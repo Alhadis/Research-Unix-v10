@@ -1,0 +1,32 @@
+extern double fabs(double),
+	floor(double),
+	ceil(double),
+	modf(double, double*),
+	frexp(double, int*),
+	ldexp(double, int),
+	sqrt(double),
+	hypot(double, double),
+	atof(const char*),
+	sin(double),
+	cos(double),
+	tan(double),
+	asin(double),
+	acos(double),
+	atan(double),
+	atan2(double, double),
+	exp(double),
+	log(double),
+	log10(double),
+	pow(double, double),
+	sinh(double),
+	cosh(double),
+	tanh(double),
+	gamma(double),
+	j0(double),
+	j1(double), jn(int, double), y0(double),
+	y1(double), yn(int, double),
+	frand();
+
+#define HUGE	1.701411733192644270e38
+#define PI	3.1415926535897932384
+#define	PI2	6.2831853071795864769
