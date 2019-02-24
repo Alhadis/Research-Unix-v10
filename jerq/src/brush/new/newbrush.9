@@ -1,0 +1,297 @@
+.TH BRUSH 9.1
+.CT 1 games
+.SH NAME
+brush \- painting program
+.SH SYNOPSIS
+.B brush
+[
+.B -f
+.I fontdir
+]
+[
+.B -p
+.I picdir
+]
+[
+.B -t
+.I texdir
+]
+.SH DESCRIPTION
+.I Brush
+paints images under mouse control.
+Options are
+.TP
+.B -f
+font directory 
+.RF ( /usr/jerq/font
+by default)
+.TP
+.B -p
+the directory in which to keep pictures
+(current directory by default)
+.TP
+.B -t
+texture directory, where brushes and shades live
+(current directory by default)
+.PP
+In general, button 1 draws, button 2 erases;
+the cursor assumes the shape of the current brush.
+Button 3 is used to select options, sweep out areas,
+or cancel operations in progress.
+.PP
+The center of the screen is for drawing.
+The borders on either side of the screen contain menus of
+available shades and brushes.
+The current brush and shade are indicated by a small box around them.
+To choose a shade or brush, point to it and click button 3.
+.PP
+The top border contains
+a help area,
+drawing options,
+and certain commands.
+Selections are made by pointing with button 3.
+Some toggle off and on, others bring up menus.
+The items are:
+.TF Smooth
+.TP
+.B Help
+Three boxes indicate what buttons
+1, 2, and 3 will do at any given time.
+The meanings of icons in these boxes are:
+.PD
+.IP
+.nf
+.ta \w'\f5square with arrow  'u
+paintbrush	draw with this button
+pencil eraser	erase with this button
+menu with cursor	menu on this button
+thumbs down	cancel or finish an operation
+pointing hand	indicate a point
+square with arrow	sweep a rectangle
+circle with arrow	sweep a circle
+skull	exit the program
+.fi
+.DT
+.TP
+.B Smooth
+Smooth the contours of magnified images.
+.TP
+.B Align
+Force circles, discs, text, and other images
+to align with texture boundaries
+.TP
+.B Image
+Manipulate the
+`current image',
+(box, ellipse, etc.)\&
+selected from the drawing menu described below.
+Button 3 makes the image disappear.
+The image menu contains:
+.RS
+.TF magnify
+.TP
+.B same
+Bring back the current image.
+(Useful if you change
+drawing options while positioning an image.)
+.TP
+.B magnify
+Sweep a rectangle indicating the
+size of the magnified image.
+The numbers that appear are horizontal and vertical
+magnification factors.
+.TP
+.B shrink
+Indicate whether image is shaded or black & white.
+It will shrink to 1/4 original size.
+.TP
+.B flip
+Reflect left-right or top-bottom.
+.TP
+.B rotate
+Rotate counterclockwise or clockwise 90 degrees.
+.TP
+.B slant
+Drag the current image rectangle into a parallelogram.
+.TP
+.B outline
+Replace the current image with its outline.
+.TP
+.B shadow
+Draw a `shadow' behind the current image.
+.TP
+.B new
+Make a new image by copying a rectangular portion of the screen.
+.RE
+.PD
+.TF Smooth
+.IP 
+To move an image on the screen, select
+.B new
+from the
+.B Image
+menu.
+Sweep the area to be moved, click button 2 to erase it,
+move it, and click button 1 to draw it.
+.TP
+.B Drawing Style
+Selects continuous curves, disconnected dots, or an `airbrush' effect when painting.
+.TP
+.B Constrain
+Enable (disable) constrained freehand drawing.
+When the icon shows a brush drawing a wavy line, you can draw
+in any direction.
+When the icon shows a right angle, your drawing will tend
+to be horizontal or vertical only, depending on the direction
+you start.
+.TP
+.B Reflect
+Draw symmetric figures.
+The icon shows the symmetries:
+left-right, top-bottom,
+or both, relative to the center of the screen.
+.TP
+.B Draw mode
+Set the drawing mode to one of
+.BR or ,
+.BR xor ,
+.BR store ,
+.BR and .
+.TP
+.B Text style
+Set the text style to one of
+.BR normal ,
+.BR outline ,
+.BR bold ,
+.BR shadow ,
+.BR italic .
+.TP
+.B Font
+Set the text font.
+Menu selection
+.B new
+prompts for a font name
+from the font directory.
+.TP
+.B I/O
+Interact with host machine.
+Menu items are:
+.RS
+.TF recall
+.TP
+.B save
+Copy screen, brushes, or shades to a file.
+Prompts for a file name, starting with the default picture
+directory (if any).
+Backspace past this if you wish to save elsewhere;
+hit return to quit.
+Next sweep a rectangle to be saved.
+Bitmaps are saved in
+.IR bitfile (9.5)
+format, printable by
+.IR bcan ;
+see
+.IR can (1).
+.TP
+.B recall
+Prompts for a file name.
+The recalled picture becomes the
+current image.
+.TP
+.B Exit
+Leave the program.
+Confirm by
+two clicks on button 3.
+.PD
+.RE
+.PP
+The menu on button 3 in the drawing area contains these selections:
+.TP Smooth
+.B lines
+Indicate first point, then position cursor with rubber band line
+for subsequent lines.
+Button 1 draws, button 2 erases.
+.TP
+.B curves
+Indicate first control point, then position cursor with rubber band line
+for subsequent control points.
+A curve (spline) will be drawn (erased) using these control points,
+depending on whether the last button hit is button 1 (draw), or button 2 (erase).
+.br
+.ns
+.TF string
+.TP
+.B box
+.PD 0
+.TP
+.B ellipse
+.TP
+.B disc
+(A disc is a filled ellipse).
+Sweep a bounding rectangle rectangle;
+numbers show the dimensions.
+A single dot marks the center of an ellipse.
+The image becomes the current image;
+use buttons 1 and 2 to draw or erase with it.
+.PD
+.TP
+.B string
+Type in text.
+The string becomes the
+current image.
+.TP
+.B fill
+Sweep rectangular bounding box, then indicate interior seed points
+using button 1 to set a point, button 2 to clear a point, and button 3 to quit.
+Enclosed regions will be filled with current shade.
+Any button stops filling.
+.TP
+.B clear
+Sweep a rectangle to be cleared.
+.TP
+.B texture
+Sweep a rectangle.  The
+current image
+becomes a rectangle of this size textured with current shade.
+.TP
+.B fade
+Sweep a rectangle.
+Holding button 2 will fade this area, as if
+erasing in
+spray paint mode with
+a random pattern instead of a shade.
+.TP
+.B invert
+Sweep a rectangle.
+Colors in this area will be inverted.
+.TP
+.B new brush
+.PD 0
+.TP
+.B new shade
+Menu select whether to edit or snarf from screen (with button 3).
+If editing,
+the current brush (shade) will appear magnified in upper left corner.
+Edit with buttons 1 and 2, quit with 3.
+Several `spare' brushes appear at the bottom of the brush menu.
+.TP
+.B details
+Select an area with box cursor to be magnified for detailed editing.
+.PD
+.SH "SEE ALSO"
+.IR can (1),
+.IR twid (9.6), 
+.IR paint (9.1)
+.SH BUGS
+.B Fill
+doesn't always know just when to stop.
+If it misses an area, try again.
+.br
+The smoothing operation fully smoothes only
+for magnification factors that are powers of two.
+.br
+Bitmaps moved off the top or bottom
+of the physical screen can pick up noise.
+.SH PROVIDER
+Garry Hodgson
+

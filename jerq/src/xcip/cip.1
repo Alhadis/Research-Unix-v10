@@ -1,0 +1,294 @@
+.TH CIP 1 DMD
+.SH NAME
+cip \- DMD interactive drawing system based on pic.
+.SH SYNOPSIS
+.B cip [-c]
+.SH DESCRIPTION
+.I Cip
+is an interactive drawing system for the AT&T Teletype's DMD 5620 and 630 
+bitmap display terminals.
+Using a set of predefined 
+.IR pic (1)
+shapes, the user draws pictures within the screen on the DMD.  
+These pictures can be stored in a file and later formatted 
+for output to a typesetter using
+.IR pic (1).
+.P
+The
+.I "-c"
+argument results in the 
+.I cip 
+program being kept
+.I "(cached)"
+in the terminal's RAM memory after quiting
+.I "cip."
+The next invocation of 
+.I cip 
+will bring up the program quickly without having to download it.
+Applicable only for the 630 terminal.
+Use the 630
+.I ucache(1)
+program to remove cip from memory.
+.SH SCREEN
+.IR Cip 's 
+screen consists of three areas.  The top-most area contains
+pictures of figures (templates).  These templates are used to draw
+pictures in the next area of the screen.
+The middle area of the screen (picture) is used for drawing
+and editing pictures.  
+The bottom of the screen shows:
+messages and file names in the left window;
+the edit depth when editing macros in a selectable middle window;
+and the current mouse button functions in the right window.
+.SH MOUSE
+The mouse is used for selection of all menu items, selection of 
+templates, and editing of figures in the picture area.  Button one is 
+always used to select a template or a figure.  Button two is used 
+to edit a selected figure, and button three displays a menu which is 
+applicable to the current state of
+.I cip.
+.TP
+.B "Button 1"
+When button one is pressed in the template area, the rectangle pointed
+to by the mouse cursor is displayed in reverse video.  
+This indicates that this is the currently selected template.
+(Note: the mouse button functions displayed at the bottom of the 
+screen changes.)
+The template can then be used
+to draw a figure in the picture area (see Button 2).  
+.sp
+If button one is pressed while in the picture area then the enclosing figure 
+is selected for editing.  
+In case of overlapping figures, repeated pressings of button one will
+run through the possibilites.
+The figure selected is blanked out as long as button one
+is pressed.  If there is no figure on the screen or if the mouse 
+cursor is far enough away from all figures, then
+.I cip
+returns to its original menu and any figure or template is unselected.
+.sp
+Pressing button one in the edit depth window at the bottom of the screen (shown
+only when editing macros) exits one level of macro editing.
+.TP
+.B "Button 2"
+Button two is only active when either a figure or a template has been
+selected.  The functions available depend greatly on the object
+selected.  In general, when a template is selected, button two can 
+only be used for drawing.  However, if a figure is selected then the 
+button is used for either copying, moving, or editing the figure.
+.TP
+.B "Button 3"
+Button three has two uses.  The button is used most often to display a
+menu.  The menu shows different options available depending on the
+current state of 
+.I cip.
+The button is also used to exit spline drawing when the
+spline template has been selected.
+.TP
+.B "        "
+A general menu is brought up by pressing button three when no figure nor
+template has been selected and provides the following functions:
+.TP 15
+.I "Get file"
+Read a file (in special
+.I pic
+format), adding its contents to the screen.
+User is first prompted for a file path name.
+Once the global file definitions have been read, a rectangle
+will appear on the screen showing the overall size
+of the file to be read.  
+Clicking button one brings the picture in centered in the screen
+(but aligned to grid points).
+Alternatively, the figure may be moved to a new location by depressing 
+button two.
+.TP
+.I "Put file"
+Write the screen's contents into a file in 
+.I pic
+format.
+Again, the user is prompted for a file path name.
+.TP
+.I "Clear screen"
+Clear screen, removing the diagram from the editor.
+This function asks if you are sure, requiring a confirming click of button
+three or an aborting click of button one or two.
+.TP
+.I "Redraw screen"	
+Removes any garbage on screen that may result from interactions with
+other windows.
+.TP
+.I "Define macro"
+A very useful function for grouping figures into a new entity.  
+Button 2 is used to draw box around figures to be grouped into a "macro"
+in the pic terminology.
+.TP
+.I "Show grid"
+Display (or turn off) a grid (via a secondary menu to the right of the main 
+menu).
+The grid will be invisible, 8 by 8, or 16 by 16 depending on how
+.I "alignment"
+is set.
+.TP
+.I "Alignment"
+Forces objects to be aligned to grid points.
+Select granularity via a secondary menu to the right of the main menu.
+The choices are: \fBfine\fR - objects can be placed anywhere, 
+\fBmedium\fR - objects are aligned to a 8 by 8 grid and
+\fBcoarse\fR - objects are aligned to a 16 by 16 grid.
+Helps keep symbols lined up with each other.
+Default is medium.
+.TP
+.I "Version"
+Prints the cip version and copyright notice.
+.TP
+.I "Close window"
+Returns to the layer window initially used when cip was downloaded.
+Current picture is saved - re-opening the editor window will redraw the
+picture.
+.TP
+.I "Quit"
+Exit editor.  WARNING:  Does not check if files have
+been written out!
+.PP
+.TP
+.sp 1
+.B "        "
+If a template has been selected, button three brings up menus for 
+boxes, lines, splines and text.
+These are used to set global defaults. 
+.TP 15
+.I "Arrows"
+Sets via a secondary menu on button 3 whether lines and splines drawn
+in the future will have \fINo arrows\fR or arrows at the \fIStart end, 
+Finish end\fR or \fIBoth ends\fR.
+.TP
+.I "Density"
+Sets line density of lines and boxes to either \fISolid, Dashed or Dotted\fR.
+.TP
+.I "Point size"
+Sets point size for text via a secondary menu of button 3.
+Includes all point sizes supported on DMD.
+Note, however, that your particular printer may not support all of these.
+.TP
+.I "Font style"
+Sets style of text.  
+Includes all font styles supported on DMD.
+Again, your particular printer may not support all of these.
+.TP
+.I "Justify"
+Set text justification to \fILeft, Center,\fR or \fIRight\fR.
+.TP
+.I "Spacing"
+Set spacing between text lines in multi-line text.
+.PP
+.TP
+.sp 1
+.B "        "
+If a figure in the diagram is selected, depressing button three
+displays a menu allowing reasonable operations on the particular figure.
+Common operations are:
+.TP 15
+.I "Delete"
+Deletes selected figure.
+.TP
+.I "Copy"
+Copies selected figure.
+.TP
+.I "Reflect x"
+Reflect around x-axis.
+.TP
+.I "Reflect y"
+Reflect around y-axis.
+.TP
+.I "Arrow"
+Place an arrow (or remove an arrow) on the nearest end of the line or
+spline selected.
+.TP
+.I "Density"
+Adjust density of line or box via secondary menu on button 3.
+.TP
+.I "Edit"
+Edit components of selected macro.
+Exit by selecting edit depth window in bottom middle of screen.
+.TP
+.I "Separate"
+Separate macro in component parts or multi-line text in separate
+single lines.
+Warning, currently there no way to combine separate single lines of text
+into a single multi-line text.
+.SH KEYBOARD
+The keyboard is used to enter and edit text in the picture.
+When existing text is selected an edit marker (an upward pointing triangle)
+can be placed by moving the mouse.
+BACKSPACE erases one character of text at a time, CONTROL-W one word at a time,
+and CONTROL-U all text selected.
+Entering RETURN begins another text line.
+The text mode is left by clicking a mouse button.
+Note: The character sequence \\(xx (e.g. \\(bu for bullits) will not displayed 
+but instead will be interpreted by troff.
+.P
+The keyboard is also used to enter and edit file names and point sizes.
+In this case an Escape, Return, or clicking a mouse button will leave
+this text mode.
+.P
+The last file name is retained by the editor between operations to facilitate
+frequent writes to keep the host updated as a new file is being entered.
+However, care must be taken to backspace over or delete the original name 
+and enter a new one when it is desired to leave the original file intact.
+.SH FILES
+.br
+$TOOLS/lib/bin/cip.m	layers version of
+.I cip
+.br
+$TOOLS/lib/dmd/cip	shell script for executing
+.I cip
+.SH SEE ALSO
+.I "Cip User's Manual: One picture is Worth a Thousand Words,"
+TM-82-11276-1.
+.br
+pic(1), proof(1), ucache(1).
+.SH WARNINGS
+.PP
+Do not use
+.I cip
+in your first layers window since this is the window system messages will
+appear in.
+These messages will hang your editor.
+.PP
+We recommend that 
+.I cip
+be used on DMD terminals with at least 1 Meg RAM memory so that there will be
+sufficient space to hold your pictures.
+.PP
+Defining pictures which are too large for the picture frame can have
+disastrous results when stored and read back.
+.PP
+.I Cip
+relies on the host machine only for file transfers.  If the host crashes
+while you are creating or modifying a picture, there may be no way to save
+the picture.
+Recommend frequent stores (by different names to be most safe).
+.PP
+The size of your text shown will in general not be what is printed.
+The problem is not necessarily in the DMD, even printers vary.
+Moral: leave plenty of room for your text.
+.PP
+The vertical bar character ("|") in multi-line text strings or in any text
+string inside a macro can not be read in (Jpic bug).
+.PP
+.I Cip
+can not read in an arbitrary pic file since pic has features not supported
+in the graphical editor.
+.PP
+There are numerous fixed limits in the host program,
+.IR Jpic ,
+used in reading a pic file into 
+.I cip.
+Thus it is quite possible to create and write out a diagram that can not
+be read back in.
+To discover why a file can not read by 
+.I cip
+do: "Jpic 
+.I your-file
+> temp".
+The standard error messages, if any, will report where the problem exists.

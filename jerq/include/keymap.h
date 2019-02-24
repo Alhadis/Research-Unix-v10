@@ -1,0 +1,54 @@
+/*
+	function keys
+	(suffix S denotes shift or ctrl)
+*/
+#define	F1	0xE8
+#define	F1S	0xC8
+#define	F2	0xE9
+#define	F2S	0xC9
+#define	F3	0xEA
+#define	F3S	0xCA
+#define	F4	0xEB
+#define	F4S	0xCB
+#define	F5	0xEC
+#define	F5S	0xCC
+#define	F6	0xED
+#define	F6S	0xCD
+#define	F7	0xEE
+#define	F7S	0xCE
+#define	F8	0xEF
+#define	F8S	0xCF
+/*
+	numeric pad
+*/
+#define	CLEAR	0xE5
+#define	CLEARS	0xF5
+#define	SETUP	0xAE
+#define	BREAK	0x80
+#define	NUMLCK	0xB2
+#define	NUMLCKS	0xF2
+
+#define	NP0	0xC2
+#define	NP0S	0x90
+#define	NP1	0xC0
+#define	NP1S	0x91
+#define	NP2	0xC1
+#define	NP2S	0x92
+#define	NP3	0xC6
+#define	NP3S	0x93
+#define	NP4	0xD3
+#define	NP4S	0x94
+#define	NP5	0xD5
+#define	NP5S	0x95
+#define	NP6	0xD7
+#define	NP6S	0x96
+#define	NP7	0xD2
+#define	NP7S	0x97
+#define	NP8	0xD4
+#define	NP8S	0x98
+#define	NP9	0xD6
+#define	NP9S	0x99
+#define	NPM	0xC4	/* minus */
+#define	NPMS	0x9A
+#define	NPD	0xC3	/* dot */
+#define	NPDS	0x9B

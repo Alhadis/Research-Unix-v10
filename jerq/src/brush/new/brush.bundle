@@ -1,0 +1,4798 @@
+# to unbundle this stuff, sh this file
+echo brush.c 1>&2
+cat >brush.c <<'End of brush.c'
+/*
+ *
+ *	main() and globals for Brush  --  brush/brush.c
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ *
+ *	NOTE:  this must be downloaded via 'jx', as it uses jerqio
+ */
+
+#include "brush.h"
+
+Rectangle statrect;		/* rectangle for status display	*/
+
+/*	current and available shades	*/
+
+Texture16 *shade;
+Texture16 *shades[] = {
+			&grey1,&grey2,&grey3,&grey4,&grey5,&grey6,
+			&grey7,&black,&leafs,&bigrcheck,&bigstcheck,
+			&cross,&woven,&thickvs,&thickhs,&star,&xhatch,&diags,
+			&zig,&tictac,&zag,&blot1,&blot2,&tactic,
+			&deathstar,&cube,&smile2,&scowley,null( Texture16 )
+		      };
+
+/*	current and available brushes	*/
+
+Texture16 *brush;
+Texture16 *brushes[] = {
+			 &circle3,&circle5,&circle7,&dot2,&dot4,&dot6,&dot8,
+			 &bar6,&bar10,&bar14,&dash6,&dash10,&dash14,
+			 &slash8,&slash12,&slash16,
+			 &diag3,&ldiag3,&grp3,&lgrp3,
+			 &null1,&null2,&null3,&null4,
+			 &null5,&null6,&null7,&null8,null( Texture16 )
+		       };
+
+Word maskwords[16],notmaskwords[16],splatwords[16],bigwords[32];
+
+Bitmap screen;		/* used instead of display to clip to draw area */
+Bitmap bigscreen;	/* used to grab bitmaps from area outside layer	*/
+
+
+Bitmap mask      = { maskwords,1,{{0,0},{16,16}} };
+Bitmap notmask   = { notmaskwords,1,{{0,0},{16,16}} };
+Bitmap spraymask = { splatwords,1,{{0,0},{16,16}} };
+Bitmap bigmask   = { bigwords,1,{{0,0},{32,32}} };
+
+char *font_dir;		/* name of font directory from argv	*/
+char *pix_dir;		/* name of picture directory from argv	*/
+char *tex_dir;		/* name of texture directory from argv	*/
+
+main( argc,argv )
+	int argc;
+	char **argv;
+{
+	init();
+	font_dir = argv[1];	/* get name of font directory		*/
+	pix_dir  = argv[2];	/* get name of picture directory	*/
+	tex_dir  = argv[3];	/* get name of texture directory	*/
+
+	for ( ;; wait(MOUSE) )
+	    {
+		check_reshape();
+		if ( bttn12() ) freehand( drawmode );
+		if ( bttn3() )  icon_handler();
+	    }
+}
+
+init()
+{
+	sleep(120);		/* bizarre nonsense to pacify IBM's	*/
+
+#ifdef J5620
+#ifdef OLDROM
+	jinit();
+#endif
+#endif
+	srand( *XMOUSE );
+	srandx( *XMOUSE );
+	request( MOUSE|KBD );
+
+	/* set default font, shade, button icons, & brush */
+
+	curr_font = fontlist[0] = &defont;
+	shade = &black;
+	curr_set = default_set;
+	setbrush( &circle3 );
+	P->state |= RESHAPED;	/* force a redraw upon main loop entry */
+}
+
+check_reshape()		/* if reshaped, reset rectangles and redraw */
+{
+	int i;
+
+	if ( P->state & RESHAPED )
+	   {
+		P->state &= ~RESHAPED;
+		statrect = Drect;
+		statrect.corner.y = DORG.y + MHEIGHT;
+		rectf( &display,statrect,F_STORE );
+		rectf( &display,inset( statrect,2 ),F_XOR );
+
+		for ( i=0; i<32; i++ ) bigwords[i] = sparse32( 4 );
+		rectf( &bigmask,bigmask.rect,F_XOR );
+
+		for ( i=0; i<NICONS; i++ ) Icons[i]->handler( INIT );
+
+		screen.base = addr( &display,Draw.r.origin );
+		screen.width = display.width;
+		screen.rect = Draw.r;
+		bigscreen.base = addr( &display,Pt(0,0) );
+		bigscreen.width = display.width;
+		bigscreen.rect = Jrect;
+
+		string( &defont,"Copyright 1985 AT&T Bell Laboratories",
+			&display,add( Draw.r.origin,Pt(16,16) ),F_XOR );
+		string( &defont,"All Rights Reserved",
+			&display,
+			add( Draw.r.origin,Pt(16,16+defont.height) ),F_XOR );
+	   }
+}
+
+are_you_sure( tries )	/* like above, but requires "tries" clicks on button3	*/
+	Word tries;	/*	to verify					*/
+{
+	Texture16 *t;
+	int i,all_threes;
+
+	t = cursswitch( &skull );
+
+	for ( i=0,all_threes=TRUE; i<tries; i++ )
+	      if ( !( all_threes &= ( ( click()==3 ) ? TRUE : FALSE ) ) ) break;
+
+	cursswitch( t );
+	return all_threes;
+}
+	
+	
+click()			/* waits for click of button, returns lowest button hit */
+{
+	Word result;
+
+	waitbuttons( UP );
+	waitbuttons( DOWN );
+	for ( result=1; result<4; result++ )
+	      if ( mouse.buttons & ( 8 >> result ) ) break;
+	waitbuttons( UP );
+	return result;
+}
+End of brush.c
+echo circles.c 1>&2
+cat >circles.c <<'End of circles.c'
+/*
+ *
+ *	circles & discs for Brush  --  brush/circles.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ *
+ */
+
+#include "brush.h"
+
+void disct16(),myellipse();
+Point xydist(),alignment();
+
+
+Image
+discs( oldpic,filled )		/* draw textured discs */
+	Image oldpic;
+	Word filled;
+{
+	Point rad;
+	Point org,p;
+	Rectangle r;
+	Bitmap *tmp;
+	char scratch[20];
+	Help old_set;
+	int foo;
+
+	old_set = helpswitch( circ_set );	
+	cursswitch( &sweepcircle );
+
+	while( !bttn123() ) wait( MOUSE );
+
+	if ( bttn12() )
+	   {
+		helpswitch( old_set );	
+		cursswitch( brush );
+		return oldpic;
+	   }
+
+	org = p = mouse.xy;
+	rad.x = rad.y = 0;
+
+	ellipse( &display,org,rad.x,rad.y,F_XOR );
+	stringf( &defont,scratch,&display,add( p,Pt(10,10) ),F_XOR,
+				"%d %d",rad.x,rad.y );
+
+	while ( bttn3() )
+		if ( !eqpt( p,mouse.xy ) )
+		   {
+			ellipse( &display,org,rad.x,rad.y,F_XOR );
+			stringf( &defont,scratch,&display,add( p,Pt(10,10) ),F_XOR,
+				 "%d %d",rad.x,rad.y );
+			rad = xydist( p=mouse.xy,org );
+			stringf( &defont,scratch,&display,add( p,Pt(10,10) ),F_XOR,
+				 "%d %d",rad.x,rad.y );
+			ellipse( &display,org,rad.x,rad.y,F_XOR );
+		   }
+
+	ellipse( &display,org,rad.x,rad.y,F_XOR );
+	stringf( &defont,scratch,&display,add( p,Pt(10,10) ),F_XOR,
+				"%d %d",rad.x,rad.y );
+	helpswitch( old_set );	
+	cursswitch( &hourglass );
+
+	/* punt if ellipse too small	*/
+
+	if ( rad.x < 4 || rad.y < 4 )
+	   {
+		errmsg( "too small" );
+		return oldpic;
+	   }
+
+	/* add brush width if circle */
+
+
+	if ( !filled )
+	   {
+		r.origin = sub( org,add( rad,Pt(8,8) ) );
+		r.corner = add( org,add( rad,Pt(9,9) ) );
+
+		if ( r.origin.x<0 )
+		   {
+			foo = 16*( (r.origin.x-16)/16 );
+			r.origin.x -= foo;
+			r.corner.x -= foo;
+			org.x -= foo;
+		   }
+
+		if ( r.origin.y<0 )
+		   {
+			foo = 16*( (r.origin.y-16)/16 );
+			r.origin.y -= foo;
+			r.corner.y -= foo;
+			org.y -= foo;
+		   }
+
+		if ( !( tmp = balloc( r ) ) ) return oldpic;
+		rectf( tmp,tmp->rect,F_CLR );
+		myellipse( tmp,org,rad,F_STORE );
+	   }
+	
+	else {
+		r.origin = sub( org,rad );
+		r.corner = add( org,add( rad,Pt(1,1) ) );
+
+		if ( r.origin.x<0 )
+		   {
+			foo = 16*( (r.origin.x-16)/16 );
+			r.origin.x -= foo;
+			r.corner.x -= foo;
+			org.x -= foo;
+		   }
+
+		if ( r.origin.y<0 )
+		   {
+			foo = 16*( (r.origin.y-16)/16 );
+			r.origin.y -= foo;
+			r.corner.y -= foo;
+			org.y -= foo;
+		   }
+		if ( !(tmp = balloc( r ) ) )
+		   {
+			errmsg( "no mem" );
+			return oldpic;
+		   }
+		rectf( tmp,tmp->rect,F_CLR );
+		eldisc( tmp,org,rad.x,rad.y,F_STORE );
+		texture16( tmp,tmp->rect,shade,F_OR );
+		eldisc( tmp,org,rad.x,rad.y,F_XOR );
+		texture16( tmp,tmp->rect,shade,F_XOR );
+	      }
+
+	if ( drawmode != F_XOR ) point( tmp,org,F_XOR );
+	Ibfree( oldpic.bp );
+	return make_image( tmp,tmp->rect,r.origin,alignment(r.origin) );
+}
+
+Point
+xydist( p,q )
+	Point p,q;
+{
+	p.x = abs( p.x-q.x );
+	p.y = abs( p.y-q.y );
+	return p;
+}
+void
+disct16( bp,p,rad,tp,code )
+	Bitmap *bp;
+	Point p;
+	Word rad;
+	Texture16 *tp;
+	Word code;
+{
+	Texture local;
+	register short *dest = (short *)&local;
+	register short *ssrc  = (short *)tp;
+	register int    i;
+
+	i = 16;
+	do {
+		*dest = *ssrc;
+		*(dest + 1) = *ssrc;
+		*((int *)(dest +32)) = *((int *)dest);
+		ssrc++;
+		dest += 2;
+	} while ( --i > 0 );
+	discture( bp,p,rad,&local,code );
+}
+
+extern void doit();
+
+void
+myellipse( bp,p,rad,f )
+	Bitmap *bp;
+	Point p,rad;
+	Code f;
+{
+	ellip1( bp,p,rad.x,rad.y,doit,Pt(0,rad.y),Pt(0,rad.y),f );
+}
+
+End of circles.c
+echo copy.c 1>&2
+cat >copy.c <<'End of copy.c'
+/*
+ *
+ *	bitmap copy for Brush  --  brush/copy.c
+ *
+ *	includes:	magnify, flip x, flip y, rotation, shearing.
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Point alignment();
+
+Image Now_Pic = { null( Bitmap ),{ { 0,0 },{ 0,0 } },{ 0,0 },{ 0,0 } };
+Image NoPic   = { null( Bitmap ),{ { 0,0 },{ 0,0 } },{ 0,0 },{ 0,0 } };
+
+Image
+new_image()		/* gets rect and sets up Image	*/
+{
+	Image result;
+	Rectangle r;
+
+	result.r = sweeprect( Pt(1,1) );
+	result.bp  = balloc( result.r );
+	if ( !result.bp )
+	   {
+		errmsg( "cannot alloc in new_image()" );
+		result.bp = &bigscreen;
+	   }
+	bitblt( &bigscreen,result.r,result.bp,result.r.origin,F_STORE );
+
+	result.pos = result.r.origin;
+	result.alg = alignment( result.pos );
+
+	return result;
+}
+
+rectprint( r )
+	Rectangle r;
+{
+	errprintf( "r is { { %d,%d },{ %d,%d } }",
+		    r.origin.x,r.origin.y,r.corner.x,r.corner.y );
+}
+
+Image
+make_image( bp,r,p,alg )	/* builds Image from pieces 	*/
+	Bitmap *bp;
+	Rectangle r;
+	Point p,alg;
+{
+	Image result;
+
+	result.bp  = bp;	
+	result.r   = r;
+	result.pos = p;
+	result.alg = alg;
+
+	return result;
+}
+
+Ibfree( bp )		/* bfree bp only if not display	*/
+	Bitmap *bp;
+{
+	if ( bp && ( bp != &display ) ) bfree( bp );
+}
+
+Image
+blowup( pic )		/* return magnified copy of Image pic	*/
+	Image pic;
+{
+	Rectangle dr;
+	Point scale,size;
+	register Bitmap *tmp;
+
+	size = extent( pic.r );
+	if ( 0>= size.x || 0>=size.y ) return pic;
+
+	dr = sweeprect( size );
+	if ( nullrect( dr ) ) return pic;
+
+	scale.x = max( 1,( dr.corner.x-dr.origin.x )/size.x );
+	scale.y = max( 1,( dr.corner.y-dr.origin.y )/size.y );
+
+	tmp = balloc( dr );
+
+	if ( !tmp )
+	   {
+		errmsg( "no mem" );
+		return pic;
+	   }
+
+	cursswitch( &hourglass );
+	rectf( tmp,tmp->rect,F_CLR );
+
+	/* copy src to dst */
+
+	bitblt( pic.bp,pic.r,tmp,dr.origin,F_STORE );
+	magnify( tmp,dr.origin,size,scale );
+
+	Ibfree( pic.bp );
+	pic = make_image( tmp,tmp->rect,pic.pos,pic.alg );
+	return pic;
+}
+
+Image
+edgeit( pic )
+	Image pic;
+{
+	Bitmap *bp;
+	Point p,p_align;
+	Rectangle r;
+
+	p_align = add( pic.alg,Pt(15,15) );
+	p_align.x %= 16;
+	p_align.y %= 16;
+
+	p = r.origin = p_align;
+	r.corner = add( p,add( Pt(2,2),extent( pic.r ) ) );
+	cursswitch( &hourglass );
+
+	if ( !nullrect( r ) )
+		if ( ( bp = balloc( r ) ) != null(Bitmap) )
+		   {
+			rectf( bp,r,F_CLR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 0,1 ) ),F_OR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 2,1 ) ),F_OR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 1,0 ) ),F_OR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 1,2 ) ),F_OR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 1,1 ) ),F_CLR );
+			Ibfree( pic.bp );
+			pic = make_image( bp,bp->rect,pic.pos,p_align );
+		   }
+	return pic;
+}
+
+Image
+shadowit( pic )
+	Image pic;
+{
+	Bitmap *bp;
+	Point p,p_align;
+	Rectangle r;
+
+	p_align = add( pic.alg,Pt(14,14) );
+	p_align.x %= 16;
+	p_align.y %= 16;
+
+	p = r.origin = p_align;
+	r.corner = add( p,add( Pt(2,2),extent( pic.r ) ) );
+	cursswitch( &hourglass );
+
+	if ( !nullrect( r ) )
+		if ( ( bp = balloc( r ) ) != null(Bitmap) )
+		   {
+			rectf( bp,r,F_CLR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 0,0 ) ),F_OR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 1,1 ) ),F_CLR );
+			bitblt( pic.bp,pic.r,bp,add( p,Pt( 2,2 ) ),F_OR );
+			Ibfree( pic.bp );
+			pic = make_image( bp,bp->rect,pic.pos,p_align );
+		   }
+	return pic;
+}
+
+Image
+flippit( pic,direction )
+	Image pic;
+	Word direction;
+{
+	Bitmap *bp;
+	Point p,p_align;
+	Rectangle r;
+
+	if ( direction == FLIPX )
+	   {
+		p_align.x = 16 - pic.r.corner.x%16;
+		p_align.y = pic.r.origin.y%16;
+	   }
+
+	else {
+		p_align.x = pic.r.origin.x%16;
+		p_align.y = 16 - pic.r.corner.y%16;
+	     }
+
+	r.origin = p_align;
+	r.corner = add( r.origin,extent( pic.r ) );
+	cursswitch( &hourglass );
+
+	if ( !nullrect( r ) )
+		if ( bp = balloc( r ) )
+		   {
+			switch( direction )
+			      {
+				case FLIPX:	flip_x( pic.bp,pic.r,bp,r.origin );
+						break;
+				case FLIPY:	flip_y( pic.bp,pic.r,bp,r.origin );
+						break;
+			      }
+			Ibfree( pic.bp );
+			pic = make_image( bp,bp->rect,pic.pos,p_align );
+		   }
+	return pic;
+}
+
+flip_x( sb,r,db,p )
+	Bitmap *sb,*db;
+	Rectangle r;
+	Point p;
+{
+	Rectangle col;
+	Word i,wid;
+
+	wid = RWIDTH( r );
+	col = r;
+	col.corner.x = col.origin.x + 1;
+
+	for ( i=0; i<=wid; i++ )
+		bitblt( sb,raddp( col,Pt(i,0) ),
+			db,add( p,Pt(wid-i-1,0) ),F_STORE );
+}
+	
+flip_y( sb,r,db,p )
+	Bitmap *sb,*db;
+	Rectangle r;
+	Point p;
+{
+	Rectangle row;
+	Word i,hgt;
+
+	hgt = RHEIGHT( r );
+	row = r;
+	row.corner.y = row.origin.y + 1;
+
+	for ( i=0; i<=hgt; i++ )
+		bitblt( sb,raddp( row,Pt(0,i) ),
+			db,add( p,Pt(0,hgt-i-1) ),F_STORE );
+}
+
+
+#define RBO	rbuf.origin
+#define RBC	rbuf.corner
+
+Image
+protate( pic )
+	Image pic;
+{
+	Bitmap *bp;
+	Rectangle r;
+	Rectangle rbuf;		/* holds quadrant of bp->r orig image in */
+	Point alg;
+	int hgt,wid,size;
+
+	wid = RWIDTH( pic.r );
+	hgt = RHEIGHT( pic.r ); 
+	size = wid + hgt;
+
+	alg.x = ( pic.r.origin.y + 15 )%16;
+	alg.y = 16 - pic.r.corner.x%16;
+
+	r.origin = add( sub( pic.r.origin,pic.alg ),alg );
+	r.corner = add( r.origin,Pt( size,size ) );
+
+	rbuf.origin = r.origin;
+	rbuf.corner = add( r.origin,Pt(wid,hgt) );
+
+	if ( !nullrect( pic.r ) )
+		if ( bp = balloc( r ) )
+		   {
+			cursswitch( &hourglass );
+			rectf( bp, bp->rect, F_CLR );
+			rbuf.corner = r.corner;
+			rbuf.origin = sub( r.corner,Pt(wid,hgt) );
+			bitblt( pic.bp,pic.r,bp, RBO,F_XOR );
+
+			horshear( bp,rbuf,-hgt,TRUE );
+
+			vershear( bp,
+				  Rect( RBO.x-hgt,RBO.y,RBC.x,RBC.y ),
+	    			  -size,FALSE );
+
+			horshear( bp,
+				  Rect( r.origin.x,r.origin.y,RBC.x,RBO.y ),
+				  -wid,TRUE );
+			Ibfree( pic.bp );
+			pic = make_image( bp,
+					  raddp( Rect( 0,0,hgt+1,wid+1 ),r.origin ),
+					  pic.pos,alg );
+		   }
+	return pic;
+}
+
+Image
+mrotate( pic )
+	Image pic;
+{
+	Bitmap *bp;
+	Rectangle r;
+	Rectangle rbuf;		/* holds quadrant of bp->r orig image in */
+	Point alg;
+	int hgt,wid,size;
+
+	wid = RWIDTH( pic.r ); 
+	hgt = RHEIGHT( pic.r ); 
+	size = wid + hgt;
+
+	alg.x = 16 - pic.r.corner.y%16;
+	alg.y = pic.r.origin.x%16;
+
+	r.origin = add( sub( pic.r.origin,pic.alg ),alg );
+	r.corner = add( r.origin,Pt( size,size ) );
+
+	rbuf.origin = r.origin;
+	rbuf.corner = add( r.origin,Pt(wid,hgt) );
+
+	if ( !nullrect( pic.r ) )
+		if ( bp = balloc( r ) )
+		   {
+			cursswitch( &hourglass );
+			rectf( bp, bp->rect, F_CLR );
+			bitblt( pic.bp,pic.r,bp, r.origin,F_XOR );
+			horshear( bp,rbuf,hgt,TRUE );
+			vershear( bp,
+				  Rect( RBO.x,RBO.y,RBC.x+hgt,RBC.y ),
+	    			  size,FALSE );
+			horshear( bp,
+				  Rect( RBO.x,RBC.y-1,RBC.x+hgt,RBC.y+wid-1 ),
+				  -wid,FALSE );
+			bitblt( bp,raddp( Rect( 0,hgt-1,hgt,size ),r.origin ),
+				bp,r.origin,F_STORE );
+			Ibfree( pic.bp );
+			pic = make_image( bp,raddp( Rect( 0,0,hgt,wid ),r.origin ),
+					  pic.pos,alg );
+		   }
+	return pic;
+}
+
+Point stretchrect();
+
+Image
+shear( pic )
+	Image pic;
+{
+	Bitmap *bp;
+	Rectangle rbuf;		/* holds quadrant of bp->r orig image in */
+	Rectangle r;
+	Point p,dir;
+	int hgt,wid;
+
+	if ( !nullrect( pic.r ) )
+	   {
+		dir = stretchrect( RectAt( pic.r,pic.pos ) );
+		wid = RWIDTH( pic.r ) + abs( dir.x );
+		hgt = RHEIGHT( pic.r ) + abs( dir.y );
+	  
+		r.origin = pic.r.origin;
+		r.corner = add( pic.r.origin,Pt( wid,hgt ) );
+
+		rbuf = pic.r;
+	  
+		if ( bp = balloc( r ) )
+		   {
+			cursswitch( &hourglass );
+			rectf( bp,bp->rect,F_CLR );
+			if ( dir.x < 0 )
+			   {
+				rbuf.origin.x -= dir.x;
+				rbuf.corner.x -= dir.x;
+			   }
+			if ( dir.y < 0 )
+			   {
+				rbuf.origin.y -= dir.y;
+				rbuf.corner.y -= dir.y;
+			   }
+			bitblt( pic.bp,pic.r,bp,rbuf.origin,F_XOR );
+			if ( dir.x != 0 )
+				horshear( bp,rbuf,dir.x,TRUE );
+			else vershear( bp,rbuf,dir.y,TRUE );
+			Ibfree( pic.bp );					
+			pic =  make_image( bp,r,
+					   pic.pos,alignment(r.origin) );
+		   }
+	   }
+	return pic;
+}
+
+Point
+tweak( p,ank )
+	Point p,ank;
+{
+	Point del;
+
+	del = sub( ank,p );
+	p.x = ( abs(del.x)>abs(del.y) ) ? p.x : ank.x;
+	p.y = ( abs(del.x)>abs(del.y) ) ? ank.y : p.y;
+	return p;
+}
+
+#define llft	Pt(r.origin.x,r.corner.y)
+#define urt	Pt(r.corner.x,r.origin.y)
+
+drawtrap( r,off,code )
+	Rectangle r;
+	Point off;
+	Word code;
+{
+	moveto( add( r.origin,off ) );
+	if ( off.x )
+	     drawto( llft,code );
+	else drawto( add( llft,off ),code );
+
+	drawto( r.corner,code );
+
+	if ( off.y )
+	     drawto( urt,code );
+	else drawto( add( urt,off ),code );
+
+	drawto( add( r.origin,off ),code );
+}
+
+Point lastpt;
+
+moveto( p )
+	Point p;
+{
+	lastpt = p;
+}
+
+drawto( p,code )
+	Point p;
+	Word code;
+{
+	segment( &bigscreen,lastpt,p,code );
+	lastpt = p;
+}
+
+horshear( bp,r,dx,top )
+	Bitmap *bp;
+	Rectangle r;
+	int dx;
+	int top;
+{
+	int j,hgt,shift,off;
+
+	hgt = RHEIGHT( r );
+
+	for ( j=0; j<hgt; j++ )
+	    {
+		shift = top ? hgt-j-1 : j;
+		off = muldiv( shift,dx,hgt );
+		bitblt( bp,Rect(r.origin.x,r.origin.y+j,r.corner.x,r.origin.y+j+1),
+			bp,Pt(r.origin.x+off,r.origin.y+j),
+			F_STORE );
+		if ( dx > 0 )
+			rectf( bp,Rect( r.origin.x,r.origin.y+j,
+				r.origin.x+off,r.origin.y+j+1 ),F_CLR );
+		else rectf( bp,Rect( r.corner.x+off,r.origin.y+j,
+			    r.corner.x,r.origin.y+j+1 ),F_CLR );
+	    }
+}
+
+/* STOPPED FORMATTING HERE	*/
+
+vershear( bp,r,dy,lft )
+	Bitmap *bp;
+	Rectangle r;
+	int dy;
+	int lft;
+{
+	int i,wid,shift,off;
+
+	wid = RWIDTH(r);
+
+	for ( i=0; i<wid; i++ )
+	    { shift = lft ? wid-i-1 : i;
+	      off = muldiv( shift,dy,wid );
+	      bitblt( bp,Rect(r.origin.x+i,r.origin.y,r.origin.x+i+1,r.corner.y),
+		      bp,Pt(r.origin.x+i,r.origin.y+off),
+		      F_STORE);
+	      if ( dy > 0 )
+		   rectf( bp,Rect( r.origin.x+i,r.origin.y,
+				   r.origin.x+i+1,r.origin.y+off ),F_CLR );
+	      else rectf( bp,Rect( r.origin.x+i,r.corner.y+off,
+				   r.origin.x+i+1,r.corner.y ),F_CLR );	}
+}
+
+magnify( bp,p,size,scale )
+	Bitmap *bp;
+	Point p;
+	Point size,scale;
+{
+	register int i,shift;
+
+	if ( scale.x>1 )
+	   { for ( i=size.x-1; i>0; i-- )	/* spread horizontally */
+		 { bitblt( bp,raddp( Rect( i,0,i+1,size.y ),p ),
+			   bp,add( Pt( i*scale.x,0 ),p ),F_OR );
+		   rectf( bp,raddp( Rect( i,0,i+1,size.y ),p ),F_CLR );	}
+
+	     for ( i=1; i<scale.x; i<<=1 )	/* smear horizontally */
+		 { shift = min( i,scale.x-i );
+		   bitblt( bp,raddp( Rect( 0,0,size.x*scale.x-shift,size.y ),p ),
+			   bp,add( Pt( shift,0 ),p ),F_OR );		}	}
+
+	if ( scale.y>1 )
+	   { for ( i=size.y-1; i>0; i-- )	/* spread vertically */
+		 { bitblt( bp,raddp( Rect( 0,i,size.x*scale.x,i+1 ),p ),
+			   bp,add( Pt( 0,i*scale.y ),p ),F_OR );
+		   rectf( bp,raddp( Rect( 0,i,size.x*scale.x,i+1 ),p ),F_CLR );	}
+
+	     for ( i=1; i<scale.y; i<<=1 )	/* smear vertically */
+		 { shift = min( i,scale.y-i );
+		   bitblt( bp,
+			   raddp( Rect( 0,0,size.x*scale.x,size.y*scale.y-shift ),
+				  p ),
+			   bp,add( Pt( 0,shift ),p ),F_OR );		}
+	
+	     if ( smoothing() ) smooth( bp,bp->rect,scale );			}
+}
+
+Point
+alignment( p )
+	Point p;
+{
+	p.x %= 16;
+	p.y %= 16;
+	return p;
+}
+
+End of copy.c
+echo draw.c 1>&2
+cat >draw.c <<'End of draw.c'
+/*
+ *
+ *	drawing for Brush  --  brush/draw.c
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Word mapwords[16];
+Bitmap map = { mapwords,1,{{0,0},{16,16}} };
+
+void doit();
+
+#define PERIOD		32
+
+#define reflecting()	(Flex.value)
+
+#define bogus_draw(p)	reflect( p,realmode( drawmode ),Flex.value )
+
+static int delta;
+static Point pos,target,slope,d;
+static Point m,lastm;
+
+aim( p )
+	Point p;
+{
+	target = p;
+
+	slope.x = 2*abs(target.x-pos.x);
+	slope.y = 2*abs(target.y-pos.y);
+	d.x = target.x > pos.x ? 1:-1;
+	d.y = target.y > pos.y ? 1:-1;
+	delta = ( slope.x > slope.y ) ? -slope.x/2 : -slope.y/2;
+}
+
+stepline()
+{
+	if ( slope.x > slope.y )
+	   {
+		if ( pos.x != target.x )
+		   {
+			bogus_draw( pos );
+			pos.x += d.x;
+			if ( ( delta += slope.y ) > 0 )
+			   {
+				delta -= slope.x;
+				pos.y += d.y;
+			   }
+		   }
+	   }
+	else if ( pos.y != target.y )
+		{
+			bogus_draw(pos);
+			pos.y += d.y;
+			if ( ( delta+=slope.x) > 0 )
+			   {
+				delta -= slope.y;
+				pos.x += d.x;
+			   }
+		}
+}
+
+freehand( mode )		/* this does freehand drawing using mouse	*/
+	int mode;
+{
+	Point start;
+	start = pos = target = lastm = mouse.xy;
+
+	reflect( pos,realmode( mode ),Flex.value );
+
+	if ( spraying() )
+	   {
+		for ( ; bttn12(); wait(MOUSE) )
+		    {
+			m = ( squaring() ) ? tweak( mouse.xy,start ) : mouse.xy;
+			reflect( m,realmode( mode ),Flex.value );
+		    }
+		pos = m;
+	   }
+	else
+		for ( ; bttn12(); wait(MOUSE) )
+		    { 
+			m = ( squaring() ) ? tweak( mouse.xy,start ) : mouse.xy;
+			if ( m.x!=lastm.x || m.y!=lastm.y )
+				aim( lastm=m );
+			stepline();
+		    }
+	cursset( pos );
+}
+
+void
+doit( bp,p,mode )		/* draws one brush worth at a time	*/
+	register Bitmap *bp;
+	Point p;
+	int mode;
+{
+	Rectangle br;
+
+	br = map.rect = raddp( BRUSHRECT,p );
+
+	/* get a copy, paint & mask it	*/
+
+	
+	if ( Spray.value == 2 /* spraying() */ )
+	   {
+		bitblt( bp,br,&map,br.origin,F_STORE );
+		spraymask.rect = br;
+		texture16( &spraymask,br,shade,F_STORE );
+		if ( mode==F_AND )
+		   {
+			rectf( &spraymask,br,F_XOR );
+			mode = F_CLR;
+		   }
+		splatter( &spraymask,spraymask.rect );
+		bitblt( &spraymask,spraymask.rect,
+			&map,br.origin,(mode==F_STORE)?F_OR:mode );
+
+		bitblt( &notmask,notmask.rect,&map,br.origin,F_CLR );
+
+	/* poke a brush shaped hole in display, then OR 'em together	*/
+
+		bitblt( &mask,mask.rect,bp,br.origin,F_CLR );
+		bitblt( &map,br,bp,br.origin,F_OR );
+	   }
+
+	else {
+		texture16( &map,br,shade,F_STORE );
+		bitblt( &notmask,notmask.rect,&map,br.origin,F_CLR );
+		switch( mode )
+		      {
+			case F_OR:	bitblt( &map,br,bp,br.origin,F_OR );
+					break;
+			case F_STORE:	bitblt( &mask,mask.rect,
+						bp,br.origin,F_CLR );
+					bitblt( &map,br,bp,br.origin,F_OR );
+					break;
+			case F_XOR:	bitblt( &map,br,bp,br.origin,F_XOR );
+					break;
+			case F_CLR:	bitblt( &map,br,bp,br.origin,F_CLR );
+					break;
+			case F_AND:	bitblt( &mask,mask.rect,
+						&map,br.origin,F_XOR );
+					bitblt( &map,br,bp,br.origin,F_CLR );
+					break;
+		      }
+	     }
+}
+
+static unsigned long randxx=1;
+
+void
+srandx(x)
+unsigned x;
+{
+	randxx = x;
+}
+
+int
+sparse32( n )
+	Word n;
+{
+	unsigned long temp;
+	Word i;
+	temp = 0xFFFFFFFF;
+
+	for ( i=0; i<n; i++ )
+	    {
+		randxx = randxx*1103515245L + 123457L;
+		temp &= ( randxx&(4<<(rand()%12)) ) ? ~randxx : randxx;
+	    }
+
+	return temp;
+}
+
+#define randrect(x,y)	raddp( Rect(0,0,x,y),Pt(rand()%16,rand()%16))
+
+splatter( bp,r )	/* splatters Bitmap bp with random junk */
+	Bitmap *bp;	/* used for spray paint masking		*/
+	Rectangle r;
+{
+	Word row,col,rrem,crem;
+	Word wid,hgt;
+
+	wid = RWIDTH(r);
+	hgt = RHEIGHT(r);
+
+	for ( row=0; row<hgt; row+=16 )
+	    {
+		rrem = min( (hgt-row),16 );
+		for ( col=0; col<wid; col+=16 )
+		    {
+			crem = min( (wid-col),16 );
+			bitblt( &bigmask,randrect(crem,rrem),bp,
+				add( r.origin,Pt(col,row) ),F_CLR );
+		    }
+	    }
+}
+
+pline( bp,p0,p1,mode,flex )	/* paint a line using brush,shade,mode	*/
+	Bitmap *bp;
+	Point p0,p1;
+	int mode;
+	Word flex;
+{
+	short dy,dx;
+	register short *minptr,*maxptr,smax,smin,incr1,incr2,err;
+	Point p;
+	int i;
+
+	dx = abs( p1.x-p0.x );
+	dy = abs( p1.y-p0.y );
+
+#define hack_draw( bp,p,mode,flex )	{ if (bp==&screen) \
+					       reflect( p,mode,flex ); \
+	     				  else doit( bp,p,mode );	 }
+
+	if ( dx+dy<2 )
+	   {
+		hack_draw( bp,p0,mode,flex );
+		return;
+	   }
+	
+	if ( dx > dy )
+	   {
+		maxptr = &p.x;
+		minptr = &p.y;
+		smax = sign( p1.x-p0.x );
+		smin = sign( p1.y-p0.y );
+		err = 2*dy - dx;
+		incr1 = 2*dy;
+		incr2 = 2*( dy - dx );
+	   }
+	else {
+		maxptr = &p.y;
+		minptr = &p.x;
+		smax = sign( p1.y-p0.y );
+		smin = sign( p1.x-p0.x );
+		err = 2*dx - dy;
+		incr1 = 2*dx;
+		incr2 = 2*( dx - dy );
+	     }
+
+	hack_draw( bp,p0,mode,flex );
+
+	for ( p = p0; !eqpt( p,p1 ); )
+	    {
+		*maxptr += smax;
+		if   ( err < 0 ) err += incr1;
+		else {
+			*minptr += smin;
+			err += incr2;
+		     }
+		hack_draw( bp,p,mode,flex );
+	    }
+}
+
+dolines()		/* draw linked straight lines */
+{
+	Point p0,last;
+	Help old_set;
+
+	cursswitch( brush );
+	old_set = helpswitch( point_set );	
+
+	while( !bttn13() );
+
+	if ( bttn1() )
+	   {
+		last = p0 = mouse.xy;
+		cursswitch( brush );
+		waitbuttons( UP );
+
+		helpswitch( pos_set );
+
+		while ( TRUE )
+		      {
+			p0 = last;
+			last = rubberpt( &display,last );
+			if ( bttn3() ) break;
+			pline( &screen,p0,last,realmode( drawmode ),Flex.value );
+			waitbuttons( UP );
+		      }
+	   }
+
+	helpswitch( old_set );
+}
+
+Point
+rubberpt( bp,org )		/* draw rubber band line from org 'til button	*/
+	Bitmap *bp;		/* return point drawn to in D coords		*/
+	Point org;
+{
+	Point last;
+
+	waitbuttons( UP );
+	last = mouse.xy;
+	segment( bp,org,last,F_XOR );
+
+	for ( ; !bttn123(); wait(CPU) )
+		if ( !eqpt( last,mouse.xy ) )
+		   {
+			segment( bp,org,last,F_XOR );
+			last = mouse.xy;
+			segment( bp,org,last,F_XOR );
+		   }
+	segment( bp,org,last,F_XOR );
+	return last;
+}
+
+reflect( p,mode,axes )
+	Point p;
+	int mode;
+	int axes;
+{
+	Point mid;
+
+	mid = midpt( Draw.r );
+
+	if ( !axes )
+	   {
+		doit( &screen,p,mode );
+		return;	
+	   }
+
+	if ( xreflect( axes ) )
+	   {
+		reflect( p,mode,axes&~XAXIS );
+		reflect( Pt( p.x,mid.y+(mid.y-p.y) ),mode,axes&~XAXIS );
+	   }
+	if ( yreflect( axes ) )
+	   {
+		reflect( p,mode,axes&~YAXIS );
+		reflect( Pt( mid.x+(mid.x-p.x),p.y ),mode,axes&~YAXIS );
+	   }
+}
+
+#define NPOINTS		100
+
+do_splines()
+{
+	Point parray[NPOINTS];
+	Point p,newp;
+	int i,n,mode;
+	Help old_set;
+
+	cursswitch( brush );
+	old_set = helpswitch( point_set );	
+	while( !bttn13() );
+
+	if ( !bttn3() )
+	   {
+		parray[0] = parray[i=1] = p = newp = mouse.xy;
+
+		for ( ;; wait(CPU) )
+		    {
+			newp = rubberpt( &display,p );
+			if ( bttn3() || i == NPOINTS-2 ) break;
+			mode = realmode( drawmode );
+			parray[++i] = newp;
+			segment( &screen,p,newp,F_XOR );
+			p = newp;
+		    }
+
+		parray[i] = p;
+		n = i+1;
+
+		for ( ; --i>=0; )
+		    {
+			segment( &screen,p,parray[i],F_XOR );
+			p = parray[i];
+		    }
+		helpswitch( kill_set );
+		waitbuttons( UP );
+		myspline( Pt(0,0),parray,n,mode );
+	   }
+
+	helpswitch( old_set );
+}
+
+myspline( offset,p,n,f )
+	Point offset;
+	register Point *p;
+	int n, f;
+{
+	register long w, t1, t2, t3, scale=1000; 
+	register int i, j, steps=10; 
+	Point q,current;
+
+    	if ( p != null(Point ) )
+	   {
+		p[0] = p[1];
+		p[n] = p[n-1];
+		cursinhibit();
+		current = (add(offset,p[0]));
+		for ( i = 0; i < n-1; i++ )
+		    {
+			for ( j = 0; j < steps; j++ )
+			    {
+				if ( bttn123() ) goto abort;
+				w = scale * j / steps;
+				t1 = w * w / (2 * scale);
+				w = w - scale/2;
+				t2 = 3*scale/4 - w * w / scale;
+				w = w - scale/2;
+				t3 = w * w / (2*scale);
+				q.x = (t1*p[i+2].x + t2*p[i+1].x + 
+					t3*p[i].x + scale/2) / scale;
+				q.y = (t1*p[i+2].y + t2*p[i+1].y + 
+					t3*p[i].y + scale/2) / scale;
+				pline( &screen,current,add(offset,q), f,0 );
+				current = add(offset,q);
+			    }
+		    }
+abort:		cursallow();
+	   }
+}
+
+End of draw.c
+echo editext.c 1>&2
+cat >editext.c <<'End of editext.c'
+/*
+ *
+ *	texture editing for Brush  --  brush/editext.c
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Texture16 grid = {
+			0xFFF0, 0x8010, 0x8010, 0x8010,
+	 		0x8010, 0x8010, 0x8010, 0x8010,
+	 		0x8010, 0x8010, 0x8010, 0xFFF0,
+	 		0x0000, 0x0000, 0x0000, 0x0000,
+		 };
+
+Texture16 nogrid = {
+			 0x000F, 0x7FEF, 0x7FEF, 0x7FEF,
+			 0x7FEF, 0x7FEF, 0x7FEF, 0x7FEF,
+			 0x7FEF, 0x7FEF, 0x7FEF, 0x000F,
+			 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+		   };
+
+#define BSIZE			12
+#define ith_bit( i )		(1<<(15-i))
+#define getdot( tp,i,j )	(tp->bits[i] & ith_bit( j ))
+#define on_off()		(( bttn1() ) ? F_STORE : F_CLR )
+
+#define ij_to_p(i,j)	add( r.origin,mul( Pt(j,i),BSIZE ) )
+
+Rectangle box = { 0,0,BSIZE,BSIZE };
+Rectangle bigbox = { 0,0,16*BSIZE,16*BSIZE };
+
+Texture16
+edit_text( tp )
+	Texture16 *tp;
+{
+	Rectangle r;
+	Point p;
+	Texture16 result;
+	Word i,j;
+	Bitmap *bp;
+	Help old_set;
+
+	result = *tp;
+	r = raddp( bigbox,Draw.r.origin );
+	if ( !(bp = balloc( r )) )
+	   {
+		errmsg( "no mem" );
+		return *tp;
+	   }
+
+	screenswap( bp,r,r );
+
+	for ( i=0; i<16*BSIZE; i+=BSIZE )
+		for ( j=0; j<16*BSIZE; j+=BSIZE )
+			tx16blt( &grid,box,
+				 &display,add( r.origin,Pt(i,j) ),F_STORE );
+
+	old_set = helpswitch( pos_set );
+
+	for ( i=0; i<16; i++ )
+		for ( j=0; j<16; j++ )
+			if ( getdot( tp,i,j ) )
+				tx16blt( &nogrid,box,
+					 &display,ij_to_p(i,j),F_STORE );
+
+	for ( ; !bttn3(); wait(CPU) )
+		for ( ; bttn12(); wait( CPU ) )
+			if ( ptinrect( p=mouse.xy,r ) )
+				splat( &result,r,
+					div(sub(p,r.origin),BSIZE),on_off() );
+	screenswap( bp,r,r );
+	bfree( bp );
+	helpswitch( old_set );
+	return result;
+}
+
+splat( tp,r,p,code )
+	Texture16 *tp;
+	Rectangle r;
+	Point p;
+	Word code;
+{
+	switch( code )
+	      {
+		case F_STORE:	tp->bits[p.y] |= ith_bit( p.x );
+				tx16blt( &nogrid,raddp( box,r.origin ),
+					 &display,ij_to_p(p.y,p.x),F_STORE );
+				break;
+		case F_CLR:	tp->bits[p.y] &= ~ith_bit( p.x );
+				tx16blt( &grid,raddp( box,r.origin ),
+					 &display,ij_to_p(p.y,p.x),F_STORE );
+				break;
+	      }
+}
+
+Rectangle snarfbox();
+
+Texture16
+snarf_text( tp )
+	Texture16 *tp;
+{
+	static Word buff[16];
+	static Bitmap dummy = { buff,1,{{ 0,0 },{ 16,16 }} };
+
+	Point p;
+	Rectangle r;
+	Texture16 result;
+	Word i,j;
+	Help old_set;
+
+	old_set = helpswitch( snarf_set );
+
+	tx16blt( tp,Rect(0,0,16,16),&dummy,Pt(0,0),F_STORE );
+
+	r = snarfbox( 16 );
+	if ( bttn3() )
+	   {
+		waitbuttons( UP );
+		bitblt( &bigscreen,r,&dummy,Pt( 0,0 ),F_STORE );
+	   }
+	else	waitbuttons( UP );
+
+	for ( i=0; i<16; i++ )
+	      result.bits[i] = buff[i]>>16;
+
+	helpswitch( old_set );
+	return result;
+}
+End of editext.c
+echo errmsg.c 1>&2
+cat >errmsg.c <<'End of errmsg.c'
+/*
+ *
+ *	error messages for Brush  --  brush/errmsg.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "myjerq.h"
+#include <jerqio.h>
+#include <font.h>
+
+extern char *_doprnt();
+Point xformpt();
+char _msg_buf[100];
+
+msg( s,spot )
+	char *s;
+	Point spot;
+{
+	Bitmap *bp;
+	static Rectangle r = { { 0,0 }, { 0,0 } };
+	Word which;
+
+	r.corner.y = 8 + defont.height;
+	r.corner.x = 16 + strwidth( &defont,s );
+	spot.x = min( spot.x,Drect.corner.x-strwidth( &defont,s ) );
+
+	if ( bp = balloc( r ) )
+	   {
+		rectf( bp,r,F_STORE );
+		rectf( bp,inset( r,2 ),F_XOR );
+		string( &defont,s,bp,Pt(8,4),F_STORE );
+		screenswap( bp,r,raddp( r,spot ) );
+		which = click();
+		screenswap( bp,r,raddp( r,spot ) );
+		bfree( bp );
+	   }
+	else {
+		string( &defont,s,&display,spot,F_STORE );
+		which = click();
+	     }
+	return which;
+}
+
+errmsg( s )
+	char *s;
+{
+	return msg( s,mouse.xy );
+}
+
+errprintf( fmt, x1)
+	char *fmt;
+	unsigned x1;
+{
+	FILE fake;
+	register FILE *f;
+
+	f = &fake;
+	f->cp = f->base = _msg_buf;
+	f->flag = f->count = 0;
+	_doprnt(f, fmt, &x1);
+	putc('\0',f);
+	errmsg( _msg_buf );
+}
+
+stringf( font,buf,bp,p,code,fmt,x1 )
+	Font *font;
+	char *buf,*fmt;
+	Bitmap *bp;
+	Point p;
+	Word code;
+	unsigned x1;
+{
+	FILE fake;
+	register FILE *f;
+
+	f = &fake;
+	f->cp = f->base = buf;
+	f->flag = f->count = 0;
+	_doprnt(f, fmt, &x1);
+	putc('\0',f);
+	string( font,buf,bp,p,code );
+}
+
+
+Point
+xformpt( p,sr,dr )		/* xform p from source to dest rect coords   */
+	Point p;
+	Rectangle sr,dr;
+{
+	p.x = dr.origin.x + muldiv( p.x-sr.origin.x,RWIDTH ( dr ),RWIDTH ( sr ) );
+	p.y = dr.origin.y + muldiv( p.y-sr.origin.y,RHEIGHT( dr ),RHEIGHT( sr ) );
+	return( p );
+}
+
+End of errmsg.c
+echo help.c 1>&2
+cat >help.c <<'End of help.c'
+/*
+ *
+ *	handle Helps for Brush  --  brush/help.c
+ *
+ *	note: a Help is a set of 3 Texture16's used in help area
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Texture16 skull     = { 0x0000, 0x0000, 0x0000, 0xC003,
+	 		0xE7E7, 0x3FFC, 0x0FF0, 0x0DB0,
+	 		0x07E0, 0x0660, 0x37EC, 0xE427,
+	 		0xC3C3, 0x0000, 0x0000, 0x0000, };
+
+/*
+Texture16 hourglass=  { 0x1FF0, 0x1FF0, 0x0820, 0x0820,
+			0x0820, 0x0C60, 0x06C0, 0x0100,
+			0x0100, 0x06C0, 0x0C60, 0x0820,
+			0x0820, 0x0820, 0x1FF0, 0x1FF0 };
+*/
+
+
+Texture16 hourglass = {				/* really infinity */
+	 0x0000, 0x0000, 0x0000, 0x0000,
+	 0x3C1C, 0x4E2E, 0x8747, 0x8383,
+	 0xC1C1, 0xE2E1, 0x7472, 0x383C,
+	 0x0000, 0x0000, 0x0000, 0x0000,
+};
+
+Texture16 menucursor= { 0xFFC0, 0x8040, 0x8040, 0x8040,
+			0xFFC0, 0xFFC0, 0xFE00, 0xFEF0,
+			0x80E0, 0x80F0, 0x80B8, 0xFE1C,
+			0x800E, 0x8047, 0x8042, 0xFFC0, };
+
+Texture16 hand      = { 0x0000, 0x0000, 0x0000, 0x3f00,
+			0x40ff, 0x8c81, 0x0afe, 0x0a90,
+			0x12e0, 0x0320, 0x87c0, 0x4440,
+			0x3f80, 0x0000, 0x0000, 0x0000 };
+
+Texture16 drawcursor ={ 0x0001, 0x0003, 0x0007, 0x000F,
+			0x001E, 0x003C, 0x0078, 0x00F0,
+			0x01E0, 0x03C0, 0x0780, 0x0900,
+			0x1100, 0x1200, 0x3C00, 0xF000, };
+
+Texture16 erasecursor={ 0x0410, 0x0550, 0x0550, 0x0550,
+			0x0550, 0x0550, 0x0550, 0x0410,
+			0x0410, 0x07F0, 0x0410, 0x0410,
+			0x0410, 0x07F0, 0x000E, 0x000E, };
+
+Texture16 sweepcursor={ 0x43FF,0xE001,0x7001,0x3801,
+			0x1D01,0x0F01,0x8701,0x8F01,
+			0x8001,0x8001,0x8001,0x8001,
+			0x8001,0x8001,0x8001,0xFFFF };
+
+Texture16 sweepcircle={ 0x43F0, 0xE008, 0x7004, 0x3802,
+			0x1D01, 0x0F01, 0x8701, 0x8F01,
+			0x8001, 0x8001, 0x8001, 0x8001,
+			0x4002, 0x2004, 0x1008, 0x0FF0, };
+
+Texture16 thumbsup  = { 0x00C0, 0x0120, 0x0120, 0x0120,
+			0x0320, 0x3E20, 0x4030, 0x401E,
+			0x7812, 0x4012, 0x4012, 0x7812,
+			0x401E, 0x4030, 0x3FE0, 0x0000, };
+
+Texture16 thumbsdown= { 0x0000, 0x3FE0, 0x4030, 0x401E,
+			0x7812, 0x4012, 0x4012, 0x7812,
+			0x401E, 0x4030, 0x3E20, 0x0320,
+			0x0120, 0x0120, 0x0120, 0x00C0, };
+
+Help default_set = { &drawcursor,&erasecursor,&menucursor };
+Help sweep_set   = { &thumbsdown,&thumbsdown,&sweepcursor };
+Help point_set   = { &hand,null(Texture16),&thumbsdown };
+Help pos_set     = { &drawcursor,&erasecursor,&thumbsdown };
+Help exit_set    = { &thumbsdown,&thumbsdown,&skull };
+Help kill_set    = { &thumbsdown,&thumbsdown,&thumbsdown };
+Help menu_set    = { &thumbsdown,&thumbsdown,&menucursor };
+Help fade_set    = { null(Texture16),&erasecursor,&thumbsdown };
+Help circ_set    = { &thumbsdown,&thumbsdown,&sweepcircle };
+Help snarf_set   = { &thumbsdown,&thumbsdown,&thumbsup };
+Help curr_set;
+
+Help
+helpswitch( new_set )
+	Help new_set;
+{
+	Help last_set;
+
+	last_set = curr_set;
+	draw_help( curr_set = new_set );
+	return last_set;
+}
+
+draw_help( b )
+	Help b;
+{
+	Word i;
+
+	for ( i=0; i<3; i++ )
+		showbutton( i+1,b.text[i] );
+}
+
+showbutton( b,tp )
+	Word b;		/* button number */
+	Texture16 *tp;
+{
+	Point p;
+	Rectangle r;
+
+	r = raddp( Rect( 0,0,24,24 ),add( Pt(2,2),mul( Pt(26,0),b-1 )));
+	r = raddp( r,Helper.r.origin );
+	rectf( &display,r,F_CLR );
+
+	if ( tp )
+		tx16blt( tp,Rect(0,0,16,16),
+			 &display,add( r.origin,Pt(4,4)),F_STORE );
+}
+
+End of help.c
+echo icons.c 1>&2
+cat >icons.c <<'End of icons.c'
+/*
+ *
+ *	icon handling for Brush  --  brush/icons.c
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Word spraywords[] =   { 0x00000452,0x0003B108,0x00038A22,0x0007C188,
+			0x00082054,0x00319820,0x00220808,0x00238800,
+			0x00208800,0x00238800,0x00200800,0x00230800,
+			0x00228800,0x00230800,0x00220800,0x00200800,
+			0x00230800,0x00228800,0x00238800,0x00228800,
+			0x00200800,0x00210800,0x00228800,0x00238800,
+			0x00228800,0x00200800,0x00228800,0x00238800,
+			0x00210800,0x00410C00,0x00400400,0x007FFC00,	};
+Bitmap spraymap = { spraywords,1,{ { 0,0 },{ 32,32 } } };
+
+Word dotwords[] =     { 0x01800000,0x01B00000,0x0C300000,0x0C000000,
+			0x000C0000,0x180C0000,0x18000000,0x00060000,
+			0x30060000,0x30000000,0x00030000,0x60030000,
+			0x60000000,0x00018000,0x00018000,0xC0000000,
+			0xC000C000,0x0000C000,0x00000003,0x00000003,
+			0x00006000,0x00006000,0x00000006,0x00003006,
+			0x00003000,0x00000018,0x00001818,0x00001800,
+			0x00000030,0x00000C30,0x00000D80,0x00000180,	};
+Bitmap dotmap = { dotwords,1,{ { 0,0 },{ 32,32 } } };
+
+Word curvewords[] =   { 0x03DC0000,0x06620000,0x0C710000,0x0C790000,
+			0x18988000,0x18988000,0x310C4000,0x310C4000,
+			0x310C4000,0x62062000,0x62062000,0x62062000,
+			0xC4031000,0xC4031000,0xC4031000,0xC4031000,
+			0x00018806,0x00018806,0x00018806,0x00018806,
+			0x0000C40C,0x0000C40C,0x0000C40C,0x00006218,
+			0x00006218,0x00006218,0x00003131,0x00003131,
+			0x000018F2,0x000018E2,0x00000CC4,0x000007B8,	};
+Bitmap curvemap = { curvewords,1,{ { 0,0 },{ 32,32 } } };
+
+Word negwords[] =     { 0x003FF800,0x00FFFE00,0x03800380,0x070001C0,
+			0x0E0000E0,0x1C0000F0,0x380001F8,0x7000039C,
+			0x6000070C,0xC0000E06,0xC0001C06,0xC0003806,
+			0xC0007006,0xC000E006,0xC001C006,0xC0038006,
+			0xC0070006,0xC00E0006,0xC01C0006,0xC0380006,
+			0xC0700006,0xC0E00006,0x61C0000C,0x7380001C,
+			0x3F000038,0x1E000070,0x0E0000E0,0x070001C0,
+			0x03800380,0x00FFFE00,0x003FF800,0x00000000,	};
+Bitmap negmap = { negwords,1,{ { 0,0 },{ 32,32 } } };
+
+Word smoothwords[] =   { 0x00000000,0x00000000,0x60000000,0x90000000,
+			0x88000000,0x42000000,0x22000000,0x13200000,
+			0x8AE00000,0x4AA00000,0x32260000,0x02290000,
+			0x02290000,0x00293000,0x00294800,0x00094A00,
+			0x00064980,0x000048C0,0x00004890,0x00003090,
+			0x00000091,0x00000099,0x00000095,0x00000013,
+			0x00000011,0x00000011,0x00000001,0x00000001,
+			0x00000000,0x00000000,0x00000000,0x00000000,	};
+
+Bitmap smoothmap  = { smoothwords,1,{ { 0,0 },{ 32,32 } } };
+
+Word alignwords[] =   { 0x00000000,0x00000000,0x00000000,0x00000000,
+			0x10000000,0x28000000,0x44000000,0x44000000,
+			0x7C800000,0x44800000,0x44800000,0x00800000,
+			0x00810000,0x00810000,0x00F90000,0x00010000,
+			0x00011C00,0x00012200,0x00012000,0x00002000,
+			0x00002644,0x00002264,0x00001E54,0x00000054,
+			0x0000004C,0x00000044,0x00000044,0x00000000,
+			0x00000000,0x00000000,0x00000000,0x00000000,	};
+
+Bitmap alignmap = { alignwords,1,{ { 0,0 },{ 32,32 } } };
+
+Word brusher(),shader(),drawer(),sprayer(),
+     smoother(),styler(),moder(),helper(),
+     phonter(),unixer(),copier(),flexor(),aligner(),squarer();
+
+Icon Brush = { {{0,0},{0,0}},0,brusher };
+Icon Shade = { {{0,0},{0,0}},7,shader };
+Icon Draw  = { {{0,0},{0,0}},0,drawer };
+Icon Spray = { {{0,0},{0,0}},FALSE,sprayer };
+Icon Smooth= { {{0,0},{0,0}},TRUE,smoother };
+Icon Style = { {{0,0},{0,0}},NORMAL,styler };
+Icon Mode  = { {{0,0},{0,0}},1,moder };
+Icon Helper= { {{0,0},{0,0}},0,helper };
+Icon Phont = { {{0,0},{0,0}},0,phonter };
+Icon Copy  = { {{0,0},{0,0}},0,copier };
+Icon Unix  = { {{0,0},{0,0}},0,unixer };
+Icon Flex  = { {{0,0},{0,0}},0,flexor };
+Icon Align = { {{0,0},{0,0}},TRUE,aligner };
+Icon Square= { {{0,0},{0,0}},FALSE,squarer };
+
+Icon *Icons[NICONS] = { &Brush,&Shade,&Draw,&Style,
+			&Spray,&Smooth,&Mode,&Helper,
+			&Phont,&Unix,&Copy,&Flex,&Align,&Square };
+
+icon_handler()
+{
+	int i;
+
+	for ( i=0; i<NICONS; i++ )
+		if ( ptinrect( mouse.xy,Icons[i]->r ) )
+		   {
+			Icons[i]->handler( SELECT );
+			break;
+		   }
+	waitbuttons( UP );
+}
+
+#define TPOS(r,v,num)	add( r.origin,Pt(4,4+v*(RHEIGHT(r)/num)) )
+
+brusher( msg )		/* handler for Brush menu icon	*/
+	Word msg;
+{
+	Word n,oldval;
+
+	switch( msg )
+	      {
+		case INIT:	Brush.r = Drect;
+				Brush.r.origin.x = Brush.r.corner.x - MWIDTH;
+				Brush.r.origin.y += MHEIGHT;
+				imagemenu( Brush.r,Brush.value,brushes,NBRUSHES );
+				break;
+		case SELECT:	oldval = Brush.value;
+				if ( ( n = select( Brush.r,NBRUSHES ) ) != -1 )
+		   		   {
+					Brush.value = n;
+					highlight( TPOS(Brush.r,oldval,NSHADES ) );
+					highlight( TPOS(Brush.r,n,NSHADES ) );
+					setbrush( brushes[n] );
+				   }
+				break;
+	      }
+}
+
+shader( msg )		/* handler for Shade menu icon	*/
+	Word msg;
+{
+	Word n,oldval;
+
+	switch( msg )
+	      {
+		case INIT:	Shade.r = Drect;
+				Shade.r.origin.y += MHEIGHT;
+				Shade.r.corner.x = Shade.r.origin.x + MWIDTH;
+				imagemenu( Shade.r,Shade.value,shades,NSHADES );
+				break;
+		case SELECT:	oldval = Shade.value;
+				if ( ( n = select( Shade.r,NSHADES ) ) != -1 )
+		   		   {
+					Shade.value = n;
+					highlight( TPOS(Shade.r,oldval,NSHADES ) );
+					highlight( TPOS(Shade.r,n,NSHADES ) );
+					shade = shades[n];
+				   }
+				break;
+	      }
+}
+
+
+Rectangle
+init_rect( pos,size )
+	Point pos,size;
+{
+	Rectangle r;
+
+	r.origin = add( Drect.origin,pos );
+	r.corner = add( r.origin,size );
+	return r;
+}
+
+helper( msg )		/* handler for drawing Helper icon	*/
+	Word msg;
+{
+	Point p;
+	Word n;
+
+	switch( msg )
+	      {
+		case INIT:	Helper.r = init_rect( Pt( 6,6 ),Pt( 80,28 ) );
+				rectf( &display,Helper.r,F_STORE );
+				draw_help( curr_set );
+				break;
+		case SELECT:	break;
+	      }
+}
+
+smoother( msg )		/* handler for Smooth icon	*/
+	Word msg;
+{
+	Point p;
+
+	switch( msg )
+	      {
+		case INIT:	Smooth.r = init_rect( Pt( 105,4 ),Pt( 32,32 ) );
+				bitblt( &smoothmap,smoothmap.rect,
+					&display,Smooth.r.origin,F_STORE );
+				if ( !smoothing() )
+					bitblt( &negmap,negmap.rect,
+						&display,Smooth.r.origin,F_XOR );
+				break;
+		case SELECT:	Smooth.value ^= TRUE;
+				bitblt( &negmap,negmap.rect,
+					&display,Smooth.r.origin,F_XOR );
+				break;
+	      }
+}
+
+Texture16 squiggle = {
+			0x0001, 0x003A, 0x0044, 0x0040,
+			0x0040, 0x0020, 0x0010, 0x3C08,
+			0x4608, 0x4190, 0x4060, 0x2000,
+			0x2000, 0x1000, 0x1000, 0xE000,
+		     };
+Texture16 straight = {
+			0xFFFF, 0x8000, 0x8000, 0x8000,
+			0x8000, 0x8000, 0x8000, 0x8000,
+			0x8000, 0x8000, 0x8000, 0x8000,
+			0x8000, 0x8000, 0x8000, 0x8000,
+		     };
+
+Bitmap *sprayicons[] = { &curvemap,&dotmap,&spraymap };
+
+sprayer( msg )		/* handler for Spray icon	*/
+	Word msg;
+{
+	switch( msg )
+	      {
+		case INIT:	Spray.r = init_rect( Pt( 260,4 ),Pt( 32,32 ) );
+				bitblt( sprayicons[Spray.value],spraymap.rect,
+					&display,Spray.r.origin,F_STORE );
+				break;
+		case SELECT:	Spray.value = (Spray.value+1)%3;
+				bitblt( sprayicons[Spray.value],spraymap.rect,
+					&display,Spray.r.origin,F_STORE );
+				break;
+	      }
+}
+
+aligner( msg )		/* handler for Align icon	*/
+	Word msg;
+{
+	switch( msg )
+	      {
+		case INIT:	Align.r = init_rect( Pt( 154,4 ),Pt( 32,32 ) );
+				bitblt( &alignmap,alignmap.rect,
+					&display,Align.r.origin,F_STORE );
+				if ( !aligning() )
+					bitblt( &negmap,negmap.rect,
+						&display,Align.r.origin,F_XOR );
+				break;
+		case SELECT:	Align.value ^= TRUE;
+				bitblt( &negmap,negmap.rect,
+					&display,Align.r.origin,F_XOR );
+				break;
+	      }
+}
+
+char *emph_text[] = { "normal text","outline text",
+			"bold text  ","shadow text","italic text",NULL };
+Menu emph_menu = { emph_text };
+
+styler( msg )		/* handler for font Style icon	*/
+	Word msg;
+{
+	Word n;
+
+	switch( msg )
+	      {
+		case INIT:	Style.r = init_rect( Pt( 516,10 ),Pt( 110,25 ) );
+				rectf( &display,Style.r,F_CLR );
+				textblt( &defont,emph_text[Style.value],
+					 &display,Style.r.origin,Style.value );
+				break;
+		case SELECT:	n = menuhit( &emph_menu,3 );
+				if ( n != -1 ) Style.value = n;
+				rectf( &display,Style.r,F_CLR );
+				textblt( &defont,emph_text[Style.value],
+					 &display,Style.r.origin,Style.value );
+				break;
+	      }
+}
+
+int drawmode   = F_OR;
+int modes[]    = { F_XOR,F_OR,F_STORE,F_AND };
+char *mtext2[] = { "xor mode  ","or mode   ","store mode","and mode  ",NULL };
+Menu modemenu  = { mtext2 };
+
+moder( msg )		/* handler for drawing Mode icon	*/
+	Word msg;
+{
+	Word n;
+	char buf[20];
+
+	switch( msg )
+	      {
+		case INIT:	Mode.r = init_rect( Pt( 409,10 ),Pt( 90,25 ) );
+				string( &defont,mtext2[Mode.value],
+					&display,Mode.r.origin,F_STORE );
+				break;
+		case SELECT:	n = menuhit( &modemenu,3 );
+				if ( n != -1 ) Mode.value = n;
+				string( &defont,mtext2[Mode.value],
+					&display,Mode.r.origin,F_STORE );
+				drawmode = modes[Mode.value];
+				break;
+	      }
+}
+
+extern char *ftext[];
+
+phonter( msg )		/* handler for drawing Phont icon	*/
+	Word msg;
+{
+	switch( msg )
+	      {
+		case INIT:	Phont.r = init_rect( Pt( 643,10 ),Pt( 60,25 ) );
+				rectf( &display,Phont.r,F_CLR );
+				string( &defont,ftext[Phont.value],
+					&display,Phont.r.origin,F_STORE );
+				break;
+		case SELECT:	pick_font();
+				rectf( &display,Phont.r,F_CLR );
+				string( &defont,ftext[Phont.value],
+					&display,Phont.r.origin,F_STORE );
+				break;
+	      }
+}
+
+char *ctext[]    = { "same","magnify","shrink","flip",
+		     "rotate","slant","outline","shadow","new",NULL };
+Menu copymenu    = { ctext };
+
+char *fliptext[] = { "flip x","flip y",NULL };
+Menu flipmenu    = { fliptext };
+
+char *rottext[]  = { "clockwise","counter",NULL };
+Menu rotmenu     = { rottext };
+
+#define SHEAR	6
+#ifdef JERQ
+#define lasty	prevhit
+#endif
+
+Image protate(),mrotate(),edgeit(),shadowit(),crunch(),new_image();
+
+#ifndef OLDROM
+#define lasty	prevhit
+#endif
+
+copier( msg )		/* handler for drawing Copy icon	*/
+	Word msg;
+{
+	Word choice;
+
+	switch( msg )
+	      {
+		case INIT:	Copy.r=init_rect( Pt( 195,10 ),Pt( 40,33 ) );
+				string( &defont,"image",
+					&display,Copy.r.origin,F_STORE );
+				break;
+		case SELECT:	copymenu.lasty = 0;
+				choice = menuhit( &copymenu,3 );
+				if ( choice == -1 ) break;
+				switch( choice )
+				      {
+					case 0:	break;
+					case 1: Now_Pic = blowup( Now_Pic );
+						break;
+					case 2: Now_Pic = crunch( Now_Pic );
+						break;
+					case 3:	switch( menupick3( &flipmenu ) )
+						{
+						  case 0: Now_Pic=flippit( Now_Pic,
+									   FLIPX );
+							  break;
+						  case 1: Now_Pic=flippit( Now_Pic,
+									   FLIPY );
+						}
+						break;
+					case 4:	switch( menupick3( &rotmenu ) )
+						{
+						  case 0: Now_Pic=mrotate(Now_Pic);
+							  break;
+						  case 1: Now_Pic=protate(Now_Pic);
+						}
+						break;
+					case 5: Now_Pic = shear( Now_Pic );
+						break;
+					case 6: Now_Pic = edgeit( Now_Pic );
+						break;
+					case 7: Now_Pic = shadowit( Now_Pic );
+						break;
+					case 8: Ibfree( Now_Pic.bp );
+						Now_Pic = new_image();
+						break;
+				      }
+				if ( Now_Pic.bp ) position( &Now_Pic,drawmode );
+	      }
+	waitbuttons( UP );
+	cursswitch( brush );
+}
+
+char *utext[]  = { "save","recall","exit",NULL };
+Menu unixmenu  = { utext };
+
+char *utext2[] = { "bitmap","shades","brushes",NULL };
+Menu umenu2    = { utext2 };
+
+unixer( msg )		/* handler for drawing Unix icon	*/
+	Word msg;
+{
+	Help old_set;
+
+	switch( msg )
+	      {
+		case INIT:	Unix.r = init_rect( Pt( 720,10 ),Pt( 40,25 ) );
+				string( &defont,"i/o",
+					&display,Unix.r.origin,F_STORE );
+				break;
+		case SELECT:	switch( menuhit( &unixmenu,3 ) )
+				{
+				  case 0: switch( menupick3( &umenu2 ) )
+					  {
+					    case 0: save_pic();
+						    break;
+					    case 1: save_text( shades,NSHADES );
+						    break;
+					    case 2: save_text( brushes,NBRUSHES );
+						    break;
+					   }
+					  break;
+				  case 1: switch( menupick3( &umenu2 ) )
+					  {
+					    case 0: recall_pic();
+						    break;
+					    case 1: recall_text( shades,
+							         Shade.r,
+								 Shade.value,
+								 NSHADES);
+						    break;
+					    case 2: recall_text( brushes,
+							         Brush.r,
+								 Brush.value,
+								 NBRUSHES);
+						    setbrush( brush );
+						    break;
+					   }
+					  break;
+				  case 2: old_set = helpswitch( exit_set );
+					  if ( are_you_sure( 2 ) )  exit();
+					  helpswitch( old_set );
+					  break;
+				}
+	      }
+}
+
+char *flextext[] = { "off","y=0","x=0","both",NULL };
+Menu flexmenu    = { flextext };
+
+flexor( msg )		/* handler for drawing Flex icon	*/
+	Word msg;
+{
+	switch( msg )
+	      {
+		case INIT:	Flex.r = init_rect( Pt( 358,4 ),Pt( 34,34 ) );
+				show_flex( Flex.r.origin );
+				break;
+		case SELECT:	switch( menuhit( &flexmenu,3 ) )
+				      {
+					case 0:	Flex.value = 0;
+						break;
+					case 1: Flex.value = XAXIS;
+						break;
+					case 2:	Flex.value = YAXIS;
+						break;
+					case 3:	Flex.value = XAXIS|YAXIS;
+						break;
+					default: return;
+				      }
+				show_flex( Flex.r.origin );
+	      }
+}
+
+show_flex( p )
+	Point p;
+{
+	static Rectangle box16 = { { 0,0 },{ 16,16 } };
+
+	rectf( &display,Flex.r,F_CLR );
+	tx16blt( &drawcursor,box16,
+		 &display,add( p,Pt(16,0) ),F_STORE );
+	if ( yreflect(Flex.value) )
+		flip_x( &display,raddp( Rect( 16,0,32,16 ),p ),
+			&display,p );
+	if ( xreflect(Flex.value) )
+		flip_y( &display,raddp( Rect( 0,0,32,16 ),p ),
+			&display,add( p,Pt(0,16) ) );
+}
+
+squarer( msg )		/* handler for Square icon	*/
+	Word msg;
+{
+	Point p;
+
+	switch( msg )
+	      {
+		case INIT:	Square.r = init_rect( Pt( 309,4 ),Pt( 32,32 ) );
+				p = Square.r.origin;
+				tx16blt( &drawcursor,Rect(0,0,16,16),
+					 &display,add( p,Pt(16,0) ),F_STORE );
+				if ( Square.value )
+				     tx16blt( &straight,Rect(0,0,16,16),
+					      &display,add( p,Pt(0,16) ),F_STORE );
+				else tx16blt( &squiggle,Rect(0,0,16,16),
+					      &display,add( p,Pt(0,16) ),F_STORE );
+				break;
+		case SELECT:	Square.value ^= TRUE;
+				p = Square.r.origin;
+				if ( Square.value )
+				     tx16blt( &straight,Rect(0,0,16,16),
+					      &display,add( p,Pt(0,16) ),F_STORE );
+				else tx16blt( &squiggle,Rect(0,0,16,16),
+					      &display,add( p,Pt(0,16) ),F_STORE );
+				break;
+	      }
+}
+
+drawer( msg )		/* handler for Draw icon	*/
+	Word msg;
+{
+	switch( msg )
+	      {
+		case INIT:	Draw.r.origin = add( DORG,Pt( MWIDTH,MHEIGHT ) );
+				Draw.r.corner = sub( DCOR,Pt( MWIDTH,0 ) ) ;
+				break;
+		case SELECT:	main_menu();		
+				break;
+	      }
+}
+
+#define LINES		0
+#define CURVES		1
+#define BOX		2
+#define CIRCLE		3
+#define DISC		4
+#define STRING		5
+#define SEEDFILL	6
+#define CLEAR		7
+#define TEXTURE		8
+#define INVERT		9
+#define FADE		10
+#define NEWBRUSH	11
+#define NEWSHADE	12
+#define DETAILS		13
+
+char *mtext[] = { "lines","curves","box","ellipse","disc",
+		  "string","fill","clear","texture","invert",
+		  "fade","new brush","new shade",
+		  "details",NULL };
+
+Menu mainmenu = { mtext };
+
+char *edsntext[] = { "edit","snarf",NULL };
+
+Menu edsnmenu    = { edsntext };
+
+main_menu()
+{
+	int op,n;
+
+	cursswitch( null( Texture16 ) );
+	switch( op = menuhit( &mainmenu,3 ) )
+	      {
+		case LINES:	dolines();
+				break;
+		case CURVES:	do_splines();
+				break;
+		case CIRCLE:	Now_Pic = discs( Now_Pic,UNFILLED );
+				position( &Now_Pic,drawmode );
+				break;
+		case DISC:	Now_Pic = discs( Now_Pic,FILLED );
+				position( &Now_Pic,drawmode );
+				break;
+		case STRING:	Now_Pic = text( Now_Pic,drawmode );
+				position( &Now_Pic,drawmode );
+				break;
+		case SEEDFILL:	seedfill();
+				break;
+		case CLEAR:    
+		case TEXTURE:  
+		case INVERT:   
+		case BOX:   
+		case FADE:	rect_op( op );
+				break;
+		case NEWBRUSH:	if ( (n = menupick3( &edsnmenu ))<0 ) break;
+				*brush = (n==0) ? edit_text( brush )
+						: snarf_text( brush );
+				setbrush( brush );
+				imagemenu( Brush.r,Brush.value,brushes,NBRUSHES );
+				break;
+		case NEWSHADE:	if ( (n = menupick3( &edsnmenu ))<0 ) break;
+				*shade = (n==0) ? edit_text( shade )
+						: snarf_text( shade );
+				imagemenu( Shade.r,Shade.value,shades,NSHADES );
+				break;					 
+		case DETAILS:	details();
+				break;
+	     }
+	cursswitch( brush );
+	waitbuttons( UP );
+}
+
+menupick3( mp )
+	Menu *mp;
+{
+	Texture16 *tp;
+	Help old_set;
+	int n = -1;
+
+	tp = (Texture16 *)cursswitch( &menucursor );
+	old_set = helpswitch( menu_set );
+
+	for ( ; !bttn123(); wait(CPU) );
+
+	if ( bttn3() ) n = menuhit( mp,3 );
+
+	cursswitch( tp );
+	helpswitch( old_set );
+	return n;
+}
+
+Point alignment();
+
+rect_op( op )
+	Word op;
+{
+	Bitmap *bp;
+	Help old_set;
+	Rectangle r;
+	Point p;
+	Texture16 *tp;
+
+	old_set = helpswitch( sweep_set );
+
+	r = sweeprect( Pt(1,1) );
+
+	if ( !nullrect( r ) )
+		switch( op )
+		      {
+			case CLEAR:	rectf( &screen,r,F_CLR );
+					break;
+			case TEXTURE:	if ( bp = balloc( r ) )
+					   {
+						texture16( bp,r,shade,F_STORE );
+						Ibfree( Now_Pic.bp );
+						Now_Pic = make_image( bp,r,
+							r.origin,
+							alignment(r.origin) );
+					     position( &Now_Pic,drawmode );
+					   }
+					break;
+			case INVERT:	rectf( &screen,r,F_XOR );
+					break;
+			case FADE:	fade( r );
+					break;
+			case BOX:	r = inset( r,-8 );
+					p = r.origin;
+
+					if ( aligning() ) r = rsubp( r,p );
+					if ( bp = balloc( r ) )
+					   {
+						Ibfree( Now_Pic.bp );
+						tp = (Texture16 *)
+							cursswitch(&hourglass);
+						rectf( bp,bp->rect,F_CLR );
+						drawbox( bp,inset( r,8 ),F_STORE );
+						Now_Pic = make_image( bp,bp->rect,
+							p,
+							alignment(r.origin) );
+						position( &Now_Pic,drawmode );
+						cursswitch( tp );
+					   }
+					break;
+		      }
+	helpswitch( old_set );
+}
+
+drawbox( bp,r,code )	/* draw rect r ( D coords ) using function code	*/
+	Bitmap *bp;
+	Rectangle r;
+	Word code;
+{
+	pline( bp,RORG,Pt(RCOR.x,RORG.y),code,0 );
+	pline( bp,Pt(RCOR.x,RORG.y),RCOR,code,0 );
+	pline( bp,RCOR,Pt(RORG.x,RCOR.y),code,0 );
+	pline( bp,Pt(RORG.x,RCOR.y),RORG,code,0 );
+}
+
+fade( r )
+	Rectangle r;
+{
+	rectf( &bigmask,bigmask.rect,F_XOR );
+
+	helpswitch( fade_set );
+
+	for ( ; !bttn3(); wait(CPU) )
+		for ( ; bttn2(); wait(CPU) )
+			splatter( &screen,r );
+
+	rectf( &bigmask,bigmask.rect,F_XOR );
+}
+		  
+End of icons.c
+echo newfill.c 1>&2
+cat >newfill.c <<'End of newfill.c'
+/*
+ *
+ *	area fills for Brush  --  brush/newfill.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+seedfill()
+{
+	Rectangle r;
+	register Word rox,roy,rcx,rcy;
+	register Bitmap *t,*safe;
+	Word i,limit;
+	Help old_set;
+
+	old_set = helpswitch( sweep_set );	
+	r = sweeprect( Pt(1,1) );
+	rox = r.origin.x;
+	roy = r.origin.y;
+	rcx = r.corner.x;
+	rcy = r.corner.y;
+	helpswitch( old_set );
+
+	if ( nullrect(r) ) return;	
+
+	if ( !( t = balloc( r ) ) ) erreturn( "no memory" );
+
+	if ( !( safe = balloc( r ) ) )
+	   {
+		free( t );
+		erreturn( "no memory" );
+	   }
+
+	/* make a safe copy */
+
+	bitblt( &display,r,safe,r.origin,F_STORE );
+
+	helpswitch( pos_set );	
+	cursswitch( null(Texture) );
+
+	i = errmsg( "seed points?" );
+	if ( i==1 ) point( &display,mouse.xy,F_STORE );
+
+	while ( !bttn3() )
+		if ( bttn12() )
+		   {
+			point( &display,mouse.xy,realmode(F_STORE) );
+			while( bttn12() );
+		   }
+
+	waitbuttons( UP );
+
+	/* erase all but seed points */
+
+	bitblt( safe,r,&display,r.origin,F_XOR );
+	helpswitch( kill_set );	
+
+	limit = max( RHEIGHT(r),RWIDTH(r) );
+
+	for ( i=1; i<limit && !bttn123(); i++,wait( CPU ) )
+	    {
+		bitblt( &display,r,t,Pt(rox,roy),F_STORE );
+		bitblt( &display,Rect(rox,roy+1,rcx,rcy),t,Pt(rox,roy),F_OR );
+		bitblt( &display,Rect(rox,roy,rcx,rcy-1),
+			t,Pt(rox,roy+1),F_OR );
+		bitblt( &display,Rect(rox,roy,rcx-1,rcy),
+			t,Pt(rox+1,roy),F_OR );
+		bitblt( &display,Rect(rox+1,roy,rcx,rcy),t,Pt(rox,roy),F_OR );
+		bitblt( t,r,&display,Pt(rox,roy),F_STORE );
+		bitblt( safe,r,&display,Pt(rox,roy),F_CLR );
+	    }
+
+	texture16( t,r,shade,F_XOR );
+	bitblt( t,r,&display,r.origin,F_CLR );
+	bitblt( &display,r,safe,r.origin,F_OR );
+
+	bitblt( safe,r,&display,r.origin,F_STORE );
+	bfree( safe );
+	bfree( t );
+	helpswitch( old_set );	
+}
+End of newfill.c
+echo readmap.c 1>&2
+cat >readmap.c <<'End of readmap.c'
+/*
+ *
+ *	read files for Brush  --  brush/readmap.c
+ *
+ *	NOTE:	dmdps code courtesy of Andy Schnable
+ *		blitblt "      "     " Tom Duff
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "myjerq.h"
+#include <jerqio.h>
+
+gettextures( tp,n,fp )		/* read in a set of textures (brushes or shades) */
+	Texture16 *tp[];
+	int n;
+	FILE *fp;
+{
+	short buff[16],i,j,stat = 1;
+
+	for ( i=0; stat>0 && i<n; i++ )
+		if ( ( stat=fread( buff,sizeof( Texture16 ),1,fp ) ) >0 )
+			for ( j=0; j<16; j++ )
+				tp[i]->bits[j] = buff[j];
+}
+
+#ifndef BITFILE
+
+/*	compile DMDPS format code	*/
+
+#ifndef VALSCREENCOLOR
+#include <setup.h>
+#endif
+
+#define allbuttons	((mouse.buttons&7)==7)
+
+Bitmap *
+readbitmap( stream )
+	FILE *stream;
+{
+	register i;
+	short rc, nrasters, rastwid;
+	Bitmap *bp;
+
+	nrasters = getw(stream);
+	rastwid = getw(stream);
+
+	if ( (bp=balloc(Rect(0,0,rastwid*16,nrasters))) == (Bitmap *) NULL )
+		return bp;
+
+	for ( i=0 ;(i<nrasters)&&((rc=readrast(bp,i,rastwid,stream))!=EOF); i++)
+		if ( allbuttons ) break;
+
+	if ( !VALSCREENCOLOR )
+		rectf( bp,bp->rect,F_XOR );
+	return bp;
+}
+
+readrast( bp,i,nw,in )
+	Bitmap *bp;
+	int i;
+	int	nw;
+	FILE	*in;
+{
+	int count,ctype;
+	char *bits;
+
+	bits = (char *)addr(bp,Pt(0,i));
+	while ( nw > 0 )
+	      {
+		count = getc( in );
+		count &= 255;
+		ctype = count&128;
+		count &= 127;
+		nw -= count;
+		count *= 2;
+
+		if ( ctype )
+		   {
+			if ( fread( bits,2,1,in ) != 1 )
+				return (EOF);
+			for ( count-=2; count>0; count-- )
+			    {
+				*(bits+2) = *bits;
+				bits += 1;
+			    }
+			bits += 2;
+		   }
+		else {
+			if ( fread( bits,count,1,in ) != 1 )
+				return (EOF);
+			bits += count;
+		     }
+	}
+	return (1);
+}
+
+getw(stream)
+FILE *stream;
+{
+	register l, h;
+
+	if ( ( l=getc( stream ) ) == EOF ) return (EOF); 
+	if ( ( h=getc( stream ) ) == EOF ) return(EOF);
+	return ( h&255 ) << 8 | ( l&255 );
+}
+
+#endif
+
+#ifdef BITFILE
+
+#define SHORTSIZE	16
+
+#define sendword(w, f)	(putc(w&255, f), putc((w>>8)&255, f))
+Word buffer[XMAX/WORDSIZE], raster[XMAX/WORDSIZE];
+Bitmap bbuffer={ buffer, (sizeof buffer)/(sizeof(Word)), 0, 0, XMAX, 1};
+int ctype, count;
+short *p1, *endraster;
+
+getword(stream)		/* snarfed from J5620 version */
+FILE *stream;
+{
+	register l, h;
+
+	if ( ( l=getc( stream ) ) == EOF ) return (EOF); 
+	if ( ( h=getc( stream ) ) == EOF ) return(EOF);
+	return ( h&255 ) << 8 | ( l&255 );
+}
+
+Bitmap *
+readbitmap( f )
+	FILE *f;
+{
+	register Bitmap *bp=0;
+	register h, w, i, j;
+	Rectangle r;
+
+	i = getword( f );		/* eat first 2 null bytes */
+
+	r.origin.x = getword( f );
+	r.origin.y = getword( f );
+	r.corner.x = getword( f );
+	r.corner.y = getword( f );
+
+	h = r.corner.y - r.origin.y;
+	w = r.corner.x - r.origin.x;
+	w = ( w+SHORTSIZE-1 )/SHORTSIZE;
+
+	bp = balloc( Rect( 0,0,SHORTSIZE*w,h ) );
+	if ( bp==0 ) return null(Bitmap);
+
+	rectf( &bbuffer,bbuffer.rect,F_CLR );
+
+	for ( i=0; i!=h; i++ )
+	    {
+		if ( getrast( f,(short *)raster,w ) )
+		   {
+			bfree( bp );
+			return null(Bitmap);
+		   }
+		for ( j=0; j!=bp->width; j++ )
+			buffer[j] ^= raster[j];
+		bitblt( &bbuffer,bbuffer.rect,bp,Pt( 0,i ),F_STORE );
+	    }
+	return bp;
+}
+
+static
+getrast( f,p,nwords )	/* receive single compressed raster */
+	FILE *f;
+	register short *p;
+	int nwords;
+{
+	register i,count;
+
+	for ( ; nwords>0; nwords-=count )
+	    {
+		if ( ( count=getc( f ) ) <= 0 )
+			return 1;
+		if ( count&128 )
+		   {
+			count &= 127;	/* count must not be zero, not checked */
+			if ( fread( p,sizeof(short),1,f ) != 1 )
+				return 1;
+			for ( i=1; i!=count; i++ )
+			    {
+				*(p+1) = *p;
+				p++;
+			    }
+			p++;
+		   }
+		else {
+			if ( fread( p,sizeof(short),count,f ) !=count )
+				return 1;
+			p += count;
+		     }
+	    }
+	return ( nwords != 0 );
+}
+#endif
+End of readmap.c
+echo writemap.c 1>&2
+cat >writemap.c <<'End of writemap.c'
+/*
+ *
+ *	write files for Brush  --  brush/writemap.c
+ *
+ *	NOTE:	dmdps (J5620) code courtesy of Andy Schnable
+ *		blitblt (JERQ) code courtesy of Tom Duff
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "myjerq.h"
+#include <jerqio.h>
+
+puttextures( tp,n,fp )		/* write a set of textures (brushes or shades) */
+	Texture16 *tp[];
+	int n;
+	FILE *fp;
+{
+	short buff[16],i,j;
+
+	for ( i=0; i<n; i++ )
+	    {
+		for ( j=0; j<16; j++ ) buff[j] = tp[i]->bits[j];
+		fwrite( (char *)buff,sizeof( Texture16 ),1,fp );
+	    }
+}
+
+#ifdef BITFILE
+#define SHORTSIZE	16
+#define sendword(w, f)	(putc(w&255, f), putc((w>>8)&255, f))
+
+extern Word buffer[], raster[];
+extern Bitmap bbuffer;
+extern int ctype, count;
+extern short *p1, *endraster;
+
+putbitmap( bp,r,f,compl )
+	Bitmap *bp, *compl;
+	Rectangle r;
+	FILE *f;
+{
+	register i, nrasters, rastwid, nrword;
+	Rectangle rrast;
+
+	nrasters = r.corner.y - r.origin.y;
+	i = r.corner.x - r.origin.x;
+	rastwid = ( i+SHORTSIZE-1 )/SHORTSIZE;
+	nrword = ( i+WORDSIZE-1 )/WORDSIZE;
+	endraster = (short *)raster + rastwid-1;
+
+	sendword( 0,f );		/* 0 1st word for some silly reason	*/
+	sendword( r.origin.x,f );
+	sendword( r.origin.y,f );
+	sendword( r.corner.x,f );
+	sendword( r.corner.y,f );
+
+	rectf( &bbuffer,bbuffer.rect,F_CLR );
+	for ( i=0; i<nrword; i++ )
+		raster[i] = 0;
+
+	rrast = r;
+
+	if ( compl )
+		rectf( compl,r,F_XOR );
+
+	for ( ; rrast.origin.y < r.corner.y; rrast.origin.y++ )
+	    {
+		rrast.corner.y = rrast.origin.y + 1;
+		if ( compl )
+			rectf( compl,rrast,F_XOR );
+		bitblt( bp,rrast,&bbuffer,Pt( 0, 0 ),F_STORE );
+		for ( i=0; i<nrword; i++ )
+			raster[i] ^= buffer[i];
+		putrast( f );
+		for ( i=0; i<nrword; i++ )
+			raster[i] = buffer[i];
+	    }
+}
+
+static
+putrast( f )
+	FILE *f;
+{
+	register short *p2;
+
+	p1 = p2 = (short *)raster;
+	do {
+		if ( p1 >= p2 )
+		   {
+			p2 = p1 + 1;
+			count = 2;
+			ctype = *p1 == *p2;
+
+		   }
+		else	if ( ( *p2 == *( p2+1 ) ) == ctype )
+			   {
+				if ( ++count >= 127 )
+				   {
+					putbits( f );
+					p1 = p2 + 2;
+				   }
+				else	p2++;
+
+			   }
+			else	if ( ctype )
+				   {
+					putbits( f );
+					p1 = p2 + 1;
+					ctype = 0;
+
+				   }
+				else {
+					count--;
+					putbits( f );
+					p1 = p2;
+					ctype = 1;
+				     }
+	   } while ( p2 < endraster );
+
+	if ( p1 <= endraster )
+	   {
+		if ( p2 > endraster )
+			count--;
+		putbits( f );
+	   }
+}
+
+static
+putbits( f )
+	FILE *f;
+{
+	int c, i;
+
+	c = count;
+	if ( ctype )
+	   {
+		c += 128;
+		count = 1;
+	   }
+	putc( c,f );
+	fwrite( (char *)p1,sizeof *p1,count,f );
+}
+#endif
+
+#ifndef BITFILE
+
+/*	compile DMDPS format code	*/
+
+#ifndef VALSCREENCOLOR
+#include <setup.h>
+#endif
+
+#define sendshort(w)	(putc(w&255, filep),putc((w>>8)&255, filep))
+#define WID (r.corner.x-r.origin.x)
+#define BNULL ((Bitmap *) NULL)
+
+static Bitmap *braster = BNULL;
+static short ctype, count; 
+static short *p1;
+static FILE *filep;
+#define allbuttons	((mouse.buttons&7)==7)
+
+putbitmap( bp,r,fileptr,dummy )
+	Bitmap *bp,*dummy; 
+	Rectangle r; 
+	FILE *fileptr;
+{
+	short nrasters,rastwid;
+	Rectangle rrast;
+
+	filep = fileptr;
+	nrasters = r.corner.y-r.origin.y;
+	rastwid = (WID+15)/16;
+	sendshort( nrasters ); 
+	sendshort( rastwid );
+
+	if ( braster == BNULL)
+		if ( ( braster= balloc(Rect(0, 0, XMAX, 1))) == BNULL )
+			return 0;
+
+	rrast = r;
+	rectf( bp,r,F_XOR );
+
+	for ( ; rrast.origin.y < r.corner.y; rrast.origin.y++ )
+	    {
+		rrast.corner.y = rrast.origin.y + 1;
+		rectf( bp,rrast,F_XOR );
+		rectf( braster,Rect( 0,0,XMAX,1 ),F_CLR );
+
+		bitblt( bp,rrast,braster,Pt( 0,0 ),F_STORE );
+		if ( !VALSCREENCOLOR )
+			rectf( braster,Rect( 0,0,XMAX,1 ),F_XOR );
+		sendrast( braster,Pt( 0,0 ),rastwid );
+		if ( allbuttons ) return 0;
+	    }
+	return 1;
+}
+
+static
+sendrast( bmap,pnt,rastwid )
+	Bitmap	*bmap;
+	Point	pnt;
+	short	rastwid;
+{
+	short *p2,*endraster;
+
+	p1 = p2 = (short *) addr( bmap, pnt );
+	endraster = p1 + rastwid - 1;
+
+	do {
+		if ( p1 >= p2 )
+		   {
+			p2 = p1 + 1; 
+			count = 2;
+			ctype = ( *p1 == *p2 );
+
+		   }
+		else	if ( ( *p2 == *(p2+1) ) == ctype )
+			   {
+				if ( ++count >= 127 )
+				   {
+					sendbits();
+					p1 = p2 + 2;
+				   }
+				else	p2++;
+
+			   }
+			else	if ( ctype )
+				   {
+					sendbits();
+					p1 = p2 + 1;
+					ctype=0;
+
+				   }
+				else {
+					count--; 
+					sendbits();
+					p1 = p2;
+					ctype=1;
+				     }
+	   } while ( p2 < endraster );
+
+	if ( p1 > endraster ) return;
+	if ( p2 > endraster ) count--;
+	sendbits();
+	fflush( filep );
+	sync();
+}
+
+static sendbits()
+{
+	short c;
+	c = count; 
+	if ( ctype )
+	   { 
+		c += 128; 
+		count = 1; 
+	   }
+	putc( c,filep );
+	fwrite( (char *)p1,2*count,1,filep );
+}
+
+#endif
+End of writemap.c
+echo options.c 1>&2
+cat >options.c <<'End of options.c'
+/*
+ *
+ *	set options for Brush  --  brush/options.c
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+setbrush( tp )		/* set brush to texture16 tp, init mask bitmaps	*/
+	Texture16 *tp;
+{
+	Word i;
+	brush = tp;
+	for ( i=0; i<16; i++ )
+	    {
+		maskwords[i] = ((Word)brush->bits[i])<<16;
+		notmaskwords[i] = maskwords[i] ^ 0xffffffff;
+	    }
+	cursswitch( brush );
+}
+
+select( r,num )
+	Rectangle r;	/* rect where the textures live */
+	Word num;	/* how many to choose from */
+{
+	Word i,hgt,off;
+	hgt = RHEIGHT(r)/num;
+	off = mouse.xy.y-r.origin.y;
+
+	if ( bttn3() && ptinrect( mouse.xy,r ) )
+		return muldiv( mouse.xy.y-r.origin.y+4,num,RHEIGHT( r ) );
+	else	return -1;
+}
+
+imagemenu( r,current,images,num )
+	Rectangle r;		/* rect in D coords */
+	Word current;		/* index of current value for hilighting */
+	Texture16 *images[];	/* array of images to be drawn */
+	Word num;		/* number of images */
+{
+	Point p;
+	int i,hgt;
+
+	hgt  = RHEIGHT( r )/num;
+	p = add( r.origin,Pt(4,4) );
+
+	rectf( &display,r,F_STORE );
+	rectf( &display,inset( r,2 ),F_XOR );
+
+	for ( i=0; i<num; i++ )
+	    {
+		tx16blt( images[i],Rect(0,0,16,16),
+			 &display,add(p,Pt(0,i*hgt)),F_STORE );
+		if ( i== current )
+			highlight( add(p,Pt(0,i*hgt)) );
+	    }
+}
+
+highlight( p )		/* highlight current brush/shade selection */
+	Point p;
+{
+	rectf( &display,Rpt( sub( p,Pt(2,2) ),add( p,Pt(18,19) ) ),F_XOR );
+	rectf( &display,Rpt( sub( p,Pt(2,4) ),add( p,Pt(18,21) ) ),F_XOR );
+}
+
+tx16blt( t,r,bp,p,code )	/* copies a texture16 to a bitmap pt	*/	
+	Texture16 *t;		/*  WITHOUT alignment			*/
+	Rectangle r;
+	Bitmap *bp;
+	Point p;
+	Word code;
+{
+	static Word tmpwords[16];
+	static Bitmap tmp = { tmpwords,1,{ {0,0},{16,16} } };
+
+	r = rsubp( r,r.origin );
+	texture16( &tmp,r,t,F_STORE );
+	bitblt( &tmp,r,bp,p,code );
+}
+
+End of options.c
+echo smooth.c 1>&2
+cat >smooth.c <<'End of smooth.c'
+/*
+ *
+ *	image smoothing for Brush  --  Brush/smooth.c
+ *
+ *  NOTE:  this code courtesy of the famous T. G. Dennehy
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+smooth( b,r,bfac )
+	Bitmap		*b;
+	Rectangle	r;
+	Point		bfac;
+{
+	Bitmap	*one,*two,*three;
+	Point	fac;
+	short	i;	
+
+	for ( fac.x=1; ( i= ( fac.x << 1 ) ) <= bfac.x; fac.x=i );
+	for ( fac.y=1; ( i= ( fac.y << 1 ) ) <= bfac.y; fac.y=i );
+	if ( ( ( r.corner.x-r.origin.x ) < ( fac.x*2 ) ) ||
+	     ( ( r.corner.y-r.origin.y ) < ( fac.y*2 ) ) )
+		return -4;
+ 
+/*	allocate some bitmap space	*/
+
+	if ( ( one=balloc( r ) ) == null(Bitmap) )
+		return -1;
+
+	if ( ( two=balloc( r ) ) == null(Bitmap) )
+	   {
+		bfree(one);
+		return -2;
+	   }
+
+	if ( ( three=balloc( r ) ) == null(Bitmap) )
+	   {
+		bfree(one);
+		bfree(two);
+		return -3;
+	   }
+
+
+	for ( ;; )
+	    {
+
+		if ( ( ( fac.x >>= 1 ) == 0 ) ||
+		     ( ( fac.y >>= 1 ) == 0 )   )
+			break;
+
+/*	up and to the right	*/
+
+		rectf( one,one->rect,F_CLR );
+		bitblt( b,Rect( r.origin.x+fac.x,r.origin.y,r.corner.x,
+				r.corner.y-fac.y),
+ 			one,add( one->rect.origin,Pt( 0,fac.y ) ),F_XOR );
+
+/*	down and to the left	*/
+
+		rectf( two,two->rect,F_STORE );
+		bitblt( b,Rect( r.origin.x,r.origin.y+fac.y,
+				r.corner.x-fac.x,r.corner.y),
+			two,add( two->rect.origin,Pt( fac.x,0 ) ),F_XOR );
+
+/*	smooth along y=x	*/
+
+		bitblt( two,two->rect,one,one->rect.origin,F_CLR );
+
+/*	down and to the right	*/
+
+		rectf( two,two->rect,F_CLR );
+		bitblt( b,Rpt( add( r.origin,Pt( fac.x,fac.y ) ),r.corner ),
+			two,two->rect.origin,F_XOR );
+
+/*	up and to the left	*/
+
+		rectf( three,three->rect,F_STORE );
+		bitblt( b,Rpt( r.origin,sub (r.corner,Pt( fac.x,fac.y ) ) ),
+			three,add( three->rect.origin,Pt( fac.x,fac.y ) ),F_XOR );
+
+/*	smooth along y=-x	*/
+
+		bitblt( three,three->rect,two,two->rect.origin,F_CLR );
+
+/*	OR the smoothing masks into the original picture	*/
+
+		bitblt( two,two->rect,b,r.origin,F_OR );
+		bitblt( one,one->rect,b,r.origin,F_OR );
+           }
+
+/*	free the space	*/
+
+
+	bfree( one );
+	bfree( two );
+	bfree( three );
+
+	return 0;
+}
+End of smooth.c
+echo sweeps.c 1>&2
+cat >sweeps.c <<'End of sweeps.c'
+/*
+ *
+ *	Sweepers for Brush  --  brush/sweeps.c
+ *
+ *	includes:	sweeprect() & stretchrect()
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Rectangle
+rcanon( p1,p2,size )	/* return canonical representation of rect(p1,p2)	*/
+	Point p1,p2,size;
+{
+	Rectangle r;
+
+	p2.x = p1.x + ( ( p2.x-p1.x )/size.x )*size.x;
+	p2.y = p1.y + ( ( p2.y-p1.y )/size.y )*size.y;
+	r.origin.x = min( p1.x,p2.x );
+	r.origin.y = min( p1.y,p2.y );
+	r.corner.x = max( p1.x,p2.x );
+	r.corner.y = max( p1.y,p2.y );
+	return r;
+}
+
+Rectangle
+sweeprect( size )	/* like getrect(), but only integral magnifications */
+	Point size;	/*  of size to be magnified			    */
+{
+	Rectangle r;
+	Point org,last;
+	char scratch[20];
+	Texture16 *tp;
+	Help old_set;
+
+	wait( MOUSE );
+	old_set = helpswitch( sweep_set );
+	tp = (Texture16 *)cursswitch( &sweepcursor );
+	while( !bttn123() );
+
+	if ( bttn12() )
+	   {
+		r.origin = r.corner = mouse.xy;
+		waitbuttons( UP );
+		cursswitch( tp );
+		helpswitch( old_set );
+		return r;
+	   };
+
+	last = org = mouse.xy;
+	r = rcanon( org,last );
+
+	drawtrap( r,Pt(0,0),F_XOR );
+	stringf( &defont,scratch,&bigscreen,add( RCOR,Pt(10,10) ),F_XOR,
+		  "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+
+	for ( ; bttn3(); nap(2) )
+		if ( !eqpt( last,mouse.xy ) )
+		   {
+			drawtrap( r,Pt(0,0),F_XOR );
+			stringf( &defont,scratch,
+				 &bigscreen,add( RCOR,Pt(10,10) ),F_XOR,
+				 "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+			last = mouse.xy;
+			r = rcanon( org,last,size );
+			stringf( &defont,scratch,
+				 &bigscreen,add( RCOR,Pt(10,10) ),F_XOR,
+				 "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+			drawtrap( r,Pt(0,0),F_XOR );
+		   }
+
+	stringf( &defont,scratch,&bigscreen,add( RCOR,Pt(10,10) ),F_XOR,
+		  "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+	drawtrap( r,Pt(0,0),F_XOR );
+
+	wait( MOUSE );
+	cursswitch( tp );
+	helpswitch( old_set );
+	return r;
+}
+
+Point
+stretchrect( r )
+	Rectangle r;
+{
+	Point p,off;
+	Texture16 *tp;
+	char scratch[15];
+
+	Help old_set;
+
+	old_set = helpswitch( sweep_set );
+	tp = (Texture16 *)cursswitch( &sweepcursor );
+
+	cursset( r.origin );
+	off.x = off.y = 0;
+
+	drawtrap( r,off,F_XOR );
+	stringf( &defont,scratch,&display,sub( add(RORG,off),Pt(10,10) ),F_XOR,
+		  "%d %d",off.x,off.y );
+
+	while( !bttn123() );
+
+	while( bttn3() )
+		if ( !eqpt( off,p=sub( tweak( mouse.xy,r.origin ),r.origin ) ) )
+		   {
+			drawtrap( r,off,F_XOR );
+			stringf( &defont,scratch,
+				 &display,sub( add(RORG,off),Pt(10,10) ),F_XOR,
+				 "%d %d",off.x,off.y );
+			off = p;
+			stringf( &defont,scratch,
+				 &display,sub( add(RORG,off),Pt(10,10) ),F_XOR,
+				 "%d %d",off.x,off.y );
+			drawtrap( r,off,F_XOR );
+		   }
+	drawtrap( r,off,F_XOR );
+	stringf( &defont,scratch,&display,sub( add(RORG,off),Pt(10,10) ),F_XOR,
+		  "%d %d",off.x,off.y );
+
+	cursswitch( tp );
+	helpswitch( old_set );
+	return off;
+}
+
+#define R(p,size)	raddp( Rect( -size/2-1,-size/2-1,size/2,size/2 ),p )
+
+Rectangle
+snarfbox( size )
+	int size;
+{
+	Point p;
+	Word i,j;
+	Help old_set;
+	Rectangle r;
+
+	old_set = helpswitch( snarf_set );
+	cursinhibit();
+
+	p = mouse.xy;
+	drawtrap( R( p,size ),Pt(0,0),F_XOR );
+
+	for ( ; !bttn123(); nap(2) )
+		if ( !eqpt( p,mouse.xy ) )
+		   {
+			drawtrap( R( p,size ),Pt(0,0),F_XOR );
+			p = mouse.xy;
+			drawtrap( R( p,size ),Pt(0,0),F_XOR );
+		   }
+
+	if ( bttn3() )
+		r = raddp( Rect( -size/2,-size/2,size/2,size/2 ),p );
+	else	r = makerect( 0,0,0,0 );
+
+	drawtrap( R( p,size ),Pt(0,0),F_XOR );
+	cursallow();
+
+	helpswitch( old_set );
+	return r;
+}
+
+#ifdef OLDRECT
+Rectangle
+newrect( bp,size )	/* like getrect(), but only integral magnifications */
+	Bitmap *bp;
+	Point size;	/*  of size to be magnified			    */
+{
+	Rectangle r;
+	Point org,last;
+	char scratch[20];
+	Texture16 *tp;
+	Help old_set;
+
+	wait( MOUSE );
+	old_set = helpswitch( sweep_set );
+	tp = (Texture16 *)cursswitch( &sweepcursor );
+	while( !bttn123() );
+
+	if ( bttn12() )
+	   {
+		r.origin = r.corner = mouse.xy;
+		waitbuttons( UP );
+		cursswitch( tp );
+		return r;
+	   };
+
+	last = org = mouse.xy;
+	r = rcanon( org,last );
+	drawtrap( r,Pt(0,0),F_XOR );
+	stringf( &defont,scratch,bp,add( RCOR,Pt(10,10) ),F_XOR,
+		  "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+
+	for ( ; bttn3(); nap(2) )
+		if ( !eqpt( last,mouse.xy ) )
+		   {
+			drawtrap( r,Pt(0,0),F_XOR );
+			stringf( &defont,scratch,bp,add( RCOR,Pt(10,10) ),F_XOR,
+				 "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+			last = mouse.xy;
+			r = rcanon( org,last,size );
+			stringf( &defont,scratch,bp,add( RCOR,Pt(10,10) ),F_XOR,
+				 "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+			drawtrap( r,Pt(0,0),F_XOR );
+		   }
+
+	stringf( &defont,scratch,bp,add( RCOR,Pt(10,10) ),F_XOR,
+		  "%d %d",RWIDTH(r)/size.x,RHEIGHT(r)/size.y );
+	drawtrap( r,Pt(0,0),F_XOR );
+	wait( MOUSE );
+	cursswitch( tp );
+	helpswitch( old_set );
+	return r;
+}
+
+#endif
+End of sweeps.c
+echo text.c 1>&2
+cat >text.c <<'End of text.c'
+/*
+ *
+ *	text for Brush  --  brush/text.c
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Rectangle str_rect();
+
+Font *curr_font = null( Font );
+
+extern char *font_dir;		/* expanded name of $DMD/font */
+
+#define MAXFONTS	8
+
+char *ftext[] = { "defont","new",NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL };
+Menu fontmenu = { ftext };
+
+Word newfont = 1;
+Font *fontlist[] = { null(Font),null(Font),null(Font),null(Font),
+		     null(Font),null(Font),null(Font),null(Font),null(Font) };
+
+pick_font()
+{
+	Word choice;
+
+	while( !bttn3() ) wait( CPU );
+
+	if ( ( choice=menuhit( &fontmenu,3 ) ) > -1 )
+		if ( choice == newfont )
+			if ( newfont >= MAXFONTS )
+			   {
+				errmsg( "too many fonts" );
+				return;
+			   }
+			else	new_font();
+		else {
+			Phont.value = choice;
+			curr_font = fontlist[choice];
+		     }
+}
+
+new_font()
+{
+	char *s,*t,name[50];
+	Font *fp;
+	Texture16 *tp;
+
+	if ( !( s = type( "font? ","" ) ) ) return;
+
+	sprintf( name,"%s/%s",font_dir,s );
+
+	tp = (Texture16 *) cursswitch( &hourglass );
+	fp = getfont( name );
+	cursswitch( tp );
+
+	if ( fp )
+	   {
+		curr_font = fontlist[newfont] = fp;
+		Phont.value = newfont;
+		t = alloc( strlen(s) + 1 );
+		strcpy( t,s );
+		ftext[newfont] = t;
+		ftext[++newfont] = "new";
+	   }
+
+	else	errprintf( "can't find  %s",name );
+}
+
+Image
+text( oldpic,drawmode )
+	Image oldpic;
+	Word drawmode;
+{
+	Word emphasis;
+	char *s,str[50];
+	Rectangle r;
+	Bitmap *tmp;
+
+	if ( s = type( "text? ","" ) )
+	   {
+		strcpy( str,s );
+		r = raddp( str_rect( curr_font,str,textyle() ),mouse.xy );
+		if ( tmp = balloc( r ) )
+		   {
+			rectf( tmp,r,F_CLR );
+			textblt( curr_font,str,tmp,r.origin,textyle() );
+			Ibfree( oldpic.bp );
+			oldpic = make_image( tmp,r,mouse.xy,Pt(0,0) );
+		   }
+	   }
+	return oldpic;
+}
+
+textblt( fp,s,bp,p,emphasis )
+	Font *fp;
+	char *s;
+	Bitmap *bp;
+	Point p;
+	Word emphasis;
+{
+	switch( emphasis )
+	      {
+		case NORMAL:	string( fp,s,bp,p,F_STORE );
+				break;
+		case SHADOW:	string( fp,s,bp,p,F_OR );
+				string( fp,s,bp,add( p,Pt( 1,1 ) ),F_CLR );
+				string( fp,s,bp,add( p,Pt( 2,2 ) ),F_OR );
+				break;
+		case OUTLINE:	string( fp,s,bp,add( p,Pt( 0,1 ) ),F_OR );
+				string( fp,s,bp,add( p,Pt( 2,1 ) ),F_OR );
+				string( fp,s,bp,add( p,Pt( 1,0 ) ),F_OR );
+				string( fp,s,bp,add( p,Pt( 1,2 ) ),F_OR );
+				string( fp,s,bp,add( p,Pt( 1,1 ) ),F_CLR );
+				break;
+		case BOLD:	string( fp,s,bp,p,F_OR );
+				string( fp,s,bp,add( p,Pt( 1, 0 ) ),F_OR );
+				break;
+		case ITALIC:	string( fp,s,bp,p,F_OR );
+				horshear( bp,raddp(str_rect(fp,s,ITALIC),p),
+					  fp->height/2,TRUE );
+				break;
+	      }
+}
+
+Rectangle
+makeRect( x0,y0,x1,y1 )
+	short x0,y0,x1,y1;
+{
+	Rectangle r;
+
+	r.origin.x = x0;
+	r.origin.y = y0;
+	r.corner.x = x1;
+	r.corner.y = y1;
+	return r;
+}
+
+Rectangle
+str_rect( fp,str,emphasis )	/* returns rect big enuff for str to fit	*/
+	Font *fp;
+	char *str;
+	Word emphasis;
+{
+	switch( emphasis )
+	      {
+		case NORMAL:	return makeRect( 0,0,strwidth(fp,str),fp->height );
+				break;
+		case SHADOW:	
+		case OUTLINE:	return makeRect( 0,0,
+						 strwidth(fp,str)+2,fp->height+2 );
+				break;
+		case BOLD:	return makeRect( 0,0,
+						 strwidth(fp,str)+2,fp->height );
+				break;
+		case ITALIC:	return makeRect( 0,0,
+						 strwidth(fp,str)+2+fp->height/2,
+						 fp->height );
+				break;
+	      }
+}
+
+Point
+align( p,boundary )		/* align point p to boundary */
+	Point p,boundary;
+{
+	if ( !aligning() || eqpt( boundary,Pt(-1,-1) ) ) return p;
+	p.x = ( p.x & 0xFFF0 ) + boundary.x;
+	p.y = ( p.y & 0xFFF0 ) + boundary.y;
+	return p;
+}
+
+position( pic,drawmode )
+	Image *pic;
+	Word drawmode;
+{
+	Rectangle cr;		/* canonical ( 0-aligned ) rect form of r */
+	Help old_set;
+
+	if ( pic->bp==null(Bitmap) || pic->bp==&display ) return;
+
+	old_set = helpswitch( pos_set );	
+
+	wait( MOUSE );		/* IMPORTANT if not current layer	*/
+
+	cursinhibit();
+
+	cr = rsubp( pic->r,pic->r.origin );
+	cursset( pic->pos );
+
+	screenswap( pic->bp,pic->r,raddp( cr,pic->pos ) );
+
+	while ( !bttn3() )
+	      {
+		if ( !eqpt( pic->pos,align( mouse.xy,pic->alg ) ) )
+		   {
+			screenswap( pic->bp,pic->r,raddp( cr,pic->pos ) );
+			pic->pos = align( mouse.xy,pic->alg );
+			screenswap( pic->bp,pic->r,raddp( cr,pic->pos ) );
+		   }
+		if ( bttn12() ) 
+		   {
+			screenswap( pic->bp,pic->r,raddp( cr,pic->pos ) );
+			if ( realmode( drawmode )==F_AND )
+			   {
+				rectf( pic->bp,pic->r,F_XOR );
+				bitblt( pic->bp,pic->r,
+					&screen,pic->pos,F_CLR );
+				rectf( pic->bp,pic->r,F_XOR );
+			   }
+			 else	bitblt( pic->bp,pic->r,
+					&screen,pic->pos,realmode( drawmode ) );
+		         screenswap( pic->bp,pic->r,raddp( cr,pic->pos ) );
+			 while( bttn12() );
+		   }
+	      }
+
+	screenswap( pic->bp,pic->r,raddp( cr,pic->pos ) );
+
+	wait( MOUSE );
+	cursallow();
+	helpswitch( old_set );	
+}
+End of text.c
+echo texture32.c 1>&2
+cat >texture32.c <<'End of texture32.c'
+/*
+ *	32 bit textures for Brush  --  brush/texture32.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "myjerq.h"
+
+Texture16 leafs = {
+	 0x0A62, 0x1246, 0x220A, 0x4412,
+	 0x4822, 0x5044, 0x6248, 0x4650,
+	 0x0A62, 0x1246, 0x220A, 0x4412,
+	 0x4822, 0x5044, 0x6248, 0x4650,
+};
+Texture16 woven = {
+	 0x2424, 0x2418, 0xA5FF, 0x6600,
+	 0x6600, 0xA5FF, 0x2418, 0x2424,
+	 0x2424, 0x1824, 0xFFA5, 0x0066,
+	 0x0066, 0xFFA5, 0x1824, 0x2424,
+};
+Texture16 scowley = {
+	 0x0FF0, 0x1008, 0x2004, 0x4002,
+	 0x8001, 0x8C31, 0x8C31, 0x8001,
+	 0x8181, 0x8001, 0x8001, 0x87E1,
+	 0x4812, 0x2814, 0x1008, 0x0FF0,
+};
+Texture16 cube = {
+	 0x0000, 0x0000, 0x07FC, 0x0FFC,
+	 0x1FFC, 0x3FFC, 0x203C, 0x203C,
+	 0x203C, 0x203C, 0x203C, 0x2038,
+	 0x2030, 0x3FE0, 0x0000, 0x0000,
+};
+Texture16 xhatch = {
+	 0x8888, 0x5050, 0x2020, 0x5050,
+	 0x8888, 0x0505, 0x0202, 0x0505,
+	 0x8888, 0x5050, 0x2020, 0x5050,
+	 0x8888, 0x0505, 0x0202, 0x0505,
+};
+Texture16 deathstar = {
+	 0x0000, 0x07E0, 0x0FF0, 0x0000,
+	 0x31FC, 0x20FC, 0x0000, 0x60FE,
+	 0x71FE, 0x0000, 0x3FFC, 0x3FFC,
+	 0x0000, 0x1FF8, 0x0FF0, 0x0000,
+};
+/*
+Texture16 deathstar = {
+	 0x07E0, 0x1F08, 0x0000, 0x7FFE,
+	 0x3FC2, 0x0000, 0xFFFF, 0x7FC1,
+	 0x0000, 0xFFFF, 0x1F01, 0x0000,
+	 0x7FFE, 0x0000, 0x1008, 0x07E0,
+};
+*/
+Texture16 zig = {
+	 0x8208, 0x8208, 0x8208, 0xF3CF,
+	 0x1041, 0x1041, 0x9E79, 0x8208,
+	 0x8208, 0xF3CF, 0x1041, 0x1041,
+	 0x9E79, 0x8208, 0x8208, 0xF3CF,
+};
+Texture16 zag = {
+	 0x1104, 0x1284, 0xF444, 0x0287,
+	 0x0100, 0x0004, 0x210A, 0x5051,
+	 0x8A0A, 0x5084, 0x2000, 0x0080,
+	 0xE140, 0x222F, 0x2148, 0x2088,
+};
+Texture16 smile2 = {
+	 0x0FF0, 0x1008, 0x2004, 0x4002,
+	 0x8001, 0x8C31, 0x8C31, 0x8001,
+	 0x8001, 0x8181, 0x9009, 0x8811,
+	 0x47E2, 0x2004, 0x1008, 0x0FF0,
+};
+Texture16 tictac = {
+	 0x1248, 0x1248, 0x1248, 0xF3CF,
+	 0x0000, 0x0000, 0xF3CF, 0x1248,
+	 0x1248, 0xF3CF, 0x0000, 0x0000,
+	 0xF3CF, 0x1248, 0x1248, 0x1248,
+};
+Texture16 bigrcheck = {
+	 0xF0F0, 0xF0F0, 0xF0F0, 0xF0F0,
+	 0x0F0F, 0x0F0F, 0x0F0F, 0x0F0F,
+	 0xF0F0, 0xF0F0, 0xF0F0, 0xF0F0,
+	 0x0F0F, 0x0F0F, 0x0F0F, 0x0F0F,
+};
+Texture16 bigstcheck = {
+	 0xFF00, 0xFF00, 0xC33C, 0xC33C,
+	 0xC33C, 0xC33C, 0xFF00, 0xFF00,
+	 0x00FF, 0x00FF, 0x3CC3, 0x3CC3,
+	 0x3CC3, 0x3CC3, 0x00FF, 0x00FF,
+};
+Texture16 cross = {
+	 0x0240, 0x0240, 0x0240, 0x0240,
+	 0x0240, 0x0240, 0xFE7F, 0x0000,
+	 0x0000, 0xFE7F, 0x0240, 0x0240,
+	 0x0240, 0x0240, 0x0240, 0x0240,
+};
+Texture16 black = {
+	 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+	 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+	 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+	 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+};
+
+Texture16 thickhs = {
+	 0xFFFF, 0xFFFF, 0x0000, 0x0000,
+	 0xFFFF, 0xFFFF, 0x0000, 0x0000,
+	 0xFFFF, 0xFFFF, 0x0000, 0x0000,
+	 0xFFFF, 0xFFFF, 0x0000, 0x0000,
+};
+
+Texture16 thickvs = {
+	 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC,
+	 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC,
+	 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC,
+	 0xCCCC, 0xCCCC, 0xCCCC, 0xCCCC,
+};
+
+Texture16 star = {
+	 0xC183, 0xE187, 0x718E, 0x399C,
+	 0x1DB8, 0x0FF0, 0x07E0, 0xFE7F,
+	 0xFE7F, 0x07E0, 0x0FF0, 0x1DB8,
+	 0x399C, 0x718E, 0xE187, 0xC183,
+};
+Texture16 diags = {
+	 0x380E, 0x9C0C, 0xCE09, 0xE713,
+	 0x13A7, 0x09CE, 0x049C, 0x0E38,
+	 0x1C70, 0x3920, 0x7390, 0xE5C8,
+	 0xC8E7, 0x9073, 0x3039, 0x701C,
+};
+Texture16 blot1 = {
+	 0x8241, 0x4422, 0x2814, 0x13C8,
+	 0x8001, 0x4422, 0x2244, 0x1188,
+	 0x1188, 0x2244, 0x4422, 0x8001,
+	 0x13C8, 0x2814, 0x4422, 0x8241,
+};
+Texture16 blot2 = {
+	 0x2814, 0x2814, 0xEFFF, 0x2800,
+	 0xEBFF, 0x2A04, 0x2BF4, 0x2A54,
+	 0x2A54, 0x2FD4, 0x2054, 0xFFD7,
+	 0x0014, 0xFFF7, 0x2814, 0x2814,
+};
+Texture16 tactic = {
+	 0x0440, 0x0720, 0x0910, 0x1188,
+	 0x2244, 0x4423, 0x8812, 0x100E,
+	 0x7008, 0x4811, 0xC422, 0x2244,
+	 0x1188, 0x0890, 0x04E0, 0x0220,
+};
+Texture16 grey1 ={ 0x88888888,0x0,0x22222222,0x0,
+                0x88888888,0x0,0x22222222,0x0,
+                0x88888888,0x0,0x22222222,0x0,
+                0x88888888,0x0,0x22222222,0x0, };
+
+Texture16 grey2 ={ 0xaaaaaaaa,0x0,0xaaaaaaaa,0x0,
+                0xaaaaaaaa,0x0,0xaaaaaaaa,0x0,
+                0xaaaaaaaa,0x0,0xaaaaaaaa,0x0,
+                0xaaaaaaaa,0x0,0xaaaaaaaa,0x0, };
+
+Texture16 grey3 ={ 0xaaaaaaaa,0x44444444,0xaaaaaaaaaaaa,0x11111111,
+		0xaaaaaaaa,0x44444444,0xaaaaaaaaaaaa,0x11111111,
+                0xaaaaaaaa,0x44444444,0xaaaaaaaaaaaa,0x11111111,
+                0xaaaaaaaa,0x44444444,0xaaaaaaaaaaaa,0x11111111, };
+
+Texture16 grey4 ={ 0xaaaaaaaa,0x55555555,0xaaaaaaaa,0x55555555,
+                0xaaaaaaaa,0x55555555,0xaaaaaaaa,0x55555555,
+                0xaaaaaaaa,0x55555555,0xaaaaaaaa,0x55555555,
+                0xaaaaaaaa,0x55555555,0xaaaaaaaa,0x55555555, };
+
+Texture16 grey5 ={ 0xeeeeeeee,0x55555555,0xbbbbbbbb,0x55555555,
+                0xeeeeeeee,0x55555555,0xbbbbbbbb,0x55555555,
+                0xeeeeeeee,0x55555555,0xbbbbbbbb,0x55555555,
+                0xeeeeeeee,0x55555555,0xbbbbbbbb,0x55555555, };
+
+Texture16 grey6 ={ 0xffffffff,0x55555555,0xffffffff,0x55555555,
+                0xffffffff,0x55555555,0xffffffff,0x55555555,
+		0xffffffff,0x55555555,0xffffffff,0x55555555,
+                0xffffffff,0x55555555,0xffffffff,0x55555555, };
+
+Texture16 grey7 ={ 0xffffffff,0xdddddddd,0xffffffff,0x77777777,
+		0xffffffff,0xdddddddd,0xffffffff,0x77777777,
+                0xffffffff,0xdddddddd,0xffffffff,0x77777777,
+		0xffffffff,0xdddddddd,0xffffffff,0x77777777, };
+
+/*
+ *	and now, the textures used for masks for brushes
+ *
+ */
+
+
+Texture16 dot2      = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x0180,
+			0x0180,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x0000,	};
+
+Texture16 dot4      = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0180,0x03C0,
+			0x03C0,0x0180,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x0000,	};
+
+Texture16 dot6      = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0180,0x03C0,0x07E0,
+			0x07E0,0x03C0,0x0180,0x0000,
+			0x0000,0x0000,0x0000,0x0000,	};
+
+Texture16 dot8      = { 0x0000,0x0000,0x0000,0x0000,
+			0x0180,0x03C0,0x07E0,0x0FF0,
+			0x0FF0,0x07E0,0x03C0,0x0180,
+			0x0000,0x0000,0x0000,0x0000,	};
+Texture16 bar6      = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0180,0x0180,0x0180,
+			0x0180,0x0180,0x0180,0x0000,
+			0x0000,0x0000,0x0000,0x0000,	};
+Texture16 bar10     = { 0x0000,0x0000,0x0000,0x0180,
+			0x0180,0x0180,0x0180,0x0180,
+			0x0180,0x0180,0x0180,0x0180,
+			0x0180,0x0000,0x0000,0x0000,	};
+Texture16 bar14     = { 0x0000,0x0180,0x0180,0x0180,
+			0x0180,0x0180,0x0180,0x0180,
+			0x0180,0x0180,0x0180,0x0180,
+			0x0180,0x0180,0x0180,0x0000,	};
+Texture16 dash6     = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x07E0,
+			0x07E0,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x0000, };
+
+Texture16 dash10    = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x1FF8,
+			0x1FF8,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x0000, };
+
+Texture16 dash14    = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x7FFE,
+			0x7FFE,0x0000,0x0000,0x0000,
+			0x0000,0x0000,0x0000,0x0000, };
+
+Texture16 diag3     = { 0x0000,0x0040,0x0020,0x0010,
+			0x0008,0x0404,0x0202,0x0100,
+			0x0080,0x4040,0x2020,0x1000,
+			0x0800,0x0400,0x0200,0x0000,	};
+
+Texture16 ldiag3    = { 0x0000,0x0200,0x0400,0x0800,
+			0x1000,0x2020,0x4040,0x0080,
+			0x0100,0x0202,0x0404,0x0008,
+			0x0010,0x0020,0x0040,0x0000,	};
+Texture16 grp3      = { 0x0000,0x0000,0x0000,0x0018,
+			0x0018,0x0000,0x0000,0x0180,
+			0x0180,0x0000,0x0000,0x1800,
+			0x1800,0x0000,0x0000,0x0000,	};
+Texture16 lgrp3     = { 0x0000,0x0000,0x0000,0x1800,
+			0x1800,0x0000,0x0000,0x0180,
+			0x0180,0x0000,0x0000,0x0018,
+			0x0018,0x0000,0x0000,0x0000,	};
+Texture16 slash16   = { 0x0002,0x0007,0x000E,0x001C,
+			0x0038,0x0070,0x00E0,0x01C0,
+			0x0380,0x0700,0x0E00,0x1C00,
+			0x3800,0x7000,0xE000,0x4000,	};
+Texture16 slash12   = { 0x0000,0x0000,0x0008,0x001C,
+			0x0038,0x0070,0x00E0,0x01C0,
+			0x0380,0x0700,0x0E00,0x1C00,
+			0x3800,0x1000,0x0000,0x0000,	};
+Texture16 slash8    = { 0x0000,0x0000,0x0000,0x0000,
+			0x0020,0x0070,0x00E0,0x01C0,
+			0x0380,0x0700,0x0E00,0x0400,
+			0x0000,0x0000,0x0000,0x0000,	};
+Texture16 circle3   = { 0x0000,0x0000,0x0000,0x0000,
+			0x0000,0x03C0,0x07E0,0x07E0,
+			0x07E0,0x07E0,0x03C0,0x0000,
+			0x0000,0x0000,0x0000,0x0000,	};
+Texture16 circle5   = { 0x0000,0x0000,0x0000,0x07E0,
+			0x0FF0,0x1FF8,0x1FF8,0x1FF8,
+			0x1FF8,0x1FF8,0x1FF8,0x0FF0,
+			0x07E0,0x0000,0x0000,0x0000,	};
+Texture16 circle7   = { 0x0000,0x0FF0,0x1FF8,0x3FFC,
+			0x7FFE,0x7FFE,0x7FFE,0x7FFE,
+			0x7FFE,0x7FFE,0x7FFE,0x7FFE,
+			0x3FFC,0x1FF8,0x0FF0,0x0000,	};
+
+Texture16 null1     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null2     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null3     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null4     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null5     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null6     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null7     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+Texture16 null8     = { 0,0,0,0,0,0,0,0x80,0,0,0,0,0,0,0,0, };
+
+End of texture32.c
+echo type.c 1>&2
+cat >type.c <<'End of type.c'
+/*
+ *
+ *	typed string input for Brush   --   brush/type.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+#include "myjerq.h"
+#include <font.h>
+#define LEN		60
+
+char *
+type( prompt,seed )		/* pop up typed input from keyboard	*/
+	char *prompt,*seed;
+{
+	static char buff[LEN];
+	register char *s,*begin,*first;
+	Bitmap *bp;
+	Point spot;
+	static Rectangle r = {{0,0},{0,0}};
+
+/*	stuff the prompt & seed into buff	*/
+
+	strcpy( buff,prompt );
+	begin = buff + strlen( prompt );
+	strcpy( begin,seed );
+	first = s = begin + strlen( seed );
+
+/*	figure out size rect needed		*/
+
+	r.corner.y = 8 + defont.height;
+	r.corner.x = 16 + LEN * strwidth( &defont," " );
+
+/*	alloc & initialize scratch bitmap	*/
+
+	bp = balloc( r );
+	rectf( bp,r,F_STORE );
+	rectf( bp,inset( r,2 ),F_XOR );
+
+/*	adjust mouse pos to avoid running off screen edge	*/
+
+	spot = mouse.xy;
+	spot.x = min( spot.x,Drect.corner.x-RWIDTH(r) );
+
+/*	save screen area, draw prompt & seed	*/
+
+	screenswap( bp,r,raddp( r,spot ) );
+	type_msg( buff,raddp( inset( r,2 ),spot ) );
+
+	for ( ; s<buff+LEN-2; )
+	    {
+		wait( KBD );
+		switch( *s++ = kbdchar() )
+		      {
+			case '\r':	--s;
+					goto out;
+			case '\b':	s-=2;
+					if ( s<begin ) s = begin;
+					break;
+			case '@':	s=begin;
+		      }
+		*s = 0;
+		type_msg( buff,raddp( inset( r,2 ),spot ) );
+	    }
+out:	*s = 0;
+
+/*	restore screen & free bitmap	*/
+
+	screenswap( bp,r,raddp( r,spot ) );
+	bfree( bp );
+
+	return s!=first ? begin : (char *)0;
+}
+
+type_msg( s,r )
+	char *s;
+	Rectangle r;
+{
+	rectf( &display, r, F_CLR );
+	string( &defont, s, &display, add( r.origin,Pt(8,2) ), F_XOR );
+}
+
+End of type.c
+echo updown.c 1>&2
+cat >updown.c <<'End of updown.c'
+/*
+ *
+ *	up/downloading files for Brush  --  brush/updown.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "brush.h"
+
+Bitmap *readbitmap();
+
+extern char *pix_dir;		/* name of picture directory	*/
+extern char *tex_dir;		/* name of texture directory	*/
+
+save_text( tp,n )
+	Texture16 *tp[];
+	Word n;
+{
+	register FILE *fp;
+	char *fname;
+	Texture16 *oldcursor;
+	Help old_set;
+
+	if ( !(fname = type( "file name? ",tex_dir )) ) return;
+	if ( ( fp = fopen( fname,"w" ) ) == 0 )
+	   {
+		errprintf( "can't open %s",fname );
+		return;
+	   }
+
+	oldcursor = ( Texture16 *) cursswitch( &hourglass );
+	puttextures( tp,n,fp );
+	fclose( fp );
+	cursswitch( oldcursor );
+}
+
+recall_text( tp,r,current,n )
+	Texture16 *tp[];
+	Rectangle r;
+	Word current;		/* index of current value for hilighting */
+	Word n;
+{
+	register FILE *fp;
+	char *fname;
+	Texture16 *oldcursor;
+	Bitmap *bp;
+
+	if ( !(fname = type( "file name? ",tex_dir )) ) return;
+
+	if ( !( fp=fopen( fname,"r" ) ) )
+	   {
+		errprintf( "can't open %s",fname );
+		return;
+	   }
+
+	oldcursor = ( Texture16 *) cursswitch( &hourglass );
+
+	gettextures( tp,n,fp );
+	fclose( fp );
+	imagemenu( r,current,tp,n );
+	cursswitch( oldcursor );
+}
+
+recall_pic()
+{
+	register FILE *fp;
+	char *fname;
+	Texture16 *tp;
+	Bitmap *bp;
+
+	if ( !(fname = type( "file name? ",pix_dir )) )
+	     return;
+
+	if ( ( fp=fopen( fname,"r" ) ) == null(FILE) )
+	   {
+		errprintf( "can't open %s",fname );
+		return;
+	   }
+
+	tp = ( Texture16 *) cursswitch( &hourglass );
+
+	if ( ( bp = readbitmap( fp ) ) != null( Bitmap ) )
+	   {
+		wait( MOUSE );
+		Ibfree( Now_Pic.bp );
+		Now_Pic = make_image( bp,bp->rect,
+					mouse.xy,Pt(0,0) );
+		position( &Now_Pic,drawmode );
+	   }
+	fclose( fp );
+	cursswitch( tp );
+}
+
+save_pic()
+{
+	Rectangle r;
+	register FILE *fp;
+	char *fname;
+	Texture16 *tp;
+	Help old_set;
+
+	if ( !(fname = type( "file name? ",pix_dir )) ) return;
+	if ( ( fp = fopen( fname,"w" ) ) == null(FILE) )
+	   {
+		errprintf( "can't open %s",fname );
+		return;
+	   }
+
+	old_set = helpswitch( sweep_set );
+	r = sweeprect( Pt(1,1) );
+	r.origin = align( r.origin,Pt( 0,0 ) );
+	helpswitch( old_set );
+
+	tp = ( Texture16 *) cursswitch( &hourglass );
+	putbitmap( &display,r,fp,&display );
+	fclose( fp );
+	cursswitch( tp );
+}
+End of updown.c
+echo shrink.c 1>&2
+cat >shrink.c <<'End of shrink.c'
+/*
+ *
+ *	image shrink for Brush  --  brush/shrink.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ *
+ */
+
+#include "brush.h"
+
+#define DARK		1
+#define LIGHT		0
+
+char *stext[] = { "shades","black/white",NULL };
+Menu smenu = { stext };
+Image crunch();
+
+Rectangle
+makerect( x0,y0,x1,y1 )
+	Word x0,y0,x1,y1;
+{
+	Rectangle r;
+	r.origin.x = x0;
+	r.origin.y = y0;
+	r.corner.x = x1;
+	r.corner.y = y1;
+	return r;
+}
+
+int D4[4][4] =        { 0,0,2,2,
+			0,0,2,2,
+			3,3,1,1,
+			3,3,1,1,};
+int D2[2][2] = { 0,2,3,1 };
+
+#define HIGHBIT		((unsigned)0x80000000)
+#define LOW5		0x1f
+
+unsigned bitmasks[] = {
+			0x80000000,0x40000000,0x20000000,0x10000000,
+			0x08000000,0x04000000,0x02000000,0x01000000,
+			0x00800000,0x00400000,0x00200000,0x00100000,
+			0x00080000,0x00040000,0x00020000,0x00010000,
+			0x00008000,0x00004000,0x00002000,0x00001000,
+			0x00000800,0x00000400,0x00000200,0x00000100,
+			0x00000080,0x00000040,0x00000020,0x00000010,
+			0x00000008,0x00000004,0x00000002,0x00000001,
+		      };
+
+Image
+crunch( pic )		/* return smaller copy of Image pic	*/
+	Image pic;
+{
+	register Bitmap *tmp;
+	Point size;
+	int dark;
+	Rectangle dr;
+	Help old_set;
+
+
+	if ( ( dark = menupick3( &smenu ) ) < 0 ) return pic;
+
+	size = div( extent( pic.r ),2 );
+	if ( 0 >= size.x || 0 >= size.y ) return pic;
+
+	dr = raddp( makerect( 0,0,size.x,size.y ),pic.r.origin );
+
+	if ( nullrect( dr ) ) return pic;
+
+	tmp = balloc( dr );
+
+	if ( !tmp )
+	   {
+		errmsg( "no mem" );
+		return pic;
+	   }
+
+	cursswitch( &hourglass );
+	rectf( tmp,tmp->rect,F_CLR );
+
+	/* copy src to dst */
+
+	old_set = helpswitch( kill_set );	
+	
+	shrink( pic.bp,pic.r,tmp,dr.origin,dark );
+
+	helpswitch( old_set );
+
+	Ibfree( pic.bp );
+	pic = make_image( tmp,tmp->rect,pic.pos,pic.alg );
+	return pic;
+}
+
+shrink( sb,r,db,dorg,darkflag )		/* "Official" shrink */
+	Bitmap *sb,*db;
+	Rectangle r;
+	Point dorg;
+	int darkflag;
+{
+	Point s,d;			/* src & dst points		*/
+	int dither,pixsum;
+	register int total = 0;
+	register unsigned Word *ptr;
+
+	dither = 1;
+
+	s = r.origin;
+	d = dorg;
+
+	for ( ; s.y<r.corner.y; d.y++,wait(CPU) )
+	    {
+		for ( d.x=dorg.x,s.x=RORG.x; s.x<r.corner.x; d.x++ )
+		    {
+			if ( bttn123() ) return;
+			if ( darkflag==LIGHT ) dither = D4[s.y&3][s.x&3];
+
+			ptr = (unsigned *)addr(sb,s);
+			total  = (*ptr & bitmasks[s.x&LOW5] ) ? 1 : 0;
+			if (*ptr & bitmasks[(s.x+1)&LOW5] ) total++;
+
+			ptr += sb->width;
+			if (*ptr & bitmasks[s.x&LOW5] ) total++;
+			if (*ptr & bitmasks[(s.x+1)&LOW5] ) total++;
+
+			if ( total > dither ) point( db,d,F_STORE );
+			s.x += ( s.x&1 ) ? 1 : 2;
+		    }
+		s.y += ( s.y&1 ) ? 1 : 2;
+	    }
+}
+
+#ifdef FOO
+total( bp,p )
+	Bitmap *bp;
+	Point p;
+{
+	int result = 0;
+	unsigned Word *ptr = (unsigned *)addr(bp,p);
+
+	result  = (*ptr & HIGHBIT >> (p.x%32) ) ? 1 : 0;
+	result += (*ptr & HIGHBIT >> ((p.x+1)%32) ) ? 1 : 0;
+
+	ptr += bp->width;
+	result += (*ptr & HIGHBIT >> (p.x%32) ) ? 1 : 0;
+	result += (*ptr & HIGHBIT >> ((p.x+1)%32) ) ? 1 : 0;
+	return result;
+}
+
+#endif
+
+End of shrink.c
+echo details.c 1>&2
+cat >details.c <<'End of details.c'
+/*
+ *
+ *	detailed image edit for Brush  --  brush/details.c
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ *
+ */
+
+#include "brush.h"
+
+#define M		8	/* mag factor	*/
+#define WINSIZE		40
+#define R(p,size)	raddp( Rect( -size/2-1,-size/2-1,size/2,size/2 ),p )
+
+Rectangle snarfbox(),findroom();
+
+Texture16 box8      = { 0x0000,0x0000,0x0000,0x0000,
+			0x0FF0,0x0FF0,0x0FF0,0x0FF0,
+			0x0FF0,0x0FF0,0x0FF0,0x0FF0,
+			0x0000,0x0000,0x0000,0x0000,	};
+Point sticky();
+
+details()
+{
+	Rectangle r,sr,er;
+	Point p,lastm;
+	int hit,lasthit;
+	Bitmap *bp;
+	Help old_set;
+	Texture16 *oldbrush;
+
+	sr = snarfbox( WINSIZE );
+	waitbuttons( UP );
+	if ( nullrect( sr ) ) return;
+
+	er = findroom( sr,Drect );
+	if ( nullrect( er ) ) return;
+	r = inset( er,-2 );
+
+	if ( !( bp=balloc( r ) ) )
+	   {
+		errmsg( "no mem" );
+		return;
+	   }
+
+	drawtrap( Rpt( add( sr.origin,Pt(-1,-1) ),sr.corner ),
+		  Pt(0,0),F_XOR );
+
+	bitblt( &display,r,bp,r.origin,F_STORE );	/* stash screen area	*/
+	rectf( &display,r,F_STORE );
+	rectf( &display,er,F_XOR );
+
+/*	copy image into work area	*/
+
+	cursinhibit();
+	old_set = helpswitch( pos_set );
+
+	for ( p.x=0; p.x<WINSIZE; p.x++ )
+		for ( p.y=0; p.y<WINSIZE; p.y++ )
+			if ( getpoint( &display,add( p,sr.origin ) ) )
+				setpoint( &display,er,p,F_STORE );
+
+	cursallow();
+	oldbrush = cursswitch( &box8 );
+
+/*	edit the sucker 'til button 3 quits	*/
+
+	for ( ; !button3(); wait(MOUSE) )
+		if ( ( hit=mouse.buttons&6 ) && ptinrect( mouse.xy,er ) )
+			if ( !eqpt( lastm,p=sticky( er,mouse.xy ) )
+			     || lasthit!=hit )
+			   {
+				lastm = p;
+				lasthit = hit;
+				setpoint( &display,er,p,(hit&4)?F_STORE:F_CLR );
+				point( &display,
+					add( sr.origin,p ),(hit&4)?F_STORE:F_CLR );
+			   }
+
+	bitblt( bp,r,&display,r.origin,F_STORE );	/* restore bkg	*/
+	drawtrap( Rpt( add( sr.origin,Pt(-1,-1) ),sr.corner ),
+		  Pt(0,0),F_XOR );
+
+
+	cursswitch( oldbrush );
+	helpswitch( old_set );
+	bfree( bp );
+}
+
+#define HEIGHT	(M*WINSIZE)
+
+Rectangle bigrect = { { 0,0 },{ HEIGHT,HEIGHT } };
+
+Rectangle
+findroom( sr,bound )
+	Rectangle sr,bound;
+{
+	Point p;
+	Rectangle r;
+
+	int  vert,horz,midflag;
+
+	midflag = FALSE;
+
+	if ( bound.corner.x > sr.corner.x+2+M*WINSIZE )		/* RIGHT	*/
+	   {
+		r.origin.x = sr.corner.x+2;
+		r.corner.x = r.origin.x + HEIGHT;
+	   }
+	else	if ( sr.origin.x > bound.origin.x+2+M*WINSIZE )	/* LEFT	*/
+		   {
+			r.corner.x = sr.origin.x-2;
+			r.origin.x = r.corner.x - HEIGHT;
+		   }
+		else {						/* MIDDLE	*/
+			midflag = TRUE;
+			r.origin.x = bound.origin.x;
+			r.corner.x = r.origin.x + HEIGHT;
+		     }
+
+	if ( bound.corner.y > sr.corner.y+2+M*WINSIZE )		/* BOTTOM	*/
+	   {
+		r.origin.y = sr.corner.y+2;
+		r.corner.y = r.origin.y + HEIGHT;
+	   }
+
+	else	if ( sr.origin.y > bound.origin.y+2+M*WINSIZE )	/* TOP	*/
+		   {
+			r.corner.y = sr.origin.y-2;
+			r.origin.y = r.corner.y - HEIGHT;
+		   }
+		else {						/* MIDDLE	*/
+			if ( midflag == TRUE ) return makerect( 0,0,0,0 );
+			r.origin.y = bound.origin.y;
+			r.corner.y = r.origin.y + HEIGHT;
+		     }
+	return r;
+}
+
+Point
+sticky( r,p )
+	Rectangle r;
+	Point p;
+{
+	return div( sub( p,r.origin ),M ); 
+}
+
+setpoint( bp,r,p,code )
+	Bitmap *bp;
+	Rectangle r;
+	Point p;
+	int code;
+{
+	static Rectangle dotrect = { { 0,0 },{ M,M } };
+
+	p = add( r.origin,mul( p,M ) );
+	rectf( bp,raddp( dotrect,p ),code );
+}
+
+#define HIGHBIT		((unsigned)0x80000000)
+
+getpoint( bp,p )
+	Bitmap *bp;
+	Point p;
+{
+	Word *ptr = addr( bp,p );
+
+	return (( *ptr ) & (HIGHBIT>>(p.x%32) ) ) ? 1 : 0;
+}
+
+#ifdef SAFE
+Rectangle
+findroom( sr,bound )
+	Rectangle sr,bound;
+{
+	Point p;
+
+	if ( bound.corner.x > sr.corner.x+2+M*WINSIZE )
+		p.x = sr.corner.x+2;
+	else	if ( sr.origin.x > bound.origin.x+2+M*WINSIZE )
+			p.x = sr.origin.x-M*WINSIZE-2;
+		else	if ( bound.corner.x > sr.origin.x+2+M*WINSIZE )
+				p.x = sr.origin.x+2;
+			else	if ( sr.corner.x > bound.origin.x+2+M*WINSIZE )
+					p.x = sr.corner.x-M*WINSIZE-2;
+				else	return makerect( 0,0,0,0 );
+
+
+	if ( bound.corner.y > sr.corner.y+2+M*WINSIZE )
+		p.y = sr.corner.y+2;
+	else	if ( sr.origin.y > bound.origin.y+2+M*WINSIZE )
+			p.y = sr.origin.y-M*WINSIZE-2;
+		else	if ( bound.corner.y > sr.origin.y+2+M*WINSIZE )
+				p.y = sr.origin.y+2;
+			else	if ( sr.corner.y > bound.origin.y+2+M*WINSIZE )
+					p.y = sr.corner.y-M*WINSIZE-2;
+				else	return makerect( 0,0,0,0 );
+	return raddp( bigrect,p );
+}
+
+#endif
+End of details.c
+echo myjerq.h 1>&2
+cat >myjerq.h <<'End of myjerq.h'
+/*
+ *
+ *	extensions to jerq.h for Brush   --  brush/myjerq.h
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include <jerq.h>
+
+#ifdef J5620
+#ifdef OLDROM
+#define button1()	bttn1()
+#define button2()	bttn2()
+#define button3()	bttn3()
+#define button1_3()	bttn123()
+#define button12()	bttn12()
+#define button23()	bttn23()
+#define button13()	bttn13()
+#endif
+
+#define Texture32	Texture
+
+#endif
+
+#ifdef JERQ
+#define Texture16	Texture
+
+#define	texture16( bp,r,t,c )	texture( bp,r,t,c )
+
+
+#define bttn1()		button1()
+#define bttn2()		button2()
+#define bttn3()		button3()
+#define bttn123()	button123()
+#define bttn12()	button12()
+#define bttn23()	button23()
+#define bttn13()	button13()
+#endif
+
+
+#define allbuttons	((mouse.buttons&7)==7)
+#define downbutton(n)	((n>=0&&n<=3)?(mouse.buttons&(8>>n)):0)
+#define upbutton(n)	(!downbutton(n))
+
+#define extent(r)	sub(r.corner,r.origin)
+#define midpt(r)	div(add(r.origin,r.corner),2)
+#define nullrect( r )	eqpt(r.origin,r.corner)
+
+#define	RHEIGHT(r)	(r.corner.y-r.origin.y)
+#define RWIDTH(r)	(r.corner.x-r.origin.x)
+
+#define	UP	0
+#define	DOWN	1
+
+#define	FALSE	0
+#define	TRUE	1
+
+#define ALL( items,list )	items=list; items; items=items->next
+#define mjstring( s,p,c )	string(&defont,s,&display,xformpt(p,Jrect,Drect),c)
+
+
+#define	waitbuttons(updown) { do wait(CPU); while((bttn123()!=0) != updown); }
+
+#define jstringat(s,p)	{ jmoveto( p ); jstring( s ); }
+
+#define sign(n)		((n>0) ? 1 : ((n<0) ? -1 : 0 ))
+
+#define null(type)	((type *)0)
+#define talloc(type)	( (type *) alloc( sizeof( type ) ) )
+#define tfree(ptr)	free((char *)ptr)
+
+#define DIST(p,q)	(norm(sub(p,q),0))
+
+char *type();
+Rectangle xformrect(),makerect(),centerect();
+Point xformpt(),jrubberpt(),makept();
+
+
+/*
+ * 	global symbols from mpx's turf
+ *      these are dependant upon the particular release of blit code
+ *
+ *	to find them: mnm -g /usr/jerq/lib/layersys | grep symbolname
+ *
+ */
+#ifdef JERQ
+#define	proctab		((struct Proc *)0x51b4)
+#define lkbdproc	(*((struct Proc **)0x4f9c))
+#define menutext	((char **)0x5002)
+#endif
+
+#ifdef J5620
+
+#define Screen		((Bitmap *)0116250)
+#define kbdproc		(*((struct Proc **)034354640))
+#define windowmenu	((struct Menu *)034356600)
+#define menutext	(windowmenu->item)
+#define proctab		((struct Proc *)034356714)
+#define mr_mouse	((struct Mouse *)034312434)	/* global mouse pos */
+
+#endif
+
+/*
+ *
+ *	define transform to take pt from J <--> D coords
+ *
+ */
+
+#define JtoD(p)		xformpt( p,Jrect,Drect )
+#define DtoJ(p)		xformpt( p,Drect,Jrect )
+#define DtoJrect(r)	xformrect(r,Drect,Jrect)
+#define JtoDrect(r)	xformrect(r,Jrect,Drect)
+
+
+End of myjerq.h
+echo brush.h 1>&2
+cat >brush.h <<'End of brush.h'
+/*
+ *
+ *	includes for Brush  --  brush/brush.h
+ *
+ *
+ *	Brush 
+ *	Garry Hodgson	1985
+ *
+ *	Copyright 1985 AT&T Bell Laboratories
+ *	All Rights Reserved
+ */
+
+#include "myjerq.h"
+#include <jerqio.h>
+#include <font.h>
+
+#define F_AND		((Code)4)	/* target &= source	*/
+
+#define spraying()	(Spray.value)
+#define smoothing()	(Smooth.value)
+#define aligning()	(Align.value)
+#define squaring()	(Square.value)
+#define textyle()	(Style.value)
+
+#define XAXIS		1
+#define YAXIS		2
+#define xreflect(axis)	(axis&XAXIS)
+#define yreflect(axis)	(axis&YAXIS)
+
+#define RectAt( r,p )	raddp( rsubp(r,r.origin),p )
+
+#define erreturn(msg)	{ errmsg( msg ); return; }
+#define realmode(mode)	((bttn2())?F_CLR:mode)
+
+#define BRUSHRECT	Rect(-8,-8,8,8)
+
+#define NSHADES		28
+#define NBRUSHES	28
+#define NICONS		14
+
+#define FLIPX		0
+#define FLIPY		1
+
+/* type styles */
+
+#define NORMAL		0
+#define OUTLINE		1
+#define BOLD		2
+#define SHADOW		3
+#define ITALIC		4
+
+/* disc styles */
+
+#define UNFILLED	0
+#define FILLED		1
+
+#define MWIDTH		24
+#define MHEIGHT		40
+
+#define DORG		Drect.origin
+#define DCOR		Drect.corner
+#define RORG		r.origin
+#define RCOR		r.corner
+
+#define EXPAND		1
+
+/* Icon messages */
+
+#define INIT		0
+#define SELECT		1
+
+typedef
+struct Icon	{
+			Rectangle r;
+			Word value;
+			Word (*handler)();
+		} Icon;
+
+extern Icon Brush,Shade,Draw,Spray,Smooth,Style,
+	    Mode,Helper,Phont,Flex,Align,Square,*Icons[];
+
+typedef
+struct Help	{
+			Texture16 *text[3];
+		} Help;
+
+extern Help	sweep_set,pos_set,point_set,default_set,
+		curr_set,exit_set,kill_set,fade_set,menu_set,
+		helpswitch(),circ_set,snarf_set;
+
+typedef
+struct Image	{
+			Bitmap		*bp;
+			Rectangle	r;
+			Point		pos;
+			Point		alg;
+		} Image;
+
+extern Image make_image(),discs(),get_image(),blowup(),text(),flippit(),
+		rotate(),shear();
+
+extern Image Now_Pic,NoPic;
+
+/*	declare our brush masks as 16 bit textures	*/
+
+extern Texture16 circle3,circle5,circle7,dot2,dot4,dot6,dot8,bar6,bar10,bar14,
+		 dash6,dash10,dash14,
+		 diag3,ldiag3,grp3,lgrp3,slash16,slash12,slash8,
+		 null1,null2,null3,null4,
+		 null5,null6,null7,null8;
+
+extern Texture16 *brush,*brushes[],edit_text(),snarf_text();
+
+/*	declare our shades as 16 bit textures	*/
+
+extern Texture16 white,grey1,grey2,grey3,grey4,grey5,grey6,grey7,black,
+		 bigcheck,bigrcheck,bigstcheck,cross,thinvs,thickvs,
+		 thinhs,thickhs,star,diags,zig,tictac,blot1,blot2,tactic,zag,
+		 smile2,smile3,smile4,scowley,cube,xhatch,deathstar,leafs,woven;
+
+extern Texture16 *shade,*shades[];
+
+/* don't forget the cursor icons */
+
+extern Texture16 skull,menucursor,sweepcursor,hand,sweepcircle,
+		 drawcursor,erasecursor,thumbsdown,smile2,scowley,
+		 hourglass;
+
+extern Bitmap screen,bigscreen,mask,notmask,spraymask,bigmask;
+extern Font *curr_font,*fontlist[];
+
+
+Point rubberpt(),xformpt(),constrain(),makept(),mod16(),align(),tweak();
+Rectangle sweeprect();
+extern Word maskwords[],notmaskwords[];
+extern int drawmode;
+End of brush.h
+echo makefile 1>&2
+cat >makefile <<'End of makefile'
+MYJERQ	= myjerq.h
+BRUSH   = .
+SOURCES = brush.c circles.c copy.c draw.c editext.c errmsg.c help.c icons.c \
+	  newfill.c readmap.c writemap.c options.c smooth.c sweeps.c text.c \
+	  texture32.c type.c updown.c shrink.c details.c
+GINCS   = $(MYJERQ) brush.h
+OBJS    = brush.o circles.o copy.o draw.o editext.o errmsg.o help.o icons.o \
+	  newfill.o readmap.o writemap.o options.o smooth.o sweeps.o text.o \
+	  texture32.o type.o updown.o shrink.o details.o
+LIBS    = -lc
+CC	= $(DMD)/bin/dmdcc
+STRIP	= $(DMD)/bin/m32strip
+CFLAGS	= -DJ5620 -DBITFILE -I$(BRUSH) 
+
+brush.56:$(OBJS)
+	@ls -l brush.56
+	$(CC) -o brush.56 $(OBJS) $(LIBS)
+	@$(STRIP) -r brush.56
+	@ls -l brush.56
+	@echo ""
+
+test.56:newtest.o errmsg.o
+	$(CC) -o newtest.56 newtest.o errmsg.o $(LIBS)
+	@echo ""
+
+freehand.56:freehand.o errmsg.o
+	$(CC) -o freehand.56 freehand.o errmsg.o $(LIBS)
+	@echo ""
+
+$(OBJS): $(GINCS)
+
+readmap.o:	makefile
+writemap.o:	makefile
+
+print:
+	@print $(SOURCES) $(GINCS) makefile56
+	@echo ""
+
+lf:
+	@lf $(SOURCES) $(GINCS) makefile56
+	@echo ""
+
+bundle:
+	bundle $(SOURCES) $(GINCS) makefile > brush.bundle
+	@echo ""
+
+cpio:
+	echo $(SOURCES) $(GINCS) makefile | 1per | cpio -ocv > brush.cpio
+	@echo ""
+
+safe:
+	@cp *.[ch] makefile56 brush.56 backup
+	@echo "`date`" > backup/last_time
+	@echo "`date`"
+	@echo ""
+
+End of makefile

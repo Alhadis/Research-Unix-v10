@@ -1,0 +1,1520 @@
+Only in /n/ikeya/v/tom/mux/term: 08foo
+Only in /n/ikeya/v/tom/mux/term: 3cc.c
+Only in /n/ikeya/v/tom/mux/term: 3queue.c
+Only in /n/ikeya/v/tom/mux/term: 3queue.h
+Only in /n/ikeya/v/tom/mux/term: 3queue.o
+Only in /n/ikeya/v/tom/mux/term: 3queue.s
+Only in /n/ikeya/v/tom/mux/term: 44foo
+Only in /n/ikeya/v/tom/mux/term: 4boot.c
+Only in /n/ikeya/v/tom/mux/term: CALL
+Only in /n/ikeya/v/tom/mux/term: Control.s
+Only in /n/ikeya/v/tom/mux/term: Queue.h
+Only in /n/ikeya/v/tom/mux/term: a48
+Only in /n/ikeya/v/tom/mux/term: a4nm
+Only in /n/ikeya/v/tom/mux/term: align.s
+diff ./boot.c /n/ikeya/v/tom/mux/term/boot.c
+32c32,35
+< 		bootaddress=address=Ualloc((unsigned)(nbytes+bss));
+---
+> 		address=Ualloc((unsigned)(nbytes+bss+4));
+> 		if (((unsigned)address) & 4)
+> 			address += 4;
+> 		bootaddress=address;
+Only in /n/ikeya/v/tom/mux/term: boot.o
+Only in /n/ikeya/v/tom/mux/term: c
+Only in /n/ikeya/v/tom/mux/term: cbcontrol.c
+Only in /n/ikeya/v/tom/mux/term: cbpcontrol.s
+diff ./comm.c /n/ikeya/v/tom/mux/term/comm.c
+3c3
+< #include <queue.h>
+---
+> #include "3queue.h"
+45c45
+< 	if((p=kbdproc)==0)
+---
+> 	if((p=kbdproc)==0 && qpeekc(&KBDQUEUE) != 0x8E)
+Only in /n/ikeya/v/tom/mux/term: comm.o
+diff ./control.c /n/ikeya/v/tom/mux/term/control.c
+4c4
+< #include <queue.h>
+---
+> #include "3queue.h"
+60a61
+> 	/* KBDQUEUE.state |= QPRIORITY;	/* debug */
+116c117,118
+< 				register c=p->kbdqueue.c_head->word;
+---
+> 				/*register c=cbuf_word[p->kbdqueue.c_head];*/
+> 				register c=qpeekc(&p->kbdqueue);
+474a477,478
+> 	static Rectangle r={0, 0, 50, 50};
+> 
+479a484,485
+> 	if (*p & P_CNTL)
+> 		OUTQUEUE.state |= QPRIORITY;
+481c487,492
+< 		qputc(&OUTQUEUE, *(unsigned char *)p++);
+---
+> 		if (!qputc(&OUTQUEUE, *(unsigned char *)p++)) {
+> 			rectf(&display, r, F_XOR);
+> 			if ((r.origin.y += 50) >= 1000)
+> 				r.origin.y = 0;
+> 			r.corner.y = r.origin.y + 50;
+> 		}
+482a494
+> 	OUTQUEUE.state &= ~QPRIORITY;
+Only in /n/ikeya/v/tom/mux/term: control.o
+Only in /n/ikeya/v/tom/mux/term: control.s
+diff ./crtm.s /n/ikeya/v/tom/mux/term/crtm.s
+53a54
+> 	.align	8
+Only in /n/ikeya/v/tom/mux/term: ctest.s
+Only in /n/ikeya/v/tom/mux/term: datpad.o
+Only in /n/ikeya/v/tom/mux/term: datpad.s
+diff ./demux.c /n/ikeya/v/tom/mux/term/demux.c
+4c4
+< #include <queue.h>
+---
+> #include "3queue.h"
+Only in /n/ikeya/v/tom/mux/term: demux.o
+Only in .: diffs
+diff ./exec.c /n/ikeya/v/tom/mux/term/exec.c
+2c2
+< #include <queue.h>
+---
+> #include "3queue.h"
+Only in /n/ikeya/v/tom/mux/term: exec.o
+Only in /n/ikeya/v/tom/mux/term: fmap
+Only in /n/ikeya/v/tom/mux/term: foo.s
+Common subdirectories: ./frame and /n/ikeya/v/tom/mux/term/frame
+Only in /n/ikeya/v/tom/mux/term: ftkbd.c
+Only in /n/ikeya/v/tom/mux/term: j
+diff ./kbd.c /n/ikeya/v/tom/mux/term/kbd.c
+2c2
+< #include <queue.h>
+---
+> #include "3queue.h"
+10c10,40
+< kbdchar(){
+---
+> /*
+>  * All characters with high bits set are used to index this table to yield
+>  * the generated character. This makes TAB==^I, etc, and removes the silly
+>  * mappings like ^@==0xba instead of NUL.  However, ^, is still NUL.
+>  * For now, shifted keys are the same as unshifted, if mapped in this table;
+>  * for example shift RETURN is RETURN.  This may change....
+>  * Characters that 'cannot happen' are mapped to 'X'==0x58, to ferret out bugs.
+>  * Break is well known as 0x80, disconnect as 0x81.
+>  * This map is done at interrupt level time, so is always applied.
+>  */
+> unsigned char defkeymap[]={
+> /*80*/	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,
+> 	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,	0x8e,	0x81,
+> /*90*/	0x90,	0x91,	0x92,	0x93,	0x94,	0x95,	0x96,	0x97,
+> 	0x98,	0x99,	0x9a,	0x9b,	0x58,	0x58,	0x58,	0x58,
+> /*A0*/	0x58,	0xa1,	0xa2,	0xa3,	0xa4,	0xa5,	0xa6,	0xa7,
+> 	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,	0xae,	0x80,
+> /*B0*/	0xb0,	0xb1,	0xb2,	0xb3,	0xb4,	0xb5,	0x0a,	0xb7,
+> 	0xb8,	0xb9,	0x00,	0xbb,	0x1e,	0xbd,	0x60,	0x1f,
+> /*C0*/	0xc0,	0xc1,	0xc2,	0xc3,	0xc4,	0x58,	0xc6,	0x0d,
+> 	0xc8,	0xc9,	0xca,	0xcb,	0xcc,	0xcd,	0xce,	0xcf,
+> /*D0*/	0x09,	0x08,	0xd2,	0xd3,	0xd4,	0xd5,	0xd6,	0xd7,
+> 	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,	0x7f,	0x58,
+> /*E0*/	0x58,	0x58,	0xe2,	0x1b,	0x58,	0xe5,	0x58,	0x0d,
+> 	0xe8,	0xe9,	0xea,	0xeb,	0xec,	0xed,	0xee,	0xef,
+> /*F0*/	0x09,	0x08,	0xb2,	0x1b,	0x58,	0xf5,	0x0a,	0x58,
+> 	0x58,	0x58,	0x58,	0x58,	0x58,	0x58,	0x7f,	0x58,
+> };
+> 
+> kbdchar()
+> {
+20c50
+< 	DUART->mr1_2b=CHAR_ERR|NO_PAR|CBITS8;
+---
+> 	DUART->mr1_2b=CHAR_ERR|PAR_ENB|EVN_PAR|CBITS8;
+22c52
+< 	DUART->b_sr_csr=BD300BPS;
+---
+> 	DUART->b_sr_csr=BD4800BPS;
+25d54
+< #ifdef ftang
+32d60
+< #endif
+40d67
+< #ifdef ftang
+56a84,85
+> 		if(c==0x8E)	/* SHIFT-SETUP; show what's up */
+> 			KBDQUEUE.state |= QPRIORITY;
+57a87
+> 		KBDQUEUE.state &= ~QPRIORITY;
+63,64d92
+< #else
+< 	qputc(&KBDQUEUE, (int)c);
+67,69c95
+< #ifdef ftang
+< 	qputc(&KBDQUEUE, kbdrepeat&0xff);
+< #endif
+---
+> 	qputc(&KBDQUEUE, kbdrepeat&0xff);
+Only in /n/ikeya/v/tom/mux/term: kbd.o
+Only in /n/ikeya/v/tom/mux/term: key.o
+Only in /n/ikeya/v/tom/mux/term: layer
+Only in /n/ikeya/v/tom/mux/term: ldpad
+Only in /n/ikeya/v/tom/mux/term: m8
+diff ./makefile /n/ikeya/v/tom/mux/term/makefile
+16c16
+< TOBJS =  boot.o comm.o control.o demux.o exec.o key.o task.o trap.o user.o window.o
+---
+> TOBJS =  boot.o comm.o control.o demux.o exec.o key.o task.o trap.o user.o window.o 3queue.o kbd.o
+19c19
+< muxterm: map pcbs.o pl.o $(OBJS) frame/frame.a proctab.o /usr/jerq/lib/libj.a /usr/jerq/lib/liblayer.a
+---
+> muxterm: map pcbs.o pl.o $(OBJS) frame/frame.a proctab.o j/libj.a layer/liblayer.a
+22c22,23
+< 		-llayer -lj -lsys -lj -lc proctab.o
+---
+> 		layer/liblayer.a j/libj.a sys/libsys.a j/libj.a -lc proctab.o
+> 		@: -llayer -lj -lsys -lj -lc proctab.o
+Only in /n/ikeya/v/tom/mux/term: mod
+Only in /n/ikeya/v/tom/mux/term: mod8
+Binary files ./muxterm and /n/ikeya/v/tom/mux/term/muxterm differ
+Only in /n/ikeya/v/tom/mux/term: na4nm
+diff ./nm.out /n/ikeya/v/tom/mux/term/nm.out
+1,394c1,72
+< 00727341 t BW_XORINNER
+< 007272fe t BW_XORLOOP
+< 0071f53c T Bottom
+< 0072a2b8 t CB_ALIGNED
+< 0072a2cc t CB_DEST_ST
+< 0072a2a0 t CB_NO_STRADDLE
+< 00723c86 T Control
+< 0071f55a T Current
+< 0071f46c T Delete
+< 0072cbc4 B ENDAREA
+< 007295ea t FCLEAR
+< 007295f2 t FCLR
+< 00729653 t FOR
+< 007296b5 t FSTORE
+< 00729589 t FXOR
+< 0072cbac B F_rectf
+< 0072961c t Fclr_4
+< 0072967e t For_4
+< 00725574 T GCalloc
+< 0072cab8 B HIWATER
+< 00727bdc T Jclipline
+< 0072cbb4 B Jdmajor
+< 0072cbb6 B Jdminor
+< 00728786 T Jmajor
+< 00728722 T Jminor
+< 0072adc0 D Jrect
+< 00001ae3 f Jrect.c
+< 00728956 T Jsetdda
+< 0072880a T Jsetline
+< 0072cbba B Jslopeneg
+< 0072cbb8 B Jxmajor
+< 00725838 t LLdownback
+< 0072cabc B LOWATER
+< 00725ea8 t Lblt
+< 007263e8 T Lbox
+< 007258c0 t Ldownback
+< 0072644c T Lgrey
+< 00726058 t Lrectf
+< 007260b8 t Lsegment
+< 00726490 t Lsetvis
+< 00726148 t Ltexture
+< 007262a4 t Lupfront
+< 0071faf8 T Memory
+< 0071f900 T Move
+< 0072dc40 O NPROC
+< 0071f42a T New
+< 0072cad0 B Null
+< 0071e700 T P
+< 0072cb34 B Pkp
+< 0071f442 T Psend
+< 00724776 T Rectf
+< 00723e1c T Reply
+< 0071f798 T Reshape
+< 00723e9e T Retry
+< 0072cb3c B Sbufp
+< 0072cb42 B Scount
+< 0071f24a T Sw
+< 0071e700 T Sys
+< 0071f51e T Top
+< 00721b10 T Uaddr
+< 00721018 T Ualloc
+< 00721036 T Uballoc
+< 00721832 T Ubitblt
+< 00721278 T Ucursallow
+< 00721318 T Ucursinhibit
+< 007212e4 T Ucursset
+< 00721388 T Ucursswitch
+< 00721068 T Uexit
+< 0072113e T Ukbdchar
+< 00721ac4 T Unewproc
+< 00721aea T Unewwindow
+< 00721bcc T Uogetrect
+< 00721174 T Uown
+< 007217d8 T Upoint
+< 00721114 T Urcvchar
+< 007218b8 T Urectf
+< 00721090 T Urequest
+< 00721a76 T Uscreenswap
+< 00721968 T Usegment
+< 007217a4 T Usendchar
+< 007219c2 T Utexture
+< 007211fa T Uwait
+< 0072cae4 B Zheader
+< 00728098 T _line
+< 0071e868 T _start
+< 0072a2ec T abs
+< 00001d2d f abs.c
+< 00001c84 f acia.c
+< 00729724 T aciainit
+< 007298fc T aciapaws
+< 00729810 T aciatrint
+< 007266e0 T add
+< 007264f8 T addr
+< 00722852 T advance
+< 0071f0ba T alarm
+< 00726640 T alloc
+< 00001b00 f alloc.c
+< 0072adc8 d allocb
+< 0072cbc0 B allocendp
+< 0072651c T allocinit
+< 0072cbbc B allocstartp
+< 0072abb4 d alphanl
+< 00001b2c f arith.c
+< 00729d66 T auto1
+< 00729f02 T auto2
+< 00729998 T auto4
+< 007269f2 T balloc
+< 00001b40 f balloc.c
+< 0072beb4 D baud_speeds
+< 00726a1e T bfree
+< 00729978 T binit
+< 00726a48 T bitblt
+< 00001b4e f bitblt.c
+< 0072ae50 d bits
+< 0071ecb6 T bldargs
+< 0072ad54 D blitdir
+< 0072bfac B blocked
+< 0071e9d0 T boot
+< 0000012e f boot.c
+< 007202aa T border
+< 0072bc6c D botbits
+< 0072a4b8 D boxcurs
+< 00001d23 f bram.c
+< 0072cac0 B buf
+< 00721f24 T bufinit
+< 0072a498 D bullseye
+< 0072347e T but1func
+< 007234f4 T but2func
+< 00723554 T but3func
+< 0072ac64 D butfunc
+< 0071f226 T buttons
+< 00001c94 f buttons.c
+< 0072abf8 d c
+< 0072bda4 d c_ll
+< 0072bde4 d c_lr
+< 0072bd84 d c_ul
+< 0072bdc4 d c_ur
+< 0071e8fd T callps
+< 0071f57a T canon
+< 00720484 T cansend
+< 0072abac d cbreak
+< 0072cc3c B cbufs
+< 007286d6 T ceil
+< 00724e06 T charofpt
+< 0072a1a8 T checkbram
+< 00723440 T checkmouse
+< 0072025c T clear
+< 00721cda T clearname
+< 00001b5e f clip.c
+< 00723186 T clixtopix
+< 0071ee60 T clockroutine
+< 00724ce2 T closeframe
+< 0072a5ac d cmd
+< 00727b98 t code
+< 0000024c f comm.c
+< 00727f98 t compact
+< 0072cac8 B complete
+< 0071f292 T control
+< 00000558 f control.c
+< 00720eda T copy
+< 007207ac T copyb
+< 00724ffc T cpl
+< 007238b4 T crc
+< 0072acb0 D crc16t_32
+< 0072abb0 d crmod
+< 0072a458 D cup
+< 0072bfb4 B cur
+< 00729a98 T cursallow
+< 0072a26c T cursblt
+< 0072cc18 B cursbm
+< 0071e9cf T curse
+< 00729a40 T cursinhibit
+< 00729d2a T cursinit
+< 0072cbf0 B cursor
+< 00001cce f cursor.c
+< 00729c84 T cursset
+< 00729df2 T cursswitch
+< 0072cbec B curtabp
+< 00722e34 T cut
+< 0072cb40 B dcount
+< 0072a478 D deadmouse
+< 0071fb72 T debug
+< 0072bfb8 B debugger
+< 0072be2c D defkeymap
+< 0072b764 D defont
+< 00001b68 f defont.c
+< 0071f488 T delete
+< 0071fe5e T delim
+< 007257d0 T dellayer
+< 00001a11 f dellayer.c
+< 0071f4e6 T delproc
+< 0072573e T delstring
+< 0072ad9c d delta
+< 00724148 T deltext
+< 00001219 f deltext.c
+< 00722a86 T deltype
+< 007204d4 T demux
+< 000006ca f demux.c
+< 00725d38 t destop
+< 00729918 T disconnect
+< 0072bb80 D display
+< 00001b70 f display.c
+< 007267a0 T div
+< 0071fc00 T dobutton
+< 00720624 T doctl
+< 0072bfc8 B doubleclickOK
+< 0072590a T downback
+< 00001a25 f downback.c
+< 0072461e T draw
+< 00724c34 T drawframe
+< 007231fe T drawscrollbar
+< 0072cbc8 B dtr
+< 007298c0 T dtrctl
+< 0072aba8 d echo
+< 0072bf84 A edata
+< 0072ac1c d editmenu
+< 0072ac04 d editstrs
+< 0072a4d8 D eightball
+< 0072dc40 A end
+< 00729583 t end
+< 0072cb44 B endpoint
+< 007268d0 T eqpt
+< 007268f0 T eqrect
+< 00720f92 T error
+< 0072a440 A etext
+< 0071e9b6 T excep_int
+< 0071e946 T excep_norm
+< 0071e9b6 T excep_proc
+< 0071e99d T excep_stack
+< 0071c320 O excep_tab
+< 00720994 T exec
+< 000007bd f exec.c
+< 00720934 T execsw
+< 0072924e t flip
+< 00729cc0 t flipcursor
+< 0072868a T floor
+< 00724a38 T fralloc
+< 0072443c T frameop
+< 0000139e f frameop.c
+< 00726658 T free
+< 00726678 T freeall
+< 0072dc3c B freelist
+< 0071ee3c T freemem
+< 00724c04 T frfree
+< 00724b74 T frinit
+< 0072512c T frselect
+< 00724a8c T frsetrects
+< 00727f08 T gcalloc
+< 00001b91 f gcalloc.c
+< 00727f24 T gcfree
+< 00727f60 T gcfreeall
+< 00727e10 T gcinit
+< 0072cb48 B genbuf
+< 0071ed2e T getchar
+< 0071eda0 T getlong
+< 00721f72 T getmuxbuf
+< 00721cb2 T getname
+< 0071fb8a T getproc
+< 0071fbe8 T getproctab
+< 0071f764 T getrect
+< 0071f5fa T getrectb
+< 007227da T getto
+< 0071f004 T givemouse
+< 0072ac44 D grey
+< 007235ca T guide
+< 0072aa50 d hex
+< 0071e8b6 T host_int
+< 0071c0f0 O host_pcb
+< 0071cc10 O hoststk
+< 0072a30c T index
+< 00001d37 f index.c
+< 0072ab90 d inhibited
+< 00722770 T inschar
+< 0072cacc B inscomplete
+< 00722882 T insertstring
+< 007228a4 T inserttype
+< 00726738 T inset
+< 007256ca T insstring
+< 007247ac T instext
+< 000014bd f instext.c
+< 00722bb0 T instype
+< 007255d6 T insure
+< 0071c2d0 O int_pcb
+< 0072cc2c B interrupt
+< 00725532 T isalnum
+< 0071c3f0 O istack
+< 00720f42 T itox
+< 00720088 T jline
+< 0072bd74 d jmptbl
+< 00729420 T jstrwidth
+< 007222de T kbd
+< 00001ce6 f kbd.c
+< 00729e64 T kbdchar
+< 00729e82 T kbdinit
+< 0072a4f8 D kbdproc
+< 0072bfd4 B kbdrepeat
+< 00729fd8 T kbdrpt
+< 0072cc38 B kbdstatus
+< 0072abfc d kbdstr
+< 000007cd f key.c
+< 0071e8ad T key_int
+< 0071c1e0 O key_pcb
+< 0071d0c0 O keystk
+< 0072a5fc D kmap
+< 0072acf4 d lasty
+< 00725c42 T layerop
+< 00001a36 f layerop.c
+< 0072cbb0 B lback
+< 00725d94 T lbitblt
+< 00001a4b f lbitblt.c
+< 00725efc T lblt
+< 00001a5b f lblt.c
+< 00001ac3 f lbox.c
+< 007295d2 t less4
+< 0072963b t less4clr
+< 0072969d t less4or
+< 0072ca1c B lfront
+< 00001b9d f line.c
+< 0072221e T linecurse
+< 007250fa T lineno
+< 00001bc3 f linesub.c
+< 00721bfe t lookup
+< 0072a9fc d lower
+< 00725f74 T lpoint
+< 00001a67 f lpoint.c
+< 0072be28 d lr
+< 00726086 T lrectf
+< 00001a77 f lrectf.c
+< 007260ee T lsegment
+< 00001a87 f lsegment.c
+< 0072acfc d ltbrack
+< 0072617e T ltexture
+< 00001a97 f ltexture.c
+< 00725a5c T mRlayerop
+< 0071f0e8 T main
+< 0071c3a0 O main_pcb
+< 0071d700 O mainstk
+< 00720a70 T mapchar
+< 007295dd t mask2ok
+< 007296a8 t mask2or
+< 00001bcb f masks.c
+< 00725292 T matchit
+< 0072016e T max
+< 0072beac D maxaddr
+< 0072a520 D menufn
+< 007289d0 T menuhit
+< 00001be0 f menuhit.c
+< 0072a4fc D menutext
+< 0072229a T mesg
+< 00720152 T min
+< 007295b3 t more4
+< 0071e893 t mous_chk
+< 0072bfc0 B mouse
+< 00725786 T movstring
+< 0072ab94 d mrfont
+< 00729646 t msk2clr
+< 0071e8a9 t msvid_exit
+< 0071e871 T msvid_int
+< 0071c230 O msvid_pcb
+< 0071d250 O msvidstk
+< 007267dc T mul
+< 0071fff8 T muxkill
+< 00720020 T muxmesg
+< 0071fefe T muxnewwind
+< 0071ffb6 T muxsendchar
+< 0072003c T muxublk
+< 00729dca T nap
+< 007226b4 T nback
+< 0072acf0 d nc
+< 0072a5f0 d ncmd
+< 00001608 f newframe.c
+< 007261b4 T newlayer
+< 00001aa3 f newlayer.c
+< 00720ad0 T newproc
+< 007299c8 T newquad
+< 0071fd20 T newwindow
+< 0072ad58 d nextcase
+< 0072bb94 d nextlong
+< 007243f0 T nexttab
+< 0072ab98 d nlist
+< 0072aa10 D normalmsg
+< 0072273c T notin
+< 00729566 t notnarrow
+< 0072cc30 B old
+< 00723878 T oldlinepos
+< 0072bcf4 d ones
+< 00724694 T opclear
+< 00724fd0 T opcpl
+< 007245b0 T opdraw
+< 00724734 T opnull
+< 0072463e T oprectf
+< 0072525a T order
+< 0072141a T ostring
+< 0071e8da T out_int
+---
+> 00000016 f pcbs.c
+> 00000139 f boot.c
+> 00000259 f comm.c
+> 00000557 f control.c
+> 000006b9 f demux.c
+> 000007ae f exec.c
+> 000007be f key.c
+> 000008c4 f task.c
+> 000009e1 f trap.c
+> 00000bf6 f user.c
+> 00000f19 f window.c
+> 00000f86 f 3queue.c
+> 0000102b f kbd.c
+> 00001040 f pcheck.c
+> 00001096 f pinit.c
+> 0000110a f precv.c
+> 00001169 f psend.c
+> 000011c2 f ptimeout.c
+> 000012eb f deltext.c
+> 0000147b f frameop.c
+> 000015a5 f instext.c
+> 000016fb f newframe.c
+> 0000187b f ptofchar.c
+> 000019c4 f select.c
+> 00001b19 f string.c
+> 00001b25 f dellayer.c
+> 00001b39 f downback.c
+> 00001b4a f layerop.c
+> 00001b5f f lbitblt.c
+> 00001b6f f lblt.c
+> 00001b7b f lpoint.c
+> 00001b8b f lrectf.c
+> 00001b9b f lsegment.c
+> 00001bab f ltexture.c
+> 00001bb7 f newlayer.c
+> 00001bc7 f upfront.c
+> 00001bd7 f lbox.c
+> 00001be7 f setvis.c
+> 00001bf7 f Jrect.c
+> 00001c14 f alloc.c
+> 00001c40 f arith.c
+> 00001c54 f balloc.c
+> 00001c62 f bitblt.c
+> 00001c72 f clip.c
+> 00001c7c f defont.c
+> 00001c84 f display.c
+> 00001ca5 f gcalloc.c
+> 00001cb1 f line.c
+> 00001cd7 f linesub.c
+> 00001cdf f masks.c
+> 00001cf4 f menuhit.c
+> 00001d00 f ptinrect.c
+> 00001d0c f rectXrect.c
+> 00001d18 f rectclip.c
+> 00001d25 f rectf.c
+> 00001d31 f screenswap.c
+> 00001d41 f strwidth.c
+> 00001d6c f texture.c
+> 00001d98 f acia.c
+> 00001da8 f bram.c
+> 00001db8 f buttons.c
+> 00001df2 f cursor.c
+> 00001e03 f setup.c
+> 00001e0d f abs.c
+> 00001e17 f index.c
+> 00001e21 f strcat.c
+> 00001e2b f strcmp.c
+> 00001e35 f strcpy.c
+> 00001e3f f strlen.c
+> 0071c050 O proc_pcb
+> 0071c0a0 O stack_pcb
+> 0071c0f0 O host_pcb
+396,410d73
+< 007200b6 T outline
+< 0071cda0 O outstk
+< 00722eaa T paste
+< 0072bfd0 B patch
+< 0072bfcc B patchedspot
+< 0072cb38 B pbufp
+< 00000016 f pcbs.c
+< 00000f31 f pcheck.c
+< 0072a444 D pconfig
+< 0072bfd8 B pconvs
+< 0072cad8 B pconvsend
+< 0071e9cf T pfkey
+< 00723988 T pinit
+< 00000f99 f pinit.c
+< 0071e8e3 T pioh_int
+412,413c75,76
+< 0071cf30 O piohstk
+< 0071e8ec T piol_int
+---
+> 0071c1e0 O key_pcb
+> 0071c230 O msvid_pcb
+415,420c78,82
+< 0071d3e0 O piolstk
+< 007231c2 T pixtoclix
+< 00723a54 T precv
+< 0000101f f precv.c
+< 0072cae8 B precvpkt
+< 0071c050 O proc_pcb
+---
+> 0071c2d0 O int_pcb
+> 0071c320 O excep_tab
+> 0071c3a0 O main_pcb
+> 0071c3f0 O istack
+> 0071c4f0 O ststk
+422,520d83
+< 0072dc44 O proctab
+< 00723f1c T psend
+< 00001090 f psend.c
+< 0072cadc B pseqtable
+< 0071e9cf T pt
+< 00724050 T ptimeout
+< 000010fb f ptimeout.c
+< 0072929c T ptinrect
+< 00001bec f ptinrect.c
+< 00724d90 T ptofchar
+< 0000177d f ptofchar.c
+< 00721c7e T putname
+< 0072a15e T qclear
+< 0072a0f2 T qgetc
+< 0072a000 T qinit
+< 0072a034 T qputc
+< 0072a0be T qputstr
+< 00001d02 f queue.c
+< 0072bf88 B queues
+< 00724740 T rXOR
+< 00726870 T raddp
+< 0072aba4 d raw
+< 00721fde T rcv
+< 007297c0 T rcvchar
+< 00726568 T realalloc
+< 00726924 T realballoc
+< 00727e44 T realgcalloc
+< 0071e8f5 T realtime
+< 0072052c T reboot
+< 0072ca20 B rebootflag
+< 007292c8 T rectXrect
+< 00001bf8 f rectXrect.c
+< 007292f4 T rectclip
+< 00001c04 f rectclip.c
+< 00729364 T rectf
+< 00001c11 f rectf.c
+< 00720540 T recvchars
+< 007296b0 t rest_or
+< 00720b48 T restart
+< 0072964e t restclr
+< 00729571 t restcode
+< 007295e5 t restloop
+< 0071e903 T resume
+< 0071e908 T retps
+< 0071e9cf T ringbell
+< 0072cc34 B rptcount
+< 00726810 T rsubp
+< 0072ad04 d rtbrack
+< 0072ad0c d same
+< 00729398 T screenswap
+< 00001c1d f screenswap.c
+< 007229ea T scrlb
+< 00722922 T scrlf
+< 0072ca24 B scrltimeout
+< 00723764 T scroll
+< 007235f4 T scrollbar
+< 007230f2 T scrollclip
+< 007250a2 T scrollcpl
+< 0072311e T scrollmark
+< 0072ac28 d scrollstrs
+< 0072bfbc B second
+< 0072863c T segment
+< 000018bb f select.c
+< 007246de T selectf
+< 00722f08 T send
+< 0072987a T sendbreak
+< 0072ca18 B sendbusy
+< 007297ee T sendchar
+< 007208c2 T sendcmd
+< 0071fe02 T sendnchars
+< 007230aa T sendoldtext
+< 0071fe8a T sendpkt
+< 00723030 T sendsubstr
+< 0071fe42 T sendwithdelim
+< 00720406 T setborder
+< 0072a21c T setbram
+< 00724f3c T setcpl
+< 0071ed02 T setdata
+< 00721fbe T setmuxbuf
+< 007232fe T setscroll
+< 00724d6c T setsel
+< 00001d0a f setup.c
+< 007264ac T setvis
+< 00001ad3 f setvis.c
+< 00729b24 t setxy
+< 007207dc T shellproc
+< 0071edd0 T shutdown
+< 0071f03c T sleep
+< 00722ddc T snarf
+< 0071e90a T spl0
+< 0071e919 T spl1
+< 0071e919 T spl4
+< 0071e926 T spl5
+< 0071e926 T spl6
+< 0071e926 T spl7
+< 0071e935 T splx
+< 00725cf0 t srcop
+< 00729706 t st4less
+< 0071c0a0 O stack_pcb
+522,537c85,90
+< 00724f08 T startline
+< 0072be04 D stdcurtab
+< 00729711 t sto2ok
+< 0072971c t stoloop
+< 007296e7 t store4
+< 0072a338 T strcat
+< 00001d41 f strcat.c
+< 0072a388 T strcmp
+< 00001d4b f strcmp.c
+< 0072a3d4 T strcpy
+< 00001d55 f strcpy.c
+< 0072b750 d strike
+< 0072156a T string
+< 00001a05 f string.c
+< 0072a410 T strlen
+< 00001d5f f strlen.c
+---
+> 0071cc10 O hoststk
+> 0071cda0 O outstk
+> 0071cf30 O piohstk
+> 0071d0c0 O keystk
+> 0071d250 O msvidstk
+> 0071d3e0 O piolstk
+539,595c92,597
+< 0072943c T strwidth
+< 00001c2d f strwidth.c
+< 00725686 T strzero
+< 0071c4f0 O ststk
+< 0072670c T sub
+< 00720bb4 T sw
+< 00720c3c T swinit
+< 00720be2 T switcher
+< 0072ca68 B swpcbp
+< 0072ca28 B swstk
+< 0072bcf0 d table
+< 007289b4 t tablegen
+< 000008c8 f task.c
+< 0071e9cf T test32
+< 00729478 T texture
+< 00001c58 f texture.c
+< 007294c8 T texture32
+< 0072bfbe B ticks
+< 0072bf84 B ticks0
+< 007201d8 T tolayer
+< 0072bbe8 D topbits
+< 00720cac T trap
+< 000009da f trap.c
+< 0072aa00 D trapmsg
+< 007298dc T tstdcd
+< 0072bfb0 B ublocked
+< 0072be24 d ud
+< 00729ab4 t update
+< 00726314 T upfront
+< 00001ab3 f upfront.c
+< 00000bfb f user.c
+< 0072cbcc B usercurtab
+< 0072a440 D usermouse
+< 0072bebc D val_baud
+< 0072bee8 D val_duplex
+< 0072bf00 D val_indx
+< 0072bef0 D val_keytone
+< 0072bf18 D val_maxes
+< 0072bee0 D val_newline
+< 0072bed4 D val_retkey
+< 0072bef8 D val_screencolor
+< 00722c02 T wbuttons
+< 0072a550 d which
+< 0071fcfc T whichbutton
+< 0072018a T whichlayer
+< 0071fca8 T whichproc
+< 00000f1c f window.c
+< 0072a544 D windowmenu
+< 00721d04 T windowproc
+< 0072acf8 d wrapped
+< 0072bbe0 d x0
+< 0072cc08 B xdata
+< 0072bbe4 d y0
+< 0072cc10 B ydata
+< 0072ab9c d zerostr
+< 00720a02 T zombexec
+< 00720960 T zombsw
+---
+> 0071d700 O mainstk
+> 0071e700 T P
+> 0071e700 T Sys
+> 0071e870 T _start
+> 0071e880 T msvid_int
+> 0071e8a2 t mous_chk
+> 0071e8b8 t msvid_exit
+> 0071e8c0 T key_int
+> 0071e8d0 T host_int
+> 0071e8f8 T out_int
+> 0071e908 T pioh_int
+> 0071e918 T piol_int
+> 0071e928 T realtime
+> 0071e930 T callps
+> 0071e938 T resume
+> 0071e940 T retps
+> 0071e948 T spl0
+> 0071e958 T spl1
+> 0071e958 T spl4
+> 0071e968 T spl6
+> 0071e968 T spl7
+> 0071e968 T spl5
+> 0071e978 T splx
+> 0071e990 T excep_norm
+> 0071e9e8 T excep_stack
+> 0071ea08 T excep_proc
+> 0071ea08 T excep_int
+> 0071ea28 T pt
+> 0071ea28 T curse
+> 0071ea28 T ringbell
+> 0071ea28 T test32
+> 0071ea28 T pfkey
+> 0071ea30 T boot
+> 0071ed38 T bldargs
+> 0071ed88 T setdata
+> 0071edb8 T getchar
+> 0071ee30 T getlong
+> 0071ee60 T shutdown
+> 0071eed0 T freemem
+> 0071eef8 T clockroutine
+> 0071f0b8 T givemouse
+> 0071f0f0 T sleep
+> 0071f170 T alarm
+> 0071f1a0 T main
+> 0071f2e0 T buttons
+> 0071f308 T Sw
+> 0071f350 T control
+> 0071f500 T New
+> 0071f520 T Psend
+> 0071f550 T Delete
+> 0071f570 T delete
+> 0071f5d8 T delproc
+> 0071f610 T Top
+> 0071f630 T Bottom
+> 0071f650 T Current
+> 0071f678 T canon
+> 0071f700 T getrectb
+> 0071f880 T getrect
+> 0071f8b8 T Reshape
+> 0071fa30 T Move
+> 0071fc30 T Memory
+> 0071fcb0 T debug
+> 0071fcc8 T getproc
+> 0071fd30 T getproctab
+> 0071fd48 T dobutton
+> 0071fe00 T whichproc
+> 0071fe58 T whichbutton
+> 0071fe80 T newwindow
+> 0071ff68 T sendnchars
+> 0071ffb0 T sendwithdelim
+> 0071ffd0 T delim
+> 00720000 T sendpkt
+> 007200e0 T muxnewwind
+> 00720198 T muxsendchar
+> 007201e0 T muxkill
+> 00720210 T muxmesg
+> 00720230 T muxublk
+> 00720280 T jline
+> 007202b0 T outline
+> 00720358 T min
+> 00720378 T max
+> 00720398 T whichlayer
+> 007203e8 T tolayer
+> 00720470 T clear
+> 007204c0 T border
+> 00720620 T setborder
+> 007206a0 T cansend
+> 007206f0 T demux
+> 00720748 T reboot
+> 00720760 T recvchars
+> 00720848 T doctl
+> 007209d0 T copyb
+> 00720a00 T shellproc
+> 00720ae8 T sendcmd
+> 00720b60 T execsw
+> 00720b90 T zombsw
+> 00720bc8 T exec
+> 00720c38 T zombexec
+> 00720ca8 T mapchar
+> 00720d08 T newproc
+> 00720d88 T restart
+> 00720df8 T sw
+> 00720e28 T switcher
+> 00720e80 T swinit
+> 00720ef0 T trap
+> 00721138 T copy
+> 007211a0 T itox
+> 007211f0 T error
+> 00721278 T Ualloc
+> 00721298 T Uballoc
+> 007212c8 T Uexit
+> 007212f0 T Urequest
+> 00721378 T Urcvchar
+> 007213a0 T Ukbdchar
+> 007213d8 T Uown
+> 00721460 T Uwait
+> 007214e0 T Ucursallow
+> 00721550 T Ucursset
+> 00721588 T Ucursinhibit
+> 007215f8 T Ucursswitch
+> 00721690 T ostring
+> 007217e0 T string
+> 00721a20 T Usendchar
+> 00721a58 T Upoint
+> 00721ab8 T Ubitblt
+> 00721b40 T Urectf
+> 00721bf0 T Usegment
+> 00721c50 T Utexture
+> 00721d08 T Uscreenswap
+> 00721d58 T Unewproc
+> 00721d80 T Unewwindow
+> 00721da8 T Uaddr
+> 00721e68 T Uogetrect
+> 00721e98 T getname
+> 00721f18 T putname
+> 00721f50 T clearname
+> 00721f80 T windowproc
+> 007221b8 T bufinit
+> 00722208 T getmuxbuf
+> 00722258 T setmuxbuf
+> 00722280 T rcv
+> 007224c8 T linecurse
+> 00722548 T mesg
+> 00722590 T kbd
+> 00722980 T nback
+> 00722a10 T notin
+> 00722a48 T inschar
+> 00722ab8 T getto
+> 00722b30 T advance
+> 00722b68 T insertstring
+> 00722b90 T inserttype
+> 00722c10 T scrlf
+> 00722ce0 T scrlb
+> 00722d80 T deltype
+> 00722eb0 T instype
+> 00722f00 T wbuttons
+> 007230e8 T snarf
+> 00723140 T cut
+> 007231b8 T paste
+> 00723218 T send
+> 00723348 T sendsubstr
+> 007233c8 T sendoldtext
+> 00723418 T scrollclip
+> 00723448 T scrollmark
+> 007234b8 T clixtopix
+> 007234f8 T pixtoclix
+> 00723538 T drawscrollbar
+> 00723638 T setscroll
+> 00723780 T checkmouse
+> 007237c0 T but1func
+> 00723838 T but2func
+> 007238a0 T but3func
+> 00723918 T guide
+> 00723940 T scrollbar
+> 00723ab8 T scroll
+> 00723bd8 T oldlinepos
+> 00723c18 T qinit
+> 00723c68 T qputc
+> 00723d20 T qputstr
+> 00723d58 T qgetc
+> 00723de0 T qclear
+> 00723e40 T qpeekc
+> 00723e68 T kbdchar
+> 00723e88 T kbdinit
+> 00723f08 T auto2
+> 00723ff8 T kbdrpt
+> 00724020 T crc
+> 007240f0 T pinit
+> 007241c0 T precv
+> 00724418 T Control
+> 007245b0 T Reply
+> 00724630 T Retry
+> 007246b8 T psend
+> 007247e0 T ptimeout
+> 007248d8 T deltext
+> 00724b80 T nexttab
+> 00724bd0 T frameop
+> 00724d48 T opdraw
+> 00724db8 T draw
+> 00724de0 T oprectf
+> 00724e38 T opclear
+> 00724e80 T selectf
+> 00724ed8 T opnull
+> 00724ee8 T rXOR
+> 00724f20 T Rectf
+> 00724f58 T instext
+> 007251e8 T fralloc
+> 00725240 T frsetrects
+> 00725328 T frinit
+> 007253b8 T frfree
+> 007253e8 T drawframe
+> 00725498 T closeframe
+> 00725520 T setsel
+> 00725548 T ptofchar
+> 007255c0 T charofpt
+> 007256c8 T startline
+> 00725700 T setcpl
+> 00725798 T opcpl
+> 007257c8 T cpl
+> 00725870 T scrollcpl
+> 007258c8 T lineno
+> 00725900 T frselect
+> 00725a38 T order
+> 00725a70 T matchit
+> 00725d18 T isalnum
+> 00725d58 T GCalloc
+> 00725db8 T insure
+> 00725e70 T strzero
+> 00725eb8 T insstring
+> 00725f30 T delstring
+> 00725f78 T movstring
+> 00725fc8 T dellayer
+> 00726030 t LLdownback
+> 007260b8 t Ldownback
+> 00726108 T downback
+> 00726260 T mRlayerop
+> 00726450 T layerop
+> 00726500 t srcop
+> 00726548 t destop
+> 007265a8 T lbitblt
+> 007266c0 t Lblt
+> 00726718 T lblt
+> 00726790 T lpoint
+> 00726878 t Lrectf
+> 007268a8 T lrectf
+> 007268e0 t Lsegment
+> 00726918 T lsegment
+> 00726970 t Ltexture
+> 007269a8 T ltexture
+> 007269e0 T newlayer
+> 00726ad0 t Lupfront
+> 00726b40 T upfront
+> 00726c18 T Lbox
+> 00726c80 T Lgrey
+> 00726cc8 t Lsetvis
+> 00726ce8 T setvis
+> 00726d38 T addr
+> 00726d60 T allocinit
+> 00726db0 T realalloc
+> 00726e88 T alloc
+> 00726ea8 T free
+> 00726ec8 T freeall
+> 00726f38 T add
+> 00726f68 T sub
+> 00726f98 T inset
+> 00727000 T div
+> 00727040 T mul
+> 00727078 T rsubp
+> 007270d8 T raddp
+> 00727138 T eqpt
+> 00727158 T eqrect
+> 00727190 T realballoc
+> 00727260 T balloc
+> 00727290 T bfree
+> 007272b8 T bitblt
+> 00727b6e t BW_XORLOOP
+> 00727bb1 t BW_XORINNER
+> 00728408 t code
+> 00728450 T Jclipline
+> 00728690 T gcinit
+> 007286c8 T realgcalloc
+> 00728790 T gcalloc
+> 007287b0 T gcfree
+> 007287f0 T gcfreeall
+> 00728828 t compact
+> 00728928 T _line
+> 00728ed0 T segment
+> 00728f20 T floor
+> 00728f70 T ceil
+> 00728fc0 T Jminor
+> 00729028 T Jmajor
+> 007290b0 T Jsetline
+> 00729200 T Jsetdda
+> 00729260 t tablegen
+> 00729280 T menuhit
+> 00729ad0 t flip
+> 00729b20 T ptinrect
+> 00729b50 T rectXrect
+> 00729b80 T rectclip
+> 00729bf0 T rectf
+> 00729c28 T screenswap
+> 00729cb0 T jstrwidth
+> 00729cd0 T strwidth
+> 00729d18 T texture
+> 00729d68 T texture32
+> 00729e06 t notnarrow
+> 00729e11 t restcode
+> 00729e23 t end
+> 00729e29 t FXOR
+> 00729e53 t more4
+> 00729e72 t less4
+> 00729e7d t mask2ok
+> 00729e85 t restloop
+> 00729e8a t FCLEAR
+> 00729e92 t FCLR
+> 00729ebc t Fclr_4
+> 00729edb t less4clr
+> 00729ee6 t msk2clr
+> 00729eee t restclr
+> 00729ef3 t FOR
+> 00729f1e t For_4
+> 00729f3d t less4or
+> 00729f48 t mask2or
+> 00729f50 t rest_or
+> 00729f55 t FSTORE
+> 00729f87 t store4
+> 00729fa6 t st4less
+> 00729fb1 t sto2ok
+> 00729fbc t stoloop
+> 00729fc8 T aciainit
+> 0072a068 T rcvchar
+> 0072a098 T sendchar
+> 0072a0c0 T aciatrint
+> 0072a128 T sendbreak
+> 0072a170 T dtrctl
+> 0072a190 T tstdcd
+> 0072a1b0 T aciapaws
+> 0072a1d0 T disconnect
+> 0072a230 T checkbram
+> 0072a2a8 T setbram
+> 0072a2f8 T binit
+> 0072a318 T auto4
+> 0072a348 T newquad
+> 0072a3c0 T cursinhibit
+> 0072a418 T cursallow
+> 0072a438 t update
+> 0072a4a8 t setxy
+> 0072a610 T cursset
+> 0072a650 t flipcursor
+> 0072a6b8 T cursinit
+> 0072a6f8 T auto1
+> 0072a768 T nap
+> 0072a790 T cursswitch
+> 0072a808 T cursblt
+> 0072a83c t CB_NO_STRADDLE
+> 0072a854 t CB_ALIGNED
+> 0072a868 t CB_DEST_ST
+> 0072a888 T abs
+> 0072a8a8 T index
+> 0072a8d4 T strcat
+> 0072a924 T strcmp
+> 0072a970 T strcpy
+> 0072a9ac T strlen
+> 0072a9dc A etext
+> 0072a9dc D usermouse
+> 0072a9e0 D pconfig
+> 0072a9f4 D cup
+> 0072aa14 D deadmouse
+> 0072aa34 D bullseye
+> 0072aa54 D boxcurs
+> 0072aa74 D eightball
+> 0072aa94 D kbdproc
+> 0072aa98 D menutext
+> 0072aabc D menufn
+> 0072aae0 D windowmenu
+> 0072aaec d which
+> 0072ab0c d r
+> 0072ab54 d cmd
+> 0072ab98 d ncmd
+> 0072aba4 D kmap
+> 0072afa4 d lower
+> 0072afac D trapmsg
+> 0072afbc D normalmsg
+> 0072affc d hex
+> 0072b13c d inhibited
+> 0072b140 d mrfont
+> 0072b144 d nlist
+> 0072b14c d zerostr
+> 0072b154 d raw
+> 0072b158 d echo
+> 0072b15c d cbreak
+> 0072b160 d crmod
+> 0072b164 d alphanl
+> 0072b1a8 d c
+> 0072b1ac d kbdstr
+> 0072b1b4 d editstrs
+> 0072b1cc d editmenu
+> 0072b1d8 d scrollstrs
+> 0072b1f4 D grey
+> 0072b214 D butfunc
+> 0072b264 D defkeymap
+> 0072b2e4 D crc16t_32
+> 0072b324 d nc
+> 0072b328 d lasty
+> 0072b32c d wrapped
+> 0072b334 d ltbrack
+> 0072b33c d rtbrack
+> 0072b344 d same
+> 0072b38c D blitdir
+> 0072b390 d nextcase
+> 0072b3d4 d delta
+> 0072b3fc D Jrect
+> 0072b404 d allocb
+> 0072b48c d bits
+> 0072bd8c d strike
+> 0072bda0 D defont
+> 0072c1bc D display
+> 0072c1d4 d nextlong
+> 0072c224 d x0
+> 0072c228 d y0
+> 0072c22c D topbits
+> 0072c2b0 D botbits
+> 0072c334 d table
+> 0072c33c d ones
+> 0072c3bc d jmptbl
+> 0072c3cc d c_ul
+> 0072c3ec d c_ll
+> 0072c40c d c_ur
+> 0072c42c d c_lr
+> 0072c44c D stdcurtab
+> 0072c46c d ud
+> 0072c470 d lr
+> 0072c474 D maxaddr
+> 0072c47c D baud_speeds
+> 0072c484 D val_baud
+> 0072c49c D val_retkey
+> 0072c4a8 D val_newline
+> 0072c4b0 D val_duplex
+> 0072c4b8 D val_keytone
+> 0072c4c0 D val_screencolor
+> 0072c4c8 D val_indx
+> 0072c4e0 D val_maxes
+> 0072c54c A edata
+> 0072c54c B ticks0
+> 0072c554 B queues
+> 0072c578 B blocked
+> 0072c57c B ublocked
+> 0072c580 B cur
+> 0072c584 B debugger
+> 0072c588 B second
+> 0072c58a B ticks
+> 0072c58c B mouse
+> 0072c594 B doubleclickOK
+> 0072c598 B patchedspot
+> 0072c59c B patch
+> 0072c5a0 B kbdrepeat
+> 0072c5a4 B pconvs
+> 0072cf64 B sendbusy
+> 0072cf68 B lfront
+> 0072cf6c B rebootflag
+> 0072cf70 B scrltimeout
+> 0072cf74 B swstk
+> 0072cfb4 B swpcbp
+> 0072d004 B HIWATER
+> 0072d008 B LOWATER
+> 0072d00c B buf
+> 0072d014 B complete
+> 0072d018 B inscomplete
+> 0072d01c B Null
+> 0072d024 B cbuf_next
+> 0072e424 B cbuf_word
+> 0072ee24 B freelist
+> 0072ee28 B freemark
+> 0072ee2c B rptcount
+> 0072ee30 B kbdstatus
+> 0072ee34 B pconvsend
+> 0072ee38 B pseqtable
+> 0072ee40 B precvpkt
+> 0072ee88 B Pkp
+> 0072ee8c B pbufp
+> 0072ee90 B Sbufp
+> 0072ee94 B dcount
+> 0072ee96 B Scount
+> 0072ee98 B endpoint
+> 0072ee9c B genbuf
+> 0072ef00 B F_rectf
+> 0072ef04 B lback
+> 0072ef08 B Jdmajor
+> 0072ef0a B Jdminor
+> 0072ef0c B Jxmajor
+> 0072ef0e B Jslopeneg
+> 0072ef10 B allocstartp
+> 0072ef14 B allocendp
+> 0072ef18 B ENDAREA
+> 0072ef1c B dtr
+> 0072ef20 B usercurtab
+> 0072ef40 B curtabp
+> 0072ef44 B cursor
+> 0072ef5c B xdata
+> 0072ef64 B ydata
+> 0072ef6c B cursbm
+> 0072ef80 B interrupt
+> 0072ef84 B old
+> 0072ef88 O NPROC
+> 0072ef88 A end
+> 0072ef8c O proctab
+diff ./opl.s /n/ikeya/v/tom/mux/term/opl.s
+3c3
+< 	.align	4
+---
+> 	.align	8
+98a99
+> 	.word	qpeekc
+100a102
+> 	.align 8
+105a108
+> 	.align	8
+126a130
+> 	.align	8
+132a137
+> 	.align	8
+142a148
+> 	.align	8
+148a155
+> 	.align	8
+154a162
+> 	.align	8
+164a173
+> 	.align	8
+176,177d184
+< 	.globl	resume
+< 	.globl	retps
+178a186
+> 	.align	8
+182a191,193
+> 
+> 	.globl	resume
+> 	.align	8
+184a196,199
+> 	RETPS
+> 
+> 	.globl	retps
+> 	.align	8
+186a202
+> 
+187a204
+> 	.align	8
+194a212
+> 	.align	8
+203a222
+> 	.align	8
+210a230
+> 	.align	8
+218a239
+> 	.align	8
+256a278
+> 	.align	8
+267a290
+> 	.align	8
+284a308
+> 	.align	8
+Only in /n/ikeya/v/tom/mux/term: p08nm
+Only in /n/ikeya/v/tom/mux/term: p08term
+Only in /n/ikeya/v/tom/mux/term: p44nm
+Only in /n/ikeya/v/tom/mux/term: p44term
+Only in /n/ikeya/v/tom/mux/term: pa4nm
+Only in /n/ikeya/v/tom/mux/term: pa4pnm
+Only in /n/ikeya/v/tom/mux/term: pad.o
+Only in /n/ikeya/v/tom/mux/term: pad.s
+Only in /n/ikeya/v/tom/mux/term: pcbs.o
+Only in /n/ikeya/v/tom/mux/term: pcheck.o
+Only in /n/ikeya/v/tom/mux/term: pinit.o
+Only in /n/ikeya/v/tom/mux/term: pl.o
+diff ./pl.s /n/ikeya/v/tom/mux/term/pl.s
+3c3
+< 	.align	4
+---
+> 	.align	8
+98a99
+> 	.word	qpeekc
+100a102
+> 	.align 8
+105a108
+> 	.align	8
+126a130
+> 	.align	8
+132a137
+> 	.align	8
+142a148
+> 	.align	8
+148a155
+> 	.align	8
+154a162
+> 	.align	8
+164a173
+> 	.align	8
+176,177d184
+< 	.globl	resume
+< 	.globl	retps
+178a186
+> 	.align	8
+182a191,193
+> 
+> 	.globl	resume
+> 	.align	8
+184a196,199
+> 	RETPS
+> 
+> 	.globl	retps
+> 	.align	8
+186a202
+> 
+187a204
+> 	.align	8
+194a212
+> 	.align	8
+203a222
+> 	.align	8
+210a230
+> 	.align	8
+218a239
+> 	.align	8
+256a278
+> 	.align	8
+267a290
+> 	.align	8
+284a308
+> 	.align	8
+Only in /n/ikeya/v/tom/mux/term: pmap
+Only in /n/ikeya/v/tom/mux/term: precv.o
+Only in /n/ikeya/v/tom/mux/term: procsize.s
+Only in /n/ikeya/v/tom/mux/term: proctab.o
+Only in /n/ikeya/v/tom/mux/term: psend.o
+Only in /n/ikeya/v/tom/mux/term: ptimeout.o
+Only in /n/ikeya/v/tom/mux/term: qpcontrol.s
+Only in /n/ikeya/v/tom/mux/term: queue.c
+Only in /n/ikeya/v/tom/mux/term: sys
+Only in /n/ikeya/v/tom/mux/term: task.o
+Only in /n/ikeya/v/tom/mux/term: trap.o
+Only in /n/ikeya/v/tom/mux/term: txtpad.o
+Only in /n/ikeya/v/tom/mux/term: txtpad.s
+Only in /n/ikeya/v/tom/mux/term: user.o
+diff ./window.c /n/ikeya/v/tom/mux/term/window.c
+4c4
+< #include <queue.h>
+---
+> #include "3queue.h"
+Only in /n/ikeya/v/tom/mux/term: window.o
+diff ./x1 /n/ikeya/v/tom/mux/term/x1
+88a89
+> 	.word	qpeekc
+Only in /n/ikeya/v/tom/mux/term: xcbcontrol.s

@@ -1,0 +1,11 @@
+#define _SYSWRITE	3
+#define _SYSTAG		0375
+#define _SYSINIT	0374
+#define _SYSSYNC	0373
+#define _SYSOPEN	1
+#define _SYSCLOSE	2
+#define _SYSACCESS	8
+#define _SYSREAD	5
+#define _SYSPOPEN	6
+#define _SYSPCLOSE	7
+#define _SYSEXIT	4

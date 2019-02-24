@@ -1,0 +1,31 @@
+TITLE = libsys makefile
+PRODUCTS = libsys.a l.o
+
+MAKEARG= -$(MAKEFLAGS) DMDBIN=$(DMDBIN) DMDLIB=$(DMDLIB) DMDSRC=$(DMDSRC)\
+	DMDINCLUDE=$(DMDINCLUDE) DMDSGS=$(DMDSGS) DMDDEMO=$(DMDDEMO)\
+	MCC=$(MCC) MCFLAGS=$(MCFLAGS) MLD=$(MLD) MAR=$(MAR)
+
+LCLCFLAGS=-J -g -O
+CLEAN=$(OBJ) libsys.a l.o
+
+OBJ=acia.o buttons.o cursblt.o cursor.o excep.o jinit.o kbd.o queue.o wait.o setup.o\
+	pf.o
+CFILES=acia.c buttons.c cursor.c excep.c jinit.c kbd.c queue.c wait.c setup.c pf.c
+
+.c.o:
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c $<
+
+.s.o:
+	$(MCC) -c $<
+
+all:	libsys.a l.o
+
+libsys.a: $(OBJ)
+	$(MAR) cr libsys.a `$(MLORDER) $(OBJ) | tsort `
+
+save:
+	-cp $(DMDLIB)/libsys.a olibsys.a
+
+install:libsys.a l.o
+	cp libsys.a $(DMDLIB)/libsys.a
+	cp l.o $(DMDLIB)/l.o

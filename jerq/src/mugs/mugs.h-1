@@ -1,0 +1,11 @@
+#define	WHOLE		'w'
+#define	SQUASH		's'
+#define	SAVEFACE	'f'
+#define	QUIT		'q'
+#define	OK		'+'
+#define	BAD		'-'
+#define	ARGC		'0'
+#define	NGFILE		'*'
+#define	PSIZE		256
+#define	FSIZE		48
+#define	RES		255

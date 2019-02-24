@@ -1,0 +1,1914 @@
+# To unbundle, sh this file
+echo README 1>&2
+sed 's/.//' >README <<'//GO.SYSIN DD README'
+-INSTALLATION:
+-
+-Provided is a series of source files, and a makefile.
+-The makefile is for a stand-alone Blit version, and both a stand-alone
+-and mux version suitable for the 5620. The Blit version is too large to
+-run under mux.
+-
+-To make the version desired
+-just remove the comment '#'s from the makefile lines of the version required.
+-do a 'make clean' if another version's .o files are present and do 'make'
+-or 'make pengo'. No 'make install' is present as different machines would
+-most probable have the loadable in different place.
+-
+-The code of pengo itself is awful. It was written in little pieces over
+-a period of several months. Requests for bug fixes will be accepted, but
+-general flames as to style and the such can be sent to /dev/null. Constructive
+-comments as to problems with the code will be read as long as they have
+-examples of what should be done. So don't just say 'the code at line 30 of
+-file X is stupid', say rather 'the code at line 30 of file X could be written
+-as .....' which would remove problem YYYYY.
+-
+-I would prefer that no local hacking of the code is performed. I will
+-(occasionally) be working on it when not doing what I should be doing, so
+-new versions, better end of game stuff and the such will be coming out.
+-
+-
+-				Rex Di Bona.
+-
+-				rex@basser.oz
+-				seismo!munnari!basser.oz!rex
+//GO.SYSIN DD README
+echo pengo.9 1>&2
+sed 's/.//' >pengo.9 <<'//GO.SYSIN DD pengo.9'
+-.TH PENGO 9.6
+-.SH NAME
+-pengo \- squash the sno-bees
+-.SH SYNOPSIS
+-.B pengo
+-.PP
+-.SH DESCRIPTION
+-.I Pengo
+-plays the video game, pengo, on either a 5620 or Blit.
+-.PP
+-.SH PLAYING
+-This game is based upon the popular arcade game
+-`pengo'. Pengo uses the mouse to control the game. Moving the mouse around
+-controls the movement of the penguin character. Pressing the mouse buttons
+-do different things. The usual keys, 'hjkl' also move the penguin, with the
+-space bar stopping movement.
+-.PP
+-Button 1:	Stop the penguin at the next block boundary.
+-.PP
+-Button 2:	Push (or break) a block, or splash the water boundary.
+-.PP
+-Button 3:	Display a menu to control aspects of the game.
+-.PP
+-When moving in a given direction the penguin will continue to move in the
+-same direction (at the same speed) unless acted upon by an outside force.
+-An outside force is defined as moving the mouse, or a wall or border.
+-If button 2 is pressed when the block is encountered then the block is
+-pushed. If another block (or a wall) is behind the first then the block
+-will shatter.
+-.PP
+-Breaking a block in this manner will score 30 points. If this breaking is
+-done to an egg then 500 points are scored. When started moving a block will
+-also move in the same direction. Hitting a sno-bee whilst moving causes the
+-sno-bee to slide in front of the block and eventually be crushed against
+-either another block or the wall. The score for this depends upon the number
+-of sno-bees crushed per block :-
+-.nf
+-.ta 1i 2.5i 3i 4i 5i
+-	1 sno-bee	400 points
+-	2 sno-bees	1600 points
+-	3 sno-bees	3200 points
+-	4 sno-bees	6400 points
+-.DT
+-.fi
+-There are three blocks with a cross on them. Lining these three blocks
+-up is worth 10000 points if they are not lined against a wall, 5000 points
+-if they are. Bonus penguins are given out every so often.
+-.PP
+-The border around the playing board is a liquid substance. Pushing on this
+-will cause ripples to move outwards (at a VERY high rate). If a sno-bee is
+-against the border it becomes `stunned'. When stunned the penguin may crush a
+-sno-bee underfoot for 100 points.
+-.PP
+-Pressing button 3 displays the following menu:
+-.PP
+-.nf
+-	Pause
+-	Stats
+-	New Game
+-	Quit
+-.fi
+-.TP
+-Pause
+-Turns the cursor int a 'zzz' symbol and pengo halts till button 3 is
+-pressed again. Pengo also halts when it is not the current window.
+-.TP
+-Stats
+-Presents the user with three slider graphs. These have the following
+-meanings (use button 1 to slide the graph):
+-.in +5m
+-.TP
+-\&'C'	Change
+-(% of time that the sno-bees change direction)
+-.TP
+-\&'R'	Random
+-(% of time that a random direction is chosen
+-when changing)
+-.TP
+-\&'B'	Break
+-% of time that a sno-bee will break a block
+-that is blocking its way)
+-.sp
+-.in -5m
+-Click button 3 when the settings have been adjusted.
+-.TP
+-New Game
+-Scraps the current game and starts a new game (confirm on button 3).
+-.TP
+-Quit
+-Exit from PENGO (confirm on button 3).
+-.PP
+-When first run, and at certain times a display of a digitised penguin may
+-appear on the screen. Pressing any of the mouse buttons will start a new game
+-running.
+-.PP
+-.SH FILES
+-pengo \(em Blit or 5620 executable, use 32ld or 68ld to execute.
+//GO.SYSIN DD pengo.9
+echo Makefile 1>&2
+sed 's/.//' >Makefile <<'//GO.SYSIN DD Makefile'
+-#
+-#	Blit Version (stand alone only)
+-#
+-#
+-#CFLAGS=-O -j
+-#CC=/usr/blit/bin/mcc
+-#I=/usr/blit/include
+-#CYFLAGS=
+-#
+-#*********************************************
+-#
+-#	5620 Version (mux)
+-#
+-#
+-#CFLAGS=-DJERQ
+-#CC=/usr/jerq/bin/3cc
+-#I=/usr/jerq/include
+-#CYFLAGS=-DJERQ
+-#
+-#*********************************************
+-#
+-#	5620 Version (stand alone)
+-#
+-#
+-#CFLAGS=-J -DJERQ
+-#CC=/usr/jerq/bin/3cc
+-#I=/usr/jerq/include
+-#CYFLAGS=-DJERQ
+-#
+-CFILES	= bitmap.c chars.c digits.c endgame.c event.c \
+-		events.c globals.c header.c init.c level.c \
+-		mouse.c pengo.c player.c \
+-		score.c screen.c shapes.c \
+-		sno_bee.c water.c
+-CYFILES	= bitmap.O chars.O digits.O endgame.O event.O \
+-		events.O globals.O header.O init.O level.O \
+-		mouse.O pengo.O player.O \
+-		score.O screen.O shapes.O \
+-		sno_bee.O water.O
+-OFILES	= bitmap.o chars.o digits.o endgame.o event.o \
+-		events.o globals.o header.o init.o level.o \
+-		mouse.o pengo.o player.o \
+-		score.o screen.o shapes.o \
+-		sno_bee.o water.o
+-
+-ICONS	= \
+-	icons/0diamond	icons/conf1	icons/pengo1	icons/sq_0left \
+-	icons/100	icons/conf12	icons/pengo2	icons/sq_0right \
+-	icons/1600	icons/conf2	icons/pengo3	icons/sq_0up \
+-	icons/3200	icons/dead0	icons/pengo4	icons/sq_1down \
+-	icons/400	icons/dead1	icons/pengo5	icons/sq_1left \
+-	icons/500	icons/egg	icons/pengo6	icons/sq_1right \
+-	icons/6400	icons/fblock	icons/pengo7	icons/sq_1up \
+-	icons/bee0	icons/hula0	icons/pengo8	icons/still \
+-	icons/bee1	icons/hula1	icons/playerl0	icons/video0 \
+-	icons/beede	icons/hula2	icons/playerl1	icons/wiggle0 \
+-	icons/blank	icons/hula3	icons/playerr0	icons/wiggle1 \
+-	icons/block	icons/hula4	icons/playerr1 \
+-	icons/chairl	icons/null	icons/salute \
+-	icons/chairr	icons/pback	icons/sq_0down
+-
+-pengo: pengo.h $(OFILES)
+-	$(CC) $(CFLAGS) $(LDFLAGS) $(OFILES) -o pengo
+-	chmod 644 pengo
+-
+-shapes.o:	screen.c $(ICONS)
+-		$(CC) $(CFLAGS) -c shapes.c
+-
+-%.O:	%.c
+-	cyntax -c -I$(I) $(CYFLAGS) $%.c
+-
+-cyntax:	pengo.h $(CYFILES)
+-	cyntax $(CYFILES)
+-
+-clean:
+-	rm -f $(OFILES) $(CYFILES) core jim.recover
+-
+-print:
+-	@pr -n Makefile pengo.h $(CFILES) $(ICONS) 
+//GO.SYSIN DD Makefile
+echo pengo.h 1>&2
+sed 's/.//' >pengo.h <<'//GO.SYSIN DD pengo.h'
+-/*
+- *	header file for pengo.	BLIT (and jerq) version
+- */
+-
+-#ifdef	JERQ
+-#include "jerq.h"
+-#define	 sbits(x)	x, 0x0000
+-#ifdef	MUX
+-#define	MPX	MPX		/* blit uses MPX */
+-#endif	MUX
+-#else
+-#include "blit.h"
+-#define	 sbits(x)	x
+-#endif
+-#include "font.h"
+-
+-#undef	NULL			/* define NULL for those who need it */
+-#define	NULL	0
+-
+-#define	HEAD_X	(13 * 16)	/* number of bits wide */
+-#define	HEAD_Y	203		/* number of rows deep */
+-#define	HEAD_COUNT	300	/* 10 seconds till static display */
+-
+-#define	TRUE	1
+-#define	FALSE	0
+-
+-#define	ALIVE	0		/* states that a character can be in */
+-#define	DYING	1
+-#define	DEAD	2		/* must be the same as SNO_BEE (defined later) */
+-#define	CONFUSED	3
+-#define	HATCHING	4
+-#define	SQUASH	5
+-#define	MOVING	6
+-#define	VANISH	7
+-
+-#define	STILL	0		/* direction movements */
+-#define	DOWN	1
+-#define	RIGHT	2
+-#define	LEFT	3
+-#define	UP	4
+-
+-#define	VERT	0	/* vertical */
+-#define	HORIZ	1	/* horizontal */
+-
+-/* defines for the game */
+-#define	shorts(x)	((x)/(sizeof(Word)/sizeof(short)))
+-#define	MAX_X	23		/* maximum X blocks */
+-#define	MAX_Y	29		/* maximum Y blocks */
+-#define	MAXX	(MAX_X + 4)	/* used for screen co-ordinates */
+-#define	MAXY	(MAX_Y + 4)	/* used for screen co-ordinates */
+-
+-#define	SHAPE_WIDTH	32	/* sorry, this really can't be changed */
+-#define	SHAPE_HEIGHT	32
+-#define	CHAR_HEIGHT	32
+-#define	CHAR_WIDTH	32
+-#define	NUM_DIGITS	6
+-#define	NUM_ADD_MAN	7
+-#define MINX	((NUM_DIGITS + 2) * SHAPE_WIDTH)     /* min size of screen (x) */
+-#define MINY	(NUM_DIGITS * SHAPE_HEIGHT + CHAR_HEIGHT)   /* min size (y) */
+-
+-/* different states that a spot on the screen can be in. */
+-#define	BLANK	0
+-#define	BLOCK	1
+-#define	SNO_BEE	2	/* not really, but just in case */
+-#define	PENGO	3	/* not really, but just in case */
+-#define	DIAMOND	4
+-#define	EGG	5
+-#define	HATCH	6
+-#define	BREAK	7
+-#define	CONF	8	/* when sno_bee is confused */
+-/* used for put_char only */
+-#define	PENGO_D	9
+-#define	SALUTE	10
+-#define	WIGGLE	11
+-#define	BACK	12
+-/*
+-	13 to 15 used for top states
+-*/
+-#define	FBLOCK	13	/* special for put_char and move_block only */
+-#define	WALL	14
+-#define	BORDER	15
+-
+-#define	HULA	16
+-#define	CHAIR	17
+-#define	VIDEO	18
+-#define	PLAYERR	19
+-#define	PLAYERL	20
+-
+-/* movement rates. Number of clock ticks allowed between moves */
+-#define	MOVE_PENGO	3L	/* pengo movement ~1 sec */
+-#define	MOVE_BEE2	2L	/* angry or running bee */
+-#define	MOVE_BEE1	3L	/* annoyed/fast bee */
+-#define	MOVE_BEE0	4L	/* normal/slow bee state */
+-#define	MOVE_BLOCK	2L	/* block movement */
+-#define	DIE_BLOCK	2L	/* block destruction time */
+-#define	EGG_HATCH	4L	/* egg hatching time */
+-
+-#define	BEE_MOVE	8	/* movement rate of sno_bee */
+-#define	PENGO_MOVE	8	/* movement rate of pengo */
+-#define	BLOCK_MOVE	4	/* movement rate of a block */
+-
+-#define	NUM_HATCH	8	/* number of states in a hatching */
+-#define	NUM_BREAK	7	/* number of states in a breaking */
+-
+-#define	MAX_BEES	12	/* Maximum number of bees displayable */
+-#define	MAX_PENGO	8	/* Maximum number of Pengo's displayable */
+-#define	NUM_PENGO	4	/* initial number of Pengo's */
+-#define	NUM_WATER	6	/* number of cycles in the mater movement */
+-#define	NUM_SCORES	5	/* number of scores possible on screen */
+-
+-#define	DYING_TIME	10L	/* time for dying loop */
+-#define	P_DYING		10L	/* pengo dying time */
+-#define	PENGO_D_TIME	4L	/* time while pengo is dying */
+-#define	PENGO_W_TIME	6L	/* time while pengo is wiggling */
+-#define	CLR_SCORE	120L	/* score on the screen time */
+-#define	FLASH_DIAMOND	3L	/* diamond flashing time */
+-#define	WATER_TIME	5L	/* water movement delay */
+-#define	SHOW_EGGS	150L	/* time that eggs are on screen for */
+-#define	RUN_DELAY	600L	/* 10 seconds till it runs */
+-#define	NUM_FLASH	10	/* number of flashes in the diamonds */
+-#define	DIE_BEE		10L	/* a sno_bee dying */
+-#define	TIME_CONFUSED	18L	/* six seconds of confusion */
+-#define	NUM_CONFUSED	20	/* 20 * 18 = 360 ticks */
+-#define	NUM_WIGGLE	20	/* number of wiggles done */
+-#define	NUM_HULA	3	/* number of hula loops */
+-#define	NUM_HULA0	5	/* number each side */
+-#define	SHOW_SCORE	150L	/* time score shown on screen */
+-#define	PENGO_SALUTE	180L	/* time that pengo's salute for */
+-#define	DANCE_PENGO	4L	/* while pengo's are moving during levels */
+-#define	PENGO_THROES	10	/* dying throes */
+-#define	PENGO_HULA	4L	/* hula dance of pengo's */
+-#define	SHOW_VIDEO	8L	/* time video player is hown for */
+-#define	NUM_BOUNCE	8	/* number of bounces at video table (must be even) */
+-
+-#define	SNO_BEE_CHANGE	30	/* 30 % chance of changing direction */
+-#define	SNO_BEE_RANDOM	40	/* 40 % chance of moving in a random direction */
+-#define	SNO_BEE_BREAK	10	/* 10 % chance of breaking block */
+-
+-/* type definitions */
+-
+-typedef	struct	element	{
+-	int	x;		/* x position */
+-	int	y;		/* y position */
+-#ifdef	JERQ
+-	int	movex;		/* x-movement */
+-	int	movey;		/* y movement */
+-	int	exists;		/* is it on the screen? */
+-	int	count;		/* what stage it is up to */
+-	int	other;
+-#else	JERQ
+-	char	movex;		/* x-movement */
+-	char	movey;		/* y movement */
+-	char	exists;		/* is it on the screen? */
+-	char	count;		/* what stage it is up to */
+-	char	other;
+-#endif	JERQ
+-} element;
+-/* externs for files */
+-
+-extern	int	pengo_left;	/* number of pengos left */
+-extern	int	sno_bee_left;	/* number of sno_bees left */
+-extern	int	egg_count_flag;	/* # eggs left */
+-extern	int	manptr;		/* index into new_man array */
+-extern	int	hit;		/* button 2 state */
+-extern	int	seggs;		/* are eggs on display ? */
+-extern	char	move_water;	/* side wall movement */
+-extern	char	sdiamond;	/* has the diamond's score been added ? */
+-extern	char	s[MAXX][MAXY];	/* storage for which blocks are on */
+-extern	long	score;		/* current score */
+-extern	long	high_score;	/* current high score */
+-extern	long	my_time;	/* 60th of a second counter for play time */
+-extern	long	old_score;	/* Previous score.. Temp variable */
+-extern	long	new_man[];	/* scores at which a new man is awarded */
+-extern	Menu	menu3;		/* menu for button 3 */
+-extern	element	pengo;		/* pengo definition */
+-extern	element	sno_bee[4];	/* which blocks are really sno_bees */
+-extern	element	eggs[MAX_BEES];	/* which blocks are eggs */
+-extern	element	diamond[3];	/* which blocks are really diamonds */
+-extern	element	moving;		/* block which is moving or breaking */
+-extern	element	breaking;	/* block which is being broken */
+-extern	element	bee_block[4];	/* blocks being broken by bees */
+-
+-extern	Point	old_mouse;	/* initial mouse position */
+-extern	Point	new_mouse;	/* current mouse position */
+-extern	Point	move_mouse;	/* difference of old & new */
+-extern	Point	home_mouse;	/* mouse home position */
+-
+-extern	Bitmap	bit16;		/* 16 * 16 generic Bitmap */
+-extern	Bitmap	bit32;		/* 32 * 32 generic Bitmap */
+-extern	Bitmap	bonus;		/* 10000 point bonus bitmap */
+-extern	Bitmap	disp_head;	/* startup and waiting display */
+-
+-extern	Rectangle	board;
+-extern	Rectangle	board0;
+-extern	Rectangle	board1;
+-extern	Rectangle	header;
+-extern	Rectangle	bwater;
+-extern	Rectangle	lwater;
+-extern	Rectangle	rwater;
+-extern	Rectangle	twater;
+-extern	Rectangle	counter;
+-
+-extern	short	N[];		/* storage for digits */
+-extern	short	char_0_9[];	/* 16 * 16 digits */
+-extern	short	char_A_Z[];	/* 16 * 16 A->Z */
+-extern	short	char_colon[];	/* 16 * 16 ':' */
+-extern	short	char_space[];	/* 16 * 16 space */
+-extern	short	char_dot[];	/* 16 * 16 '.' */
+-extern	short	char_blank[];	/* 32 * 32 space */
+-extern	short	char_block[];	/* 32 * 32 block */
+-extern	short	flip_block[];	/* 32 * 32 block */
+-extern	short	char_pengo[];	/* 32 * 32 pengo */
+-extern	short	char_sno_bee[];	/* 32 * 32 sno_bee */
+-extern	short	char_0diamond[];/* 32 * 32 diamond 0 */
+-extern	short	*char_1diamond;	/* 32 * 32 diamond 1 */
+-extern	short	char_null[];	/* 32 * 32 NULL pattern */
+-extern	short	char_egg[];	/* 32 * 32 egg shape */
+-extern	short	nw[];		/* still water */
+-extern	short	tw[];		/* top water barrier */
+-extern	short	bw[];		/* bottom water barrier */
+-extern	short	lw[];		/* left barrier */
+-extern	short	rw[];		/* right barrier */
+-extern	Texture	skull;		/* skull and X bones for quit */
+-
+-/* access routines for the RAM screen map */
+-
+-#define	screen(x, y)	s[((x) + 2)][((y) + 2)]
+-
+-#define	max(a, b)	((a > b) ? (a) : (b))
+-#define	min(a, b)	((a < b) ? (a) : (b))
+-#define abs(a)		((a < 0) ? (-a) : (a))
+-#define	R3		Rect(0, 0, 32, 32)
+-#define	RX(a, b)	rectXrect(raddp(R3,Pt(a.x,a.y)),raddp(R3,Pt(b.x,b.y)))
+-#define	P3		Rect(8, 8, 24, 24)	/* pengo shape (smaller) */
+-#define	PX(a, b)	rectXrect(raddp(P3,Pt(a.x,a.y)),raddp(R3,Pt(b.x,b.y)))
+-#define	addchar(c,p,f)	bitblt(bchar(c), Rect(0, 0, 16, 16), &display, p, f)
+-/* functions called for add_event */
+-extern	int	clr_bee();
+-extern	int	die_pengo();
+-extern	int	add_score();
+-extern	int	move_player();
+-extern	int	move_sno_bee();
+-extern	int	move_block();
+-extern	int	die_block();
+-extern	int	add_man();
+-extern	Bitmap	*bchar();	/* return bitmap of character */
+-extern	int	swill_water();
+-extern	int	egg_hatch();
+-extern	int	clear_egg();
+-extern	int	show_eggs();
+-extern	int	sbd;
+-extern	int	npd;
+-extern	Rectangle	pengom;
+-extern	Rectangle	sno_bm;
+-extern	Rectangle	dboard;
+-extern	Rectangle	dsp0;
+-extern	Rectangle	dsp1;
+-extern	Rectangle	dsp2;
+-extern	short	spengo[];
+-extern	short	sbee[];
+-extern	int	run_bee();
+-extern	int	flash_diamond();
+-extern	int	run_sno_bee();
+-extern	int	bee_run;
+-extern	int	bee_break();
+-extern	char	blockx;
+-extern	char	blocky;
+-extern	int	vanish_bee();
+-extern	int	confused_bee();
+-extern	short	conf1[];
+-extern	short	conf2[];
+-extern	short	char_100[];
+-extern	short	char_400[];
+-extern	short	char_500[];
+-extern	short	char_1600[];
+-extern	short	char_3200[];
+-extern	short	char_6400[];
+-extern	short	char_0bee[];
+-extern	short	char_1bee[];
+-extern	short	char_0pengo[];
+-extern	short	char_1pengo[];
+-extern	short	char_2pengo[];
+-extern	short	char_3pengo[];
+-extern	short	char_4pengo[];
+-extern	short	char_5pengo[];
+-extern	short	char_6pengo[];
+-extern	short	char_7pengo[];
+-extern	short	char_8pengo[];
+-extern	short	*char_still;
+-extern	short	*char_sorry;
+-extern	short	*char_happy;
+-extern	short	char_0dead[];
+-extern	short	char_1dead[];
+-extern	short	*pengo_moves[];
+-extern	short	char_question[];
+-extern	short	char_lbrkt[];
+-extern	short	char_rbrkt[];
+-extern	short	char_uscore[];
+-extern	short	char_slash[];
+-extern	short	char_pback[];
+-extern	short	char_salute[];
+-extern	short	char_0wiggle[];
+-extern	short	char_1wiggle[];
+-extern	int	reshaped;	/* for use in the stand alone world.. */
+-extern	int	sb_change;
+-extern	int	sb_random;
+-extern	int	sb_break;
+-extern	short	ch_sq_0down[];
+-extern	short	ch_sq_0left[];
+-extern	short	ch_sq_0right[];
+-extern	short	ch_sq_0up[];
+-extern	short	ch_sq_1down[];
+-extern	short	ch_sq_1left[];
+-extern	short	ch_sq_1right[];
+-extern	short	ch_sq_1up[];
+-extern	short	*squash_moves[];
+-extern	short	char_header[];
+-extern	short	char_0hula[];
+-extern	short	char_1hula[];
+-extern	short	char_2hula[];
+-extern	short	char_3hula[];
+-extern	short	char_4hula[];
+-extern	short	*hula_moves[];
+-extern	short	char_lchair[];
+-extern	short	char_rchair[];
+-extern	short	char_0video[];
+-extern	short	char_0lplayer[];
+-extern	short	char_1lplayer[];
+-extern	short	char_0rplayer[];
+-extern	short	char_1rplayer[];
+//GO.SYSIN DD pengo.h
+echo init.c 1>&2
+sed 's/.//' >init.c <<'//GO.SYSIN DD init.c'
+-/*
+-	Initialisation routines for various stages...
+-
+-*/
+-#include "pengo.h"
+-
+-int	sizex;	/* number of pixels across */
+-int	sizey;	/* number of pixels down */
+-char	blockx;	/* number of blocks across */
+-char	blocky;	/* number of blocks down */
+-char	count;
+-char	pos;
+-char	tmp;
+-char	store[4];
+-char	store1[MAX_X * MAX_Y][2];
+-int	point1;
+-int	block_count;
+-extern	Rectangle	mouse_board;
+-
+-Rectangle	board	= { { 0, 0 }, { 0, 0 } };	/* inside water boundary */
+-Rectangle	board0	= { { 0, 0 }, { 0, 0 } };	/* whole board */
+-Rectangle	board1	= { { 0, 0 }, { 0, 0 } };	/* board excluding score */
+-Rectangle	header	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	bwater	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	lwater	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	rwater	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	twater	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	pengom	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	sno_bm	= { { 0, 0 }, { 0, 0 } };
+-Rectangle	dboard	= { { 0, 0 }, { 0, 0 } };
+-
+-changed_screen()
+-{
+-#ifdef	MPX
+-	if (P->state & RESHAPED)
+-	{
+-		init();
+-		init_scr();
+-		P->state &= ~RESHAPED;
+-	}
+-#else
+-	init();
+-	init_scr();
+-	reshaped = FALSE;
+-#endif
+-}
+-
+-init()
+-{
+-	cursswitch(char_space);
+-	cancel_events();
+-	while(TRUE)
+-	{
+-		score = 0;	/* reset score */
+-		my_time = 0;	/* reset pseudo clock */
+-		cancel_events();
+-		request(KBD | MOUSE);
+-#ifdef	MPX
+-		P->state &= ~RESHAPED;
+-#else
+-		reshaped = FALSE;
+-#endif
+-		sizex = Drect.corner.x - Drect.origin.x;
+-		sizey = Drect.corner.y - Drect.origin.y;
+-		if ((sizex < MINX) || (sizey < MINY))
+-		{
+-			string(&defont, "Pengo:", &display,
+-				Drect.origin, F_XOR);
+-			string(&defont, "Reshape", &display,
+-				add(Drect.origin, Pt(0, 12)), F_XOR);
+-		}
+-		else
+-			break;	/* screen is of an adequate size */
+-		request(KBD);
+-#ifdef	MPX
+-		P->state &= ~RESHAPED;
+-		while(!(P->state & RESHAPED))
+-		{
+-			int c;
+-
+-			if (((c = kbdchar()) == 'q') || (c == 'Q'))
+-				exit(0);
+-			wait(CPU);	/* let others have a go */
+-		}
+-#endif
+-	}
+-	texture(&display, Drect, char_space, F_STORE);
+-	sizex &= ~31;	/* clear off lower bits */
+-	sizey &= ~31;	/* same thing... */
+-	if (!(sizey & 32))	/* if sizey is even take off 32 */
+-		sizey -= 32;
+-	if (sizex & 32)		/* if sizex is odd take off 32 */
+-		sizex -= 32;
+-	board.corner.x  = Drect.origin.x + sizex - 16;
+-	board.corner.y  = Drect.origin.y + sizey - 16;
+-	board.origin.x  = Drect.origin.x + 16;
+-	board.origin.y  = Drect.origin.y + CHAR_HEIGHT + 16;
+-	board0.corner.x = Drect.origin.x + sizex;
+-	board0.corner.y = Drect.origin.y + sizey;
+-	board0.origin.x = Drect.origin.x;
+-	board0.origin.y = Drect.origin.y;
+-	board1.corner.x = Drect.origin.x + sizex;
+-	board1.corner.y = Drect.origin.y + sizey;
+-	board1.origin.x = Drect.origin.x;
+-	board1.origin.y = Drect.origin.y + CHAR_HEIGHT;
+-	bwater.corner.x = Drect.origin.x + sizex - 16;
+-	bwater.corner.y = Drect.origin.y + sizey;
+-	bwater.origin.x = Drect.origin.x + 16;
+-	bwater.origin.y = Drect.origin.y + sizey - 16;
+-	lwater.corner.x = Drect.origin.x + 16;
+-	lwater.corner.y = Drect.origin.y + sizey - 16;
+-	lwater.origin.x = Drect.origin.x;
+-	lwater.origin.y = Drect.origin.y + CHAR_HEIGHT + 16;
+-	rwater.corner.x = Drect.origin.x + sizex;
+-	rwater.corner.y = Drect.origin.y + sizey - 16;
+-	rwater.origin.x = Drect.origin.x + sizex - 16;
+-	rwater.origin.y = Drect.origin.y + CHAR_HEIGHT + 16;
+-	twater.corner.x = Drect.origin.x + sizex - 16;
+-	twater.corner.y = Drect.origin.y + CHAR_HEIGHT + 16;
+-	twater.origin.x = Drect.origin.x + 16;
+-	twater.origin.y = Drect.origin.y + CHAR_HEIGHT;
+-	texture(&display, board0, char_space, F_STORE);
+-	home_mouse = div(add(board.origin, board.corner), 2);
+-	mouse_board = inset(board0, 16 * 7);
+-	counter.origin = div(
+-		sub(
+-			add(board.origin, board.corner),
+-			Pt(16 * 7, 0)
+-		),
+-		2
+-	);
+-	counter.corner = add(counter.origin, Pt(16 * 7, 48));
+-	{
+-		/* fix up the screen header */
+-
+-		int	hx;	/* # chars */
+-
+-		hx = ((Drect.corner.x - Drect.origin.x) >> 5) - NUM_DIGITS;
+-		header.origin.x = Drect.origin.x + (hx / 2) * CHAR_WIDTH;
+-		header.origin.y = Drect.origin.y;
+-		header.corner.x = header.origin.x + NUM_DIGITS * CHAR_WIDTH;
+-		header.corner.y = Drect.origin.y + CHAR_HEIGHT;
+-		pengom.origin.x = Drect.origin.x;
+-		pengom.origin.y = Drect.origin.y;
+-		pengom.corner.x = header.origin.x;
+-		pengom.corner.y = Drect.origin.y + CHAR_HEIGHT;
+-		sno_bm.origin.x = header.corner.x;
+-		sno_bm.origin.y = Drect.origin.y;
+-		sno_bm.corner.x = Drect.origin.x + sizex;
+-		sno_bm.corner.y = Drect.origin.y + CHAR_HEIGHT;
+-		npd = hx / 2;
+-		sbd = ((sno_bm.corner.x - sno_bm.origin.x) >> 5) - 1;
+-	}
+-	dboard.origin = board.origin;
+-	dboard.corner = sub(board.corner, Pt(32, 32));
+-}
+-
+-extern	Bitmap	bit16;
+-
+-init_scr()	/* set up the screen, colour in the bits that need it! */
+-{
+-	Word	*water();
+-
+-	bit16.base = water(STILL);
+-	texture(&display, raddp(bit16.rect, board1.origin), bit16.base, F_STORE);
+-	texture(&display,
+-		raddp(
+-			bit16.rect,
+-			add(Drect.origin, Pt(0, sizey - 16))
+-		),
+-		bit16.base,
+-		F_STORE
+-	);
+-	texture(&display,
+-		raddp(
+-			bit16.rect,
+-			add(Drect.origin, Pt(sizex - 16, 32))
+-		),
+-		bit16.base,
+-		F_STORE
+-	);
+-	texture(&display, raddp(bit16.rect, board.corner), bit16.base, F_STORE);
+-	texture(&display, twater, bit16.base, F_STORE);
+-	texture(&display, bwater, bit16.base, F_STORE);
+-	texture(&display, rwater, bit16.base, F_STORE);
+-	texture(&display, lwater, bit16.base, F_STORE);
+-	texture(&display, board,  char_space, F_STORE);
+-	move_water = FALSE;
+-}
+-
+-init_board()
+-{
+-	int	x;
+-	int	y;
+-
+-	disp_pengo(pengo_left);
+-	disp_sno_bee(sno_bee_left);
+-	sdiamond = FALSE;		/* all diamonds are active */
+-	blockx = ((sizex - 32) >> 5);
+-	blocky = ((sizey - 64) >> 5);
+-	for (x = -2; x < blockx + 2; x++)
+-	{
+-		screen(x, -2) = WALL;
+-		screen(x, -1) = BORDER;
+-		screen(x, blocky) = BORDER;
+-		screen(x, blocky + 1) = WALL;
+-	}
+-	for (y = -1; y < blocky + 1; y++)
+-	{
+-		screen(-2, y) = WALL;
+-		screen(-1, y) = BORDER;
+-		screen(blockx, y) = BORDER;
+-		screen(blockx + 1, y) = WALL;
+-	}
+-	for (x = 0; x < blockx; x++)
+-	{
+-		for (y = 0; y < blocky; y++)
+-		{
+-			screen(x, y) = BLOCK;
+-			put_char(x << 5, y << 5, BLOCK, F_STORE, NULL);
+-		}
+-	}
+-	screen(0, blocky - 1) = BLANK;
+-	put_char(0, (blocky - 1) << 5, BLANK, F_STORE, NULL);
+-	store[0] = LEFT;
+-	store[1] = RIGHT;
+-	store[2] = UP;
+-	store[3] = DOWN;
+-	for (count = 3; count > 0; count--)
+-	{
+-		pos = rand() % (count + 1);
+-		tmp = store[pos];
+-		store[pos] = store[count];
+-		store[count] = tmp;
+-	}
+-	point1 = 0;
+-	maze(0, blocky - 1);
+-	add_a_pengo();
+-	set_up_diamonds();
+-	set_up_eggs();
+-	moving.exists = FALSE;
+-	bee_run = FALSE;
+-	cursswitch(char_space);
+-}
+-
+-add_a_pengo()
+-{
+-	pengo.other = ALIVE;	/* he hasn't died yet, just born */
+-	pengo.x = blockx / 2;	/* lets put the pengo on the screen */
+-	pengo.y = blocky / 2;
+-	pengo.movex = pengo.movey = 0;	/* not moving yet */
+-	if (screen(pengo.x, pengo.y) != BLANK)
+-	{
+-		for (tmp = 0; tmp < 4; tmp++)
+-		{
+-			switch(store[tmp])
+-			{
+-			case UP:
+-				if (screen(pengo.x - 1, pengo.y) == BLANK)
+-				{
+-					pengo.x--;
+-					tmp = 4;
+-				}
+-				break;
+-			case DOWN:
+-				if (screen(pengo.x + 1, pengo.y) == BLANK)
+-				{
+-					pengo.x++;
+-					tmp = 4;
+-				}
+-				break;
+-			case RIGHT:
+-				if (screen(pengo.x, pengo.y + 1) == BLANK)
+-				{
+-					pengo.y++;
+-					tmp = 4;
+-				}
+-				break;
+-			case LEFT:
+-				if (screen(pengo.x, pengo.y - 1) == BLANK)
+-				{
+-					pengo.y--;
+-					tmp = 4;
+-				}
+-				break;
+-			}
+-		}
+-	}
+-	if (screen(pengo.x, pengo.y) != BLANK)
+-	{
+-		for (tmp = 0; tmp < 4; tmp++)
+-		{
+-			switch(store[tmp])
+-			{
+-			case UP:
+-				if (screen(pengo.x - 1, pengo.y - 1) == BLANK)
+-				{
+-					pengo.x--;
+-					pengo.y--;
+-					tmp = 4;
+-				}
+-				break;
+-			case DOWN:
+-				if (screen(pengo.x - 1, pengo.y + 1) == BLANK)
+-				{
+-					pengo.x--;
+-					pengo.y++;
+-					tmp = 4;
+-				}
+-				break;
+-			case RIGHT:
+-				if (screen(pengo.x + 1, pengo.y - 1) == BLANK)
+-				{
+-					pengo.x++;
+-					pengo.y--;
+-					tmp = 4;
+-				}
+-				break;
+-			case LEFT:
+-				if (screen(pengo.x + 1, pengo.y + 1) == BLANK)
+-				{
+-					pengo.x++;
+-					pengo.y++;
+-					tmp = 4;
+-				}
+-				break;
+-			}
+-		}
+-	}
+-	if (screen(pengo.x, pengo.y) != BLANK)
+-	{
+-		for (tmp = 0; tmp < 4; tmp++)
+-		{
+-			switch(store[tmp])
+-			{
+-			case UP:
+-				if (screen(pengo.x - 1, pengo.y) == BLOCK)
+-				{
+-					pengo.x--;
+-					tmp = 4;
+-				}
+-				break;
+-			case DOWN:
+-				if (screen(pengo.x + 1, pengo.y) == BLOCK)
+-				{
+-					pengo.x++;
+-					tmp = 4;
+-				}
+-				break;
+-			case RIGHT:
+-				if (screen(pengo.x, pengo.y + 1) == BLOCK)
+-				{
+-					pengo.y++;
+-					tmp = 4;
+-				}
+-				break;
+-			case LEFT:
+-				if (screen(pengo.x, pengo.y - 1) == BLOCK)
+-				{
+-					pengo.y--;
+-					tmp = 4;
+-				}
+-				break;
+-			}
+-		}
+-		if (screen(pengo.x, pengo.y) == BLOCK)
+-		{
+-			put_char(pengo.x<<5, pengo.y<<5, FBLOCK, F_XOR, NULL);
+-			screen(pengo.x, pengo.y) = BLANK;
+-		}
+-	}
+-	if (screen(pengo.x, pengo.y) != BLANK)
+-	{
+-		for (tmp = 0; tmp < 4; tmp++)
+-		{
+-			switch(store[tmp])
+-			{
+-			case UP:
+-				if (screen(pengo.x - 1, pengo.y - 1) == BLOCK)
+-				{
+-					pengo.x--;
+-					pengo.y--;
+-					tmp = 4;
+-				}
+-				break;
+-			case DOWN:
+-				if (screen(pengo.x - 1, pengo.y + 1) == BLOCK)
+-				{
+-					pengo.x--;
+-					pengo.y++;
+-					tmp = 4;
+-				}
+-				break;
+-			case RIGHT:
+-				if (screen(pengo.x + 1, pengo.y - 1) == BLOCK)
+-				{
+-					pengo.x++;
+-					pengo.y--;
+-					tmp = 4;
+-				}
+-				break;
+-			case LEFT:
+-				if (screen(pengo.x + 1, pengo.y + 1) == BLOCK)
+-				{
+-					pengo.x++;
+-					pengo.y++;
+-					tmp = 4;
+-				}
+-				break;
+-			}
+-		}
+-		if (screen(pengo.x, pengo.y) == BLOCK)
+-		{
+-			put_char(pengo.x<<5, pengo.y<<5, FBLOCK, F_XOR, NULL);
+-			screen(pengo.x, pengo.y) = BLANK;
+-		}
+-	}
+-	if (screen(pengo.x, pengo.y) != BLANK)
+-	{
+-		/* blast it all, in those 9 spots not one was free
+-			so I'll just take it anyway!!!	*/
+-		screen(pengo.x, pengo.y) = BLANK;
+-		put_char(pengo.x<<5, pengo.y<<5, BLANK, F_STORE, NULL);
+-	}
+-	pengo.x <<= 5;
+-	pengo.y <<= 5;
+-	put_char(pengo.x, pengo.y, PENGO, F_XOR, NULL);
+-	old_mouse = mouse.xy;
+-}
+-
+-maze(x, y)
+-int x;
+-int y;
+-{
+-	char	x1;
+-	char	y1;
+-	char	count;
+-
+-nasty1:
+-	sleep(2);
+-	for (count = 3; count > 0; count--)
+-	{
+-		pos = rand() % (count + 1);
+-		tmp = store[pos];
+-		store[pos] = store[count];
+-		store[count] = tmp;
+-	}
+-	for (count = 0; count < 4; count++)
+-	{
+-nasty2:
+-		pos = 0;
+-	 	x1 = x;
+-		y1 = y;
+-		switch (store[count])
+-		{
+-		case RIGHT:
+-			if (screen(x + 2, y) == BLOCK)
+-			{
+-				screen(++x1, y) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				screen(++x1, y) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				pos++;
+-			}
+-			break;
+-		case LEFT:
+-			if (screen(x - 2, y) == BLOCK)
+-			{
+-				screen(--x1, y) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				screen(--x1, y) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				pos++;
+-			}
+-			break;
+-		case UP:
+-			if (screen(x, y - 2) == BLOCK)
+-			{
+-				screen(x, --y1) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				screen(x, --y1) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				pos++;
+-			}
+-			break;
+-		case DOWN:
+-			if (screen(x, y + 2) == BLOCK)
+-			{
+-				screen(x, ++y1) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				screen(x, ++y1) = BLANK;
+-				put_char(x1 << 5, y1 << 5, BLANK, F_STORE, NULL);
+-				pos++;
+-			}
+-			break;
+-		}
+-		if (pos)
+-		{
+-			store1[point1][0] = x;
+-			store1[point1][1] = y;
+-			x = x1;
+-			y = y1;
+-			point1++;
+-			goto nasty1;
+-		}
+-#ifdef	MPX
+-		if (P->state & RESHAPED)
+-			return;
+-#endif
+-	}
+-	if (point1--)
+-	{
+-		x = store1[point1][0];
+-		y = store1[point1][1];
+-		count  = 0;
+-		goto nasty2;
+-	}
+-}
+-
+-set_up_diamonds()
+-{
+-	int	pos, x, y, z;
+-
+-	block_count = 0;
+-	for (x = 1; x < blockx - 1; x++)
+-		for (y = 1; y < blocky - 1; y++)
+-			if (screen(x, y) == BLOCK)
+-				block_count++;
+-	for (z = 0; z < 3; z++)
+-	{
+-		pos = rand() % block_count--;
+-		for (x = 1; (x < blockx - 1) && (pos >= 0); x++)
+-			for (y = 1; (y < blocky - 1) && (pos >= 0); y++)
+-				if (screen(x, y) == BLOCK)
+-					pos--;
+-		x--;
+-		y--;
+-		diamond[z].x = x << 5;
+-		diamond[z].y = y << 5;
+-		diamond[z].exists = TRUE;
+-		diamond[z].other = 0;	/* diamond state */
+-		screen(x, y) = DIAMOND;
+-		put_char(diamond[z].x, diamond[z].y, FBLOCK, F_XOR, 0);
+-		put_char(diamond[z].x, diamond[z].y, DIAMOND, F_XOR, 0);
+-	}
+-}
+-
+-set_up_eggs()
+-{
+-	int	pos, x, y, z;
+-	extern	int	egg_count_flag;
+-
+-	egg_count_flag = 0;
+-	seggs = TRUE;	/* yes, show eggs */
+-	for (z = 0; z < MAX_BEES; z++)
+-	{
+-		eggs[z].exists = FALSE;	/* clear all eggs */
+-		eggs[z].other  = ALIVE;
+-	}
+-	for (z = 0; z < sno_bee_left; z++)
+-	{
+-		pos = rand() % block_count--;
+-		for (x = 1; (x < blockx - 1) && (pos >= 0); x++)
+-			for (y = 1; (y < blocky - 1) && (pos >= 0); y++)
+-				if (screen(x, y) == BLOCK)
+-					pos--;
+-		x--;
+-		y--;
+-		eggs[z].x = x << 5;
+-		eggs[z].y = y << 5;
+-		eggs[z].exists = TRUE;
+-		if (z > 3)
+-		{
+-			eggs[z].other = 0;	/* diamond state */
+-			screen(x, y) = EGG;
+-		}
+-		else
+-		{
+-			bee_block[z].exists = FALSE;
+-			eggs[z].exists = FALSE;
+-			sno_bee[z].exists = FALSE;
+-			sno_bee[z].other = HATCHING;
+-			sno_bee[z].count = NUM_HATCH + 1;
+-			sno_bee[z].x = eggs[z].x;
+-			sno_bee[z].y = eggs[z].y;
+-			screen(x, y) = HATCH;
+-			add_event(EGG_HATCH, egg_hatch, z);
+-			put_char(eggs[z].x, eggs[z].y, FBLOCK, F_XOR, 0);
+-		}
+-	}
+-	show_eggs();
+-}
+-
+-redraw_screen()
+-{
+-	int	x;
+-	int	y;
+-	int	dx;
+-	int	dy;
+-	int	tmp;
+-
+-	disp_pengo(pengo_left);
+-	for (tmp = 0; tmp < 3; tmp++)
+-	{
+-		diamond[tmp].x &= ~31;
+-		diamond[tmp].y &= ~31;
+-		screen(diamond[tmp].x>>5, diamond[tmp].y>>5) = DIAMOND;
+-	}
+-	for (tmp = 0; tmp < moving.count; tmp++)
+-	{
+-		int	pos;
+-
+-		for (pos = 0; pos < MAX_BEES; pos++)
+-		{
+-			if (eggs[pos].exists == TRUE)
+-				break;
+-		}
+-		if (pos < MAX_BEES)
+-		{
+-			int	a;
+-
+-			for (a = 0; a < 4; a++)
+-			{
+-				if (
+-					(sno_bee[a].exists == FALSE) &&
+-					(sno_bee[a].other != HATCHING)
+-				)
+-					break;
+-			}
+-			if (a < 4)
+-			{
+-				eggs[pos].exists = FALSE;
+-				sno_bee[a].other = HATCHING;
+-				sno_bee[a].count = NUM_HATCH;
+-				sno_bee[a].x = eggs[pos].x;
+-				sno_bee[a].y = eggs[pos].y;
+-				screen(sno_bee[a].x >> 5, sno_bee[a].y >> 5) =
+-					HATCH;
+-			}
+-		}
+-	}
+-	for (tmp = 0; tmp < MAX_BEES; tmp++)
+-		if (eggs[tmp].exists == TRUE)
+-		{
+-			eggs[tmp].x &= ~31;
+-			eggs[tmp].y &= ~31;
+-			eggs[tmp].other = ALIVE;
+-			screen(eggs[tmp].x>>5, eggs[tmp].y>>5) = EGG;
+-		}
+-	for (tmp = 0; tmp < 4; tmp++)
+-		if (
+-			(sno_bee[tmp].exists == FALSE) &&
+-			(sno_bee[tmp].other == HATCHING)
+-		)
+-		{
+-			sno_bee[tmp].exists = TRUE;
+-			sno_bee[tmp].other = SNO_BEE;
+-			screen(sno_bee[tmp].x >> 5, sno_bee[tmp].y >> 5) = BLANK;
+-		}
+-	for (x = 0; x < blockx; x++)
+-		for(y = 0; y < blocky; y++)
+-			switch(screen(x, y))
+-			{
+-			case EGG:
+-			case BLOCK:
+-				put_char(x<<5, y<<5, BLOCK, F_STORE, NULL);
+-				break;
+-
+-			case DIAMOND:
+-				put_char(x<<5, y<<5, DIAMOND, F_XOR, NULL);
+-				put_char(x<<5, y<<5, BLANK, F_XOR, NULL);
+-				break;
+-
+-			case BREAK:
+-				screen(x, y) = BLANK;
+-			case BLANK:
+-				put_char(x<<5, y<<5, BLANK, F_STORE, NULL);
+-				break;
+-
+-			default:	/* catch for bad things */
+-				put_char(x<<5, y<<5, WALL, F_STORE, NULL);
+-				break;
+-			}
+-	breaking.exists = FALSE;
+-	moving.exists = FALSE;
+-	egg_count_flag = 0;
+-	show_eggs();
+-	add_a_pengo();
+-	x = -1;
+-	for (tmp = 0; tmp < 4; tmp++)
+-		if (sno_bee[tmp].exists == TRUE)
+-		{
+-			switch(++x)
+-			{
+-			case 0:
+-				dx = 0;
+-				dy = 0;
+-				break;
+-
+-			case 2:
+-				dx = blockx - 1;
+-				dy = 0;
+-				break;
+-
+-			case 1:
+-				dx = 0;
+-				dy = blocky - 1;
+-				break;
+-
+-			case 3:
+-				dx = blockx - 1;
+-				dy = blocky - 1;
+-				break;
+-			}
+-			add_sno_bee(dx, dy, x, tmp);
+-		}
+-	if (x == 0)
+-		add_event(RUN_DELAY, run_bee, NULL);
+-}
+-
+-int	sdir[4][2] = {
+-	{1, -1},
+-	{1, 1},
+-	{-1, -1},
+-	{-1, 1},
+-};
+-
+-add_sno_bee(dx, dy, x, num)
+-int	dx;
+-int	dy;
+-int	x;
+-int	num;
+-{
+-	int	mx = sdir[x][0];
+-	int	my = sdir[x][1];
+-	int	mn = min(blockx, blocky);
+-	int	tmp;
+-	for (tmp = 0; tmp < mn; tmp++)
+-	{
+-		int	tmp1;
+-
+-		for(tmp1 = 0; tmp1 <= tmp; tmp1++)
+-		{
+-			if (screen (dx + mx * tmp1, dy + my * tmp) == BLANK)
+-			{
+-				sno_bee[num].x = (dx + mx * tmp1) << 5;
+-				sno_bee[num].y = (dy + my * tmp) << 5;
+-				sno_bee[num].other = SNO_BEE;
+-				add_event(MOVE_BEE0, move_sno_bee, num);
+-				put_char(
+-					sno_bee[num].x,
+-					sno_bee[num].y,
+-					SNO_BEE,
+-					F_XOR, num);
+-				return;
+-			}
+-			if (screen (dx + mx * tmp, dy + my * tmp1) == BLANK)
+-			{
+-				sno_bee[num].x = (dx + mx * tmp) << 5;
+-				sno_bee[num].y = (dy + my * tmp1) << 5;
+-				sno_bee[num].other = SNO_BEE;
+-				add_event(MOVE_BEE0, move_sno_bee, num);
+-				put_char(
+-					sno_bee[num].x,
+-					sno_bee[num].y,
+-					SNO_BEE,
+-					F_XOR, num);
+-				return;
+-			}
+-		}
+-	}
+-}
+//GO.SYSIN DD init.c
+echo level.c 1>&2
+sed 's/.//' >level.c <<'//GO.SYSIN DD level.c'
+-#include "pengo.h"
+-
+-#define	MAX_LEVEL	8	/* maximum level reached in display routines */
+-
+-Rectangle	dsp0	= { { 0, 0 }, { 0, 0 } }; /* 5 * 1 rectangle */
+-Rectangle	dsp1	= { { 0, 0 }, { 0, 0 } }; /* 5 * 2 rectangle */
+-Rectangle	dsp2	= { { 0, 0 }, { 0, 0 } }; /* 3 * 2 rectangle */
+-
+-level_dance(level)
+-int	level;
+-{
+-	Point	tmp;
+-
+-	int	blkx;
+-	int	blky;
+-	int	x;
+-
+-	blkx = (board.corner.x - board.origin.x) >> 5;
+-	blky = (board.corner.y - (board.origin.y + 128)) >> 5;
+-
+-	dsp0.origin.x = board.origin.x + (((blkx - 5) >> 1) << 5);
+-	dsp0.origin.y = board.origin.y + 128 + (((blky - 1) >> 1 ) << 5);
+-	dsp0.corner = add(dsp0.origin, Pt(5 * 32, 32));
+-	dsp1.origin = dsp0.origin;
+-	dsp1.corner = add(dsp1.origin, Pt(5 * 32, 2 * 32));
+-	dsp2.origin = add(dsp0.origin, Pt(0, 32));
+-	dsp2.corner = add(dsp2.origin, Pt(3 * 32, 2 * 32));
+-	pengo.movex = 8;
+-	pengo.movey = 0;
+-	switch(level % (MAX_LEVEL + 2))
+-	{
+-	case 2:
+-	case 4:
+-	case 6:		/* to save space */
+-		tmp.x = board.origin.x - (32 + 8) * 2;
+-		tmp.y = dsp0.origin.y;
+-		dance_4(tmp, PENGO, NULL);
+-		while(tmp.x < dsp0.origin.x)
+-		{
+-			sleep((int)DANCE_PENGO);
+-			dance_4(tmp, PENGO, NULL);
+-			tmp.x += 8;
+-			dance_4(tmp, PENGO, NULL);
+-		}
+-		sleep((int)DANCE_PENGO);
+-		dance_4(tmp, PENGO, NULL);
+-		switch(level % (MAX_LEVEL + 2))
+-		{
+-		case 6:
+-			dance_4(tmp, SALUTE, NULL);
+-			sleep((int)PENGO_SALUTE);
+-			dance_4(tmp, SALUTE, NULL);
+-			break;
+-
+-		case 4:
+-			dance_4(tmp, BACK, NULL);
+-			sleep((int)DANCE_PENGO);
+-			dance_4(tmp, BACK, NULL);
+-			dance_4(tmp, WIGGLE, 0);
+-			for (x = 0; x < NUM_WIGGLE; x++)
+-			{
+-				sleep((int)PENGO_W_TIME);
+-				dance_4(tmp, WIGGLE, x & 1);
+-				dance_4(tmp, WIGGLE, (x + 1) & 1);
+-			}
+-			sleep((int)DANCE_PENGO);
+-			dance_4(tmp, WIGGLE, x & 1);
+-			break;
+-
+-		case 2:
+-			dance_4(tmp, HULA, 0);
+-			sleep((int)PENGO_HULA);
+-			dance_4(tmp, HULA, 0);
+-			for (x = 0; x < NUM_HULA; x++)
+-			{
+-				int	i;
+-
+-				for (i = 0; i < NUM_HULA0; i++)
+-				{
+-					dance_4(tmp, HULA, 2);
+-					sleep((int)PENGO_HULA);
+-					dance_4(tmp, HULA, 2);
+-					dance_4(tmp, HULA, 1);
+-					sleep((int)PENGO_HULA);
+-					dance_4(tmp, HULA, 1);
+-				}
+-				dance_4(tmp, HULA, 2);
+-				sleep((int)PENGO_HULA);
+-				dance_4(tmp, HULA, 2);
+-				dance_4(tmp, HULA, 4);
+-				sleep((int)PENGO_HULA);
+-				dance_4(tmp, HULA, 4);
+-				for (i = 0; i < NUM_HULA0; i++)
+-				{
+-					dance_4(tmp, HULA, 3);
+-					sleep((int)PENGO_HULA);
+-					dance_4(tmp, HULA, 3);
+-					dance_4(tmp, HULA, 4);
+-					sleep((int)PENGO_HULA);
+-					dance_4(tmp, HULA, 4);
+-				}
+-			}
+-			dance_4(tmp, HULA, 0);
+-			sleep((int)PENGO_HULA);
+-			dance_4(tmp, HULA, 0);
+-		}
+-		dance_4(tmp, PENGO, NULL);
+-		while(ptinrect(tmp, board))
+-		{
+-			sleep((int)DANCE_PENGO);
+-			dance_4(tmp, PENGO, NULL);
+-			tmp.x += 8;
+-			dance_4(tmp, PENGO, NULL);
+-		}
+-		sleep((int)DANCE_PENGO);
+-		dance_4(tmp, PENGO, NULL);
+-		break;
+-
+-	case 8:
+-		tmp = add(dsp0.origin, Pt(32, 32));
+-		level_put_char(add(tmp, Pt(00, 00)), CHAIR, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(32, 00)), VIDEO, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(63, 00)), CHAIR, F_XOR, 1);
+-		level_put_char(add(tmp, Pt(62, -9)), PLAYERR, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 0);
+-		for (x = 0; x < NUM_BOUNCE; x++)
+-		{
+-			sleep((int)SHOW_VIDEO);	/* each bounce */
+-			level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 0);
+-			level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 1);
+-		}
+-		sleep((int)SHOW_VIDEO);	/* still beginning */
+-		level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 1);
+-		for (x = 0; x < NUM_BOUNCE; x++)
+-		{
+-			sleep((int)SHOW_VIDEO);	/* each bounce */
+-			level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 0);
+-			level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 1);
+-		}
+-		sleep((int)SHOW_VIDEO);	/* last bounce, right turns head */
+-		level_put_char(add(tmp, Pt(62, -9)), PLAYERR, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(62, -9)), PLAYERR, F_XOR, 1);
+-		sleep((int)SHOW_VIDEO);	/* delay whils right turns head */
+-		for (x = 0; x < NUM_BOUNCE; x++)
+-		{
+-			sleep((int)SHOW_VIDEO);	/* each bounce */
+-			level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 0);
+-			level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 1);
+-		}
+-		sleep((int)SHOW_VIDEO);
+-		level_put_char(add(tmp, Pt(01, -9)), PLAYERL, F_XOR, 1);
+-		level_put_char(add(tmp, Pt(62, -9)), PLAYERR, F_XOR, 1);
+-		level_put_char(add(tmp, Pt(00, 00)), CHAIR, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(32, 00)), VIDEO, F_XOR, 0);
+-		level_put_char(add(tmp, Pt(63, 00)), CHAIR, F_XOR, 1);
+-
+-	default:
+-		break;
+-	}
+-}
+-
+-dance_4(tmp, ch, other)
+-Point	tmp;
+-int	ch;
+-int	other;
+-{
+-	int	x;
+-
+-	for (x = 0; x < 4; x++)
+-		level_put_char(add(tmp, Pt((32 + 8) * x, 0)), ch, F_XOR, other);
+-}
+-
+-level_put_char(tmp, ch, format, other)
+-Point	tmp;
+-int	ch;
+-int	format;
+-int	other;
+-{
+-	int	tmp0;
+-
+-	if (!ptinrect(tmp, dboard))
+-		return;
+-	switch(ch)
+-	{
+-	case PENGO:
+-		if (pengo.movex)
+-			if (pengo.movex < 0)
+-				tmp0 = 1;
+-			else
+-				tmp0 = 3;
+-		else
+-			if (pengo.movey < 0)
+-				tmp0 = 5;
+-			else if (pengo.movey)
+-				tmp0 = 7;
+-			else
+-				tmp0 = 0;
+-		if (tmp.x & 16)
+-			tmp0++;
+-		bit32.base = (Word *)pengo_moves[tmp0];	
+-		break;
+-
+-	case BACK:
+-		bit32.base = (Word *)char_pback;
+-		break;
+-
+-	case WIGGLE:
+-		bit32.base = (Word *)(other ? char_1wiggle : char_0wiggle);
+-		break;
+-
+-	case SALUTE:
+-		bit32.base = (Word *)char_salute;
+-		break;
+-
+-	case HULA:
+-		bit32.base = (Word *)hula_moves[other];
+-		break;
+-
+-	case CHAIR:
+-		bit32.base = (Word *)(other ? char_rchair : char_lchair);
+-		break;
+-
+-	case VIDEO:
+-		bit32.base = (Word *)(other ? char_null : char_0video);
+-		break;
+-
+-	case PLAYERR:
+-		bit32.base = (Word *)(other ? char_0rplayer : char_1rplayer);
+-		break;
+-
+-	case PLAYERL:
+-		bit32.base = (Word *)(other ? char_0lplayer : char_1lplayer);
+-		break;
+-
+-	default:
+-		bit32.base = (Word *)char_null;
+-		break;
+-
+-/* others here ... */
+-	}
+-	bitblt(&bit32, Rect(0, 0, 32, 32), &display,
+-		add(board.origin, Pt(tmp.x, tmp.y)), format);
+-}
+-
+-int	padd_score[] = { 5000, 1000, 500, 100, 10, 1, 0, };
+-
+-extra_score(seconds)
+-int	seconds;
+-{
+-	Point	tmp;
+-	int	count;
+-
+-	if (seconds < 0)
+-		seconds = 0;
+-	tmp.x = board.origin.x + (board.corner.x - board.origin.x - 16 * 16) / 2;
+-	tmp.y = board.origin.y + 16;
+-	rectf(&display, board, F_STORE);
+-	addstr("Time Taken ....", tmp, F_CLR);
+-	add_time(seconds, add(tmp, Pt(16 * 15, 0)));
+-	tmp.y += 16;
+-	addstr(" 0 ...  9  5000", tmp, F_CLR);
+-	tmp.y += 16;
+-	addstr("10 ... 19  1000", tmp, F_CLR);
+-	tmp.y += 16;
+-	addstr("20 ... 29   500", tmp, F_CLR);
+-	tmp.y += 16;
+-	addstr("30 ... 39   100", tmp, F_CLR);
+-	tmp.y += 16;
+-	addstr("40 ... 49    10", tmp, F_CLR);
+-	tmp.y += 16;
+-	addstr("50 ... 59     1", tmp, F_CLR);
+-	tmp.y += 16;
+-	addstr("Over 59 NO BONUS", tmp, F_CLR);
+-	if (seconds >= 60)
+-		seconds = 60;
+-	rectf(&display, Rect(
+-		board.origin.x,
+-		board.origin.y + ((seconds/10) * 16) + 32,
+-		board.corner.x,
+-		board.origin.y + ((seconds/10) * 16) + 48), F_XOR);
+-	put_score(score += padd_score[(seconds / 10) % 7]);
+-	count = 0;
+-	if (button123())
+-		for (;count < 60; count++)
+-			if (!button123())
+-				break;
+-			else
+-				sleep(2);
+-	for (;count < 60; count++)
+-		if (button123())
+-			break;
+-		else
+-			sleep(2);
+-	while(button123())
+-		wait(CPU);
+-}
+-
+-add_time(seconds, pos)
+-int	seconds;
+-Point	pos;
+-{
+-	if (!seconds)
+-	{
+-		addstr("0 seconds", pos, F_CLR);
+-		return;
+-	}
+-	if (seconds > 3600)	/* 1 hour */
+-	{
+-		addstr("Over 1 Hour", pos, F_CLR);
+-		return;
+-	}
+-	if (seconds > 60)
+-	{
+-		int	minutes;
+-
+-		minutes = seconds / 60;
+-		if (minutes > 10)
+-		{
+-			addchar((minutes / 10) + '0', pos, F_CLR);
+-			pos.x += 16;
+-		}
+-		addchar((minutes % 10) + '0', pos, F_CLR);
+-		seconds = seconds % 60;
+-		pos.x += 16;
+-		addstr(" Min:", pos, F_CLR);
+-		pos.x += 5 * 16;
+-	}
+-	if (seconds > 10)
+-	{
+-		addchar((seconds / 10) + '0', pos, F_CLR);
+-		pos.x += 16;
+-	}
+-	addchar((seconds % 10) + '0', pos, F_CLR);
+-	pos.x += 16;
+-	addstr(" Sec", pos, F_CLR);
+-}
+//GO.SYSIN DD level.c
+echo mouse.c 1>&2
+sed 's/.//' >mouse.c <<'//GO.SYSIN DD mouse.c'
+-/*
+-	mouse looker after...
+-
+-	Self contained mouse handler
+-*/
+-
+-#include "pengo.h"
+-
+-char	*menu3text[] = { "Pause", "Stats", "New Game", "Quit", NULL };
+-
+-#define M_PAUSE	0
+-#define	M_STATS	1
+-#define	M_NEW	2
+-#define	M_QUIT	3
+-
+-Menu	menu3 = { menu3text };
+-Texture skull = {
+-	 0x03C0, 0x0660, 0x0810, 0x0A50,
+-	 0x1248, 0x1008, 0x1998, 0x0C30,
+-	 0x0000, 0x0180, 0x0660, 0x0420,
+-	 0x0020, 0x00C0, 0x0100, 0x0100,
+-};
+-
+-Texture sunset = {
+-	0x5006, 0xA819, 0x00A0, 0x04A0,
+-	0x049F, 0x12A4, 0x0808, 0x03E0,
+-	0x2412, 0x0808, 0x0808, 0x3FFF,
+-	0x3C1F, 0x7E7E, 0x783E, 0xFCFC,
+-};
+-
+-Texture sleepz = {
+-	0xF800, 0xF800, 0x1800, 0x3000,
+-	0x67C0, 0xC7C0, 0xF8C0, 0xF980,
+-	0x033E, 0x063E, 0x07C6, 0x07CC,
+-	0x0018, 0x0030, 0x003E, 0x003E,
+-};
+-
+-Texture	grey = {
+-	0xAAAA, 0x5555, 0xAAAA, 0x5555,
+-	0xAAAA, 0x5555, 0xAAAA, 0x5555,
+-	0xAAAA, 0x5555, 0xAAAA, 0x5555,
+-	0xAAAA, 0x5555, 0xAAAA, 0x5555,
+-};
+-
+-Texture	*old;
+-
+-Rectangle	graph;
+-Rectangle	graphc;
+-Rectangle	graphr;
+-Rectangle	graphb;
+-
+-short	gstore[6 * 120];	/* storage for tmp store */
+-
+-Bitmap	graphs	= { (Word *) gstore, shorts(6), { { 0, 0 }, { 16 * 5, 120 } } };
+-
+-wait_mouse()
+-{
+-	while (!(own() & MOUSE))
+-	{
+-		wait(CPU);
+-		old_mouse = mouse.xy;
+-	}
+-	hit = button1() ? TRUE : hit;
+-	if (button3())
+-	{
+-		old = cursswitch((Word *)0);
+-		switch (menuhit(&menu3, 3))
+-		{
+-		case M_QUIT:
+-			cursswitch(&sunset);
+-			while (!button12())
+-				if (button3())
+-					exit();
+-				else
+-					wait(CPU);
+-			break;
+-		case M_NEW:
+-			cursswitch(&skull);	/* pause cursor */
+-			while (!button12())
+-				if (button3())
+-				{
+-					extern	int	reshaped;
+-
+-					cursswitch(old);
+-#ifdef	JERQ
+-#ifndef	MPX
+-/*
+- *	Don't know why these lines have to be here, but only on
+- *	stand alone jerq the 'cursswitch(old)' leaves the old
+- *	cursor in place... very strange.
+- */
+-					cursswitch(char_space);
+-#endif	MPX
+-#endif	JERQ
+-#ifdef	MPX
+-					P->state |= RESHAPED;  /* force a restart */
+-#else
+-					reshaped = TRUE;
+-#endif
+-					return(TRUE);
+-				}
+-				else
+-					wait(CPU);
+-			break;
+-		case M_PAUSE:
+-			cursswitch(&sleepz);
+-			while(!button3())
+-				wait(CPU);
+-			while(button3())
+-				wait(CPU);
+-			break;
+-
+-		case M_STATS:	/* change movement stats */
+-			graph.origin =
+-				add(
+-					board.origin,
+-					div(
+-						sub(
+-							sub(
+-								board.corner,
+-								board.origin
+-							),
+-							Pt(80, 120)
+-						),
+-						2
+-					)
+-				);
+-			graph.corner = add(graph.origin, Pt(80, 120));
+-			cursswitch(old);
+-#ifdef	JERQ
+-#ifndef	MPX
+-			cursswitch(char_space);
+-#endif	MPX
+-#endif	JERQ
+-			bitblt(&display, raddp(graphs.rect, graph.origin),
+-				&graphs, Pt(0,0), F_STORE);	/* save display */
+-			graphc = raddp(Rect(0, 16, 20, 120), graph.origin);
+-			graphr = raddp(graphc, Pt(30, 0));
+-			graphb = raddp(graphr, Pt(30, 0));
+-			rectf(&display, graph, F_CLR);
+-			bitblt(bchar('C'), Rect(0,0,16,16), &display,
+-				graph.origin, F_STORE);
+-			bitblt(bchar('R'), Rect(0,0,16,16), &display,
+-				add(graph.origin, Pt(30, 0)), F_STORE);
+-			bitblt(bchar('B'), Rect(0,0,16,16), &display,
+-				add(graph.origin, Pt(60, 0)), F_STORE);
+-			rectf(&display, graphc, F_STORE);
+-			rectf(&display, inset(graphc, 1), F_CLR);
+-			rectf(&display, graphr, F_STORE);
+-			rectf(&display, inset(graphr, 1), F_CLR);
+-			rectf(&display, graphb, F_STORE);
+-			rectf(&display, inset(graphb, 1), F_CLR);
+-			gdisp(inset(graphc, 2), sb_change);
+-			gdisp(inset(graphr, 2), sb_random);
+-			gdisp(inset(graphb, 2), sb_break);
+-			cursswitch((Word *)0);
+-			sleep(2);	/* sync */
+-			while(!button3())
+-			{
+-				/* here we adjust the graphs */
+-				if (ptinrect(mouse.xy, inset(graphc,2))&& button1())
+-					mgdisp(graphc, &sb_change);
+-				if (ptinrect(mouse.xy, inset(graphr,2))&& button1())
+-					mgdisp(graphr, &sb_random);
+-				if (ptinrect(mouse.xy, inset(graphb,2))&& button1())
+-					mgdisp(graphb, &sb_break);
+-			}
+-			while(button3())
+-				wait(CPU);
+-			cursswitch(old);
+-#ifdef	JERQ
+-#ifndef	MPX
+-			cursswitch(char_space);
+-#endif	MPX
+-#endif	JERQ
+-			bitblt(&graphs,graphs.rect,&display,graph.origin, F_STORE);
+-			break;
+-
+-		default:
+-			/* shouldn't happen */
+-			exit(2);
+-		}
+-		cursswitch(old);
+-#ifdef	JERQ
+-#ifndef	MPX
+-		cursswitch(char_space);
+-#endif	MPX
+-#endif	JERQ
+-	}
+-	return(FALSE);
+-}
+-
+-gdisp(box, value)
+-Rectangle	box;
+-int		value;
+-{
+-	texture(&display,
+-		Rect(
+-			box.origin.x,
+-			box.corner.y - value,
+-			box.corner.x,
+-			box.corner.y
+-		),
+-		&grey,
+-		F_STORE);
+-	rectf(&display,
+-		Rect(
+-			box.origin.x,
+-			box.origin.y,
+-			box.corner.x,
+-			box.corner.y - value
+-		),
+-		F_CLR);
+-}
+-
+-mgdisp(box, vp)
+-Rectangle	box;
+-int		*vp;
+-{
+-	Point	tmp;
+-
+-	cursswitch(old);
+-#ifdef	JERQ
+-#ifndef	MPX
+-	cursswitch(char_space);
+-#endif	MPX
+-#endif	JERQ
+-	while (button1() && ptinrect((tmp = mouse.xy), inset(box, 2)))
+-	{
+-		cursswitch((Word *)NULL);
+-		*vp = box.corner.y - tmp.y - 2;
+-		sleep(2);			/* sync with display */
+-		cursswitch(old);
+-#ifdef	JERQ
+-#ifndef	MPX
+-		cursswitch(char_space);
+-#endif	MPX
+-#endif	JERQ
+-		rectf(&display, box, F_STORE);
+-		gdisp(inset(box, 2), *vp);	/* put it on the screen */
+-	}
+-	rectf(&display, box, F_STORE);
+-	rectf(&display, inset(box, 1), F_CLR);
+-	gdisp(inset(box, 2), *vp);
+-	cursswitch((Word *)NULL);
+-}
+//GO.SYSIN DD mouse.c
+

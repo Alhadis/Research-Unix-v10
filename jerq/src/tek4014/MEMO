@@ -1,0 +1,97 @@
+A memo?  Gods, no.  Except for use of the mouse, the Tektronix 4014
+manual serves as documentation for the program.  Here's a brief rundown:
+
+1.  Getting it started.
+	Open a layer in mpx (layers).  Make it full-width and about
+three-fifths of the height for maximal Tektronix compatibility. If
+/usr/jerq/bin (or the local equivalent) is not in your $PATH, put it
+there.  Type tek4014 (or whatever), and, if using a 1200 baud line,
+go out and do your Christmas shopping.  When you return, the layer
+will be a functioning tektronix emulator.
+
+2.  The button 2 menu.
+	The menu on button 2 shows you the state in which the switches
+on the 4014 are NOT; i.e., it shows you what you will get if you push
+that menu item.  This applies to the "real" 4014 switches:
+	line/local, ascii/apl, 
+and to the fake ones:
+	dither/random, smear/focus, flash/no flash.
+These last two relate to the way that point-plotted images are handled:
+either by a dithering process to get grey levels, or by a coin-flip method;
+and either by considering 100% to be a 2x2 cell of pixels, or a 1x1.  Since
+a jerq doesn't have grey levels, or the resolution of a real 4014, some
+fiddling with these may be necessary to produce the best mimicry of a
+4014.  They start in dither/smear, which produces the best results on
+all of the examples I've tried.
+The flash/no flash switch, controls whether characters, points, and lines
+are highlighted briefly when drawn.
+
+Menu items page, reset, shift and exit:
+	page and reset transmit the functions of the 4014 keyboard
+key reset/page (reset = shift page).  page clears the screen; reset
+homes the cursor, and sets alpha mode in the largest font.  You can
+also page the screen by typing the no scroll key.
+
+	exit exits the emulator, first demanding button 3 confirmation.
+
+	When the screen has dimmed, a menu item shift appears.  Since the
+shift keys on the jerq keyboard do not transmit, use this to wake the
+screen up, if you just want to see what's underneath.
+
+3.  GIN mode (using the crosshairs)
+	When in GIN mode, a crosshair cursor will appear on the screen.
+Point the mouse, and press button 1 to get control of the crosshairs.
+
+4.  Layer tomfoolery.
+	Since a 4014 is an OR mode device, the appearance of the stipple
+pattern can ruin the images on the screen.  Thus, rather than using
+stippling to show non-currency, tek4014 flips itself into a black on
+white image when it is not current.  This is also desirable for use
+with screen dumping programs.  Reshaping a 4014 layer causes a page
+function: screen clear, alpha mode, homed cursor.
+
+5.  Other incompatibilities.
+	As far as I know, there are none.  In every regard, your tek4014
+layer should appear to all programs to be a Tektronix 4014, with extended
+graphics option.  If not, tell me, and I will fix it, if possible.
+
+Mark (research|rabbit|ikeya ! msm) Manasse
+
+Command line switches:
+
+To further emulate a 4014, the strappable terminal options are now
+available as command line switches at start-up time.
+
+Strap		Switch	Effect
+LFeffect	-l	Default: LF causes LF only;
+			-l: LF causes LF and CR.
+
+CReffect	-c	Default: CR causes CR only;
+			-c: CR causes CR and LF.
+
+NOTE: only one of -l and -c may be selected.
+
+DELimpliesLOY	-d	Default: DEL is legal LOY.
+			-d: ESC ? also recognized as DEL.
+
+GINcount	-e,-g	Default: GIN mode sends four position characters,
+				 and a CR.
+			-e: Send a CR and an EOT.
+			-g: Send only the GIN characters; no CR, no EOT.
+
+NOTE: only one of -e and -g may be selected.
+
+NOTE: the following is not a true 4014 strap, but is included
+      to make the emulator more usable.
+
+DIMallowed	-u	Default: ALLOWED.  The screen will dim after 90 seconds
+			idle in ALPHA mode.  Recover either by typing a character,
+			or by selecting 'shift' on the button 2 menu.
+			-u: The screen never dims.  (How dull)
+
+The default settings correspond to the strap options in 1127; in particular,
+the cda-draw software requires the default GIN strap.  Berkeley users will
+probably want to use -l, unless their system has been Ritchie'd.
+
+Mark
+

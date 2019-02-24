@@ -1,0 +1,39 @@
+TITLE = liblayer makefile
+PRODUCTS = liblayer.a
+
+AS=m32as
+CFLAGS=-I$(DMDINCLUDE) -g -O
+MAKEARG= -$(MAKEFLAGS) DMDBIN=$(DMDBIN) DMDLIB=$(DMDLIB) DMDSRC=$(DMDSRC)\
+	DMDINCLUDE=$(DMDINCLUDE) DMDSGS=$(DMDSGS) DMDDEMO=$(DMDDEMO)\
+	MCC=$(MCC) MCFLAGS=$(MCFLAGS) MLD=$(MLD) MAR=$(MAR)
+CLEAN= core $(OBJ) liblayer.a
+MLORDER=m32lorder
+LCLCFLAGS=-J -g -O
+
+SOURCE=dellayer.c layerop.c lbitblt.c lblt.c lpoint.c lrectf.c lscroll.c lsegment.c ltexture.c newlayer.c upfront.c lbox.c
+
+UINC = .
+
+OBJ=layerop.o lbitblt.o lblt.o lrectf.o dellayer.o\
+	lscroll.o lpoint.o ltexture.o lsegment.o newlayer.o upfront.o lbox.o 
+
+.c.o:
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c $<
+
+.s.o:
+	$(MCC) -c $<
+
+liblayer.a: $(OBJ)
+	$(MAR) cr liblayer.a `$(MLORDER) $(OBJ) | tsort`
+
+save:
+	-cp $(DMDLIB)/liblayer.a oliblayer.a
+
+lint:
+	lint $(SOURCE)
+
+print:
+	@pr layer.h $(SOURCE)
+
+install:	liblayer.a
+	cp liblayer.a $(DMDLIB)/liblayer.a

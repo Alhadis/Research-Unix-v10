@@ -1,0 +1,430 @@
+#	@(#) stin : 1.12 4/20/84
+#	stin - input description for pcc2 code generator
+#
+#
+
+SHAPES
+
+#	basic shapes
+
+F:	'FREE';			# evaluate for effects only
+CC:	'CC';			# evaluate for condition codes (ignore value)
+
+# Different flavors of constants
+Cplit:	POSRANGE 6:0;		# 0 - 63: positive literal
+Cb:	POSRANGE 8:1;		# -128 - 127
+Cs:	SGRANGE 15:2;		# -32768 - 32767
+C: :4;				# constant
+
+N:	'NAME'	:8;		# including address constants
+T:	'TEMP'	:5;		# temporary
+A:	'AUTO'	:5;		# auto
+P:	'PARAM'	:5;		# incoming arg
+R:	'REG'	:0;		# "register"
+
+#	addressing modes
+
+STK:	T, A, P;		# K(%sp) or K(%ap)
+ROFF:	R, R+C, R-C;
+OREG:	*(*ROFF):9, *STK:9, *ROFF:5;	# PCC1 "OREG" node
+AWD1:	STK, R, OREG, N;	# addressable words
+AWD:	AWD1, *N:11;		# same, including indirect of global
+AWDnR:	STK, OREG, N;		# addressable words that aren't in registers
+DAWD:	STK, R, N;		# directly addressable word
+IAWD:	OREG, *N:11;		# AWD without DAWD
+
+AAWD:	& AWD1:1;
+STAWD:	AWD1, AAWD, C;		# structure AWD
+
+BC:	'CONV' AWD[cuc];	# character converted to int or short
+SC:	'CONV' AWD[s];		# short converted to int
+USC:	'CONV' AWD[us];		# unsigned short converted to int
+
+MEMADR:	'UAND' STK:1;		# address of stack items
+
+BSRC:	AWD[cuc], BC[iui], Cb;	# character operand
+HSRC:	AWD[s], SC[iui], Cs; 	# short operands to int operations 
+HSRCnconv: AWD[sus], Cs;	# any halfword source with no convert
+				# used for assignment, since there 
+				# won't be a convert.
+UHSRC:	AWD[us], USC[iui], Cs;
+WSRC:	AWD[iuip], C;
+
+WSRCnC:	AWD[iuip], C;		# no conversion
+UWSRCnC:	AWD[uip];	# unsigned
+SWSRCnC:	AWD[i], C;	# signed
+
+BDST:	AWD[cuc];
+HDST:	AWD[sus];
+SHDST:	AWD[s];
+WDST:	AWD[iuip];
+
+SSRC:	AWD[f];			# single
+DSRC:	AWD[d];			# double
+SSRCconv: 'CONV' SSRC;		# converted (to double) single
+DSRCconv: 'CONV' DSRC;		# converted (to single) double
+FSRC:	SSRC, DSRC, C;
+
+SDST:	AWD[f];
+DDST:	AWD[d];
+FDST:	SDST,DDST;
+
+#	useful subtrees to recognize
+
+FLD:	'FLD' AWD[cucsusiui];		# bit field
+BFLD:	'FLD' AWD[cuc];
+HFLD:	'FLD' AWD[sus];
+WFLD:	'FLD' AWD[iui];
+
+
+OPCODES
+
+DCOST	:8;			# default opcode cost
+
+#	convert to/from double
+
+'CONV'	[iuip] SSRC	{$1 $< $C}	"	movtsw	AL,A1\n":24;
+'CONV'	[iuip] DSRC	{$1 $l $< $C}	"	movtdw	AL,A1\n":24;
+'CONV'	[sus] SSRC	{$1 $< $C}	"\tmovtsw\tAL,A1\n\tmovtwh\tA1,A1\n":32;
+'CONV'	[sus] DSRC	{$1 $< $l $C}	"\tmovtdw\tAL,A1\n\tmovtwh\tA1,A1\n":32;
+'CONV'	[cuc] SSRC	{$1 $< $C}	"\tmovtsw\tAL,A1\n\tmovtwb\tA1,A1\n":32;
+'CONV'	[cuc] DSRC	{$1 $< $l $C}	"\tmovtdw\tAL,A1\n\tmovtwb\tA1,A1\n":32;
+'CONV'	[f] WSRC 	{$1 $< $C}	"	movws	AL,A1\n":24;
+'CONV'	[d] WSRC 	{$1 $P $< $C}	"	movwd	AL,A1\n":24;
+'CONV'	[d] SSRC	{$1 $P $< $C}	"	movsd	AL,A1\n":24;
+'CONV'	[f] DSRC	{$1 $l $< $C}	"	movds	AL,A1\n":24;
+'CONV'	[f] AWD[us]	{$1 $< $C}	"\tmovzhw\tAL,A1\n\tmovws\tA1,A1\n":32;
+'CONV'	[f] AWD[s]	{$1 $< $C}	"\tmovbhw\tAL,A1\n\tmovws\tA1,A1\n":32;
+'CONV'	[f] AWD[cuc]	{$1 $< $C}	"\tmovzbw\tAL,A1\n\tmovws\tA1,A1\n":32;
+'CONV'	[d] AWD[us]	{$1 $P $l $< $C} "\tmovzhw\tAL,A1\n\tmovwd\tA1,A1\n":32;
+'CONV'	[d] AWD[s]	{$1 $P $l $< $C} "\tmovbhw\tAL,A1\n\tmovwd\tA1,A1\n":32;
+'CONV'	[d] AWD[cuc]	{$1 $P $l $< $C} "\tmovzbw\tAL,A1\n\tmovwd\tA1,A1\n":32;
+
+#	integral conversions
+
+'CONV'[sus] AWD[cuc]	{$1 $<}		"RL!1	movzbh	AL,A1\n":14;
+'CONV'[sus] AWD[cuc]	{$1 $< $C}	"	movzbh	AL,A1\n":14;
+'CONV'[iuip] AWD[cuc]	{$1 $< $C}	"	movzbw	AL,A1\n":14;
+
+'CONV'[iuip] AWD[s]	{$1 $< $C}	"	movbhw	AL,A1\n":14;
+'CONV'[iuip] AWD[us]	{$1 $< $C}	"	movzhw	AL,A1\n":14;
+
+'CONV'[cuc] AWD[sus]	{$1 $<}		"RL!1	movthb	AL,A1\n":14;
+'CONV'[cuc] AWD[iuip]	{$1 $<}		"RL!1	movtwb	AL,A1\n":14;
+'CONV'[sus] AWD[iuip]	{$1 $<}		"RL!1	movtwh	AL,A1\n":14;
+'CONV'[cuc] AWD[sus]	{$1 $< $C}	"	movthb	AL,A1\n":14;
+'CONV'[cuc] AWD[iuip]	{$1 $< $C}	"	movtwb	AL,A1\n":14;
+'CONV'[sus] AWD[iuip]	{$1 $< $C}	"	movtwh	AL,A1\n":14;
+
+#	leaf nodes (Also matches some conversions of leaves)
+
+'FLD'	AWD		{$1 $< $C}	"	extzv	&ZHR,&SR,AL,A1\n":16;
+
+BSRC			{$C}		"	cmpb	AR,&0\nZb";
+HSRC			{$C}		"	cmph	AR,&0\nZb";
+WSRC			{$C}		"	cmpw	AR,&0\nZb";
+AWD[f]			{$C $r}		"	fcmps	AR,&0.0\nZb":24;
+AWD[d]			{$C $r}		"	fcmpd	AR,&0.0\nZb":24;
+
+WSRC			{$1 $> }	"RR!1	movw	AR,A1\n";
+HSRC			{$1 $C $> }	"	movbhw	AR,A1\n";
+UHSRC			{$1 $C $> }	"	movzhw	AR,A1\n";
+BSRC			{$1 $C $> }	"	movzbw	AR,A1\n";
+AWD[f]			{$1 $r $P $> }	"	movsd	AR,A1\n";
+DAWD[d]			{$1 $r $P $>}	"\tmovw	AR,A1\n\tmovw	ZDR,ZD1\n";
+IAWD[d]			{$1 $r $P $>}	"	movdd	AR,A1\n";
+
+#	constant initialization
+
+'INIT' [cuc]	C	{$N}		"	ZB";
+'INIT' [sus]	C	{$N}		"	.half	CL\n";
+'INIT' [iuip]	C	{$N}		"	.word	CL\n";
+'INIT' [f]	C	{$N}		"	.single	CL\n";
+'INIT' [d]	C	{$N}		"	.double	CL\n";
+
+#		function arguments
+
+'ARG'	WSRCnC			{$N}		"	pushw	AL\n";
+'ARG'	AWD[s]			{$N 1}	"\tmovbhw\tAL,A1\n\tpushw\tA1\n":16;
+'ARG'	AWD[us]			{$N 1}	"\tmovzhw\tAL,A1\n\tpushw\tA1\n":16;
+'ARG'	AWD[c]			{$N 1}	"\tmovzbw\tAL,A1\n\tpushw\tA1\n":16;
+'ARG'	DAWD[f] {1 $P $l} "\tmovsd\tAL,A1\n\tpushw\tA1\n\tpushw\tZD1\n":24;
+'ARG'	IAWD[f] {1 $P $l $C} "\tmovsd\tAL,A1\n\taddw2\t&8,%sp\n\tmovdd\tA1,-8(%sp)\n":32;
+'ARG'	DAWD[d]	{$N $l}	"\tpushw\tAL\n\tpushw\tZDL\n":24;
+'ARG'	IAWD[d]	{$N $l}	"\taddw2\t&8,%sp\n\tmovdd\tAL,-8(%sp)\n":24;
+'ARG'	MEMADR			{$N}	"	pushaw	A(LL)\n";
+
+#	take address of
+
+'UAND'	AWDnR			{$1 $<}		"	movaw	AL,A1\n";
+
+=	AWD,MEMADR		{$L}		"	movaw	A(RL),AL\n";
+=	AWD,MEMADR		{$R}		"	movaw	A(RL),AL\n";
+
+#	arithmetic ops -- take advantage of mod N bit arithmetic
+
++ BSRC,BSRC	{$1 $< $> $C}
+	"RR=1	addb2	AL,ARERL=1	addb2	AR,ALE	addb3	AR,AL,A1\n";
++ HSRC,HSRC	{$1 $< $> $C}
+	"RR=1	addh2	AL,ARERL=1	addh2	AR,ALE	addh3	AR,AL,A1\n";
++ WSRC,WSRC	{$1 $< $> $C}
+	"RR=1	addw2	AL,ARERL=1	addw2	AR,ALE	addw3	AR,AL,A1\n";
++ DSRC,DSRC	{$1 $P $l $r $< $> $C}
+	"RR=1	faddd2	AL,ARERL=1	faddd2	AR,ALE	faddd3	AR,AL,A1\n":6;
+
+- BSRC,BSRC	{$1 $< $> $C}	"RL!1\tsubb3\tAR,AL,A1\nRL=1\tsubb2\tAR,AL\n";
+- HSRC,HSRC	{$1 $< $> $C}	"RL!1\tsubh3\tAR,AL,A1\nRL=1\tsubh2\tAR,AL\n";
+- WSRC,WSRC	{$1 $< $> $C}	"RL!1\tsubw3\tAR,AL,A1\nRL=1\tsubw2\tAR,AL\n";
+- DSRC,DSRC	{$1 $P $l $r $< $> $C}
+	"RL!1	fsubd3	AR,AL,A1\nRL=1	fsubd2	AR,AL\n":6;
+
+'UMINUS' BSRC			{$1 $<}		"	\\M\\N\\E\\G\\B	AL,A1\n";
+'UMINUS' HSRC			{$1 $<}		"	mnegh	AL,A1\n";
+'UMINUS' WSRC			{$1 $<}		"	mnegw	AL,A1\n";
+'UMINUS' DSRC		{$1 $P $l $< $C}	"\tfsubd3\tAL,&0.0,A1\n":24;
+
+# looks so gross because "expand" uses caps for itself
+# BC and SC templates are used to reach around conversions explicitly
+# because optim doesn't push down conversions around *.
+
+* BC[iuisus],BC[iuisus] {$1 $< $> $C}
+	"R(RL)=1	\\M\\U\\L\\B2	AL,ARER(LL)=1	\\M\\U\\L\\B2	AR,ALE	\\M\\U\\L\\B3	AR,AL,A1\n":16;
+* BSRC,BSRC {$1 $< $> $C}	"	\\M\\U\\L\\B3	AR,AL,A1\n":16;
+* SC,SC {$1 $< $> $C}
+	"R(RL)=1	\\M\\U\\L\\H2	AL,ARER(LL)=1	\\M\\U\\L\\H2	AR,ALE	\\M\\U\\L\\H3	AR,AL,A1\n":16;
+* HSRC,HSRC {$1 $< $> $C}	"	\\M\\U\\L\\H3	AR,AL,A1\n":16;
+* WSRC,WSRC	{$1 $< $> $C}
+	"RR=1	mulw2	AL,ARERL=1	mulw2	AR,ALE	mulw3	AR,AL,A1\n":16;
+* DSRC,DSRC	{$1 $P $l $r $[ $] $C}
+	"RR=1	fmuld2	AL,ARERL=1	fmuld2	AR,ALE	fmuld3	AR,AL,A1\n":24;
+
+/ UWSRCnC,WSRCnC {$1 $< $> $C} "RL!1\tudivw3\tAR,AL,A1\nRL=1\tudivw2\tAR,AL\n":18;
+/ WSRCnC,UWSRCnC {$1 $< $> $C} "RL!1\tudivw3\tAR,AL,A1\nRL=1\tudivw2\tAR,AL\n":18;
+/ WSRCnC,WSRCnC	{$1 $< $> $C} "RL!1\tdivw3\tAR,AL,A1\nRL=1\tdivw2\tAR,AL\n":18;
+/ DSRC,DSRC {$1 $P $l $r $< $> $C}
+	"RL!1	fdivd3	AR,AL,A1\nRL=1	fdivd2	AR,AL\n":32;
+
+% UWSRCnC,WSRCnC {$1 $< $> $C} "RL!1\tumodw3\tAR,AL,A1\nRL=1\tumodw2\tAR,AL\n":18;
+% WSRCnC,UWSRCnC {$1 $< $> $C} "RL!1\tumodw3\tAR,AL,A1\nRL=1\tumodw2\tAR,AL\n":18;
+% WSRCnC,WSRCnC	{$1 $< $> $C} "RL!1\tmodw3\tAR,AL,A1\nRL=1\tmodw2\tAR,AL\n":18;
+
+#	logical ops -- again, take advantage
+#
+#	WE 32000 versions of these instructions actually do set
+#	condition codes correctly, even though IS25 doesn't require it
+
+& BSRC,BSRC	{$C}		"	bitb	AL,AR\n";
+& HSRC,HSRC	{$C}		"	bith	AL,AR\n";
+& WSRC,WSRC	{$C}		"	bitw	AL,AR\n";
+
+& BSRC,BSRC	{$C $1 $> $<}
+	"RR=1	andb2	AL,ARERL=1	andb2	AR,ALE	andb3	AR,AL,A1\n";
+& HSRC,HSRC	{$C $1 $> $<}
+	"RR=1	andh2	AL,ARERL=1	andh2	AR,ALE	andh3	AR,AL,A1\n";
+& WSRC,WSRC	{$C $1 $> $<}
+	"RR=1	andw2	AL,ARERL=1	andw2	AR,ALE	andw3	AR,AL,A1\n";
+
+| BSRC,BSRC	{$C $1 $> $<}
+	"RR=1	orb2	AL,ARERL=1	orb2	AR,ALE	orb3	AR,AL,A1\n";
+| HSRC,HSRC	{$C $1 $> $<}
+	"RR=1	orh2	AL,ARERL=1	orh2	AR,ALE	orh3	AR,AL,A1\n";
+| WSRC,WSRC	{$C $1 $> $<}
+	"RR=1	orw2	AL,ARERL=1	orw2	AR,ALE	orw3	AR,AL,A1\n";
+
+^ BSRC,BSRC	{$C $1 $> $<}
+	"RR=1	xorb2	AL,ARERL=1	xorb2	AR,ALE	xorb3	AR,AL,A1\n";
+^ HSRC,HSRC	{$C $1 $> $<}
+	"RR=1	xorh2	AL,ARERL=1	xorh2	AR,ALE	xorh3	AR,AL,A1\n";
+^ WSRC,WSRC	{$C $1 $> $<}
+	"RR=1	xorw2	AL,ARERL=1	xorw2	AR,ALE	xorw3	AR,AL,A1\n";
+
+~	BSRC			{$1 $<}		"	mcomb	AL,A1\n";
+~	HSRC			{$1 $<}		"	mcomh	AL,A1\n";
+~	WSRC			{$1 $<}		"	mcomw	AL,A1\n";
+
+#	shifts
+
+<<	WSRCnC,WSRCnC		{$1 $> $< $C}	"\t\\L\\L\\S\\W3\tAR,AL,A1\n";
+
+>>	WSRCnC,WSRCnC		{$1 $> $< $C}	"\t\\L\\R\\S\\W3\tAR,AL,A1\n";
+
+#	assignment ops -- mod N bits!
+
++=	BDST,BSRC		{$L $C}		"	addb2	AR,AL\n";
++=	HDST,HSRC		{$L $C}		"	addh2	AR,AL\n";
++=	WDST,WSRC		{$L $C}		"	addw2	AR,AL\n";
++=	DDST,DSRC		{$L $r $l $C}	"	faddd2	AR,AL\n":24;
+
+-=	BDST,BSRC		{$L $C}		"	subb2	AR,AL\n";
+-=	HDST,HSRC		{$L $C}		"	subh2	AR,AL\n";
+-=	WDST,WSRC		{$L $C}		"	subw2	AR,AL\n";
+-=	DDST,DSRC		{$L $r $l $C}	"	fsubd2	AR,AL\n":24;
+
+*=	BDST,BSRC	{$L $C}		"\t\\M\\U\\L\\B2\tAR,AL\n":16;
+*=	HDST,HSRC	{$L $C}		"\t\\M\\U\\L\\H2\tAR,AL\n":16;
+*=	WDST,WSRC		{$L $C}		"	mulw2	AR,AL\n":16;
+*=	DDST,DSRC		{$L $r $l $C}	"	fmuld2	AR,AL\n":32;
+
+/=	WDST,UWSRCnC		{$L $C}		"	udivw2	AR,AL\n":18;
+/=	AWD[uip],WSRCnC		{ }		"	udivw2	AR,AL\n":18;
+/=	AWD[iuip],WSRCnC	{ }		"	divw2	AR,AL\n":18;
+/=	DDST,DSRC		{$L $r $l $C}	"	fdivd2	AR,AL\n":32;
+
+%=	AWD[uip],WSRCnC		{ }		"	umodw2	AR,AL\n":18;
+%=	WDST,UWSRCnC		{$L $C}		"	umodw2	AR,AL\n":18;
+%=	WDST,WSRCnC		{$L $C}		"	modw2	AR,AL\n":18;
+
+|=	BDST,BSRC		{$L}		"	orb2	AR,AL\n";
+|=	HDST,HSRC		{$L}		"	orh2	AR,AL\n";
+|=	WDST,WSRC		{$L}		"	orw2	AR,AL\n";
+
+&=	BDST,BSRC		{$L}		"	andb2	AR,AL\n";
+&=	HDST,HSRC		{$L}		"	andh2	AR,AL\n";
+&=	WDST,WSRC		{$L}		"	andw2	AR,AL\n";
+
+^=	BDST,BSRC		{$L}		"	xorb2	AR,AL\n";
+^=	HDST,HSRC		{$L}		"	xorh2	AR,AL\n";
+^=	WDST,WSRC		{$L}		"	xorw2	AR,AL\n";
+
+<<=	WDST,WSRCnC		{$L $C}		"\t\\L\\L\\S\\W3\tAR,AL,AL\n";
+
+>>=	WDST,WSRCnC		{$L $C}		"\t\\L\\R\\S\\W3\tAR,AL,AL\n";
+
+#	comparisons
+
+'CMP'	WSRC,WSRC		{$C}		"	cmpw	AL,AR\nZb";
+'CMP'	HSRC,HSRC		{$C  }		"	cmph	AL,AR\nZb";
+'CMP'	BSRC,BSRC		{$C}		"	cmpb	AL,AR\nZb";
+
+'CMP'	SSRC,SSRC		{$C}		"	fcmps	AL,AR\nZb";
+'CMP'	SSRCconv,SSRCconv	{$C}		"	fcmps	AL,AR\nZb";
+'CMP'	DSRC,DSRC		{$C}		"	fcmpd	AL,AR\nZb";
+
+#	post increment, decrement (rhs is amount)
+
+++	BDST,C	{$N}		"	addb2	&CR,AL\n";
+++	HDST,C	{$N}		"	addh2	&CR,AL\n";
+++	WDST,C	{$N}		"	addw2	&CR,AL\n";
+++	DDST,C	{$l $N}		"	faddd2	&CR,AL\n":24;
+
+++	BDST,C	{$1 $l}		"	movb	AL,A1\n	addb2	&CR,AL\n":16;
+++	HDST,C	{$1 $l}		"	movh	AL,A1\n	addh2	&CR,AL\n":16;
+++	WDST,C	{$1 $l}		"	movw	AL,A1\n	addw2	&CR,AL\n":16;
+++	DAWD[d],C {$1 $P $l $l $l} "\tmovw\tAL,A1\n\tmovw\tZDL,ZD1\n\tfaddd2\t&CR,AL\n":20;
+++	IAWD[d],C {$1 $P $l $l $l} "	movdd	AL,A1\n	faddd2	&CR,AL\n":32;
+
+--	BDST,C	{$N}		"	subb2	&CR,AL\n";
+--	HDST,C	{$N}		"	subh2	&CR,AL\n";
+--	WDST,C	{$N}		"	subw2	&CR,AL\n";
+--	DDST,C	{$l $N}		"	fsubd2	&CR,AL\n":24;
+
+--	BDST,C	{$1 $l}		"	movb	AL,A1\n	subb2	&CR,AL\n":16;
+--	HDST,C	{$1 $l}		"	movh	AL,A1\n	subh2	&CR,AL\n":16;
+--	WDST,C	{$1 $l}		"	movw	AL,A1\n	subw2	&CR,AL\n":16;
+--	DAWD[d],C {$1 $P $l $l $l} "\tmovw\tAL,A1\n\tmovw\tZDL,ZD1\n\tfsubd2\t&CR,AL\n":24;
+--	IAWD[d],C {$1 $P $l $l $l} "	movdd	AL,A1\n	fsubd2	&CR,AL\n":24;
+
+--	BFLD,C	{1 $N}
+"\textzv\t&ZHL,&SL,AL,A1\n\tsubb2\t&CR,A1\n\tinsv\tA1,&ZHL,&SL,AL\n";
+--	HFLD,C	{1 $N}
+"\textzv\t&ZHL,&SL,AL,A1\n\tsubh2\t&CR,A1\n\tinsv\tA1,&ZHL,&SL,AL\n";
+--	WFLD,C	{1 $N}
+"\textzv\t&ZHL,&SL,AL,A1\n\tsubw2\t&CR,A1\n\tinsv\tA1,&ZHL,&SL,AL\n";
+
+--	BFLD,C	{2 $1 $l}
+"\textzv\t&ZHL,&SL,AL,A1\n\tmovw\tA1,A2\n\tsubb2\t&CR,A2\n\tinsv\tA2,&ZHL,&SL,AL\n":16;
+--	HFLD,C	{2 $1 $l}
+"\textzv\t&ZHL,&SL,AL,A1\n\tmovw\tA1,A2\n\tsubh2\t&CR,A2\n\tinsv\tA2,&ZHL,&SL,AL\n":16;
+--	WFLD,C	{2 $1 $l}
+"\textzv\t&ZHL,&SL,AL,A1\n\tmovw\tA1,A2\n\tsubw2\t&CR,A2\n\tinsv\tA2,&ZHL,&SL,AL\n":16;
+
+#	assignment
+
+#	same size or smaller integers
+
+=	WDST,WSRC		{$L}		"RL!R	movw	AR,AL\n";
+=	HDST,HSRCnconv		{$L}		"RL!R	movh	AR,AL\n";
+=	BDST,BSRC		{$L}		"RL!R	movb	AR,AL\n";
+=	WDST,WSRC		{$R $C}		"	movw	AR,AL\n";
+=	HDST,HSRCnconv		{$R $C}		"	movh	AR,AL\n";
+=	BDST,BSRC		{$R $C}		"	movb	AR,AL\n";
+
+#	bigger integers
+
+=	HDST,BSRC		{$L $C}		"	movzbh	AR,AL\n":14;
+=	WDST,BSRC		{$L $C}		"	movzbw	AR,AL\n":14;
+
+=	WDST,HSRC		{$L $C}		"	movbhw	AR,AL\n":14;
+=	WDST,UHSRC		{$L $C}		"	movzhw	AR,AL\n":14;
+
+#	floating point -- better have conversions where appropriate!
+
+=	SDST,SSRC	{$L}		"	movw	AR,AL\n";
+=	SDST,SSRC	{$R}		"	movw	AR,AL\n";
+=	DAWD[d],DAWD[d]	{$L $r $l}	"\tmovw\tAR,AL\n\tmovw\tZDR,ZDL\n":24;
+=	IAWD[d],DSRC	{$L $r $l}	"	movdd	AR,AL\n":24;
+=	DDST,IAWD[d]	{$L $r $l}	"	movdd	AR,AL\n":24;
+=	DAWD[d],DAWD[d]	{$R $r $l}	"\tmovw\tAR,AL\n\tmovw\tZDR,ZDL\n":24;
+=	IAWD[d],DSRC	{$R $r $l}	"	movdd	AR,AL\n":24;
+=	DDST,IAWD[d]	{$R $r $l}	"	movdd	AR,AL\n":24;
+=	SDST,DSRCconv[f] {$L $r}	"	movds	AR,AL\n":24;
+=	DDST,SSRCconv[d] {$L $l}	"	movsd	AR,AL\n":24;
+
+=	FLD,BSRC	{$L 1 $C}	
+			"RR!1\tmovzbw	AR,A1\n\tinsv\tA1,&ZHL,&SL,AL\n":18;
+=	FLD,HSRC	{$L 1 $C}
+			"RR!1\tmovzhw	AR,A1\n\tinsv\tA1,&ZHL,&SL,AL\n":18;
+=	FLD,UHSRC	{$L 1 $C}
+			"RR!1\tmovzhw	AR,A1\n\tinsv\tA1,&ZHL,&SL,AL\n":18;
+=	FLD,WSRC	{$L 1 $C}	 "\tinsv\tAR,&ZHL,&SL,AL\n":16;
+
+#	structure assignment, arguments
+
+# complicated. do it in zzzcode()
+
+'STASG'	STAWD,STAWD	{$L 3 $]}	"ZS":24;
+
+'STARG'	STAWD	{$N 3 $[}	"Zs":24;
+
+#	goto (for fortran)
+
+'GOTO'	C			{$N}		"	jmp	CL\n";
+'GOTO'	STK			{$N}		"	jmp	*AL\n";
+
+#	comma (list separator)
+
+'CM'	F,F			{$N}		"";
+
+#	comma op (eval left, eval right, return right value)
+
+'COMOP'	F,F			{$N}		"";
+'COMOP'	F,R			{$R}		"";
+'COMOP'	F,CC			{$C}		"";
+
+#	CALL
+
+'CALL'	C,F		{$A $1}		"\tcall\t&Zc,CL\n";
+'CALL'	R,F		{$A $1}		"\tcall\t&Zc,0(AL)\n";
+'CALL'	N,F		{$A $1}		"\tcall\t&Zc,*AL\n";
+'CALL'	STK,F		{$A $1}		"\tcall\t&Zc,*AL\n";
+
+'UCALL'	C		{$A $1}		"	call	&Zc,CL\n";
+'UCALL'	R		{$A $1}		"	call	&Zc,0(AL)\n";
+'UCALL'	N		{$A $1}		"	call	&Zc,*AL\n";
+'UCALL'	STK		{$A $1}		"	call	&Zc,*AL\n";
+
+#	generate a label
+
+'GENLAB'	F		{$N}		".\\LL:\n";
+'GENLAB' 	R  		{$L} 		".\\LL:\n";
+'GENLAB' 	CC   		{$C}		".\\LL:\n";
+
+#	conditional branch
+
+'GENBR'		CC		{$N}		"	ZC";
+
+#	generate a branch
+
+'GENUBR'	F		{$N}		"	jmp	.\\LL\n";
+'GENUBR'	C		{$N}		"	jmp	.\\LL\n";
+'GENUBR'	R		{$N}	 	"	jmp	0(AL)\n";

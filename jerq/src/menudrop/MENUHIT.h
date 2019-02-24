@@ -1,0 +1,1 @@
+#define MENUHIT	30

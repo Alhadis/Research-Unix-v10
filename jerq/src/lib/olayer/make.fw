@@ -1,0 +1,237 @@
+########
+#
+#	liblayer makefile
+#
+########
+#
+#	Standard Macros
+#
+########
+AUX_CLEAN = 
+MAKE.LO = make.lo
+MAKE.ROOT = $(ROOT)/make.root
+MKGEN = mkgen
+FWROOT = ../../..
+ROOT = $(DMD)
+INC = $(FWROOT)/include
+SGSX = 
+
+INC_LIST	=\
+	-I$(INC)
+
+CLEAN =\
+	.c.o\
+	.s.o\
+	dellayer.o\
+	layerop.o\
+	lbitblt.o\
+	lblt.o\
+	lbox.o\
+	lpoint.o\
+	lrectf.o\
+	lsegment.o\
+	ltexture.o\
+	newlayer.o\
+	upfront.o
+
+all:
+install:	all
+
+##########
+#
+#	make.root
+#
+##########
+
+DMDBIN=$(ROOT)/bin
+DMDLIB=$(ROOT)/lib
+DMDSRC=$(ROOT)/src
+DMDINCLUDE=$(ROOT)/include
+FWLIB=$(FWROOT)/fwlib
+FWSRC=$(FWROOT)/src
+FWINCLUDE=$(FwROOT)/include
+UINC=/usr/include
+DMDDEMO=$(ROOT)/demo
+MCC=$(ROOT)/bin/dmdcc
+MLD=m32ld
+MAR=ar
+MLORDER=m32lorder
+
+########
+#
+#	make.lo
+#
+########
+
+TITLE = liblayer makefile
+PRODUCTS = liblayer.a
+
+AS=m32as
+CFLAGS=-I$(DMDINCLUDE) -g -O
+MAKEARG= -$(MAKEFLAGS) DMDBIN=$(DMDBIN) FWLIB=$(FWLIB) FWSRC=$(FWSRC)\
+	FWINCLUDE=$(FWINCLUDE) DMDSGS=$(DMDSGS) DMDDEMO=$(DMDDEMO)\
+	MCC=$(MCC) MCFLAGS=$(MCFLAGS) MLD=$(MLD) MAR=$(MAR)
+CLEAN= core $(OBJ) liblayer.a
+MLORDER=m32lorder
+LCLCFLAGS=-J -g -O
+
+SOURCE=dellayer.c layerop.c lbitblt.c lblt.c lpoint.c lrectf.c  lsegment.c ltexture.c newlayer.c upfront.c lbox.c
+
+UINC = .
+
+OBJ=dellayer.o  lbitblt.o lblt.o  lpoint.o  \
+	ltexture.o lsegment.o newlayer.o upfront.o lbox.o lrectf.o layerop.o
+
+.c.o:
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c $<
+
+.s.o:
+	$(MCC) -c $<
+
+liblayer.a: $(OBJ)
+	$(MAR) cr liblayer.a $(OBJ) 
+
+save:
+	-cp $(FWLIB)/liblayer.a oliblayer.a
+
+lint:
+	lint $(SOURCE)
+
+print:
+	@pr layer.h $(SOURCE)
+
+install:	liblayer.a
+	cp liblayer.a $(FWLIB)/liblayer.a
+
+########
+#
+#	All dependencies and rules not explicitly stated
+#	(including header and nested header dependencies)
+#
+########
+
+dellayer.o:	dellayer.c
+dellayer.o:	$(INC)/jerq.h
+dellayer.o:	$(INC)/jerqproc.h # nested include from mpx.h
+dellayer.o:	$(INC)/layer.h
+dellayer.o:	$(INC)/mpx.h # nested include from jerq.h
+dellayer.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c dellayer.c
+
+layerop.o:	$(INC)/jerq.h
+layerop.o:	$(INC)/jerqproc.h # nested include from mpx.h
+layerop.o:	$(INC)/layer.h
+layerop.o:	layerop.c
+layerop.o:	$(INC)/mpx.h # nested include from jerq.h
+layerop.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c layerop.c
+
+lbitblt.o:	$(INC)/font.h
+lbitblt.o:	$(INC)/jerq.h
+lbitblt.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lbitblt.o:	$(INC)/layer.h
+lbitblt.o:	lbitblt.c
+lbitblt.o:	$(INC)/mpx.h # nested include from jerq.h
+lbitblt.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lbitblt.c
+
+lblt.o:	$(INC)/jerq.h
+lblt.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lblt.o:	$(INC)/layer.h
+lblt.o:	lblt.c
+lblt.o:	$(INC)/mpx.h # nested include from jerq.h
+lblt.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lblt.c
+
+lbox.o:	$(INC)/jerq.h
+lbox.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lbox.o:	$(INC)/layer.h
+lbox.o:	lbox.c
+lbox.o:	$(INC)/mpx.h # nested include from jerq.h
+lbox.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lbox.c
+
+lpoint.o:	$(INC)/jerq.h
+lpoint.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lpoint.o:	$(INC)/layer.h
+lpoint.o:	lpoint.c
+lpoint.o:	$(INC)/mpx.h # nested include from jerq.h
+lpoint.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lpoint.c
+
+lrectf.o:	$(INC)/jerq.h
+lrectf.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lrectf.o:	$(INC)/layer.h
+lrectf.o:	lrectf.c
+lrectf.o:	$(INC)/mpx.h # nested include from jerq.h
+lrectf.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lrectf.c
+
+lscroll.o:	$(INC)/jerq.h
+lscroll.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lscroll.o:	$(INC)/layer.h
+lscroll.o:	lscroll.c
+lscroll.o:	$(INC)/mpx.h # nested include from jerq.h
+lscroll.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lscroll.c
+
+lsegment.o:	$(INC)/jerq.h
+lsegment.o:	$(INC)/jerqproc.h # nested include from mpx.h
+lsegment.o:	$(INC)/layer.h
+lsegment.o:	$(INC)/line.h
+lsegment.o:	lsegment.c
+lsegment.o:	$(INC)/mpx.h # nested include from jerq.h
+lsegment.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c lsegment.c
+
+ltexture.o:	$(INC)/jerq.h
+ltexture.o:	$(INC)/jerqproc.h # nested include from mpx.h
+ltexture.o:	$(INC)/layer.h
+ltexture.o:	ltexture.c
+ltexture.o:	$(INC)/mpx.h # nested include from jerq.h
+ltexture.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c ltexture.c
+
+newlayer.o:	$(INC)/jerq.h
+newlayer.o:	$(INC)/jerqproc.h # nested include from mpx.h
+newlayer.o:	$(INC)/layer.h
+newlayer.o:	$(INC)/mpx.h # nested include from jerq.h
+newlayer.o:	newlayer.c
+newlayer.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c newlayer.c
+
+upfront.o:	$(INC)/jerq.h
+upfront.o:	$(INC)/jerqproc.h # nested include from mpx.h
+upfront.o:	$(INC)/layer.h
+upfront.o:	$(INC)/mpx.h # nested include from jerq.h
+upfront.o:	$(INC)/sys/2681.h # nested include from jerq.h
+upfront.o:	upfront.c
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c upfront.c
+
+########
+#
+#	Standard Targets
+#
+#	all		builds all the products specified by PRODUCTS
+#	clean		removes all temporary files (ex. installable object)
+#	clobber		"cleans", and then removes $(PRODUCTS)
+#	makefile	regenerates makefile
+#	install		installs products; user defined in make.lo 
+#
+########
+
+all:		$(PRODUCTS)
+
+clean:
+		rm -f $(CLEAN) $(AUX_CLEAN)
+
+clobber:	clean
+		rm -f $(PRODUCTS)
+
+makefile:	$(MAKE.LO) $(MAKE.ROOT)
+		$(MKGEN) >make.out
+		if [ -s make.out ]; then mv make.out makefile; fi
+
+makefile_all:	makefile
+
+install: 	# rules, if any, specified above

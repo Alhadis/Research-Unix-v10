@@ -1,0 +1,74 @@
+L=libj.a
+INCL=/usr/dud/include
+CC=3cc
+AS=/usr/dud/bin/vax/m32as
+AR=3ar
+DCAN=dcan
+CFLAGS=-J
+
+OBJ=$L(Jrect.o) $L(addr.o) $L(alloc.o) $L(arc.o) $L(arith.o) $L(arith.o) \
+	$L(atan2.o) $L(balloc.o) $L(bitblt.o) $L(circle.o) $L(clip.o) $L(comm.o) \
+	$L(cosdeg.o) $L(data.o) $L(defont.o) $L(disc.o) $L(discture.o) \
+	$L(display.o) $L(elarc.o) $L(eldisc.o) $L(ellipse.o) $L(exit.o) \
+	$L(fgets.o) $L(font.o) $L(fopen.o) $L(gcalloc.o) $L(get.o) $L(getfont.o) \
+	$L(introutine.o) $L(line.o) $L(linesub.o) $L(masks.o) $L(menuhit.o) \
+	$L(min.o) $L(norm.o) $L(point.o) $L(popen.o) $L(printf.o) $L(ptinrect.o) \
+	$L(put.o) $L(rdwr.o) $L(rectXrect.o) $L(rectclip.o) $L(rectf.o) \
+	$L(rol.o) $L(screenswap.o) $L(sqrt.o) 
+CFILES=Jrect.c addr.s alloc.c arc.c arith.c arith.s atan2.c balloc.c bitblt.c \
+	circle.c clip.c comm.c cosdeg.c data.c defont.c disc.c discture.c \
+	display.c elarc.c eldisc.c ellipse.c exit.c fgets.c font.c \
+	fopen.c gcalloc.c get.c getfont.c introutine.c line.c linesub.c \
+	masks.c menuhit.c min.c norm.c point.c popen.c printf.c ptinrect.c \
+	put.c rdwr.c rectXrect.c rectclip.c rectf.c rol.c screenswap.c sqrt.c \
+	string.c strwidth.c texture.c texture32.s wait.c
+
+
+$L:	$(OBJ)
+
+$L(%.o):	%.c
+	$(CC) -c $(CFLAGS) $%.c && $(AR) r $L $%.o && rm -f $%.o
+
+$L(%.o):	%.s
+	$(CC) -c $(CFLAGS) $%.c && $(AR) r $L $%.o && rm -f $%.o
+
+new:	$(OBJ)
+		$(AR) uv $L
+		$(AR) ma clip.o $L line.o
+		rm $(FILES)
+
+print:
+	@pr $(CFILES)
+
+pp:
+	pp -tGraphics -kjerq $(CFILES) | $(DCAN)
+
+lint:
+	lint -h -c -u -n -I/usr/jerq/include $(CFILES)
+
+$L(clip.o):	$(INCL)/line.h
+$L(comm.o):	$(INCL)/jerqio.h
+$L(data.o):	$(INCL)/jerqio.h
+$L(defont.o):	$(INCL)/font.h
+$L(exit.o):	$(INCL)/jerqio.h
+$L(fgets.o):	$(INCL)/jerqio.h
+$L(font.o):	$(INCL)/jerqio.h
+$L(font.o):	$(INCL)/font.h
+$L(fopen.o):	$(INCL)/jerqio.h
+$L(get.o):	$(INCL)/jerqio.h
+$L(getfont.o):	$(INCL)/font.h
+$L(getfont.o):	$(INCL)/jerqio.h
+$L(jlineto.o):	$(INCL)/line.h
+$L(jstring.o):	$(INCL)/font.h
+$L(line.o):	$(INCL)/line.h
+$L(menuhit.o):	$(INCL)/font.h
+$L(popen.o):	$(INCL)/jerqio.h
+$L(printf.o):	$(INCL)/jerqio.h
+$L(put.o):	$(INCL)/jerqio.h
+$L(rdwr.o):	$(INCL)/jerqio.h
+$L(string.o):	$(INCL)/font.h
+$L(strwidth.o):	$(INCL)/font.h
+$L(wait.o):	$(INCL)/queue.h
+
+.PRECIOUS:	$L
+

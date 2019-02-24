@@ -1,0 +1,13 @@
+all:		mugs mugsterm.m
+mugsterm.m:	mugsterm.c mugs.h
+		3cc -o mugsterm.m mugsterm.c
+mugs:		mugs.o closepic.o readpic.o
+		cc -o mugs mugs.o closepic.o readpic.o
+clean:
+		rm -f mugs mugsterm.m *.o
+mugs.o mugsterm.o:	mugs.h
+mugs.o closepic.o readpic.o:	fb.h
+install:	mugs mugsterm.m
+	cp mugs /usr/jerq/bin
+	strip /usr/jerq/bin/mugs
+	cp mugsterm.m /usr/jerq/mbin

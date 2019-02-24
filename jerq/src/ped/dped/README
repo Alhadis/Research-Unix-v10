@@ -1,0 +1,20 @@
+This is the 5620 ped part.
+It is  supposed to be identical to the Blit (prototype 5620) part except
+for the device.h file. The differences are of importance in where
+to look for the include files (jped.h) and the memory allocation (jsub.c)
+
+All files that are to be used under the Unix V system must be passed
+through the following sed script suggested by
+Bob Hutchison (pyuxvv!hutch, PY-2678):
+
+sed '
+s/button/bttn/
+s/jerq/DMD/
+s/index(/strchr(/
+s/Texture /Texture16 /g
+s/blitblt/bitmapc/
+s/texture(/texture16(/' $1 | sed s/blit/jerq/ 
+
+Users on other systems must also modify the makefile. Bob suggests
+	CC=dmdcc
+	CFLAGS=-O

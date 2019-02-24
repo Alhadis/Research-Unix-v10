@@ -1,0 +1,103 @@
+.TH PROOF 1 Blit
+.SH NAME
+proof \- troff output simulator for Blit
+.SH SYNOPSIS
+.B proof
+[
+.B \-s|w ]
+[
+.B \-u ]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Proof
+reads
+.IR troff (1)
+intermediate language output from
+.I file
+and displays a simulation of the resulting pages on the screen.
+Standard input is used if there is no file argument or the file name is `\-'.
+The amount of text displayed depends on the mode
+(which can be set from the command line).
+.I Scaled
+mode (\-s) means that each page of text
+will compressed into the size of the layer.
+.I Window
+mode (\-w and the default) displays portions of the page at the correct size.
+Fonts are loaded as required.
+If the requested font has not yet
+been scan-converted, the default Blit font is used and the font
+name of the missing font is noted
+in the file
+.BR /usr/jerq/font/MISSING .
+.PP
+After a layer's worth of text is displayed,
+.I proof
+pauses for a command.
+Typing carriage return turns the page,
+.B q
+quits buts leaves a
+proof terminal (with its loaded fonts),
+.B x
+exits and restarts the regular terminal program,
+.B p n
+sets the next page to be printed to n,
+.B s
+sets scaled mode and
+.B w
+sets window mode.
+The page number should be a number or \fB$\fP (the last page).
+If the number is omitted, the next page is displayed.
+If the number is out of range,
+the first or last page is displayed.
+Commands may come from either the host or the keyboard or be selected from
+the button 3 menu.
+.PP
+There is a horizontal and vertical scroll bar manipulated as in
+.IR mux (1).
+The horizontal scrollbar indicates which portion of the 8\(12 inch horizontal
+axis is visible.
+Changing the horizontal scrollbar does not take effect until the next time text is
+displayed.
+The vertical scrollbar indicates which portion of the 11 inch vertical
+axis is visible.
+Changing the vertical scrollbar takes effect immediately.
+.PP
+The default exit from
+.I proof
+leaves a ``proof terminal'' program in the Blit which can be
+used by later invocations of
+.I proof
+without reloading the program and fonts.
+This program almost completely emulates the normal terminal and can
+be distinguished by the dashed border around the layer.
+More than one layer can run
+.IR proof .
+To simply download the terminal program, use `\f2proof /dev/null\fP'.
+.PP
+.I Proof
+interprets lines, splines, circles, ellipses, and arcs directly
+and without regard to the prevailing point size.
+.PP
+Typing `\f2proof \-u\fP'
+restores the
+proof terminal
+to its normal state (equivalent to typing `x' above).
+.SH FILES
+.ta \w'/usr/jerq/font/MISSING  'u
+/usr/jerq/font/*		Blit fonts
+.br
+/usr/jerq/font/MISSING	list of referenced but unconverted fonts
+.SH SEE ALSO
+"A Typesetter-independent Troff", Brian W. Kernighan
+.SH BUGS
+There is a maximum number of fonts (currently 50) that can be loaded
+at once.
+Since each (size,typeface) tuple and some special characters
+are a font, this limit can be exceeded in printing highly theoretical
+papers.
+.PP
+Window mode can get confused if the troff ouput is not approximately
+sorted in ascending \fIy\fP-order.
+Most of the problems should go away if you \fIdsort\fP the troff ouput.

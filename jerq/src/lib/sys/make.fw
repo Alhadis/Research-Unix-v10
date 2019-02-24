@@ -1,0 +1,204 @@
+########
+#
+#	libsys makefile
+#
+########
+#
+#	Standard Macros
+#
+########
+AUX_CLEAN = 
+INC = $(FWROOT)/include
+MAKE.LO = make.lo
+MAKE.FWROOT = $(FWROOT)/make.root
+MKGEN = mkgen
+FWROOT = ../../..
+ROOT = $(DMD)
+SGSX = 
+
+INC_LIST	=\
+	-I$(INC)
+
+CLEAN =\
+	.c.o\
+	.s.o\
+	acia.o\
+	buttons.o\
+	cursblt.o\
+	cursor.o\
+	kbd.o\
+	pf.o\
+	queue.o\
+	setup.o\
+	wait.o
+
+all:
+install:	all
+
+##########
+#
+#	make.root
+#
+##########
+
+FWBIN=$(ROOT)/bin
+FWLIB=$(FWROOT)/fwlib
+FWSRC=$(FWROOT)/src
+FWINCLUDE=$(FWROOT)/include
+UINC=/usr/include
+FWDEMO=$(FWROOT)/demo
+MCC=$(ROOT)/bin/dmdcc
+MLD=m32ld
+MAR=ar
+MLORDER=m32lorder
+
+########
+#
+#	make.lo
+#
+########
+
+TITLE = libsys makefile
+PRODUCTS = libsys.a 
+
+MAKEARG= -$(MAKEFLAGS) DMDBIN=$(DMDBIN) FWLIB=$(FWLIB) FWSRC=$(FWSRC)\
+	FWINCLUDE=$(FWINCLUDE) FWSGS=$(FWSGS) FWDEMO=$(FWDEMO)\
+	MCC=$(MCC) MCFLAGS=$(MCFLAGS) MLD=$(MLD) MAR=$(MAR)
+
+LCLCFLAGS=-J -g -O
+CLEAN=$(OBJ) libsys.a 
+
+OBJ=acia.o buttons.o cursblt.o cursor.o kbd.o queue.o wait.o setup.o\
+	pf.o
+CFILES=acia.c buttons.c cursor.c kbd.c queue.c wait.c setup.c pf.c
+
+.c.o:
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c $<
+
+.s.o:
+	$(MCC) -c $<
+
+all:	libsys.a 
+
+libsys.a: $(OBJ)
+	rm -f libsys.a
+	$(MAR) cr libsys.a `$(MLORDER) $(OBJ) | tsort`
+
+save:
+	-cp $(FWLIB)/libsys.a olibsys.a
+
+install:libsys.a 
+	cp libsys.a $(FWLIB)/libsys.a
+
+########
+#
+#	All dependencies and rules not explicitly stated
+#	(including header and nested header dependencies)
+#
+########
+
+acia.o:	acia.c
+acia.o:	$(INC)/jerq.h
+acia.o:	$(INC)/jerqproc.h # nested include from mpx.h
+acia.o:	$(INC)/layer.h # nested include from mpx.h
+acia.o:	$(INC)/mpx.h # nested include from jerq.h
+acia.o:	$(INC)/queue.h
+acia.o:	$(INC)/setup.h
+acia.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c acia.c
+
+buttons.o:	buttons.c
+buttons.o:	$(INC)/jerq.h
+buttons.o:	$(INC)/jerqproc.h # nested include from mpx.h
+buttons.o:	$(INC)/layer.h # nested include from mpx.h
+buttons.o:	$(INC)/mpx.h # nested include from jerq.h
+buttons.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c buttons.c
+
+cursblt.o:	cursblt.s
+	$(MCC) -c cursblt.s
+
+cursor.o:	cursor.c
+cursor.o:	$(INC)/jerq.h
+cursor.o:	$(INC)/jerqproc.h # nested include from mpx.h
+cursor.o:	$(INC)/layer.h # nested include from mpx.h
+cursor.o:	$(INC)/mpx.h # nested include from jerq.h
+cursor.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c cursor.c
+
+
+kbd.o:	$(INC)/jerq.h
+kbd.o:	$(INC)/jerqproc.h # nested include from mpx.h
+kbd.o:	kbd.c
+kbd.o:	$(INC)/kbd.h
+kbd.o:	$(INC)/layer.h # nested include from mpx.h
+kbd.o:	$(INC)/mpx.h # nested include from jerq.h
+kbd.o:	$(INC)/queue.h
+kbd.o:	$(INC)/setup.h
+kbd.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c kbd.c
+
+
+pf.o:	$(INC)/font.h
+pf.o:	$(INC)/jerq.h
+pf.o:	$(INC)/jerqproc.h # nested include from mpx.h
+pf.o:	$(INC)/kbd.h
+pf.o:	$(INC)/layer.h # nested include from mpx.h
+pf.o:	$(INC)/mpx.h # nested include from jerq.h
+pf.o:	pf.c
+pf.o:	$(INC)/pf.h
+pf.o:	$(INC)/setup.h
+pf.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c pf.c
+
+queue.o:	queue.c
+queue.o:	$(INC)/queue.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c queue.c
+
+setup.o:	$(INC)/font.h
+setup.o:	$(INC)/jerq.h
+setup.o:	$(INC)/jerqproc.h # nested include from mpx.h
+setup.o:	$(INC)/kbd.h
+setup.o:	$(INC)/layer.h # nested include from mpx.h
+setup.o:	$(INC)/mpx.h # nested include from jerq.h
+setup.o:	setup.c
+setup.o:	$(INC)/setup.h
+setup.o:	$(INC)/sys/2681.h # nested include from jerq.h
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c setup.c
+
+wait.o:	$(INC)/jerq.h
+wait.o:	$(INC)/jerqproc.h # nested include from mpx.h
+wait.o:	$(INC)/layer.h # nested include from mpx.h
+wait.o:	$(INC)/mpx.h # nested include from jerq.h
+wait.o:	$(INC)/queue.h
+wait.o:	$(INC)/sys/2681.h # nested include from jerq.h
+wait.o:	wait.c
+	$(MCC) $(MCFLAGS) $(LCLCFLAGS) -c wait.c
+
+########
+#
+#	Standard Targets
+#
+#	all		builds all the products specified by PRODUCTS
+#	clean		removes all temporary files (ex. installable object)
+#	clobber		"cleans", and then removes $(PRODUCTS)
+#	makefile	regenerates makefile
+#	install		installs products; user defined in make.lo 
+#
+########
+
+all:		$(PRODUCTS)
+
+clean:
+		rm -f $(CLEAN) $(AUX_CLEAN)
+
+clobber:	clean
+		rm -f $(PRODUCTS)
+
+makefile:	$(MAKE.LO) $(MAKE.FWROOT)
+		$(MKGEN) >make.out
+		if [ -s make.out ]; then mv make.out makefile; fi
+
+makefile_all:	makefile
+
+install: 	# rules, if any, specified above

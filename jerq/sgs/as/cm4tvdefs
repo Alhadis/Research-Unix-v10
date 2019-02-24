@@ -1,0 +1,38 @@
+define(ID_VERSION,`#@(#) cm4tvdefs: 1.1 1/9/82')dnl
+define(_SCR1,r0)dnl
+define(_SCR2,r1)dnl
+define(_SCR3,r2)dnl
+define(_1STREG,r8)dnl
+define(_2NDREG,r7)dnl
+define(_3RDREG,r6)dnl
+define(_4THREG,r5)dnl
+define(_5THREG,r4)dnl
+define(_6THREG,r3)dnl
+define(_1STARG,0(%ap))dnl
+define(_2NDARG,4(%ap))dnl
+define(_3RDARG,8(%ap))dnl
+define(_4THARG,12(%ap))dnl
+define(_5THARG,16(%ap))dnl
+define(C_PROLOGUE,`define(`_RET_NO',incr(_RET_NO))define(`_F_NAME',$1)dnl
+	.text;dnl
+	.tv	$1;dnl
+	.def	$1;	.val	$1;	.scl	2;	.type	040;	.endef;dnl
+	.globl	$1;dnl
+$1:	save	&ifelse($2,,6,$2)')dnl
+define(A_PROLOGUE,`define(`_RET_NO',incr(_RET_NO))define(`_F_NAME',$1)dnl
+	.text;dnl
+	.tv	$1;dnl
+	.def	$1;	.val	$1;	.scl	2;	.type	040;	.endef;dnl
+	.globl	$1;dnl
+$1:')dnl
+define(I_RETURN,`define(`_RET_LAB',.RET`'_RET_NO)	jmp	_RET_LAB')dnl
+define(C_RETURN,`ifelse(_RET_LAB,`_RET_LAB',,_RET_LAB:undefine(`_RET_LAB'))dnl
+	ret	&ifelse($1,,6,$1);dnl
+	.def	_F_NAME;	.val	.;	.scl	-1;	.endef')dnl
+define(A_EPILOGUE,`ifelse(_RET_LAB,`_RET_LAB',,_RET_LAB:undefine(`_RET_LAB'))dnl
+	.def	_F_NAME;	.val	.;	.scl	-1;	.endef')dnl
+define(C_CALL,`ifelse($2,,,`	pushw	$2;')ifelse($3,,,`	pushw	$3;')ifelse($4,,,`	pushw	$4;')ifelse($5,,,`	pushw	$5;')ifelse($6,,,`	pushw	$6;')TV($1)	call	&eval(0+ifelse($2,,0,1)+ifelse($3,,0,1)+ifelse($4,,0,1)+ifelse($5,,0,1)+ifelse($6,,0,1)),*$1')dnl
+define(A_CALL,`TV($1)	call	&$2,*$1')dnl
+define(TV,`ifelse(index($1,`('),-1,`	.tv	$1;')')dnl
+define(_RESULT,r0)dnl
+define(_TARGET,r2)dnl

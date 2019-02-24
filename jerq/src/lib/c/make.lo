@@ -1,0 +1,24 @@
+TITLE = libc makefile
+PRODUCTS = libc.a
+
+
+MAKEARG= -$(MAKEFLAGS) 
+
+MLORDER=m32lorder
+LCLCFLAGS=-g -O -J
+CLEAN=$(OBJ) libc.a
+
+OBJ=abs.o atoi.o atol.o chrtab.o ctype.o index.o qsort.o rand.o rindex.o strcat.o strchr.o strcmp.o strcpy.o strlen.o strncat.o strncmp.o strncpy.o swab.o
+
+.c.o:
+	$(MCC) $(MCFLAGS) -c $<
+
+.s.o:
+	$(MCC) -c $<
+
+libc.a:	abs.o atoi.o atol.o chrtab.o ctype.o index.o qsort.o rand.o rindex.o strcat.o strchr.o strcmp.o strcpy.o strlen.o strncat.o strncmp.o strncpy.o swab.o
+	$(MAR) cr libc.a `$(MLORDER) $(OBJ) | tsort`
+
+install:	libc.a
+	cp libc.a $(DMDLIB)/libc.a
+

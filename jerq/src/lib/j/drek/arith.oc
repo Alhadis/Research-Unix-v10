@@ -1,0 +1,93 @@
+#include <jerq.h>
+
+Point
+add(a, b)
+	Point a, b;
+{
+	register Point *ap= &a, *bp= &b;
+	ap->x+=bp->x;
+	ap->y+=bp->y;
+	return(*ap);
+}
+
+Point
+sub(a, b)
+	Point a, b;
+{
+	register Point *ap= &a, *bp= &b;
+	ap->x-=bp->x;
+	ap->y-=bp->y;
+	return(*ap);
+}
+
+Rectangle
+inset(r,n)
+	Rectangle r;
+{
+	r.origin = add(r.origin,Pt(n,n));
+	r.corner = sub(r.corner,Pt(n,n));
+	return(r);
+}
+
+Point
+div(a, b)
+	Point a;
+	register b;
+{
+	register Point *ap= &a;
+	ap->x/=b;
+	ap->y/=b;
+	return(*ap);
+}
+
+Point
+mul(a, b)
+	Point a;
+	register b;
+{
+	register Point *ap= &a;
+	ap->x*=b;
+	ap->y*=b;
+	return(*ap);
+}
+
+Rectangle
+rsubp(r, p)
+	Rectangle r;
+	Point p;
+{
+	register Rectangle *rp= &r;
+	register Point *pp= &p;
+	rp->origin.x-=pp->x;
+	rp->origin.y-=pp->y;
+	rp->corner.x-=pp->x;
+	rp->corner.y-=pp->y;
+	return(*rp);
+}
+Rectangle
+raddp(r, p)
+	Rectangle r;
+	Point p;
+{
+	register Rectangle *rp= &r;
+	register Point *pp= &p;
+	rp->origin.x+=pp->x;
+	rp->origin.y+=pp->y;
+	rp->corner.x+=pp->x;
+	rp->corner.y+=pp->y;
+	return(*rp);
+}
+
+eqpt(p, q)
+	Point p, q;
+{
+	return(p.x==q.x && p.y==q.y);
+}
+
+eqrect(r, s)
+	Rectangle r, s;
+{
+#define o origin
+#define c corner
+	return(r.o.x==s.o.x && r.o.y==s.o.y && r.c.x==s.c.x && r.c.y==s.c.y);
+}

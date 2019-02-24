@@ -1,0 +1,66 @@
+To get a 4014 emulator going, put all of these files into a directory such as
+/usr/jerq/src/tek4014 (except for the file that belongs in /usr/jerq/bin -- the
+file that 68ld's tek4014).  Say "make", and "make install".  On some systems, the
+make install will have to be modified, as you may not have mopt.  It really
+doesn't matter; performance and size are enhanced by mopt, but not enough to
+make a big thing about it.
+
+You will want to chmod /usr/jerq/bin/tek4014 to be executable.
+
+jek.c is the main file.
+
+tiny.c, bigapl.c, and tinyapl.c contain the fonts as C declarations, and can
+be used by an program which is willing to say "extern Font xxxx", where xxxx
+is one of tinyfont, bigaplfont, and tinyaplfont.
+
+All the remaining files (the ones with 'd' somewhere in the title) are versions
+of the line drawing code for executing lines with texturing.  Only dsegment is
+included, and the arguments are just like segment, with an extra Word argument
+at the end.  This all works under layers/mpx.
+
+I am currently willing to maintain this code.  Please mail bug reports in the
+form of minimal examples of code that does something on a real Tek, and
+something else in tek4014.
+
+Caveats:
+	You must be running the December '82 (or later) release of mpx, since
+tek uses the alarm() mechanism, and assumes that the cursor dissappears during
+F_CLR mode operations.
+	Intensity settings don't dim the points, but, instead, roll a 1d100 and
+plot the point if the die rolls a number less than the intensity.  This is
+probably undesirable in most cases, but comes as close as I can figure out to
+mimicing a 4014.
+	Yes, the little characters sure are tiny.  We use a magnifying-lens
+program, which should be ready for distribution eventually.  In the meantime,
+physical magnifying lenses are available in most stockrooms.
+	Write-through mode lines are done in XOR mode, and thus may not be
+perfect.  The cross-hairs are done this way, too.
+	Oh, yes: the no scroll key is used as an alternate method of paging
+the screen.  I.e., an alternate to the button 2 menu item.  The things I do
+for the convenience of the user, and does anyone say as much as "Thank you,
+Marvin?"  I should say (and hope) not!
+	The timing on the XMIT light sometimes will cause the rightmost LED
+to glow.  Stupid keyboard design and overutilization of the clock are at fault.
+If it bothers you, you can set the UART to send two stop bits, but, even to me,
+this seems excessive.
+	As described in MEMO, strappable options on the 4014 are selected as
+command line switches.  Berkeley 4.1 users will probably want to note at least
+-l among these (symptom: prompts wander diagonally down the page.  cure: -l).
+Mark ( ikeya|rabbit|research ! msm ) Manasse
+
+NOTES ON THE SECOND RELEASE:
+
+Point plot mode now uses a simple dithering algorithm which produces very good
+results on the limited set of examples I have available to me.  If you prefer
+the old style, that is still available; at 100% intensity, both methods coincide
+if you set focused mode.
+
+MEMO now contains something approximating a memo on the use of the emulator.
+Don't expect much so you won't be disappointed (i.e., you will still want
+chapters 1 and 2 of a real 4014 manual.)
+
+The other changes are mostly just reorganizing, and minor bug fixes.  I expect
+this release to be the final one prior to the next Blit tape, but I will gladly
+serve as a clearinghouse for bug reports.
+
+msm

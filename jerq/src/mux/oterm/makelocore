@@ -1,0 +1,35 @@
+PLS=$1
+MPXH=$2
+TEMPLATE=$3
+AS=$4
+if test $# -lt 4
+then
+	echo usage makelocore Pl.s jpx.h Pl.template mas
+	exit 1
+fi
+qed - -x makelocore.q -e $MPXH
+sed "1,/Ken/d
+s/.*'\(.*\)'.*/	long \1/
+" < $MPXH > /tmp/x$$
+sed "/defont/r /tmp/x$$" < $TEMPLATE > $PLS
+cat > notsolow.s <<!
+	bra.b	_start
+global	Drect
+global	mouse
+global	Jdisplayp
+Drect:	short 0; short 0; short 0; short 0
+mouse:	short 0; short 0; short 0; short 0; short 0
+Jdisplayp:	long 0
+argv:	long 0	# not global
+argc:	short 0	# not global
+_start:
+	mov.l	`grep jinit $MPXH | sed 's/[^0-9]//g'` * 4 + 0406, %a0
+	jsr	(%a0)
+	mov.l	argv, -(%sp)
+	mov.w	argc, -(%sp)
+	jsr	main
+	mov.l	`grep exit $MPXH | sed 's/[^0-9]//g'` * 4 + 0406, %a0
+	jsr	(%a0)
+!
+echo echo $AS -o /usr/jerq/lib/notsolow.o  notsolow.s
+rm -f /tmp/x$$

@@ -1,0 +1,159 @@
+#ifndef PADS_H
+#define PADS_H
+
+typedef unsigned short Attrib;
+#ifndef PADS_TERM
+int	strlen(char*),
+	strcmp(char*,char*),
+	read(int,char*,int),
+	write(int,char*,int),
+	ioctl(int,int ...);
+char	*strcpy(char*,char*),
+	*sbrk(int);
+
+#define PRINTF_TYPES char * ...
+#define PRINTF_ARGS char *fmt ...
+#define FMT(i) ( ((int*)&fmt)[i] )
+#define PRINTF_COPY\
+	(fmt?fmt:""), FMT(1),FMT(2),FMT(3),FMT(4),FMT(5),FMT(6),FMT(7),FMT(8)
+
+#ifdef TRACE
+#define OK(x)		if( !ok() ) PadsError(__SRC__);
+#define VOK		if( !ok() ) PadsError(__SRC__);
+#define IF_LIVE(x)	{ if( x )   PadsError(__SRC__); } if(0)
+#define SRCFILE(f)	static __SRC__ = f;
+typedef int  (*PFI)();
+PFI trace_fcn(char*,int), trace_ptr;
+#define trace  (!(trace_ptr=trace_fcn(__SRC__,__LINE__))) ? 0 : (*trace_ptr)
+#else
+#define OK(x)		{ if( !ok() ) return x; }
+#define VOK		{ if( !ok() ) return ; 	}
+#define IF_LIVE(x)	  if( x )
+#define SRCFILE(f)
+#define trace  if( 0 )
+#endif
+
+class Index {
+	char	pub_filler[2];
+public:
+	int	null();
+};
+extern Index ZIndex;
+#else
+typedef unsigned short Index;
+#define MJR(i)	((i)>>8)
+#define MNR(i)	((i)&0xFF)
+typedef struct Carte Carte;
+typedef enum Protocol Protocol;
+struct Carte {
+	unsigned char	size;		/* host.size != term.size */
+	unsigned char	attrib;
+	short		width;
+	Index		bin[1];
+};
+#endif
+
+#define	SELECTLINE	((Attrib)0x0001)
+#define SORTED		((Attrib)0x0002)
+#define ACCEPT_KBD	((Attrib)0x0004)
+#define FOLD		((Attrib)0x0008)
+#define TRUNCATE	((Attrib)0x0010)
+#define USERCLOSE	((Attrib)0x0020)
+#define DONT_CUT	((Attrib)0x0040)
+#define FLUSHLINE	((Attrib)0x0080)	/* should not be required */
+#define FAKELINE	((Attrib)0x0100)
+#define USERCUT		((Attrib)0x0200)
+#define DONT_CLOSE	((Attrib)0x0400)
+#define NO_TILDE	((Attrib)0x0800)
+#define DONT_DIRTY	((Attrib)0x1000)
+
+#ifndef PADS_TERM
+char *sf(PRINTF_TYPES);
+char *PadsInit(char* = 0);
+void PadsServe(long = 0);
+void NewHelp();
+void NewPadStats();
+class PadRcv;
+typedef void (PadRcv::*Action)(...);
+void Pick(char*,Action,long);
+long UniqueKey();
+Index NumericRange(short,short);
+void PadsWarn(PRINTF_TYPES);
+//extern char *TapTo;
+
+class PadRcv {	friend Remote; friend Pad;
+	short	oid;
+	short	magic;
+	int	isvalid();
+public:
+		PadRcv();
+		~PadRcv();
+	void	invalidate();
+virtual	int	disc();
+virtual	char	*kbd(char*);
+virtual	char	*help();
+virtual	void	numeric(long);
+virtual	void	userclose();
+virtual	void	cycle();
+virtual	void	linereq(long,Attrib=0);
+virtual	int	accept(Action);
+virtual	void	usercut();
+};
+
+class Pad {
+	char	pub_filler[24];
+public:
+	int	ok();
+		Pad(PadRcv *);
+		~Pad();
+	void	alarm(short=0);
+	void	banner(PRINTF_TYPES);
+	void	clear();
+	void	dump();
+	void	error(PRINTF_TYPES);
+	void	insert(class Line&);
+	void	insert(long, Attrib, PadRcv*, Index, PRINTF_TYPES);
+	void	insert(long, Attrib, PadRcv*, class Menu&, PRINTF_TYPES);
+	void	insert(long, Attrib, PRINTF_TYPES);
+	void	insert(long, PRINTF_TYPES);
+	void	lines(long);
+	void	makecurrent();
+	void	makegap(long,long);
+	void	menu(Index);
+	void	menu(class Menu&);
+	void	name(PRINTF_TYPES);
+	void	options(Attrib, Attrib=0);
+	void	tabs(short);
+	void	removeline(long);
+	void	createline(long,long);
+	void	createline(long);
+};
+
+class Line {
+public:
+	int	ok();
+		Line();
+	PadRcv	*object;
+	char	*text;
+	long	key;
+	Attrib	attributes;
+	Index	carte;
+};
+class Menu {
+	char	pub_filler[8];
+public:
+		Menu();
+		~Menu();
+		Menu( char*, Action=0, long=0 );
+	Index	index( char* =0, Action=0, long=0 );
+	void	first( char*, Action=0, long=0 );
+	void	first( Index );
+	void	last( char*, Action=0, long=0 );	
+	void	last( Index );	
+	void	sort( char*, Action=0, long=0 );
+	void	sort( Index );
+};
+
+#endif
+
+#endif

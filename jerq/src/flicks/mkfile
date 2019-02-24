@@ -1,0 +1,49 @@
+ALL=flicks fflicks preflicks fflicks.m flicks.m
+CC3=/usr/jerq/bin/3cc
+CFLAGS=-g
+
+all:V:	$ALL
+
+flicks:	flicks.o piclib.o
+	cc $CFLAGS -o flicks $prereq 
+
+piclib.o:	piclib.h
+
+fflicks:	fflicks.c
+	cc $CFLAGS -o fflicks fflicks.c
+
+preflicks:	preflicks.o piclib.o
+	cc $CFLAGS -o preflicks $prereq 
+
+fflicks.m:	fjerq.3o fcommon.3o
+	$CC3 $CFLAGS -o fflicks.m $prereq -ljj
+
+flicks.m:	jerq.3o fcommon.3o
+	$CC3 -g -o flicks.m $prereq -ljj
+
+udither: udither.c
+	cc $CFLAGS udither.c -o udither
+
+ldither: ldither.c
+	cc $CFLAGS ldither.c -o ldither
+
+udither.data: udither.c
+	mk udither
+	udither >udither.data
+
+ldither.data: ldither.c
+	mk ldither
+	ldither >ldither.data
+
+install:	all
+	cp flicks fflicks preflicks /usr/jerq/bin
+	cp flicks.m fflicks.m /usr/jerq/mbin
+
+ship:	install
+	ship /usr/jerq/bin/preflicks /usr/jerq/bin/flicks /usr/jerq/bin/fflicks /usr/jerq/mbin/fflicks.m /usr/jerq/mbin/flicks.m
+
+clean:
+	rm -f *.o *.3o $ALL
+
+%.3o:	%.c
+	$CC3 $CFLAGS -c $stem.c && mv $stem.o $stem.3o

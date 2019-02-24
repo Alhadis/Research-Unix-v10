@@ -1,0 +1,67 @@
+#ifndef PROCESS_H
+#define PROCESS_H
+#ifndef UNIV_H
+#include "univ.h"
+#endif
+#include "format.h"
+
+class Process : public PadRcv {
+	friend TermProcess; friend HostMaster; friend Master;	
+	friend HostProcess; friend SigMask; friend SrcDir;
+	friend KernProcess; friend KernMaster;
+	friend SnetProcess; friend BatchProcess;
+	friend KernCore;    friend WerkProcess;
+
+	int	isdead;
+	Asm	*_asm;
+	Bpts	*_bpts;
+	Core	*core;
+	CallStk	*callstk;
+	Memory	*memory;
+	Journal	*_journal;
+	Pad	*pad;
+	Process	*sibling;
+	Master	*master;
+	Process *parent;
+	SrcDir	*srcdir;
+	char	*_prefix;
+	Behavs	prev_behavs;
+	char	stoprequest;
+	char	cycles;
+	Process	*_slave;
+	char	pub_filler[256*3+4];
+	void	cycle();
+virtual	Index	carte();
+	void	linereq(long,Attrib=0);
+PUBLIC(Process,U_PROCESS)
+	Globals	*globals;
+		Process(Process* =0, char* =0, char* =0, char* =0);
+	char	*procpath;
+	char	*stabpath;
+	char	*comment;
+	char	*prefix(char*);
+	void	openglobals(Menu* =0);
+	void	openmemory(long=0);
+	void	openasm(long=0);
+	void	openjournal();
+	Journal	*journal();
+	Frame	*frame(long);
+	SymTab	*symtab();
+	Bpts	*bpts();
+	Process	*slave();
+	void	go();
+	void	pop();
+	void	stmtstep(long);
+	void	stepinto();
+	void	instrstep(long);
+	void	stepover(long,long);
+	void	openframe(long,char* =0);
+	void	openpad();
+	void	currentstmt();
+
+	char	*help();
+	char	*kbd(char*);
+virtual	void	userclose();
+virtual	void	stop();
+};
+#endif

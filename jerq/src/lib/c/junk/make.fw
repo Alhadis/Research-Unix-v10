@@ -1,0 +1,117 @@
+########
+#
+#	libc makefile
+#
+########
+#
+#	Standard Macros
+#
+########
+AUX_CLEAN = 
+MAKE.LO = make.lo
+MAKE.FWROOT = $(FWROOT)/make.root
+MKGEN = mkgen
+ROOT = $(DMD)
+FWROOT = ../../..
+SGSX = 
+
+INC_LIST	=
+
+CLEAN =\
+	.c.o\
+	.s.o\
+	abs.o\
+	strlen.o
+
+all:
+install:	all
+
+##########
+#
+#	make.root
+#
+##########
+
+FWBIN=$(FWROOT)/bin
+FWLIB = ../../../fwlib
+FWSRC=$(FWROOT)/src
+FWINCLUDE=$(FWROOT)/include
+UINC=/usr/include
+FWDEMO=$(FWROOT)/demo
+MCC=$(ROOT)/bin/dmdcc
+MLD=m32ld
+MAR=ar
+MLORDER=m32lorder
+
+########
+#
+#	make.lo
+#
+########
+
+TITLE = libc makefile
+PRODUCTS = libc.a
+
+
+MAKEARG= -$(MAKEFLAGS) 
+
+MLORDER=m32lorder
+LCLCFLAGS=-g -O -J
+CLEAN=$(OBJ) libc.a
+
+OBJ=abs.o  strlen.o 
+.c.o:
+	$(MCC) $(MCFLAGS) -c $<
+
+.s.o:
+	$(MCC) -c $<
+
+libc.a:	abs.o  strlen.o 
+	$(MAR) cr libc.a `$(MLORDER) $(OBJ) | tsort`
+
+install:	libc.a
+	cp libc.a $(FWLIB)/libc.a
+
+
+########
+#
+#	All dependencies and rules not explicitly stated
+#	(including header and nested header dependencies)
+#
+########
+
+abs.o:	abs.c
+	$(MCC) $(MCFLAGS) -c abs.c
+
+
+strlen.o:	strlen.c
+	$(MCC) $(MCFLAGS) -c strlen.c
+
+
+########
+#
+#	Standard Targets
+#
+#	all		builds all the products specified by PRODUCTS
+#	clean		removes all temporary files (ex. installable object)
+#	clobber		"cleans", and then removes $(PRODUCTS)
+#	makefile	regenerates makefile
+#	install		installs products; user defined in make.lo 
+#
+########
+
+all:		$(PRODUCTS)
+
+clean:
+		rm -f $(CLEAN) $(AUX_CLEAN)
+
+clobber:	clean
+		rm -f $(PRODUCTS)
+
+makefile:	$(MAKE.LO) $(MAKE.FWROOT)
+		$(MKGEN) >make.out
+		if [ -s make.out ]; then mv make.out makefile; fi
+
+makefile_all:	makefile
+
+install: 	# rules, if any, specified above

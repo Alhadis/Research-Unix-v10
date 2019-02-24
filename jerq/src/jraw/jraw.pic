@@ -1,0 +1,48 @@
+BEGIN {
+	pos[1] = "ljust above"
+	pos[2] = "above"
+	pos[4] = "rjust above"
+	pos[8] = "rjust"
+	pos[16] = "rjust below"
+	pos[32] = "below"
+	pos[64] = "ljust below"
+	pos[128] = "ljust"
+}
+func okname(s) {
+	if (split(s,x,"/") == 1)
+		return "J"s
+	else
+		return "Jnot"x[1]
+}
+func head(s) {
+	return substr(s,1,length(s)-1)
+}
+func place(s,m,x,y) {
+	if (s == "")
+		return
+	print	"\""s"\"",pos[m],"at ("x","0-y")"
+}
+/^[rwx\-][rwx\-]/ {
+	print	".bp\n.sp 4\n.ps 10\n.ft R\n.ce"
+	print	$9"		"$6,$7,$8
+	print	".sp 2\n.ft CW\n.ps 6\n.vs 6\n.PS"
+}
+/^m/ {print	"define",okname(head($2)),"{["; next}
+/^e/ {print	"]}"; next}
+/^t/ {
+	if ($3 == "@") {
+		place($2,$4,$7,$8)
+		place(head($5),$6,$7,$8)
+	}
+	else {
+		place(head($2),$3,$6,$7)
+		place(head($4),$5,$6,$7)
+	}
+	next
+}
+/^w/ {print	"line from ("$2","0-$3") to ("$4","0-$5")"; next}
+/^i bubble/ {print	okname(head($2))" with .nw at ("$3","0-$4-4")"; next}
+/^i/ {print	okname(head($2))" with .nw at ("$3","0-$4")"; next}
+/^b/ {print	"box ht "$5-$3" wid "$4-$2" with .nw at ("$2","0-$3")"; next}
+/^z/ {print	"box dotted ht "$5-$3" wid "$4-$2" with .nw at ("$2","0-$3")"; next}
+END {print	".PE"}

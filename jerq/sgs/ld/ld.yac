@@ -1,0 +1,761 @@
+%{
+static char ID[] = "@(#) ld.yac: 1.8 12/1/83";
+#include "system.h"
+#include <stdio.h>
+#include "bool.h"
+#include "attributes.h"
+#include "list.h"
+#include "structs.h"
+
+#if TRVEC
+#include "tv.h"
+#include "ldtv.h"
+#endif
+
+#include "extrns.h"
+#include "sgs.h"
+#include "sgsmacros.h"
+#include "ldmacros.h"
+
+
+
+extern char inline[];
+
+
+/*
+ *
+ *	There is a very important variable, called
+ *
+ *		in_y_exp
+ *
+ *	that is used to help recognize filenames.
+ *
+ *	The problems is this:  a UNIX filename can contain
+ *	virtually any character, and the nodes in the pathname
+ *	are separated by slashes.  Unfortunately, slashes also
+ *	occur in expressions, comments, and the /= assignment
+ *	operator.  Moreover, the LEX rules ignore white space,
+ *	which is important to knowing where one filename stops
+ *	and the next begins.
+ *
+ *	The resolution is this.  Lex doesn't know enough alone to
+ *	recognize a filename; so we give it some help.  Whenever we
+ *	are in an expression, we set in_y_exp to TRUE, and then lex knows
+ *	that any slash is a slash, and should not be kept as part of
+ *	a filename.  a/b is a divided by b, not the file a/b.
+ *
+ *	Consequently, whenever a slash must be kept as a slash,
+ *	in_y_exp will be TRUE.  Otherwise, it will be FALSE, and the
+ *	lexical analyzer will treat a/b as a filename.
+ */
+
+int in_y_exp;
+
+static secnum;					/* number of sections */
+static char *fnamptr;
+static int nsecspcs, fillflag;			/* parsing status flags */
+static ACTITEM *aiptr, *afaiptr, *grptr;	/* pointers to action items */
+extern char *curfilnm;				/* name of current ifile */
+
+#if TRVEC
+static TVASSIGN *tvslotn,		/* ptr to last  in list of tv slots */
+		*slotptr;		/* temp for traversing list	    */
+#endif
+
+static int tempi;				/* temporary int */
+/*eject*/
+%}
+/*eject*/
+%token <sptr>	NAME	2	/* ld directives and their component tokens */
+%token <lptr>	LONGINT	3
+%token <ivalue> INT	4
+%token <ivalue> ALIGN	5
+%token <ivalue> DOT	6
+%token <ivalue> LEN	7
+%token <ivalue> MEMORY	8
+%token <ivalue> ORG	9
+%token <ivalue> REGIONS	10
+%token <ivalue> SECTIONS	11
+%token <ivalue>	PHY	12
+
+%token <ivalue> AND	13	/* operators */
+%token <ivalue> ANDAND	14
+%token <ivalue> BNOT	15	/* bitwise NOT "~" */
+%token <ivalue> COLON	16
+%token <ivalue> COMMA	17
+%token <ivalue> DIV	18
+%token <ivalue> EQ	19
+%token <ivalue> EQEQ	20
+%token <ivalue> GE	21
+%token <ivalue> GT	23
+%token <ivalue> LBRACE	24
+%token <ivalue> LE	26
+%token <ivalue> LPAREN	27
+%token <ivalue> LSHIFT	28
+%token <ivalue> LT	29
+%token <ivalue> MINUS	30
+%token <ivalue> MULT	31
+%token <ivalue> NE	32
+%token <ivalue> NOT	33
+%token <ivalue> OR	34
+%token <ivalue> OROR	35
+%token <ivalue> PC	36
+%token <ivalue> PLUS	37
+%token <ivalue> RBRACE	38
+%token <ivalue> RPAREN	39
+%token <ivalue> RSHIFT	40
+%token <ivalue> SEMICOL	41
+			/* operator assignments */
+%token <ivalue> DIVEQ	42
+%token <ivalue> MINUSEQ	43
+%token <ivalue> MULTEQ	44
+%token <ivalue> PLUSEQ	45
+
+%token <sptr>	FILENAME	46
+%token <ivalue> TV	47
+%token <ivalue> SPARE	48
+
+%token <ivalue> DSECT	49
+%token <ivalue> NOLOAD 	50
+%token <ivalue> COPY	51
+%token <ivalue> INFO	52
+
+%token <ivalue> BLOCK	53
+
+%token <ivalue> UMINUS	54
+%token <ivalue> GROUP 	55
+%token <ivalue> RANGE	56
+%token <ivalue> ASSIGN	57
+
+
+
+
+%type <enode>	assnment	/* link value types with nonterminals */
+%type <ivalue>	assnop
+%type <ivalue>	attr
+%type <enode>	ename
+%type <enode>	expr
+%type <sptr>	filename
+%type <ivalue>	fillspc
+%type <aitem>	flgstmt2
+%type <ivalue>	inclspc
+%type <ivalue>	opt_attr
+%type <lptr>	opt_block
+%type <lptr>	opt_org
+%type <lptr>	opt_aln
+%type <ivalue>	opt_type
+%type <enode>	term
+%type <lptr>	vaddr
+
+
+
+
+%right EQ PLUSEQ MINUSEQ MULTEQ DIVEQ
+%left OROR
+%left ANDAND
+%left OR
+%left AND
+%binary EQEQ NE GT LT LE GE
+%left LSHIFT RSHIFT
+%left PLUS MINUS
+%left MULT DIV PC
+%right NOT BNOT
+%left LPAREN
+
+
+
+%union {
+	int ivalue;	/* yylval values */
+	char *sptr;
+	long *lptr;
+
+	ACTITEM *aitem;	/* nonterminal values */
+	ENODE	*enode;
+	}
+/*eject*/
+%%
+
+wholefile:	cmds = ;
+
+cmds:		cmds cmd
+		|		/* empty */
+		= ;
+
+cmd:		regspecs
+		| memspecs
+		| tvspecs
+		| secspecs
+		| assnment = {
+			bldexp($1, &explist);
+			}
+		| filename = {
+			filespec($1);
+			}
+		| flagstmt
+		| error = {
+			for( tempi = lineno; tempi == lineno; )
+				yychar = yylex();
+			yyerrok;
+			yyclearin;
+			}
+		;
+/*eject*/
+regspecs:	REGIONS LBRACE reglist RBRACE   = {
+#if USEREGIONS == 0
+			yyerror("REGIONS command not allowed in a %s load", SGS);
+#endif
+			}
+		;
+
+reglist:	rgnspc
+		| reglist rgnspc   = ;
+
+rgnspc:		NAME COLON ORG EQ LONGINT com LEN EQ LONGINT com vaddr = {
+			long *orgp, *lenp, *vaddrp, vzero;
+			REGION *rgnp;
+			orgp = $5;
+			lenp = $9;
+			if (*lenp <= 0)
+				yyerror("region %s has invalid length",$1);
+			if ( (vaddrp = $11) == NULL )
+				vzero = *orgp;
+			else
+				vzero = *orgp - *vaddrp;
+			if ( (vzero & 0xfL) != 0 ) {
+				yyerror("virtual 0 (paddr %.1lx) of region %s is not a multiple of 16",
+					vzero, $1);
+				vzero &= ~0xfL;
+				}
+			rgnp = (REGION *) myalloc(sizeof(REGION));
+			rgnp->rgorig = *orgp;
+			rgnp->rglength = *lenp;
+			rgnp->rgvaddr = (vaddrp == NULL) ? 0L : *vaddrp;
+			if( (rgnp->rgvaddr + rgnp->rglength) > 0x10000L ) {
+				yyerror("addresses of region %s (vaddr=%.1lx  len=%.1lx) exceed 64K",
+					$1, rgnp->rgvaddr, *lenp);
+				rgnp->rglength = 0x10000L - rgnp->rgvaddr;
+				}
+			strncpy( rgnp->rgname, $1, 8 );
+			listadd(l_REG, &reglist, rgnp);
+			}
+		| error = {
+			yyerror("REGIONS specification ignored");
+			}
+		;
+
+com:		COMMA
+		|		/* empty */
+		= ;
+
+vaddr:		DOT EQ LONGINT = {
+			if ( *(long *) $3 > 0xffffL ) {
+				yyerror("virtual address %.1lx exceeds 0xffff: truncated to %.1lx",
+					*(long *) $3, *(long *) $3 & 0xffffL);
+				*(long *) $3 &= 0xffffL;
+				}
+			$$ = $3;
+			}
+		|		/* empty */
+		= {
+			$$ = NULL;
+			}
+		;
+/*eject*/
+memspecs:	MEMORY LBRACE memlist RBRACE  = 
+		;
+
+memlist:	memspc
+		| memlist memspc = ;
+
+memspc:		NAME opt_attr COLON ORG EQ LONGINT com LEN EQ LONGINT com = {
+			long *orgp, *lenp;
+			MEMTYPE *memp;
+			orgp = $6;
+			lenp = $10;
+			memp = (MEMTYPE *) myalloc(sizeof(MEMTYPE));
+			memp->mtorig = *orgp;
+			memp->mtlength = *lenp;
+			memp->mtattr = $2;
+			strncpy( memp->mtname, $1, 8 );
+			listadd(l_MEM, &memlist, memp);
+			}
+		| error = {
+			yyerror("MEMORY specification ignored");
+			}
+		;
+	
+opt_attr:	attr = {
+			$$ = $1;
+			}
+		| = {			/* empty */
+			$$ = att_R | att_W | att_X | att_I;
+			}
+		;
+
+attr:		LPAREN NAME RPAREN  =  { 
+			int attflgs;
+			char *p;
+			attflgs = 0;
+			for( p = $2; *p; p++ )
+				switch (*p) {
+				case 'R': attflgs |= att_R; break;
+				case 'W': attflgs |= att_W; break;
+				case 'X': attflgs |= att_X; break;
+				case 'I': attflgs |= att_I; break;
+				default:  yyerror("bad attribute value in MEMORY directive: %c", *p);
+				}
+			$$ = attflgs;
+			}
+		;
+/*eject*/
+tvspecs:	TV opt_long LBRACE tvlist RBRACE tvfill = {
+#if TRVEC
+			int length;
+
+			tvspec.tvinflnm = curfilnm;
+			tvspec.tvinlnno = lineno;
+
+			length = 0;
+			for( slotptr = tvslot1; slotptr != NULL; slotptr = slotptr->nxtslot ) {
+				TVASSIGN *slotptr2;
+				length = max(length, slotptr->slot);
+				for (slotptr2 = tvslot1; slotptr2 != slotptr; slotptr2 = slotptr2->nxtslot )
+					if (slotptr2->slot == slotptr->slot) {
+						lderror(1,0,NULL,
+						"function %s assigned to tv slot %d which is already in use", slotptr->funname, slotptr->slot);
+						break;
+						}
+				}
+			if( tvspec.tvlength > 0 ) {
+				if( length > tvspec.tvlength ) {
+					yyerror("ASSIGN slot %d exceeds total TV size of %d",
+						length, tvspec.tvlength);
+					tvspec.tvlength = length;
+					}
+				if( tvspec.tvrange[1] > tvspec.tvlength ) {
+					yyerror("RANGE value %d exceeds total TV size of %d",
+						tvspec.tvrange[1], tvspec.tvlength);
+					tvspec.tvlength = tvspec.tvrange[1];
+					}
+				}
+			else
+				tvspec.tvlength = max(length, tvspec.tvrange[1]);
+#else
+			yyerror("usage of unimplemented syntax");
+#endif
+			}
+		;
+
+tvlist:		SPARE EQ LONGINT = {
+#if TRVEC
+			tvspec.tvosptr = (OUTSECT *) ((unsigned) *(long *) $3);
+#else
+			yyerror("usage of unimplemented syntax");
+#endif
+			}
+		| tvdirlist
+		;
+
+tvdirlist:	tvdir tvdirlist
+		|			/* empty */
+		;
+
+tvdir:		LEN EQ LONGINT = {
+#if TRVEC
+			if( tvspec.tvlength > 0 )
+				yyerror("illegal multiple LENGTH fields in the TV directive");
+			tvspec.tvlength = (int) (*(long *) $3);
+#else
+			yyerror("usage of unimplemented syntax");
+#endif
+			}
+		| RANGE LPAREN LONGINT COMMA LONGINT RPAREN = {
+#if TRVEC
+			if( tvspec.tvrange[1] > 0 )
+				yyerror("illegal multiple RANGE fields in the TV directive");
+			if( tvspec.tvrange[0] < 0 || tvspec.tvrange[0] > tvspec.tvrange[1] )
+				yyerror("illegal RANGE syntax: r[0]<0 or r[0]>r[1]");
+			else {
+				tvspec.tvrange[0] = (int) (*(long *) $3);
+				tvspec.tvrange[1] = (int) (*(long *) $5);
+				}
+#else
+			yyerror("usage of unimplemented syntax");
+#endif
+			}
+		| ASSIGN LPAREN slotlist RPAREN
+		;
+
+tvfill :	EQ NAME = {
+#if TRVEC
+#if FLEXNAMES
+			tvspec.tvfnfill = savefn($2);
+#else
+			strncpy(tvspec.tvfnfill, $2, 8 );
+#endif
+#else
+			yyerror("usage of unimplemented syntax");
+#endif
+			}
+		|			/* empty */
+		;
+
+slotlist:	slotspec
+		| slotlist com slotspec
+		|		/* empty */
+		;
+slotspec:	NAME EQ LONGINT = {
+#if TRVEC
+			if( (int) (*(long *) $3) == 0 )
+				yyerror("illegal ASSIGN slot number (0)");
+			if( tvslot1 == NULL )
+				tvslot1 = tvslotn = (TVASSIGN *) myalloc(sizeof(TVASSIGN));
+			else
+				tvslotn = tvslotn->nxtslot = (TVASSIGN *) myalloc(sizeof(TVASSIGN));
+#if FLEXNAMES
+			tvslotn->funname = savefn($1);
+#else
+			strncpy(tvslotn->funname, $1, 8);
+#endif
+			tvslotn->slot = (int) (*(long *) $3);
+			tvslotn->nxtslot = NULL;
+#else
+			yyerror("usage of unimplemented syntax");
+#endif
+		}
+		;
+
+opt_long :	LONGINT = {
+			long org;
+			org = *(long *) $1;
+#if TRVEC
+			chktvorg(org, &(tvspec.tvbndadr));
+#endif
+			}
+		|		/* empty */
+		;
+/*eject*/
+secspecs:	SECTIONS LBRACE sglist RBRACE  = 
+		;
+
+sglist:		sec_or_grp
+		| sglist com sec_or_grp
+		;
+
+sec_or_grp:	scnspc
+		| groupspc
+		| flgstmt2
+		;
+
+seclist:	scnspc
+		| seclist com scnspc 
+		;
+
+groupspc:	grprfx LBRACE seclist RBRACE inclspc = {
+			listadd(l_AI,&bldoutsc,grptr);
+			grptr = NULL;
+			}
+		;
+
+grprfx:		GROUP opt_org opt_aln opt_block COLON = {
+			if ( $2 != NULL && $3 != NULL )
+				yyerror("bonding excludes alignment");
+			grptr = dfnscngrp(AIDFNGRP, (long *)$2, (long *)$3, (long *)$4);
+			strncpy( grptr->dfnscn.ainame, "*group*", 8 );
+			}
+		;
+
+flgstmt2:	MINUS NAME = {
+			char *fp;
+			fp = $2;
+			if (fp[0] == 'l')	/* library flag */
+				library(fp);
+			else
+				yyerror("bad flag value in SECTIONS directive: -%s", $2);
+			}
+		;
+
+scnspc:		scnprfx LBRACE scnstmts RBRACE fillspc inclspc = {
+			if (aiptr == NULL)
+				goto scnerr;
+			aiptr->dfnscn.aifill = $5;
+			aiptr->dfnscn.aifillfg = fillflag;
+			listadd(l_AI,grptr ? &grptr->dfnscn.sectspec : &bldoutsc,aiptr);
+			if (grptr && $6)
+				yyerror("can not specify an owner for section within a group");
+			aiptr = NULL;
+		}
+		| error = {
+			if (aiptr)
+				yyerror("section %s not built", aiptr->dfnscn.ainame);
+		scnerr:
+			aiptr = NULL;
+			}
+		;
+
+scnprfx:	NAME opt_org opt_aln opt_block opt_type COLON = {
+			secnum++;
+			if ( OKSCNNAME($1) == 0 )
+				yyerror("%s is a reserved section name", $1);
+			if ( $2 != NULL && $3 != NULL )
+				yyerror("bonding excludes alignment");
+			aiptr = dfnscngrp(AIDFNSCN, (long *)$2, (long *)$3, (long *)$4);
+			if (grptr && aiptr->dfnscn.aibndadr != -1L)
+				yyerror("can not bond a section within a group");
+			if (grptr && aiptr->dfnscn.aialign != 0L)
+				yyerror("can not align a section within a group");
+			aiptr->dfnscn.aisctype = $5;
+			strncpy( aiptr->dfnscn.ainame, $1, 8 );
+			}
+		;
+
+opt_block:	BLOCK LPAREN LONGINT RPAREN = {
+			$$ = $3;
+			}
+		| = {			/* empty */
+			$$ = NULL;
+			}
+		;
+
+opt_org:	LONGINT   = {
+			$$ = $1;
+			}
+		| = {			/* empty */
+			$$ = NULL;
+			}
+		;
+
+opt_aln:	ALIGN LPAREN LONGINT RPAREN = {
+			$$ = $3;
+			}
+		| = {			/* empty */
+			$$ = NULL;
+			}
+		;
+
+opt_type:	LPAREN DSECT RPAREN = {
+			$$ = STYP_DSECT;
+			}
+		| LPAREN NOLOAD RPAREN = {
+			$$ = STYP_NOLOAD;
+			}
+		| LPAREN COPY RPAREN = {
+			$$ = STYP_COPY | STYP_DSECT;
+			}
+		| LPAREN INFO RPAREN = {
+			$$ = STYP_INFO | STYP_DSECT;
+			}
+		| = {			/* empty */
+			$$ = STYP_REG;
+			}
+		;
+
+scnstmts:	scnstmt
+		| scnstmts com scnstmt
+		|			/* empty */
+		;
+
+scnstmt:	fname insecspc    
+		| flgstmt2 = {
+			bldadfil( ((ACTITEM *) ldfilist.tail)->ldlbry.aifilnam, aiptr );
+			}
+		| assnment   = {
+			bldexp($1,&aiptr->dfnscn.sectspec);
+			}
+		| error = {
+			in_y_exp = 0;
+			yyerror("statement ignored");
+			for( tempi = lineno; ((int)yychar > 0) && (tempi == lineno) ; )
+				yychar = yylex();
+			if ((int) yychar <= 0)
+				lderror(2,0,NULL, "unexpected EOF");
+			yyerrok;
+			yyclearin;
+			}
+		;
+
+fname:		filename = {
+			fnamptr = savefn($1);
+			nsecspcs = 0;
+			bldldfil(fnamptr,0);
+			afaiptr = bldadfil(fnamptr,aiptr);
+			}
+		;
+insecspc:	LPAREN inseclist RPAREN fillspc = {
+			afaiptr->adfile.ainadscs = nsecspcs;
+			afaiptr->adfile.aifilflg = fillflag;
+			afaiptr->adfile.aifill2 = $4;
+			}
+		|			/* empty */
+		;
+
+inseclist:	NAME = {
+			nsecspcs++;
+			bldadscn($1,fnamptr,aiptr);
+			}
+		| inseclist com NAME = {
+			nsecspcs++;
+			bldadscn($3,fnamptr,aiptr);
+			}
+		;
+
+inclspc:	GT NAME = {
+			if (grptr)
+				strncpy( grptr->dfnscn.aiowname, $2, 8 );
+			else
+				strncpy( aiptr->dfnscn.aiowname, $2, 8 );
+			$$ = 1;
+			}
+		| GT attr = {
+			if (grptr)
+				grptr->dfnscn.aiattown = $2;
+			else
+				aiptr->dfnscn.aiattown = $2;
+			$$ = 1;
+			}
+		| = {				/* empty */ 
+			$$ = 0;
+			}
+		;
+
+fillspc:	EQ LONGINT = {
+			fillflag = 1;
+			$$ = (int) (*(long *)$2);
+			}
+		| = {				/* empty */
+			fillflag = 0;
+			$$ = 0;
+			}
+		| EQ error = {
+			yyerror("bad fill value");
+			fillflag = 0;
+			yyerrok;
+			yyclearin;
+			$$ = 0;
+			}
+		;
+/*eject*/
+assnment:	ename assnop expr exend = {
+			in_y_exp = 0;
+			if ( $2 == EQ )
+				$$ = buildtree(EQ, $1, $3);
+			else {
+				ENODE *p,*ndp;
+				ndp = buildtree($2,$1,$3);
+				p = (ENODE *) myalloc(sizeof(ENODE));
+				*p = *$1;
+				$$ = buildtree(EQ,p,ndp);
+				}
+			}
+		;
+
+assnop:		DIVEQ =		{ $$ = DIV;	in_y_exp = TRUE; }
+		| EQ =		{ $$ = EQ;	in_y_exp = TRUE; }
+		| MINUSEQ =	{ $$ = MINUS;	in_y_exp = TRUE; }
+		| MULTEQ =	{ $$ = MULT;	in_y_exp = TRUE; }
+		| PLUSEQ =	{ $$ = PLUS;	in_y_exp = TRUE; }
+		;
+
+expr:		expr PLUS expr = {
+			bop:
+				$$ = buildtree($2,$1,$3);
+			}
+		| expr MINUS expr = { goto bop; }
+		| expr MULT expr = { goto bop; }
+		| expr DIV expr = { goto bop; }
+		| expr PC expr = { goto bop; }
+		| expr RSHIFT expr = { goto bop; }
+		| expr LSHIFT expr = { goto bop; }
+		| expr AND expr = { goto bop; }
+		| expr OR expr = { goto bop; }
+		| expr GT expr = { goto bop; }
+		| expr LT expr = { goto bop; }
+		| expr GE expr = { goto bop; }
+		| expr LE expr = { goto bop; }
+		| expr NE expr = { goto bop; }
+		| expr EQEQ expr = { goto bop; }
+		| expr ANDAND expr = { goto bop; }
+		| expr OROR expr = { goto bop; }
+		| term = {
+			$$ = $1;
+			}
+		;
+
+exend:		SEMICOL
+		| COMMA  
+		| error = {
+			yyerror ("semicolon required after expression");
+			}
+		;
+
+term:		LONGINT = {
+			$$ = cnstnode(*(long *) $1);
+			}
+		| ename = {
+			$$ = $1;
+			}
+		| MINUS term = {
+			$$ = buildtree(UMINUS,$2,NULL);
+			}
+		| NOT term = {
+			$$ = buildtree($1,$2,NULL);
+			}
+		| BNOT term = {
+			$$ = buildtree(BNOT,$1,NULL);
+			}
+		| ALIGN LPAREN expr RPAREN = {
+			$$ = buildtree($1,$3,NULL);
+			}
+		| PHY LPAREN ename RPAREN = {
+			$$ = buildtree($1,$3,NULL);
+			}
+		| LPAREN expr RPAREN = {
+			$$ = $2;
+			}
+		;
+
+ename:		NAME =	{
+			$$ = symnode($1);
+			}
+		| DOT =	{
+			$$ = symnode(NULL);
+			}
+		;
+/*eject*/
+filename:	NAME = {
+			$$ = $1;
+			}
+		| FILENAME = {
+			$$ = $1;
+			}
+		;
+/*eject*/
+flagstmt:	MINUS filename  = {
+			pflags($2, TRUE);
+			}
+		;
+%%
+/*eject*/
+/*VARARGS*/
+yyerror(format, a1, a2, a3, a4)
+char *format;
+{
+
+/*
+ * Issue a parsing error message
+ */
+
+	char *p;
+
+	p = sname(curfilnm);	/* strip off directories from path name */
+
+/*
+ * For any purely YACC-generated error, also print out the current
+ * line, up to the point of the error
+ */
+
+	if( strcmp(format, "syntax error") == 0 )
+		lderror(1, lineno, p, "%s : scanned line = (%s)", format, inline, a1, a2 );
+	else
+		lderror(1, lineno, p, format, a1, a2, a3, a4);
+}

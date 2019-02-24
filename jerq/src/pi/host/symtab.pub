@@ -1,0 +1,49 @@
+#ifndef SYMTAB_H
+#define SYMTAB_H
+#ifndef UNIV_H
+#include "univ.h"
+#endif
+
+#include "mip.h"
+extern int FunctionGathered, UTypeGathered, FunctionStubs, UTypeStubs;
+extern int IdToSymCalls, StrCmpCalls;
+
+class SSet {
+	friend	SymTab;	friend LookupCache;
+	char	v[8];
+public:
+		SSet(char=0);
+		SSet(char,char,char=0,char=0,char=0,char=0,char=0);
+};
+
+
+class SymTab : public PadRcv {
+	friend Ed8SymTab; friend CoffSymTab; friend MccSymTab; friend Core;
+	friend	TermCore;		/* rob's system problem */
+	char	pub_filler[3340];
+virtual	char	*gethdr()		{ return "SymTab.gethdr"; }
+virtual	Source	*tree()			{ return 0; }
+PUBLIC(SymTab,U_SYMTAB)
+		SymTab(Core*,int,SymTab* =0,long=0);
+virtual		~SymTab();
+	void	read();
+	void	enter(Symbol*);
+	Symbol	*idtosym(SSet,char*,int=1);
+	Symbol	*loctosym(SSet,long,int=1);
+	Pad	*pad();
+	Core	*core();
+	char	*symaddr(long);
+	Source	*root();
+	long	modtime();
+	Block	*blk();
+	char	*warn();
+	Index	utypecarte(short);
+	long	magic();
+	UType	*utypelist();
+	void	banner();
+virtual	Block	*gatherfunc(Func*);
+virtual	Var	*gatherutype(UType*);
+	void	opentypes();
+};
+char *DiscName(UDisc);
+#endif

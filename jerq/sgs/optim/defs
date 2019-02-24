@@ -1,0 +1,280 @@
+/* @(#) defs: 1.3 3/17/84				*/
+
+/*      machine dependent include file for IS25 */
+
+# include <ctype.h>
+
+
+#define IMPREGAL
+/*	#define IMPSCRATCH 		*/
+#define IMPLLSW
+#define IMPTRIAD
+#define IMPIL
+
+#define LABEL	3
+#define HLABEL	4
+#define JMP	5
+#define RET	6
+#define SWITCH	7
+#define SWITCHT	8
+#define CALL	9
+#define JSB	10
+#define JZ	11
+#define JNZ	12
+#define JPOS	13
+#define JNPOS	14
+#define JNEG	15
+#define JNNEG	16
+#define JE	17
+#define JNE	18
+#define JL	19
+#define JLE	20
+#define JG	21
+#define JGE	22
+#define JLU	23
+#define JLEU	24
+#define JGU	25
+#define JGEU	26
+#define JBC	27
+#define JBS	28
+#define CMPB	29
+#define CMPH	30
+#define CMPW	31
+#define BITW	32
+#define MCOMB	33
+#define MCOMH	34
+#define MCOMW	35
+#define MOVZBH	36
+#define MOVZBW	37
+#define MOVZHW	38
+#define MOVAB	39
+#define MOVAH	40
+#define MOVAW	41
+#define ANDB2	42
+#define ANDH2	43
+#define ANDW2	44
+#define ANDB3	45
+#define ANDH3	46
+#define ANDW3	47
+#define ORB2	48
+#define ORH2	49
+#define ORW2	50
+#define ORB3	51
+#define ORH3	52
+#define ORW3	53
+#define XORB2	54
+#define XORH2	55
+#define XORW2	56
+#define XORB3	57
+#define XORH3	58
+#define XORW3	59
+#define LLSW2	60
+#define LLSW3	61
+#define LRSW2	62
+#define LRSW3	63
+#define MOVB	64
+#define MOVH	65
+#define MOVW	66
+#define MOVBBH	67
+#define MOVBBW	68
+#define MOVBHW	69
+#define MOVTHB	70
+#define MOVTWB	71
+#define MOVTWH	72
+#define MNEGB	73
+#define MNEGH	74
+#define MNEGW	75
+#define ADDB2	76
+#define ADDH2	77
+#define ADDW2	78
+#define ADDB3	79
+#define ADDH3	80
+#define ADDW3	81
+#define SUBB2	82
+#define SUBH2	83
+#define SUBW2	84
+#define SUBB3	85
+#define SUBH3	86
+#define SUBW3	87
+#define MULW2	88
+#define MULW3	89
+#define DIVW2	90
+#define DIVW3	91
+#define MODW2	92
+#define MODW3	93
+#define ALSW2	94
+#define ALSW3	95
+#define ARSW2	96
+#define ARSW3	97
+#define UMULW2	98			/* unsigned ops set different result
+					** indicators from other arith. ops.
+					*/
+#define UMULW3	99
+#define UDIVW2	100
+#define UDIVW3	101
+#define UMODW2	102
+#define UMODW3	103
+#define INSV	104
+#define EXTZV	105
+#define MOVBLB	106
+#define MOVBLH	107
+#define MOVBLW	108
+#define INCTST	109
+#define INCPTH	110
+#define INCPTW	111
+#define DECPTH	112
+#define DECPTW	113
+#define ACJL	114
+#define ACJLU	115
+#define ACJLE	116
+#define ACJLEU	117
+#define ATJNZB	118
+#define ATJNZH	119
+#define ATJNZW	120
+#define OTHER	121
+#define PUSHAW	122
+#define PUSHW	123
+#define FADDD2	124
+#define FADDD3	125
+#define FADDS2	126
+#define FADDS3	127
+#define FSUBD2	128
+#define FSUBD3	129
+#define FSUBS2	130
+#define FSUBS3	131
+#define FMULD2	132
+#define FMULD3	133
+#define FMULS2	134
+#define FMULS3	135
+#define FDIVD2	136
+#define FDIVD3	137
+#define FDIVS2	138
+#define FDIVS3	139
+#define FCMPD	140
+#define MOVTDW	141
+#define MOVWD	142
+#define MOVTSW	143
+#define MOVWS	144
+#define MOVDS	145
+#define MOVSD	146
+#define MOVDW	147
+#define MOVSW	148
+#define MOVDD	149
+#define MOVD	150
+#define PUSHD	151
+#define SAVE	152
+#define PUSHZB	153
+#define PUSHZH	154
+#define PUSHBB	155
+#define PUSHBH	156
+
+/* pseudo ops */
+
+# define numpops	12
+
+# define ALIGN	1
+# define BSS	2
+# define BYTE	3
+# define DATA	4
+# define DEF	5
+# define FIL	6
+# define GLOBL	7
+# define LN	8
+# define SET	9
+# define TEXT	10
+# define TV	11
+# define WORD	12
+# define POTHER	0
+
+/* begin comment character */
+
+# define CC '#'
+
+/* predicates and functions */
+
+# define islabel(p) (p != NULL && (p->op == LABEL || p->op == HLABEL))
+# define ishl(p) (p->opcode[0] != '.' || p->op == HLABEL)
+# define isuncbr(p) (JMP <= p->op && p->op <= SWITCHT)
+# define iscbr(p) (p->op >= JZ && p->op <= JGEU)
+# define isbr(p) (p->op >= JMP && p->op <= JBS && p->op != CALL)
+# ifdef N3B
+# define ishb(p) (p->op == RET)
+# else
+# define ishb(p) (0)
+# endif
+# define isrev(p) (p->op >= JZ && p->op <= JBS)
+# define isret(p) (p->op == RET)
+# define iscompare(p) (p->op == CMPW || p->op == CMPB || p->op == CMPH)
+# define setlab(p) (p->op = LABEL)
+# define setbr(p,l) {p->op = JMP; p->opcode = "jmp"; p->op1 = l;}
+# define bboptim(f,l) 0
+# define mvlivecc(p) (p->back->nlive = (p->back->nlive & ~CONCODES) | (p->nlive & CONCODES))
+# define swplivecc(p,q) { int x; x=(p->nlive & CONCODES); mvlivecc(q); q->nlive = (q->nlive & ~CONCODES) | x; }
+
+/* maximum number of operands */
+
+# define MAXOPS 4
+
+/* register usages */
+
+# define REGS 0x1fff	/* bit 12 used for condition code analysis */
+# define RETREG 0x0003
+# define LIVEREGS 0x0e00
+
+/* condition codes */
+
+# define CONCODES 0x1000
+# define isdeadcc(p) ((p->nlive & CONCODES) == 0)
+
+/* options */
+
+# define COMTAIL
+# define LIVEDEAD
+# define PEEPHOLE
+
+/* line number stuff */
+
+# define IDTYPE int
+# define IDVAL 0
+
+/* table sizes */
+
+/* maximum number of labels referenced in a function,
+   must be relatively prime to 5 */
+# ifdef AR16WR
+# define NUMLBLS 513
+# else
+# define NUMLBLS 917
+# endif
+/* maximum allocatable space (in shorts) */
+# ifdef AR16WR
+# define SPACE 19450
+# else
+# define SPACE 150000
+# endif
+
+/* The symbol UCODE50 is defined for 3B20's (only) when they are
+** known to have the UNIX 5.0 microcode.  
+*/
+
+#ifndef UCODE50			/* allow local definition */
+#if defined(U3B) || defined(N3B)
+#define UCODE50			/* turn on special instructions */
+#endif	/* def U3B */
+#endif	/* ndef UCODE50 */
+
+/* There is an optimization in w2opt.c which removes certain "cmpw"
+** instructions that follow a "call".  This option requires that
+** C-callable assembly language routines that return values must
+** set the result indicators according to the value of the returned
+** result.  This improvement should only be turned on for systems
+** which will adhere to that convention.
+*/
+
+#ifndef	CALLCMPW		/* allow local definition */
+#if defined(U3B)		/* presently enabled for 3B20S UNIX */
+#define CALLCMPW		/* enable removal of extra "cmpw" */
+#endif	/* defined ... */
+#endif	/* ndef CALLCMPW */
+
+#define spflg(i) ( (i) == 'y' )	/* indicate y flag has suboptions */

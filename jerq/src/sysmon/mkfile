@@ -1,0 +1,63 @@
+CFLAGS=-O
+DMDCC=/n/coma/usr/630/bin/dmdcc
+JCC=/usr/jerq/bin/3cc
+NPROC=1
+DMDBIN=/n/coma/usr/630/bin
+DMDLIB=/n/coma/usr/630/lib
+DMDINC=/n/coma/usr/630/include
+DMDMBIN=/n/coma/usr/630/mbin
+
+all:V:		sysdaemon sysmon sysmon.m 630sysmon.m
+
+
+sysdaemon:	daemon.o
+	cc $CFLAGS $prereq -o $target
+
+
+sysmon:		sysmon.o mytty.o icon.o from.o
+	cc $CFLAGS -o sysmon $prereq -lipc
+
+sysmon.m:	jerqmon.c
+	$JCC $CFLAGS -o $target $prereq -ljj
+
+630sysmon.m:	jerqmon.c mhit.c
+	(DMD=/n/coma/usr/630; export DMD; $DMDCC -I$DMDINC $CFLAGS -o $target $prereq)
+
+
+daemon.o:	defs.h load.h
+sysmon.o:	load.h defs.h msg.h
+mhit.o:		menu.h
+
+cyntax:V:	cyn.dae cyn.bin
+
+cyn.dae: 	daemon.c
+	cyntax $prereq
+
+cyn.bin:	sysmon.c icon.c from.c
+	cyntax $prereq
+
+
+install:V: all
+	rm -f /usr/jerq/bin/sysmon /usr/jerq/bin/vismon
+	cp sysmon /usr/jerq/bin
+	ln /usr/jerq/bin/sysmon /usr/jerq/bin/vismon
+	strip /usr/jerq/bin/sysmon
+	cp sysmon.m /usr/jerq/mbin/sysmon.m
+	rm -f $DMDBIN/sysmon $DMDBIN/vismon
+	cp sysmon $DMDBIN
+	# trouble with following link.  zarf?
+	#ln $DMDBIN/sysmon $DMDBIN/vismon
+	cp sysmon $DMDBIN/vismon
+	strip $DMDBIN/sysmon
+	strip $DMDBIN/vismon
+	cp 630sysmon.m $DMDMBIN/sysmon.m
+	cp sysdaemon /usr/jerq/lib
+	/etc/chown bin,sys /usr/jerq/lib/sysdaemon
+	chmod 2755 /usr/jerq/lib/sysdaemon
+	cp sysdaemon $DMDLIB
+	/etc/chown bin,sys $DMDLIB/sysdaemon
+	chmod 2755 $DMDLIB/sysdaemon
+
+
+clean:V:
+	rm -f core *.o sysmon sysmon.m 630sysmon.m *.out sysdaemon vismon 

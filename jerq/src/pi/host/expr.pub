@@ -1,0 +1,46 @@
+#ifndef EXPR_H
+#define EXPR_H
+#ifndef UNIV_H
+#include "univ.h"
+#endif
+#include "dtype.pub"
+#include "op.h"
+#include "format.pub"
+
+class Spy{
+	friend	Expr;
+	friend	Phrase;
+	Bls	b;
+		Spy()	{}
+};
+
+class Expr : PadRcv {
+	char	pub_filler[4];
+PUBLIC(Expr,U_EXPR)
+		Expr();	
+		Expr(EDisc, Op, Expr*, Expr*, Cslfd, char*, int, Symbol*);
+	char	*id;
+	Symbol	*sym;
+	Expr	*sub1;
+	Expr	*sub2;
+	DType	type;
+	Cslfd	val;
+	long	addr;
+	Spy	*spy;
+	short	bitaddr;
+	char	op;
+	char	evalerr;
+	char	*evaltext(Frame*, Bls&);
+	char	*text();
+	Index	carte(Frame*);
+	int	format();
+	void	setspy(long);
+	void	reformat(int,int=0);
+};
+
+Expr	*E_Id(char*),
+	*E_Sym(Symbol*),
+	*E_Unary(Op,Expr*),
+	*E_Binary(Expr*,Op,Expr*),
+	*E_IConst(long);
+#endif

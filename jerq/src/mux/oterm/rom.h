@@ -1,0 +1,176 @@
+/*
+ *	The offsets into the firmware jump table (Firm) of the
+ *	firmware routines.
+ */
+#define F_abs	0
+#define F_aciapaws	1
+#define F_aciainit	2
+#define F_aciatrint	3
+#define F_add	4
+#define F_addr	5
+#define F_alloc	6
+#define F_allocinit	7
+#define F_auto1	8
+#define F_auto2	9
+#define F_auto4	10
+#define F_balloc	11
+#define F_bfree	12
+#define F_binit	13
+#define F_bitblt	14
+#define F_bramgetstr	15
+#define F_bramputstr	16
+#define F_ceil	17
+#define F_checkbram	18
+#define F_cursallow	19
+#define F_cursblt	20
+#define F_cursinhibit	21
+#define F_cursinit	22
+#define F_cursset	23
+#define F_cursswitch	24
+#define F_dellayer	25
+#define F_disconnect	26
+#define F_div	27
+#define F_eqpt	28
+#define F_eqrect	29
+#define F_excep_int	30
+#define F_excep_norm	31
+#define F_excep_proc	32
+#define F_excep_stack	33
+#define F_excep_msg	34
+#define F_floor	35
+#define F_free	36
+#define F_freeall	37
+#define F_gcalloc	38
+#define F_gcfree	39
+#define F_gcfreeall	40
+#define F_gcinit	41
+#define F_getnum	42
+#define F_inset	43
+#define F_jline	44
+#define F_jlineto	45
+#define F_jmove	46
+#define F_jmoveto	47
+#define F_jpoint	48
+#define F_jrectf	49
+#define F_jsegment	50
+#define F_jstring	51
+#define F_jstrwidth	52
+#define F_jtexture	53
+#define F_kbdchar	54
+#define F_kbdinit	55
+#define F_kgetc	56
+#define F_layerop	57
+#define F_lbitblt	58
+#define F_lblt	59
+#define F_Lbox	60
+#define F_Lgrey	61
+#define F_load	62
+#define F_lpoint	63
+#define F_lrectf	64
+#define F_lsegment	65
+#define F_ltexture	66
+#define F_main	67
+#define F_menuhit	68
+#define F_mul	69
+#define F_nap	70
+#define F_newlayer	71
+#define F_own	72
+#define F_pfkey	73
+#define F_point	74
+#define F_Pt	75
+#define F_ptinrect	76
+#define F_qclear	77
+#define F_qgetc	78
+#define F_qinit	79
+#define F_qputc	80
+#define F_qputstr	81
+#define F_raddp	82
+#define F_rcvchar	83
+#define F_realalloc	84
+#define F_realballoc	85
+#define F_realgcalloc	86
+#define F_reboot	87
+#define F_Rect	88
+#define F_rectclip	89
+#define F_rectf	90
+#define F_rectXrect	91
+#define F_ringbell	92
+#define F_Rpt	93
+#define F_rsubp	94
+#define F_screenswap	95
+#define F_scroll	96
+#define F_segment	97
+#define F_sendbreak	98
+#define F_sendchar	99
+#define F_0	100
+#define F_setbram	101
+#define F_setupdisplay	102
+#define F_spl0	103
+#define F_spl1	104
+#define F_spl4	105
+#define F_spl5	106
+#define F_spl6	107
+#define F_spl7	108
+#define F_splx	109
+#define F_string	110
+#define F_strlen	111
+#define F_strwidth	112
+#define F_sub	113
+#define F_test32	114
+#define F_texture	115
+#define F_trdisable	116
+#define F_trenable	117
+#define F_tstdcd	118
+#define F_upfront	119
+#define F_version	120
+#define F_wait	121
+#define F_allocb	122
+#define F_allocendp	123
+#define F_allocstartp	124
+#define F_blocked	125
+#define F_cbufs	126
+#define F_cur	127
+#define F_cursor	128
+#define F_curtabp	129
+#define F_defont	130
+#define F_display	131
+#define F_dtr	132
+#define F_ENDAREA	133
+#define F_freelist	134
+#define F_interrupt	135
+#define F_kbdrepeat	136
+#define F_kbdstatus	137
+#define F_lback	138
+#define F_lfront	139
+#define F_maxaddr	140
+#define F_mouse	141
+#define F_NAVAIL	142
+#define F_nextlong	143
+#define F_NLONGS	144
+#define F_PtCurrent	145
+#define F_queues	146
+#define F_remote	147
+#define F_savecur	148
+#define F_stdcurtab	149
+#define F_ublocked	150
+#define F_usercurtab	151
+
+/*
+ * New entries go here
+ */
+#define F_botbits	152
+#define F_baud_speeds	153
+#define F_topbits	154
+#define F_ver_str	155
+#define F_psendchar	156
+#define F_kbdrpt	157
+
+/*
+ *	the firmware jump table
+ */
+extern int ((*Firm)())[1];
+
+/*
+ *	indirecting through the sucker
+ */
+#define ROMVEC(x) *(Firm[F_x])()

@@ -1,0 +1,61 @@
+typedef enum Error{
+	/* error_s */
+	Eopen,
+	Ecreate,
+	Emenu,
+	Emodified,
+	Eio,
+	/* error_c */
+	Eunk,
+	Emissop,
+	Edelim,
+	/* error */
+	Efork,
+	Ealloc,
+	Eintr,
+	Eaddress,
+	Esearch,
+	Epattern,
+	Enewline,
+	Eblank,
+	Enopattern,
+	EnestXY,
+	Enolbrace,
+	Enoaddr,
+	Eoverlap,
+	Enosub,
+	Elongsub,
+	Elongrhs,
+	Ebadrhs,
+	Erange,
+	Esequence,
+	Elong,
+	Eorder,
+	Enoname,
+	Eleftpar,
+	Erightpar,
+	Eclass,
+	Ebadclass,
+	Eoverflow,
+	Enocmd,
+	Epipe,
+	Enofile,
+	Etoolong,
+	Echanges,
+	Eempty,
+	Efsearch,
+	Emanyfiles,
+	Elongtag,
+	Esubexp
+}Error;
+typedef enum Warning{
+	/* warn_s */
+	Wdupname,
+	Wfile,
+	Wdate,
+	/* warn */
+	Wnonascii,
+	Wpwd,
+	Wnotnewline,
+	Wbadstatus
+}Warning;
