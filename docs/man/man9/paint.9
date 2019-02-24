@@ -1,0 +1,218 @@
+.TH PAINT 9.1
+.CT 1 games
+.SH NAME
+paint \- draw pictures in a layer
+.SH SYNOPSIS
+.B paint
+.SH DESCRIPTION
+.PP
+.I Paint
+is a program for artistic interactive drawing.
+Buttons 1 and 2 draw in different ways,
+e.g. depositing and erasing paint.
+Button 3 gets a menu.
+Certain menu items contain arrows, which if touched call submenus.
+Moving off the right of a submenu causes it to disappear.
+Some items toggle a state on and off; a
+.L *
+appears in the abnormal state.
+Pressing button 1 while holding button 3 gets a short help
+message for the menu item.
+The top-level menu contains:
+.PP
+.de fq
+\f5\\$1\fR	\\$2	\\$3 \\$4 \\$5 \\$6
+..
+.nf
+.ta \w'\f5Line style\fP 'u +\w'\(-> 'u
+.fq Style \(-> "Different kinds of brush strokes"
+.fq Operation \(-> "Ways of putting paint on canvas"
+.fq Texture \(-> "Things to do to the texture pattern"
+.fq Brush \(-> "Things to do to the paintbrush"
+.fq Canvas \(-> "Things to do to the whole picture"
+.fq State \(-> "Change things saved in \fI.paintstate\fP"
+.fq Fill "" "Fill an area of the picture"
+.fq Green "" "Erase the entire picture"
+.fq Mask "" "Display mask instead of image"
+.fq Exit
+.fi
+.PP
+The
+.B Style
+submenu:
+.PP
+.nf
+.fq Paint "" "Multiple brush spots while holding button 1 or 2
+.fq Circles "" "Circles; press at center and release at circumference
+.fq Lines "" "Rubber-band brush lines
+.fq Curves "" "Continuous strokes while holding button 1 or 2
+.fq "Line Style" \(-> "Solid, dotted, dashed, etc. lines
+.fi
+.PP
+Entries in the
+.B Line Style
+sub-submenu are strings of 
+.LR A s, 
+.LR B s
+and dot that
+describe dotted and dashed lines.
+.L A
+stands for the brush on the button pushed,
+.L B
+stands for the brush on the other button; 
+.L .
+for
+no brush at all.
+The string is cycled through at successive points when drawing
+Lines, Curves, or Circles.
+Thus 
+.L A
+means a solid line,
+.L A...
+means a 1 in 4 dotted
+line, and
+.L AAAA....
+means 4-pixel dashes.
+.PP
+The
+.B Operation
+submenu assigns a pair of operations for buttons 1 and 2.
+A hidden `mask' plane describes the shape that has been painted;
+black pixels in the mask are inside, green outside.
+Likewise, the brush
+consists of a pair of rectangular image and mask planes.
+There are 11 effective operations to combine the part of the brush
+inside its mask
+with the part of the picture it sits on (see
+the Porter/Duff paper for details); selected pairs can be assigned to the
+buttons:
+.PP
+.nf
+.ta \w'\f5Line style\fP \(-> 'u
+.fq Above/Erase "Button 1 paints on top, Button 2 erases
+.fq Below/Erase "Button 1 paints behind, Button 2 erases
+.fq Above/Below "Button 1 paints on top, Button 2 behind
+.fq Inside/Erase "Button 1 paints inside, Button 2 erases
+.fq Brush/Clear "Special effects
+.fq AoutB/AinB "Special effects
+.fq BinA/BatopA "Special effects
+.fq Xor/Above "Special effects
+.fi
+.PP
+.B Above
+paints on top of the picture, as in
+`normal' paint programs.
+.PP
+.B Below
+paints underneath\(emonly in places that were not
+previously covered.
+.PP
+.B Inside
+paints on top, but only inside the already-painted part.
+.PP
+The other 7 operations are best described as `special effects'.
+Try them out
+to see what they do, or look at the Porter/Duff paper.
+.PP
+Texture
+facilities paint with a repeating 16\(mu16 pattern instead of copies of
+a brush.
+The
+.B Texture
+submenu contains:
+.PP
+.nf
+.ta \w'\f5Line style\fP 'u +\w'\(-> 'u
+.fq Texture "" "Turn texturing on or off
+.fq Make "" "Pick a texture from the picture
+.fq Negate "" "Reverse the texture's green and black
+.fq Save "" "Name a texture and copy it into a file
+.fq Library \(-> "List and and retrieve textures in library
+.fq Get "" "Type a name and get a texture from a file
+.fi
+.PP
+.B Make
+gives a 16\(mu16 square cursor with which to pick
+a texture.
+.PP
+The
+.B Brush
+submenu has the same items
+for brushes.
+.B Make
+allows you to sweep out a region to use as a brush.
+.PP
+The
+.B Canvas
+submenu contains
+.BR Negate ,
+.BR Save ,
+.BR Library ,
+and
+.BR Get ,
+in this case pertaining to entire pictures.
+A library picture
+is saved in a file containing the image plane then the
+mask plane in
+.IR bitfile (9.5)
+format.
+.PP
+The file
+.B .paintstate
+in the current directory remembers
+the names of the current brush, texture,
+and libraries between sessions.
+The
+.B State
+submenu displays the library names at the bottom
+of the layer, where they can be edited:
+.PP
+.nf
+.ta \w'\f5Line style\fP \(-> 'u
+.fq Brushes  "" "Name the brush directory
+.fq Pictures  "" "Name the picture directory
+.fq Textures  "" "Name the texture directory
+.fi
+.PP
+The
+.B Fill
+menu item gives an arrowhead cursor.
+If you touch down with button 3 at a point not painted,
+the rookwise-connected
+region containing it will fill with black.
+On completion, the
+black will be replaced by the current texture.
+While the region is filling, any button click aborts the operation.
+.PP
+The current selections from the
+.BR "Brush Library" ,
+.BR Style ,
+.BR Operation ,
+.BR Texture ,
+and
+.B "Line Style"
+menus are marked with a 
+.LR * ,
+and are displayed in the information box
+at the bottom of the layer.
+.SH FILES
+.TF /usr/jerq/lib/paint/brush
+.TP
+.F /usr/jerq/lib/paint/brush
+the default brush library
+.TP
+.F /usr/jerq/lib/paint/tex
+the default texture library
+.TP
+.F \&.paintstate
+state of terminated program
+.SH SEE ALSO
+.IR mbits (6),
+.IR bitfile (9.5), 
+.IR brush (9.1),
+.IR cip (9.1),
+.IR ped (9.1)
+.br
+Thomas Porter and Tom Duff,
+`Compositing Digital Images,'
+Siggraph '84 Proceedings

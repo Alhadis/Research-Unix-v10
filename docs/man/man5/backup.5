@@ -1,0 +1,168 @@
+.TH BACKUP 5
+.CT 1 sa_mortals 
+.SH NAME
+backup \- incremental backup files
+.SH DESCRIPTION
+The backup system consists of a number of client machines, and a
+`backup machine',
+which has a database and a collection of
+backup copies of files.
+On clients files concerned with backup live in a directory, normally
+.FR /usr/lib/backup ,
+defined in the shell script
+.FR /usr/bin/backup .
+The file
+.FR /usr/lib/backup/conf ,
+needed on both client and backup machine,
+has up to three lines, namely the backup machine name,
+the default backup device, and the directory, hereafter called
+.BR $FM ,
+where the rest of the backup software
+lives on the backup machine.
+Client systems normally have just the first line.
+The rest of this description applies to the backup machine.
+.PP
+The databases live in
+.BR $FM/db 
+and are maintained in
+.IR cbt (3)
+form.
+The main database, called
+.FR filemap ,
+stores two mappings.
+The first maps filename-time pairs to backup copy names, thus:
+.IP
+.EX
+/n/bowell/usr/jim/goo//519487622   v/v22/17
+.EE
+.LP
+The number after
+.CW //
+is the inode change date,
+expressed in seconds since the epoch; see
+.IR stat (2).
+If the backup copy is still on magnetic disk, it will be called
+.BR $FM/v/v22/17 ;
+otherwise it will be
+.B v22/17
+on some optical disk.
+(The mapping of backup copy name to optical disk name is kept in 
+.BR $FM/adm/volidmap .)
+The second mapping maps filenames to the time of their most recently backed-up version:
+.IP
+.L
+/n/bowell/usr/jim/goo   520514116
+.PP
+The second database,
+.BR dir ,
+maps directoryname-time pairs to the contents of that directory.
+This allows quick recovery of file trees.
+.PP
+The third database,
+.BR fs ,
+maps filename-time pairs to (essentially) inodes.
+This allows efficient implementation of 
+.BR "backup mount" ;
+see
+.IR backup (1).
+.PP
+The program
+.B $FM/bin/dbupdate
+manages these databases.
+The
+.I dir
+and
+.I fs 
+databases are optional; they will be updated only if they already exist.
+The program
+.F "$FM/bin/sweep"
+also assigns the backup copy names into a flat
+directory structure.
+A new directory is used when the total size of the files in the current directory
+would exceed 20000K
+bytes, rounding each file size up to a multiple of 4K.
+.PP
+The backup copy of a file consists of a header
+that gives the original inode, pathname and owner (as a string),
+followed by the contents of the file.
+Directories are stored as a sequence of entry names.
+.PP
+To prevent multiple writers into a database,
+a lockfile
+.FI $FM/locks/ database
+is used.
+The content of this file
+is the process id of the process accessing the database.
+Locks are removed by
+.F $FM/bin/rmlocks
+executed by
+.IR rc (8)
+when the system boots.
+.PP
+The backup system supports multiple
+.I filemap
+databases (this allows the current database to be kept small).
+The list of database names is kept in
+.FR $FM/db/filemaplist ,
+one per line in order of increasing priority.
+The last name is assumed to be the active database; all the
+others are read-only.
+.PP
+Programs such as
+.I sweep
+and
+.I dbupdate
+leave droppings in the log file
+.FR $FM/log .
+.PP
+Statistics of the numbers of files and bytes saved for users 
+of a given system are kept in
+.FR $FM/stat.dir/\fIsystem .
+Each file consists of a sequence of records with a machine-independent structure;
+generally, one record per user per day.
+The records are maintained by
+.FR "$FM/bin/procstats" ,
+which processes the file
+.F $FM/stat.log
+that is maintained by
+.IR dbupdate .
+.PP
+To allow quick searching for filenames with full regular expressions,
+a simple sorted list of all saved filenames is often kept, normally in
+.FR $FM/filenames .
+.PP
+The device (and system) used for recovering files can be specified in many ways.
+In order of decreasing priority:
+a
+.B -f
+option in
+.I backup recover
+or
+.I backup fetch
+(see
+.IR backup (1)),
+a default device on the client system (in line 2 of
+.FR /usr/lib/backup/conf ),
+the default device on the backup system.
+.SH FILES
+.F /usr/lib/backup/*
+.br
+.F /usr/lib/backup/conf
+.br
+.F /usr/backup/db
+.br
+.F /usr/backup/locks
+.br
+.F /usr/backup/log
+.br
+.F /usr/backup/filenames
+.SH "SEE ALSO"
+.IR backup (1),
+.IR worm (8),
+.IR backup (8),
+.IR cbt (1),
+.IR stat (2)
+.br
+A. Hume,
+`The File Motel: an Owner's Manual',
+this manual, Volume 2

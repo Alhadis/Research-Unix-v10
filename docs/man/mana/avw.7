@@ -1,0 +1,127 @@
+.TH AVW 7 purdy
+.CT 1 inst_info
+.SH NAME
+w, fp, ft, fd, rad \(mi aviation weather
+.SH SYNOPSIS
+.B /usr/ken/bin/w
+[
+.I station ...
+]
+.PP
+.B /usr/ken/bin/fp
+[ 
+.I obj ...
+]
+.PP
+.B /usr/ken/bin/ft
+[
+.I obj ...
+]
+.PP
+.B /usr/ken/bin/fd
+[
+.I obj ...
+]
+.PP
+.B /usr/ken/bin/rad
+.SH DESCRIPTION
+.I W
+looks up each of its arguments in a set of
+weather files.
+The weather files are constantly maintained by
+a daemon that reads the National Weather Service
+Wire.
+If
+.I w
+is called with no arguments,
+it reads the standard input and looks up each line.
+.PP
+The active weather files are:
+.TP
+.B AA
+airport name and runway direction and length
+.PD0
+.TP
+.B NT
+NOTAM \(mi Notices to Airmen \(mi special cautions at airports
+.TP
+.B FT
+24-hour terminal forcasts at airports issued three times a day
+.TP
+.B SA
+hourly surface observations taken at airports
+.TP
+.B FD
+daily winds aloft forcasts taken at certain reporting points
+.TP
+.B FP
+daily area forcasts taken at certain reporting points
+.TP
+.B SD
+hourly radar precipitation taken at certain reporting points
+.PD
+.PP
+If
+.I w
+is given an airport name,
+it will print the latest AA,
+NT,
+FT,
+and SA data.
+The other files are printed by providing the reporting point name.
+In most cases this is a meaningless string of characters that are
+supplied by other programs.
+.PP
+.I Fp
+takes a series of navagation stations as arguments;
+see
+.IR av (A)
+for a description of these objects.
+If
+.I fp
+has no argument,
+it uses the default
+.L here
+which specifies Murray Hill, NJ.
+If
+.I fp
+is given one argument,
+it will print the name of the nearest
+FP (area forecast) station to the argument.
+If
+.I fp
+is given two arguments,
+it will print the names of all FP
+stations that are nearest to some point
+on the great circle route between the objects.
+If more than two arguments are given
+then the stations are printed for each pair of arguments.
+The output of
+.I fp
+is meant to be piped into
+.IR w .
+.PP
+.I Ft
+and
+.I fd
+behave the same as
+.I fp
+but print the station names reporting
+winds aloft and terminal forcasts respectively.
+.PP
+.I Rad
+creates a radar summary weather map and
+prints the map on the laser printer.
+.SH FILES
+.TF /usr/ken/lib/obj
+.TP
+.F /usr/weather/*
+weather files
+.TP
+.F /usr/ken/lib/obj
+navigation aids
+.TP
+.F /usr/weather/rd
+weather wire daemon
+.SH SEE ALSO
+.IR av (7)

@@ -1,0 +1,200 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH FILEBUF 3I+ "C++ Stream Library" " "
+.SH NAME
+filebuf \- buffer for file input/output
+.SH SYNOPSIS
+.ft B
+.nf
+.ta1i 2i
+#include <iostream.h>
+
+typedef long streamoff, streampos;
+class ios {
+public:
+	enum	seek_dir { beg, cur, end };
+	enum open_mode { in, out, ate, app } ;
+	// \fIand lots of other stuff ... \fP
+	} ;
+
+#include <fstream.h>
+
+class filebuf : streambuf {
+public:
+		filebuf() ;
+		filebuf(int d);
+		filebuf(int d, char*  p, int len) ;
+
+	filebuf*	attach(int d) ;
+	int	close();
+	int	fd();
+	int	is_open();
+	filebuf*	open(char *name, open_mode om, int prot=0664) ;
+	streampos	seekoff(streamoff o, seek_dir d, open_mode m) ;
+	streampos	seekpos(strempos p, open_mode m ) ;
+	streambuf*	setbuf(char* p, int len) ;
+	int	sync() ;
+};
+.fi
+.ft R
+.SH DESCRIPTION
+\f(CWfilebuf\fRs
+specialize
+\f(CWstreambuf\fRs
+to use a file as source or sink of characters.
+Characters are consumed by doing
+writes to the
+file, and are produced by doing
+reads.
+When the file is seekable, 
+a \f(CWfilebuf\fR allows seeks.
+At least 4 characters of putback are guaranteed.
+When the file permits reading and writing the buffer permits
+both storing and fetching.  No special action is required between
+gets and puts.
+A 
+\f(CWfilebuf\fRs that is connected to a file descriptor is said
+to be \fIopen\fR.
+.PP
+Assume:
+.br
+\(em \fBf\fR is a \f(CWfilebuf\fR.
+.br
+\(em \fBpfb\fR is a \f(CWfilebuf*\fR.
+.br
+\(em \fBpsb\fR is a \f(CWstreambuf*\fR.
+.br
+\(em \fBi\fR, \fBd\fR, \fBlen\fR, and \fBprot\fR are \f(CWint\fR
+.br
+\(em \fBname\fR and \fBptr\fR are \f(CWchar*\fR.
+.br
+\(em \fBm\fR is \f(CWopen_mode\fR.
+.br
+\(em \fBoff\fR is \f(CWstreamoff\fR.
+.br
+\(em \fBp\fR and \fBpos\fR are \f(CWstreampos\fR.
+.br
+\(em \fBdir\fR is \f(CWseek_dir\fR.
+.PP
+Constructors:
+.TP
+\fBfilebuf()\fR
+Constructs an initially closed \f(CWfilebuf\fR.
+.TP
+\fBfilebuf(d)\fR
+Constructs a \f(CWfilebuf\fR connected to \fBd\fR.
+.TP
+\fBfilebuf(d,p,len)\fR
+Constructs a \f(CWfilebuf\fR connected to \fBd\fR
+and initialized to use the reserve area starting at \fBp\fR and containing
+\fBlen\fR bytes.
+If \fBp\fR is null or \fBlen\fR is zero or less,
+the \f(CWfilebuf\fR will be unbuffered.
+.PP
+Members: 
+.TP
+\fBpfb=f.attach(d)
+Connects \fBf\fR
+to an open file descriptor, \fBd\fR.
+\fBpfb\fR is normally \fB&f\fR
+but is 0 if \fBf\fR is already open.
+.TP
+\fBi=f.close()
+Flushes any waiting output, closes the file descriptor, and disconnects
+\fBf\fR. Unless an error occurs, \fBf\fR's error state will be cleared.
+\fBi\fR is 0 unless errors occur in which case it is \f(CWEOF\fR . 
+Even if errors occur
+\fBattach\fR leaves the file descriptor and \fBf\fR
+closed.
+.TP
+\fBi=f.fd()\fR
+Returns \fBi\fR, the file descriptor \fBf\fR is connected to.
+If \fBf\fR is closed \fBi\fR is \f(CWEOF\fR.
+.TP
+\fBi=f.is_open()\fR
+Returns non-zero when \fBf\fR is connected to a file descriptor,
+and zero otherwise.
+.TP
+\fBpfb=f.open(name,m,prot)\fR
+Opens a file with the specified pathname, mode, and protection,
+and connects \fBf\fR to it.
+\f(CWopen_mode\fRs may be or'ed together to form \fBm\fR.  
+\f(CWin\fR and \f(CWout\fR translate to corresponding UNIX modes.
+\f(CWate\fR and
+\f(CWapp\fR
+both cause the file to be positioned
+at its end during the open.  \f(CWapp\fR implies \f(CWoutput\fR.
+In addition,
+\f(CWapp\fR causes all subsequent
+writes to occur at the end of a file.
+(In some systems this is supported directly by the kernel, in other
+instances the desired effect is approximated by seeking to the
+end of the file before each write.)
+\f(CWout\fR may be specified even if \fBprot\fR does not permit
+output. 
+Normally \fBpfb\fR is \fB&f\fR
+but if an error occurs it is 0.
+.TP
+\fBp=f.seekoff(off,dir,m)\fR
+Moves the get/put pointer as designated by \fBoff\fR and \fBdir\fR.
+It fails if the file that \fBf\fR is attached to 
+does not support seeking, or if the attempted motion
+is otherwise invalid (such as attempting to seek to a position
+before the beginning of file). 
+\fBoff\fR is interpreted as a count
+relative to the place in the file specified by \fBdir\fR
+as described in \fIsbuf.pub\fR(3C++).
+\f(CWm\fR is ignored.
+\fBp\fR is the position after movement, or \f(CWEOF\fR if
+a failure occurs. 
+The position of the file after a failure is undefined.
+.TP 
+\fBp=f.seekpos(pos,m)\fR
+Moves the file to a position \fBpos\fR
+as described in \fIsbuf.pub\fR(3C++).
+\f(CWm\fR is ignored.
+Normally \fBp\fR is \fBpos\fR, but on failure it is \f(CWEOF\fR. 
+.TP
+\fBpsb=f.setbuf(ptr,len)\fR
+Sets up the reserve area as \fBlen\fR bytes beginning at \fBp\fR.
+If \fBptr\fR is null or \fBlen\fR is less than or equal to 0, the
+\fBf\fR will be unbuffered.
+Normally \fBpsb\fR is \fB&f\fR, but
+it is 0 if \fBf\fR is open, and in the latter case no changes
+are made to the reserve area or buffering status.
+.TP
+\fBi=f.sync()\fR
+Attempts to force the state of get/put pointers of \fBf\fR to agree
+(be synchronized) with
+the state of the file \fBf.fd()\fR.  This means it
+may write characters to the file if some have been buffered for
+output or attempt to reposition (seek) the file if characters have
+been read and buffered for input.  Normally \fBi\fR is 0, but it
+is \f(CWEOF\fR if synchronization is not possible.
+Sometimes it is neccessary to guarantee that certain
+characters are written together.
+To do this, the program should use
+\fBsetbuf\fR
+(or a constructor)
+to guarantee that the reserve area is at least as large as
+the number of characters that must be written together.
+It can then do a \fBsync\fR,
+followed by storing the characters, 
+followed by another \fBsync\fR.
+.SH CAVEATS
+\fBattach\fR
+and the constructors should test if the file descriptor they
+are given is open, but I can't figure out a portable way to do that.
+.PP
+There is no way to force atomic reads.
+.PP
+Unix does usually report failures of seek (e.g. on a tty) and
+so a filebuf does not either.
+.SH SEE ALSO
+sbuf.pub(3C++)
+sbuf.prot(3C++)
+fstream(3C++)

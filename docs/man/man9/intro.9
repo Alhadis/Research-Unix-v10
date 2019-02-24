@@ -1,0 +1,128 @@
+.TH INTRO 9
+.SH NAME
+intro \- introduction to 5620-related software
+.SH SYNOPSIS
+.BI PATH= stuff :/usr/jerq/bin
+.SH DESCRIPTION
+Section 9 of this manual lists software for running or supporting
+Teletype DMD-5620 terminals.
+Subsections 9.1-9.7 mirror the purposes of the preceding sections 1-7,
+with 9.1 being commands, 9.6 being games, etc.
+Command synopses assume that the shell search path includes
+.FR /usr/jerq/bin .
+.PP
+Few commands deal with a 5620 in native mode.
+.IR 32ld (9.1)
+loads programs into the terminal and
+.IR mux (9.1)
+starts the characteristic `layer' or window system.
+Almost all other commands in section 9 either run on
+Unix or within
+.I mux
+layers.
+.PP
+A layer is technically a virtual terminal,
+but is almost indistinguishable in software from a real terminal;
+in particular, the interface described in
+.IR ttyld (4)
+applies to layers, except for the additional editing capabilities discussed in
+.IR mux (9.1).
+.PP
+The commands in sections 9.1 and 9.6 run on Unix,
+but most implicitly call
+.I 32ld
+to down-load a program that replaces the
+default terminal process running in the layer.
+To Unix the interface is still that of
+a terminal; in particular
+.F /dev/tty
+(see
+.IR fd (4))
+is always connected to the layer.
+The default
+.I mux
+terminal program implements the teletype driver function itself.
+When a program is down-loaded,
+there is no teletype driver;
+programs that desire one
+must push the teletype line discipline on the stream,
+and arrange to pop the line discipline
+on exit; see
+.IR stream (4)
+and
+.IR ttyld (4).
+Some commands may simply
+emulate other terminals by down-loading
+a terminal program (see
+.IR term (9.1);
+others, such as the text editor
+.IR sam (9.1),
+are really two programs \(em one on Unix and one in the layer \(em
+communicating using standard input/output on Unix
+and
+.BR sendchar() / rcvchar()
+in the terminal; see
+.IR request (9.2).
+.PP
+There is an identity between bitmaps and layers
+in the graphics software.
+Graphic objects are bitmaps.
+The 
+.IR newlayer (9.2)
+primitives that operate on layers are aliased to bitmap
+primitives of (9.3), and the data structures are isomorphic.
+When running under
+.IR mux ,
+a programmer need not consider layers as graphical objects
+at all; the operating system checks the arguments to the graphics
+primitives and dispatches the appropriate operator depending
+on the type of the argument.
+Except in stand-alone software, layers are an invisible
+implementation detail.
+.SS Teletype 630
+.I Mux
+and various programs that run in
+.I mux
+layers have been ported to Teletype DMD-630 terminals.
+The ported software is not available on all machines and
+is not specifically documented.
+Look in
+.F /usr/630/bin
+to see what's there.
+.SH FILES
+.TF /usr/jerq/mbin
+.TP
+.F /usr/jerq/bin
+jerq-related Unix object programs
+.TP
+.F /usr/jerq/mbin
+terminal programs, usually down-loaded automatically
+by programs in
+.F /usr/jerq/bin
+.TP
+.F /usr/630/bin
+630-related Unix object programs
+.TP
+.F /usr/630/lib
+terminal programs
+.SH SEE ALSO
+.IR 32ld (9.1), 
+.IR mux (9.1), 
+.IR stream (4)
+.SH BUGS
+There are two mechanical-drawing programs,
+.I cip
+and
+.I ped,
+two `artistic' drawing programs,
+.I paint
+and
+.I twid,
+one `graphic' drawing program,
+.I brush,
+two pixel-level drawing programs,
+.I icon
+and 
+.I jf,
+all for working on binary images.
+None dominates.

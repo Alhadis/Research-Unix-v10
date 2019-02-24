@@ -1,0 +1,125 @@
+.TH IPCONFIG 8
+.CT 1 sa_auto
+.SH NAME
+ipconfig, dkipconfig, udpconfig \- set up DARPA Internet protocols
+.SH SYNOPSIS
+.B /usr/ipc/mgrs/ipconfig
+[
+.B -m
+.I mask
+] [
+.B -df
+]
+.I "ip-device localhost network"
+.BI [ arp-device ]
+.B &
+.br
+.B /usr/ipc/mgrs/dkipconfig
+.I "gatemachine localhost remotehost"
+.B &
+.br
+.B /usr/ipc/mgrs/udpconfig
+.I udp-device
+.B &
+.SH DESCRIPTION
+.I Ipconfig
+activates the DARPA Internet protocol on a communications device,
+with Internet address
+.I localhost
+for the host
+and network address
+.I network
+for the device.
+.PP
+If
+.I arp-device
+is specified,
+the ARP address resolution protocol
+is started on that device.
+Option
+.B -d
+causes
+.I ipconfig
+to print ARP requests on the standard output
+as they are received.
+.PP
+Option
+.B -m
+declares a subnet mask
+for the network reached through
+.IR ip-device .
+.I Mask
+may be a four-piece IP address like
+.L 255.255.255.0
+or a 32-bit hexadecimal number like
+.LR ffffff00 .
+.PP
+Option
+.B -f
+is a special workaround for networks with obsolete hosts.
+It causes
+.I ipconfig
+to answer illegal ARP requests for the subnet's broadcast address
+with an illegal Ethernet address,
+to prevent broadcast storms.
+.PP
+.I Dkipconfig
+places a network call to
+.I gatemachine
+and activates the IP protocol on the connection,
+so that the remote machine becomes a gateway for the caller's IP traffic.
+.I Localhost
+becomes the calling machine's Internet address
+through this IP interface;
+.I remotehost
+is the Internet address
+to which local IP packets should be sent
+to reach the gateway.
+.PP
+.I Ipconfig
+and
+.I dkipconfig
+record unusual events and errors in
+log files
+.F /usr/ipc/log/ipconfig
+and
+.FR /usr/ipc/log/dkipconfig .
+.PP
+.I Udpconfig
+activates the UDP datagram protocol
+on the named
+.IR udp-device ,
+usually
+.FR /dev/ipudp .
+Only one
+.I udpconfig
+is needed for the entire collection of IP networks.
+.PP
+These programs are usually run once from
+.IR rc (8).
+.SH EXAMPLES
+The following calls start IP
+on system
+.B fs
+on the first Interlan Ethernet controller,
+with ARP active;
+arrange for machine
+.B nj/astro/research
+to pass IP packets to
+.BR fs ;
+and activate
+UDP.
+.EX
+/usr/ipc/mgrs/ipconfig /dev/il00 fs mh-astro-net /dev/il01 &
+/usr/ipc/mgrs/dkipconfig nj/astro/research fs-dk research-dk127 &
+/usr/ipc/mgrs/udpconfig /dev/ipudp &
+.EE
+.SH FILES
+.F /usr/ipc/log/ipconfig
+.br
+.F /usr/ipc/log/dkipconfig
+.SH "SEE ALSO"
+.IR con (1),
+.IR qns (7),
+.IR route (8),
+.IR tcpmgr (8)

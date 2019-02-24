@@ -1,0 +1,76 @@
+.TH IOCTL 2
+.CT 2 file_io file_inq_creat
+.SH NAME
+ioctl \(mi miscellaneous control operations
+.SH SYNOPSIS
+.nf
+.B #include <sys/filio.h>
+.PP
+.B int ioctl(fildes, request, param)
+.B void *param;
+.fi
+.SH DESCRIPTION
+.I Ioctl
+performs a variety of
+.I requests
+on open files,
+most applying only to particular device files.
+The writeups of various devices
+in section 4 discuss how
+.I ioctl
+applies to them;
+see
+.IR stream (4)
+in particular
+for operations applying to
+communication devices.
+.PP
+.I Param
+points to a parameter buffer.
+Some
+.I requests
+read data from the buffer;
+others write data to the buffer;
+some do both.
+The buffer's size varies according to the request.
+A few provide meaningful data
+in the return value from
+.I ioctl
+as well;
+others return a conventional value of
+0 for success,
+\-1 for failure.
+.PP
+Requests for different drivers
+are defined in different header files.
+Two standard calls,
+defined in
+.BR <sys/filio.h> ,
+apply to any open file:
+.IP
+.L
+ioctl(fildes, FIOCLEX, (void *)0);
+.br
+.L
+ioctl(fildes, FIONCLEX, (void *)0);
+.LP
+The first causes the file to be closed automatically upon
+a successful
+.IR exec (2);
+the second causes the file to be left open.
+.SH "SEE ALSO"
+.IR exec (2),
+.IR stream (4)
+.SH DIAGNOSTICS
+.BR EBADF ,
+.BR EFAULT ,
+.BR EIO ,
+.BR ENODEV ,
+.BR ENOTTY
+.SH BUGS
+.I Ioctl
+requests vary among UNIX systems;
+undisciplined use is likely to compromise portability.
+.br
+The size of the parameter buffer
+should be an explicit argument.

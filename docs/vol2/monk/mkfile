@@ -1,0 +1,55 @@
+< ../ADM/defns
+< ../index/defns
+
+LP=$LPFONTS
+
+all:V:	monk.out
+
+pg:	monk.out
+	count monk.m monk.out
+
+spell:VQ:
+	dospell monk.m
+
+lp:	monk.out
+	$LP $newprereq && touch $target
+
+monk.out:DQ: monk.m monk.cite $REF ../ADM/monk.mac
+	while :
+	do
+		echo 'monking ...'
+		$MLIB/monk -d $MLIB/db monk.m |
+			cite |
+			$PREFER |
+			tbl |
+			pic |
+			eqn -d'' |
+			troff $MLIB/tmac.p - > monk.out 2> .cite
+		cite -s .cite > tmp1 2> tmp2
+		set +e
+		gre -v '^\.(TC|ix)' tmp2
+		set -e
+		if cmp -s tmp1 monk.cite
+		then
+			break;
+		else
+			cp tmp1 monk.cite
+		fi
+	done
+	rm -f tmp1 tmp2 .cite
+
+index:V:
+	#this doesn't really work with this paper - see README
+	runind xmonk
+	$MLIB/monk -d $MLIB/db xxmonk.m |
+		cite |
+		$PREFER |
+		tbl |
+		pic |
+		eqn -d'' |
+		troff $MLIB/tmac.p $IND/mtm.mac - > xmonk.out 2> monk.x
+	mkindex monk.x
+	rm xmonk.m
+
+pindex:V:
+	mkindex monk.x

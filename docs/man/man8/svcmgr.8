@@ -1,0 +1,331 @@
+.TH SVCMGR 8
+.CT 1 sa_auto
+.SH NAME
+svcmgr \- service remote computing requests
+.SH SYNOPSIS
+.B /usr/ipc/mgrs/svcmgr
+[
+.B -d
+]
+.SH DESCRIPTION
+.I Svcmgr
+performes services
+such as login and command execution,
+often in response to requests from network listeners
+like
+.IR dkmgr
+and
+.IR tcpmgr (8).
+It should be run once from
+.IR rc (8).
+.PP
+.I Svcmgr
+is controlled by several files in directory
+.FR /usr/ipc/lib :
+services are defined in files
+.B serv
+and
+.BR serv.local ,
+authorization in
+.B auth
+and
+.BR auth.local .
+The
+.B .local
+files are searched first.
+The idea is that
+.B serv
+and
+.B auth
+will be the same throughout an administrative cluster of machines,
+and anything peculiar to specific systems
+will be kept in
+.B serv.local
+and
+.BR auth.local .
+.PP
+Each service is announced
+as a name in directory
+.F /cs
+using the routines in
+.IR ipc (3).
+When a connection is requested to one of these services,
+.I svcmgr
+receives a file descriptor
+connected to the requester.
+A new process is created
+to perform the actions listed for that service
+in the
+.I serv
+files,
+usually resulting in a
+.IR login (8)
+with standard input, output, and error files
+attached to the connection.
+Often
+there are flags to
+.I login
+specifying a local user name
+or a command to be executed.
+Environment variable
+.SM CSOURCE
+is set to a string
+of the form
+.IP
+.BI source= remote-machine
+.BI user= ruser
+.BI line= lineinfo
+.PP
+.I Remote-machine
+and
+.I ruser
+are supplied in the connection message;
+.I lineinfo
+network-dependent stuff
+of varying interest and meaning.
+If a particular command was specified
+(the
+.B cmd
+or
+.B exec
+action),
+.I login
+sets
+environment variable
+.SM REXEC
+to
+.LR 1 .
+.PP
+The
+.I auth
+files are used to translate remote user names to local ones.
+They contain lines with four fields:
+.RS
+service name
+.br
+calling system name
+.br
+calling user name
+.br
+local user name
+.RE
+.LP
+The service, calling system, and calling user names
+are regular expressions
+in the style of
+.IR regexp (3).
+The calling system and calling user fields may be omitted;
+.L .*
+is assumed.
+The local user name
+is a literal name,
+.L &
+to repeat the calling user name provided in the request,
+or
+.L :
+to explicitly reject a call.
+If the local user name is omitted,
+.L &
+is assumed.
+.PP
+Several service actions `look up the connection in the
+.I auth
+files.'\0
+This means to
+find the first line in
+.B auth.local
+or
+.B auth
+for which the service,
+calling system,
+and calling user
+match the patterns,
+and return the local user name in that line
+(the same as the calling user if
+.LR & ).
+If no matching line is found,
+or if the first match has local user name
+.LR : ,
+the lookup fails.
+.PP
+The
+.I serv
+files contain lines with three fields:
+.RS
+service name
+.br
+a list of actions,
+separated by
+.L +
+.br
+the calling system name
+.RE
+.PP
+The calling system name is a regular expression as in
+the
+.I auth
+file.
+The line matching an incoming call is the first whose service
+matches the requested service and whose regular expression
+matches the calling machine.
+.PP
+The possible actions are:
+.de XP
+.TP
+.ie '\\$2'' .L "\\$1"
+.el .L "\\$1(\f2\\$2\fP)"
+..
+.TF password
+.PD
+.XP user x
+Use local username
+.IR x .
+.XP auth
+Look up the connection
+in the
+.I auth
+files.
+If a match is found,
+use the resulting local user.
+Otherwise reject the call.
+.XP v9auth
+Look up the connection
+in the
+.I auth
+files;
+if a match is found,
+send
+.L OK
+to the caller,
+and use the result.
+If there is no match, send
+.LR NO ,
+and read a string of the form `login,passwd\\n'.
+If the login and password
+describe a valid local user,
+send
+.L OK
+and use that user;
+otherwise send
+.L NO
+and try again
+(until the caller gives up).
+This is the authentication protocol used by
+.IR ipclogin
+(see
+.IR ipc (3)),
+hence by
+.IR con (1),
+.IR push (1),
+and 
+.IR pull.
+.XP inauth
+Read two null-terminated strings
+from the caller.
+If they aren't the same,
+reject the call.
+Otherwise look up the service,
+calling system,
+and the null-terminated string
+(as a user name)
+in the
+.I auth
+files,
+use the resulting local user if there's a match,
+reject the call otherwise.
+This is the authentication protocol used by
+.IR ipcrogin,
+hence by
+.IR rsh
+and
+.IR rlogin ;
+see
+.IR ipc (3)
+and
+.IR con (1).
+.XP ttyld
+Push the terminal line discipline
+.IR ttyld (4)
+onto the connection.
+.XP mesgld
+Push the reverse message line discipline
+(see
+.IR mesgld (4))
+onto the connection.
+.XP term
+Read a null-terminated string from the caller,
+and set environment variable
+.SM TERM
+to the result.
+.XP args
+Read a null-terminated string from the caller,
+and save the result as arguments to a possible command.
+.XP s5parms
+Extract arguments from the destination address
+in a way compatible with the
+DKHOST network software
+used by System V Datakit implementations,
+and save for later use.
+.XP cmd x
+Execute shell command
+.IR x ,
+with any saved arguments,
+and with the connection as standard input, output, and error.
+.XP login
+Provide a login session with the connection as standard input, output, and error.
+.XP password
+Provide a login session,
+but ignore any local user name;
+always demand a login and password.
+.XP exec
+Use any saved arguments
+as a shell command to be executed.
+.XP gateout gateway
+Call network address
+.IR gateway
+and send the connection info there,
+If all is well,
+pass the new connection's file descriptor
+to the original caller:
+the result is a connection through the gateway.
+.I Gateway
+should be a
+.I svcmgr
+service,
+perhaps on some other machine,
+with action
+.BR gateway .
+.XP gateway localout
+The intended target for
+.BR gateout :
+read new connection info from the connection,
+and place a call to the new destination;
+if it succeeds,
+loop passing data between the new connection and the original one.
+.PP
+If the file
+.F /usr/ipc/log/svc
+can be opened,
+.I svcmgr
+prints miscellaneous chatter there,
+including a record of each service request.
+The
+.B -d
+(debug)
+option increases the chatter.
+...SH EXAMPLES
+...to be supplied
+.SH FILES
+.nf
+.F /usr/ipc/lib/serv
+.F /usr/ipc/lib/serv.local
+.F /usr/ipc/lib/auth
+.F /usr/ipc/lib/auth.local
+.F /usr/ipc/log/svc
+.fi
+.SH "SEE ALSO"
+.IR con (1),
+.IR ipc (3),
+.IR dkmgr (8),
+.IR tcpmgr (8),
+.IR ipc (3)

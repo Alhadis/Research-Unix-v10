@@ -1,0 +1,1398 @@
+#
+# general - general style awk script
+#	every style script must begin with this general header
+#
+
+
+
+
+BEGIN {
+
+#
+# used by fixname for parsing name string
+#
+verbatim="%verbatim[ ]*((\\([^\\)]*\\))|(\\[[^\\]]*\\])|(<[^>]*>)|({[^}]*}))"
+
+	titles["Mr."] = 1;
+	titles["Mr"] = 1;
+	titles["Mrs."] = 1;
+	titles["Mrs"] = 1;
+	titles["Ms."] = 1;
+	titles["Ms"] = 1;
+	titles["Dr."] = 1;
+	titles["Dr"] = 1;
+	titles["Fr."] = 1;
+	titles["Fr"] = 1;
+	titles["Rev."] = 1;
+	titles["Rev"] = 1;
+
+	postfix["I"] = 1;
+	postfix["II"] = 1;
+	postfix["III"] = 1;
+	postfix["IV"] = 1;
+	postfix["Jr."] = 1;
+	postfix["Jr"] = 1;
+	postfix["M.D."] = 1;
+	postfix["MD"] = 1;
+	postfix["S.J."] = 1;
+	postfix["SJ"] = 1;
+
+	prefix["Mac"] = 1;
+	prefix["Mc"] = 1;
+	prefix["Van"] = 1;
+	prefix["Von"] = 1;
+	prefix["mac"] = 1;
+	prefix["mc"] = 1;
+	prefix["van"] = 1;
+	prefix["von"] = 1;
+	prefix["di"] = 1;
+	prefix["Di"] = 1;
+	prefix["de"] = 1;
+	prefix["De"] = 1;
+	prefix["D'"] = 1;
+	prefix["d'"] = 1;
+	prefix["Der"] = 1;
+	prefix["der"] = 1;
+	prefix["Del"] = 1;
+	prefix["del"] = 1;
+	prefix["La"] = 1;
+	prefix["la"] = 1;
+	prefix["L'"] = 1;
+	prefix["l'"] = 1;
+
+
+
+	Monthcode["Foo"] = 00;
+	Monthcode["Jan"] = 01;
+	Monthcode["Feb"] = 02;
+	Monthcode["Mar"] = 03;
+	Monthcode["Apr"] = 04;
+	Monthcode["May"] = 05;
+	Monthcode["Jun"] = 06;
+	Monthcode["Jul"] = 07;
+	Monthcode["Aug"] = 08;
+	Monthcode["Sep"] = 09;
+	Monthcode["Oct"] = 10;
+	Monthcode["Nov"] = 11;
+	Monthcode["Dec"] = 12;
+}
+
+
+##
+## Control and reference information from prefer
+##
+
+$1 == "%LETS_GO" {
+	print PASS;
+	if($2 == "nroff") nroff = 1;
+	if($3 == "rp") rp = 1;
+}
+
+	
+$1 == "%BEGIN_CITE"	{
+	bibno++;
+	cbibno++;
+ 	assoc = "";
+	allauthors[bibno] = "";
+}
+
+$1 == "%T" {			# check for refer format
+	if(refertitle == 0) {
+		print "Warning: reference data is in refer format; use pconvert to change to refer format" | "cat >&2";
+	}
+	refertitle++;
+}
+
+/^%/	{ sub(/[ \t]*$/,""); }
+
+$1 == "%author"	{
+	if($2 ~ /^et/ && $3 ~ /^al/) {
+		aetal[bibno] = 1;
+	}
+	else {
+		a = ++authors[bibno];
+		fixname();
+		setauthor(bibno,a);
+		if(!aflag)
+			assoc = assoc Afull[bibno,a];
+		allauthors[bibno] = allauthors[bibno] Afull[bibno,a];
+	}
+}
+
+
+$1 == "%booktitle"	{ booktitle[bibno] = getrest();}
+
+$1 == "%address"	{ city[bibno] = getrest(); }
+
+$1 == "%date"	{	# assumes Month Day, Year
+	year[bibno] = $NF;
+	if(NF > 2) {
+		month[bibno] = substr($2,1,3);
+		if(NF == 4) {
+			day[bibno] = $3;
+			sub(",","",day[bibno]);
+		}
+		date[bibno] = getrest();
+	}
+	else date[bibno] = $NF;
+	if(!aflag)
+		assoc = assoc date[bibno];
+}
+
+$1 == "%editor"	 {
+	if($2 ~ /^et/ && $3 ~ /^al/)
+		eetal[bibno] = 1;
+	else {
+		e = ++editors[bibno];
+		fixname();
+		seteditor(bibno,e);
+	}
+}
+
+$1 == "%publisher"	{ issuer[bibno] = getrest(); }
+
+$1 == "%journal"	{ journal[bibno] = getrest(); }
+
+$1 == "%number"	{
+	number[bibno] = $2;
+	if(NF > 2) numstr[bibno] = getrest();
+}
+
+$1 == "%other"		{ other[bibno] = getrest(); }
+
+$1 == "%pages"	{ 
+	pages[bibno] = getrest();
+	gsub(/- /,"-",pages[bibno]);
+	gsub(/ -/,"-",pages[bibno]);
+}
+
+$1 == "%part"		{
+	part[bibno] =  $2
+	if(NF > 2) partstr[bibno] = getrest();
+}
+
+$1 == "%report"		{ report[bibno] = getrest(); }
+
+$1 == "%tm"		{ tmno[bibno] = getrest(); }
+
+$1 == "%type" 		{ reftype[bibno] = $2; }
+
+$1 == "%title"	{
+	title[bibno] = getrest();
+	if(!aflag)
+		assoc = assoc title[bibno];
+}
+
+$1 == "%volume"	{
+	volume[bibno] = $2;
+	if(NF > 2) volstr[bibno] = getrest();
+}
+
+$1 == "%also_begin"	{
+	if(++aflag == 1) {
+		savebibno = bibno;
+	}
+	bibno = savebibno " " ++also[savebibno];
+	allauthors[bibno] = "";
+	pre_also[bibno] = getrest();
+}
+
+
+$1 == "%also_end"	{
+	aflag--;
+	if(reftype[bibno] == "not_found" || reftype[savebibno] == "not_found") {
+		erasebib(bibno);
+		also[savebibno]--;
+	}
+
+	else {
+		if(title[savebibno] == title[bibno])
+			title[bibno] = "";
+		if(allauthors[savebibno] == allauthors[bibno])
+			authors[bibno] = 0;
+		post_also[bibno] = getrest();
+	}
+	if(aflag)
+		bibno = savebibno " " aflag;
+	else 
+		bibno = savebibno;
+}
+
+$1 == "%no_cite"	{ no_cite[cbibno] = 1; }
+
+$1 == "%no_author"	{ no_author[cbibno] = 1; }
+
+$1 == "%no_date"	{ no_date[cbibno] = 1; }
+
+$1 == "%pre_text"	{ pre_text[cbibno] = getrest(); }
+
+$1 == "%post_text"	{ post_text[cbibno] = getrest(); }
+
+$1 == "%END_CITE"	{
+	if(reftype[bibno] == "not_found") {
+		erasebib(bibno);
+		erasecite(cbibno);
+		bibno--;
+		cbibno--;
+	}
+	else {
+		assoc = assoc reftype[bibno];
+		if (biblist[assoc] != 0) {
+			erasebib(bibno);
+			bibno--;
+		}
+		else
+			biblist[assoc] = bibno;
+		uniqno[cbibno] = biblist[assoc];
+
+		if (no_cite[cbibno] != 1) {
+			cites++;
+			bibptr[cites] = cbibno;
+		}
+	}
+}
+
+$1 == "%END_LIST"	{
+	if (cites > 0) {
+		citations($2);
+		cites = 0;
+	}
+	else printf $2;
+	print $1;
+}
+
+$1 == "%BIBLIO"	{
+	if(bibno > 0 && $2 != "no_bib") {
+		if(sortflag && PASS == "")
+			bibsort(SKEY);
+		bibliography();
+	}
+	print "%END_BIB";
+}
+
+$1 == "%WHOLEBIB"	{
+	if(bibno > 0) {
+		if ($2) {
+			sortflag = 1;
+			if($2 == "sort")
+				bibsort(SKEY);
+			else
+				bibsort($2);
+		}
+		else sortflag = 0;
+		bibliography();
+	}
+	print "%END_BIB";
+}
+
+
+##
+## For two passes
+##
+$1 == "%END_CITE2" {
+	cbibno++
+	if (no_cite[cbibno] != 1) {
+		cites++;
+		bibptr[cites] = cbibno;
+		
+	}
+}
+
+$1 == "%END_LIST1" {
+	cites = 0;
+	print $2 "%END_LIST";
+}
+
+
+$1 == "%BIBLIO1" {
+	if(sortflag)
+		bibsort(SKEY);
+	cbibno = 0;
+}
+
+$1 == "%DBINCLUDE"	{
+	cbibno +=$2;
+}
+
+
+
+##############################################
+##
+## functions
+##
+##############################################
+
+##
+## Sort the entire bibliography by the stated keys
+##
+func bibsort(keys)
+{
+	if (bibno == 0) return;
+
+	"echo $$" | getline pid;
+	sortout = "/tmp/sort" pid;
+	sort = "sort -f -o " sortout;
+	for(k=1; k <=3; k++)
+		key[k] = substr(keys,k,1);
+	for(i = 1; i <= bibno; i++) {
+		for(k=1; k <=3; k++) {
+			if(key[k] == "a") {
+				if(authors[i] )
+					printf "%s\t", Asort[i] | sort;
+				else if(editors[i])
+					printf "%s\t", Esort[i] | sort;
+				else if(issuer[i])
+				printf "%s\t", issuer[i] | sort;
+				else
+					printf "%s\t", title[i] | sort;
+			}
+			else if(key[k] == "d") {
+				printf "%s", year[i] | sort;
+				printf "%2s", Monthcode[month[i]] | sort;
+				printf "%2s\t", day[i] | sort;
+			}
+			else if(key[k] == "t")
+				printf "%s\t", title[i] | sort;
+			else
+				printf " \t" | sort;
+		}
+		print i | sort;
+	}
+	close(sort);
+	FS = "\t";
+	for(i = 1; i <= bibno; i++) {
+		getline < sortout;
+		sortorder[i] = $4;
+		inverse[$4] = i;
+	}
+	FS = " ";
+	system("rm " sortout);
+}
+
+##
+## erase bibliographic entry
+##
+func erasebib(b)
+{
+	authors[b] = 0;
+	allauthors[b] = "";
+	aetal[b] = 0;
+	editors[b] = 0;
+	eetal[b] = 0;
+	title[b] = "";
+	booktitle[b] = "";
+	issuer[b] = "";
+	journal[b] = "";
+	number[b] = "";
+	other[b] = "";
+	pages[b] = "";
+	part[b] = "";
+	report[b] = "";
+	reftype[b] = "";
+	volume[b] = "";
+	volstr[b] = "";
+	date[b] = "";
+	year[b] = "";
+	month[b] = "Foo";
+	day[b] = "00";
+	city[b] = "";
+	Asort[b] = "";
+	Esort[b] = "";
+	also[b] = 0;
+	pre_also[b] = "";
+	post_also[b] = "";
+}
+
+
+##
+## erase citation entry
+##
+func erasecite(b) {
+	no_cite[b] = 0;
+	no_author[b] = 0;
+	no_date[b] = 0;
+	pre_text[b] = "";
+	post_text[b] = "";
+}
+
+##
+## sequence - dtermine if c is in a sequence c-1, c, c+1
+##
+func sequence(c,n) {
+
+# take care of endpoints 1 and n
+	if (c == 1) return "no";
+	if (c == n) {
+		if(seq == "in") return "end";
+		else return "no"
+	}
+
+# ignore sequence if pretext or posttext exists
+
+	text = 0;
+	if (pretext[bibptr[c-1]] || posttext[bibptr[c-1]] || \
+	pretext[bibptr[c]] || posttext[bibptr[c]] || \
+	pretext[bibptr[c+1]] || posttext[bibptr[c+1]] ) text = 1 ;
+
+# detect a sequence ..1,2,3..
+
+	if((makemark(c-1) == makemark(c)-1) && (makemark(c+1) == makemark(c)+1)) {
+		if (text == 1) 
+			if(seq == "in") return "end";
+			else return "no";
+		else return "in";
+	}
+
+# detect end ..7,8,22
+
+	if((seq == "in") && (makemark(c+1) != makemark(c)+1)) return "end";
+}
+
+
+
+##
+## format a list of bibliographies
+##	used by both reference_placement and reference_list
+##
+func bibliography()
+{
+	print ".in .5i";
+	for(i = 1; i <= bibno; i++) {
+		b = bibindex(i);
+		printref(b);
+	}
+	print ".in -5i"
+	print ".nr RF " bibno;
+}
+
+##
+## format a single reference
+##
+func printref(b) {
+	if (reftype[b] == "book") book(b)
+	else if (reftype[b] == "article") article(b)
+	else if (reftype[b] == "review") review(b);
+	else if (reftype[b] == "incollection") incollection(b)
+	else if (reftype[b] == "inproceedings") inproceedings(b)
+	else if (reftype[b] == "techreport") techreport(b)
+	else if (reftype[b] == "phdthesis") thesis(b)
+	else if (reftype[b] == "mastersthesis") thesis(b)
+	else if (reftype[b] == "editedbook") editedbook(b)
+	else if (reftype[b] == "misc") default(b)
+	else if (reftype[b] == "pamphlet") pamphlet(b)
+	else if (reftype[b] == "manual") manual(b)
+	else if (reftype[b] == "proceedings") proceedings(b)
+	else if (reftype[b] == "tm") tm(b)
+	else if (reftype[b] == "unpublished") default(b)
+	else {
+		print "Unknown reference type " reftype[b] " for " Afull[b,1] " ... " title[b] ", " date[b] | "cat >&2";
+		default(b);
+	}
+	if (other[b]) {
+		printf ".\n" other[b];
+		if(substr(other[b],length(other[b]),1) != ".")
+			printf ".";
+	}
+	else printf ".";
+	if(also[b]) {
+		aprint++;
+		print "";
+		for(ia=1; ia <= also[b]; ia++) {
+			prea = pre_also[b " " ia]
+			if(prea) {
+				printf prea;
+				if(bracket(prea) == 0)
+					printf " ";
+			}
+			else printf "Also " ;
+			printref(b " " ia);
+			posta = post_also[b " " ia]
+			if(posta) {
+				if(bracket(posta) == 0)
+					printf " ";
+				print posta;
+			}
+			else print "";
+		}
+		aprint--;
+	}
+	else if(aprint == 0) print "";
+}
+
+func bracket(string)
+{
+	brack = substr(string,length(string));
+	if(brack ~ /[<>\(\){}\[\]]/)
+		return 1;
+	return 0;
+}
+
+##
+## fixverbatim
+##	handle strings with %verbatim around them
+##
+func fixverbatim()
+{
+	vb = 0;
+	while(match($0,verbatim)) {
+		vb++;
+		beg=substr($0,1,RSTART-1);
+		mid=substr($0,RSTART,RLENGTH);
+		end=substr($0,RSTART+RLENGTH,length($0)-(RLENGTH+RSTART-1));
+		gsub("%verbatim[ ]*","",mid);
+		mid=substr(mid,2,length(mid)-2);
+		gsub(" ","\\\\&",mid);
+		$0 = beg mid end;
+	}
+	return vb;
+}
+
+
+
+##
+## fixname
+## 	parse namestring from %author and %editor into
+##	Given Last Title and Post
+##	e.g., Given = Fred P., Last = Smith, Title = Mr., Post = Jr.
+##	
+func fixname() {
+	verbflag = fixverbatim()
+	Given = "";
+	Last = "";
+	Title = "";
+	Post = "";
+	if(postfix[$NF]) {			#....Jr.
+		Post = $NF;
+		NF--;
+		if(substr($NF,length($NF),1) == ",") {
+			$NF = substr($NF,1,length($NF)-1);
+		}
+	}
+	for(i=2; i<=NF; i++) {			# look for field ending with ","
+		if(substr($i,length($i),1) == ",") {
+			$i = substr($i,1,length($i)-1);
+			break;
+		}
+	}
+	if (i < NF) {				 # Last, Given...
+		for(k=2; k<i; k++) {	
+			Last = Last $k " ";
+		}
+		Last = Last $i;
+		j=i+1;
+		if(titles[$j]) {
+			Title = $j;
+			j++;
+		}
+		for(; j<NF; j++) {
+			Given = Given $j " ";
+		}
+		Given = Given $NF;
+	}
+	else {					# Given....Last
+		if(NF > 1) Last = $NF;
+		for(i=NF-1 ;i>1; i--) {
+			if(prefix[$i]) Last = $i " " Last;
+			else break;
+		}
+		j = 2;
+		if (titles[$j]) {
+			Title = $2;
+			j++;
+		}
+		if(j <= i) {
+			for(; j<i; j++) {
+				Given = Given $j " ";
+			}
+			Given = Given $i;
+		}
+	}
+	if(verbflag) {
+		gsub("\\\\&"," ",Last);
+		gsub("\\\\&"," ",Title);
+		gsub("\\\\&"," ",Post);
+	}
+}
+
+
+##
+## initial - return initial of name string
+##
+func initial(string) {
+	return(substr(string,1,1) ".")
+}
+
+
+##
+## LastFM - Organize Name: Last, F.M., e.g. Smith, F.P. Jr.
+##
+func LastFM() {
+	Name = "";
+	punc = "";
+	if(Last) {
+		Name = Name Last;
+		punc = ", ";
+	}
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+			Name = Name punc Given;
+		}
+		else {
+			ng = split(Given,G);
+			Name = Name punc initial(G[1]);
+			for(i = 2; i <= ng; i++) 
+				Name = Name initial(G[i]);
+		}
+	}
+	punc = " ";
+	if(Post) {
+		Name = Name punc Post;
+	}
+	return(Name);
+
+}
+
+
+##
+## FMLast - Organize Name: F.M. Last, e.g., F.P. Smith Jr.
+##
+func FMLast() {
+	Name = "";
+	punc = "";
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+			Name = Name punc Given;
+		}
+		else {
+			ng = split(Given,G);
+			Name = Name initial(G[1]);
+			for(i = 2; i <= ng; i++) 
+				Name = Name initial(G[i]);
+		}
+		punc = " ";
+	}
+	if(Last) {
+		Name = Name punc Last;
+		punc = " ";
+	}
+	if(Post) {
+		Name = Name punc Post;
+	}
+	
+	return(Name);
+}
+
+##
+## F_M_Last - Organize Name: F.M. Last, e.g., F.P. Smith Jr.
+##
+func F_M_Last() {
+	Name = "";
+	punc = "";
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+			Name = Name punc Given;
+		}
+		else {
+			ng = split(Given,G);
+			Name = Name initial(G[1]);
+			for(i = 2; i <= ng; i++) {
+				Name = punc Name initial(G[i]);
+				punc = " ";
+			}
+		}
+		punc = " ";
+	}
+	if(Last) {
+		Name = Name punc Last;
+		punc = " ";
+	}
+	if(Post) {
+		Name = Name punc Post;
+	}
+	
+	return(Name);
+}
+
+##
+## LastF_M - Organize Name: Last, F. M., e.g. Smith F. P. Jr.
+##
+func LastF_M() {
+	Name = "";
+	punc = "";
+	if(Last) {
+		Name = Name Last;
+		punc = ", ";
+	}
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+			Name = Name punc Given;
+		}
+		else {
+			ng = split(Given,G);
+			Name = Name punc initial(G[1]);
+			for(i = 2; i <= ng; i++) 
+				Name = Name " " initial(G[i]);
+		}
+	}
+	punc = " ";
+	if(Post) {
+		Name = Name punc Post;
+	}
+	return(Name);
+}
+
+##
+## FMLast - Organize Name: F. M. Last, e.g., F. P. Smith Jr.
+##
+func F_MLast() {
+	Name = "";
+	punc = "";
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+			Name = Name punc Given;
+		}
+		else {
+			ng = split(Given,G);
+			Name = Name initial(G[1]);
+			for(i = 2; i <= ng; i++) 
+				Name = Name " " initial(G[i]);
+		}
+		punc = " ";
+	}
+	if(Last) {
+		Name = Name punc Last;
+		punc = " ";
+	}
+	if(Post) {
+		Name = Name punc Post;
+	}
+	return(Name);
+}
+
+
+##
+## FirstMiddleLast - Organize Name: First Middle Last e.g., Fred Peter Smith Jr.
+##
+func FirstMiddleLast()
+{
+	Name = "";
+	punc = "";
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+		}
+		Name = Name Given;
+		punc = " ";
+	}
+	if(Last) {
+		Name = Name punc Last;
+		punc = " ";
+	}
+	if(Post) {
+		Name = Name punc Post;
+	}
+	return(Name);
+}
+
+##
+## LastFirstMiddle - Organize Name: Last, First Middle Last e.g., Smith, Fred Peter, Jr.
+##
+func LastFirstMiddle()
+{
+	Name = "";
+	punc = "";
+	if(Last) {
+		Name = Name Last;
+		punc = ", ";
+	}
+	if(Given) {
+		if(Given ~ /\\\&/) {
+			gsub("\\\\&"," ",Given);
+		}
+		Name = Name punc Given;
+		punc = ", ";
+	}
+	if(Post) {
+		Name = Name punc Post;
+	}
+	return(Name);
+}
+
+
+
+##
+## getrest - get rest of $0 after lopping off $1.
+##
+func getrest()
+{
+	rest = substr($0,length($1)+2);
+	return(substr(rest,index(rest,$2))); # strip off blanks
+}
+###
+### acm reference formatting style
+###
+
+BEGIN	{
+	PASS="%TWOPASS";	# only one pass thru document
+	sortflag = 1;		# reference_placement bib is sortedone
+	STYLE = "acm";
+	SKEY = "atd";
+}
+
+
+
+#######################################################
+#
+# Functions required by general awk script
+#
+#######################################################
+
+
+##
+## Set author and editor fields
+##	for reference list
+##	for citation
+##	for possible sorting
+##
+
+func setauthor(b,a) {
+
+	Afull[b,a] = LastFM();
+	Asort[b] = Asort[b] Afull[b,a] " ";
+}
+
+func seteditor(b,a) {
+	E[b,a] = FMLast();
+	Efull[b,a] = LastFM();
+	Esort[b] = Esort[b] Efull[b,a] " ";
+}
+
+
+##
+## citations
+##	print a citation list
+##	(Last, year; Last, year...)
+##
+func citations(lastpunc) {
+	seq = "no";
+	punc = "\n";
+	if(lastpunc == "\"" || lastpunc == "'") {
+		punc = lastpunc " ";
+		lastpunc = "\\ ";
+	}
+	if(lastpunc == "(") {
+		punc = lastpunc;
+		lastpunc = "";
+	}
+	for(i=1; i<=cites; i++) {
+		cn = bibptr[i]
+		seq = sequence(i,cites);
+		if (seq == "in") continue;
+		if (seq == "end") {
+			punc = "-";
+			seq = "no";
+		}
+		printf "%s[", punc;
+		if (pre_text[cn]) printf "%s ", pre_text[cn];
+		printf "%s", makemark(i);
+		if(post_text[cn]) {
+			if (is_punc(substr(post_text[cn],1,1)) == 0) print "";
+			printf "%s", post_text[cn];
+		}
+		printf "]";
+		punc = ", ";
+	}
+	printf lastpunc;
+}
+
+func is_punc(p)
+{
+	if(p == ",") return 1;
+	if(p == ".") return 1;
+	if(p == ";") return 1;
+	return 0;
+}
+
+
+##
+## makemark
+##	return citation mark: identical citations have the same number
+##
+func makemark(m) {
+	return(inverse[uniqno[bibptr[m]]]);
+}
+
+
+
+##
+## bibindex
+##	print citation mark for the bibliography;
+##	return an index for accessing rest of citation
+##
+func bibindex(i) {
+	print ".LP"
+	print ".in \\w'999.\\ 'u"
+	printf ".ti -\\w'%s.\\ 'u\n",i;
+	printf "%s.\\ ", i ;
+	if(sortflag) return sortorder[i];
+	else return i;
+}
+
+
+
+#############################################
+#
+# Reference types
+#
+############################################
+
+
+func book(b) {
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# italic title.
+			if(title[b])
+				printf "\\f2\\&%s\\f1\\&.\n", title[b];
+	# Vol. #.
+			if (volstr[b])
+				printf "%s.\n", volstr[b] ;
+			else if (volume[b])
+				printf "Vol. %s.\n", volume[b] ;
+	# publisher, location
+			printf "%s", issuer[b] ;
+			punc = ",\n";
+			if (city[b]) printf ", %s", city[b] ;
+	# date
+			printf punc date[b] ;
+}
+
+func editedbook(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				if(authors[b] <2)
+					printf ", Ed.\n";
+				else
+					printf ", Eds.\n";
+			}
+	# italic title.
+			if(title[b])
+				printf "\\f2\\&%s\\f1\\&.\n", title[b];
+	# Vol. #.
+			if (volstr[b])
+				printf "%s.\n", volstr[b] ;
+			else if (volume[b])
+				printf "Vol. %s.\n", volume[b] ;
+	# publisher, location
+			printf "%s", issuer[b] ;
+			if (city[b]) printf ", %s", city[b] ;
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+
+
+func incollection(b) {
+
+	# Authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# Title.
+			if(title[b])
+				printf "%s.\n", title[b] ;
+	# in italics booktitle,
+			printf "In \\f2\\&%s\\f1\\&,\n", booktitle[b];
+	# Vol. #,
+			if (volstr[b])
+				printf "%s,\n", volstr[b] ;
+			else if (volume[b])
+				printf "Vol. %s,\n", volume[b] ;
+	# editorlist Ed.
+			if (editors[b]) {
+				editorlist(b);
+				if (editors[b] == 1) printf ", Ed.\n"
+				else if (editors[b] > 1) printf ", Eds.\n"
+			}
+	# publisher, location
+			printf "%s", issuer[b] ;
+			if (city[b]) printf ", %s", city[b] ;
+	# date,
+			printf ",\n%s", date[b] ;
+	# pages,
+			if ( pages[b]) {
+				if ( pages[b] ~ /[,-]/ )
+					printf ",\npp. %s", pages[b];
+				else printf ",\np. %s", pages[b];
+			}
+}
+
+func thesis(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# italic title.
+			if(title[b])
+				printf "%s.\n", title[b];
+	# thesis, publisher, 
+			if(reftype[b] == "phdthesis")
+				printf "PhD Thesis, %s", issuer[b];
+			else if(reftype[b] == "mastersthesis")
+				printf "Master's Thesis, %s", issuer[b];
+
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+
+
+func review(b) {
+	article(b);
+}
+
+func article(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+				}
+	# title.
+			if(title[b])
+				printf "%s.\n", title[b] ;
+	# review
+			if(booktitle[b]) {
+				printf "Review of \\f2\\&%s\\f1\\&", booktitle[b];
+				if(editors[b]) {
+					printf " by "
+					editorlist(b);
+				}
+				if (issuer[b]) {
+					printf " %s", issuer[b];
+				}
+				printf ".\n";
+			}
+	# italics journal
+			printf "\\f2\\&%s\\f1\\&", journal[b];
+	# italics volume,
+			if (volstr[b])
+				printf " \\f2\\&%s\\f1\\&", volstr[b] ;
+			else if (volume[b])
+				printf " \\f2\\&%s\\f1\\&", volume[b] ;
+	# number
+			if(numstr[b])
+				printf ", %s", numstr[b];
+			else if (number[b])
+				printf ", %s", number[b] ;
+	# part
+			if(partstr[b])
+				printf ", %s", partstr[b];
+			else if (part[b])
+				printf ", Pt. %s", part[b] ;
+	# date
+			printf " (%s)", date[b] ;
+	# pages,
+			if ( pages[b]) printf ", %s", pages[b];
+}
+
+
+
+
+func inproceedings(b) {
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# Title.
+			if(title[b])
+				printf "%s.\n", title[b] ;
+	# italics Journal,
+			printf "In \\f2\\&%s\\f1\\&", journal[b];
+	# volume,
+			if (volstr[b])
+				printf ", %s", volstr[b] ;
+			else if (volume[b])
+				printf ", Vol. %s", volume[b] ;
+			if(numstr[b])
+				printf ", %s", numstr[b];
+			else if (number[b])
+				printf ", No. %s", number[b] ;
+			if(partstr[b])
+				printf ", %s", partstr[b];
+			else if (part[b])
+				printf ", Pt. %s", part[b] ;
+	# editorlist Ed.
+			if(editors[b]) {
+				printf ",\n";
+				editorlist(b);
+				if (editors[b] == 1) printf ", Ed."
+				else if (editors[b] > 1) printf ", Eds."
+			}
+	# organization,
+			if(issuer[b])
+				printf ", %s", issuer[b];
+	# location,
+			if(city[b])
+				printf ", %s", city[b];
+	# date,
+			printf ", %s", date[b];
+	# pages,
+			if ( pages[b]) {
+				if ( pages[b] ~ /[,-]/ )
+					printf ", pp. %s", pages[b];
+				else printf ", p. %s", pages[b] ;
+			}
+}
+
+func proceedings(b) {
+			punc = "";
+	# authorlist
+			if(authors[b] >0) {
+				authorlist(b);
+				punc = "\n";
+			}
+				
+	# editorlist Ed.
+			else if(editors[b] > 0) {
+				printf punc;
+				editorlist(b);
+				if (editors[b] == 1) printf ", Ed."
+				else if (editors[b] > 1) printf ", Eds."
+				punc = "\n";
+			}
+	# publisher.
+			else if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ".\n";
+			}
+	# italics(title),
+			if(title[b]) {
+				printf "%s\\f2\\&%s\\f1\\&", punc,title[b];
+				punc = ".\n";
+				if(substr(title[b],length(title[b]),1) == ".")
+					punc = "\n";
+	
+	# volume, number, part.
+				if (volstr[b])
+					printf ", %s", volstr[b] ;
+				else if (volume[b])
+					printf ", Vol. %s", volume[b] ;
+				if(numstr[b])
+					printf ", %s", numstr[b];
+				else if (number[b])
+					printf ", No. %s", number[b] ;
+				if(partstr[b])
+					printf ", %s", partstr[b];
+				else if (part[b])
+					printf ", Pt. %s", part[b] ;
+			}
+	# publisher,
+			if(issuer[b])
+				if(authors[b] || editors[b]) {
+					printf "%s%s", punc, issuer[b];
+					punc = ",\n";
+				}
+	# location,
+			if (city[b]) {
+				printf "%s%s", punc, city[b] ;
+				punc = ",\n";
+			}
+	# date
+			if (date[b])
+				printf "%s%s", punc, date[b];
+}
+
+func techreport(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# title.
+			if(title[b])
+				printf "%s.\n", title[b];
+	# report number,
+			if(report[b]) printf "%s,\n", report[b] ;
+	# publisher,
+			if (issuer[b]) printf "%s,\n", issuer[b] ;
+	# date
+			printf "%s", date[b] ;
+}
+
+func tm(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# title.
+			if(title[b])
+				printf "%s.\n", title[b];
+	# report number,
+			if(rp)
+				printf "AT&T Bell Laboratories internal memorandum";
+			else
+				printf tmno[b] 
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+
+func manual(b) {
+			punc = "";
+	# authorlist
+			if(authors[b] >0) {
+				printfull(b);
+				punc = "\n";
+			}
+	# editorlist Ed.
+			else if(editors[b]) {
+				printf punc;
+				printedfull(b);
+				if (editors[b] == 1) printf ", Ed."
+				else if (editors[b] > 1) printf ", Eds."
+				punc = "\n";
+			}
+	# publisher
+			else if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ".\n";
+			}
+	# title,
+			if(title[b]) {
+				printf "%s\\f2\\&%s\\f1\\&" ,punc, title[b];
+				punc = ".\n";
+	# Vol. volume,
+				if (volstr[b])
+					printf ", %s", volstr[b] ;
+				else if (volume[b])
+					printf ", Vol. %s", volume[b] ;
+			}
+	# publisher
+			if(issuer[b]) {
+				if((authors[b]>0) || editors[b]) {
+					printf "%s%s", punc, issuer[b];
+					punc = ", ";
+				}
+			}
+	# location
+			if (city[b]) {
+				printf "%s%s", punc, city[b] ;
+				punc = ", ";
+			}
+	# date
+			printf "%s%s", punc, date[b];
+}
+
+func pamphlet(b) {
+	default(b);
+}
+
+func default(b) {
+			punc = "";
+	# authorlist
+			if(authors[b] >0) {
+				printfull(b);
+				punc = "\n";
+			}
+				
+	# publisher.
+			else if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ".\n";
+			}
+	# title,
+			if (title[b]) {
+				printf "%s%s" ,punc, title[b];
+				punc = ".\n";
+			}
+	# volume,
+			if(volstr[b]) {
+				printf ", %s", volstr[b];
+			}
+			else if (volume[b]) {
+				printf ", Vol. %s", punc, volume[b] ;
+			}
+	# publisher,
+			if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ", ";
+			}
+	# location,
+			if (city[b]) {
+				printf "%s%s", punc, city[b] ;
+				punc = ", ";
+			}
+	# date,
+			if (date[b]) {
+				printf "%s%s", punc, date[b];
+				punc = ", ";
+			}
+	# pages
+			if (pages[b]) {
+				if ( pages[b] ~ /[,-]/ )
+					printf "%spp. %s", punc, pages[b];
+				else
+					printf "%sp. %s", punc, pages[b];
+			}
+}
+
+
+
+
+
+
+# Author, First
+# Author, First and Second Author
+# Author, First, Second Author, and Remaining Authors
+
+func printfull(b) {			
+	if ( authors[b] == 0 ) ;
+	else if ( authors[b] == 1 ) {
+		printf  Afull[b,1] ;
+		if(aetal[b]) printf ", et al.";
+	}
+	else if ( authors[b] == 2 ) printf  Afull[b,1] " and " Afull[b,2];
+	else {
+		for ( j = 1; j < authors[b]; j++ ) printf Afull[b,j] ", ";
+		printf "and " Afull[b,authors[b]];
+	}
+}
+func printedfull(b) {			
+	if ( editors[b] == 0 ) ;
+	else if ( editors[b] == 1 ) {
+		printf  Efull[b,1] ;
+		if(eetal[b]) printf ", et al.";
+	}
+	else if ( editors[b] == 2 ) printf  Efull[b,1] " and " Efull[b,2];
+	else {
+		for ( j = 1; j < editors[b]; j++ ) printf Efull[b,j] ", ";
+		printf "and " Efull[b,editors[b]];
+	}
+}
+
+func editorlist(b) {			
+ 	if ( editors[b] == 0 ) ;
+	else if ( editors[b] == 1 ) printf E[b,1] ;
+	else if ( editors[b] == 2 ) printf E[b,1] " and " E[b,2];
+	else {
+		for ( j = 1; j < editors[b]; j++ ) printf E[b,j] ", ";
+		printf "and " E[b,editors[b]];
+	}
+}

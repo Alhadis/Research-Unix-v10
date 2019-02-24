@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	sam.out
+
+pg:	sam.out
+	count sam.ms sam.out
+
+spell:VQ:
+	dospell sam.ms
+
+lp:	sam.out
+	$LP $newprereq && touch $target
+
+sam.out:D: sam.ms fig1.so fig2.so fig3.so fig4.so fig5.pic fig6.pic fig7.pic $REF ../ADM/bm.mac
+	cat ../ADM/bm.mac sam.ms | $PREFER | pic | tbl | troff -mpm | ../ADM/bm.sh > $target
+
+index:V:
+	runind sam
+	cat ../ADM/bm.mac xsam.ms | $PREFER | pic | tbl | troff -mpm  > /dev/null 2>sam.x
+	mkindex sam.x
+	#rm xsam.ms
+
+pindex:V:
+	mkindex sam.x

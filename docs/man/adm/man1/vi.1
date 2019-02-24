@@ -1,0 +1,459 @@
+.TH VI 1
+.CT 1 editor
+.SH NAME
+ex, edit, vi \- text editor
+.SH SYNOPSIS
+.B ex
+[
+.I option ...
+]
+.I file ...
+.PP
+.B edit
+[
+.I option ...
+]
+.I file ...
+.PP
+.B vi
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I Ex
+is elaborated from
+.IR ed (1).
+.I Vi
+is the display editing aspect of
+.IR ex ;
+.I edit
+is a simplified subset of
+.IR ex .
+The editors work on several
+.I files
+simultaneously.
+.I Vi
+gets the terminal type from environment variable
+.BR TERM .
+.PP
+The options are:
+.TP
+.BI -r " file
+Recover the
+.I file
+after a crash in the editor.
+If no file is specified, list all saved files.
+.TP
+.B -l
+Lisp indent mode; give special meaning to editor commands
+.BR ()[]{} .
+.TP
+.BI -w n
+Default window size is
+.I n
+lines.
+.TP
+.B -x
+Edit encrypted files; a key will be prompted for.
+.TP
+.B -R
+Read only; no files will be changed.
+.TP
+.BI + cmd
+Execute the specified
+.I ex
+command upon entering the editor.
+.PP
+The editors begin in `command mode'. 
+An
+.SM ESC
+character typed in command mode cancels the command.
+The commands
+.B
+a A c C i I o O R s S
+enter input mode, where arbitrary text may be entered.
+.SM ESC
+or interrupt returns to command mode.
+The commands
+.B
+: / ? !
+take input from the last line of the screen, which is
+ended by a newline, or canceled by an interrupt.
+.PP
+A number preceding commands 
+.B z G |
+specifies a line.
+A number before almost any other command causes it
+to be repeated.
+.PP
+In the following summary of
+.I vi
+commands
+.B ^
+means the `control' key.
+Commands so marked work in input mode;
+others work in command mode.
+.PP
+.de fq
+\&\f5\\$1\fR	\\$2 \\$3 \\$4 \\$5 \\$6
+..
+.de fz
+\&\f5\\$1 \fI\\$2\fR	\\$3 \\$4 \\$5 \\$6
+..
+.ta \w'\f5:e + file'u
+File manipulation
+.2C
+.fq :w write back changes
+.fz :w  file write \fIfile\fR
+.fz :w!  file overwrite \fIfile\fR
+.fq :q quit
+.fq :q! quit, discarding changes
+.fz :e file edit \fIfile\fR
+.fq :e! reedit, discarding changes
+.fq ":e\ +" file edit, starting at end
+.fz ":e\ +"  starting at line \fIn\fP
+.fq :sh run shell, then return
+.fz :! cmd run shell command
+.fq :n edit next \fIfile\fR argument
+.fz : ex-cmd do editor command
+.1C
+.PP
+Positioning in file
+.2C
+.fq ^F forward screen
+.fq ^B backward screen
+.fq ^D down half screen
+.fq ^U up half screen
+.fq G "to specified line (end default)
+.fz / pat next line matching \fIpat\fR
+.fz ? pat previous line matching
+.fq n repeat last "\f5\e  or  ?\fP
+.fz /\fIpat\fP/\o'+_' n "\fIn\fRth line after or before \fIpat\fR
+.fq ( beginning of sentence
+.fq ) end of sentence
+.fq { beginning of paragraph
+.fq } end of paragraph
+.fq % find matching \f5(){}\fP
+.1C
+.PP
+Adjusting the screen
+.2C
+.fq ^L clear and redraw
+.fq ^R  "retype, eliminate \f5@\fR lines
+.fq z redraw, current line at window top
+.fq z- \&... at bottom
+.fq z. \&... at center
+.fq /\fIpat\fP/z- \fIpat\fR line at bottom
+.fz z n use \fIn\fR-line window
+.fq ^E scroll down one line
+.fq ^Y scroll up one line
+.1C
+.PP
+Marking and returning
+.2C
+.fq `` move cursor to previous context
+.fq '' \&... at first nonwhite in line
+.fz m x "mark position with letter \fIx\fR
+.fz ` x move cursor to mark
+.fz ' x \&... at first nonwhite
+.1C
+.PP
+Line positioning
+.2C
+.fq H top line of screen
+.fq L bottom line
+.fq M middle line
+.fq + next line, at first nonwhite
+.fq - previous line, at first nonwhite
+<newline>	same as \f5+\fR
+.fq j next line, same column
+.fq  k previous line, same column
+.1C
+.PP
+Character positioning
+.2C
+.fq ^ first nonwhite (not CTRL)
+.fq 0 beginning of line
+.fq $ end of line
+.fq l forward
+.fq h backward
+.fq ^L ^H same as \f5l h\fR
+<space>	same as \f5l\fR
+.fz f x find \fIx\fR forward
+.fz F x find backward
+.fz t x upto \fIx\fR forward
+.fz T x back upto \fIx\fR
+.fq ; repeat last \f5f F t T\fR
+.fq , opposite of \f5;\fR
+.fq | to specified column
+.fq % find matching \f5(){}\fR
+.1C
+.PP
+Words, sentences, paragraphs
+.2C
+.fq w word forward
+.fq b word backward
+.fq e end of word
+.fq ) next sentence
+.fq ( previous sentence
+.fq } next paragraph
+.fq { previous paragraph
+.fq W blank-delimited word
+.fq B backward to ...
+.fq E to end of ...
+.1C
+.PP
+Corrections
+.2C
+.fq ^H erase last character
+.fq ^W erase last word
+erase	your erase, same as \f5^H\fR
+kill	your kill, erase this line
+.fq \e quotes your erase or kill
+ESC	return to command mode
+.fq ^? interrupt, return to command mode
+.fq ^D backtab over autoindent
+.fq ^V quote nonprinting character
+.1C
+.PP
+Insert and replace
+.2C
+.fq a append after cursor
+.fq A append at end of line
+.fq i insert before cursor
+.fq I insert before first non-blank
+.fq o open below line
+.fq O open above
+.fz r x replace one character
+.fz R text replace characters
+.1C
+.PP
+Operators
+.PP
+.br
+Operators are followed by cursor motion and affect all
+text that would have been moved over:
+.B dw
+deletes a word.
+Double the operator, e.g.\&
+.BR dd ,
+to affect whole lines.
+.2C
+.fq d delete
+.fq c change
+.fq y yank lines to buffer
+.fq < left shift
+.fq > right shift
+.fq ! filter through command
+.fq = Lisp indent
+.1C
+.PP
+Miscellaneous operators
+.2C
+.fq C change rest of line (\f5c$\fR)
+.fq D delete rest of line (\f5d$\fR)
+.fq s substitute characters (\f5cd\fR)
+.fq S substitute lines (\f5cc\fR)
+.fq J join lines
+.fq x delete characters (\f5dl\fR)
+.fq X ... before cursor (\f5dh\fR)
+.fq Y yank lines (\f5yy\fR)
+.1C
+.PP
+Yank and put
+.2C
+.fq p put buffer after cursor
+.fq P put buffer before cursor
+\f5"\fI x \f5p\fR	put from buffer \fIx\fR
+.fz x y yank to buffer \fIx\fR
+.fz x d delete to buffer \fIx\fR
+.1C
+.PP
+Undo, redo, retrieve
+.2C
+.fq u undo last change
+.fq U restore current line
+.fq . repeat last change
+\f5"\fI n \f5p\fR	retrieve \fIn\fR-th last delete
+.1C
+.PP
+Special ex commands
+.PP
+.br
+.I Ex
+understands most
+.I ed
+commands, plus the commands indicated with
+.B :
+in the
+.I vi
+summary, plus the following, shown with their
+shortest possible spellings:
+.PD0
+.2C
+.BI ab brev
+.BI ar gs
+.BI co py
+.BI map
+.BI ma rk
+.BI n ext
+.BI nu mber
+.BI pre serve
+.BI pu t
+.BI re ad
+.BI rec over
+.BI rew ind
+.BI se t
+.BI sh ell
+.BI so urce
+.BI st op
+.BI una bbrev
+.BI u ndo
+.BI unm ap
+.BI ve rsion
+.BI vi sual
+.BI x it
+.BI ya nk
+.BI z " window"
+.BI < " lshift
+.BI > " rshift
+.BI ^D " scroll
+.1C
+The
+.B set
+command
+controls various options;
+.L set all
+shows the list.
+.SH EXAMPLES
+.2C
+.PD0
+.TF /\fItext\fR<newline>
+.TP
+.B \(<-\(da\(ua\(->
+arrow keys move the cursor
+.TP
+.B hjkl
+same as arrow keys
+.TP
+.BI i text\fR<ESC>
+.RI insert " text
+.TP
+.BI cw new\fR<ESC>
+.RI "change word to " new
+.TP
+.B 3dw
+delete 3 words
+.TP
+.B ZZ
+exit, saving changes
+.TP
+.BI / text\fR<newline>
+.RI "search for " text
+.TP
+.B ^U ^D
+scroll up or down
+.1C
+.PD
+.SH FILES
+.TF /usr/lib/ex?.?preserve
+.TP
+.F /usr/lib/ex?.?recover
+recover command
+.TP
+.F /usr/lib/ex?.?preserve
+preserve command
+.TP
+.F /etc/termcap
+describes capabilities of terminals
+.TP
+.F $HOME/.exrc
+editor startup file
+.TP
+.F /tmp/Ex*
+editor temporary
+.TP
+.F /tmp/Rx*
+named buffer temporary
+.TP
+.F /usr/preserve
+preservation directory
+.SH SEE ALSO
+.IR ed (1), 
+.IR sam (9.1), 
+.IR sed (1)
+.br
+W. Joy and M. Horton,
+`An Introduction to Display Editing with Vi',
+in
+.I
+Unix Programmer's Manual, Seventh Edition, Virtual VAX-11 Version,
+1980, Vol 2C
+(Berkeley)
+.ig
+.SH BUGS
+The
+.I undo
+command causes all marks to be lost on lines changed and then restored
+if the marked lines were changed.
+.br
+.I Undo
+never clears the buffer modified condition.
+.br
+The
+.I z
+command prints a number of logical rather than physical lines.
+More than a screen full of output may result if long lines are present.
+.br
+File input/output errors don't print a name if the 
+.LR -
+option is used.
+.br
+There is no easy way to do a single scan ignoring case.
+.br
+The editor does not warn if text is placed in named buffers and not used
+before exiting the editor.
+.br
+Null characters are discarded in input files, and cannot appear in resultant
+files.
+.br
+Software tabs using
+.B ^T
+work only immediately after the
+.LR autoindent .
+.br
+The
+.L wrapmargin
+option can be fooled since it looks at output columns when blanks are typed.
+If a long word passes through the margin and onto the next line without a
+break, then the line won't be broken.
+.br
+The
+.I source
+command does not work when executed as
+.BR :source ;
+there is no way to use the
+.BR :append ,
+.BR :change ,
+and
+.BR :insert
+commands in
+.I vi,
+since it is not possible to give
+more than one line of input to a
+.B :
+escape.
+To use these
+on a
+.B :global
+you must
+.B Q
+to
+.I ex
+command mode,
+execute them, and then reenter the screen editor with
+.L vi
+or
+.LR open .
+..

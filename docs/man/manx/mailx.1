@@ -1,0 +1,908 @@
+.TH MAILX 1 "Post 4.0" " "
+.de Cm
+.ne 3
+.TP
+\\f3\\$1\\f1\\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.br
+..
+.de C
+.ne 2
+.TP
+\\f3\\$1\\f1\\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.br
+..
+.de Ti
+.ne 2
+.TP
+\\f3~\\^\\$1\\f1 \\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.br
+..
+.de Va
+.ne 2
+.TP
+\\f3\\$1\\f1=\\$2 \\$3 \\$4 \\$5 \\$6 \\$7 \\$8 \\$9
+.br
+..
+.de V
+.ne 2
+.TP
+\\f3\\$1\\f1
+.br
+..
+.ds Ma \\f2mailx\\f1
+.ds EV \s-1ENVIRONMENT VARIABLES\s+1
+.ds CM "\s-1COMMANDS\s+1
+.ds Te "\s-1TILDE ESCAPES\s+1
+.ds WA "\s-1WARNINGS\s+1
+.ds al \\f2alias\\f1
+.ds nu \\f2number\\f1
+.ds ms \\f2message\f1
+.ds sh \\f2shell-command\\f1
+.ds mc \\f2mail-command\\f1
+.ds dl \\fBdead.letter\\f1
+.ds mr \\f2.mailrc\\f1
+.ds mb \\f2mbox\\f1
+.ds mx \\f2mailbox\\f1
+.ds ml \\f2msglist\\f1
+.ds om [\\f2msglist\\f1]
+.ds hf \\f2header-field\\f1
+.ds fn \\f2filename\\f1
+.ds st \\f2string\\f1
+.ds dr \\f2directory\\f1
+.ds nm \\f2address\\f1
+.ds vr \\f2variable\\f1
+.SH NAME
+mailx \- interactive message processing system
+.SH SYNOPSIS
+.B mailx
+[options] [address ...]
+.SH DESCRIPTION
+The command
+\f2mailx\f1 provides a comfortable, flexible environment for sending and
+receiving messages electronically.
+When reading mail,
+\*(Ma provides commands to facilitate saving, deleting, and responding to
+messages.
+When sending mail,
+\*(Ma allows editing, reviewing and other modification of the message
+as it is entered.
+.PP
+Incoming mail is stored in a standard file for each user,
+called the \*(mx for that user.
+When \*(Ma is called to read messages,
+the \*(mx is the default place to find them.
+As messages are read,
+they may be marked to be moved to a secondary file for storage
+(see ``hold''),
+unless specific action is taken,
+so that the messages need not be seen again.
+This secondary file is called the \*(mb
+and is normally located in the user's \s-1HOME\s+1 directory
+(see ``\s-1MBOX\s+1'').
+Messages can be saved in other secondary files named by the user.
+Messages remain in a secondary file until forcibly removed.
+.PP
+The user can access a secondary file by using the 
+\f3\-f\f1 option of the \*(Ma command.
+Messages in the secondary file can then be read or otherwise
+processed using the same \*(CM as in the primary \*(mx.
+This gives rise within these pages to the notion of a current \*(mx.
+.PP
+On the command line,
+.I options
+start with a dash (\-) and any other arguments are taken to be
+addresses.
+If no recipients are specified,
+\*(Ma will attempt to read messages from the \*(mx.
+Command line options are:
+.PP
+.PD 0
+.TP 14
+.B \-e
+Test for presence of mail.
+\f2mailx\f1 prints nothing and exits with a successful return code if there is
+mail to read.
+.TP
+.BR \-f \ [\*(fn]
+Read messages from \*(fn instead of \*(mx.
+If no \*(fn is specified,
+the \*(mb is used.
+.TP
+.B \-F
+Record the message in a file named after the first recipient.
+Overrides the ``record'' variable, if set.
+.TP
+.B \-H
+Print header summary only.
+.TP
+.B \-i
+Ignore interrupts.
+See ``ignore''.
+.TP
+.B \-n
+Do not initialize from the system default
+.I mailx.rc
+file.
+.TP
+.B \-N
+Do not print initial header summary.
+.TP
+.BI \-s \ subject
+Set the Subject header field to
+.IR subject .
+.TP
+.BI \-u \ user
+Read
+.IR user 's
+\*(mx.
+This is only effective if
+.IR user 's
+\*(mx is not read protected.
+.PD
+.PP
+When reading mail,
+\*(Ma is in
+command mode.
+A header summary of the first several messages is displayed,
+followed by a prompt indicating \*(Ma can accept regular commands
+(see \*(CM below).
+When sending mail,
+\*(Ma is in
+input mode.
+If no subject is specified on the command line,
+a prompt for the subject is printed.
+As the message is typed,
+\*(Ma will read the message and store it in a temporary
+file.
+Commands may be entered by beginning a line with the tilde (~) escape
+character followed by a single command letter and optional arguments.
+See \*(Te for a summary of these commands.
+Outgoing mail may be saved in a local file (see ``record'').
+.PP
+At any time,
+the behavior of \*(Ma is governed by a set of
+\f2environment variables\f1.
+These are flags and valued parameters which are set and cleared via the
+``set'' and ``unset'' commands.
+See \*(EV below for a summary of these parameters.
+.PP
+\*(Ma accepts \fIpost\fP addressing.
+Login names may be any network address,
+including mixed network addressing.
+If mail is found to to undeliverable, an attempt is
+made to return it to the sender's \f2mailbox\f1.
+If the recipient name begins with a plus (+),
+the rest of the name is a file to append the mail to.
+If the file is a relative path name, it is prepended
+with the value of the ``folder'' variable.
+If the recipient name begins with a pipe symbol (|),
+the rest of the name is taken to be a shell command to pipe the
+message through.
+This provides an automatic interface with any program that reads the standard
+input, such as
+.IR lp (1)
+for recording outgoing mail on paper.
+Alias groups are set by the ``alias'' command
+and are lists of recipients of any type.
+.PP
+Regular commands are of the form
+.ti +.5i
+[
+.B command
+] [
+.I msglist
+] [
+.I arguments
+]
+.br
+If no command is specified in command mode,
+.BR p rint
+is assumed.
+In input mode,
+commands are recognized by the escape character,
+and lines not treated as commands are taken as input for the message.
+.PP
+Each message is assigned a sequential number,
+and there is at any time the notion of a current message,
+marked by a right angle bracket (>) in the header summary.
+Many commands take an optional list of messages
+(\*(ml) to operate on. 
+The default for \f2msglist\f1 is the current message.
+A \*(ml is a list of message identifiers separated by spaces,
+which may include:
+.PP
+.PD 0
+.TP 8
+.B n
+Message number
+.BR n .
+.TP
+.B .
+The current message.
+.TP
+.B ^
+The first message.
+.TP
+.B $
+The last message.
+.TP
+.B *
+All messages.
+.TP
+.B n\-m
+An inclusive range of message numbers.
+.TP
+.B user
+All messages from
+.BR user ,
+where
+.B user
+is the network address of the sender.
+.TP
+.B /string
+All messages with
+.B string
+in the subject line (case ignored).
+.TP
+.BI : c
+All messages of type
+.IR c ,
+where
+.I c
+is one of:
+.RS 13
+.TP
+.B d
+deleted messages
+.TP
+.B n
+new messages
+.TP
+.B o
+old messages
+.TP
+.B r
+read messages
+.TP
+.B u
+unread messages
+.RE
+.PP
+Note that the context of the command determines whether this type of
+message specification makes sense.
+.PD
+.PP
+Other arguments are usually arbitrary strings whose usage
+depends on the command involved.
+File names,
+where expected,
+are expanded via the normal shell conventions (see
+.IR sh (1)).
+Special characters are recognized by certain commands and are
+documented with the commands below.
+.PP
+At start-up time,
+\*(Ma tries to execute commands from the optional system-wide file
+(\f3/usr/lib/mailx.rc\f1) to initialize
+certain parameters,
+then from a private start-up file (\f3$HOME/.mailrc\f1) for
+personalized variables.
+With the exceptions noted below, 
+regular commands are legal inside start-up files.
+The most common use of a start-up file is 
+to set up initial display options and alias lists.
+The following commands are not legal in the start-up file:
+``!'', ``Copy'', ``edit'', ``followup'', ``Followup'', ``hold'',
+``mail'', ``reply'', ``Reply'', ``shell'', and ``visual''.
+An error in the start-up file causes the remaining lines in the file to
+be ignored.
+The \f3.mailrc\f1 file is optional, and must be constructed locally.
+.SS \*(CM
+The following is a complete list of \*(Ma commands:
+.PP
+.PD 0
+.Cm ! \*(sh
+Escape to the shell.
+See ``\s-1SHELL\s+1''.
+.Cm # "" \f2comment\f1
+Null command (comment).
+This may be useful in \*(mr files.
+.Cm =
+Print the current message number.
+.Cm ?
+Prints a summary of commands.
+.Cm a lias \*(al \*(nm ...
+Declare an alias for the given addresses.
+The addresses will be substituted
+when
+\*(al is used as a recipient.
+Useful in the \*(mr file.
+.Cm alt ernates \*(nm ...
+Declares a list of alternate addresses for your login.
+When responding to a message,
+these addresses are removed from the list of recipients for the response.
+With no arguments,
+.BR alt ernates
+prints the current list of alternate addresses.
+See also ``allnet''.
+.Cm cd "" [\*(dr]
+Change directory.
+If \*(dr is not specified,
+\s-1$HOME\s+1 is used.
+.Cm c opy [\*(fn]
+.C c opy \*(om \*(fn
+Copy messages to the file without marking the messages as saved.
+Otherwise equivalent to the ``save'' command.
+.Cm C opy \*(om
+Save the specified messages in a file whose name is derived from the
+author of the
+message to be saved, without marking the messages as saved.
+Otherwise equivalent to the ``Save'' command.
+.Cm d elete \*(om
+Delete messages from the \*(mx.
+If ``autoprint'' is set,
+the next message after the last one deleted is printed.
+.Cm di scard [\*(hf ...]
+Suppresses printing of the specified header fields when displaying messages
+on the screen.
+Examples of header fields to ignore are ``status'' and ``cc''.
+The fields are included when the message is saved.
+The ``Print'' command overrides this command.
+.Cm dp "" \*(om
+Delete the specified messages from the \*(mx and print the next message
+after the last one deleted.
+Roughly equivalent to a ``delete''
+command followed by a ``print'' command.
+.Cm ec ho \*(st ...
+Echo the given strings (like
+.IR echo (1)).
+.Cm e dit \*(om
+Edit the given messages.
+The messages are placed in a temporary file and the ``EDITOR'' variable
+is used to get the name of the editor.
+Default editor is
+.IR ed (1).
+.Cm ex it
+.C x it
+Exit from \*(Ma,
+without changing the \*(mx.
+No messages are saved in the \*(mb (see also
+.BR q uit).
+.Cm fi le [\*(fn]
+Quit from the current file of messages and read in the specified file.
+Several special characters are recognized when used as file names,
+with the following substitutions:
+.RS 10
+.TP 8
+%
+current \*(mx.
+.TP
+.RB % user
+\*(mx for
+.BR user .
+.TP
+#
+previous file.
+.TP
+&
+current \*(mb.
+.RE
+.RS 5
+Default file is the current \*(mx.
+.RE
+.Cm folders
+Print the names of the files in the
+directory set by the ``folder'' variable.
+.Cm fo llowup \*(om
+Reply to the first message in the \*(ml,
+sending the message to the author of each message in the \*(ml.
+The subject line is taken from the first message
+and the response is recorded in a file whose name is derived
+from the author of the first message.
+See also the ``Followup'', ``Save'', and ``Copy''
+commands, and ``outfolder'' and ``flipf''.
+.Cm F ollowup [\*(ms]
+Reply to the specified message,
+recording the response in a file whose name is derived from the
+author of the message.
+Overrides the ``record'' variable, if set.
+See also the ``followup'', ``Save'', and ``Copy''
+commands, and ``outfolder'' and ``flipf''.
+.Cm f rom \*(om
+Prints the header summary for the specified messages.
+.Cm h eaders [\*(ms]
+Prints the page of headers which includes the message specified.
+The ``screen'' variable sets the number of headers per page.
+See also the ``z'' command.
+.Cm hel p
+Prints a summary of commands.
+.Cm ho ld \*(om
+Holds the specified messages in the \*(mx.
+.Cm i f \fBs\f1 | \fBr\f1
+.C "" \*(mcs
+.C el se
+.C "" \*(mcs
+.C en dif
+Conditional execution, where
+.B s
+will execute following \*(mcs, up to an
+.BR el se
+or
+.BR en dif,
+if the program is in
+send mode, and
+.B r
+causes the \*(mcs to be executed only in
+receive mode.
+Useful in the \*(mr file.
+.Cm l ist
+Prints all commands available.
+No explanation is given.
+.Cm m ail \*(nm ...
+Mail a message to the specified \*(nm\fI(es)\fR.
+If ``record'' is set to a file name, the reply is saved at the
+end of that file.
+.Cm M ail \*(nm
+Mail a message to the specified \*(nm and record a copy of it
+in a file named after that \*(nm.
+.Cm mb ox \*(om
+Arrange for the given messages to end up in the standard \*(mb save file
+when \*(Ma terminates normally.
+See ``MBOX'' for a description of this file.
+See also the ``exit'' and ``quit'' commands.
+.Cm n ext [\*(ms]
+Go to next message matching \*(ms.
+A \*(ml may be specified,
+but in this case the first valid message in the list is the only one used.
+This is useful for jumping to the next message from a specific user,
+since the name would be taken as a command in the absence of a real command.
+See the discussion of \*(mls above for a description of
+possible message specifications.
+.Cm pi pe \*(om [\*(sh]
+Pipe the message through the given \*(sh.
+The message is treated as if it were read.
+If no arguments are given,
+the current message is piped through the command specified by the
+value of the ``cmd'' variable.
+If the ``page'' variable is set,
+a form feed character is inserted after each message.
+.Cm p rint \*(om
+Print the specified messages.
+If ``crt'' is set,
+the messages longer than the number of lines specified by the
+``crt'' variable are paged through the command specified by the
+``PAGER'' variable.
+The default command is
+.IR pg (1).
+.Cm P rint \*(om
+Print the specified messages on the screen,
+including all header fields.
+Overrides suppression of fields by the ``ignore'' command.
+.Cm q uit
+Exit from \*(Ma,
+storing messages that were read in \*(mb and unread messages in the \*(mx.
+Messages that have been explicitly saved in a file are deleted.
+.Cm r eply [\*(ml]
+Send a response to the author of each message in the \*(ml.
+The subject line is taken from the first message.
+If ``record'' is set to a file name,
+the response is saved at the end of that file.
+See ``flipr''.
+.Cm R eply [\*(ms]
+Reply to the specified message,
+including all other recipients of the message.
+If ``record'' is set to a file name,
+the response is saved at the end of that file.
+See ``flipr''.
+.Cm s ave [\*(fn]
+.C s ave \*(om \*(fn
+Save the specified messages in the given file.
+The file is created if it does not exist.
+The message is deleted from the \*(mx when
+\*(Ma terminates unless ``keepsave'' is set
+(see the ``exit'' and ``quit'' commands).
+.Cm S ave \*(om
+Save the specified messages in a file whose name is derived from
+the author of the first message.
+The name of the file is taken to be the author's name with all
+network addressing stripped off.
+See also the ``Copy'', ``followup'', and ``Followup''
+commands and ``outfolder''.
+.Cm se t
+.C se t \*(vr
+.C se t \*(vr=\*(st
+.C se t \*(vr=\*(nu
+Define a variable called \*(vr.
+The variable may be given a null, string, or numeric value.
+``Set'' by itself prints all defined variables and their values.
+See \*(EV for detailed descriptions of the \*(Ma variables.
+.Cm sh ell
+Invoke an interactive shell (see ``SHELL'').
+.Cm si ze \*(om
+Print the size in characters of the specified messages.
+.Cm so urce \*(fn
+Read commands from the given file and return to command mode.
+.Cm to p \*(om
+Print the top few lines of the specified messages.
+If the ``toplines'' variable is set,
+it is taken as the number of lines to print.
+The default is 5.
+.Cm tou ch \*(om
+Touch the specified messages.
+If any message in \*(ml is not specifically saved in a file,
+it will be placed in the \*(mb,
+or the file specified in the MBOX environment variable, upon normal termination.
+See ``exit'' and ``quit''.
+.Cm u ndelete \*(om
+Restore the specified deleted messages.
+Will only restore messages deleted in the current mail session.
+If ``autoprint'' is set, the last message of those restored is printed.
+.Cm undi scard [\*(hf ...]
+Restore printing of the specified header fields when displaying messages
+on the screen.
+.Cm uns et \*(vr ...
+Causes the specified variables to be erased.
+If the variable was imported from the execution environment (i.e., a
+shell variable) then it cannot be erased.
+.Cm ve rsion
+Prints the current version and release date.
+.Cm v isual \*(om
+Edit the given messages with a screen editor.
+The messages are placed in a temporary file and the ``VISUAL'' variable
+is used to get the name of the editor.
+.Cm w rite \*(om \*(fn
+Write the given messages on the specified file,
+minus the header and trailing blank line.
+Otherwise equivalent to the ``save'' command.
+.Cm z [+|\-]
+Scroll the header display forward or backward one screen\-full.
+The number of headers displayed is set by the ``screen'' variable.
+.PD
+.SS \*(Te
+The following commands may be entered only from
+input mode,
+by beginning a line with the tilde escape character (~).
+See
+``escape''
+for changing this special character.
+.PP
+.PD 0
+.Ti ! \*(sh
+Escape to the shell.
+.Ti : \*(mc
+Perform the command-level request.
+.Ti ?
+Print a summary of tilde escapes.
+.Ti A
+Insert the autograph string ``Sign'' into the message.
+.Ti a
+Insert the autograph string ``sign'' into the message.
+.Ti b \*(nm ...
+Add the \*(nmes to the blind carbon copy (Bcc) list.
+See ``askcc''.
+.Ti c \*(nm ...
+Add the \*(nmes to the carbon copy (Cc) list.
+See ``askbcc''.
+.Ti d
+Read in the \*(dl file.
+See ``DEAD''.
+.Ti e
+Invoke the editor on the partial message.
+See ``EDITOR''.
+.Ti f \*(om
+Forward the specified messages.
+The messages are inserted into the message
+without alteration.
+.Ti h
+Prompt for Subject, To, Cc, and Bcc lists.
+If the field is displayed with an initial value,
+it may be edited as if you had just typed it.
+.Ti i \*(st
+Insert the value of the named variable into the text of the message.
+For example, ``~A''is equivalent to ``~i \ Sign''.
+Environment variables set and exported in the shell are also
+accessible by ``~i''.
+.Ti m \*(om
+Insert the specified messages into the letter,
+shifting the new text to the right one tab stop (see ``mprefix'').
+Valid only when sending a message while reading mail.
+.Ti p
+Print the message being entered.
+.Ti q
+Quit from input mode by simulating an interrupt.
+If the body of the message is not null,
+the partial message is saved in \*(dl.
+See ``DEAD'' for a description of this file.
+.Ti r \*(fn
+.br
+.Ti r  !\*(sh
+.br
+Read in the specified file.
+If the argument begins with an exclamation point,
+the rest of the string is taken as a shell command
+and is executed,
+with the standard output inserted into the message.
+.Ti R
+Request a return-receipt when the recipient reads the mailbox.
+The return-receipt is generated if the recipient reads the mail using
+.IR post (1),
+AT&T Mail, or OTS.
+.Ti s \*(st ...
+Set the subject line to \*(st.
+.Ti t \*(nm ...
+Add the given \*(nmes to the To list.
+.Ti v
+Invoke a preferred screen editor on the partial message.
+See ``VISUAL''.
+.Ti w \*(fn
+.br
+.Ti w  !\*(sh
+.br
+Write the message without the headers onto the given file.
+If the argument begins with an exclamation point,
+the rest of the string is taken as a shell command
+and is executed,
+with the standard input being the message without the headers.
+.Ti x
+Exit as with
+.B ~q
+except the message is not saved in \*(dl.
+.Ti | \*(sh
+Pipe the body of the message through the given \*(sh.
+If the \*(sh returns a successful exit status,
+the output of the command replaces the message.
+.PD
+.SS \*(EV
+The following are environment variables taken from the execution environment and
+are not alterable within \*(Ma.
+.PD 0
+.Va \s-1HOME\s+1 \*(dr
+The user's base of operations.
+.Va \s-1MAILRC\s+1 \*(fn
+The name of the start-up file.
+Default is \fB$HOME/.mailrc\fR.
+.PD
+.PP
+The following variables are internal \*(Ma variables.
+They may be imported from the execution environment or
+set via the ``set'' command at any time.
+The ``unset'' command may be used to erase variables.
+.PD 0
+.V allnet
+.Va allnet \fBuucp\f1
+.Va allnet \fBany\f1
+.Va allnet \fBheader\f1
+All network names whose last component (login name) match are treated as
+identical.
+If
+.B uucp
+is the argument, all network names whose two last components
+(system and login name) that match are treated as identical.
+This causes the \*(ml message specifications to behave similarly.
+If
+.B any
+is the argument,
+.I user
+is treated as a pattern to be matched anywhere in the first
+line of a message (similar to /bin/mail).
+.If
+.B header
+is the argument,
+.I user
+is treated as a pattern to be used in a case-independent match
+of either the network address in the first line of a message or
+the full name, as printed by the ``headers'' command.
+Default is ``allnet=any''.
+See also the ``alternates'' command and the ``metoo'' variable.
+.V append
+Upon termination, append messages to the end of the \*(mb file instead of prepending them.
+Enabled by default.
+.V askbcc
+Prompt for the Bcc list after message is entered.
+Default is ``noaskbcc''.
+.V askcc
+Prompt for the Cc list after message is entered.
+Default is ``noaskcc''.
+.V asksub
+Prompt for subject if it is not specified on the command line
+with the \-s option.
+Enabled by default.
+.V autoprint
+Enable automatic printing of messages after ``delete''
+and ``undelete'' commands.
+Default is ``noautoprint''.
+.V bang
+Enable the special-casing of exclamation points (!) in shell escape
+command lines
+as in
+.IR vi (1).
+Default is ``nobang''.
+.Va cmd \*(sh
+Set the default command for the ``pipe'' command.
+No default value.
+.V crt
+.Va crt \*(nu
+Pipe messages having more than \f2number\f1 lines
+through the command specified by the value of the ``\s-1PAGER\s+1'' variable.
+Enabled by default.
+.Va DEAD \*(fn
+The name of the file in which to save partial letters
+in case of untimely interrupt. 
+Default is
+.BR $HOME/dead.letter .
+.V debug
+Enable verbose diagnostics for debugging.
+Messages are not delivered.
+Default is ``nodebug''.
+.V dot
+Take a period on a line by itself during input from a terminal as end-of-file.
+Enabled by default.
+.Va EDITOR \*(sh
+The command to run when the ``edit'' or ``~e'' command is used.
+Default is ``ed''.
+.Va escape \f2c\f1
+Substitute
+.I c
+for the ~ escape character.
+.V flipf
+Reverse the meanings of the ``followup'' and ``Followup'' commands in
+composition mode.
+Enabled by default.
+.V flipr
+Reverse the meanings of the ``reply'' and ``Reply'' commands in
+composition mode.
+Enabled by default.
+.Va folder \*(dr
+The directory for saving standard mail files.
+User-specified relative file names beginning with a plus (+)
+are expanded by preceding the file name with
+this directory name to obtain the real file name.
+If \*(dr does not start with a slash (/),
+$HOME is prepended to it.
+Default is
+.BR $HOME .
+See also ``outfolder'' below.
+.V header
+Enable printing of the header summary when entering \*(Ma.
+Enabled by default.
+.V hold
+Hold all messages that are read in the mailbox instead of putting them
+in the standard \*(mb file.
+Enabled by default.
+.V ignore
+Ignore interrupts while entering messages.
+Handy for noisy dial-up lines.
+Default is
+.BR noignore .
+.V ignoreeof
+Ignore end-of-file during message input.
+Input must be terminated by a period (.) on a line by itself
+or by the ``~.'' command (see ``dot'').
+Default is ``noignoreeof''.
+.Va iprompt \*(st
+Set the composition mode prompt to \fIstring\fP.
+Default is no prompt.
+.V keepsave
+Keep messages that have been saved in other files in the mailbox
+instead of deleting them.
+Default is ``nokeepsave''.
+.Va \s-1LISTER\s+1 \*(sh
+The command (and options) to use when listing the contents of the ``folder''
+directory.
+The default is ls.
+.Va \s-1MBOX\s+1 \*(fn
+The name of the file to save messages which have been read.
+The ``xit'' command overrides this function,
+as does saving the message explicitly in another file.
+Default is
+.BR $HOME/mbox .
+.V metoo
+If your login appears as a recipient,
+do not delete it from the list.
+Default is ``nometoo''.
+.Va mprefix \*(st
+Set the leading string to be used with the ``~m'' command.
+Default is a tab character.
+.V onehop
+When responding to a message that was originally sent to several
+recipients,
+the other recipient addresses are normally forced to be relative to the
+originating author's machine for the response.
+This flag disables alteration of the recipients' addresses,
+improving efficiency in a network where all machines can send directly
+to all other machines (i.e., one hop away).
+Disabled by default.
+.V outfolder
+Causes the files used to record outgoing messages to be located
+in the directory specified by the ``folder'' variable unless the
+path name is absolute.
+Default is ``nooutfolder''.
+See ``folder'' and the
+``Save'', ``Copy'', ``followup'', and ``Followup'' commands.
+.V page
+Used with the ``pipe''
+command to insert a form feed after each message sent through the pipe.
+Default is ``nopage''.
+.Va \s-1PAGER\s+1 \*(sh
+The command to use as a filter for paginating output.
+This can also be used to specify the options to be used.
+Default is ``pg \-e'' .
+.Va prompt \*(st
+Set the command mode prompt to \*(st.
+Default is ``? ''.
+.V quiet
+Don't print the opening message and version when entering \*(Ma.
+Default is ``quiet''.
+.Va record \*(fn
+Record all outgoing mail in \*(fn.
+Disabled by default.
+See also ``outfolder'' above.
+.V save
+Enable saving of messages in \*(dl on interrupt or delivery error.
+See ``DEAD'' for a description of this file.
+Enabled by default.
+.Va screen \*(nu
+Sets the number of lines in a screen\-full of headers for the
+``headers'' command.
+Default depends on baud rate.
+.Va sendmail \*(sh
+Alternate command for delivering messages.
+Default is
+.BR /bin/mail .
+.V sendwait
+Wait for background mailer to finish before returning.
+Enabled by default.
+.Va SHELL \*(sh
+The name of a preferred command interpreter.
+Default is
+.BR /bin/sh .
+.V showto
+When displaying the header summary and the message is from you,
+print the recipient's address instead of the author's address.
+Enabled by default.
+.Va sign \*(st
+The variable inserted into the text of a message when the ``~a''
+command is given.
+No default (see also ~i).
+.Va Sign \*(st
+The variable inserted into the text of a message when the ``~A''
+command is given.
+No default (see also ~i).
+.Va toplines \*(nu
+The number of lines of header to print with the ``top'' command.
+Default is 5.
+.Va translate \fIcommand\fP
+Run the given address(es) through
+.I command
+for resolution.
+Disabled by default.
+.Va \s-1VISUAL\s+1 \*(sh
+The name of a preferred screen editor.
+Default is ``vi''.
+.PD
+.SH FILES
+.PD 0
+.TP 30
+$HOME/.mailrc
+personal start-up file
+.TP
+$HOME/mbox
+secondary storage file
+.TP
+/usr/mail/*
+mailboxes
+.TP
+/usr/lib/mailx.help*
+help message files
+.TP
+/usr/lib/mailx.rc
+optional global start-up file
+.TP
+/tmp/R[emqsx]*
+temporary files
+.PD
+.SH SEE ALSO
+ls(1),
+mail(1),
+post(1),
+pg(1).

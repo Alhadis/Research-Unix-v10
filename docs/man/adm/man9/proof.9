@@ -1,0 +1,124 @@
+.TH PROOF 9.1
+.CT 1 writing_output
+.SH NAME
+proof \- troff output interpreter for 5620
+.SH SYNOPSIS
+.B proof
+[
+.BI -f fonts
+]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Proof
+reads
+.IR troff (1)
+intermediate language from
+.I file
+or standard input
+and simulates the resulting pages on the screen.
+If no file name is given and standard input is a terminal,
+proof terminates immediately leaving a `proof layer'.
+By invoking
+.I proof
+in a proof layer you can avoid download time.
+.PP
+Fonts are loaded as required.
+The usual 
+.IR mux (9.1)
+font,
+.BR defont ,
+is used for unknown fonts.
+Option
+.B -f
+preloads fonts.
+Names are given relative to
+.F /usr/jerq/font
+and are separated by commas.
+The most-used fonts are 
+.LR -fR.10,I.10,B.10,S.10 .
+.PP
+After a layer's worth of text is displayed,
+.I proof
+pauses for a command from keyboard or mouse button 3.
+The typed versions of commands are:
+.TP \w'newline\ 'u
+newline
+Go on to next portion of text.
+(Button 3 equivalent: 
+.LR more .)
+.TP
+.B q
+Quit, leaving a proof layer.
+.TP
+.B x
+Exit and restart the regular terminal program.
+(Equivalent to 
+.L q
+followed by
+.LR "term mux" ;
+see
+.IR term (9.1)).
+.TP
+.BI p n
+Print page
+.I n.
+An out-of-bounds page number means the end nearer to that number;
+a missing number means page 0;
+a signed number means an offset to the current page.
+.PP
+Button 1 gets a scroll box, which represents a full page of text.
+An interior rectangle shows what part of the page is now visible.
+The interior rectangle moves with the mouse, causing the layer to
+scroll both vertically and horizontally.
+Button 2 gets a speedometer.
+The bar of the speedometer moves with the mouse
+to control the rate at which new information is displayed.
+.SH EXAMPLES
+.TP
+.L
+troff -ms memo | proof
+Format a memo and display it.
+.TP
+.L
+(eqn memo | troff -ms) 2>diags | proof
+Display a memo with equations.
+Avoid sending diagnostics to the screen; see
+.SM BUGS.
+.SH FILES
+.TF /usr/jerq/font/.missing
+.TP
+.F /usr/jerq/font/*
+fonts
+.TP
+.F /usr/jerq/font/.missing
+list of referenced but unconverted fonts
+.SH SEE ALSO
+.IR lp (1), 
+.IR font (6),
+.IR reader (9.7),
+.IR psi (9.1)
+.br
+Brian W. Kernighan,
+.I A Typesetter-independent Troff
+.SH BUGS
+.I Proof
+breaks if other messages are directed to its layer.
+In particular, unredirected
+.I troff 
+diagnostics will break the pipeline
+.LR "troff | proof" .
+.br
+Windowing can get confused if the
+.I troff
+output is not approximately
+sorted in ascending
+.IR y -order.
+.br
+A proof layer imitates
+.LR "term 33" ,
+not
+.IR mux .
+Among other difficulties, it will not be reusable if downloaded
+across the network.

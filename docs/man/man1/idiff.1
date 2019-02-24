@@ -1,0 +1,77 @@
+.TH IDIFF 1
+.CT 1 files dirs
+.SH NAME
+idiff \(mi interactive file comparison
+.SH SYNOPSIS
+.B idiff
+[
+.I option
+]
+.I file1 file2
+.SH DESCRIPTION
+.I Idiff
+compares
+.I file1
+with
+.I file2
+using
+.IR diff ,
+then presents each set of changed lines
+for selection or processing.
+.I File2
+may be a directory;
+in that case, the basename of
+.I file1
+is appended.
+.PP
+For each group, legal responses are
+.TP
+.B <
+to retain the `from' lines
+.TP
+.B >
+to retain the `to' lines
+.TP
+.B e
+to edit both sets of lines
+.TP
+.B d
+to delete both sets
+.TP
+.B 1
+to retain the rest of the `from' file
+.TP
+.B 2
+to retain the rest of the `to' file
+.TP
+.B !
+to invoke a shell command
+.PP
+Lines that compare equal are copied verbatim from
+.I file1.
+Lines produced by this process,
+including the lines written from within the editor,
+are written to file
+.IR idiff.out .
+Comparison may be affected by the 
+.IR diff (1)
+options
+.TP
+.B -b
+Ignore trailing blanks (spaces and tabs) and treat other
+strings of blanks as if they were a single space. 
+.TP
+.B -B
+Ignore all blanks.
+.SH FILES
+.TF /tmp/idiff.*
+.TP
+.F idiff.out
+.TP
+.F idiff.*
+.TP
+.F /tmp/idiff.*
+.SH SEE ALSO
+.IR diff (1)
+.SH BUGS
+There is no way to revisit a choice.

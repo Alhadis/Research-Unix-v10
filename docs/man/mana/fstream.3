@@ -1,0 +1,154 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH FSTREAM 3I+ "C++ Stream Library" " "
+.SH NAME
+fstream \- iostream and streambuf specialized to files
+.SH SYNOPSIS
+.nf
+.ft B
+.ta1i 2i
+#include <fstream.h>
+
+typedef long streamoff, streampos;
+class ios {
+public:
+	enum	seek_dir { beg, cur, end };
+	enum open_mode { in, out, ate, app } ;
+	// \fIand lots of other stuff ... \fP
+	} ;
+
+class ofstream : ostream {
+		ofstream() ;
+		ofstream(char* name, open_mode mode, int prot=0664) ;
+		ofstream(int fd)	;
+		ofstream(int fd, char* p, int l) ;
+
+	void	attach(int fd);
+	void	close();
+	void	open(char* name, open_mode, int=0664) ;
+	filebuf*	rdbuf();
+};
+
+class ifstream : istream {  \fI same as ofstream\fP };
+class fstream : iostream { \fI same as ofstream\fP };
+.fi
+.ft R
+.SH DESCRIPTION
+\f(CWifstream\fRs, \f(CWofstream\fR and \f(CWfstream\fR
+specialize \f(CWistream\fR, \f(CWostream\fR and \f(CWiostream\fR
+(respectively) to files.
+That is, the associated streambuf will be a \f(CWfilebuf\fR.
+.PP
+Assume
+.br
+\(em \fBf\fR any of \f(CWifstream\fR, \f(CWofstream\fR or \f(CWfstream\fR.
+.br
+\(em \fBpfb\fR is a \f(CWfilebuf*\fR.
+.br
+\(em \fBpsb\fR is a \f(CWstreambuf*\fR.
+.br
+\(em \fBname\fR and \fBptr\fR are \f(CWchar*\fR.
+.br
+\(em \fBi\fR, \fBfd\fR, \fBlen\fR and \fBprot\fR are \f(CWint\fR.
+.br
+\(em \fBmode\fR is an \f(CWopen_mode\fR.
+.PP
+The constructors for \fIx\f(CWstream\fR, where \fIx\fR is either
+\f(CWif\fR,
+\f(CWof\fR or \f(CWf\fR, are:
+.TP
+\fIx\fBstream()\fR
+Constructs an unopened \f(CWxstream\fR.
+.TP
+\fIx\fBstream()(name,mode,prot)\fR
+Constructs an \f(CWxstream\fR and tries to opens it using
+\fBname\fR, \fBmode\fR, and \fBprot\fR.
+The status of the constructed \f(CWxstream\fR
+will indicate failure in case the
+\fBopen\fR fails.
+.TP
+\fIx\fBstream()\fR
+Constructs an \f(CWxstream\fR connected to file descriptor \fBd\fR,
+which must be previously opened.
+.TP
+\fIx\fBstream(d,ptr,len)\fR
+Constructs an \f(CWxstream\fR connected to file descriptor \fBfd\fR
+and in addition initializes
+the associated \f(CWfilebuf\fR to use the \fBlen\fR bytes
+at \fBptr\fR as the
+reserve area.  If \fBptr\fR is null or \fBlen\fR is 0, the \f(CWfilebuf\fR
+will be unbuffered.
+.PP
+Member functions:
+.TP
+\fBf.attach(d)\fR
+Connects \fBf\fR to the file descriptor \fBd\fR.
+A failure occurs when \fBf\fR is already connected to a file.
+A failure sets \f(CWfailbit\fR in \fBf\fR's error state.
+.TP
+\fBf.close()\fR
+Closes any associated \f(CWfilebuf\fR and thereby breaks the connection
+of the \fBf\fR to a file.  
+\\fBf\fR's error state is cleared except on failure.
+A failure occurs when the call to \fBf.rdbuf()->close\fR fails.
+.TP
+\fBf.open(name,mode,prot)\fR
+Opens file \fBname\fR and connects \fBf\fR to it.
+If the file is created, it is created with protection mode \fBprot\fR.
+\fBopen\fR normally returns 0, but it returns \f(CWEOF\fR on failure.
+Failure
+occurs if \fBf\fR is already open, or the call to \fBf.rdbuf()->open\fR
+fails.  \f(CWfailbit\fR is set in \fBf\fR's error status on failure.
+The members of \f(CWopen_mode\fR are bits that may be or'ed together.
+The meaning of these bits in \fBmode\fR is 
+.RS
+.TP
+\f(CWapp\fR
+A seek to the end of file is performed.
+Subsequent data written to the file is always added (appended)
+at the end of file.
+On some systems this is implemented in the kernel.
+In
+others it is implemented by seeking to the end of the file
+before each write.  \f(CWapp\fR implies \f(CWoutput\fR.
+.TP
+\f(CWate\fR
+A seek to the end of the file is performed during the \fBopen\fR.
+\f(CWate\fR does not imply \f(CWoutput\fR.
+.TP
+\f(CWin\fR
+Implied by construction and opens of \f(CWifstream\fRs.
+For \f(CWfstream\fRs it indicates that input operations should be
+allowed possible.  Is is legal to include \f(CWin\fR in the modes
+of an \f(CWostream\fR in which case it implies that the original
+file (if it exists) should not be truncated.
+.TP
+\f(CWout\fR
+Implied by construction and opens of \f(CWofstream\fRs.
+For \f(CWfstream\fR it says that output operations are to
+be allowed.
+.RE
+.TP
+\fBpfb=f.rdbuf()\fR
+Returns a pointer to the associated \f(CWfilebuf\fR.
+\fBfstream::rdbuf\fR has the same meaning as
+\fBiostream::rdbuf\fR
+but is typed differently.
+.TP
+\fBpsb=f.setbuf(p,len)\fR
+Has the usual effect of a \fBsetbuf\fR, offering space
+for a reserve area or requesting unbuffered I/O.
+Normally the returned \fBpsb\fR is \fBf.rdbuf()\fR, but it is 0
+on failure.
+A failure occurs if \fBf\fR is open or the call to \fBf.rdbuf()->setbuf\fR
+fails.
+.SH SEE ALSO
+filebuf(3C++)
+istream(3C++)
+ios(3C++)
+ostream(3C++)
+sbuf.pub(3C++)

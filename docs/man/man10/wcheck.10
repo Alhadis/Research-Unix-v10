@@ -1,0 +1,65 @@
+.TH WCHECK 10.1 UCDS
+.SH NAME
+wcheck \- static circuit checks
+.SH SYNOPSIS
+.B wcheck
+.I files
+.SH DESCRIPTION
+.I Wcheck
+reads and checks a circuit description and reports simple errors found.
+.PP
+The circuit description language is 
+.IR cdl (7).
+The
+.I files
+are usually a board description file
+.RB ( .wb )
+made with
+.BR "board -w",
+a chips description file made with
+.BR "mkchip -t" ,
+and
+(a) circuit description file(s) made with
+.B "draw -w"
+and/or
+.BR cdm .
+The chip descriptions must include lines beginning with
+.BR \&.tt .
+The rest of the line contains one character per pin on the chip according to
+this table.
+.nf
+	\f51\fP	open collector output
+	\f52\fP	totem pole ttl output
+	\f53\fP	3-state output
+	\f5i\fP	input
+	\f5p\fP	pull-up (for \f51\fP)
+	\f5d\fP	pull-down
+	\f50	1\fP and \f5p\fP
+	\f54	3\fP and \f5i\fP
+	\f55	1\fP and \f5i\fP
+	\f56	1\fP and \f5p\fP and \f5i\fP
+	\f5j	p\fP and \f5i\fP
+	\f5k	d\fP and \f5i\fP
+	\f59\fP	voltage source
+	\f5v\fP	vcc sink
+	\f5g\fP	ground
+	\f5w\fP	other voltage sink
+	\f58\fP	analog output
+	\f5a\fP	analog load
+	\f5n\fP	no connect (use as tie point prohibited)
+	\f5s\fP	switch contact
+.fi
+.PP
+.I Wcheck
+is designed to flag all things that it does not think
+are perfect.
+.SH FILES
+.nf
+.ta 20
+.PP
+wcwir_out wcsort_out	temporary files in the working directory
+.fi
+.PP
+.SH SEE ALSO
+.IR smoke (10.1)
+

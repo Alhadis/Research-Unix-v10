@@ -1,0 +1,119 @@
+.TH SPELL 1
+.CT 1 writing_aids 
+.SH NAME
+spell \- find spelling errors
+.SH SYNOPSIS
+.B spell
+[
+.I option
+]
+...
+[
+.I file
+]
+...
+.SH DESCRIPTION
+.I Spell
+looks up words from the named
+.I files
+(standard input default)
+in a public spelling list and in a private list.
+Possible misspellings\(emwords 
+that occur in neither and are not plausibly derivable
+from the former\(emare placed on the standard output.
+.PP
+.I Spell
+ignores constructs of
+.IR troff (1)
+and its standard preprocessors,
+as well as constructs of
+.IR tex (1).
+It understands these options:
+.TP
+.B -b
+Check British spelling.
+.TP
+.B -v
+Print all words not literally in the spelling list, with
+derivations.
+.TP
+.B -x
+Print, marked with
+.LR = ,
+every stem as it is looked up in the spelling list,
+along with its affix classes.
+.PP
+The private list, by default
+.FR $HOME/lib/spelldict ,
+is arranged one word per line.
+.PP
+Pertinent files may be specified by
+environment variables, listed below with their default settings.
+Copies of all output
+are accumulated in the history file, if it exists and is writable.
+.PP
+As a matter of policy, 
+.I spell
+does not admit multiple spellings of the same word.
+Variants that follow general rules are preferred over
+over those that don't, even when the unruly spelling is
+more common.
+Thus, in American usage, `modelled', `sizeable', and `judgment' are
+rejected in favor of `modeled', `sizable', and `judgement'.
+Agglutinated variants are shunned: `crewmember' and `backyard'
+cede to `crew member' and  `back yard' (noun) or `back-yard' 
+(adjective).
+.SH FILES
+.TF /usr/dict/spellhist
+.TP
+.F /usr/dict/amspell
+American spelling list, hashed
+.RB ( D_SPELL )
+.TP
+.F /usr/dict/brspell
+British spelling list
+.TP
+.F /usr/dict/spellhist
+history file
+.RB ( H_SPELL )
+.TP
+.F $HOME/lib/spelldict
+private list
+.RB ( A_SPELL )
+.TP
+.F /usr/dict/spellprog
+the main routine
+.RB ( P_SPELL )
+.TP
+.F deroff
+(or
+.FR delatex )
+for removing punctuation and 
+.IR troff (1)
+constructs
+.RB ( DEROFF )
+.SH SEE ALSO
+.IR dict (7),
+.IR deroff (1),
+.IR wwb (1)
+.SH BUGS
+For efficiency spell uses a probabilistic method,
+which has a small chance (<0.001) of accepting a
+random string as a word.
+.br
+The heuristics of
+.IR deroff (1)
+and
+.IR delatex ,
+used to excise formatting information, are imperfect.
+.br
+The spelling list's coverage is uneven;
+in particular biology, medicine, and chemistry, and
+perforce proper names,
+are covered very lightly.
+New installations may wish to 
+monitor output (with
+.FR /usr/dict/spellhist )
+to catch local additions.
+.br
+British spelling was done by an American.

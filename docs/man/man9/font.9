@@ -1,0 +1,110 @@
+.TH FONT 9.5
+.CT 2 comm_term
+.SH NAME
+font \- jerq font layouts
+.SH SYNOPSIS
+.B #include <jerq.h>
+.br
+.B #include <font.h>
+.PP
+.B typedef struct Fontchar Fontchar;
+.br
+.B typedef struct Font Font;
+.PP
+.B extern Font defont;
+.SH DESCRIPTION
+A
+.I Font
+is  a character set, stored as a single
+Bitmap
+with the characters
+placed side-by-side.
+It is described by the following data structures.
+.IP
+.EX
+.ta +.5i +\w'unsigned char bottom;  'u
+typedef struct Fontchar {
+	short x;		/* left edge of bits */
+	unsigned char top;	/* first non-zero scan-line */
+	unsigned char bottom;	/* last non-zero scan-line */
+	char left;		/* offset of baseline */
+	unsigned char width;	/* width of baseline */
+} Fontchar;
+typedef struct Font {
+	short n;		/* number of chars in font */
+	char height;	/* height of bitmap */
+	char ascent;	/* top of bitmap to baseline */
+	long unused;
+	Bitmap *bits;	/* where the characters are */
+	Fontchar info[n+1];	/* n+1 character descriptors */
+} Font;
+.EE
+.PP
+Characters in
+.L bits
+abut exactly, so the displayed width of the character
+.I c
+is
+.BI Font.info[ c +1].x\ -\ Font.info[ c ].x .
+The first
+.L left
+columns of pixels in a character overlap the previous character.
+The upper left corner of the nonempty columns appears at
+.RB ( x, 0)
+in the bitmap.
+.L Width
+is the distance to move horizontally after drawing a character.
+The font bitmap has a fixed
+.LR height ;
+parameters
+.L top
+and
+.L bottom
+may speed up the copying of a character.
+.PP
+Characters are positioned by their upper left corners.
+.PP
+Fonts are stored on disk in binary with byte
+order that of the terminal.
+First in the file is the Font structure
+with
+.B bits
+elided.
+The data for the bitmap follows.
+The header for the bitmap must be inferred from
+.B Font.height
+and
+.BR Font.info[Font.n].x .
+.SH EXAMPLES
+.EX
+Fontchar *i = f->info + c;
+bitblt(f->bits, Rect(i->x, i->top, (i+1)->x, i->bottom),
+	&display, Pt(p.x+i->left, p.y+i->top), fc);
+p.x += i->width;
+.EE
+.ns
+.IP
+Copy character
+.I c
+from font
+.I f
+to point
+.I p
+with Code
+.B F_XOR
+or
+.BR F_OR .
+.PP
+For Code
+.LR F_STORE ,
+use
+.LR "Rect(i->x, 0, (i+1)->x, f->height)" .
+.SH SEE ALSO
+.IR jf (9.1),
+.IR string (9.3),
+.IR getfont (9.1)
+.SH BUGS
+The
+.L unused
+field is used, by
+.IR getfont (9.1).

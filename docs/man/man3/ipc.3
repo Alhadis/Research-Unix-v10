@@ -1,0 +1,348 @@
+.TH IPC 3X
+.CT 2 comm_proc
+.SH NAME
+ipccreat, ipcopen, ipclisten, ipcaccept, ipcreject, ipcexec, ipcpath , ipclogin, ipcrogin
+\(mi set up connections between processes or machines
+.SH SYNOPSIS
+.B #include <ipc.h>
+.PP
+.B char *ipcpath(name, network, service)
+.br
+.B char *name;
+.br
+.B char *network;
+.br
+.B char *service;
+.PP
+.B int ipcopen(name, param)
+.br
+.B char *name;
+.br
+.B char *param;
+.PP
+.B int ipccreat(name, param)
+.br
+.B char *name;
+.br
+.B char *param;
+.PP
+.B ipcinfo *ipclisten(fd)
+.br
+.B int fd;
+.PP
+.B int ipcaccept(ip)
+.br
+.B ipcinfo *ip;
+.PP
+.B int ipcreject(ip, no, str)
+.br
+.B ipcinfo *ip;
+.br
+.B int no;
+.br
+.B char *str;
+.PP
+.B int ipcexec(name, param, cmd)
+.br
+.B char *name;
+.br
+.B char *param;
+.br
+.B char *cmd;
+.PP
+.B int ipclogin(fd)
+.br
+.B int fd;
+.PP
+.B int ipcrogin(fd, opt)
+.br
+.B int fd;
+.br
+.B char *opt;
+.PP
+.B extern char *errstr;
+.SH DESCRIPTION
+These routines establish communication between unrelated
+processes, often for networking purposes.
+They are loaded by the
+.B -lipc
+option of
+.IR ld (1).
+.PP
+End points in the network are identified by names of the form:
+.BR element [ !element "]... "  .
+The name is translated element by element relative to the name space
+selected by the previous element.
+The first element is always a name in the local file system.
+By convention, all network interfaces and services
+mount themselves in
+.FR /cs .
+For example:
+.TP
+.B /cs/exec
+refers to a local process which has mounted itself (via
+.I ipccreat )
+on 
+.FR /cs/exec .
+.TP
+.B /cs/dk!nj/astro/voice
+refers to a voice synthesizer attached
+to Datakit; process
+.F /cs/dk
+is the Datakit interface.
+.TP
+.B /cs/dk!dutoit!exec
+is the process that has mounted itself on
+.F /cs/exec
+in machine `dutoit'.
+.PP
+.I Ipcpath,
+forms a network name from its arguments and returns a pointer to it.
+It takes three arguments: the destination
+.I name,
+the default
+.I network,
+and the default
+.I service.
+It assumes that 
+.I name
+is a three part name of the form: network!host!service.
+If either network or service is missing from
+.I name, ipcpath
+supplies them
+from the default arguments.
+It then tacks a
+.F /cs
+on the front and returns a pointer to that.
+Thus,
+.IP
+.EX
+ipcpath("dutoit", "dk", "dcon")
+.EE
+.LP
+returns a pointer to the string 
+.LR /cs/dk!dutoit!dcon .
+.PP
+.I Ipcopen
+places a call to a named network end point and returns
+a file descriptor for the resulting connection.
+.I Param,
+a whitespace-delimited string of values, specifies
+properties which the connection must have.
+At present four parameter values are defined:
+.TF heavy
+.TP
+.B heavy
+.br
+.ns
+.TP
+.B light
+Heavy (usually computer-to-computer) or light (computer-to-terminal)
+traffic is expected.
+.TP
+.B delim
+The connection must support delimiters; see
+.IR stream (4).
+.TP
+.B hup
+.B SIGHUP
+must be generated at end of file; see
+.IR signal (2).
+.PD
+.PP
+.I Ipccreat
+attaches a process to a name space.
+It returns a file descriptor representing the attachment.
+.I Name 
+and
+.I param
+mean the same as for 
+.I ipcopen.
+.PP
+.I Ipclisten
+waits for calls (from
+.I ipcopen
+in other processes) appearing on file descriptor
+.I fd
+(obtained from
+.IR ipccreat ).
+When a call arrives, it returns an
+.B ipcinfo
+structure, defined in
+.FR <ipc.h> :
+.IP
+.EX
+.ta \w'typedef\ 'u +\w'char\ 'u +\w'reserved[5];\ 'u
+typedef	struct {
+	int	reserved[5];
+	char	*name;		that being dialed
+	char	*param;		parameters used to set up call
+	char	*machine;	machine id of caller
+	char	*user;		user name of caller
+	int	uid, gid;	uid, gid of caller
+} ipcinfo;
+.EE
+.PP
+The call may be accepted by
+.I ipcaccept
+or rejected by
+.I ipcreject.
+.I Ipcaccept
+returns a file descriptor for the connection.
+.I Ipcreject
+takes an integer error number and an error message string,
+which will be passed back to the caller as
+.I errno
+and 
+.I errstr.
+.PP
+A higher-level routine,
+.I ipcexec,
+executes the command,
+.I cmd,
+on a named machine.
+The file descriptor returned by 
+.I ipcexec
+is the standard input, standard output, and 
+standard error of the command.
+As in
+.I ipcopen,
+.I param
+lists properties required of the channel.
+.PP
+Once a connection is established using
+.I ipcopen
+it is often necessary to authenticate yourself
+to the destination.
+This is done using 
+.I ipclogin
+and
+.I ipcrogin.
+.I Ipclogin
+runs the client side of the authentication protocol
+described in
+.IR svcmgr (8)
+for the 
+.I v9auth
+action.
+The supplied
+.I fd
+is the descriptor returned by 
+.I ipcopen.
+Until the authentication is accepted,
+.I ipclogin
+will prompt the user (using
+.FR /dev/tty )
+for a login id and password to be sent over
+.I fd.
+.PP
+.I Ipcrogin
+runs the client side of the authentication protocol
+used by BSD's 
+.I rlogin 
+and 
+.I rsh
+services.
+Unlike
+.I ipclogin,
+it will not prompt the user if the authentication
+fails.
+.I Ipcrogin
+takes a second argument that is written to
+.I fd
+after the authentication is accepted.
+.SH EXAMPLES
+To connect to the voice synthesizer attached to the Datakit:
+.EX
+.ta \w'12345678'u +\w'12345678'u +\w'12345678'u
+#include <ipc.h>
+main() {
+	int fd;
+	fd = ipcopen(ipcpath("voice", "dk", 0), "light");
+	if(fd<0){
+		printf("can't connect: %s\en", errstr);
+		exit(1);
+	}
+	...
+	close(fd);
+}
+.EE
+.PP
+To place a Dataphone call via Datakit; the service name is 
+derived in an obvious way from the ACU service class; see
+.IR dialout (3).
+.EX
+	fd = ipcopen(ipcpath("9-1-201-582-0000", "dk", "dial1200"), "light");
+.EE
+.PP
+To announce as a local service and wait for incoming calls:
+.EX
+.ta \w'12345678'u +\w'12345678'u +\w'12345678'u
+#include <ipc.h>
+main() {
+        int fd;
+        ipcinfo *ip;
+        fd = ipccreat("/tmp/service", 0);
+        if(fd<0){
+                printf("can't announce: %s\en", errstr);
+                exit(1);
+        }
+        while(ip = ipclisten(fd)){
+                int nfd;
+                if(i_hate_this_user(ip->machine, ip->user)) {
+                        ipcreject(ip, EACCES, "i hate you");
+                        continue;
+                }
+                nfd = ipcaccept(ip);
+		...
+                close(nfd);
+        }
+        printf("lost the announced connection somehow\en");
+        exit(1);
+}
+.EE
+.SH FILES
+.TF /cs/tpc
+.TP 
+.F /cs/dk
+the announce point for the Datakit dialer
+.TP
+.F /cs/tcp
+the announce point for the internet dialer
+.SH SEE ALSO
+.IR dialout (3),
+.IR connld (4),
+.IR dkmgr (8),
+.IR svcmgr (8),
+.IR tcpmgr (8)
+.br
+D. L. Presotto,
+`Interprocess Communication in the Eighth Edition
+.SM UNIX
+System',
+this manual, Volume 2
+.SH DIAGNOSTICS
+Integer return values of \-1 and pointer return
+values of 0 denote error.
+.I Errno
+contains an error code (see
+.IR intro (2))
+and
+.I errstr
+points to an explanatory string.
+.SH BUGS
+Files created by
+.I ipccreat
+in the local name space are not removed when
+the file descriptor returned by
+.I ipccreat
+is closed.
+.br
+Information in
+.B ipcinfo
+is no more trustworthy than its origin.
+Information, such as user name, sent by foreign
+machines may be suspect.
+On Ethernet or dialup connections (but not on Datakit)
+machine names can be forged.
+Let's not even think about wire-swappers and wiretappers.

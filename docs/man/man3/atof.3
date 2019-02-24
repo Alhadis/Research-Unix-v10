@@ -1,0 +1,111 @@
+.TH ATOF 3
+.CT 2 data_man math
+.SH NAME
+atof, atoi, atol, strtod, strtol, strtoul \(mi convert ASCII to numbers
+.SH SYNOPSIS
+.nf
+.B double atof(nptr)
+.B char *nptr;
+.PP
+.B int atoi(nptr)
+.B char *nptr;
+.PP
+.B long atol(nptr)
+.B char *nptr;
+.PP
+.B double strtod(nptr, rptr)
+.B char *nptr, **rptr;
+.PP
+.B "long strtol(nptr, rptr, base)
+.B char *nptr, **rptr;
+.PP
+.B "unsigned long strtoul(nptr, rptr, base)
+.B char *nptr, **rptr;
+.fi
+.SH DESCRIPTION
+.IR Atof ,
+.IR atoi ,
+and
+.I atol
+convert a string pointed to by
+.I nptr
+to floating, integer, and long integer
+representation respectively.
+The first unrecognized character ends the string.
+.PP
+.I Atof
+recognizes an optional string of tabs and spaces,
+then an optional sign, then
+a string of digits optionally containing a decimal
+point, then an optional 
+.L e
+or 
+.L E
+followed
+by an optionally signed integer.
+.PP
+.I Atoi
+and
+.I atol
+recognize an optional string of tabs and spaces,
+then an optional sign, then a string of
+decimal digits.
+.PP
+.I Strtod,
+.I strtol,
+and
+.I strtoul,
+behave similarly to 
+.I atof,
+and
+.I atol
+and, if
+.I rptr
+is not zero, set
+.I *rptr
+to point to the input character
+immediately after the string converted.
+.PP
+.I Strtol
+and
+.I strtoul
+interpret the digit string in the specified
+.I base,
+from 2 to 36,
+each digit being less than the base.
+Digits with value over 9 are represented by letters,
+a-z or A-Z.
+If
+.I base
+is 0, the input is interpreted as an integral constant in
+the style of C (with no suffixed type indicators):
+numbers are octal if they begin with
+.LR 0 ,
+hexadecimal if they begin with
+.L 0x
+or
+.LR 0X ,
+otherwise decimal.
+.I Strtoul
+does not recognize signs.
+.SH SEE ALSO
+.IR scanf (3)
+.SH DIAGNOSTICS
+Zero is returned if the begining of the input string is not
+interpretable as a number.
+.PP
+If overflow is detected by
+.I atof,
+.I strtod,
+.I strtol,
+or
+.I strtoul, 
+a maximum value of the correct sign is returned and
+.I errno
+is set to
+.BR ERANGE .
+.SH BUGS
+.I Atoi
+and
+.I atol
+have no provisions for overflow.

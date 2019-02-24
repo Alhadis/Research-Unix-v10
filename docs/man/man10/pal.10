@@ -1,0 +1,63 @@
+.TH PAL 10.1 UCDS
+.SH NAME
+pal \- data preparation program for PAL's and PLA's
+.SH SYNOPSIS
+.B pal
+[
+.BI - option
+] [
+.I type
+[
+.I filename
+] ]
+.SH DESCRIPTION
+.I Pal
+reads data from the standard input or
+.I filename
+in the form of
+.IR minterm (10.5)
+and writes on the standard output data suitable
+for
+.IR prom (10.1)
+driving a PRO LOG programmer with a MMI PAL adapter.
+.PP
+The options are:
+.TP
+.B -x
+Produce a table filled with '\-' (fuse blown) or 'X'
+(fuse present) for checking by human being.
+.TP
+.B -d
+Produce output suitable for use by
+.IR drom (10.1)
+driving a DATA I/O programmer with a LogicPak.
+.PP
+.I Pal
+has internal tables that describe the fuse layout
+and addressing inside the chips. The
+.I type
+flag on the command line is used to address the correct tables.
+.I type
+means the pal type, for example, "AM22V10".
+.PP
+The numeric symbol of a term that corresponds to the output
+enable of a pin is 100 + pin_number by convention.  Just to be strange,
+the convention for the 22V10 is: 200 + pin_number for polarity,
+300 + pin_number for architecture fuses and pins 25 and 26 are
+asynchronous reset and synchronous preset respectively.
+.PP
+The pals with X in their name use an additional convention.
+Since
+.IR quine (10.1)
+can only handle and-or logic, and the X pals have two
+different sets of and-or logic driving the two inputs of an xor gate,
+those two terms are number 200 + output pin number and 300 + ditto.
+.SH SEE ALSO
+.IR minterm (10.5),
+.IR prom (10.1),
+.IR drom (10.1),
+.IR eprom (10.1)
+.SH BUGS
+Unfortunately, the devices are compiled in.  Case is important for device
+names.
+

@@ -1,0 +1,106 @@
+.TH LDE 10.1 UCDS
+.SH NAME
+lde \- logic design equation programs
+.SH SYNOPSIS
+.B lde
+[
+.I option
+] [
+.I filename
+]
+.SH DESCRIPTION
+.I lde
+is the front end of a set of programs that prepare data
+for fuse-programmable logic elements
+such as roms or pla's.
+It accepts an expression language,
+.IR lde (10.5),
+on its standard input or from filename and writes
+an interpretation on its standard output.
+The output format is selected
+by options on the command line.
+The options are:
+.TP
+.B -p
+A single number is written
+on each output line as required by
+.IR prom (10.1)
+or
+.IR drom (10.1).
+The pin numbers in the .i and .o areas of the input
+are not used, instead, the order of appearance of
+of variable names is used to assign their bit positions
+in the address and data of the output.
+This is the default action.
+.TP
+.B -x
+Produce hex output instead of the default octal only
+when used with the above.
+.TP
+.B -a
+Produce 
+.IR minterm (10.5)
+output for the
+.IR quine (10.1)
+program.
+Pin numbers in the .i and .o areas of the input are carried
+through to the output.
+.TP
+.B -w
+Produce a macro definition in
+.IR cdl (10.5)
+for use by
+.IR cdm (10.1).
+Pin numbers in the .i and .o areas are used
+only if they are associated with the variable name with
+a `:', other variable names do not appear in the output.
+.TP
+.B -W
+Produce a chip descriptor file in the form of
+.I /usr/ucds/lib/lib/pins
+for use by
+.IR cdm (10.1) or
+.IR cdmglob (10.1).
+.TP
+.B -d -v -T -o
+Produce other stuff to help debug the program.
+.PP
+Numeric parameters may be passed from the command line with
+.TP
+.BI - n
+where
+.I n
+is decimal.
+The (zero based)
+.RI m th
+occurence of
+.BI \- n
+substitutes the value
+.I n
+for the symbol
+.B $m
+in the input.
+.SH SEE ALSO
+.IR lde (10.5),
+.IR minterm (10.5),
+.IR cdl (10.5),
+.IR quine (10.1),
+.IR pal (10.1),
+.IR drom (10.1),
+.IR cdm (10.1)
+.SH FILES
+.SH BUGS
+An output may appear or the left of the
+assignment operator more than once
+in which case
+.I lde
+produces unpredictable output without comment.
+.br
+An output may have been declared but not have been assigned to;
+no diagnostic is given.
+.br
+Also,
+.B \&.tt
+lines must
+.I not
+have a space between pin declarations.

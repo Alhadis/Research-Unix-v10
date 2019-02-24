@@ -1,0 +1,62 @@
+.TH ACCESS 2
+.CT 2 dirs file_inq_creat secur
+.SH NAME
+access \(mi determine accessibility of file
+.SH SYNOPSIS
+.nf
+.B int access(name, mode)
+.B char *name;
+.fi
+.SH DESCRIPTION
+.I Access
+checks the given
+file
+.I name
+for accessibility.
+If \fImode\fL&4\fR
+is nonzero, read access is checked.
+If \fImode\fL&2\fR
+is nonzero, write access is checked.
+If \fImode\fL&1\fR
+is nonzero, execute access is checked.
+If \fImode\fL==\fR0,
+the file merely need exist.
+In any case
+all directories leading to the file
+must permit searches.
+0 is returned if the access is permitted,,
+\-1 if not.
+.PP
+Permission is checked
+against the real userid and groupid of the process;
+this call is most useful in set-userid and set-groupid programs.
+.PP
+Only access bits are checked.
+A directory may be announced as writable by
+.IR access ,
+but an attempt to open it for writing will fail
+(although files may be created there);
+a file may look executable, but
+.IR exec (2)
+will fail unless it is in proper format.
+.PP
+If the userid of the process is the owner of the file
+access is determined by the three owner bits (0700).
+Otherwise, if the groupid of the process is the group
+of the file access is determined by the three group bits (0070).
+Otherwise access is determined by the three other bits (0007).
+.SH SEE ALSO
+.IR stat (2)
+.SH DIAGNOSTICS
+.BR EACCES ,
+.BR EFAULT ,
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR ,
+.BR EROFS ,
+.BR ETXTBSY
+.SH BUGS
+On symbolic links permissions are irrelevant and
+.IR access
+returns nonsense.

@@ -1,0 +1,210 @@
+.TH MENUHIT 9.3
+.CT 2 comm_term
+.SH NAME
+menuhit, hmenuhit \- present user with menu and get selection
+.SH SYNOPSIS
+.nf
+.B #include <jerq.h>
+.PP
+.B int menuhit(m, b)
+.B Menu *m;
+.PP
+.B #include <menu.h>
+.PP
+.B NMitem *hmenuhit(m, b)
+.B NMenu *m;
+.fi
+.SH DESCRIPTION
+.I Menuhit
+presents the user with a menu specified by the Menu pointer
+.I m
+and returns an integer indicating the selection made,
+or
+\-1
+for no selection.
+The integer
+.I b
+specifies which button to use for the interaction: 1, 2 or 3.
+.I Menuhit
+assumes that the button is already depressed when it is called.
+The user makes a selection by lifting the button when the cursor
+points at the desired selection;
+lifting the button outside the menu indicates no selection.
+.PP
+Menus can be built in two ways, either as an array of
+strings or with a generator function:
+.IP
+.EX
+typedef struct {
+	char	**item;		/* string array, ending with 0 */
+	char	*(*generator)();	/* used if item == 0 */
+	short	prevhit;		/* offset from top of last select */
+	short	prevtop;		/* topmost item displayed */
+} Menu;
+
+char *menutext[]={"Item 0", "Item 1", "Item 2", 0};
+Menu stringsmenu={ menutext };
+.EE
+.LP
+or
+.IP
+.EX
+char *menugen();
+Menu genmenu={ (char **)0, menugen };
+.EE
+.PP
+The generator function is passed an integer parameter
+.IR n ,
+and must return the string for the
+.IR n th
+menu entry, or 0 if
+.I n
+is beyond the number of entries in the menu.
+The
+.IR n 's
+may come in any order but the result is only needed until the next call.
+.PP
+Regardless of the method of generation, characters with the
+.B 0200
+bit set are regarded as fill characters.
+For example, the string
+.L
+"\e240X"
+will appear in the menu as a right-justified
+.L X
+.RL ( 040
+is the
+.SM ASCII
+space character).
+Menu strings without fill characters are drawn centered in the menu.
+.PP
+The fields
+.I prevhit
+and
+.I prevtop
+are used to guide which items are displayed and which item
+the mouse points to initially.
+They should be nonnegative.
+Both
+.I menuhit
+and
+.I hmenuhit
+may choose to ignore these fields.
+.PP
+.I Hmenuhit
+supports hierarchical menus.
+Submenus are denoted graphically by a right-pointing arrow.
+Moving the cursor onto the arrow causes the submenu to appear.
+Hierarchical menus are built of
+.BR NMitem s
+defined as
+.IP
+.EX
+typedef struct NMenu {
+	char	*text;
+	char	*help;
+	struct NMenu *next;
+	void	(*dfn)(), (*bfn)(), (*hfn)();
+	long	data;
+} NMitem;
+.EE
+.PP
+The
+.B text
+field is shown to the user;
+characters with the
+.B 0200
+bit set behave as above.
+The contents of the
+.B help
+field are shown whenever the user holds down button 1 at the same time
+as the button specified by the parameter
+.IR b .
+If
+.I b
+is 1,
+you get help all the time.
+The
+.B next
+field is the address of a submenu or
+.B "(NMenu *)0"
+if there is none.
+The two functions
+.B (*dfn)()
+and
+.B (*bfn)()
+support dynamic submenus.
+.I Dfn
+is called just before the submenu is invoked.
+Its argument is the current menu item.
+Similarly,
+.I bfn
+is called with the current menu item just after the submenu has finished.
+.I Hfn
+is called only when a menu item is selected;
+its argument is the current menu item.
+The menu has been undrawn before
+.I hfn
+is called.
+The return value from
+.I hmenuhit
+is the menu item selected or
+.B "(NMenu *)0"
+if none was selected.
+To permit communication between menu functions and the calling program,
+the
+.I data
+field is available for the user;
+it is ignored by
+.IR hmenuhit .
+.PP
+An
+.BR NMenu ,
+like a
+.BR Menu ,
+may be built by list or by generator.
+An
+.B NMenu
+generator takes an integer parameter
+.I n
+and returns a pointer to an
+.LR NMitem .
+In either case,
+the list of menu items is terminated by an item with a 0
+.B text
+field.
+.SH EXAMPLES
+Simple code to use
+.B stringsmenu
+declared above:
+.IP
+.EX
+.ta \w'case -1: 'u
+switch(menuhit(&stringsmenu, 3)){
+case 0:	item_0();
+	break;
+case 1:	item_1();
+	break;
+case 2:	item_2();
+	break;
+case -1:	noselection();
+	break;
+}
+.EE
+.PP
+To provide a submenu for item 1:
+.IP
+.DT
+.EX
+NMitem *gen();	
+NMenu i1list = { 0, gen };
+void item_2(), item_3();
+NMitem imenu = {
+	{ "item 1", "item 1 help", &i1list },
+	{ "item 2", "item 2 help", 0, 0, 0, item_2 },
+	{ "item 3", 0, 0, 0, 0, item_3 },
+	{ 0 }
+};
+NMenu b3 = { imenu };
+(void)hmenuhit(&b3, 3);
+.EE

@@ -1,0 +1,10 @@
+tr A-Z a-z <$1.terms|awk -v file=$1.terms '{
+	term=$0
+	gsub(/\\/,"\\\\")
+	gsub(/\//,"\\/")
+	term=$0
+	getline <file
+	gsub(/\\/,"\\\\")
+	gsub(/\//,"\\/")
+	gsub(/\&/,"\\\\\&")
+	print "s/" term "/" $0 "/"}'

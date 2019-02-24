@@ -1,0 +1,1087 @@
+....if \nM=0 .RP
+....TM 76-1274-5 39199 39199-11
+.if \n(tm>0 .ND June 11, 1976*
+.TL
+Tbl \(em A Program to Format Tables\(dg
+.AU "MH 2C-569" 6377
+L. L. Cherry
+M. E. Lesk
+.AI
+.MH
+.AB
+.I Tbl
+is a document formatting preprocessor for
+.I troff
+or
+.I nroff
+which makes
+even
+fairly complex tables easy to specify and enter.
+Tables are made up of columns which may be independently centered, right-adjusted,
+left-adjusted, or aligned by decimal points.
+Headings may be placed over single columns or groups of columns.
+A table entry may contain equations, or may consist of several rows of text.
+Horizontal or vertical lines may be drawn as desired
+in the table,
+and any table or element may be enclosed in a box.
+For example:
+.TS
+center, box;
+c  s  s  s
+c  s  s  s
+c |c |c |c
+c |cp-2 |c |c
+l |n |n |n.
+U. S. Energy Production/Consumption
+\s-2(in quadrillion Btu)\s0
+=
+Year	Production	Consumption	Net
+\^	all sources		\^
+_
+1953	36.77	36.27	+0.51
+1958	38.81	40.35	\-1.54
+1963	45.85	48.32	\-2.47
+1968	56.81	61.00	\-4.19
+1973	62.06	74.28	\-12.22
+1978	61.01	78.09	\-17.08
+1983	61.19	70.05	\-8.86
+1987	64.55	76.01	\-11.46
+.TE
+.AE
+.tr # 
+.de e1
+.nr \\$1 \\$2
+..
+.de e2
+.if !\\n(\\$1=\\n% .tm Error in example \\$1: referred to page \\n(\\$1, is on page \\n%
+.rr \\$1
+..
+.di qq
+.EQ
+delim $$
+.EN
+.di
+.rm qq
+.FS
+\(dg This is version of |reference(v7tbl) revised by Lorinda Cherry.
+.FE
+.2C
+.NH
+Introduction.
+.PP
+.I Tbl
+turns a simple description
+of a table into a
+.I troff
+or
+.I nroff |reference(troff reference)
+program (list of commands) that prints the table.
+It
+attempts to isolate a portion of a job that it can
+successfully
+handle and leave the remainder for other programs.
+Thus
+.I tbl
+may be used with the equation formatting
+program
+.I eqn |reference(latest eqn)
+or various
+layout macro packages |reference(msmacros)|reference(lesk kernighan typesetting)|reference(mashey smith documentation),
+but does not duplicate their functions.
+.PP
+This memorandum is divided into two parts.
+First we give the rules for preparing
+.I tbl
+input; then some examples are shown.
+The description of rules is precise but technical, and
+the beginning user may prefer to read the examples first,
+as they show some common table arrangements.
+A section explaining how to invoke
+.I tbl
+precedes the examples.
+To avoid repetition, henceforth read
+.I troff
+as
+.I
+``troff
+.R
+or
+.I
+nroff.''
+.R
+.ds . \^\s14.\s0
+.PP
+The input to
+.I
+tbl
+.R
+is text for a document, with tables preceded by a ``\f(CW.TS\fP''
+(table start)
+command and followed by a ``\f(CW.TE\fP''
+(table end) command.
+.I Tbl
+processes the tables, generating
+.I troff
+formatting commands,
+and leaves the remainder of the text unchanged.
+The
+.CW .TS
+and
+.CW .TE
+lines are copied, too, so that
+.I troff
+page layout macros
+(such as the memo formatting macros|reference(msmacros)) can use these lines
+to delimit and place tables as they see fit.
+In particular, any arguments on the
+.CW .TS
+or
+.CW .TE
+lines
+are copied but otherwise ignored, and may be used by document layout
+macro commands.
+.PP
+The format of the input is as follows:
+.DS
+\&text
+.CW .TS
+\&\fItable\fR
+.CW .TE
+\&text
+.CW .TS
+\&\fItable\fR
+.CW .TE
+\&text
+\&\&\*. \*. \*.
+.DE
+where the format of each table is as follows:
+.DS
+.CW .TS
+\fIoptions \f(CW;\fR
+\fIformat \f(CW.\fP
+data
+.CW .TE
+.DE
+.R
+Each table is independent, and must contain formatting
+information
+followed by the data to be entered in the table.
+The formatting information, which describes the
+individual columns and rows of the table, may be preceded
+by a few options that affect the entire table.
+A detailed description of tables is given in the next section.
+.NH
+Input commands.
+.PP
+As indicated above, a table contains, first, global options,
+then a format section describing the layout of the table
+entries, and then the data to be printed.  The format and data
+are always required, but not the options.
+The various parts of the table are entered as follows:
+.NH 2
+Options
+.PP
+There may be a single line of options
+affecting the whole table.
+If present, this line must follow the
+.CW .TS
+line immediately
+and must contain a list of option names
+separated by spaces, tabs, or commas, and must be terminated by a semicolon.
+The allowable options are:
+.IP \f(CW##center\fR 15
+center the table (default is left-adjust);
+.IP \f(CW##expand\fR
+make the table as wide as the current line length;
+.IP \f(CW##box\fR
+enclose the table in a box;
+.IP \f(CW##allbox\fR
+enclose each item in the table in a box;
+.IP \f(CW##doublebox\fR
+enclose the table in two boxes;
+.IP \f(CW##tab#\fR(\fIx\fR\^)
+use \fIx\fR instead of tab to separate data items.
+.IP \f(CW##linesize(\fIn\fP)\fR
+set lines or rules (e.g. from \f(CWbox\fR\^) in \fIn\fR point type;
+.IP \f(CW##delim(\fIxy\fP)\fR
+recognize \fIx\fR and \fIy\fR as the \fIeqn\fR delimiters.
+.PP
+.I Tbl
+tries to keep boxed tables on one page by issuing
+appropriate
+.I troff
+\&``need''
+.CW .ne ) (
+commands.
+These requests are calculated from the number of lines in the tables,
+and if there are spacing commands embedded in the input, these requests may be inaccurate;
+use normal
+.I troff
+procedures, such as keep-release macros, in that case.
+The user who must have a multi-page boxed table
+should use macros designed for this purpose,
+as explained below under `Usage.'
+.NH 2
+Format
+.PP
+The format section of the table specifies the layout
+of the columns.
+Each line in this section corresponds to one line
+of the table (except that the last line corresponds to all following
+lines up to the next
+.CW .T& ,
+if any \(em see below),
+and each line contains a key-letter for each column
+of the table.
+It is good practice to separate the key letters for each
+column by spaces or tabs.
+Each key-letter is one of the following:
+.cs B 25
+.IP "##\f(CWL\fR#or#\f(CWl\fR" 10
+to indicate a left-adjusted column entry;
+.IP "##\f(CWR\fR#or#\f(CWr\fR
+to indicate a right-adjusted column entry;
+.IP "##\f(CWC\fR#or#\f(CWc\fR
+to indicate a centered column entry;
+.IP "##\f(CWN\fR#or#\f(CWn\fR
+to indicate a numerical column entry, to be aligned with other
+numerical entries so that the units digits of numbers line up;
+.IP "##\f(CWA\fR#or#\f(CWa\fR
+to indicate an alphabetic subcolumn;
+all corresponding entries are aligned on the left, and positioned
+so that the widest is centered within the column (see
+example on page 12);
+.IP "##\f(CWS\fR#or#\f(CWs\fR
+to indicate a spanned heading, i.e. to indicate that the
+entry from the previous column continues across this
+column
+(not allowed for the first column, obviously); or
+.IP ##\f(CW\s+4\v'6p'^\v'-6p'\s0\fR
+to indicate a vertically spanned heading, i.e. to indicate that
+the entry from the previous row continues down through this row.
+(Not allowed for the first row of the table, obviously).
+.cs B
+.PP
+When numerical alignment is specified, a location for the decimal
+point is sought.  The rightmost dot
+.CW . ) (
+adjacent to a digit is used as a decimal point; if there is no
+dot adjoining a digit, the rightmost digit is used as a units digit;
+if no alignment is indicated, the item is centered in the column.
+However, the special non-printing character string
+.CW \e&
+may be used
+to override unconditionally dots
+and digits, or to align alphabetic data;
+this string lines up where a dot normally would,
+and then disappears from the final output.
+In the example below, the items shown at the left will be
+aligned (in a numerical column) as shown on the right:
+.KS
+.TS
+center;
+l6 n.
+13	13
+4\*.2	4\&\*.2
+26\*.4\*.12	26\*.4\&\*.12
+abc	abc
+abc\e&	abc\&
+43\e&3\*.22	43\&3\*.22
+749\*.12	749\&\*.12
+.TE
+.KE
+.PP
+\fBNote:\fR
+If numerical data are used in the same column with wider
+.CW L
+or
+.CW r
+type table entries, the widest \fInumber\fR is centered relative
+to the wider
+.CW L
+or
+.CW r
+items (\f(CWL\fR is used instead of \f(CWl\fR for readability;
+they have the same meaning as key-letters).
+Alignment within the numerical items is preserved.
+This is similar to the behavior of
+.CW a
+type data, as explained above.
+However,
+alphabetic subcolumns (requested by the
+.CW a
+key-letter)
+are always slightly indented relative to
+.CW L
+items;
+if necessary, the column width is increased to force this.
+This is not true for \f(CWn\fR type entries.
+.PP
+.ft BI
+Warning:
+.ft 1
+the \f(CWn\fR and \f(CWa\fR items should not be used in
+the same column.
+.PP
+For readability, the key-letters describing each column should
+be separated by spaces.
+The end of the format section is indicated by a period.
+The layout of the key-letters in the format section resembles
+the layout of the actual data in the table.
+Thus a simple format might appear as:
+.P1
+c  s  s
+l  n  n .
+.P2
+which specifies a table of three columns. The first line
+of the table contains a heading centered across all three
+columns; each remaining line contains a left-adjusted item
+in the first column followed by two columns of numerical
+data.
+A sample table in this format might be:
+.br
+.ne 6v
+.br
+.in +4
+.TS
+c s s
+l n n.
+Overall title
+Item-a	34.22	9.1
+Item-b	12.65	.02
+Items: c,d,e	23	5.8
+Total	69.87	14.92
+.TE
+.in -4
+There are some additional features of the key-letter system:
+.IP "\fI##Horizontal lines#\fR"
+\(em A key-letter may be replaced by
+.CW _
+(underscore) to indicate
+a horizontal line in place of the corresponding column entry,
+or by
+.CW =
+to indicate a double horizontal line.
+If an adjacent column contains a horizontal line, or if
+there are vertical lines adjoining this column,
+this horizontal line is extended to meet the nearby lines.
+If any data entry is provided for this column, it is ignored and
+a warning message is printed.
+.QQ do the D(x) and M(x) to draw a line of 'x' characters.
+.QQ D will draw divided lines, M merged lines. thus - is simplh M(\(ru)
+.IP "\fI##Vertical lines#\fR"
+\(em A vertical bar may be placed between column key-letters.  This will
+cause a vertical line between the corresponding columns of the table.
+A vertical bar to the left of the first key-letter
+or to the right of the last one produces a line at the
+edge of the table.
+If two vertical bars appear between key-letters, a double vertical
+line is drawn.
+.IP "\fI##Space between columns#\fR"
+\(em A number may follow the key-letter.  This indicates the amount of separation
+between this column and the next column.
+The number normally specifies the separation in
+.I
+ens
+.R
+(one
+en
+.ne 3
+is about the width of the letter `n').* 
+.FS
+* More precisely, an en is a number of points (1 point = 1/72 inch)
+equal to half the current type size.
+.FE
+If the ``expand'' option is used, then these numbers are multiplied
+by a constant such that the table is as wide as the current line length.
+The default column separation number is 3.
+If the separation is changed the worst case (largest space requested) governs.
+.IP "\fI##Vertical spanning#\fR"
+\(em Normally, vertically spanned items extending over several
+rows of the table are centered in their vertical range.
+If a key-letter is followed by
+.CW t
+or
+.CW T ,
+any corresponding vertically spanned item
+will begin at the top line of its range.
+.IP "\fI##Font changes#\fR"
+\(em A key-letter may be followed by a string containing a font
+name or number
+preceded by the letter
+.CW f
+or
+.CW F .
+This indicates that the corresponding column should be in a different
+font from the default font (usually Roman).
+All font names are one or two letters; a one-letter font
+name should be separated from whatever follows by a space or tab.
+The single letters
+.CW B ,
+.CW b ,
+.CW I ,
+and
+.CW i
+are shorter synonyms for
+.CW fB
+and
+.CW fI
+and refer to the bold and italic fonts in the current font family.
+Font change commands given with the table entries
+override these specifications.
+.IP "\fI##Point size changes#\fR"
+\(em A key-letter may be followed by the letter
+.CW p
+or
+.CW P
+and a number to indicate the point size of the corresponding table entries.
+The number may be a signed digit, in which case it is taken as
+an increment or decrement
+from the current point size.
+If both a point size and a column separation value are given,
+one or more blanks must separate them.
+.IP "\fI##Vertical spacing changes#\fR"
+\(em A key-letter may be followed by the letter
+.CW v
+or
+.CW V
+and a number to indicate the vertical line spacing to be used
+within a multi-line corresponding table entry.
+The number may be a signed digit, in which case it is taken as an increment
+or decrement from the current vertical spacing.
+A column separation value must be separated by blanks or some other
+specification from a vertical spacing request.
+This request has no effect unless the corresponding table entry
+is a text block (see below).
+.IP "\fI##Column width indication#\fR"
+\(em A key-letter may be followed by the letter
+.CW w
+or
+.CW W
+and a width value in parentheses.
+This width is used as a minimum column width.
+If the largest element in the column is not as wide as the width value
+given after the \f(CWw\fR, the largest element is assumed to be that wide.
+If the largest element in the column is wider than the specified value,
+its width is used.
+The width is also used as a default line
+length for included text blocks.
+Normal
+.I troff
+units can be used to scale the width value; if none are used,
+the default is
+ens.
+If the width specification is a unitless integer
+the parentheses may be omitted.
+If the width value is changed in a column, the \fIlast\fR one given controls.
+.IP "\fI##Equal width columns#\fR"
+\(em A key-letter may be followed by the letter
+.CW e
+or
+.CW E
+to indicate equal width columns.
+All columns whose
+key-letters are followed by \f(CWe\fR or \f(CWE\fR are made the same width.
+This permits the user to get a group of regularly spaced
+columns.
+.IP "\fI##Staggered columns#\fR"
+\(em A key-letter may be followed by the letter
+.CW u
+or
+.CW U
+to indicate that the corresponding entry is to be moved up one half line.
+This makes it easy, for example, to have a column of differences
+between numbers in an adjoining column.
+The
+.CW allbox
+option does not work with staggered columns.
+.IP "\fI##Zero-width item#\fR"
+\(em A key-letter may be followed by the letter
+.CW z
+or
+.CW Z
+to indicate that the corresponding
+data item is to be ignored in calculating column widths.
+This may be useful, for example, in allowing headings
+to run across adjacent columns where spanned headings
+would be inappropriate.
+.IP "##\f(CWNote:\fR#"
+The order of the above features is immaterial; they need not be separated
+by spaces, except as indicated above to avoid ambiguities involving
+point size and font changes.  Thus
+a numerical column entry in italic font and 12 point type with a minimum
+width of 2.5 inches and separated by 6 ens from the next column could
+be specified as
+.P1
+np12w(2.5i)fI  6
+.P2
+.IP "\fI##Alternative notation#\fR"
+\(em Instead of listing the format of successive lines of a table
+on consecutive lines of the format section,
+successive line formats may be given on the same line, separated
+by commas, so that the format for the example
+above might have been written:
+.P1
+c s s, l n n .
+.P2
+.IP "\fI##Default#\fR"
+\(em Column descriptors missing from the end
+of a format line are assumed to be \f(CWL\fR.
+The longest line in the format section, however,
+defines the number of columns
+in the table;
+extra columns in the data are ignored silently.
+.QQ put in the diagnostics.
+.NH 2
+Data
+.PP
+The data for the table are typed after the format.
+Normally, each table line is typed as one line of data.
+Very long input lines can be broken: any line whose last character is
+.CW \e
+is combined with the following line (and the
+.CW \e
+vanishes).
+The data for different columns (the table entries) are separated by tabs,
+or by whatever character has been specified with the option
+.I tabs .
+There are a few special cases:
+.IP "\fI##Troff commands within tables\fR#"
+\(em An input line
+beginning with a
+.CW .
+followed by anything
+but a number is assumed to be a command to
+.I troff
+and is passed through unchanged, retaining its position in the table.
+So, for example, vertical space within a table may be produced by
+.CW .sp
+commands
+in the data.
+.IP "\fI##Full width horizontal lines\fR#"
+\(em An input
+.I line
+containing only
+.CW _
+(underscore)
+or
+.CW =
+(equal sign) is taken to be a single or double
+line, respectively, extending the
+full width
+of the
+.I table.
+.IP "\fI##Single column horizontal lines\fR#"
+\(em An input table
+.I entry
+containing only the character $fat "\(ul" $ or \f(CW=\fR
+is taken to be a single or double line extending
+the full width of the
+.I column.
+Such lines are extended to meet horizontal or vertical
+lines adjoining this column.
+To obtain these characters explicitly in a column, either
+precede them by
+.CW \e&
+or
+follow them by a space before the usual tab or newline.
+.IP "\fI##Short horizontal lines\fR#"
+\(em An input table
+.I entry
+containing only the string
+.CW \e_
+is taken to be a single line as wide as the contents of
+the column.  It is not extended to meet
+adjoining lines.
+.IP "\fI##Repeated characters\fR#"
+\(em An input table
+.I entry
+containing only a string of the form
+.CW \eR \fIx\fR
+where
+.I x
+is any character is replaced by repetitions of the character
+.I x
+as wide as the data in the column.
+The sequence of
+.I x 's
+is not extended to meet adjoining columns.
+.IP "\fI##Vertically spanned items\fR#"
+\(em An input table entry containing only the
+character string
+.CW \e^
+indicates that the table entry immediately
+above spans downward over this row.  It is equivalent
+to a table format key-letter of
+.CW ^ .
+.IP "\fI##Text blocks\fR#"
+\(em In order to include a block of text as a table entry,
+precede it by
+.CW T{
+and follow
+it by
+.CW T} .
+Thus the sequence
+.P1
+\&\fR. . .\fP T{
+.I
+block of
+text
+.CW
+T}\fR . . .
+.P2
+is the way to enter, as a single entry in the table, something
+that cannot conveniently be typed as a simple string between
+tabs.
+Note that the
+.CW T}
+end delimiter must begin a line;
+additional columns of data may follow after a tab on the same line.
+See the example on page 10 for an illustration of included text blocks
+.e1 aa 10
+in a table.
+If more than fifty or so text blocks are used in a table,
+various limits in the
+.I troff
+program are likely to be exceeded,
+producing diagnostics such as `too many string/macro names' or `too many
+number registers.'
+.IP
+Text blocks are pulled out from the table, processed separately by
+.I
+troff,
+.R
+and replaced in the table as a solid block.  If no line length
+is specified in the
+.I
+block of text
+.R
+itself, or in the table format,
+the default is to use
+$ L times C / (N+1) $
+where $L$ is the current line length,
+$C$ is the number of table columns spanned by the text,
+and $N$ is the total number of columns in the table.
+The other parameters (point size, font, etc.) used in setting the
+.I
+block of text
+.R
+are those in effect at the beginning of the table (including
+the effect of the
+.CW .TS
+macro)
+and any table format specifications of size, spacing and font,
+using the \f(CWp\fR, \f(CWv\fR and \f(CWf\fR modifiers to the column key-letters.
+Commands within the text block itself are also recognized, of course.
+However,
+.I troff
+commands within the table data but not within the text block
+do not affect that block.
+.br
+.di RR
+.     this is going down a rathole
+.EQ
+delim off
+.EN
+.di
+.rm RR
+.IP "##\fBWarnings:\fR#"
+Although any number of lines may be present in a table,
+only the first 200 lines are used in calculating
+the widths of the various columns.
+A multi-page table,
+of course, may be arranged as several single-page tables
+if this proves to be a problem.
+Other difficulties with formatting may arise because,
+in the calculation of column widths all table entries
+are assumed to be in the font and size being used when
+the
+.CW .TS
+command was encountered, except for font and size changes
+indicated (a) in the table format section and (b)
+within the table data (as in the entry
+.CW \es+3\efIdata\efP\es0 ).
+Therefore, although arbitrary
+.I troff
+requests may be sprinkled in a table, care must be taken
+to avoid confusing the width calculations;
+use requests such as
+.CW .ps
+with care.
+.tr ##
+.sp .5v
+.NH 2
+Additional Command Lines
+.PP
+If the format of a table must be changed after
+many similar lines, as with sub-headings or summarizations, the
+.CW .T&
+(table continue)
+command can be used
+to change column parameters.
+The outline of such a table input is:
+.DS
+.ft CW
+\&.TS
+.ft I
+\&options \f(CW;\fP
+\&format \*.
+\&data
+\&\*. \*. \*.
+.ft CW
+\&.T&
+.ft I
+\&format \*.
+\&data
+.ft CW
+\&.T&
+.ft I
+\&format \*.
+\&data
+.ft CW
+\&.TE
+.DE
+.R
+as in the examples on pages 9 and 12.
+.e1 ab 9
+.e1 ac 12
+Using this procedure, each table line can be close to its corresponding format line.
+.sp 3p
+.ft BI
+Warning:
+.ft R
+it is not possible to change the number of columns, the space
+between columns, the global options such as \fIbox,\fR
+or the selection of columns to be made equal width.
+Nor is
+.CW .T&
+recognized after the first 200 lines of a table.
+.NH
+Usage.
+.PP
+On
+.UX ,
+.I tbl
+can be run on a simple table with the command
+.P1
+tbl input-file | troff
+.P2
+but
+for more complicated use, where there are several input files,
+and they contain equations and \fIms\fR memorandum layout commands as well
+as tables, the normal command would be
+.P1
+tbl \fIfiles ...\fP | eqn | troff -ms
+.P2
+and, of course, the usual options may be used on the
+.I troff
+and
+.I eqn
+commands. If any of the file names are
+.CW -
+the standard input is read at that point.
+.PP
+For the convenience of users employing line printers without
+adequate driving tables or post-filters, there is a special
+.CW -TX
+command line option to
+.I tbl
+which produces output that does not have fractional line
+motions in it.
+.PP
+Note that when
+.I eqn
+and
+.I tbl
+are used together on the same file,
+.I tbl
+should be used first.
+If there are no equations within tables,
+either order works, but it is usually faster
+to run
+.I tbl
+first, since
+.I eqn
+normally produces a larger expansion of the input
+than
+.I tbl .
+However, if there are equations within tables
+(using the
+.I delim
+mechanism in
+.I eqn ),
+.I tbl
+must be first or the output will be scrambled.
+Users must also beware of using equations in
+\f(CWn\fR-style columns; this is nearly always wrong,
+since
+.I tbl
+attempts to split numerical format items into two parts and this
+is not possible with equations.
+The user can defend against this by giving the
+.I delim(xx)
+table option;
+this prevents splitting of numerical columns within the delimiters.
+For example, if the
+.I eqn
+delimiters
+are
+.I $$ ,
+giving
+.I delim($$)
+a numerical column such as
+.CW "1245$+- 16$"
+will be divided after 1245, not after 16.
+.PP
+.I Tbl
+accepts up to about 35 columns, the exact number
+depending on the availability
+of number registers.
+The user must avoid number register names used
+by tbl, which include two-digit numbers from 31 to 97,
+and strings of the form
+.CW 4\fIx\fR,
+.CW 5\fIx\fR,
+.CW #\fIx\fR,
+\fIx\f(CW+\fR, \fIx\f(CW|\fR, \f(CW^\fIx\fR, and \fIx\f(CW-\fR,
+where
+\fIx\fR is any lower case letter.
+The names
+.CW ## ,
+.CW #- ,
+and
+.CW #^
+are also used in certain circumstances.
+To conserve number register names, the
+.CW n
+and
+.CW a
+formats share a register;
+hence the restriction above that they may not be used in the same column.
+.PP
+For aid in writing layout macros,
+.I tbl
+defines a number register
+.CW TW
+which is
+the table width; it is defined by the time that the
+.CW .TE
+macro
+is invoked and may be used in the expansion of that macro.
+More importantly, to assist in laying out multi-page boxed tables
+the macro T# is defined to produce the bottom lines and side lines of a boxed
+table, and then invoked at its end.  By use of this macro
+in the page footer a multi-page table can be boxed.
+In particular, the
+.I ms
+macros can be used to print a multi-page boxed table with a repeated heading
+by giving the
+argument
+.CW H
+to the
+.CW .TS
+macro.
+If the table start macro is written
+.P1
+	\&\*.TS H
+.P2
+a line of the form
+.P1
+	\&\*.TH
+.P2
+must be given in the table after any table heading (or at the start if none).
+Material up to the
+.CW .TH
+is placed at the top of each page of table;
+the remaining lines in the table are placed on several pages as required.
+Note that this is
+.I not
+a feature of
+.I tbl ,
+but of the \fIms\fR layout macros.
+.FC
+.1C
+.NH
+Examples.
+.PP
+Here are some examples illustrating features of
+.I
+tbl.
+.R
+.ds T \|\h'.4n'\v'-.2n'\s6\zT\s0\s10\v'.2n'\h'-.4n'\(ci\|\s0
+The symbol \*T in the input represents a tab character.
+.de IN
+.po \\n(POu
+.sp |\\n(.hu
+.sp
+.NE \\$1
+.mk
+.B
+Input:
+.R
+.sp .5
+.nf
+.in +3n
+..
+.de OU
+.br
+.in -3n
+.rt
+.po +3i
+.B
+Output:
+.R
+.sp .5
+..
+.rm TS
+.rm TE
+.nf
+.KS
+.IN 2.5i
+\&\*.TS
+\&box;
+\&c c c
+\&l l r\*.
+\&Fact\*TLocation\*TStatistic
+\&
+\&Largest state\*TAlaska\*T591,004 sq. mi.
+\&Smallest state\*TRhode Island\*T1,212 sq. mi.
+\&Longest river\*TMississippi-Missouri\*T3,710 mi.
+\&Highest mountain\*TMount McKinley, AK\*T20,320 ft.
+\&Lowest point\*TDeath Valley, CA\*T\-282 ft.
+\&\*.TE
+.OU
+.TS
+box;
+c c c
+l l r.
+Fact	Location	Statistic
+
+Largest state	Alaska	591,004 sq. mi.
+Smallest state	Rhode Island	1,212 sq. mi.
+Longest river	Mississippi-Missouri	3,710 mi.
+Highest mountain	Mount McKinley, AK	20,320 ft.
+Lowest point	Death Valley, CA	\-282 ft.
+.TE
+.IN 2.8i
+\&\*.TS
+\&allbox;
+\&c s s
+\&c c c
+\&n n n\*.
+\&AT&T Common Stock
+\&Year\*TPrice\*TDividend
+\&1984\*T15-20\*T$1\*.20
+\&5\*T19-25\*T1\*.20
+\&6\*T21-28\*T1\*.20
+\&7\*T20-36\*T1\*.20
+\&8\*T24-30\*T1\*.20
+\&9\*T29-37\*T\*.30*
+\&\*.TE
+\&* (first quarter only)
+.OU
+.TS
+allbox;
+c s s
+c c c
+n n n.
+AT&T Common Stock
+Year	Price	Dividend
+1984	15-20	$1.20
+5	19-25	1.20
+6	21-28	1.20
+7	20-36	1.20
+8	24-30	1.20
+9	29-37	.30*
+.TE
+* (first quarter only)
+.KE
+.BP
+.KS
+.IN 4i
+\&\*.TS
+\&box;
+\&c s s
+\&c | c | c
+\&l | l | n\*.
+\&Major New York Bridges
+\&=
+\&Bridge\*TDesigner\*TLength
+\&\(ul
+\&Brooklyn\*TJ\*. A\*. Roebling\*T1595
+\&Manhattan\*TG\*. Lindenthal\*T1470
+\&Williamsburg\*TL\*. L\*. Buck\*T1600
+\&\(ul
+\&Queensborough\*TPalmer &\*T1182
+\&\*T  Hornbostel
+\&\(ul
+\&\*T\*T1380
+\&Triborough\*TO\*. H\*. Ammann\*T\(ul
+\&\*T\*T383
+\&\(ul
+\&Bronx Whitestone\*TO\*. H\*. Ammann\*T2300
+\&Throgs Neck\*TO\*. H\*. Ammann\*T1800
+\&\(ul
+\&George Washington\*TO\*. H\*. Ammann\*T3500
+\&\*.TE
+.OU
+.TS
+box;
+c s s
+c | c | c
+l | l | n.
+Major New York Bridges
+=
+Bridge	Designer	Length
+_
+Brooklyn	J. A. Roebling	1595
+Manhattan	G. Lindenthal	1470
+Williamsburg	L. L. Buck	1600
+_
+Queensborough	Palmer &	1182
+	  Hornbostel
+_
+		1380
+Triborough	O. H. Ammann	_
+		383
+_
+Bronx Whitestone	O. H. Ammann	2300
+Throgs Neck	O. H. Ammann	1800
+_
+George Washington	O. H. Ammann	3500
+.TE
+.IN 3.0i
+\&\*.TS
+\&c c
+\&np-2 | n | \*.
+\&\*TStack
+\&\*T\(ul
+\&1\*T46
+\&\*T\(ul
+\&2\*T23
+\&\*T\(ul
+\&3\*T15
+\&\*T\(ul
+\&4\*T6\*.5
+\&\*T\(ul
+\&5\*T2\*.1
+\&\*T\(ul
+\&\*.TE
+.OU
+.TS
+c c
+np-2 | n |.
+	Stack
+	_
+1	46
+	_
+2	23
+	_
+3	15
+	_
+4	6.5
+	_
+5	2.1
+	_
+.TE
+.KE

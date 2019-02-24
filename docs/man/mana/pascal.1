@@ -1,0 +1,170 @@
+.TH PASCAL 1
+.CT 1 prog_other
+.SH NAME
+pascal \(mi language interpreter
+.SH SYNOPSIS
+.B pascal
+[
+.B -cx
+]
+[
+.BI - options
+]
+[
+.B -i
+.I name ...
+]
+[
+.IB name .p
+]
+[
+.I obj
+[
+.I argument ...
+]
+]
+.PP
+.B pmerge
+.IB name .p
+.I \&...
+.SH DESCRIPTION
+.I Pascal
+translates Pascal source programs
+to interpretable form, executes them,
+or both.
+Under option
+.B -c
+the programs are translated
+but not executed.
+The translated code appears in file
+.FR obj .
+Under option
+.B -x
+.I pascal
+interprets the previously translated code in file
+.I obj
+(default
+.FR obj ).
+.I Arguments
+are made available through the built-ins
+.L argc
+and
+.LR argv .
+.PP
+Options
+.B -c
+and
+.B -x 
+must come first.
+.PP
+Option
+.B -i
+causes the named procedures and include files to be listed.
+.PP
+Other options are combined in a separate string:
+.TP
+.B b
+Buffer the runtime
+file
+.LR output .
+.PD0
+.TP
+.B l
+Make a program listing during translation.
+.TP
+.B n
+List each included
+file on a new page with a banner line.
+.TP
+.B p
+Suppress the post-mortem control flow backtrace
+if an error occurs;
+override execution limit of 500,000 statements.
+.TP
+.B s
+Accept standard Pascal only;
+non-standard constructs cause warning diagnostics.
+.TP
+.B t
+Suppress runtime tests of subrange variables and treat
+assert statements as comments.
+.TP
+.B u
+Card image mode;
+only the first 72 characters of input lines are used.
+.TP
+.B w
+Suppress warning diagnostics.
+.TP
+.B z
+Cause the interpreter to gather profiling data for
+later analysis by
+.IR pxp (A).
+.PD
+.PP
+.I Pmerge
+combines the named source files into a single source file on the
+standard output.
+.SH FILES
+.TF /usr/lib/pascal/*
+.TP
+.F *.p
+source
+.TP
+.F *.i
+include files
+.TP
+.F /usr/lib/pascal/*
+.TP
+.F obj
+.TP
+.F /tmp/pix*
+obj for compile-and-go
+.TP
+.F pmon.out
+profile data file
+.SH "SEE ALSO"
+.IR pc (1),
+.IR pxp (A)
+.br
+W. N. Joy, Susan L. Graham, C. B. Haley,
+`Berkeley Pascal User's Manual', in
+.I
+Unix Programmer's Manual, Seventh Edition, Virtual VAX-11 Version,
+1980, Vol 2C
+(Berkeley).
+There
+.I pascal
+is called
+.I pi, px,
+and
+.IR pix.
+.SH DIAGNOSTICS
+The first character of an
+error message indicates its class:
+.TP
+.L E
+Fatal error; no code will be generated.
+.PD0
+.TP
+.L e
+Non-fatal error.
+.TP
+.L w
+Warning \- a potential problem.
+.TP	
+.L s
+Warning \- nonstandard Pascal construct.
+.SH BUGS
+The keyword
+.L packed
+is recognized but has no effect.
+.br
+Diagnostics for an included file may appear in the listing
+of the next one.
+.br
+A dummy
+.I obj
+must be given if both source and
+.I arguments
+are present.

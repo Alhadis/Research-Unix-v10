@@ -1,0 +1,85 @@
+.TH POOL 3+
+.CT 2 datatype
+.SH NAME
+pool \- fast memory allocation
+.SH SYNOPSIS
+.nf
+.B #include <Pool.h>
+.PP
+.ft L
+struct Pool {
+	Pool(unsigned);
+	~Pool();
+	void* alloc();
+	void free(void*)
+};
+.fi
+.SH DESCRIPTION
+.PP
+Every
+.L Pool
+is a collection of
+.IR elements ,
+each of which is an array of bytes.
+All elements of a pool
+are the same size.
+Pool functions are
+.nr xx \w'\fIp\fL.free(\fIep\fL)\ '
+.TP \n(xxu
+.BI Pool( n )
+Construct a pool whose elements are of size
+.I n.
+.TP
+.IB p .alloc()
+Allocate a new element in pool
+.LR p .
+Return a pointer to the element.
+.TP
+.IB p .free( ep )
+Free the element of
+.I p
+pointed to by
+.I ep.
+The element must
+have been allocated from
+.I p.
+.PP
+Destroying a pool
+frees all the memory occupied by its elements.
+.PP
+The memory in a pool element is aligned on
+the same boundary as memory returned by
+.IR malloc (3)
+so that it may be used to contain an
+object of any type.
+In typical use, there would be one pool per class, with
+the pool known only to the 
+.B new
+and
+.B delete
+operators of that class.
+.SS Performance
+Pool memory is allocated in chunks that are typically
+about 1,000 bytes each.
+Once a chunk is allocated to a particular pool,
+that chunk is only released when the pool itself
+is destroyed.
+.PP
+Elements are allocated inline except when 
+a new chunk must be added to the pool.
+Elements are always freed inline.
+.SH EXAMPLES
+.B #include <Pool.h>
+.PP
+.EX
+struct Mytype {
+	static Pool mypool;
+	// constructors and members
+	void* operator new(unsigned) { return mypool.alloc(); }
+	void operator delete(void* p) { mypool.free(p); }
+};
+.EE
+.PP
+.B Pool Mytype::mypool(sizeof(Mytype));
+.SH SEE ALSO
+.IR malloc (3)

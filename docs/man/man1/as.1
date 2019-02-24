@@ -1,0 +1,86 @@
+.TH AS 1 
+.CT 1 prog_other
+.SH NAME
+as \- assembler
+.SH SYNOPSIS
+.B as
+[
+.I option ...
+]
+[
+.I name ...
+]
+.SH DESCRIPTION
+.I As
+assembles the named files, or the standard input if no file name is specified.
+The options are:
+.TP
+.BI -d n
+Specifies the number of bytes
+.I n
+(1, 2, or 4) to be assembled for offsets
+which involve forward or external references, and which have sizes unspecified
+in the assembly language.
+Default is 
+.BR -d4 .
+.TP
+.B -L
+Save defined labels that begin with
+.LR L ,
+which are normally discarded
+to save space in the resultant symbol table.
+The compilers generate such temporary labels.
+.TP
+.B -V
+Use virtual memory for intermediate storage, rather than a temporary file.
+.TP
+.B -W
+Do not complain about errors.
+.TP
+.B -J
+Use long branches to resolve jumps when byte-displacement branches are
+insufficient.  This must be used when a compiler-generated assembly contains
+branches of more than 32K bytes.
+.TP
+.B -R
+Make initialized data segments read-only, by concatenating them to
+the text segments.
+This obviates the need to run editor scripts on assembly
+code to make initialized data read-only and shared.
+.TP
+.B -t
+Specifies a directory to receive the temporary file, other than
+the default
+.FR /tmp .
+.TP
+.BI -o obj
+Place output in file
+.I obj.
+Default is
+.FR a.out .
+.PP
+All undefined symbols in the assembly
+are treated as global.
+.SH FILES
+.TF /tmp/as*
+.TP
+.F /tmp/as*
+default temporary file
+.TP
+.F a.out
+default object file
+.SH "SEE ALSO"
+.IR ld (1),
+.IR nm (1),
+.IR adb (1),
+.IR pi (9.1),
+.IR a.out (5)
+.br
+J. F. Reiser and R. R. Henry
+`Assembler Reference Manual',
+.I Unix Programmer's Manual, Seventh Edition, Virtual VAX-11 Version,
+1980, Volume 2C (Berkeley)
+.SH BUGS
+.B -J
+should be eliminated; the assembler should automatically choose among
+byte, word and long branches.

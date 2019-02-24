@@ -1,0 +1,222 @@
+.TH SCSISH 8
+.CT 1 sa_nonmortals
+.SH NAME
+scsish \- SCSI shell
+.SH SYNOPSIS
+.B /usr/lib/worm/scsish
+.SH DESCRIPTION
+.I Scsish
+is a command interpreter for SCSI commands executed through
+.B /dev/scsi
+(see
+.IR scsi (4)).
+Many commands are applicable to more or less all SCSI devices;
+some are specific to the SONY WDA-3000-10 optical disk jukebox.
+Any details not found here are in the manual for the jukebox.
+.PP
+Typically commands are sent to a particular drive
+(a number between 0 and 7 inclusive)
+on a particular device
+(normally a number between 0 and 5 inclusive).
+Most commands take a drive parameter (a number).
+The device number is set by the
+.B id
+command.
+.PP
+Occasionally, commands fail and will print the result of a
+.B sense
+command which is normally needed to clear the error status.
+.PP
+All input is in lower case and keywords and numbers are separated by white space.
+Commands are separated by a newline or semicolon.
+.SS "General SCSI Commands"
+.TF "disk eject drive"
+.TP
+.BI capacity " drive"
+Report the capacity of
+.I drive
+as
+.BR "nblocks x blocksize" .
+.TP
+.BI "disk eject" " drive"
+Eject the disk
+(or other removable medium)
+from
+.IR drive .
+.TP
+.BI echo " number"
+Print
+.I number
+on standard output.
+.TP
+.B help
+Print a summary of the available commands.
+.TP
+.BI id " n"
+Set the destination SCSI bus device number.
+By default, it is 2 which is the normal device number for the SONY jukebox.
+.TP
+.BI inquiry " drive"
+Print various bits of status about
+.IR drive .
+For example,
+.IP
+.EX
+drive 2,0: WORM device, '    SONY     WDA-3000-10 2.D'
+	disk,write protect,,,ready (0x9)
+.EE
+.IP
+If
+.I drive
+is omitted, an inquiry is performed for drives 0 through 7.
+.TP
+.BI read " drive block"
+Print the contents of the 1024 byte block at
+.I block
+on
+.I drive
+in hexadecimal.
+.TP
+.BI "read id" " drive"
+Print the string starting at byte 42 in block 1 on
+.IR drive .
+This corresponds to the initial
+.I vol_id
+for
+.IR worm (8)
+disks.
+.TP
+.B reset
+Attempt to reset the SCSI interface.
+.TP
+.BI sense " drive"
+Print the sense data for
+.IR drive .
+Some of the interpretations of the sense bytes are idiosyncratic to SONY.
+.TP
+.BI "ext sense" " drive"
+Print the extended sense data for
+.IR drive .
+Most of the interpretations of the extended sense bytes are idiosyncratic to SONY.
+.TP
+.BI sleep " n"
+Sleep for
+.I n
+seconds.
+.TP
+.BI start " drive"
+Start
+.I drive
+spinning.
+.TP
+.BI stop " drive"
+Stop
+.IR drive .
+.TP
+.BI test " drive"
+Test unit ready for
+.IR drive .
+.PD
+.SS "SONY Commands"
+.TP
+.BI alternate " drive"
+Print the replacement block tables from the disk.
+.TP
+.BI media " drive blkno nblks"
+Print a summary of the media quality in
+.I drive
+for the
+.I nblks
+blocks starting at block number
+.IR blkno .
+For example, a dirty disk can yield
+.IP
+.EX
+drive 0: media check for 1000 blocks [0-999], upper drive
+849 good, 1 unwritten, 147 <50% burst, 3 >96% burst, 
+.EE
+.IP
+Please report any instances of messages including
+.B "rare error"
+to the jukebox guru.
+.PD
+.TP
+.BI "ext media" " drive blkno nblks"
+A verbose form of the
+.B media
+command.
+.PD
+.SS "Jukebox Commands"
+.TP
+.B config
+Print the configuration data for the jukebox.
+.TP
+.BI "disk release" " drive shelf side"
+Release the disk from
+.I drive
+to
+.IR shelf .
+The value of
+.I side
+indicates whether it should be inverted on the way
+.RB ( b )
+or not
+.RB ( a ).
+If
+.I shelf
+and
+.I side
+are absent,
+the disk is restored to its former shelf.
+.PD0
+.TP
+.BI "disk set" " shelf side drive"
+Put the disk from
+.I shelf
+into
+.IR drive .
+The value of
+.I side
+indicates whether it should be inverted on the way
+.RB ( b )
+or not
+.RB ( a ).
+.TP
+.BI internal " n"
+Execute various internal reports and diagnostics.
+.B internal
+with no argument will print a list of available diagnostics.
+.TP
+.BI "status" " drive"
+Print the status for
+.IR drive .
+An absent
+.I drive
+is taken as 0.
+As the status is for the jukebox as a whole,
+the value of
+.I drive
+doesn't matter.
+A sample status output shows the jukebox hides the mapping
+of logical drive number and actual drive:
+.IP
+.EX
+drive 0: ready,disk in LUN,power on,disk in drive 0, return shelf 2
+drive 1: not ready,no disk in LUN,power on,disk in shelf 0
+drive 2: not ready,no disk in LUN,power on,disk in shelf 0
+drive 3: ready,disk in LUN,power on,disk in drive 1, return shelf 0
+drive 4: not ready,no disk in LUN,power on,disk in shelf 0
+drive 5: not ready,no disk in LUN,power on,disk in shelf 0
+drive 6: not ready,no disk in LUN,power on,disk in shelf 0
+drive 7: not ready,no disk in LUN,power on,disk in shelf 0
+0: no disk
+1: no disk
+2: disk,
+I/O shelf: no disk
+carrier: disk shelf=0
+upper drive: disk, LUN=0
+lower drive: disk, LUN=3
+.EE
+.SH "SEE ALSO"
+.IR worm (8), 
+.IR scsi (4)

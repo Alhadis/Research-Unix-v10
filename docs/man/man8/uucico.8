@@ -1,0 +1,205 @@
+.TH UUCICO 8
+.CT 1 sa_auto
+.SH NAME
+uucico, uusched, uuxqt, kick, debug  \- uucp file transport and execution
+.SH SYNOPSIS
+.B /usr/lib/uucp/uucico
+[
+.B -r1
+.B -s
+.I system
+]
+[
+.B -x
+.I debug
+]
+[
+.B -d
+.I spool_directory
+]
+.PP
+.B /usr/lib/uucp/uusched
+[
+.B -x
+.I debug
+]
+[
+.B -u
+.I debug
+]
+.PP
+.B /usr/lib/uucp/kick
+.I system
+.PP
+.B /usr/lib/uucp/debug
+.I system
+.PP
+.B /usr/lib/uucp/uuxqt
+[
+.B -s
+.I system
+]
+[
+.B -x
+.I debug
+]
+.SH DESCRIPTION
+.I Uucico
+transfers files between systems
+for
+.IR uucp (1).
+It is normally invoked by
+.I login
+for
+an incoming connection
+(a slave),
+or by
+.IR uusched
+to call out to another system
+(a master).
+The options are
+.TP \w'\f5-s\ \fIsystem\ 'u
+.B -r1
+This is a master;
+option 
+.B -s
+is required.
+In the absence of
+.B -r1
+the process is a slave and expects to speak to a master on
+standard input and standard output.
+.TP \w'\f5-s\ \fIsystem\ 'u
+.BI -s " system
+Call the named
+.I system.
+.TP
+.BI -x " debug
+Turn on debugging output;
+.I debug
+is a single digit, larger for more output.
+.ig
+.PP
+For example,
+the shell
+.I Uutry
+starts
+.I uucico
+with debugging turned on.
+..
+.PP
+.I Uusched
+invokes
+.I uucico
+for each system
+with work pending.
+It is called by
+.IR uucp
+and
+.IR uux (1)
+after work is queued,
+and should be invoked regularly by
+.IR cron (8).
+The options are
+.TP \w'\f5-s\ \fIsystem\ 'u
+.BI -x " debug
+As for
+.I uucico.
+.TP
+.BI -u " debug
+Invoke
+.I uucico
+with option
+.B -x
+.I debug.
+.PP
+.I Kick
+invokes
+.I uucico
+in the background
+to call out to the specified
+.IR system .
+.I Debug
+causes a call with
+a moderate amount
+of debugging output
+.RB ( -x4 ).
+Both attempt to remove
+existing system status information
+for
+.IR system ,
+so that a call will be attempted
+regardless of recent failures.
+.PP
+.I Uuxqt
+executes commands requested remotely by
+.IR uux (1).
+It searches the
+.I uucp
+spool directories looking for
+filenames starting with
+.BR X. ,
+checks the
+.I Permissions
+file to see that all required data files are available
+and accessible
+and that the requested command is permitted for the
+requesting system,
+and invokes the command if all is well.
+.PP
+Before a command is invoked,
+the file creation mask
+.RI ( umask (2))
+is set to 0 and these
+environment variables are set:
+.TF UU_MACHINE
+.TP
+.B UU_MACHINE
+the name of the last sending machine
+.TP
+.B UU_USER
+the user that sent the job
+.TP
+.B PATH
+set to
+.LR /bin:/usr/bin
+.TP
+.B USER
+set to
+.L uucp 
+.PD
+.SH FILES
+.TF /usr/lib/uucp/Maxuuscheds
+.TP
+.F /usr/lib/uucp/Systems*
+.TP
+.F /usr/lib/uucp/Permissions
+.TP
+.F /usr/lib/uucp/Devices
+.TP
+.F /usr/lib/uucp/Maxuuscheds
+how many copies of
+.I uusched
+may be active at once
+.TP
+.F /usr/lib/uucp/Maxuuxqts
+ditto for
+.I uuxqt
+.TP
+.F /usr/spool/uucp/*
+.TP
+.F /usr/spool/uucppublic/*
+.TP
+.F /usr/spool/uucp/LCK*
+.fi
+.SH "SEE ALSO"
+.IR uucp (1), 
+.IR uux (1),
+.IR uustat (1)
+.br
+D. A. Nowitz,
+`UUCP Administration',
+this manual, Volume 2
+.SH BUGS
+System and user names received by
+.I uuxqt
+should not be believed.

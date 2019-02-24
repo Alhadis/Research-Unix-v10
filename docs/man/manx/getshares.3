@@ -1,0 +1,43 @@
+.TH GETSHARES 3 SHARE
+.SH NAME
+getshares \- get shares file entry given uid
+.SH SYNOPSIS
+.B "#include <shares.h>"
+.br
+.sp
+.B "unsigned long getshares(lp, uid, lock)"
+.br
+.B "struct lnode * lp;"
+.br
+.B "int uid;"
+.br
+.B "int lock;"
+.SH DESCRIPTION
+.I Getshares
+finds the shares entry with the same uid as
+.I uid
+and reads it into an area pointed to by
+.IR lp .
+.I lock
+should be non-zero if the shares data-base should be opened for writing.
+Returns zero if no entry exists,
+(in which case all
+.RI non- uid
+fields of
+.I *lp
+will have been cleared),
+or the ``last used'' time of the entry.
+.I lp\->l_uid
+will always have been set to
+.I uid
+on return.
+.SH "SEE ALSO"
+closeshares(3),
+getshput(3),
+openshares(3),
+putshares(3),
+sharesfile(3).
+.SH DIAGNOSTICS
+.I Getshares
+returns 0
+if entry can't be found, or on error.

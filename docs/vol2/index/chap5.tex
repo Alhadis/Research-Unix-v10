@@ -1,0 +1,1349 @@
+\ifnum\pageno=1 \input macros.tex \immediate\openout\inx=chap5.index\makecontents\pageno=105 \fi
+\proofmodefalse
+\draft{11/24/89 by Trevor}
+\def \sH {\script H}
+\def\SQ{\tilde{\bS}}
+\def\scM {\script M} 
+\chapter 5 {Some theory for additive models}
+\Section{Introduction}
+In the previous chapter we introduce the nonparametric additive model
+and the backfitting procedure, a heuristic method for  estimation.
+In this chapter we provide some theoretical underpinning for these ideas.
+The technical content and level of this chapter is somewhat
+higher than the others, so the reader
+interested only in applications 
+may well decide not to tackle it.
+ 
+The chapter has two main parts.
+In the first half the backfitting algorithm is justified as a method
+for  estimating the  additive model.
+ Several  justifications are provided.
+We first introduce an $L_2$ version of backfitting, that is,
+a backfitting algorithm for square integrable random variables, and
+show how the intuitive procedure introduced in the last chapter
+can be viewed as a data analogue of this.
+A second, different, justification for backfitting, 
+comes from a penalized least-squares framework.
+Unlike the $L_2$ argument, it makes no appeal to random
+variables: 
+instead, it applies to finite-sample backfitting procedures that use linear smoothers 
+(recall the discussion of linear smoothers in sections~2.8 and 3.4.2).
+
+An important by-product of these justifications
+is the set of {\em estimating equations} that are solved by backfitting.
+This linear system can be solved noniteratively and in some
+special cases such a direct solution is more appropriate
+than backfitting.
+
+We also describe very briefly a more technical abstract derivation using the theory of reproducing-kernel Hilbert-spaces. 
+
+In the second half of the chapter
+we study the existence and uniqueness of the solutions to the additive-model
+estimating equations and   
+the convergence of the backfitting algorithm.
+The results pertain to linear smoothers only.
+ One of the  interesting notions that arises is {\em concurvity}, the
+analogue of collinearity.
+We also discuss some theory for  standard-error bands and degrees of freedom of the estimated
+smooths,
+and the relationship of backfitting to the Gram-Schmidt and Gauss-Seidel
+techniques. 
+ 
+Related theory for generalized additive models
+is not covered here but
+is discussed 
+in the
+next chapter.
+We don't devote much space  to  asymptotic issues such as consistency or rates of convergence  for
+additive models; these are briefly mentioned in the
+bibliographic notes.
+
+\Sectionskip\Section{Estimating equations for additive models}
+\Mark{ESTIMATING EQUATIONS}
+The additive model
+$$\ev(Y\given \rvX)=\sum_{j=1}^p f_j(X_j)\eqn{\addm}$$
+can be estimated by the backfitting algorithm, which we
+give  again below:
+
+\setbox1=\vbox{\hsize \algwidth {\setnine\parindent 20pt 
+ \item{(i)} {\em Initialize:}$ \quad f_j=f_j^{\,(0)},
+j=1,\ldots, p$ 
+ \item{(ii)} {\em Cycle:} $\quad j=1,\ldots, p,1,\ldots
+p,\ldots$
+$$f_j=\smooth_j(\vec y-\sum_{k\neq j}\vec f_k\given \vec x_j) $$
+\item{(iii)} Continue (ii) until the individual functions don't
+change.  
+}%end algorithm
+\smallskip
+} %end box1 
+\midinsert  \algorithm{{\ninerm\noindent Algorithm \chapnodot 1}
+The backfitting algorithm}{\box1} \endinsert
+ 
+In the above, the $\vec f_j$ are the $n$-vectors 
+$\{f_j(x_{1j}),\ldots, f_j(x_{nj})\}^T$, with $x_{ij}$ in the order of $y_i$.
+We have omitted the constant term $\alpha$ in \addm; we  see later that
+this does not change the resulting estimates.
+
+In order to justify this procedure, we need some way of introducing
+the smoothness that is provided by the scatterplot smoothers 
+in the  algorithm.
+To put it another way,
+if we naively  
+tried to minimize
+$$\sum_{i=1}^n \Bigl\{y_i-\tsum_{j=1}^p f_j(x_{ij})\Bigr\}^2\eqn{\naive}$$
+then the solution would be any set of functions $(\,f_j:j=1,\ldots,p\,)$ that interpolated the data (assuming for the moment that the $X$-values are distinct).
+For example, $f_1(x_{i1})=y_i$ $\forall i$ and $f_j\equiv 0$
+for $j >1$.
+We  discuss several ways of introducing  smoothness.
+One approach is explicitly to  add a term  to $\naive$ that penalizes for lack of
+smoothness, the  
+{\em penalized least-squares} approach.
+Another approach, described next, is to step back and
+consider random variables instead of data.
+A Hilbert-space version of the additive model and backfitting can be
+formulated,
+with conditional expectation operators playing the role of smoothers.
+Besides its use here,
+this formulation is
+mathematically
+ interesting 
+in its own right.
+The data version of backfitting is then derived as an empirical version
+of this Hilbert-space procedure, the smoothness 
+entering when one considers how best to estimate the conditional
+expectations.
+A third approach,  based on reproducing-kernel Hilbert-spaces,  is a more abstract version of the penalized least-squares approach. Later on in the chapter
+we  give yet another derivation, based on a Bayesian stochastic model.
+ 
+\sectionskip\section{$L_2$ function spaces}
+Let $\sH_j$ for $j=1,\ldots,p$ denote the Hilbert spaces of measurable
+functions $\phi_j (X_j)$ with $\ev\phi_j(X_j)=0$, $\ev\phi^2_j(X_j) <
+\infty$, and inner product
+$\inner{\phi_j(X_j),\phi_j'(X_j)}=\ev \phi_j(X_j)\phi_j'(X_j) $.  In
+addition, denote by $\sH$ the space of arbitrary centered, square
+integrable functions of $X_1,\ldots,X_p$.  We consider the $\sH_j$
+as subspaces of $\sH$ in a canonical way.  Furthermore, denote by
+$\sH^{add} \subset \sH$ the  linear subspace of additive
+functions: $\sH^{add}=\sH_1+\cdots +\sH_p$, which is closed under some technical assumptions.
+   These are all subspaces of  $\sH_{YX}$,
+the space of centered square integrable functions of $Y$ and $X_1,\ldots,X_p$.
+   
+The optimization problem in this population setting is  
+to minimize 
+$$\ev\{Y-g(\rvX)\}^2\eqn{\backc}$$
+over  $g(\rvX)=\sum_j f_j(X_j)\in\sH^{add}$. 
+ Of course, without the additivity
+restriction, the solution is simply $\ev(Y\given \rvX)$; we seek the
+closest additive approximation to this function.  Since by assumption $\sH^{add}$ is a
+closed subspace of $\sH$ this minimum exists and is unique; the
+individual functions $f_j(X_j)$, however, may not be uniquely
+determined.  Denote by $P_j$ the conditional expectation operator $\ev(\cdot\given
+X_j)$; as such $P_j$ is an orthogonal projection onto $H_j$.
+
+The minimizer $g(\rvX)$ of \backc\ can be characterized by residuals $Y-g(\rvX)$ which are orthogonal to the space of fits:
+ $Y-g(\rvX) \perp \sH^{add}$. 
+Since $\sH^{add}$ is generated by $\sH_j\ (\subset \sH^{add})$,
+ we have equivalently:
+$Y-g(\rvX)\perp \sH_j,\quad\forall j$ 
+or:\ 
+ $\;P_j\{Y-g(\rvX)\}=0\quad\forall j$. 
+Component-wise this can be written as
+ $$\eqalign{f_j(X_j) &=P_j\Bigl\{Y-\sum_{k\neq j} f_k(X_k)\Bigr\}\cr &=
+\ev\Bigl\{Y-\sum_{k\neq j}f_k(X_k)\given X_j\Bigr\}.\cr}\eqn{\backe}$$
+Equivalently, the following system of {\em estimating equations}
+is necessary and sufficient for $\vec f=
+(f_1,\ldots,f_p)$ to minimize \backc:
+$$\pmatrix{I&P_1&P_1&\cdots&P_1\cr
+P_2&I&P_2&\cdots&P_2\cr\vdots&\vdots&\vdots&\ddots&\vdots\cr
+P_p&P_p&P_p&\cdots&I\cr}\pmatrix{f_1(X_1)\cr f_2(X_2)\cr\vdots\cr
+f_p(X_p)}= \pmatrix{P_1 Y\cr P_2Y\cr \vdots\cr P_pY}\eqn{\backd}$$ 
+or
+$$\bP\vec f=\vec Q Y,$$
+where $\vec P $ and $ \vec Q$ represent a matrix and vector of operators, respectively,
+ and operator matrix multiplication is defined in the obvious way.
+ 
+The reader familiar with the Gauss-Seidel method for solving
+linear systems of equations will recognize backfitting as a formal
+Gauss-Seidel algorithm for solving the system $\backd$.
+(We say {\em formal} because the elements in the left  matrix
+of $\backd$ are not real numbers or real-valued matrices but
+conditional expectation operators.)
+Suppose we wish to solve a linear system of equations $\bA\vec z=\vec b$, with
+$\bA=\{a_{ij}\}$  an $m\times m$ matrix, $\vec b$ an $m$ vector and $\vec z$ 
+the vector of $m$ unknown coefficients.
+ The Gauss-Seidel iterative method 
+solves for each $z_i$ in turn from the 
+relation in the $i$th row
+$\sum_{j=1}^m a_{ij} z_j=b_i$.
+This process is repeated for $i=1,\ldots, m,1,\ldots,m,\ldots$,  
+using the latest values of each $z_j$ at each step, until convergence.
+ 
+The connection between backfitting and the Gauss-Seidel method becomes more precise
+when we consider the corresponding data version of $\backd$ using linear smoothers.
+Recall from section~2.8 that a linear smoother can be written as
+ a {\em smoother matrix} times the response vector $\vec y$,
+that is $\hatvec f=\bS\vec y$.
+Examples of linear smoothers include the running-mean, locally-weighted running-line,
+smoothing splines and kernel smoothers.
+Consider then a backfitting algorithm that estimates the conditional
+expectation operator $P_j$ by a linear scatterplot smoother 
+with smoother matrix $\bS_j$.
+Then the data version of the estimating equations $\backd$ is
+the $np\times np$ system
+$$\pmatrix{\bI&\bS_1&\bS_1&\cdots&\bS_1\cr
+\bS_2&\bI&\bS_2&\cdots&\bS_2\cr\vdots&\vdots&\vdots&\ddots&\vdots\cr
+\bS_p&\bS_p&\bS_p&\cdots&\bI\cr}\pmatrix{\vec f_1\cr \vec f_2\cr\vdots\cr \vec
+f_p}= \pmatrix{\bS_1 \vec y\cr \bS_2\vec y\cr \vdots\cr \bS_p\vec
+y}.\eqn{\backdd}$$ 
+
+In short form we write
+ $$\hat {\vec P}\vec f=\hat {\bQ}\vec y.$$
+Backfitting is a Gauss-Seidel procedure for solving the above 
+system.
+The only  nonstandard aspect is that we solve  for $n$ elements at each step instead of one (block Gauss-Seidel), although for linear  smoothers this distinction can be dropped.
+
+Now
+suppose we start with $\backdd$.
+Why use an iterative procedure like backfitting to find its solution?
+Why not use a standard, noniterative method like a QR decomposition?
+The difficulty is that in general, $\backdd$ is an $np\times np$ system
+and since methods like QR require $O(m^3)$ operations to solve an $m\times m$
+system, our problem would  cost $O\{(np)^3\}$ operations.
+On the other hand, backfitting exploits the special structure in $\backdd$,
+and if the smoothers can be applied in $O(n)$ computations (as is the
+case for running-lines and  smoothing splines), then backfitting
+requires only $O(np)$ computations.
+(This assumes that a fixed number of iterations is sufficient for convergence).
+If, however,  the effective dimension of the system $\backdd$ is really less than $np$,
+there may be better methods than backfitting for solving  the problem.
+In particular, if each $\bS_j$ is an orthogonal projection and the
+union of the projection spaces has rank $m$, then $\backdd$ is equivalent
+to an $m\times m$ least-squares problem (Exercise~5.3)  and least-squares methods
+are likely to be preferable if $m << n$.
+This is the case if the $\bS_j$s produce linear or polynomial fits,
+or if we use regression splines with a small number of knots.
+
+Later in this chapter the properties of the estimating equations \backdd\ are
+studied.
+We find that there is an intimate connection between the 
+existence of solutions of this system and the convergence of the
+backfitting procedure for finding these solutions.
+
+\sectionskip\section{Penalized least-squares}
+In this section we provide a different justification for backfitting
+from that given in
+ the Hilbert-space framework  in the previous section.
+In section~2.10 we derive the  cubic smoothing spline
+as the minimizer over all twice continuously differentiable functions of the
+penalized least-squares criterion
+$$\sum_{i=1}^n\{y_i-f(x_i)\}^2+\lambda\int \{f''(x)\}^2 \, dx.\eqn{\qb}$$ 
+We establish this by using the fact that the solution to $\qb$ is a cubic
+spline,
+and hence we simplified $\qb$ by writing it as a function of $f_i=f(x_i)$, the $n$ evaluations of the minimizing function~$f$.
+This gave the equivalent form
+$$(\vec y-\vec f)^T(\vec y-\vec f) +\lambda\vec f^T\bK\vec f\eqn{\nqd}$$
+where $\bK$ is a certain quadratic penalty matrix.
+The quantity
+$\nqd$ is easily shown to have a minimum given by
+$$\hat\vec f=(\bI+\lambda \bK)^{-1}\vec y.
+\eqn{\css}$$
+We also argued in the opposite direction for
+other symmetric linear smoothers.
+That is, given a symmetric linear smoother based on the smoother matrix
+$\bS$, the smooth $\hat\vec f=\bS\vec y$ minimizes
+$$(\vec y-\vec f)^T(\vec y-\vec f) +\vec f^T(\bS^- -\bI)\vec f\eqn{\newm}$$
+over all $\vec f\in\script{R}(\bS)$ (the range of $\bS$), where $\bS^-$ is any generalized inverse of $\bS$.
+
+In order to extend this idea to the estimation of the additive model,
+we generalize the criterion $\qb$ in an obvious way.
+We seek to minimize
+$$\sum_{i=1}^n\Bigl\{y_i-\tsum_{j=1}^pf_j(x_{ij})\Bigr\}^2 +\sum_{j=1}^p
+\lambda_j\int \{f_j''(t)\}^2 \, dt\eqn{\splinpen}$$
+over all twice
+continuously differentiable functions $f_j$.
+Before deriving the solution to $\splinpen$, let's take note of some
+of its features.
+Notice that each function in 
+$\splinpen$ is penalized by a separate constant $\lambda_j$.
+This in turn determines the  smoothness of  that function in the solution.
+Note also that if the $\lambda_j$s are all zero (no smoothness penalty)
+the solution to  \splinpen\ is any interpolating set of functions whose evaluations satisfy $\sum_{j=1}^p  f_j(x_{ij})=y_i$ for $i=1,\ldots,n$.
+On the other hand, if each $\lambda_j$ goes to infinity, the
+penalty term goes to infinity unless $f_j''(t)=0$ for all $j$, that is,
+unless
+each $f_j$ is linear.
+Hence the problem reduces to standard linear least-squares.
+
+Using a  straightforward
+extension of the arguments used in the single-predictor
+case,
+the solution to \splinpen\ is shown to be a cubic spline in each of the predictors.
+As before we parametrize by evaluations at the $n$ observations.
+Thus we may rewrite $\splinpen$ as
+$$\Bigl(\vec y-\sum_{j=1}^p  \vec f_j\Bigr)^T\Bigl(\vec y-\sum_{j=1}^p\vec f_j\Bigr)+\sum_{j=1}^p
+\lambda_j \vec f_j^T \bK_j \vec f_j \eqn{\nsplinpen}$$
+where the $\bK_j$s are penalty matrices for each predictor, defined 
+analogously to the  $\bK$ for a single predictor  given in section~2.10.
+Now if we differentiate $\nsplinpen$ with respect to the function $\vec f_k$
+we obtain $-2(\vec y-\sum_j \vec f_j)+2\lambda_k \bK_k\vec f_k=\bf 0$
+or 
+$$\hat\vec f_k=\Bigl(\bI+\lambda_k \bK_k\Bigr)^{-1}\Bigl(\vec y-\tsum_{j\neq k} \hat\vec f_j\Bigr).\eqn{\solsplin}$$
+As noted earlier, $(\bI+\lambda_k \bK_k)^{-1}$ is the smoother matrix for
+a cubic smoothing spline, and hence  $\solsplin$, for $k=1,\ldots, p$,
+ are just  
+the  estimating equations $\backdd$.
+
+Arguing in the opposite direction, the minimizers of the 
+ penalized least-squares criterion
+$$\Bigl(\vec y-\sum_{j=1}^p  \vec f_j\Bigr)^T\Bigl(\vec y-\sum_{j=1}^p\vec f_j\Bigr)+\sum_{j=1}^p
+\vec f_j^T(\bS_j^{-}-\bI)\vec f_j,\eqn{\gsplinpen}$$
+over all $\vec f_j\in\script{R}(\bS_j)$,
+ are the solutions to the estimating equations $\backdd$ (Exercise~5.1).
+
+
+ 
+As we do in the single predictor case (Exercise~3.6), we can interpret
+each of the penalty terms in $\nsplinpen$ as a down-weighting of each
+of the components of $\vec f_j$, the down-weighting determined by
+ the  corresponding eigenvalue of that component
+and
+$\lambda_j$.
+
+\def\sH{{\script H}}
+\sectionskip
+\section{Reproducing-kernel Hilbert-spaces}
+This section describes  a more abstract framework for defining and estimating general nonparametric regression models which includes additive models as a special case.
+We present these results   to give the reader a taste of this rich
+area;
+the level of mathematics is somewhat higher than the rest of the chapter.
+The description is close to that of ^{Chen, Gu and Wahba (1989)}.
+
+A Hilbert space $\sH$ of real-valued functions of $t\in \Omega$ is  a  {\em reproducing-kernel} Hilbert-space if evaluation is a continuous linear functional.
+By the Riesz representation theorem, there exist {\em representers of evaluation}
+$e_t\in\sH$ such that $f(t)=\langle f,e_t\rangle_\sH$ for $f\in \sH$, where $\langle \cdot,\cdot\rangle_{\script H}$ denotes the inner-product on $\sH$.
+The consequences of these properties will become clearer as we proceed.
+
+The reproducing kernel itself,
+$Q(\cdot,\cdot):\Omega\times\Omega\mapsto\R 1$, is defined by
+$Q(s,t)=\langle e_s,e_t\rangle_\sH$, and consequently
+$e_s=Q(s,\cdot)$, considered as a function of the second argument, with
+the first held fixed at $s\in \Omega$.
+We will see that the kernel $Q$, evaluated at the realizations of $t$,  provides a finite dimensional basis for representing the solution to a class of optimization problems.
+
+Now suppose $\Omega$ is a space of vector predictors $\fat{X}=(X_1,\ldots,X_p)$ and that $\sH$ has the decomposition
+$$
+\sH=\sH_0+\sum_{k=1}^q\sH_k,
+$$
+where $\sH_0$ is spanned by $\phi_1,\ldots,\phi_M$, and $\sH_k$ has the reproducing kernel $Q_k(\cdot,\cdot)$. 
+The space $\sH_0$ is the projection component of $\sH$, that is, the
+space of functions that are not to be penalized in the optimization.
+In the previous section $\sH_0$ is the space of functions linear in $t$.
+
+We are now set up to pose the  optimization problem. 
+For a given set of predictors $\vec x^1,\ldots,\vec x^n$  (with each $\vec x^i\in\Omega$), find $f=\sum_{k=0}^q f_k$ with $f_k\in \sH_k$, \ $k=0,\ldots, q$, to minimize
+$$
+\sum_{i=1}^n\Bigl\{y_i-\tsum_{k=0}^qf_k(\vec x^i)\Bigr\}^2+ \sum_{k=1}^q\lambda_k\norm{f_k}^2_{\sH_k}.\eqn{\rkcrit}
+$$
+
+The first part of the criterion is discrete in nature, and is the reason why  
+reproducing-kernel spaces are natural for these kinds of problems. 
+We do not want small changes in the $\vec x^i$ to result in vastly different solutions; this is why it is desirable for evaluation to be continuous. 
+ 
+
+The theory of reproducing kernels guarantees  that a minimizer exists, and has the form
+$$\eqalign{
+\hat{f}_0(\fat{X})&=\sum_{j=1}^M\beta_{j0}\phi_j(\fat{X})\cr
+\hat{f}_k(\fat{X})&=\sum_{i=1}^n\beta_{ik}Q_k(\fat{X},\vec x^i).\cr
+}
+\eqn{\rksoln}
+$$
+Furthermore, if the projection onto $\sH_0$ is unique, then so is the solution
+to the larger problem.
+So even though the problem is posed in an infinite-dimensional space, the minimizing $\hat f$ is finite-dimensional, and the $Q_k$ supply bases for representing the solution.
+The parameters are found by minimizing the finite dimensional  quadratic criterion
+$$
+\norm{\vec y-\vec T\fat{\beta_0}-\sum_{k=1}^q\vec Q_k\fat{\beta}_k}^2 +
+\sum_{k=1}^q\lambda_k\fat{\beta}_k^T\vec Q_k\fat{\beta}_k\eqn{\rkdata}
+$$
+where $\vec T$ is the $n\times M$ matrix of evaluations of $\phi_j$, with 
+$ij$th entry $T_{ij}=\phi_j(\vec x^i)$, and $\vec Q_k$ is the $n\times n$
+{ evaluated} kernel with $ij$th entry $Q_k(\vec x^i,\vec x^j)$.
+This problem is of dimension at most $qn+M$.
+
+At this point a number of specializations are possible:
+\smallskip
+{\parindent 20pt
+\item{(i)} If $q=p$ and each of the $\sH_k$ are the canonical subspaces of $\sH$,
+then the additive model consists of a sum of univariate functions. Furthermore, by choosing an inner product appropriate for cubic smoothing splines, the problem reduces exactly to \splinpen, although the solution is typically represented by a different basis.
+\item{(ii)} The current specification has $nq+M$ parameters. If attention is restricted to $f_0$ and $f_+=\sum_{k=1}^qf_k$, with $Q_+=\sum_{k=1}^q Q_k/\lambda_k$, then the dimension of the solution is reduced to $M+n$. 
+\item{(iii)} The general problem as specified by \rksoln\ can potentially be   solved more cheaply by backfitting; the system of estimating equations that characterize the minimum of \rksoln\ can be written in a form similar to \backdd:
+$$\pmatrix{\bI&\bS_0&\bS_0&\cdots&\bS_0\cr
+\bS_1&\bI&\bS_1&\cdots&\bS_1\cr\vdots&\vdots&\vdots&\ddots&\vdots\cr
+\bS_q&\bS_q&\bS_q&\cdots&\bI\cr}\pmatrix{\vec f_0\cr \vec f_1\cr\vdots\cr \vec
+f_q}= \pmatrix{\bS_0 \vec y\cr \bS_1\vec y\cr \vdots\cr \bS_q\vec
+y}\eqn{\backrk}$$ 
+where $\bS_0=\bT(\bT^T\bT)^{-1}\bT$ and $\bS_k=\bQ_k(\bQ_k+\lambda_i\bI)^{-1}$.
+If the computational complexity of the individual operators $\bS_k$ is significantly lower  than  that of the full problem, savings can be made using backfitting-type algorithms. 
+
+}\smallskip
+This is a very  brief summary of some powerful machinery; we cite a number of relevant references in the bibliographic section for more details of this approach and for pointers to the large application area. 
+
+\Sectionskip\Section{Solutions to the estimating equations}
+%\Mark{THE BACKFITTING ALGORITHM}
+\section{Introduction}
+The remainder of the chapter 
+focuses attention  on additive models with linear smoothers $\smooth_1,\ldots,\smooth_p$,  and the algorithms for estimating them.
+
+Most of the smoothers that we have discussed produce  function estimates, and so we could discuss issues such as convergence in terms of these functions as well.
+Instead we restrict attention to the evaluation of these functions at the $n$ realizations of the predictors.
+We do this mainly for simplicity and clarity, but point out that most of the results cited here, in particular those pertaining to  convergence,  can be modified to include this more general case.  
+As a consequence, we  usually refer to a smoother by its matrix representation $\bS$ rather than in the operator form $\smooth$.
+
+The centerpiece of the discussion is the set of estimating equations \backdd.
+Before one delves into methods for solving such a system,  questions
+of consistency and degeneracy have to be answered. 
+In other words, we
+must confirm that the system has at least one solution, and find out
+whether this solution is unique.
+We first look at a few special cases which are are easy to
+work out and  illustrate the 
+ main issues.
+Later in the chapter we answer these questions  in some generality.
+
+ 
+  In our discussion  we sometimes assume implicitly that the same
+smoother is used for each of the variables, but this is only for ease
+of presentation.  The results are general in nature and apply to any
+backfitting procedure in which some linear smoother is used for each
+of the variables.  
+In fact, there is no need even to assume that each smoother is based
+on a single predictor:
+for example a two-dimensional smoother or a least-squares fit on some
+set of predictors could be included.
+Even more generally
+ one can think of $\bS_1,\ldots,\bS_p$  as a
+set of linear transformations, without reference to predictor variables at all.
+
+Throughout the chapter we assume
+ that the $\bS_j$s all reproduce constant functions.
+Note that this
+causes a simple kind of non\-unique\-ness in the backfitting algorithm.
+Suppose the starting functions are all zero.
+Then at every stage of the procedure $\hat \vec f_1$ has 
+the same mean as $\vec y$, but the other $\hat\vec f_j$s  have mean $\bf 0$.
+If the procedure started at $j=2$, however, the mean of $\vec y$ would go into
+$\hat\vec f_2$ instead.
+A closer look reveals that
+ nonzero starting functions  cause a dependence
+of the final iterates on the values of the starting functions.
+It is also clear that unless special constraints are built in, the constant in the additive model is not identifiable.
+This is a special instance of what we call {\em concurvity}, the analogue of {\em collinearity} in linear models.
+ 
+It turns out that such degeneracies do not affect convergence in any important way.
+In this case a simple fix is possible:
+assume that $\vec y$ has been centered to have mean  $\bf 0$,
+and replace $\bS_j$ by 
+the matrix that smooths then subtracts off the average of the smooth.
+It is easy to see that the resultant smoother matrix is
+$(\bI-{\bf  1}{\bf  1}^T/n)\bS_j$,
+what we call a {\em centered} smoother.
+This ensures that at every stage of the procedure the $\hatvec f_j$s have
+mean $\bf 0$.
+
+
+\sectionskip\section{Projection smoothers}
+The additive model is introduced as a generalization  of the linear regression model.
+What if we use a linear least-squares fit,
+or any other orthogonal projection, 
+ for each predictor?
+As mentioned in section~5.2.1, the set of estimating equations \backdd\ is
+equivalent to the usual normal equations for linear regression
+(Exercise~5.3).
+Thus if
+  $\bS_j$ is an orthogonal projection
+and $\script L_{col}(\bS_j)$ denotes the subspace spanned by the columns
+of $\bS_j$,
+we  expect 
+ the backfitting solution $\hatvec y=\sum_1^p \hatvec f_j$ to converge  to
+the projection of $\vec y$ onto $V=\script L_{col}(\bS_1)\oplus 
+\script L_{col}(\bS_2)\oplus \ldots\oplus \script L_{col}(\bS_p)$.
+Indeed if this wasn't the case we might well question the entire
+backfitting paradigm.
+Fortunately, it is fairly easy to show that backfitting does the
+expected in this special case.
+We sketch the  proof here, leaving the details to the 
+reader (Exercise~5.2).
+The idea is to show that the residual vector from backfitting
+converges to the  least-squares residual vector,
+that is, the projection of $\vec y$ onto the orthogonal
+complement of $V$.
+After one cycle of backfitting,  the residual vector
+from backfitting, say 
+$\vec r$, is $\bC\vec y$ where
+$$\bC=(\bI-\bS_p)(\bI-\bS_{p-1})\cdots (\bI-\bS_1).\eqn{\resv}$$
+Thus after $m$ cycles the residual is $\vec r^{\,(m)}=\bC^m\vec y$.
+We can split  $\vec y$ into its components in the
+projection space $V$ and its orthogonal complement,
+that is $\vec y=\hat\vec y+\vec y^{\perp}$.
+Now the operator $\bC$ {\em takes residuals} along each predictor in turn, and
+hence leaves $\vec y^{\perp}$ unchanged.
+Thus
+$$\vec r^{\,(m)}=\bC^m\hat\vec y+\vec y^{\perp}.\eqn{\splitup}$$
+The proof is then completed by showing that $\norm{\bC^m\hat\vec y}
+\rightarrow 0$ and hence $\vec r^{\,(m)}\rightarrow \vec y^{\perp}$ (Exercise~5.2).
+
+Hence we see that the backfitting procedure provides an alternative
+method for computing least-squares fits.
+Examination of $\splitup$ reveals that it works by successively projecting
+the current residual into the space orthogonal to each $\script L_{col}(
+\bS_j)$.
+\input zigfig.tex
+\par
+Figure~\zigfig\ gives a picture of this
+in the two-predictor case.
+Each ${\vec x}_j^\perp$ denotes the vector orthogonal to  $\vec x_j$ in the span of $\script L_{col}(\vec x_1,\vec x_2)$. 
+It shows the backfitting residual $\vec r^{\,(m)}$ converging to the least-squares residual $\vec y^{\perp}$ in a zig-zag fashion.
+At convergence the backfitting residual vector is orthogonal to
+each $\script L_{col}(\bS_j)$ and equals the least-squares residual
+$\vec y^{\perp}$.
+This is a novel but not very practical way of finding the least-squares fit, for it can be very slow if the predictors are correlated.
+In particular, one can show that
+for two predictors
+the difference between the $i$th iterate and the solution converges to zero 
+geometrically at rate
+$\cos(\theta)$, where $\theta$ is the angle between
+the two predictor vectors
+(Exercise~5.4).
+This is intuitively plausible from Fig.~\zigfig.
+There is a close connection between backfitting and the iterative proportional scaling algorithm for fitting log-linear models to contingency tables (^{Bishop \etal,~1975}).
+They both cycle through a system of estimating equations and update one component at a time; convergence is geometric in both cases.
+
+It is interesting to look at two extreme situations that can occur.
+First, suppose  that the predictors are perfectly
+collinear
+($\theta=0$ in the two predictor case).
+Then one can easily check that backfitting converges after a single
+cycle, with $\hat\vec f_1=\hat\vec y$ and $\hat\vec f_j =\bf 0$ for $j>1$.
+More interestingly, suppose that the predictors are mutually uncorrelated
+($\theta=90^\circ$ in the two-predictor case).
+Then again we have convergence after a single cycle.
+This brings up the connection of backfitting with the Gram-Schmidt method
+for solving the least-squares normal equations.
+Like backfitting, the Gram-Schmidt method works by regressing the
+current residual onto each predictor in turn. 
+However there is one important difference.
+After regressing on the $j$th predictor, the $(j+1)$th through $p$th
+predictors are also regressed 
+on the $j$th predictor and the residual vector from each regression
+is used in place of the predictor in the remaining steps.
+This process orthogonalizes the predictors and because of this,
+ the Gram-Schmidt procedure converges after a single
+cycle.
+In the orthogonal-projection setting, clearly the Gram-Schmidt method is
+superior to backfitting and this suggests that a sweeping-out operation be used to improve the backfitting
+algorithm with general smoothers.
+This is not useful, however, because the
+resultant model would no longer be additive in the predictors.
+ 
+We note also that the above proof of the convergence of the residual
+vector does not establish that the estimated functions converge to
+the correct ones.
+Indeed, if there exists strict collinearity  among the predictors
+it wouldn't be clear to which solution the functions $\hat \vec{f}_j$ produced by  backfitting
+ would converge, if indeed they converge at all.
+It turns out that  backfitting always does converge to a solution representing
+the projection of $\vec y$ onto  $V$, but
+the fixed point depends on the starting functions.
+ 
+\sectionskip\section{Semi-parametric  models}
+Consider an additive model in which all but one term is assumed
+to be linear --- the so called {\em semi-parametric} model.  
+The  backfitting algorithm for estimating such
+a model can be thought
+of as having two smoothers:  one a projection $\bS_1=\bX(\bX^T\bX)^{-1}\bX^T$  producing a least-squares fit
+$\bX\hatfat \beta$ on one or more covariates (represented by the full-rank design
+matrix $\bX$), and the other a smoother $\bS_2$ producing an estimate $\hat\vec
+ f_2$.  The backfitting steps are
+ $\vec f_1=\bS_1(\vec y-\vec f_2)=\bX(\bX^T\bX)^{-1}\bX^T(\vec y-\vec f_2)\equiv
+\bX {\fat\beta}$, and $\vec f_2=\bS_2(\vec y-\bX{\fat\beta})$.
+ It turns out that we can solve for $\hatfat\beta$ and 
+$\hat\vec  f_2$ explicitly (Exercise~2.8):
+  $$\eqalign{{\hatfat\beta}
+&=\{\bX^T(\bI-\bS_2)\bX\}^{-1}\bX^T(\bI-\bS_2)\vec y\cr
+ { \hat\vec f}_2 &= \bS_2(\vec
+y-\bX\hatfat\beta)\cr}\eqn{\simmm}$$
+so that iteration is unnecessary.
+Although $\bS_2$ is an $n\times n$ matrix, all we have to do is smooth each of
+the $p$ columns of $\bX$, an operation that can usually be  performed in $O(np)$ operations.
+This provides a computationally simple method for nonparametric
+analysis of covariance; it is interesting that the smoother matrix
+$\bS_2$ enters as the weight matrix for the regression on $\bX$.
+This manipulation also shows that in this special case, the estimating equations
+$\backdd$ are consistent and have a unique solution as long a
+$\bX^T(\bI-\bS_2)\bX$ is invertible.
+In section~6.7
+we discuss this model in more detail.
+
+\sectionskip\section{Backfitting with  two smoothers}
+The third special case that we consider is an additive model
+that involves two linear smoothers.
+It turns out that one can analyse the properties of the estimating
+equation solutions and the  convergence of backfitting with some
+fairly elementary calculations, and this exercise sheds light on the main
+issues that arise in the  more difficult  $p$-predictor case.
+
+
+
+It is possible to determine general conditions under which the  system \backdd\  is consistent by
+checking whether the rank of $\hatvec P$ is the same as that of the
+augmented matrix $[\hatvec P\colon\hatvec Q\vec y]$.
+However, it is easier to proceed by constructing the solutions to \backdd\
+through the backfitting procedure.
+
+Recall that the components of each $\vec x_j$ are in the same order as
+the components of $\vec y$.
+As a technical point, this means that 
+ $\bS_j$ really means
+$\bE_j^{-1}\bS_j\bE_j$ where $\bE_j$ is the permutation matrix that sorts
+in the order of $\vec x_j$ (Exercise~5.19).
+
+Let
+$\norm{\bC}=\sup_{\vec a\neq \bf 0}\norm{\bC\vec a}/\norm{\vec a}$, the
+2-norm of the matrix $\bC$
+(this choice is made for convenience; any matrix norm would do).
+The system \backdd\ can be written $$\eqalign{\vec f_1&=\bS_1(\vec y-\vec
+f_2)\cr \vec f_2&=\bS_2(\vec y-\vec f_1).\cr}\eqn{\back}$$ Let $\vec
+f_1^{\,(m)}$ and $\vec f_2^{\,(m)}$ denote the estimates at the $m$th stage of the
+backfitting algorithm, with $m=0$ denoting the starting functions.
+Backfitting consists of  alternating  the steps 
+$$\eqalign{\vec
+f_1^{\,(m)}&=\bS_1(\vec y-\vec f_2^{\,(m-1)})\cr \vec f_2^{\,(m)}&=\bS_2(\vec y-\vec
+f_1^{\,(m)}).\cr}\eqn{\backit}$$ Using induction one shows that for $m\ge 1$
+$$\eqalign{\vec f_1^{\,(m)}&=\vec y-\sum_{j=0}^{m-1}(\bS_1\bS_2)^j(\bI-\bS_1)\vec
+y-(\bS_1\bS_2)^{m-1}\bS_1\vec f _2^{\, (0)},\cr \vec
+f_2^{\,(m)}&=\bS_2\sum_{j=0}^{m-1}(\bS_1\bS_2)^j(\bI-\bS_1)\vec y
++\bS_2(\bS_1\bS_2)^{m-1}\bS_1 \vec f_2^{\, (0)}. \cr}\eqn{\qbac}$$
+ 
+  Then a sufficient condition for $\vec
+f_1^{\,(m)}$ and $\vec f_2^{\,(m)}$ to converge is $\norm{\bS_1\bS_2} < 1$.  If this is
+the case, we can solve $\qbac$ to obtain 
+$$\eqalign{ \vec
+f_1^{\,(\infty)}&=\{\bI-(\bI-\bS_1\bS_2)^{-1}(\bI-\bS_1)\}\vec y\cr \vec
+f_2^{\,(\infty)}&=\bS_2(\bI-\bS_1\bS_2)^{-1}(\bI-\bS_1) \vec y\cr
+&=\{\bI-(\bI-\bS_2\bS_1)^{-1}(\bI-\bS_2)\}\vec y.\cr }\eqn{\qconv}$$
+ The fit
+$\hat{\vec y}$ is given by 
+$$\eqalign{\hat{\vec y}&=\vec
+f_1^{\,(\infty)}+\vec f_2^{\,(\infty)}\cr
+&=\{\bI-(\bI-\bS_2)(\bI-\bS_1\bS_2)^{-1}(\bI-\bS_1)\}\vec y\cr}\eqn{\qconvsum}$$ which
+is symmetric in $\bS_1$ and $\bS_2$, as some simple calculations show.
+
+This proves that if
+$\norm{\bS_1\bS_2}<1$, the estimating equations are consistent, and have
+a unique solution.
+In addition, the final iterates from the
+backfitting procedure  are independent of the starting
+values and starting order. 
+  
+Is $\norm{\bS_1\bS_2}<1$ typically?
+If the smoothers are not centered, we 
+would have $\bS_1\bS_2\bf 1=\bf 1$ so that $\norm{\bS_1\bS_2}=1$,
+but the centering makes $\bS_1\bS_2\bf 1=0$.
+  However, smoothers like the cubic spline
+smoother have a second unit eigenvalue corresponding to the linear
+functions.  Consider a backfitting algorithm with two covariates
+$\vec x_1$ and $\vec x_2$ using cubic smoothing splines.
+ If the data show strict collinearity through the origin (i.e.  $\vec
+x_2=c\vec x_1$), we still have $\norm{\bS_1\bS_2}=1$.
+With higher order splines, for example, quintic smoothing splines which also have unit quadratic
+ eigenvectors, similar situations involving linear and quadratic functions are possible. 
+The condition $\norm{\bS_1\bS_2}=1$ is an example of {\em concurvity}, a phenomenon that we  study later in
+the general $p$-covariate case.  
+
+As it turns out, if $\bS_1$ and $\bS_2$ are symmetric 
+with eigenvalues in $(-1,1]$, one can prove that
+the estimating equations are consistent. 
+Furthermore, the  backfitting algorithm converges despite the presence of concurvity,
+and
+the fitted values 
+ $\vec
+f_1^{\,(\infty)}+\vec f_2^{\,(\infty)}$ 
+are independent of the starting functions.
+Concurvity will, however,  lead to a dependence of the limits $\vec
+f_1^{\,(\infty)}$ and $\vec f_2^{\,(\infty)}$ on the starting guess $\vec
+f_2^{\, (0)}$. 
+That is  $\vec f_+^{\,(\infty)}=
+\vec f_1^{\,(\infty)}+\vec f_2^{\,(\infty)}$ is unique but $\vec
+f_1^{\,(\infty)}$ and $\vec f_2^{\,(\infty)}$ are not.
+Cubic smoothing splines satisfy these conditions; however, the conditions are sufficient and not necessary. 
+Empirical evidence suggests that the results may also hold for smoothers such as locally-weighted lines, for which the smoother matrix is asymmetric and has modulus greater than one.
+ 
+We can usefully view these results as an extension of those for linear regression with a singular regression-matrix $\bX$: the fit $\hatfat{\mu}=\bX\hatfat\beta$ is unique, but $\hatfat\beta$ is not.
+
+It is not surprising that the condition $\norm{\bS_1\bS_2}=1$ leads to
+a dependence of the backfitting solutions on the starting functions,
+for it is immediate in this case that the backfitting solutions themselves 
+are not unique.
+Since each $\bS_j$ is assumed to  have  eigenvalues in $(-1,1]$,
+$\norm{\bS_1\bS_2}$ can only equal 1
+ if there is some vector $\vec a$ that is
+reproduced by both $\bS_1$ and $\bS_2$.
+But this will  lead to nonuniqueness of the solution to
+backfitting, for if $\hat\vec f_1$ and $\hat\vec f_2$ are solutions, then
+so are $\hat\vec f_1+\vec a$ and $\hat\vec f_2-\vec a$,
+evident upon examination of $\back$.
+
+\sectionskip\section{Existence and uniqueness: $p$-smoothers}
+The two-smoother problem has revealed important aspects of the estimating equations
+and backfitting which can be used to motivate the more general results that
+we discuss here.
+In fact, the  results in the general case are qualitatively the
+same as in the simpler setting.
+ 
+In the two-smoother problem, we are forced to restrict attention to
+symmetric smoother matrices with eigenvalues in $(-1,1]$.
+The exclusion of $-1$ as an eigenvalue  is necessary to avoid oscillatory behaviour in
+the algorithm.
+In the $p$-smoother case, it turns out that we need to assume that
+each smoother is symmetric  and has
+eigenvalues in $[0,1]$.
+We can give no intuitive reason for this stronger condition being
+necessary here, but note that this is not a 
+practical limitation of the results, because any
+reasonable symmetric smoother should satisfy this property.
+
+The first issue to be settled is the existence of at least one solution
+to the estimating equations
+$\backdd$. It turns out that if $\bS_1,  \ldots,\bS_p$ are symmetric 
+with eigenvalues in $[0,1]$,
+the estimating equations $\backdd$ have at least one solution for every $\vec y$.
+Given that at least one solution exists, is it unique?
+Nonuniqueness occurs in
+the
+two smoother case when $\norm{\bS_1 \bS_2}=1$.
+This leads us to ask: what interrelation among the $\bS_j$s in the $p$-smoother case will lead to nonuniqueness of the solution
+to backfitting?
+The answer lies
+ in the estimating equations $\hat\vec P \vec f=\hat\vec Q\vec y$.
+Suppose that there is a $\vec g$ such that $\hat\vec P\vec g=\bf 0
+        $.
+Then the system $\hat\vec P\vec f=\hat\vec Q\vec y$ has an infinite number of solutions because if
+ $\{\,\vec f_j^{\,(\infinity)}:j=1,\ldots,p\,\}$ is a solution, then
+         so is
+$\{\,\vec f_j^{\,(\infinity)} +c\vec g_j:j=1,\ldots,p\,\}$  for any $c$.
+
+We think of this phenomenon as the analogue of collinearity, and define
+the {\em concurvity space} of the system \backdd\ 
+ to be the space of functions $\vec g$ 
+satisfying 
+$\hat{\vec P}\vec g = \bf 0$.  Concurvity in function space is similarly 
+defined, with regard to the system \backd.
+
+A quick word on notation. An unsubscripted vector $\vec g$ denotes the $np$ vector of evaluations $\vec g^T=(\vec g_1^T, \ldots,\vec g_p^T)$, while an additive fit is denoted by $\vec f_+=\sum_{j=1}^p\vec f_j$.
+
+
+ In the two variable case it is easy to show that
+$\norm{\bS_1\bS_2}<1 $ and $\norm{\bS_2\bS_1}<1$ if and only the concurvity
+space is empty.
+Thus we see that concurvity plays an important role in the behaviour
+of backfitting.
+It is natural, then, to try to pin down exactly how concurvity can
+occur.
+We can do this, after a bit of preparation.
+Let $\bS_j$, \ $j=1,\ldots,p$ be symmetric   smoother
+matrices with  eigenvalues in $[0,1]$.  Let $\scM_1(\bS_j)$
+ be the space  spanned by the
+eigenvectors of $\bS_j$ with eigenvalue +1 (that is,  they pass through the smoother
+ unchanged), for $j=1,\ldots,p$.  
+Then  $\hat \vec P
+\vec g=\bf 0$ if and only if $\vec g_j\in \scM_1(\bS_j)\;\forall j$ and $\vec
+g_+=\bf 0$.
+
+In other words, we have concurvity if and only if the spaces
+$\scM_j(\bS_j)$ are linearly dependent; that is, there exist
+$\vec g_j\in \scM_1(\bS_j)$ not all zero satisfying $\vec
+g_+=\bf 0$.  Given such a linear degeneracy, any solution $\vec
+f_1,\ldots,\vec f_p$ of $\hat{\vec P}\vec f=\hat{\vec Q}\vec y$  leads
+to nonuniqueness in the form of additional solutions $\vec f_1+c\vec
+g_1,\ldots,\vec f_p+c\vec g_p$.
+
+The result above says that concurvity involves only functions in the eigenspaces
+corresponding to eigenvalue +1.
+In the case of cubic smoothing splines, those eigenspaces correspond to
+linear functions of each predictor,
+and thus exact concurvity only exists if the predictors are exactly collinear.
+However, approximate concurvity is of practical concern, when the predictors are clustered around some lower dimensional manifold.
+Note that if quintic splines or
+quadratic regression are used, the eigenspaces $\scM_1(\bS_j)$ consist of
+the quadratic functions in the $j$th variable; hence concurvity may
+involve truly nonlinear degeneracies between the variables.
+
+\sectionskip\section{Convergence of backfitting: $p$-smoothers}
+With this definition of concurvity in  hand, we can  state the main result for the
+convergence of backfitting.
+Consider a backfitting algorithm with
+symmetric smoothers 
+$\bS_j$, \ $j=1,\ldots,p$,  
+having eigenvalues in $[0,1]$.
+Then if the $\bS_j$ do not exhibit concurvity, it can be shown that backfitting converges to
+the unique solution of $\backdd$, independent of the starting functions.
+If there is concurvity, backfitting converges to one of the 
+solutions of $\backdd$, the starting functions determining the final
+solutions.
+
+Note that these results apply to, 
+amongst others,   smoothing splines,
+regression splines,
+and simple linear and  polynomial
+regression.
+ They also can be applied to a backfitting algorithm
+that uses a mixture of these smoothers, for example  a cubic smoothing spline
+for one variable, a simple linear fit for another variable,
+etc.
+ The smoothers need not even be univariate; the results apply to 
+two or higher-dimensional surface smoothers as well.
+
+\sectionskip\section{Summary of the main results of the section}
+For two smoothers $\bS_1$ and  $\bS_2$:
+\smallskip
+{\parindent 20pt
+\item{(i)} if $\norm{\bS_1\bS_2}<1$, then
+the estimating equations \back\  have a unique solution \qconv\  and
+ the backfitting algorithm converges to this unique solution;
+\item{(ii)} if $\bS_1$ and $\bS_2$ are symmetric 
+with eigenvalues in $(-1,1]$,
+then
+the estimating equations \back\  have at least one solution,
+and  the backfitting algorithm converges to one of the solutions.
+This solution is dependent on the starting function 
+${\vec f}_2^{\, (0)}$.
+
+}\smallskip
+In general for $p$ symmetric smoothers $\bS_1,\ldots,\bS_p$ with eigenvalues in $[0,1]$:
+\smallskip
+{\parindent 20pt
+\item{(i)} The estimating equations $\backdd$ have at least one solution for every $\vec y$.
+\item{(ii)}  Let $\scM_1(\bS_j)$
+ be the space  spanned by the
+eigenvectors of $\bS_j$ with eigenvalue +1 (that is,  they pass through the smoother
+ unchanged), for $j=1,\ldots, p$.  
+Then  $\hat \vec P
+\vec g=\bf 0$ if and only if $\vec g_j\in \scM_1(\bS_j)\;\forall j$ and $\vec
+g_+=\bf 0$. Either of these conditions characterize the {\em concurvity} space of the
+estimating equations.
+\item{(iii)} If the concurvity space is empty, backfitting converges to
+the unique solution of $\backdd$, independent of the starting functions.
+\item{(iv)}
+If the  concurvity space is not empty, backfitting converges to one of the 
+solutions of $\backdd$, and the  starting functions determine the final
+solutions.
+
+}
+\Sectionskip\Section{Special topics}
+\section{Weighted additive models}
+Consider a weighted penalized least-squares criterion of the form
+$$\Bigl(\vec y-\sum_j\vec f_j\Bigr)^T\bW\bigl(\vec y-\sum_j\vec f_j\Bigr)+\sum_j
+\lambda_j \vec f_j^T \bK_j \vec f_j \eqn{\wsplinpen}$$
+where $\bW$ is a diagonal
+matrix of weights,
+and $\lambda_j$ is a smoothing parameter and  $\bK_j$ is a smoothing-spline penalty matrix for the $j$th predictor.
+These weights might represent the relative precision of each observation or
+might arise  as part of another iterative procedure,
+for example the local-scoring procedure 
+described in Chapters~4 and 6.
+The estimating equations for this problem have the same  form as for the unweighted case, except that
+the  smoothers are 
+weighted  smoothing splines given by
+$\bS_j=(\bW+\lambda_j\bK_j)^{-1}\bW$.
+We could generalize all the results presented so far to deal with the weighted case by simply computing norms and inner products in the metric of $\bW$.
+However, it is simpler
+to map the problem back to the unweighted case,
+using the transformations
+$\by'=\bW^{1/2}\by$,
+$\vec f_j'=\bW^{1/2}\vec f_j$,
+$\bK_j'=\bW^{-1/2}\bK_j\bW^{-1/2}$.
+Note that $\bS_j$ is not symmetric, but
+$\bW^{1/2}\bS\bW^{-1/2}$ is symmetric with eigenvalues in
+$[0,1]$,  and unit eigenvalues 
+corresponding to linear functions of the $j$th variable.
+Thus the convergence results for the unweighted case can be directly applied.
+
+
+\sectionskip\section{A modified backfitting algorithm}
+In the previous chapter we mention the possibility of modifying the backfitting
+algorithm  to improve its efficiency.
+The basic idea is as follows.
+Many smoothers have a {\em projection} part and a {\em shrinking} part.
+For example, a cubic smoothing spline has unit eigenvalues that are  constant
+and linear functions of the predictor (its projection part), and
+eigenvalues less than one for other eigenvectors.
+The idea  is to combine all of the projection operations for
+all of the predictors into one large projection, and use only
+the nonprojection parts of each smoother in an iterative backfitting-type
+ operation.
+
+This modification has several advantages.
+When a smoothing-spline or running-line smoother is used for
+several predictors,
+practical experience
+has shown that
+if the predictors are correlated,
+ many iterations may be required to get the correct
+average slope of the functions.  
+By performing all of the projections in one operation, 
+all of the function slopes are simultaneously estimated.
+A second advantage is in collinearity/concurvity situations.
+In a backfitting problem with symmetric  smoothers having
+eigenvalues in $[0,1]$, we have seen in the previous section that the
+only nonuniqueness ({\em concurvity}) occurs in the eigenspaces
+with eigenvalue one.
+By separating out the estimation of these components of the functions,
+the nonunique part of the solutions is 
+conveniently allocated to the projection step.
+This makes it easy to characterize the solutions and eliminates the
+dependence of the final solutions on the starting functions.
+
+Let us now be more specific.
+Let $\bG_j$ be the matrix that projects onto $\scM_1(\bS_j)$, the space of eigenvalue
+one for the $j$th smoother.
+Using $\bG_j$, we define the modified smoother matrices 
+$$\tilde \bS_j=(\bI-\bG_j)\bS_j.$$
+Note that $\tilde \bS_j$ has the effect of subtracting out the component
+of the smoothed value that lies in $\scM_1(\bS_j)$.
+The general form of the modified backfitting algorithm is given below.
+\setbox2=\vbox{\hsize \algwidth  {\setnine\parindent 20pt 
+
+\item{(i)} Initialize $\tilde{\vec f}_1, \ldots,\tilde{\vec f}_p$ and set $\tilde{\vec
+f}_+=\tilde{\vec f}_1+\cdots +\tilde{\vec f}_p$.
+\item{(ii)} Regress $\vec y-\tilde{\vec f}_+$ onto the space  $\scM_1(\bS_1)+\cdots + \scM_1(\bS_p)$, 
+that is,
+ set $\vec g = \bG(\vec y-\tilde{\vec f}_+)$, where $\bG$ is the orthogonal projection
+onto $\scM_1(\bS_1)+\cdots +\scM_1(\bS_p)$ in $\R n$.  
+  \item{(iii)} Apply one cycle of backfitting  to $\vec y-\vec g$
+using smoothers $\tilde{\bS}_i$;  this step yields an updated
+additive fit $\tilde{\vec f}_+ = \tilde{\vec f} _1 + \cdots
++\tilde{\vec f} _p$.  
+\item {(iv)} Repeat steps (ii) and (iii) until
+convergence.  The final estimate for the overall fit is $\vec f_+ =\vec g + \tilde{\vec f}_+ $.
+
+}%end algorithm 
+\smallskip
+} %end box 2
+
+\midinsert
+\algorithm{{\ninerm\noindent Algorithm \chapnodot 2} The modified backfitting algorithm}{\box2}
+\endinsert
+ 
+Note that it is not sufficient
+to perform the projection step only once. 
+It must be iterated with the
+other steps because
+when $\tilde{\vec f}_+$ is changed in step (ii), the projection component
+$\vec g$ no longer equals $\bG(\vec y-\tilde{\vec f}_+)$.
+An alternative to step (iii) is to iterate it to convergence rather than cycling through once; we find that this tends to slow down convergence in terms of the number of smooths performed. 
+
+In order justify this procedure, we must not
+only show that  it does converge, but that it converges to the same solution as the
+original backfitting procedure.
+It turns out (to follow) that in the case of symmetric 
+smoothers with  eigenvalues in $[0,1]$, the modified backfitting
+procedure does solve the original problem.
+For other linear smoothers, the modified backfitting procedure might
+still make sense, but it solves a slightly different problem.
+
+We now state some convergence results about modified backfitting algorithms:
+\smallskip
+{\parindent 20pt
+\item{(i)}If $\bS_j$, \ $j=1,\ldots,p,$ are symmetric and have 
+eigenvalues in $[0,1]$,
+then the modified
+backfitting algorithm converges in the sense that $\vec g$ and $ \tilde{\vec f} _1,
+\ldots, \tilde{\vec f} _p$ converge.
+\item{(ii)}Suppose the modified
+backfitting algorithm has converged with smoothers $\tilde{\bS}_j$,
+yielding functions $\tilde{\vec f}_j$ and $\vec g_j\in \scM_1(\bS_j)$.  Then the
+components $\vec f_j=\vec g_j + \tilde{\vec f}_j$ are solutions to
+the estimating equations with smoothers
+$\bS^*_j=\bG_j+(\bI-\bG_j)\bS_j$.
+
+}\smallskip
+
+Notice that if $\bS_j$ is symmetric, we have
+$\bS_j^*=\bS_j$ and thus the solutions to the modified algorithm solve the
+estimating equations with smoothers $\bS_j$.  
+ 
+If the $\bS_j$ are symmetric and have eigenvalues in $[0,1]$ then $\tilde{\bS}_j=\bS_j-\bG_j$,
+and $\norm{\tilde{\bS}_j }<1$.  Smoothing splines belong to this
+class, and hence the algorithm always converges for them.  
+ If cubic smoothing splines are used for all predictors, $\bG$ is the {\em hat} matrix 
+corresponding to the least-squares regression on $({\bf 1},{\vec x}_1,\ldots,{\vec x}_p)$. 
+The nonlinear functions $\tilde{\vec f_j}$ are uniquely determined. 
+Concurvity (collinearity) can show up only  in the $\bG$ step, where it is dealt with in the standard linear least-squares fashion. 
+At convergence, one may then decompose $\vec g=\sum \vec g_j$ and reconstruct final components $\vec f_j=\vec
+g_j+\tilde{\vec f_j}$.  
+If $\bS_j$ is a cubic smoothing spline and if $\by$
+is centered initially, then $\vec g_j=\hat{\beta}_j\cdot\vec x_j$,
+where $\hat\beta_1,\ldots,\hat\beta_p$ are the coefficients from the
+multiple linear regression of $\vec y-\tilde{\vec f}_+$ on $\vec
+x_1,\ldots,\vec x_p$.
+
+\sectionskip\section{Explicit solutions to the estimating equations}
+By manipulating the fixed points of the modified backfitting procedures,
+an expression for the solutions to the estimating equations \backdd\ can be  derived
+(Exercise~5.6).
+Let $\tilde \bA_j=(\bI-\tilde \bS_j)^{-1}\tilde \bS_j$, $\tilde \bA=\sum_1^p \tilde \bA_j$,
+and $\bB=(\bI+\tilde \bA)^{-1}\tilde \bA$.
+Then the solutions are $\tilde{\vec f}_+=(\bI-\bB\bG)^{-1}\bB(\bI-\bG)\vec y$ and
+$\vec g=\bG(\vec y-\tilde{\vec f}_+)$.
+These can be combined to obtain 
+$$\eqalign{
+\vec f_+=&\{\bG+(\bI-\bG)(\bI-\bB\bG)^{-1}\bB(\bI-\bG)\}\vec y\cr
+\tilde{\vec f}_j=&(\bI-\tilde \bS_j)^{-1}(\vec y-\vec g-\tilde{\vec f}_+)\cr
+\vec f_j=&\vec g_j+\tilde{\vec f}_j\cr}\eqn{\mbsol}$$
+ and the individual $\vec g_j$s are any
+vectors  $\vec g_j\in \scM_1(\bS_j)$ such that $\sum_1^p \vec g_j=\vec g$.
+Interestingly, $\mbsol$ reveals that for symmetric 
+smoother matrices  with eigenvalues in $[0,1]$, a direct solution can be obtained in $O(n^3 p)$ operations,
+the number required for computing 
+$(\bI-\tilde \bS_j)^{-1}$ for $j=1,\ldots, p$.
+This is less than the $O\{(np)^3\}$ operations that are needed to solve the
+estimating equations $\backdd$ in general.
+
+\sectionskip\section{Standard errors}
+From the previous sections we note that each estimated function
+in the additive fit is the result of a  
+linear mapping or smoother applied to  $\vec y$.  This
+means
+ that the variance formula developed in Chapter~3
+can be applied to the additive model.  At convergence, we can
+express $\hatvec f_j$ as
+$\bR_j\vec y$ for some $n\times n$ matrix $\bR_j$.
+  If the observations  have independent and identically distributed errors, 
+then $\cov(\hatvec{f}_j)=\bR_j\bR_j^T\sigma^2$ where
+$\sigma^2=\var(Y_i)$.  As in the least-squares case, if $\hat{\vec P}$ in equation \backdd\ 
+has singular values close to $\bf 0$, this will be reflected in $\cov(\hatvec
+f\,)$ as large variances and covariances.  
+
+Direct computation of $\bR_j$ is
+formidable, except in very special cases such as the semi-parametric model.
+Our best general approach to date is to apply the backfitting procedure to the each of the $n$ unit
+$n$-vectors that are the columns of $\bI_n$, the $n\times n$ identity matrix.
+The result of backfitting applied to the $i$th unit vector produces fitted vectors $\hatvec{f}_j^{\,i}$, $j=1,\ldots,p$, where $\hatvec{f}_j^{\,i}$ is the $i$th column
+ of $\bR_j$. 
+Similarly, $\hatvec{f}_+^{\,i}$ is the $i$th column of $\bR$.
+ The standard-error bands in Fig.~\fone\ of Chapter~4 are constructed
+using $\pm$ twice the square root of the diagonal elements of $\hat{\sigma}^2\bR_j\bR_j^T$. 
+Since the backfitting algorithm is $O(kn)$ for $O(n)$ smoothers, this procedure is $O(kn^2)$.
+Now $k=pmC$, where $p$ is the number of predictors, $m$ is the number of backfitting iterations, and $C$ is the constant for the particular smoother.
+For smoothing splines, typical numbers might be $k=5\times 5\times 35= 875$, which is likely to be  larger than $n$, so this task can  be tedious in practice.
+We have nevertheless used it  in many examples, although usually not  often
+within any single analysis.
+
+The global confidence set techniques described in Chapter~3 can be extended to apply to  additive models; 
+the procedure is similar to the univariate case.
+Suppose the additive model is correct, i.e., $Y_i=f_+(\vec X_i)+\varepsilon_i$,
+and our estimate of $\bR\vec f_+=\vec g_+ $ is $\hatvec{ f}_+=\bR\vec y$.
+Then an approximate pivotal for $\vec g_+$ is 
+$$\nu(\vec g_+)=(\hatvec f_+-\bg_+)^T(\bR\bR^T\hat\sigma^2)^{-1}
+(\hatvec f_+-\bg_+).\eqn{\nuu}
+$$
+Assuming that we have an  estimate of the dispersion parameter $\hat\sigma^2$ and the distribution $G$ of $\nu$, then we can construct a simultaneous $1-\alpha$ confidence set of all the component functions:
+ $$C(\bg_1,\ldots,\bg_p)=\{\bg_1,\ldots,\bg_p;\nu(\bg_+) \leq G_{1-\alpha}\}.\eqn{\bogplus}$$
+We will not pursue this topic further here; it is an area of current research and we need to gain more experience with it.
+
+\sectionskip\section{Degrees of freedom}
+Each of the definitions for degrees of freedom given in Chapter~3 has a natural analogue here.
+The overall degrees of freedom $\df$ is simply $\tr(\bR)$,
+where $\bR$ is the (smoother) matrix that produces $\hatvec f_+=\bR \vec y$.
+In addition, the posterior covariance of $\vec f_+$,
+in the Bayesian treatment of the additive model given in section~5.4.6,
+is proportional to $\bR$, for appropriate choice of
+the prior covariances.
+
+Similarly, the degrees of freedom for error is
+$\dferr=n-\tr(2\bR-\bR\bR^T)$.
+More usefully,
+for model comparison, we need a notion of the change in the error  degrees of freedom $\Delta\dferr$ due to an individual term.
+Let $\bR_{(j)}$ denote that operator that produces the additive fit with
+the $j$th term removed.
+Then we define $\dferr_j$, the degrees of freedom for error due to  the $j$th term: 
+$$\dferr_j=\trace(2\bR-\bR\bR^T)-\trace(2\bR_{(j)}-\bR_{(j)}\bR_{(j)}^T).$$
+This is  the expected increase in the residual sum of squares  (up to a scale factor) if the $j$th predictor is excluded from the model, assuming its exclusion does not increase the bias.
+Approximate $F$ and $\chi^2$ tests that make use of $\dferr_j$ are discussed
+in section~6.8.
+
+The sum of the variances of the fitted values is a meaningful concept
+for an additive fit and thus 
+$\dfvar=\trace(\bR\bR^T)$.
+Further, the sum of the variances of the fitted component function $\hat\vec f_j$ is
+ $\sigma^2\trace(\bR_j\bR_j^T)$;
+the effect of  predictor correlation on this quantity is
+explored in  Exercise~5.17.
+
+
+
+
+
+None of these definitions are attractive from a computational point of view.
+In particular, it would be convenient to use  $\tr(\bS_j)-1$ or
+even $\tr(2\bS_j-\bS_j\bS_j^T)-1$  to select the amount of smoothing
+ prior to including the $j$th predictor in a model,
+and as an approximation to $\dferr_j$ for model comparison.
+We subtract one since there is a redundant constant in $p-1$ of the $p$ terms
+ in the model; in general we subtract the dimension of $\bigcap_j\scM_1(\bS_j)$.
+In the extreme case of exact concurvity, it is possible to show that  $\tr(2\bS_j-\bS_j\bS_j^T)-1$
+is an upper bound  for $\dferr_j$ (Exercise~5.7);
+for a balanced additive model (the other extreme; Exercise~5.18) it is equal to $\dferr_j$.
+^{Buja, Hastie and Tibshirani (1989)} carried out some small simulation experiments
+ and found that adding up the
+individual degrees of freedom gave a good approximation to the
+true degrees of freedom.
+The only exceptions occurred when the predictors had extremely high
+correlation  or when a very small smoothing parameter was used.
+
+In the examples in this book, we use the convenient
+approximation $\tr(\bS_j)-1$  to  select
+the amount of smoothing, while we use the exact quantities  $\dferr_j$ 
+for model comparisons via approximate $F$ or $\chi^2$ tests.
+Further details are given in section~6.8.
+
+\sectionskip\section{A Bayesian version of additive models}
+Just as in the case of a single smoother, there is a rather simple Bayesian
+approach to additive models.
+As in section~3.6, there  is a functional (stochastic process) version, 
+and a finite dimensional (sampled) version; we  focus on the latter.
+
+The model is 
+$$
+\vec y = \vec f_1+\cdots +\vec f_p+\fat{\varepsilon}\eqn{\bayesadd}$$
+with $\vec f_j \sim N({\bf 0},\sigma^2 \bQ_j)$ independently for all $j$ and independent of ${\fat\varepsilon}\sim N({\bf 0},\sigma^2 \bI)$. 
+Note from section~3.6 that each $\bQ_j$ corresponds to the inverse of some penalty matrix $\bK_j$; also, from section~5.2.3, $\bQ_j$ can be identified with the realization of a reproducing kernel. For the moment we assume that the priors are proper and nonsingular. 
+
+Straightforward derivations (Exercise~5.9) show the following:
+\smallskip
+{\parindent 20pt
+\item{(i)} The prior  for $\vec f_+=\vec f_1+\cdots +\vec f_p$
+is $N({\bf 0},\bQ_+)$ with $\bQ_+=\sum_j\bQ_j$. 
+\item{(ii)} The posterior mean for $\vec f_+$ is $\ev(\vec f_+\given \vec y)= \bQ_+(\bI+\bQ_+)^{-1}\vec y$. 
+Similarly the posterior means for the individual functions are $\ev(\vec f_j\given \vec y)= \bQ_j(\bI+\bQ_+)^{-1}\vec y$.
+\item{(iii)} The posterior covariance of $\vec f_+$ is $\sigma^2\bQ_+(\bI+\bQ_+)^{-1}$, and for $\vec f_j$ they are $\sigma^2(\bQ_j-\bQ_j(\bI+\bQ_+)^{-1}\bQ_j)$.
+
+}\smallskip
+
+Notice that the solution involves the inversion of an $n\times n$ {\em unstructured} matrix, which takes $O(n^3)$ operations, unless of course backfitting is used.
+
+Similar equations can be derived for partially improper priors.
+These  give infinite variance to certain components in $\R n$, which correspond
+ to  components in $\scM_1(\bS_j)$. 
+The simplest way to formulate the problem is along the lines taken in section~5.2.3, where the projection space is explicitly isolated.
+In addition, smoothing parameters are thought of as prior variances
+for the $\vec f_j$s; we have absorbed these into the $\bQ_j$s in the
+above formulation.
+
+\Sectionskip\Section{Bibliographic notes}
+The theory of nonparametric additive modelling is relatively recent.
+^{Breiman and Friedman (1985)} proposed the ACE algorithm, a procedure
+more general than the additive model (allowing response transformations, and  discussed in
+ Chapter~7) and proved many results on convergence and consistency
+of backfitting in both Hilbert-space and data settings.
+Most of this chapter is based on the paper by Buja, Hastie, and Tibshirani (1989)
+in which some of Breiman and Friedman's convergence results were
+extended and the concurvity and degrees of freedom results are
+presented.
+In some cases, results stronger than those given in this chapter
+can be derived; see ^{Buja \etal~(1989)}  and the discussions.
+We have traded generality for simplicity and interpretability
+in this chapter.
+
+Backfitting goes back a long way. 
+^{Friedman and Stuetzle (1981)} defined the term in the context of projection-pursuit regression, 
+ while ^{Wecker and Ansley (1983)} suggested its use in the context of economic models. 
+Some of the earlier references  include ^{Papadakis (1937) } for  the separation of fertility trends in the analysis of field trials, and ^{Shiskin, Young and Musgrave (1967)} in the X-11 system for decomposing time series (Chapter~8).
+^{Kohn and Ansley (1989)}  independently studied the properties of additive models in the stochastic setting, including convergence.
+
+Much of the statistical theory and practice of one and higher-dimensional spline models is due to Grace Wahba and her co-workers. 
+Some relevant references are ^{ Kimeldorf and Wahba (1971)}, ^{Wahba (1978, 1980, 1986)}, ^{O'Sullivan (1983)}, ^{Gu and Wahba (1988)}, and ^{Chen, Gu and Wahba (1989)}. 
+Section~5.2.3 is based almost entirely on this last reference. 
+Cox (1989) ^^{Cox, D.D., 1989} described the Bayesian formulation of additive models,
+summarized in section~5.4.6.
+ 
+The notion of concurvity was introduced by ^{Buja, Donnell and Stuetzle}
+(1986)
+and was also discussed in ^{Buja \etal~(1989)}.
+^{Bickel, Klaassen, Ritov, and Wellner (1990) } studied the  theory
+for semi-parametric models,
+and in the two predictor projection case, showed convergence of the
+backfitting functions and computed the rates of convergence.
+
+The semi-parametric approach discussed in section~5.3.3 was considered
+by ^{Engle, Granger, Rice and Weiss (1986)}, ^{Denby (1986)}, ^{Wahba (1986)}, ^{Green and
+Yandell (1985)}, ^{Green (1985)},
+^{Eubank (1985)},
+^{Heckman (1986, 1988)}, 
+^{Speckman (1988)}, and ^{Shiau and Wahba (1988)}.
+Green (1985), and Green and Yandell (1985) looked at
+regression and more general models
+ with a single nonparametric term
+ (we discuss their work in Chapter~6).
+^{Heckman (1986)} proved consistency of the regression estimate in a regression 
+model with a single cubic spline term and showed that the estimates
+of the regression coefficients and nonparametric function 
+are Bayes estimates under an appropriate diffuse prior,
+generalizing the work of ^{Wahba (1978)}.
+^{Rice (1986)} studied the convergence rates for these partially-splined models.
+Speckman (1988) compared the bias and variance of estimators for this model, 
+and proposed a new estimate (Exercise~5.13) with asymptotically lower-order bias. 
+This estimate was also suggested by ^{Denby (1986)}.
+^{Shiau and Wahba (1988)} did a thorough study of  bias and variance for these
+models, and
+^{Heckman (1988) }studied minimax estimators.
+ 
+Stone (1982) ^^{Stone (C.J., 1982)} studied rates of convergence for  additive models, with the
+functions estimated by polynomials or regression splines.
+He proved the interesting result 
+ that the optimal rate of convergence for an estimate
+of the additive model
+is the same as 
+that for a single function, discussed in section~3.10.
+Thus an increase in the  dimension $p$ does not decrease the rate of convergence,
+as it does if one is estimating a general (nonadditive) $p$-dimensional
+function.
+ 
+The Gauss-Seidel algorithm is discussed in most textbooks on
+numerical analysis; see for example ^{Golub and Van Loan (1983)}.
+For a description of the QR algorithm, see ^{Thisted (1988)}.
+
+\Sectionskip\Section{Further results and exercises 5}
+\Mark{EXERCISES \ 5}%
+\beginexercises
+\exercise
+ Consider an additive model with
+symmetric but not necessarily invertible smoother matrices.
+Show that the minimizers of the penalized least-squares criterion $\gsplinpen$ 
+are the solutions to the estimating equations $\backdd$.
+
+ [^{Buja, Hastie and Tibshirani, 1989]}
+\exercise
+Complete the proof of convergence of backfitting in the case of
+orthogonal projections (section~5.3.2) by showing that
+$\norm{\bC^m\hat\vec y}\rightarrow 0$.
+(Hint: show that $\norm{\bC\vec a}\leq \norm{\vec a}$ for all $\vec a$,
+with equality if and only if $\vec a$ is in the orthogonal complement
+of $V$).
+\exercise
+Consider  a backfitting procedure with orthogonal projections,
+and
+let $ \bD$ be the overall design matrix whose columns span
+$V=\script L_{col}(\bS_1)\oplus 
+\script L_{col}(\bS_2)\oplus \ldots \oplus\script L_{col}(\bS_p)$.
+Show that the estimating equations $\hat {\vec P}\vec f=\hat {\bQ}\vec y$
+are equivalent to the least-squares normal equations 
+$\bD^T\bD\fat \beta=\bD^T\vec y$ where $\fat \beta$ is the vector
+of coefficients.
+\exercise
+In a backfitting procedure with two least-squares projections $\bS_1$ and
+$\bS_2$ based on predictors $\vec x_1$ and $\vec x_2$, show that 
+if $\theta\neq 0$, then 
+the difference between the $i$th iterate and the solution converges to zero 
+geometrically at rate
+ $\cos{\theta}$,
+where
+$\theta$ is the angle between $\vec x_1$ and $\vec x_2$.
+ 
+ [^{Deutsch, 1983}]
+\exercise Prove that in the case of the semi-parametric model, backfitting converges to the solution  $\simmm$. 
+Give conditions that guarantee the solution is unique.
+ 
+ [^{Green, 1985}]
+\exercise Prove item (ii) in section~5.4.2, stating that the modified backfitting
+procedure provides a solution to the estimating equations $\backdd$.
+Derive the explicit solutions $\mbsol$  to the estimating equations from the fixed
+points of the modified backfitting algorithm.
+
+  [^{Buja, Hastie and Tibshirani, 1989}]
+\exercise
+As an extreme case of concurvity, consider an additive model with $p$
+identical smoothers $\bS$.
+Assume that $\bS$ is centered and  symmetric,
+with eigenvalues in $[0,1]$, and that the dimension of $\scM_1(\bS)$ is $q$.
+ Show that
+{\parindent 20pt
+\item{(i)} $\trace(2\bS-\bS^2)\leq \trace(2\bR-\bR^2)\leq p\;\trace(2\bS-\bS^2)-(p-1)q$.
+\item{(ii)} $\trace(2\bR-\bR^2)-\trace(2\bR_{(j)}-\bR_{(j)}^2)\leq \trace(2\bS-\bS^2)-q.$
+
+}
+Hence conclude that
+{\parindent 20pt
+\item{(a)} including  the same predictor twice or more increases the degrees of
+freedom (in contrast to projections such as linear regression);
+\item{(b)} the sum of the degrees of freedom of the individual function estimates
+provides an upper bound on the  degrees of freedom of the fitted model;
+\item{(c)} $\trace(2\bS-\bS^2)-q$ provides an upper bound on the degrees of freedom contribution $\dferr_j$.
+
+}\smallskip
+
+  [^{Buja, Hastie and Tibshirani, 1989]}
+
+\exercise Compute the smoother matrix for a running-mean and kernel smoother
+for a small dataset, and hence find empirically that these smoothers are
+not symmetric
+and that their eigenvalues can have moduli larger than one.
+\exercise Derive the expressions (i)--(iii) in section~5.4.6 for the Bayes posterior means and variances for a stochastic additive model.
+\exercise Starting with equations \backdd\ with each of the smoothers a smoothing spline, derive an equivalent  form for $\hatvec{f}_+$ as in the previous exercise.
+\exercise Suppose that the $B$-spline basis functions are to be used to represent the smoothing splines in an additive model fit.
+\smallskip
+{\parindent 20pt
+\item{(i)}Derive closed form expressions for the $B$-spline coefficients of the additive model solution.
+\item{(ii)} Derive expressions for $\hat{f}_+(\vec x^0)$ and $\hat{f}_j(x_{0j})$, the fitted functions evaluated at an arbitrary point $\vec x^0$.
+
+}
+\exercise What is the rank of $\hat {\vec P}$ in \backdd, if the smoothers are all cubic smoothing splines, and the $\vec x_j$ span a $p$ dimensional space?
+Identify the null space.
+\exercise Derive  the value of $\fat\beta$ that minimizes
+$$\norm{\vec y-\vec X\fat{\beta}-\bS(\vec y-  \vec X\fat{\beta})}\eqn{\twicing}$$
+and compare it with the semi-parametric estimator \simmm\ in section~5.3.3, using the same smoother  $\bS$  in both cases. 
+\exercise Suppose the same  smoother $\vec S$ is used to estimate  both the  terms
+in a two-term additive model (that is, both variables are identical).
+Show that the backfitting residual converges to $(\bI+\bS)^{-1}(\bI-\bS)\vec y$, and that the  residual sum of squares converges upwards. Can the residual sum of squares converge upwards in less structured situations?
+\exercise Consider a semi-parametric model with $p$ predictors (including the constant) and an additional smoother $\bS$. 
+Derive explicit expressions for $\bR$ and $\bR_j$, and show that $\trace(\bR)\leq p+\trace(\bS)-1$.
+\exercise Suppose $\bS_1$ and $\bS_2$ both have the same eigenspaces; this occurs frequently in time-series applications, as in Chapter~8, where smoothing takes place in the  Fourier domain. Let $\lambda_{1k}$ and $\lambda_{2k}$, $k=1,\ldots,n$,
+be the eigenvalue pair for the $k$th eigenvector,  with $\lambda_{jk}\in [0,1]\;\forall k,j$. Assume for convenience that the constant term has been removed, and
+that $\lambda_{1k}\lambda_{2k}<1$.
+\smallskip
+{\parindent 20pt
+\item{(i)}Show that the additive-fit operators $\bR=\bR_1+\bR_2$ have eigenvalues
+$$\eqalign{\lambda_{k}(\bR)&=1-{(1-\lambda_{1k})(1-\lambda_{2k})\over 1-\lambda_{1k}\lambda_{2k}}\cr
+\lambda_{k}(\bR_1)&={\lambda_{1k}(1-\lambda_{2k})\over 1-\lambda_{1k}\lambda_{2k}}\cr
+\lambda_{k}(\bR_2)&={\lambda_{2k}(1-\lambda_{1k})\over 1-\lambda_{1k}\lambda_{2k}}\cr}
+$$
+\item{(ii)}Conclude from (i) that components with eigenvalue one for either smoother
+get  totally absorbed into the corresponding term.
+\item{(iii)}Show that $\trace(\bR)-\trace(\bS_1)\leq\trace(\bS_2)$
+\item{(iv)}Show that $\trace(\bR_j\bR_j^T)\leq\trace(\bS_j\bS_j^T)$, and interpret this result in terms of pointwise variances.
+
+}
+\exercise Consider two extremely simple smoothers: $\bS_1=\vec u\lambda\vec u^T$ and $\bS_2=\vec v\lambda\vec v^T$, with $\lambda\in[0,1]$, and $\norm{\vec u}=\norm{\vec v}=1$.
+Let $\bR_j$ be the additive operators as above. 
+Show that 
+$$\trace(\bR_j\bR_j^T)={\lambda^2\{1-c^2\lambda(2-\lambda)\}\over(1-c^2\lambda^2)^2},$$ where $c=\langle \vec u,\vec v\rangle$.
+For $c=0$, $\trace(\bR_j\bR_j^T)=\lambda^2=\trace(\bS_j\bS_j^T)$, while for $c=1$, $\trace(\bR_j\bR_j^T)= \{\lambda/(1+\lambda)\}^2$. 
+Investigate for  values of $c\in (0,1)$ and a range of values of $\lambda$.
+
+\exercise
+Consider a balanced additive model as defined in Exercise~4.8.
+Let $\bS_0={\bf 11}^T/n$ denote the {\em mean smoother}.
+Using the notation of section~5.4.5,
+show that
+
+{\parindent 20pt
+\item{(i)}$\bR_j$=$\bS_j-\bS_0$, $\bR=\bS_0+\sum_{j=1}^p\bR_j$, and $\bR_j\bR_k =\bf 0$ for $j\neq k$.
+\item{(ii)} The full and marginal  definitions of $\dferr$ and $\dfvar$ coincide, that is
+$\tr(2\bR-\bR\bR^T)-\tr(2\bR_{(j)}-\bR_{(j)}\bR_{(j)}^T)=\tr(2\bS_j-\bS_j\bS_j^T)-1$ and $\tr(\bR_j\bR_j^T)=\tr(\bS_j\bS_j^T)-1$. 
+
+}
+\exercise
+Suppose each of the  predictors in an additive model have ties, and smoothing splines are to be used in the fit. Describe the   smoother matrices $\bS_j$, as well as their eigenstructure. Show how the estimating equations \backdd\ can be reduced from the
+default dimension $np$ to $\sum_{j=1}^pm_j$, where $m_j$ is the number of unique values in $\vec x_j$.
+\endexercises
+\vfill\supereject

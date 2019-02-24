@@ -1,0 +1,79 @@
+.TH GRAW 10.5 UCDS
+.SH NAME
+graw \- graw file format
+.SH DESCRIPTION
+.B Graw
+files are very simple.  There is one primitive per line, each primitive indicated
+by a single character identifier.  All strings are enclosed in quotes.  Definition
+need not preceed use, though in practice graw outputs
+.I ref
+(aka include) primitives first and master definitions are seldom found outside libraries.
+.PP
+.B Graw
+file interpreters should look up
+.I ref
+files according to some search path.
+.PP
+Syntax:
+.PP
+body:	prim | body prim 
+.br
+prim:	line | box | string | dots | macro | inst | ref | master
+.br
+line:	\fBl\fR point point
+.br
+box:	\fBb\fR rect
+.br
+string:	\fBs\fR chars disp point
+.br
+dots:	\fBd\fR rect
+.br
+macro:	\fBz\fR rect
+.br
+inst:	\fBi\fR chars point
+.br
+ref:	\fBr\fR filename
+.br
+master:	mstart body mend
+.br
+mstart:	\fBm\fR chars
+.br
+mend:	\fBe\fR
+.br
+rect:	point point
+.br
+point:	INT INT
+.br
+disp:	INT
+.br
+chars:	\fB"\fR STRING \fB"\fR
+.PP
+.B Graw
+.I string
+displacements are specified by five bit codes defined below:
+.RS
+.ft CW
+/* string placement displacements */
+.br
+#define	HALFX	1
+.br
+#define	FULLX	2
+.br
+#define	HALFY	4
+.br
+#define	FULLY	8
+.br
+#define	INVIS	16
+.ft R
+.RE
+.PP
+Invisible
+.I string\fRs
+are typically defined for masters with connection points.
+Though the text is usually not displayed or printed, the
+remaining four bits should nonetheless specify a proper
+displacement for the sake of back-annotation.
+.SH FILES
+/n/ross/lib/graw/gates.g	the standard gate file
+.SH SEE ALSO
+graw(10)

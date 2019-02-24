@@ -1,0 +1,64 @@
+.TH DMESG 8
+.CT 1 sa_nonmortals
+.SH NAME
+dmesg \- system diagnostic messages
+.SH SYNOPSIS
+.B /etc/dmesg
+[
+.B -
+]
+[
+.B -i
+]
+[
+.I core namelist
+]
+.SH DESCRIPTION
+.I Dmesg
+looks in a system buffer
+for recent console messages from the operating system
+and reproduces them on the standard output.
+Under option
+.LR - ,
+.I dmesg
+produces only those messages printed by the system
+since the last time
+.L dmesg\ -
+was run.
+It is normally run periodically by
+.IR cron (8)
+to produce the error log
+.FR /usr/adm/messages .
+.PP
+Option
+.B -i
+prints messages produced since the last
+.L dmesg\ -
+without changing any records.
+.PP
+If
+.I core
+and
+.I namelist
+are specified,
+they are used in place of
+.F /dev/kmem
+and
+.FR /unix .
+.SH FILES
+.TF /usr/adm/messages
+.TP
+.F /usr/adm/messages
+error log
+.br
+.TP
+.F /usr/adm/msgbuf
+record of option
+.L -
+.SH BUGS
+Since the system error message buffer is small,
+not all error messages
+are guaranteed to be logged.
+.br
+Error messages generated immediately before a system crash
+may not be logged.

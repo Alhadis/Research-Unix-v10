@@ -1,0 +1,413 @@
+.TH FONT 5
+.CT 1 writing_output
+.SH NAME
+font \- description files for troff
+.SH DESCRIPTION
+Directories
+.BI /usr/lib/font/dev dest
+describe typesetters,
+where
+.I dest
+is as in the
+.B -T
+option of
+.IR troff (1).
+Such directories contain files named as in FILES below.
+.PP
+Lines of a typesetter description in file
+.F DESC
+have the following forms.
+.TF paperlength\ n
+.TP
+.BI res " n
+Resolution of device is
+.I n
+basic units per inch.
+.PD0
+.TP
+.BI hor " n
+Horizontal motion occurs in increments of
+.I n
+units.
+.TP
+.BI vert " n
+Vertical motion occurs in increments of
+.I n
+units.
+.TP
+.BI unitwidth " n
+Widths are given for pointsize
+.I n.
+.TP
+.BI sizescale " n
+Scaling for fractional pointsizes, not used.
+.TP
+.BI paperwidth " n
+Width of paper is
+.I n
+units.
+.TP
+.BI paperlength " n
+Length of paper is
+.I n
+units.
+.TP
+.BI biggestfont " n
+Maximum number of characters in a font is
+.I n.
+.TP
+.BI sizes " n n n ... " 0
+Pointsizes
+.I "n ...
+are available.
+.TP
+.BI fonts " n name ...
+Number of initial fonts followed by their names,
+for example
+.br
+.L
+fonts 4 R I B S
+.TP 
+.B charset
+This line comes last, followed by
+a list of special character names for
+the device, separated by spaces or newlines, as
+.BR bu
+for
+.BR \e(bu
+.PD
+.PP
+Lines of a font description file have the following forms.
+.TF paperlength\ n
+.TP
+.BI name " name
+name of the font,
+such as
+.B R
+or
+.B CW
+.PD 0
+.TP
+.BI internalname " name
+The typesetter's name for the font, independent of the
+.I troff
+name or font position.
+.TP
+.B special
+A
+.I troff
+special font, logically part of all non-special fonts.
+.TP
+.BI ligatures " name ... " 0
+The named ligatures are available.
+Legal names are
+.BR "ff fi fl ffi ffl" .
+.TP
+.BI spacewidth " n
+Space is
+.I n
+units wide (default 1/3 of an em).
+.TP
+.B charset
+Must come last.
+Each line following
+.B charset
+describes one character thus:
+.PD
+.IP
+.I "name  width  height  code
+.IP
+.I Name
+is either a single ASCII character or a special character listed in
+.FR DESC .
+.I Width
+is in basic units.
+.I Height
+is 1 if the character descends below
+the baseline,
+2 if it rises above the letter `a',
+3 if it both rises and
+descends, 0 for neither.
+.I Code
+is the number sent to the typesetter to produce the character.
+If a character name is a synonym for the preceding one,
+its width, height, and code may be replaced by one double quote
+\fL"\fR.
+.PP
+Lines beginning with
+.B #
+are comments in both
+.B DESC
+and font description files.
+.PP
+.I Troff
+and its postprocessors use the binary versions as compiled by
+a program
+.I makedev.
+.ig
+.PP
+The file
+.I DESC.out
+starts with the
+.I dev
+structure,
+defined by
+.IR dev.h :
+.CW
+.ta0.6i 1.8i
+ /*
+dev.h: characteristics of a typesetter
+* /
+
+\s-1struct dev {
+unsigned short\ filesize;\ \ /* number of bytes in file, */
+\0\0	\0\0\0\0\0	/* excluding dev part */
+short	res;		/* basic resolution in goobies/inch */
+short	hor;		/* goobies horizontally */
+short	vert;
+short	unitwidth;	/* size at which widths are given*/
+short	nfonts;\0	/* number fonts physically available */
+short	nsizes;\0	/* number of pointsizes */
+short	sizescale;	/* scaling for fractional pointsizes */
+short	paperwidth;	/* max line length in units */
+short	paperlength;	/* max paper length in units */
+short	nchtab;\0	/* number of funny names in chtab */
+short	lchname;	/* length of chname table */
+short	biggestfont;	/* max # of chars in a font */
+short	spare;	/* in case of expansion */\f1
+};
+.CE
+.IR filesize
+is just the size of everything in
+.I DESC.out
+excluding the
+.I dev
+structure.
+.I nfonts
+is the number of different font positions available.
+.I nsizes
+is the number of different pointsizes supported by this typesetter.
+.I nchtab
+is the number of special character names.
+.I lchname
+is the total number of characters,
+including nulls,
+needed to list all
+the special character names.
+At the end of the structure is one spare for later expansions.
+.PP
+Immediately following the
+.I dev
+structure are a number of tables.
+First is the
+.I sizes
+table,
+which contains
+.I nsizes
++ 1 shorts(a null at the end),
+describing the pointsizes of text
+available on this device.
+The second table is the
+.IR funny_char_index_table .
+It contains indexes into the table that follows it,
+the
+.IR funny_char_strings .
+The indexes point to the beginning of each special character name
+that is stored in the
+.I funny_char_strings
+table.
+The
+.I funny_char_strings
+table is
+.I lchname
+characters long,
+while the
+.I funny_char_index_table
+is
+.I nchtab
+shorts long.
+.PP
+Following the
+.I dev
+structure will occur
+.I nfonts
+.I {font}.out
+files,
+which are used to initialize the font positions.
+These
+.I {font}.out
+files,
+which also exist as separate files,
+begin with a
+.I Font
+structure and then are followed by four character arrays:
+.CW
+\s-1struct Font {	  /* characteristics of a font */
+char	 nwfont;	 /* number of width entries */
+char	 specfont;	 /* 1 == special font */
+char	  ligfont;	 /* 1 == ligatures exist on this font */
+char	 namefont[10]; /* name of this font, e.g., R */
+char	 intname[10];  /* internal name of font, in ASCII */
+}\s+1;
+.CE
+The
+.I Font
+structure tells how many defined characters there are in
+the font, whether the font is a "special" font and if it contains
+ligatures.
+It also has the ASCII name of the font,
+which should
+match the name of the file it appears in,
+and the internal
+name of the font on the typesetting device
+.RI ( intname ).
+The internal name is
+independent of the font position and name that
+.B troff
+knows about.
+For
+example, you might say mount R in position 4,
+but when asking
+the typesetter to actually produce a character from the R
+font,
+the postprocessor which instructs the typesetter would
+use
+.IR intname .
+.PP
+The first three character arrays are specific for the font and run
+in parallel.
+The first array,
+.IR widths ,
+contains the width of each character
+relative to
+.IR unitwidth .
+.I unitwidth
+is defined in
+.IR DESC .
+The second array,
+.IR height ,
+contains height information.
+If a character rises
+above the letter 'a',
+02 is set.
+If it descends below the line,
+01 is set.
+The third array,
+.IR codes ,
+contains the code that is sent to
+the typesetter to produce the character.
+.PP
+The fourth array is defined by the device description in
+.IR DESC .
+It is the
+.IR font_index_table .
+This table contains indexes into the
+.IR width ,
+.IR height ,
+and
+.I code
+tables for each character.
+The order that characters appear in these three
+tables is arbitrary and changes from one font to the next.
+In order for
+.B troff
+to be able to translate from ASCII and the special character names to these
+arbitrary tables,
+the
+.I font_index_table
+is created with an order that is constant for each device.
+The number of entries in this table is 96 plus the number of special
+character names for this device.
+The value
+96 is
+128 - 32,
+the number of printable characters in the
+ASCII alphabet.
+To determine whether a normal ASCII character exists,
+.B troff
+takes the ASCII value of the character,
+subtracts 32,
+and looks in the
+.IR font_index_table .
+If it finds a 0,
+the character is not defined in this font.
+If it
+finds anything else,
+that is the index into
+.IR widths ,
+.IR height ,
+and
+.I codes
+that describe that character.
+.PP
+To look up a special character name,
+for example
+.BR \e(pl ,
+the mathematical plus sign,
+and determine whether it appears
+in a particular font or not,
+the following procedure is followed.
+A
+.I counter
+is set to 0 and an index to a special character name
+is picked out of the
+.I counter'th
+position in the
+.IR funny_char_index_table .
+A string comparison is performed between
+.I funny_char_strings [ funny_char_index_table
+.I [ counter ] ]
+and the special character name,
+in
+our example
+.BR pl ,
+and if it matches,
+then
+.B troff
+refers to this character as (96 +
+.IR counter ).
+When it wants to
+determine whether a specific font supports this character,
+it
+looks in
+.IR font_index_table "[96 + " counter ].
+.PP
+The 0th element of the
+.I width
+array defines the width of a space.
+If that element is 0, the width of
+a space is taken to be 1/3 the width of the
+.LR \e(em 
+character.
+..
+.SH FILES
+.TF /usr/lib/font/dev*
+.TP
+.F /usr/lib/font/dev*
+typesetter description directory
+.TP
+.F DESC
+typesetter description (ASCII)
+.TP
+.F DESC.out
+typesetter description (binary); created by
+.I makedev
+.TP
+.I font
+description of the named
+.I font
+(ASCII)
+.TP
+.IB font .out
+description of the named
+.I font
+(binary); created by
+.I makedev
+.TP
+.F /n/bowell/usr/src/cmd/troff/makedev
+.SH "SEE ALSO"
+.IR troff (1)
+.br
+B. W. Kernighan,
+`A Typesetter-Independent Troff',
+this manual, Volume 2

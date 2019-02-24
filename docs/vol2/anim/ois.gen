@@ -1,0 +1,29 @@
+awk '
+BEGIN {	n = ARGV[1]
+	for (i = 1; i <= n; i++) x[i] = int(100*rand())
+	for (i = 1; i <= n; i++) draw(i)
+	for (i = 2; i <= n; i++) {
+	    for (j = i; j > 1 && less(j, j-1); j--)
+		swap(j-1, j)
+	    print "view text"
+	    print "sortedbar: text ljust", i, 1, "\"  |\""
+	    print "click phase"
+	}
+}
+function draw(i)  {
+	print "view text"
+	print "a" i ": text", i, 1, x[i]
+	print "view geom"
+	print "a" i ": text", i, x[i], "bullet"
+}
+function swap(i, j,   t) {
+	t = x[i];  x[i] = x[j];  x[j] = t
+	draw(i); draw(j)
+	print "click swap"
+}
+function less(i, j) {
+	print "view geom"
+	print "compline: line fat", i, -8, j, -8
+	print "click comp"
+	if (x[i] < x[j]) return 1; else return 0
+}' $*

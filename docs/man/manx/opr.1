@@ -1,0 +1,101 @@
+.TH OPR 1
+.SH NAME
+opr \- off line print on Xerox 9700
+.SH SYNOPSIS
+.B opr
+[
+.I option ...
+]
+.SH DESCRIPTION
+.ad b
+.I Pn
+prints its standard input
+on the Xerox 9700 printer.
+The options include:
+.TP 13
+.BI \-pland
+Print in landscape mode, rather than the default portrait mode.
+.RE
+.TP 13
+.BI \-y style
+Print using font
+.I style.
+.ne 8
+Allowable styles are:
+.sp
+.RS 8m
+.ta +12nR +7nR +11nR +7nR +9nR +7nR
+.nf
+				dflt lin/page		max chr/lin
+style	chr/in	lin/in	port	land	port	land
+vint	12.0	6.5	66	50	94	126
+elit	12.0	6.5	66	50	94	126
+pica	10.0	6.0	62	46	78	105
+bell	13.6	8.5	88	66	106	132
+mini	17.6	12.5	132	96	132	132
+xr18	6.8	4.0	42	31	53	71
+vg14	5.2	4.2	43	32	40	55
+tr14	NA	4.2	43	32	NA	NA
+.fi
+.RE
+.IP "" 13
+The default style is vint.
+The xr, vg, and tr styles are large fonts for viewgraphs, where the
+third and fourth characters of the names indicate the approximate point
+size of the font.
+The tr style is a proportionally spaced font
+which may not align horizontally for such constructs as
+centered text and indented lists. 
+.TP 13
+.BI \-k mask
+The
+.I mask
+is the name of an electronic form to be overlaid on each page.
+Possibilities are
+.RS 10m
+.ta 12n +12n
+.nf
+.br
+blogo	Bell Laboratories logo (top right corner).
+prin3	Proprietary information message (small type).
+vgraf	Bell logo for viewgraphs (bottom left corner).
+.fi
+.RE
+.TP 13
+.BI \-c n
+Make
+.IR n
+copies of the output.
+Default is 1; max is 99.
+.TP
+.BI \-fnohole
+Print on paper without prepunched holes.
+.TP
+.BI \-l n
+Print
+.IR n
+lines per page.
+.TP
+.BI \-o n
+Offset the output
+.IR n
+spaces from the left margin.
+Default is 0.
+.TP
+.BI \-r
+The first character of each line is taken to be carriage control (e.g. 1, +)
+.PP
+.IR Pn
+queues a job to do the printing
+when facilities become available.
+A new sheet is begun for each file.
+Backspaces, form feeds, carriage returns, and tabs are handled.
+Escape characters result in a fatal error.
+All other control characters are passed on to the output.
+Tab stops are assumed every 8 spaces.
+The output bin, user id, and charge account are taken from /etc/passwd.
+.SH BUGS
+The printer has a limited overprinting capability.
+If this is exceeded, the page will be blank.
+.br
+Lines longer than 132 characters are silently truncated.

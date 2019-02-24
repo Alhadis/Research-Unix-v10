@@ -1,0 +1,165 @@
+.TH MMT 1
+.SH NAME
+mmt, mvt \- typeset documents, view graphs, and slides
+.SH SYNOPSIS
+.B mmt
+[ options ] [ files ]
+.PP
+.B mvt
+[ options ] [ files ]
+.SH DESCRIPTION
+These two commands are very similar to
+.IR mm (1),
+except that they both typeset their input via
+.IR troff (1),
+as opposed to formatting it via
+.IR nroff (1);
+.I mmt\^
+uses
+the
+.SM MM
+macro package,
+while
+.I mvt\^
+uses the
+Macro Package for
+View Graphs and Slides.
+These two commands have options to specify
+preprocessing by
+.IR tbl (1)
+and/or
+.IR eqn (1).
+The proper pipelines and the
+required arguments and flags for
+.IR troff (1)
+and
+for
+the macro packages
+are generated, depending on the options selected.
+.PP
+.I Options\^
+are given below.
+Any other arguments or flags (e.g.,
+.BR \-rC3 )
+are passed
+to
+.IR troff (1)
+or to
+the macro package,
+as appropriate.
+Such options can occur in any order,
+but they must appear before the
+.I files\^
+arguments.
+If no arguments are given,
+these commands
+print a list of their options.
+.PP
+.PD 0
+.TP 10
+.B \-e
+Causes
+these commands
+to invoke
+.IR eqn (1);
+also causes
+.I eqn
+to read the
+.B /usr/pub/eqnchar
+file (see
+.IR eqnchar (7)).
+.TP
+.B \-t
+Causes
+these commands
+to invoke
+.IR tbl (1).
+.TP
+.B \-Tst
+Directs the output to the
+.SM MH STARE
+facility.
+.TP
+.B \-Tvp
+Directs the output to a Versatec printer via the
+.IR vpr (1)
+spooler;
+this option is not available at all
+.SM UNIX
+sites.
+.TP
+.B \-T4014
+Directs the output to a Tektronix 4014 terminal via the
+.IR tc (1)
+filter.
+.TP
+.B \-Ttek
+Same as
+.BR \-T4014 .
+.TP
+.B \-a
+Invokes the
+.B \-a
+option of
+.IR troff (1).
+.TP
+.B \-y
+Causes
+.I mmt\^
+to use the non-compacted version of the macros (see
+.IR mm (7)).
+No effect for
+.IR mvt .
+.PD
+.PP
+These commands read the standard input
+when
+.B \-
+is specified
+instead of any file names.
+.PP
+.I Mvt\^
+is just a link to
+.I mmt\^.
+.SH HINT
+Use the
+.BI \-o list\^
+option of
+.IR troff (1)
+to specify ranges of pages to be output.
+Note, however, that these commands, if invoked with
+one or more of the
+.BR \-e ,
+.BR \-t ,
+and
+.B \-
+options,
+.I together\^
+with the
+.BI \-o list\^
+option of
+.IR troff (1)
+may cause a harmless ``broken pipe'' diagnostic
+if the last page of the document is not specified in
+.IR list .
+.SH SEE ALSO
+.tr ~
+.PD 0
+env(1), eqn(1), mm(1), tbl(1), tc(1), troff(1), profile(5),
+environ(7), mm(7), mv(7).
+.PP
+.I "\s-1MM\s+1\-Memorandum Macros\^"
+by D.~W. Smith and J.~R. Mashey.
+.PP
+.I "Typing Documents with \s-1MM\s+1\^"
+by D.~W. Smith and E.~M. Piskorik.
+.PP
+.I "A Macro Package for View Graphs and Slides\^"
+by T.~A. Dolotta and D.~W. Smith (in preparation).
+.PD
+.SH DIAGNOSTICS
+.tr ~~
+``m[mv]t: \|no input file''\| if
+none of the arguments is a readable file and
+the command
+is not used as a filter.

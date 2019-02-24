@@ -1,0 +1,281 @@
+.TH MAN 6
+.CT 1 inst_info
+.SH NAME
+man \(mi macros to typeset manual
+.SH SYNOPSIS
+.B nroff  -man
+.I file ...
+.PP
+.B troff  -man
+.I file ...
+.SH DESCRIPTION
+These macros are used to lay out pages of this manual.
+.PP
+Except in
+.L .LR
+and
+.L .RL
+requests, any text argument denoted
+.I t
+in the request summary may be zero to six words.
+Quotes
+\f5"\fP ... \f5"\fP
+may be used to include blanks in a `word'.
+If
+.I t
+is empty,
+the special treatment is applied to
+the next text input line (the next line that doesn't begin with dot).
+In this way, for example,
+.B .I
+may be used to italicize a line of more than 6 words, or
+.B .SM
+followed by
+.B .B
+to make small letters in `bold' font.
+.PP
+A prevailing indent distance is remembered between
+successive indented paragraphs,
+and is reset to default value upon reaching a non-indented paragraph.
+Default units for indents
+.I i
+are ens.
+.PP
+The fonts are
+.TP
+.B R
+roman, the main font, preferred for diagnostics
+.PD 0
+.TP
+.B I
+italic, preferred for parameters, short names of commands
+(use 
+.B F
+for full path names),
+names of manual pages,
+and naked function names
+.TP
+.L B
+`bold', actually the constant width font CW,
+preferred for examples, declarations, keywords, names of
+.B struct
+members, and literals
+(numbers are rarely literals)
+.TP
+.B F
+also font CW;
+used for filenames to help cross-indexing
+.TP
+.B L
+also font CW.
+In
+.I troff
+.BR L = B ;
+in
+.I nroff
+arguments of the macros
+.BR .L ,
+.BR .LR ,
+and
+.B .RL
+are printed in quotes;
+preferred only where quotes really help (e.g. lower-case literals and
+punctuation).
+.PD
+.LP
+Type font and size are reset to default values
+before each paragraph, and after processing
+font- or size-setting macros.
+.PP
+The
+.B -man
+macros admit equations and tables in the style of
+.IR eqn (1)
+and
+.IR tbl (1),
+but do not support arguments on
+.B .EQ
+and
+.B .TS
+macros.
+.PP
+These strings are predefined by
+.BR -man :
+.TP
+.B \e*R
+.if t `\*R', `(Reg)' in
+.if t .I nroff.
+.if n `(Reg)', trademark symbol in
+.if n .I troff.
+.br
+.ns
+.TP
+.B \e*S
+Change to default type size.
+.SH FILES
+.F /usr/lib/tmac/tmac.an
+.br
+.F /usr/man/man0/xx
+.SH SEE ALSO
+.IR troff (1), 
+.IR man (1)
+.SH REQUESTS
+.ta \w'.TH n c x 'u +\w'Cause 'u +\w'Argument\ 'u
+.di xx
+			\ka
+.br
+.di
+.in \nau
+.ti0
+Request	Cause	If no	Explanation
+.ti0
+	Break	Argument
+.ti0
+\&\f5.B\fR \fIt\fR	no	\fIt\fR=n.t.l.*	Text
+.I t
+is `bold'.
+.ti0
+\&\f5.BI\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating bold and italic.
+.ti0
+\&\f5.BR\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating bold and Roman.
+.ti0
+\&\f5.CT\fR \fIc x...\fR	no		Chapter
+.I c,
+topics
+.I x
+in topic index; see
+.F /usr/man
+for topic codes.
+.ti0
+\&\f5.DT\fR	no		Restore default tabs.
+.ti0
+\&\f5.EE\fR	yes		End displayed example
+.ti0
+\&\f5.EX\fR	yes		Begin displayed example
+.ti0
+\&\f5.F\fR \fIt\fR	no	\fIt\fR=n.t.l.	Text
+.I t
+is filename.
+.ti0
+\&\f5.FR\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating filename and Roman.
+.ti0
+\&\f5.HP\fR \fIi\fR	yes	\fIi\fR=p.i.*	Set prevailing indent to
+.I i.
+Begin paragraph with hanging indent.
+.ti0
+\&\f5.I\fR \fIt\fR	no	\fIt\fR=n.t.l.	Text
+.I t
+is italic.
+.ti0
+\&\f5.IB\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating italic and bold.
+.ti0
+\&\f5.IP\fR \fIx i\fR	yes	\fIx\fR=""	Same as \f5.TP\fP with tag
+.I x.
+.ti0
+\&\f5.IR\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating italic and Roman.
+.ti0
+\&\f5.L\fR \fIt\fR	no	\fIt\fR=n.t.l.	Text
+.I t
+is literal.
+.ti0
+\&\f5.LP\fR	yes		Same as \f5.PP\fP.
+.ti0
+\&\f5.LR\fR \fIt\fR	no		Join 2
+words of
+.I t
+alternating literal and Roman.
+.ti0
+\&\f5.PD\fR \fId\fR	no	\fId\fR=\f5.4v\fP	Interparagraph distance is
+.I d.
+.ti0
+\&\f5.PP\fR	yes		Begin paragraph.
+Set prevailing indent to default.
+.ti0
+\&\f5.RE\fR	yes		End of relative indent.
+Set prevailing indent to amount of starting \f5.RS\fP.
+.ti0
+\&\f5.RF\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating Roman and filename.
+.ti0
+\&\f5.RI\fR \fIt\fR	no	\fIt\fR=n.t.l.	Join
+words of
+.I t
+alternating Roman and italic.
+.ti0
+\&\f5.RL\fR \fIt\fR	no		Join 2 or 3
+words of
+.I t
+alternating Roman and literal.
+.ti0
+\&\f5.RS\fR \fIi\fR	yes	\fIi\fR=p.i.	Start relative indent,
+move left margin in distance
+.I i.
+Set prevailing indent to default for nested indents.
+.ti0
+\&\f5.SH\fR \fIt\fR	yes	\fIt\fR=""	Subhead; reset paragraph distance.
+.ti0
+\&\f5.SM\fR \fIt\fR	no	\fIt\fR=n.t.l.	Text
+.I t
+is small.
+.ti0
+\&\f5.SS\fR \fIt\fR	no	\fIt\fR=""	Secondary subhead.
+.ti0
+\&\f5.TF\fR \fIs\fR	yes		Prevailing indent is wide as
+string
+.I s
+in font 
+.BR L ;
+paragraph distance is 0.
+.ti0
+\&\f5.TH\fR \fIn c x\fR	yes		Begin page named
+.I n
+of chapter
+.IR c;
+.I x
+is extra commentary, e.g. `local', for page head.
+Set prevailing indent and tabs to default.
+.ti0
+\&\f5.TP\fR \fIi\fR	yes	\fIi\fR=p.i.	Set prevailing indent to
+.I i.
+Restore default indent if
+.IR i =0.
+Begin indented paragraph
+with hanging tag given by next text line.
+If tag doesn't fit, place it on separate line.
+.ti0
+\&\f5.1C\fR	yes		Equalize columns and return to 1-column output
+.ti0
+\&\f5.2C\fR	yes		Start 2-column nofill output
+.PP
+.ti0
+* n.t.l. = next text line; p.i. = prevailing indent
+.SH BUGS
+There's no way to fool
+.I troff
+into handling literal double quote marks
+.B \&"
+in font-alternation macros, such as
+.LR .BI .
+.br
+There is no direct way to suppress column widows in 2-column
+output; the column lengths may be adjusted by inserting
+.L .sp
+requests before the closing
+.LR .1C .

@@ -1,0 +1,309 @@
+.TH SHARE 5 SHARE
+.SH NAME
+Share \- Share Scheduling on Unix
+.SH SYNOPSIS
+Scheduling for a share of the machine
+.SH DESCRIPTION
+.I Share
+is a term covering those elements of the Unix kernel
+that affect the priority of a user's job.
+The basic scheduler in Unix schedules processes on a short term
+.I per-process
+basis.
+The
+.I "share scheduler"
+takes account of the history of a user's
+usage of the resources of the machine, and introduces a
+.I per-user
+long term scheduler.
+To do this, several variables are available to the scheduler in a per-user data
+structure known as an
+.I lnode.
+These record the intended share of the machine that the user should get,
+the recent history of resources consumed (``usage''),
+and the number of active (running) processes belonging to the user.
+Together, these affect the priority of each of the processes
+so that consumption of resources is adjusted toward the intended share.
+.P
+A user's
+.I usage
+is calculated by accumulating the charges incurred by use of resources,
+and decaying the result over time.
+The share scheduler affects the low-level scheduling of a user's processes
+by adding the user's
+.I usage
+divided by the allocated share,
+and multiplied by the active process count,
+to the priority of a process
+every time that process incurs a clock tick.
+Since the larger its priority,
+the less often a process is scheduled,
+processes belonging to users with high
+.IR usage ,
+low share, or many active processes
+will get a smaller share of resources.
+Note that at any one time, a user can use all of the resources available
+provided there is no competition from others.
+.SS "SCHEDULING GROUPS"
+.I lnodes
+are organised into a tree.
+For any particular sub-tree,
+the sub-tree's share of resources
+is divided up between the
+lnodes
+according to their relative shares.
+Sub-trees are also known as groups.
+The root
+.I lnode
+of the group is the group owner,
+and the leaf
+.I lnodes
+are its users.
+The total shares issued to the group include both those issued to the owner,
+as well as those issued to the users.
+Both owner and users are known as group members.
+The share of the group's resources
+allocated to any particular member of the group
+is in the proportion
+of the member's shares divided by the group's shares.
+.P
+The most interesting group is the one at the top of the tree,
+whose owner is ``root'',
+and its group members are the primary scheduling groups.
+\&``root''
+gets 100% of the available resources,
+which is split as above between the primary scheduling groups.
+.P
+Not all group owners represent real users,
+and in these cases there is no need to allocate them a share of resources.
+Such lnodes are indicated by the \s-1NOTSHARED\s0 flag,
+which causes the scheduler to ignore their shares when allocating
+their group's resources among its members.
+However,
+the long term
+.I charge
+of a group owner
+always includes all the charges levied on any member of its group.
+.P
+For reasons of system management,
+\&``root'' is always allocated 100% of the resources whenever it needs them.
+However, since all real users run on their own lnodes,
+the \s-1NOTSHARED\s0 flag is turned on for ``root'',
+and thus the primary scheduling groups
+have 100% of the available resources to share between themselves.
+However, for instrumentation purposes,
+``root''s
+.I charge
+only represents its own consumption of resources,
+but the total consumption of resources is accumulated in the
+.I kl_temp
+field of
+\&``root''s
+.I kern_lnode
+(see
+.IR lnode (5)
+for details of a
+.IR kern_lnode .)
+.SS CHARGES
+Charges making up the accumulating usage figure
+are levied by default as follows:-
+.RS
+.PD 0
+.TP "\w'system servicesXX'u"
+cpu
+100%
+.TP
+disk i/o
+0%
+.TP
+terminal i/o
+0%
+.TP
+system services
+0%
+.TP
+memory
+0%
+.PD
+.RE
+.P
+Memory charges are levied every scheduler cycle,
+but note that 
+.I root
+is never charged for the memory it uses.
+These charges can be varied at different times of the day to reflect
+their popularity by using the command
+.IR charge (1).
+.P
+Usage is decayed at an exponential rate intended to ensure that
+all users of the machine get an equal chance to compete for resources
+over a particular time period.
+The default decay results in a
+.I half-life
+of 2 minutes.
+Use
+.IR charges (1)
+to find out the current decay rate and resource charges.
+.SS NICE
+The
+.IR nice (2)
+system call has a slightly different effect under Share.
+The
+.I nice
+parameter for a process now affects the rate at which its priority decays
+to a higher priority over time.
+.I Nicing
+a process will make it run slower,
+by reducing its effective share of the resources,
+but it may not run slower than another user's processes
+if that user has an even lower effective share of the resources.
+However, processes with a
+.I nice
+priority of 19 are guaranteed only to run when no other processes need the CPU.
+.I Niced
+processes are charged less for CPU time than normal processes,
+priority 19 processes are charged almost nothing for CPU time.
+.SS MANAGEMENT
+There are three flags that control the operation of the share scheduler.
+.TP "\w'LIMSHAREXX'u"
+.SM NOSHARE
+This turns off the scheduler.
+Since this will leave the parameters in a ``frozen'' state,
+it should probably only be done at system boot time.
+This flag is on by default when the system is booted,
+so the command
+.IR charge (1)
+must be run to activate the scheduler.
+Note that the program
+.IR login (8)
+won't attach users to their own
+.I lnodes
+while this flag is on,
+instead each user will remain attached to
+.IR root 's
+lnode.
+[Value 01]
+.TP
+.SM ADJGROUPS
+This flags turns on global group effective share adjustment.
+If any group is found to be getting less than
+.SM MINGSHARE
+times its allocated share,
+then the costs incurred by its members are reduced proportionately.
+[Value 02]
+.TP
+.SM LIMSHARE
+This flag deals with an 
+``edge effect''
+that occurs when users first log in.
+It may be that their
+.I usage
+field has decayed to the point where they might temporarily be allocated
+nearly 100% of the machine.
+This flag limits any one user's share of the resources to no more than
+MAXUSHARE times their intended share.
+Of course, this still may be nearly 100%, if no other users are logged in,
+or the other users have very small shares.
+[Value 04]
+.P
+The
+.IR charge (1)
+command is used to manipulate these flags, and the charging parameters above.
+There are also other parameters which may be changed with
+.IR charge :-
+.TP "\w'MAXNORMUSAGEXX'u"
+.BI DecayRate
+The decay rate for users'
+.IR "active process rates" .
+This parameter is calculated by counting the active proceses
+per user every clock scan,
+and is decayed every clock scan.
+The usual value for this should result in a
+.I half-life
+for the rate of about 10 seconds.
+.TP
+.BI DecayUsage
+The decay rate for users' usages.
+This may be altered to produce a
+.I half-life
+for usage ranging from a few seconds to many days.
+.TP
+.BI Delta
+The run frequency of the share scheduler in seconds.
+The default value of 4 is fine.
+.TP
+.BI MAXGROUPS
+This sets the maximum group nesting (depth of scheduling tree) allowed,
+not including ``root''s group.
+.TP
+.BI MAXPRI
+Absolute upper bound for a process's priority.
+.TP
+.BI MAXUPRI
+Upper bound for normal processes' priorities.
+.I Idle
+processes run with priorities in the range
+\s-1MAXUPRI\s0 < \fIpri\fP < \s-1MAXPRI\s0.
+.TP
+.BI MAXUSAGE
+Upper bound for ``reasonable'' usages.
+Users with usages larger than this are grouped together and given
+process priorities
+which prevent them from interfering with ``normal'' users.
+The usage
+(multiplied by the
+.IR "active process rate" )
+is added to a running process's priority
+every time it incurs a clock tick,
+so the upper bound should be small enough not to overrun the value
+.SM MAXUPRI
+in too short a time interval
+.TP
+.BI MAXUSERS
+Sets the maximum number of users and groups that can be active.
+Note that this cannot exceed the maximum configured in the kernel.
+.TP
+.BI PriDecay
+This is the decay rate for maximally niced processes.
+A reasonable minimum value for the
+.I half-life
+is about 100 seconds,
+but see the comment for 
+.SM MAXUSAGE
+above.
+.TP
+.BI PriDecayBase
+The base for calculating the decay rate
+for process priorities with normal \fInice\fP.
+This should be set low enough so that the priorities of processes
+for users with low share don't decay too quickly.
+A reasonable minimum value for the
+.I half-life
+is about 2 seconds.
+.SH FILES
+.PD 0
+.TP "\w'/usr/include/sys/charges.hXX'u"
+.IR /usr/include/sys/share.h
+Definition of scheduler parameters.
+.TP
+.IR /usr/include/sys/charges.h
+Default scheduler parameters.
+.PD
+.SH "SEE ALSO"
+charge(1),
+pl(1),
+rates(1),
+shstats(1),
+ustats(1),
+lnode(5),
+shares(5),
+login(8),
+sharer(8).
+.SH REFERENCES
+"Scheduling for a Share of the Machine", J Larmouth, SP&E, Vol 5 1975 pp 29-49
+.br
+"Scheduling for Immediate Turnaround", J Larmouth, SP&E, Vol 8 1978 pp 559-578
+.br
+"A Fair Share Scheduler", J Kay & P Lauder, TM 11275-870319-01
+.br
+"Share Scheduler Administration", P Lauder

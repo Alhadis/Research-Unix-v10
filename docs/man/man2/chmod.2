@@ -1,0 +1,102 @@
+.TH CHMOD 2
+.CT 2 file_inq_creat dirs secur
+.SH NAME
+chmod, fchmod, chown, fchown, utime \(mi change file mode, owner, group, or times
+.SH SYNOPSIS
+.nf
+.B int chmod(file, mode)
+.B char *name;
+.PP
+.B int fchmod(fildes, mode)
+.PP
+.B int chown(file, uid, gid)
+.B char *name;
+.PP
+.B int fchown(fildes, uid, gid)
+.PP
+.B #include <sys/types.h>
+.PP
+.B int utime(file, timep)
+.B char *file;
+.B time_t timep[2];
+.fi
+.SH DESCRIPTION
+These functions change inode information for the file named by
+a null-terminated string or associated with file descriptor
+.IR fildes .
+.PP
+.I Chmod
+and
+.I fchmod
+change file permissions and other mode bits to
+.IR mode .
+Mode values are defined in
+.IR stat (2).
+Only the
+.B 07777
+bits of 
+.IR mode
+are significant.
+Only the owner of a file (or super-user) may change the mode.
+Only a process in the file's group (or super-user) may set
+the set-group-id bit, 
+.BR S_ISGID .
+.PP
+.I Chown
+and
+.I fchown
+change the owner,
+.I uid,
+and the group,
+.I gid,
+of a file.
+Only the super-user may change a file's owner.
+The owner of a file
+may change its group
+to match the current effective groupid.
+Other changes
+are restricted to the super-user.
+.PP
+.I Utime
+sets the
+.B st_atime
+(access time)
+and
+.B st_mtime
+(modify time)
+fields for
+.I file
+to
+.B timep[0]
+and
+.B timep[1]
+respectively.
+The
+.B st_ctime
+(inode change time)
+field for
+.I file
+is set to the current time.
+.PP
+The caller must be the owner of the file or the super-user.
+.SH "SEE ALSO"
+.IR stat (2),
+.IR time (2)
+.SH DIAGNOSTICS
+all:
+.BR EIO ,
+.BR EPERM
+.br
+.IR "chmod, chown, utime" :
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR ,
+.BR EACCES ,
+.B EFAULT
+.br
+.IR "fchmod, fchown" :
+.B EBADF
+.SH BUGS
+An attempt to change the inode data for
+a file on a read-only file system
+is quietly ignored.

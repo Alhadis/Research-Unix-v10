@@ -1,0 +1,334 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH ISTREAM  3I+ "C++ Stream Library" " "
+.SH NAME
+istream \- formatted and unformatted input
+.SH SYNOPSIS
+.nf
+.ft B
+.ta1i 2i
+#include <iostream.h>
+
+typedef long streamoff, streampos;
+class ios {
+public:
+	enum	seek_dir { beg, cur, end };
+	enum	open_mode { in, out, ate, app } ;
+	// \fIand lots of other stuff ... \fP
+	} ;
+
+class istream : ios {
+public:
+	int	gcount();
+	istream&	get(char* ptr, int len, char delim='\en');
+	istream&	get(unsigned char* ptr,int len, char delim='\en');
+
+	istream&	get(unsigned char& c);
+	istream&	get(char& c);
+	istream&	get(streambuf&, char delim ='\en');
+	int	get();
+	istream&	getline(char* ptr, int len, char delim='\en');
+	istream&	getline(unsigned char* ptr, int len, char delim='\en');
+	istream&	getline(streambuf& sb, int len, char delim='\en');
+	istream&	ignore(int len=1,int delim=EOF);
+	int	ipfx(int need=0);
+	int	peek();
+	istream&	putback(char c);
+	istream&	read(char* s,int n); 
+	istream&	read(unsigned char* s,int n);
+	istream&	seekg(streampos pos);
+	istream&	seekg(streamoff off, seek_dir d);
+	streampos	tellg();
+
+	istream&	operator>>(char*);
+	istream&	operator>>(unsigned char*);
+	istream&	operator>>(unsigned char&);
+	istream&	operator>>(char&);
+	istream&	operator>>(short&);
+	istream&	operator>>(int&);
+	istream&	operator>>(long&);
+	istream&	operator>>(unsigned short&);
+	istream&	operator>>(unsigned int&);
+	istream&	operator>>(unsigned long&);
+	istream&	operator>>(float&);
+	istream&	operator>>(double&);
+	istream&	operator>>(streambuf&);
+	istream&	operator>>(istream& (*)(istream&));
+};
+
+class istream_withassign {
+		istream_withassign();
+	istream&	operator=(istream&);
+	istream&	operator=(streambuf*);
+};
+
+extern istream_withassign cin;
+
+istream&	ws(iostream& i)	;
+.fi
+.ft R
+.SH DESCRIPTION
+\f(CWistream\fRs support interpretation of characters
+fetched from an associated \f(CWstreambuf\fR.
+These are commonly refered to as input operations.
+.PP
+Assume that
+.br
+\(em \fBins\fR has type \f(CWistream\fR.
+.br
+\(em \fBinwa\fR has type \f(CWistream_withassign\fR.
+.br
+\(em \fBinsp\fR has type \f(CWistream*\fR.
+.br
+\(em \fBc\fR has type \f(CWchar&\fR
+.br
+\(em \fBdelim\fR has type \f(CWchar\fR.
+.br
+\(em \fBptr\fR has type \f(CWchar*\fR or \f(CWunsigned char*\fR.
+.br
+\(em \fBsb\fR has type \f(CWstreambuf&\fR.
+.br
+\(em \fBi\fR, \fBlen\fR, \fBd\fR, and \fBneed\fR have type \f(CWint\fR.
+.br
+\(em \fBpos\fR is a \f(CWstreampos\fR.
+.br
+\(em \fBoff\fR is a \f(CWstreamoff\fR.
+.br
+\(em \fBdir\fR is a \f(CWseek_dir\fR.
+.br
+\(em \fBmanip\fR is a function with type \f(CWistream& (*)(istream&)\fR.
+.PP
+Constructors and assignment:
+.TP
+\fBistream(sb)\fR
+Initializes \fBios\fR state variables and associates stream with
+buffer \fBsb\fR.
+\fBistream_withassign()\fR
+Does no initialization.  This allows a file static
+variable of this type
+(\fBcin\fR for example) to be used before it is constructed provided
+it is assigned to first.
+.TP
+\fBinswa=sb\fR
+Associates \fBsb\fR with \fBswa\fR and initializes the entire
+state of \fBinswa\fR.
+.TP
+\fBinswa=ins\fR
+Associates \fBins->rdbuf()\fR with \fBswa\fR and initializes the entire
+state of \fBinswa\fR.
+.PP
+Input prefix function:
+.TP
+\fBins.ipfx(need)
+If \fBins\fR's error state is non-zero return immediately.
+If neccessary (and it is non-null) \fBf.tie\fR is flushed.
+Flushing is neccessary if either \fBneed==0\fR or there
+are less than \fBneed\fR characters immediately available.
+If \fBf.skip()\fR is non-zero and \fBneed\fR is zero
+then leading whitespace characters are
+extracted from \fBins\fR.  Return zero 
+or an error occurs while skipping whitespace.
+Otherwise it returns non-zero.
+.PP
+Formatted input functions:
+.TP
+\fBins\fP>>\fPx\fR
+Calls \fBipfx(0)\fR and if that returns non-zero
+extracts characters from \fBins\fR and converts them according
+to the type of \fBx\fR.  It stores the converted value in
+\fBx\fR.
+Errors are indicated by setting the
+error state of \fBins\fR.  \f(CWfailbit\fR means that characters
+in \fBins\fR were not a representation of the required type.
+\f(CWbadbit\fR indicates that attempts to extract characters failed.
+\fBins\fR is always returned.
+.RS
+.PP
+The details of conversion depend on the values of \fBins\fR's format
+state variable (see \fIios\fR(3C++)) and the
+type of \fBx\fR.  Except as noted, the extraction operators
+do not change the value
+of the format state variables.
+.TP
+\f(CWchar*\fR, \f(CWunsigned char*\fR
+Characters are stored in the array pointed at by \fBx\fR
+until a whitespace character is found in \fBins\fR.
+The terminating whitespace
+is left in \fBins\fR.
+If \fBins.width()\fR
+is non-zero it is taken to be the size of the array, and
+no more than \fBins.width()-1\fR characters are extracted.
+A terminating
+null character (0) is always stored (even when nothing else is
+done because of \fBins\fR's status).
+\fBins.width()\fR is reset to 0.
+.TP
+\f(CWchar&\fR, \f(CWunsigned char&\fR
+A character is extracted and stored in \fBx\fR.
+.TP
+\f(CWshort&\fR, \f(CWunsigned short&\fR, \f(CWint&\fR, \f(CWunsigned int&\fR, \f(CWlong&\fR, \f(CWunsigned long&\fR
+Characters are extracted and converted to an integral value
+according to the conversion specified by 
+\fBins.convbase()\fR.
+The first character may be a sign (\f(CW+\fR or \f(CW-\fR).  After that,
+if \fBins.convbase()\fR
+is 8, 10, or 16 the conversion is octal, decimal, or hexadecimal respectively.
+Conversion is terminated by the first "non-digit," which is left
+in \fBins\fR. Octal digits are the characters '0' to '7'.
+Decimal
+digits are the octal digits plus '8' and '9'.
+Hexadecimal digits
+are the decimal digits plus the letters 'a' through 'f' (in either
+upper or lower case).
+If \fBins.convbase()\fR
+is 0 then the number is interpreted according to C lexical
+conventions.  That is, if the first characters (after the optional
+sign) are \f(CW0x\fR or \f(CW0X\fR a hexadecimal conversion
+is performed
+on following hexadecimal digits.  Otherwise if the first character is a 
+\f(CW0\fR an
+octal conversion is performed and in all other cases a decimal conversion
+is performed.
+\f(CWfailbit\fR is set if there are no
+digits (not counting the \f(CW0\fR in \f(CW0x\fR or \f(CW0X\fR) during
+hex conversion) available.
+.TP
+\f(CWfloat&\fR, \f(CWdouble&\fR
+Converts the characters according to C++ syntax for a float or double,
+and stores the result in \fBx\fR.  \f(CWfailbit\fR is set if there are no
+digits available in \fBins\fR or if it does not begin with a well formed
+floating point number.
+.RE
+.PP
+The type and name(\f(CWoperator>>\fR) of
+the extraction operations are chosen
+to give a convenient syntax for sequences of input operations.
+The operator overloading of C++ permits
+extraction functions to be declared for user defined classes.
+These operations can then be used with the same syntax as the
+member functions described here.
+.PP
+Unformatted input functions, which call \fBipfx(1)\fR and proceed only
+if it returns non-zero:
+.TP
+\fBinsp=&ins.get(ptr,len,delim)\fR
+Extracts characters and stores them in
+the byte array beginning at \fBptr\fR
+and extending for \fBlen\fR bytes.
+Extraction stops when \fBdelim\fR is encountered
+(\fBdelim\fR is left in \fBins\fR and not stored),
+when \fBins\fR has no more characters,
+or when the array has only one byte left.
+\fBget\fR always stores a terminating null, even if it doesn't extract
+any characters from \fBins\fR because of its error status.
+\f(CWfailbit\fR is set only if \fBget\fR encounters
+an end of file before it stores any characters.
+.TP
+\fBinsp=&ins.get(c)\fR
+Extracts a single character
+and stores it in \fBc\fR.
+.TP
+\fBinsp=&ins.get(sb,delim)\fB
+Extracts characters from \fBins.rdbuf()\fR and stores
+them into \fBsb\fR.
+It stops if it encounters end of file or if a store into
+\fBsb\fR
+fails or
+if it encounters \fBdelim\fR (which it leaves in \fBins\fR). 
+\f(CWfailbit\fR is set if it stops because the store into \fBsb\fR fails
+.TP
+\fBi=ins.get()\fR.
+Extracts a character and returns it.
+\fBi\fR is \f(CWEOF\fR if extraction encounters end of file.
+\f(CWfailbit\fR is never set.
+.TP
+\fBinsp=&ins.getline(ptr,len,delim)\fR
+Does the same thing as \fBins.get(ptr,len,delim)\fR with the exception
+that it extracts a terminating \fBdelim\fR character from \fBins\fR.
+In case \fBdelim\fR occurs when exactly \fBlen\fR characters
+have been extracted, termination is treated as being due to the
+array being filled, and this \fBdelim\fR is left in \fBins\fR.
+.TP
+\fBinsp=&ins.ignore(n,d)\fR
+Extracts and throws away
+up to \fBn\fR characters.
+Extraction stops prematurely if 
+\fBd\fR is extracted or end of file is reached.
+If \fBd\fR is \f(CWEOF\fR it can never cause termination.
+.TP
+\fBinsp=&ins.read(ptr,n)\fR
+Extracts
+\fBn\fR
+characters and stores them in the array beginning at \fBptr\fR
+If end of file is reached before \fBn\fR characters have been
+extracted, 
+\fBread\fR
+stores whatever it can extract and sets \f(CWfailbit\fR.
+The number of characters extracted can be determined via \fBins.gcount()\fR.
+.PP
+Other members are:
+.TP
+\fBi=ins.gcount()\fR
+Returns the number of characters extracted by the last unformatted
+input function.  Formatted input functions may call unformatted
+input functions and thereby reset this number.
+.TP
+\fBi=ins.peek()\fR
+Begins by calling \fBins.ipfx(1)\fR.
+If that call returns zero or if \fBins\fR is at end of file,
+it returns \f(CWEOF\fR.
+Otherwise it returns (without extracting it) the next character.
+.TP
+\fBinsp=&ins.putback(c)\fR
+Attempts to back up \fBins.rdbuf()\fR.
+\fBc\fR must be the character before \fBins.rdbuf()\fR's get pointer.
+(Unless other activity is modifying \fBins.rdbuf()\fR this
+is the last character extracted from \fBins\fR.)
+If it is not, the effect is undefined.
+\fBputback\fR may fail (and set the error state).
+Although it is a member of \f(CWistream\fR,
+\fBputback\fR never extracts characters, so
+it does not call \fBipfx\fR.  It will, however, return without
+doing anything if the error state is non-zero.
+.TP
+\fBins>>manip\fR
+Equivalent to \fBmanip(ins)\fR.
+Syntactically this looks like an extractor
+operation, but semantically it does an arbitrary operations
+rather than converting a sequence of characters and storing the
+result in \fBmanip\fR.
+.PP
+Member functions related to positioning.
+.TP
+\fBinsp=&ins.seekg(off,dir)\fR
+Repositions \fBins.rdbuf()\fR's get pointer.
+See \fIsbuf.pub\fR(3C++)\fR for a discussion of positioning.
+.TP
+\fBinsp=&ins.seekg(pos)\fR
+Repositions \fBins.rdbuf()\fR's get pointer.
+See \fIsbuf.pub\fR(3C++)\fR for a discussion of positioning.
+.TP
+\fBpos=ins.tellg()\fR
+The current position of \fBios.rdbuf()\fR's get pointer.
+See \fIsbuf.pub\fR(3C++)\fR for a discussion of positioning.
+.PP
+Manipulator:
+.TP
+\fBins>>ws\fR
+Extracts whitespace characters.
+.SH CAVEATS
+.PP
+There is no overflow detection on conversion of integers. There should
+be, and overflow should cause the error state to be set.
+.PP
+There should be a way to input an arbitrary length string without 
+knowing a maximum size beforehand.
+.PP
+.SH SEE ALSO
+ios(3C++)
+sbuf.pub(3C++)
+manip(3C++)

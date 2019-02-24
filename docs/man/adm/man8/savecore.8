@@ -1,0 +1,83 @@
+.TH SAVECORE 8
+.CT 1 sa_auto
+.SH NAME
+savecore \- save a core image of the operating system
+.SH SYNOPSIS
+.B /etc/savecore
+.I target
+.I dump
+.SH DESCRIPTION
+.I Savecore
+copies the core image
+saved after an operating system crash
+to an ordinary file.
+This is worth doing
+so that the crash image will not be overwritten
+immediately by another crash,
+or sometimes because the crash image was written
+in a place where normal system operation will overwrite it
+(e.g. in the swap area).
+.PP
+The crash image is taken from
+.I dump
+and written to
+.IR target .
+If
+.I target
+exists and is a directory,
+the image is copied to
+a file in that directory
+with the first nonexistent name
+in the sequence
+.BR "z.0 z.1 z.2 ..." ;
+otherwise
+.I target
+is created or overwritten.
+.PP
+The crash image to be copied
+is checked for a magic number
+in a known location.
+If the magic number is correct,
+it is followed by the size of the image,
+and the time it was written;
+these numbers are printed
+before the dump is copied.
+If the magic number is wrong,
+the image is not copied.
+.I Savecore
+overwrites the magic number in
+.I dump
+after a successful copy.
+.PP
+The program runs faster
+if
+.I dump
+is the raw device.
+.PP
+For compatibility with an older program of the same name,
+the
+.I dump
+argument may be omitted;
+.I savecore
+will noisily examine each device specified for swapping in
+.IR fstab (5)
+and each of several popular default swap devices
+for a valid magic number.
+The first device that looks right
+is taken to be the crash image.
+.PP
+.I Savecore
+is usually called when the system is booted,
+from
+.IR rc (8).
+.SH EXAMPLE
+.EX
+/etc/savecore /tmp/dump /dev/rra11
+.EE
+.SH SEE ALSO
+.IR reboot (8)
+.SH BUGS
+The argument convention
+(the file to be written comes first)
+is unfortunate;
+it stems from compatibility.

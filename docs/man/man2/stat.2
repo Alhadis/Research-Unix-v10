@@ -1,0 +1,144 @@
+.TH STAT 2
+.CT 2 file_inq_creat
+.SH NAME
+stat, lstat, fstat \(mi get file status
+.SH SYNOPSIS
+.nf
+.B #include <sys/types.h>
+.B #include <sys/stat.h>
+.PP
+.B int stat(name, buf)
+.B char *name;
+.B struct stat *buf;
+.PP
+.B int lstat(name, buf)
+.B char *name;
+.B struct stat *buf;
+.PP
+.B int fstat(fildes, buf)
+.B struct stat *buf;
+.fi
+.SH DESCRIPTION
+.I Stat
+puts detailed information about the file
+.I name
+in a structure whose address is
+.IR buf .
+.I Lstat
+does the same except that when
+.I name
+is a symbolic
+link (see
+.IR link (2)),
+it
+supplies information about the link itself.
+.I Fstat
+does what
+.I stat
+does for the file open on descriptor
+.IR fildes .
+.PP
+It is unnecessary to have any
+permissions at all with respect to
+.IR name ,
+but all directories
+leading to the file must be searchable.
+.nf
+.ta \w'\fLnnnnnnnn\fP'u +\w'\fLunsigned short st_mode; \fP'u
+\fLstruct stat
+{
+	\fLdev_t st_dev;\fR	device number for this file system
+	\fLino_t st_ino;\fP	inode number
+	\fLunsigned short st_mode;\fP	file mode encoded as below
+	\fLshort st_nlink;\fP	number of links (not symbolic links)
+	\fLshort st_uid;\fP	uid of owner
+	\fLshort st_gid;\fP	gid of owner
+	\fLdev_t st_rdev;\fP	if device file, the device number
+	\fLoff_t st_size;\fP	size in bytes
+	\fLtime_t st_atime;\fP	time file was last read or created
+	\fLtime_t st_mtime;\fP	time file was last written or created
+	\fLtime_t st_ctime;\fP	time file or inode was last written or created
+\fL};\fP
+.fi
+.PP
+The bits in
+.B st_mode
+are defined by
+.nf
+.ft L
+.ta 10n 20n
+.ft P
+\fLS_IFMT	0170000\fP	file type
+\fLS_IFDIR	0040000\fP	directory
+\fLS_IFCHR	0020000\fP	character device
+\fLS_IFBLK	0060000\fP	block device
+\fLS_IFREG	0100000\fP	regular file
+\fLS_IFLNK	0120000\fP	symbolic link
+\fLS_ISUID	0004000\fP	set userid on execution
+\fLS_ISGID	0002000\fP	set groupid on execution
+\fLS_ICCTYP	0007000\fP	type of concurrency control
+\fLS_ISYNC	0001000\fP	1 writer and n readers (synchronized access)
+\fLS_IEXCL	0003000\fP	1 writer or n readers (exclusive access)
+\fL	0000400\fP	read permission by owner
+\fL	0000200\fP	write permission by owner
+\fL	0000100\fP	execute permission (search on directory) by owner
+\fL	0000070\fP	read, write, execute (search) by group
+\fL	0000007\fP	read, write, execute (search) by others
+.fi
+.PP
+.B S_IFMT
+and
+.B S_ICCTYP
+are field masks; the other constants encode modes.
+Codes contained in the 
+.B S_IFMT
+field are mutually exclusive.
+If bit
+.L 01000
+is set,
+the concurrency modes contained in
+.B S_ICCTYP
+are in effect;
+otherwise the set-id flags
+.B S_ISUID
+and
+.B S_ISGID
+apply.
+.PP
+The concurrency modes affect
+.I open
+and
+.I creat
+calls.
+Synchronized access,
+.BI S_ISYNC ,
+guards against inconsistent updates
+by forbidding concurrent opens for writing.
+Exclusive access,
+.BI S_IEXCL ,
+guards against inconsistent views
+by forbidding concurrent opens if one is for writing.
+.SH "SEE ALSO"
+.IR chmod (1), 
+.IR ls (1), 
+.IR chmod (2), 
+.IR filsys (5)
+.SH DIAGNOSTICS
+.IR stat ,
+.IR lstat :
+.BR EACCES ,
+.BR EFAULT ,
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR
+.br
+.IR fstat :
+.BR EBADF ,
+.BR EFAULT ,
+.BR EIO
+.SH BUGS
+For efficiency,
+.B st_atime
+is not set when a directory
+is searched, although this might be more logical.

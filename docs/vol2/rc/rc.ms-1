@@ -1,0 +1,154 @@
+.so ../ADM/mac
+.XX 18 309 "\f2Rc\fP \(em A Shell for Plan 9 and UNIX"
+.de TP	\" An indented paragraph describing some command, tagged with the command name
+.IP "\\f(CW\\$1\\fR" 8
+.if \\w'\\$1'-7n .br
+..
+.TL
+.I Rc " \(em A Shell for Plan 9 and UNIX
+.AU
+Tom Duff
+.AI
+.MH
+.AB
+.I Rc
+is a command interpreter for Plan 9.
+It also runs on a variety of UNIX systems,
+including SunOS and the Tenth Edition.
+Its spirit is very close Bourne's
+.I /bin/sh ,
+but its notation is less abstruse.
+.LP
+.I Rc
+tries to fix a number of problems with the Bourne shell.
+There is no macro-substitution \(em commands are not re-scanned
+after values of variables are substituted.  This eliminates the
+need for several types of quotation, all with different semantics,
+and as a side-effect abolishes several important Bourne-shell security holes.
+.LP
+It's syntax is more regular and better suited to casual use,
+resembling
+.I C ,
+or maybe
+.I awk ,
+rather than
+.I "Algol 68" .
+The grammar is described using
+.I yacc ,
+and so can be accurately documented and understood.
+.LP
+The design strives for simplicity without sacrificing
+too much facility.
+.AE
+.NH 1
+Introduction
+.LP
+Plan 9 needs a command-programming language.  As porting the
+Bourne shell to a non-UNIX environment seemed a daunting task,
+I chose to write a new command interpreter called
+.I rc
+because it runs commands.
+Although tinkering with perfection is a dangerous business,
+I could hardly resist trying to `improve' on Bourne's design.
+Its most identifiable shortcoming is its macro-processor view
+of variable substitution, as evidenced by the peculiar semantic difference between
+.CW $*
+and
+.CW $@ ,
+the three different types of quotation and the odd interpretation of
+.CW IFS ,
+among other things.  The order and manner in which parsing, parameter assignment,
+breaking into words and parameter substitution occur is hard to learn,
+and has subtle effects that are often not well-understood, especially by novices.
+.LP
+It is remarkable that in the four most recent editions of the UNIX
+programmer's manual the Bourne shell grammar described in the manual page
+does not admit the command
+.CW who|wc .
+This is surely an oversight, but it suggests something darker:
+nobody really knows what the Bourne shell's grammar is.  Even examination
+of the source code is little help.  The parser is implemented by recursive
+descent, but the routines corresponding to the syntactic categories all
+have a flag argument that subtly changes their operation depending on the
+context.
+.CW "LPLOG=$LPSPOOL/log/${LPDEST}.`set \`date\`;echo $1`
+.LP
+.I Rc 's
+parser is implemented using
+.I yacc ,
+so I can say precisely what the grammar is \(em it's reproduced in the appendix.
+Its lexical structure is harder to describe; I could not convince my users
+to abandon some Bourne-isms that would have made lexical analysis as
+straightforward as C's.
+(Of course, having coerced me into muddying up the syntax, they complain
+about its turbidity.)
+.LP
+.I Rc 's
+semantics are not very different from Bourne's.  It still has
+command and pattern substitution, redirection, pipelines, conditional execution,
+.I while
+and
+.I for
+loops and almost everything else.
+.LP
+Syntax is another matter.  The syntax of the simplest commands must be very simple.
+I've taken it as given that the reflex cases, those situations in which the
+commands roll off the fingertips, should be handled as Bourne did.  Thus,
+you still type
+.P1
+rm -fr *
+ls|wc
+cat *.c >c.files
+cyntax *.c && cc -g *.c
+.P2
+there is a tension between on the one hand wanting a
+very simple syntax with no punctuation for simple commands, and on the other
+hand wanting a more complex syntax to write more complicated stuff in
+reasonable ways.  The Bourne shell is as good a compromise in this regard as
+I've seen, but even it has a funny two-level syntax with one syntax for the
+commands it executes (normal commands and flow of control stuff like if and
+case) and another syntax for executing those commands (monstrosities like
+${foo:=`bar \`parp\``}.
+no macros
+security
+C instead of Algol 68
+yacc
+.NH 1
+References
+.LP
+.in+.5i
+.ti-.5i
+[1]
+M. Beeler, W. Gosper et al,
+\fIHakmem,\fP
+MIT AI Lab memo #239,
+1973
+.in -.5i
+.BP
+hi
+.BP
+there
+.BP
+there
+.BP
+hi
+.BP
+there
+.BP
+hi
+.BP
+there
+.BP
+there
+.BP
+hi
+.BP
+there
+.BP
+there
+.BP
+hi
+.BP
+there
+.BP
+there

@@ -1,0 +1,50 @@
+.TH PROFIL 2
+.CT 2 debug_tune
+.SH NAME
+profil \(mi execution time profile
+.SH SYNOPSIS
+.nf
+.B void profil(buff, bufsiz, offset, scale)
+.B unsigned short *buff;
+.B int bufsiz, offset;
+.B unsigned scale;
+.fi
+.SH DESCRIPTION
+.I Buff
+points to an area of core whose length in bytes is given by
+.IR bufsiz .
+After this call, the user's program counter
+is examined each clock tick;
+.I offset
+is subtracted from it, and the result multiplied by
+.IR scale ,
+divided by 65536
+and then rounded up to a multiple of two.
+If the resulting number (\f2n\fP) is less than
+.IR bufsiz ,
+then
+.B buff[n/2]
+is incremented.
+.PP
+Profiling is turned off by giving a
+.I scale
+of 0.
+It is rendered
+ineffective by giving a
+.I bufsiz
+of 0.
+Profiling is turned off when an
+.I exec
+is executed, but remains on in child and parent both
+after a
+.IR fork .
+Profiling is turned off if an update in
+.I buff
+would cause a memory fault.
+.SH "SEE ALSO"
+.IR prof (1),
+.IR monitor (3)
+.SH BUGS
+Because of the rounding up,
+single byte instructions
+cannot be exactly profiled.

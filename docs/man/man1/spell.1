@@ -1,0 +1,138 @@
+.TH SPELL 1
+.CT 1 writing_aids 
+.SH NAME
+spell \- find spelling errors
+.SH SYNOPSIS
+.B spell
+[
+.I option
+]
+...
+[
+.I file
+]
+...
+.SH DESCRIPTION
+.I Spell
+looks up words from the named
+.I files
+(standard input default)
+in a public spelling list and in a private list.
+Possible misspellings (words 
+that occur in neither and are not plausibly derivable
+from the former) are placed on the standard output.
+.PP
+.I Spell
+ignores constructs of
+.IR troff (1)
+and its standard preprocessors,
+or constructs of
+.IR tex (1).
+The options are
+.TP
+.B -b
+Check British spelling.
+.TP
+.B -v
+Print all words not literally in the spelling list, with
+derivations.
+.TP
+.B -x
+Print on standard error, marked with
+.LR = ,
+every stem as it is looked up in the spelling list,
+along with its affix classes.
+Used for maintenance.
+.TP
+.B -c
+.br
+.ns
+.TP
+.B -C
+Input must come from standard input, one word per line.
+Output is a single byte per word, delivered immediately:
+.L -
+if the word is rejected, 
+.L +
+if the word is accepted under
+.BR -c ,
+and a digit if the word is accepted under
+.BR -C .
+Digit zero indicates a word known directly; larger
+numbers indicate words derived by more
+elaborate paths.
+Used by other programs piping queries to spell.
+.TP
+.B -n
+Print line number (counted from 1) and character number 
+(counted from 0) with each spelling error.
+Used by WYSIWYG tools.
+.PP
+The private list, by default
+.FR $HOME/lib/spelldict ,
+is arranged one word per line.
+.PP
+Pertinent files may be specified by
+environment variables, listed below with their default settings.
+To help in gathering local vocabularies, copies of all output
+are accumulated in the history file, if it exists and is writable.
+.PP
+.I Spell
+rarely admits multiple spellings of the same word.
+Variants that follow general rules are preferred over
+over those that don't, even when the unruly spelling is
+more common.
+Thus, in American usage, `modeled', `sizable', and `judgement' are
+preferred to `modelled', `sizeable', and `judgment'.
+Agglutinated variants are shunned: `crew member' and `back yard'
+(noun) or `back-yard' (adjective) are preferred to
+`crewmember' and  `backyard'.
+.SH FILES
+.TF /usr/lib/spell/spellhist
+.TP
+.F /usr/lib/spell/amspell
+spelling list, compressed
+.RB ( D_SPELL )
+.TP
+.F /usr/lib/spell/brspell
+British spelling list
+.TP
+.F /usr/lib/spell/spellhist
+history file
+.RB ( H_SPELL )
+.TP
+.F $HOME/lib/spelldict
+private list
+.RB ( A_SPELL )
+.TP
+.F /usr/lib/spell/sprog
+the main routine
+.RB ( P_SPELL )
+.TP
+.BR deroff " (or " delatex )
+(or
+.FR delatex )
+for removing punctuation and 
+.IR troff (1)
+constructs
+.RB ( DEROFF )
+.SH SEE ALSO
+.IR dict (7),
+.IR deroff (1),
+.IR wwb (1)
+.SH BUGS
+Words in a private list are recognized only by
+exact match, including capitalization and affixing.
+.br
+The heuristics of
+.IR deroff (1)
+and
+.IR delatex ,
+used to excise formatting information, are imperfect.
+.br
+The spelling list's coverage is uneven;
+in particular biology, medicine, and chemistry, and
+perforce proper names,
+are covered very lightly.
+.br
+British spelling was done by an American.

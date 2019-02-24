@@ -1,0 +1,83 @@
+.TH MKNOD 8
+.CT 1 sa_nonmortals
+.SH NAME
+mknod \- construct special file
+.SH SYNOPSIS
+.B /etc/mknod
+.I name
+[
+.B c
+]
+[
+.B b
+]
+.I major
+.I minor
+.SH DESCRIPTION
+.I Mknod
+makes a special file.
+The first argument is the
+.I name
+of the entry.
+The second is
+.B b
+to make a file for a block device,
+.B c
+to make a character device.
+The last two arguments are
+numbers specifying the
+.I major
+device type
+and the
+.I minor
+device (e.g. unit, drive, or line number).
+.PP
+Minor devices are specific to each device driver;
+see the writeups in Section 4.
+The assignment of major device numbers
+varies with the implementation.
+Here are some conventional ones
+in the system used on VAXes:
+.SS "Block devices
+.de DV
+.ie '\\$3''\\$1	\\$2
+.el\{.
+\\$1	\\$2,
+.IR "\\$3" "(\\$4)"
+\}
+.br
+..
+.DV 0 "MASSBUS SMD disk"
+.DV 1 "block TE16 tape" mt 4
+.DV 2 "UNIBUS SMD disk"
+.DV 3 "VAX 8550 console disk"
+.DV 7 "MSCP disk" ra 4
+.DV 8 "block TU78 tape" mt 4
+.DV 10 "block TMSCP tape" mt 4
+.SS "Character devices
+.DV 0 "console terminal" console 4
+.DV 1 "DZ11 serial interface"
+.DV 2 "VAX-11/750 console tape"
+.DV 3 "memory, null device" "mem, null" 4
+.DV 4 "raw MASSBUS SMD disk"
+.DV 5 "TE16 tape" mt 4
+.DV 7 "interleaved swap devices" drum 4
+.DV 8 "VAX-11/780 console floppy"
+.DV 12 "raw VAX 8550 console disk"
+.DV 13 "raw UNIBUS SMD disk"
+.DV 14 "DEBNA Ethernet controller" ethernet 4
+.DV 17 "DR11-C Datakit interface" dk 4
+.DV 22 "TU78 tape" mt 4
+.DV 26 "KMC11-B control interface" kmc 4
+.DV 28 "raw MSCP disk" ra 4
+.DV 31 "KMC11-B protocol-support Datakit interface" dk 4
+.DV 40 "file descriptor device" fd 4
+.DV 42 "IP protocol endpoints"
+.DV 43 "TCP protocol endpoints"
+.DV 44 "Interlan NI1010A Ethernet controller" ethernet 4
+.DV 50 "UDP protocol endpoints"
+.DV 57 "DHV11 serial line controller"
+.DV 58 "DEQNA Ethernet controller" ethernet 4
+.DV 59 "TMSCP tape" mt 4
+.SH "SEE ALSO"
+.IR mknod (2)

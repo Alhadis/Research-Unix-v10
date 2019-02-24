@@ -1,0 +1,117 @@
+.TH JF 9.1
+.CT 1 editor graphics
+.SH NAME
+jf \- font editor
+.SH SYNOPSIS
+.B jf
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Jf
+edits jerq font files.
+If
+.I file
+does not begin with a slash and is not a font file,
+it is looked up in a standard font directory.
+.PP
+.I Jf
+is mostly mouse- and
+menu-driven, except when prompting for file names.
+.I Jf
+divides its layer into two types of areas:
+Font displays
+show all characters in a given font in actual size.
+When characters are opened for editing, they appear magnified in
+edit displays.
+.PP
+Button 1
+is the `do it' button.
+Clicking button 1 inside a font display
+opens a character for editing; inside an edit display
+it sets a pixel.
+It may have other functions selected via menus, in which case the function
+is indicated by a special cursor.
+.PP
+Button 2
+is the `undo it' button.
+Clicking button 2 closes a character or clears a
+pixel, unless conditioned otherwise via menu selection.
+.PP
+Button 3
+is the `menu' button.
+Clicking button 3 selects a menu, pops control
+back to the top level, or (when the gunsight cursor shows)
+picks a font or character to be affected.
+Sometimes menu selection is the only (non-trivial)
+option available, as indicated by a `menu' cursor.
+.PP
+A font is described by several parameters; these are either read from the
+font file, or set by default by the
+.B make new font
+function:
+.B max width
+(default 16 pixels),
+.B height
+(16)\-measured from the top,
+.B ascent
+(16)\-the distance of the printing baseline from the top, and
+.B range
+(1)\-the highest-numbered character in the font.
+(The first character is numbered 0.)
+All may be changed under the
+.B set sizes
+menu.
+.B Squeeze font,
+in the
+.B open/close font
+menu, reduces max width as much as possible.
+.PP
+Each character has a width, which is shown by the length of the baseline
+in the edit display.
+The
+.B char width
+may be set under the
+.B set sizes
+menu; button 1 sets it to 0, button 2 sets it to a specified pixel
+within the max width.
+The quantity
+.B char left
+may be used for kerning.
+If positive, it shifts a character right and causes
+.B max width
+to increase if necessary; if negative, the character will be shifted
+left.
+Otherwise
+.I char left
+is irrelevant to font editing.
+.PP
+The
+.B bit function
+menu controls copying among characters in any of the
+.IR bitblt (9.3)
+Codes:
+.BR F_STORE ,
+.BR F_CLR ,
+.BR F_OR ,
+.BR F_XOR.
+Press button 3 on the source character; hold it down while moving and
+release it on the destination.
+.PP
+Several fonts may be open at once.
+When editing a font, it is often convenient to open a second copy
+for recovering botched characters.
+.SH FILES
+.TF /usr/jerq/include/font.h
+.TP
+.F /usr/jerq/font/*
+jerq fonts
+.TP
+.F /usr/jerq/include/font.h
+jerq font header file
+.SH SEE ALSO
+.IR font (9.5)
+.SH DIAGNOSTICS
+When out of memory or screen area, 
+.I jf
+ignores the offending operation.

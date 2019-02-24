@@ -1,0 +1,118 @@
+.if "\*(Bp"" .so /usr/lib/tmac/tmac.bits
+.TH MBITS 6
+.CT 1 writing_troff
+.SH NAME
+mbits \- macros to typeset bitmaps
+.SH SYNOPSIS
+.B troff
+[
+.I option ...
+]
+.B -mbits
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+These macros are used to typeset bitmaps.
+They are compatible with other
+.I troff
+macro packages, so that bitmap figures may be included in documents.
+.TP "\w'\f5.BM \fIf s dX dY\fR'u+1m"
+\f5\&.BM \fIf\fR
+Set the format for subsequent \&.BM requests to
+.IR f .
+The default is
+.L b
+for
+.IR blitblt (9.1)
+output.
+The other possibility is 
+.L i
+for faces and large icons in
+.SM
+ASCII
+format.
+.TP
+\f5\&.BM \fIf s\fR
+Insert the bitmap from file
+.IR f ;
+each pixel will be
+.I s
+basic units square.
+The bitmap origin is placed at the current point, which
+is left unchanged.
+.TP
+\f5\&.BM \fIf s dX dY\fR
+Set the number registers
+.IR dX " and " dY
+to the width and height (in basic units) of the bitmap in file
+.IR f ,
+assuming pixel size
+.IR s .
+This form may be used to calculate positioning.
+.SH EXAMPLES
+.PP
+This sequence centers the bitmap and spaces past it to continue
+with the text:
+.PP
+.EX
+\&.BM i
+\&.BM /n/face/48x48x1/pjw 6 dX dY
+\&.sp
+\&.in (\en(.lu-\en(dXu)/2u
+\&.BM /n/face/48x48x1/pjw 6
+\&.in
+\&.sp \en(dYu
+.if n .ig
+.sy echo  >/tmp/pjw\n($$ -e '\
+0x0000,0x1FA0,0x0000,\\n0x0000,0x7FFC,0x0000,\\n0x0000,0xFEFF,0x0000,\\n\
+0x0001,0xBFBF,0xC000,\\n0x0001,0xEFFA,0xE000,\\n0x0002,0x00FF,0xF800,\\n\
+0x0002,0x007F,0xFF80,\\n0x0000,0x001F,0x7E00,\\n0x000C,0x001F,0xFFC0,'
+.sy echo >>/tmp/pjw\n($$ -e '\
+0x0000,0x0015,0xFFC0,\\n0x0030,0x001F,0xFFF0,\\n0x0070,0x000F,0xFEB0,\\n\
+0x00C0,0x0007,0xFFF8,\\n0x00E0,0x0007,0xFFE8,\\n0x01E0,0x0003,0xFFF8,\\n\
+0x03C0,0x0001,0xFFF8,\\n0x03E0,0x0001,0xFFF8,\\n0x07C2,0x8000,0xFFF0,'
+.sy echo >>/tmp/pjw\n($$ -e '\
+0x0FFA,0xF83F,0xBFF8,\\n0x0FE0,0x7C67,0xFFF8,\\n0x1FF1,0xEFF9,0x7FF8,\\n\
+0x1FF7,0xFFFF,0xFFF8,\\n0x1FF5,0xA4FF,0xFFF8,\\n0x1FD0,0x247F,0xFFF0,\\n\
+0x0FE0,0x8045,0xFFF0,\\n0x1FA0,0x0870,0x3FF0,\\n0x0320,0x0060,0xDFE0,'
+.sy echo >>/tmp/pjw\n($$ -e '\
+0x0B80,0x1030,0x1F80,\\n0x0181,0x601F,0xF780,\\n0x0085,0x405A,0x5F00,\\n\
+0x0000,0x0BFB,0xFF00,\\n0x0180,0x1FE8,0xEE00,\\n0x0380,0x07F2,0xBE00,\\n\
+0x0182,0x03D5,0xEFC0,\\n0x0080,0x0075,0x7F80,\\n0x01C1,0xD5DD,0x4F80,'
+.sy echo >>/tmp/pjw\n($$ -e '\
+0x00C1,0x57FF,0xFF80,\\n0x0040,0x0039,0x7F00,\\n0x0060,0x006B,0xCE00,\\n\
+0x0004,0x1FEB,0x6000,\\n0x0000,0x07FF,0xF800,\\n0x0002,0x0015,0xA000,\\n\
+0x0000,0x0057,0xC000,\\n0x0002,0x003F,0x4000,\\n0x0000,0x804B,0xC000,'
+.sy echo >>/tmp/pjw\n($$ -e '\
+0x0002,0xBBFE,0x8000,\\n0x0000,0x8FFB,0xC000,\\n0x0001,0x7ABF,0xC000,'
+.BM i
+.BM /tmp/pjw\n($$ 6 dX dY
+.sp
+.in (\n(.lu-\n(dXu)/2u
+.BM /tmp/pjw\n($$ 6
+.sy rm -f /tmp/pjw\n($$
+.in
+.sp \n(dYu
+..
+.EE
+.SH FILES
+.F /usr/lib/btroff
+.SH SEE ALSO
+.IR blitblt (9.1), 
+.IR troff (1), 
+.IR bitfile (9.5), 
+.IR ms (6)
+.SH BUGS
+At time of writing,
+.I mbits
+does not work with PostScript output devices.
+See
+.IR mpictures (6)
+for an alternative.
+.br
+.B \&.BM
+does not work inside a diversion.
+.br
+The concept of `pixel size' varies among typesetting devices.

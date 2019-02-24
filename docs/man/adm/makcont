@@ -1,0 +1,32 @@
+for i in /usr/man/man[1-9]
+do
+	cd $i
+	sed -n '
+/^\.TH */{
+s///
+s/\([^ ]*  *[^ ]*\).*/\1/
+h
+}
+/SH *NAME/,/SH/{
+/.*-  */{
+s///
+G
+s/\([^\n]*\)\n\([^ ]*\)  *\([^ ]*\)/.yy \2(\3) "\1"/p
+}
+}
+' *
+done|fgrep -v -f donotprint|
+sort -t\( +1n +0f >contents
+e - contents <<!
+/INTRO(1)/m0
+/INTRO(2)/;.m?(1)?
+/INTRO(3)/;.m?(2)?
+/INTRO(9)/;.m?(8)?
+/LENS(/s/bitmap/& magnifier/
+1i
+.yy "" "permuted index"
+.yy "" introduction
+.yy "" glossary
+.
+w
+!

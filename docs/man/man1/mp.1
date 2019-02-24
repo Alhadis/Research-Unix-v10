@@ -1,0 +1,304 @@
+.TH MP 1
+.CT 1 writing_other
+.SH NAME
+mp, MetaPost \- system for drawing pictures
+.SH SYNOPSIS
+.B mp
+[
+.B -I
+]
+[
+.B -T
+]
+[
+.I first-line
+]
+.SH DESCRIPTION
+.I Mp
+interprets the MetaPost language and produces
+.I PostScript
+pictures.  The MetaPost language is similar to Knuth's Metafont
+with additional features for including
+.IR tex (1)
+or
+.IR troff (1)
+commands and accessing features of PostScript not found in Metafont.
+The
+.B -T
+flag selects
+.I troff
+instead of
+.IR tex .
+.PP
+An argument given on the command line
+behaves as the first input line.
+That can be either a (possibly truncated) file name
+or a sequence MetaPost commands starting with
+.L \e
+and including an
+.L input
+command.  Thus
+.L mp figs
+processes the file
+.LR figs.mp .
+The basename of
+.L figs
+becomes the
+.IR jobname ,
+and is used in forming output file names.  If no file is named, the
+jobname becomes
+.LR mpout .
+The default
+.L .mp
+extension can be overridden by specifying an extension explicitly.
+.PP
+There is normally one output file for each picture generated,
+and the output files are named
+.IR jobname.nnn ,
+where
+.I nnn
+is a number passed to the
+.L beginfig
+macro.  The output file name is
+.IB jobname .ps
+if this number is negative.
+.PP
+The output files can be used as figures in a TeX document by including
+.IP
+.BI "\especial{psfile=" jobname.nnn }
+.LP
+in the TeX document.  Alternatively, one can
+.L \einput epsf.tex
+and then use the macro
+.BI "\eepsfbox{" jobname.nnn }
+to produce a box of the appropriate size containing the figure.
+.TP
+.BI btex " TeX commands " etex
+This causes
+.I mp
+to generate a MetaPost picture expression that corresponds to the
+TeX commands.  If the TeX commands generate
+more than one line of text, it must be in a
+.L \evbox
+or a minipage environment.
+.TP
+.BI verbatimtex " TeX commands " etex
+This is ignored by
+.I mp
+except that the TeX commands are passed on to TeX.  When using LaTeX
+instead of TeX the input file must start with a
+.L verbatimtex
+block that gives the
+.L \edocumentstyle
+and
+.L "\ebegin{document}"
+commands.
+.PP
+Since most TeX fonts have to be downloaded as bitmaps, the
+.L btex
+feature works best when the output of
+.L mp
+is to be included in a TeX document so that
+.IR dvips (1)
+can download the fonts.  For self-contained PostScript output that can be
+used directly or included in a
+.I troff
+document, start your MetaPost input file with the command
+.L "prologues:=1"
+and stick to standard PostScript fonts.  TeX and MetaPost use the names in the
+third column of the file
+.LR /usr/lib/mp/trfonts.map .
+.PP
+MetaPost output can be included in a
+.I troff
+document via the
+.IR mpictures (6)
+macro package.  In this case
+.I mp
+should be invoked with the
+.B -T
+flag so that the commands between
+.L btex
+and
+.L etex
+or between
+.L verbatimtex
+and
+.L etex
+are interpreted as
+.I troff
+instead of TeX.  (This automatically sets
+.L prologues:=1
+).
+.PP
+Here is a list of the environment variables affect the behavior of
+.IR mp :
+.TF MPXCOMMAND
+.TP
+.B MPINPUTS
+Search path for
+.L \einput
+files.
+It should be colon-separated,
+and start with dot.
+Default:
+.L .:/usr/lib/mp
+.TP
+.B MFINPUTS
+Auxiliary search path for
+.L \einput
+files with
+.L .mf
+extensions.
+Default:
+.L .:/usr/lib/mf
+.TP
+.B TEXFONTS
+Search path for font metric files.
+Default: 
+.L .:/usr/lib/tex/fonts/tfm
+.TP
+.B MPXCOMMAND
+The name of a shell script that converts embedded typesetting commands
+to a form that
+.I mp
+understands.
+Defaults:
+.L /usr/lib/mp/bin/makempx
+for
+.I tex
+and
+.L /usr/lib/mp/bin/troffmpx
+for
+.I troff
+.TP
+.B TEX
+The version of TeX to use when processing
+.L btex
+and
+.L verbatimtex
+commands.  Default:
+.L tex
+.TP
+.B TROFF
+The
+.I troff
+pipeline for
+.L btex
+and
+.L verbatimtex
+commands.  Default:
+.B eqn -d\e$\e$ | troff -Tpost
+.TP
+.B MPMEMS
+Search path for
+.L .mem
+files. Default:
+.L .:/usr/lib/mp
+.TP
+.B MPPOOL
+Search path for strings.
+Default:
+.L .:/usr/lib/mp
+.TP
+.B MPEDITOR
+A command for invoking an editor with
+.L %s
+in place of the file name and
+.L %d
+in place of the line number.
+Default:
+.L /bin/ed %s
+.TP
+.B TEXVFONTS
+Search path for virtual fonts.
+Default:
+.L /usr/lib/tex/fonts/psvf
+.PD
+.PP
+A
+.L .mem
+file is a binary file that permits fast loading of fonts and macro packages.
+.I Mp
+reads the default
+.F plain.mem
+unless another
+.L .mem
+file is specified at the start of the first line with an
+.L &
+just before it.  There is also an
+.F mfplain.mem
+that simulates plain Metafont so that
+.I mp
+can read
+.L .mf
+fonts.  (Plain Metafont is described in
+.I The
+.IR METAFONTbook ).
+.PP
+Experts can create
+.L .mem
+files be invoking
+.I mp
+with the
+.B -I
+switch and giving macro definitions followed by a
+.L dump
+command.
+.PP
+The MetaPost language is similar to Metafont, but the manual
+.I A User's Manual for MetaPost
+assumes no knowledge of Metafont.  MetaPost does not have bitmap
+output commands or Metafont's online display mechanism.  Use
+.IR dvips (1)
+and
+.IR psi (9.1)
+to see the results before printing.
+.SH FILES
+.TF /usr/lib/tex/macros/doc/mpintro.tex
+.TP
+.F /usr/lib/mp/*
+macros,
+.L .mem
+files, and tables for handling included
+.I tex
+and
+.I troff
+.TP
+.F /usr/lib/mp/bin
+Directory for programs that handle included
+.I tex
+and
+.IR troff .
+.F /usr/lib/mp/trfonts.map
+table of corresponding font names for
+.IR troff ,
+PostScript, and TeX
+.TP
+.F /usr/lib/tex/macros/epsf.tex
+The TeX input file where the
+.L \eepsfbox
+macro is defined
+.TP
+.F /usr/lib/tex/macros/doc/mpintro.tex
+TeX input for a document that describes the MetaPost language
+.TP
+.F /usr/lib/mp/examples.mp
+The source file for the figures used in
+.F mpintro.tex
+.TP
+.F /n/bowell/usr/src/cmd/tex/mp/doc/*
+More information on using MetaPost with
+.IR troff .
+.SH "SEE ALSO"
+.IR tex (1),
+.IR lp (1),
+.IR psi (9.1),
+.br
+Donald E. Knuth,
+.I The METAFONTbook,
+Addison Wesley, 1986,
+.br
+John D. Hobby,
+.I A User's Manual for MetaPost
+AT&T Bell Labs Computing Science Technical Report 162, 1991.

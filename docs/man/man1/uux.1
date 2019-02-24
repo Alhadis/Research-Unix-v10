@@ -1,0 +1,129 @@
+.\"@(#)uux.1c	5.2
+.TH UUX 1
+.CT 1 comm_mach
+.SH NAME
+uux \- unix to unix command execution
+.SH SYNOPSIS
+.B uux
+[
+.I options
+]
+.I command-arg ...
+.SH DESCRIPTION
+.I Uux\^
+will execute a command on a specified system with files
+and standard output on specified files and systems.
+For security reasons, most machines allow only selected
+commands to be run, perhaps only receipt of incoming mail.
+.PP
+The
+.I command-args
+make up a 
+.IR sh (1)
+command with
+with command and file arguments
+possibly written
+.IB system ! file.
+A missing
+.I system
+is interpreted as the local system.
+.I Files
+may be prefixed by
+.BI ~ xxx /
+to represent the home directory for login name
+.I xxx
+on the specified system.
+.PP
+.I Uux\^
+copies all files to the execution system.
+Files to be returned as outputs must be enclosed in (escaped)
+parentheses.
+Files must have general read permission.
+.PP
+The options
+are
+.TF -ggrad
+.TP
+.BI -a name
+Use
+.I name
+as the user identification replacing the initiator user-id.
+(Notification will be returned to the user.)
+.TP
+.B -b
+Return standard input to the command if the exit status is non-zero.
+.TP
+.B -c
+Don't copy local file to the spool directory for transfer to the remote
+machine (default).
+.TP
+.B -C
+Force the copy of local files to the spool directory for transfer.
+.TP
+.BI -g grade\^
+.I Grade
+is a single letter/number;
+earlier
+.SM ASCII
+sequence characters will cause the job to be transmitted
+earlier during a particular conversation.
+The default is
+.BR N .
+.TP
+.B -j
+Place the jobid, an
+.SM ASCII
+string, on the standard output.
+The jobid can be used by
+.IR uustat (1)
+to obtain the status
+or terminate a job.
+.TP
+.B -n
+Suppress mail notification about failures.
+.TP
+.B -p
+.TP
+.B -
+Take the standard input to
+.I uux
+as the standard input to the executed command.
+.TP
+.B -r
+Don't start the file transfer, just queue the job.
+.TP
+.BI -s file\^
+Report status of the transfer in
+.I file.\^
+.TP
+.BI -x debug
+Produce debugging output on stdout.
+.I Debug
+is a number between 0 and 9;
+higher numbers give more detailed information.
+.TP
+.B -z
+Notify the user if the command succeeds.
+.ne2
+.SH FILES
+.TF /usr/spool/uucp
+.TP
+.F /usr/spool/uucp
+spool directory
+.TP
+.F /usr/lib/uucp/*
+other data and programs
+.PD
+.SH SEE ALSO
+.IR uucp (1), 
+.IR uucico (8), 
+.IR uustat (1)
+.SH BUGS
+All the commands in a shell pipeline are executed on
+the machine of the first command.
+.br
+Because files are gathered into a common directory,
+two files for one command cannot have the same basename.
+This won't work:
+.L
+uux "a!diff  b!/usr/dan/xyz c!/usr/dan/xyz > !xyz.diff".

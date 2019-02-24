@@ -1,0 +1,83 @@
+.TH CONNLD 4
+.CT 2 sa comm_proc
+.SH NAME
+conn_ld \- line discipline for unique stream connection
+.SH SYNOPSIS
+.B #include <sys/filio.h>
+.SH DESCRIPTION
+This line discipline
+provides unique connections
+to a server.
+The server process should push the line discipline on a pipe
+(see
+.B FIOPUSHLD 
+in
+.IR stream (4))
+and
+.IR fmount (2)
+the pipe end on a file.
+A subsequent attempt to
+.IR open (2)
+or
+.IR creat
+that file causes a new pipe to be created.
+A file descriptor for one
+end of the new pipe is passed on the mounted pipe to
+to the server process as if by
+.BR FIOSNDFD ;
+see
+.IR stream (4).
+The
+opening process
+is blocked until the server responds.
+The server should receive the passed file descriptor with
+.RB FIORCVFD
+and respond in one of the following ways:
+.IP \(em
+Accept the new file descriptor by performing
+.RS
+.IP
+.L
+ioctl(fd, FIOACCEPT, (void *)0);
+.RE
+.IP
+The originating
+.I open
+completes and returns a file descriptor for the 
+other end of the new pipe.
+.IP \(em
+Write some data on the new file descriptor.
+This performs an implicit
+.LR FIOACCEPT .
+.IP \(em
+Pass a different file descriptor:
+.RS
+.IP
+.L
+ioctl(fd, FIOSNDFD, &newfd);
+.RE
+.IP
+The originator's end of the new pipe is closed,
+and a file descriptor for the open file
+designated by
+.I newfd
+is returned to the originating
+.IR open .
+.IP \(em
+Reject the connection,
+by closing the new file descriptor
+or by performing
+.RS
+.IP
+.L
+ioctl(fd, FIOREJECT, (void *)0);
+.RE
+.IP
+The originating
+.I open
+fails with
+.BR ENXIO 
+and the new pipe is discarded.
+.SH SEE ALSO
+.IR fmount (2),
+.IR stream (4)

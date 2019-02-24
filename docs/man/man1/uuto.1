@@ -1,0 +1,102 @@
+.TH UUTO 1
+.CT 1 comm-mach
+.SH NAME
+uuto, uupick \- simplified unix-to-unix remote file copy
+.SH SYNOPSIS
+.B uuto
+[
+.I option ...
+]
+.I file ... recipient
+.PP
+.B uupick
+[
+.B -s
+.I system
+]
+.SH DESCRIPTION
+.I Uuto
+sends the named
+.I files
+to a
+.IR recipient 
+on another system by means of
+.IR uucp (1).
+The recipient is named thus:
+.IP
+.IB system ! user
+.PP
+The options are
+.TP
+.B -p
+Make a copy of the
+.I files.
+This option allows you to delete or modify the files without
+worrying about whether they have yet been sent.
+.PD 0
+.TP
+.B -m
+Notify the sender by mail when the copy is complete.
+(The recipient is always notified.)
+.PD
+.PP
+.I Uupick
+accepts or rejects files received from
+.I uuto.
+For each file currently available,
+it announces
+.IP
+.BI "from system" " sys-name" ": file" " file-name"
+.LP
+followed by
+.LR ? .
+Give one of these answers on the standard input:
+.TP
+<new-line>
+Go on to next entry.
+.TP
+.B d
+Delete the entry.
+.TP
+.BI m " dir
+Move the entry to directory
+.I dir.
+If 
+.I dir
+is missing, use the current directory.
+.TP
+.BI a " dir
+Like
+.BR m ,
+but move all files from the given system.
+.TP
+.B  p
+Print the file.
+.TP
+<EOT> (control-d)
+.br
+.ns
+.TP
+.B q
+Stop.
+.TP
+.BI ! command
+Escape to
+.IR sh (1)
+command.
+.TP
+anything else
+Print a usage summary.
+.PP
+Option
+.B -s
+picks files only from the named
+.I system.
+.SH FILES
+.F /usr/spool/uucppublic/receive/\fIrecipient\fP/\fIsendingsystem\fP/*
+where the files go
+.SH SEE ALSO
+.IR mail (1),
+.IR push (1),
+.IR rcp (1),
+.IR uucp (1)

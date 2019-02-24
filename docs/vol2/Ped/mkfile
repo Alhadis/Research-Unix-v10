@@ -1,0 +1,23 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	ped.out
+
+pg:	ped.out
+	count ped.ms ped.out
+
+spell:VQ:
+	dospell ped.ms
+
+lp:	ped.out
+	$LP $newprereq && touch $target
+
+ped.out:D:	ped.ms $REF nice.so dragon.so mvpoint.so
+	cat ../ADM/bm.mac ped.ms | $PREFER | tped | tbl | eqn | troff -mpm | ../ADM/bm.sh > $target
+
+index:V:
+	runind ped
+	cat ../ADM/bm.mac xped.ms | $PREFER | tped | tbl | eqn | troff -mpm > /dev/null 2>ped.x
+	mkindex ped.x
+	rm xped.ms
+

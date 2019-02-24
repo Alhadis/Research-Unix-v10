@@ -1,0 +1,194 @@
+.TH CP 1 
+.CT 1 files
+.SH NAME
+cp, mv, ln, reccp \- copy, move, or link files
+.SH SYNOPSIS
+.B cp
+[
+.B -z
+]
+.I file1 file2
+.br
+.B cp
+[
+.B -z
+]
+.I file ... directory
+.PP
+.B mv
+[
+.B -f
+]
+.I file1 file2
+.br
+.B mv
+[
+.B -f
+]
+.I file ... directory
+.PP
+.B ln
+[
+.B -s
+]
+.I file1 file2
+.br
+.B ln
+[
+.B -s
+]
+.I file ... directory
+.PP
+.B reccp
+[
+.B -z
+]
+.I file1 file2
+.br
+.B reccp
+[
+.B -z
+]
+.I file ... directory
+.SH DESCRIPTION
+In the first form of each command,
+.I file2
+is any name except an existing directory.
+In the second form the command
+copies, moves, or links one or more
+.I files
+into a
+.I directory
+under their original filenames, as if by a sequence of 
+commands in the first form.
+Thus
+.L "mv f1 f2 dir
+is equivalent to
+.LR "mv f1 dir/f1; mv f2 dir/f2" .
+.PP
+.I Cp
+copies the contents of plain
+.I file1
+to
+.IR file2 .
+The mode and owner of  
+.I file2
+are preserved if it already
+exists; the mode of
+.I file1
+is used otherwise.
+.PP
+.I Mv
+moves
+.I file1
+to
+.IR file2 .
+If the two files are in the same file system, the name
+.I file1
+is simply changed to
+.IR file2 ;
+if they are in different file systems,
+.I file1
+is copied and then removed.
+If
+.I file2
+already exists, it is removed before
+.I file1
+is moved.
+In this case the mode of
+.I file2
+is reported if it
+is not writable and the standard input is a terminal.
+Respond
+.L y 
+(and newline) to permit removal.
+.PP
+.I Ln
+links plain
+.I file1
+and
+.IR file2 .
+.I File2
+becomes an alternate name for, and is otherwise
+identical to,
+.I file1.
+.I File2
+must be in the same file system as
+.I file1
+and must not already exist.
+.PP
+.I Reccp
+copies plain files like
+.I cp,
+but copies directories and their contents recursively.
+It attempts to duplicate linkage and dates.
+When run by the super-user, it preserves ownership
+and copies device files as device files.
+.PP
+The options are:
+.TP
+.B -z
+Preserve `holes'; see
+.IR lseek (2).
+.TP
+.B -f
+Forcibly remove
+.IR file2 
+without asking.
+.TP
+.B -s
+Make symbolic links:
+record the (arbitrary) name
+.I file1
+in 
+.I file2.
+Except in special cases, such as
+.IR rm (1)
+and
+.I lstat
+(see
+.IR stat (2)),
+subsequent references to 
+.I file2
+are treated as references to
+.IR file1 .
+See
+.IR link (2)
+for details.
+.SH EXAMPLES
+.TP
+.B mkdir /usr1/ken; cp /usr/ken/* /usr1/ken
+Place in 
+.B /usr1/ken
+copies of all files from
+.BR /usr/ken .
+.TP
+.B reccp /usr/ken /usr1
+.br
+.ns
+.TP
+.B mkdir /usr1/ken; reccp /usr/ken/* /usr1/ken
+Two ways to duplicate in
+.B /usr1/ken
+the whole file hierarchy from
+.BR /usr/ken .
+.SH "SEE ALSO"
+.IR cat (1),
+.IR link (2),
+.IR stat (2),
+.IR push (1),
+.IR uucp (1),
+.IR rcp (1),
+.IR cpio (1)
+.SH DIAGNOSTICS
+.I Cp,
+.I mv,
+and
+.I reccp
+refuse to copy or move files onto themselves or directories into themselves.
+.SH BUGS
+.I Mv
+to a different file system is imperfect: if
+.I file1
+is a plain file links to it are broken; if it is a
+directory, nothing happens.

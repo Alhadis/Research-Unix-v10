@@ -1,0 +1,132 @@
+.TH MAN 1
+.CT 1 inst_info
+.SH NAME
+man \(mi print pages of this manual
+.SH SYNOPSIS
+.B man
+[
+.I option ...
+]
+[
+.I chapter
+]
+.I title ...
+.SH DESCRIPTION
+.I Man
+locates and prints pages of this manual named
+.I title
+in the specified
+.IR chapter .
+.I Title
+is given in lower case.
+The
+.I chapter
+number is a single digit, 1-9;
+pages marked (3S) or (9.1), for example,
+belong to chapters 3 and 9 respectively.
+If no
+.I chapter
+is specified, pages 
+in all chapters, including the unprinted appendix, are printed.
+.PP
+On some machines a cache of preformatted pages is available.
+If so, and if neither option
+.B -t
+or
+.B -n
+is present, option
+.BR -q ,
+for quick printing, is assumed.
+.PP
+The options are:
+.TP
+.B -q
+Copy cached pages to the standard output
+or, if they are out of date or unavailable, act as
+.BR -n .
+Any name from the 
+.SM NAME
+list at the top of the page will serve as a
+.I title
+in the cache.
+If the standard output is directed to a terminal,
+filter it through
+.IR ul (1).
+.TP
+.B -t
+Use
+.IR troff (1)
+to place on the standard output intermediate code to drive
+the typesetting devices of
+.IR lp (1),
+.IR apsend (1),
+or
+.IR proof (9.1).
+.TP
+.B -n
+Print the pages on the standard output using
+.I nroff.
+.TP 
+.B -f
+The
+.I titles
+are actual names of manual source files.
+Assume option
+.B -t
+unless 
+.B -n
+is present.
+.PP
+Under
+.B -t
+and
+.B -n
+further options, e.g. to specify the kind of terminal you have,
+are passed on to
+.I troff 
+or
+.IR nroff .
+.PP
+From time to time a daemon
+updates cached pages that are out of date
+and supplies links for subsidiary entries.
+.SH EXAMPLES
+.TP
+.B man man
+Reproduce this page and
+.IR man (6).
+.TP
+.B "man -t eqn eqnchar | lp
+Format the
+.I eqn
+and
+.I eqnchar
+pages and send them to the laser printer.
+.SH FILES
+.TF /usr/spool/man?/man.?
+.TP
+.F /usr/man/man?/*.?
+.I troff
+source for manual; this page is
+.F /usr/man/man1/man.1
+.TP
+.F /usr/spool/man/man?/*.?
+manual cache 
+.TP
+.F /usr/man/man0/cache
+cache daemon; invoked by
+.IR cron (8)
+.SH "SEE ALSO"
+.IR troff (1),
+.IR man (6),
+.IR apsend (1),
+.IR lp (1),
+.IR proof (9.1)
+.SH BUGS
+The manual was intended to be typeset; some detail is sacrificed on terminals.
+.br
+You can't ask for manual pages named 1 through 9.
+.br
+Pages not available in the cache can be located by their proper titles only.
+.br
+Cache entries by subsidiary names are always deemed up to date.

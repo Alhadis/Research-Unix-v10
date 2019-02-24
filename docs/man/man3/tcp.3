@@ -1,0 +1,181 @@
+.TH TCP 3X
+.CT 2 comm_mach
+.SH NAME
+tcp_sock, tcp_connect, tcp_listen, tcp_accept, tcp_rcmd \(mi tcp networking functions
+.SH SYNOPSIS
+.nf
+.B #include <sys/inet/tcp_user.h>
+.PP
+.B int tcp_sock();
+.PP
+.B int tcp_connect(fd, tp)
+.B int fd;
+.B struct tcpuser *tp;
+.PP
+.B int tcp_listen(fd, tp)
+.B int fd;
+.B struct tcpuser *tp;
+.PP
+.B int tcp_accept(fd, tp)
+.B int fd;
+.B struct tcpuser *tp;
+.PP
+.B "int tcp_rcmd(host, port, locuser, remuser, cmd, fd2p)"
+.B char *host, *port, *locuser, *remuser, *cmd;
+.B int *fd2p;
+.PP
+.SH DESCRIPTION
+These routines are loaded by the
+.B -lin
+option of
+.IR ld (1).
+.PP
+TCP is a protocol layered
+upon IP (internet protocol).
+It provides full-duplex byte stream connections between
+end points called sockets.
+The address of a socket is composed of the internet address
+of its host and the port number to which
+the socket is bound.
+.PP
+.I Tcp_sock
+returns the file descriptor of an unbound socket.
+Once opened, a socket may be bound to a port number within the
+host and set up as the active or passive end of a connection.
+.PP
+Addresses and parameters are passed in 
+.B tcpuser
+structures:
+.PP
+.nf
+.ft L
+.ta 8n
+struct tcpuser {
+	int code;
+	tcp_port lport, fport;
+	in_addr laddr, faddr;
+	int param;
+};
+.fi
+.ft R
+.PP
+.I Lport
+and
+.I laddr
+refer to the port and address numbers of the local end of a connection.
+.I Fport
+and
+.I faddr
+refer to the port and address numbers of the foreign end of a connection.
+.PP
+.I Tcp_connect
+binds socket
+.I fd
+to port
+.IB tp ->lport
+and attempts to set up a connection to
+the socket bound to port
+.IB tp ->fport
+on host
+.IB tp ->faddr.
+If
+.IB tp ->lport
+is 0, a local port number is automatically
+chosen.
+.I Tcp_connect
+returns 0
+if the connection is established, \-1 otherwise.
+.IB Tp ->lport
+and
+.IB tp ->laddr
+are filled in to reflect the local port and address numbers for the connection.
+Communication proceeds by performing
+.IR read (2)
+and
+.IR write
+on
+.IR fd .
+If
+.IB tp ->param
+is non-zero, it specifies options to set for the connection.
+The only option supported is
+.B SO_KEEPALIVE
+which causes empty messages to be sent periodically to
+detect dead connections.
+.PP
+.I Tcp_listen
+binds socket
+.I fd
+to port
+.IB tp ->lport
+and configures the socket to listen for connection requests to that port.
+If
+.IB tp ->faddr
+and
+.IB tp ->fport
+are non-zero, only connections coming from sockets on machine
+.I faddr
+and bound to port
+.I fport
+are listened for.
+.I Tcp_listen
+returns 0
+on success, \-1
+otherwise.
+.IB tp ->laddr
+is filled in to reflect the local address number for the connection.
+.IR Select (2)
+can be used with a listening socket to provide asynchronous polling of
+connection requests by selecting for pending input on the socket.
+.PP
+.I Tcp_accept
+waits for and accepts a connection request sent to the listening socket
+.I fd.
+When a connection arrives,
+.I tcp_accept
+returns a new file descriptor over which communications can proceed.
+.IB Tp ->faddr,
+.IB tp ->fport,
+.IB tp ->laddr,
+and
+.IB tp ->lport
+are filled in to identify the two ends of the connection.
+.IB Tp ->param
+is filled in with the minor device number of the
+tcp device used for the new connection.
+.I Fd
+is left open and continues listening for connections.
+.PP
+.I Tcp_rcmd
+remotely executes a
+.I cmd
+on
+.I host
+as user
+.I remuser.
+Standard input is attached to
+.I cmd's
+standard input and
+.I cmd's
+standard output is attached to standard output.
+If
+.I fd2p
+is non-zero, it is filled with the file descriptor of a new TCP connection attached
+to
+.I cmd's
+standard error.
+Otherwise,
+.I cmd's
+standard error is attached to its standard output.
+.SH FILES
+.TP 12
+.F /dev/tcp*
+the socket devices
+.SH SEE ALSO
+.IR ipc (3),
+.IR internet (3), 
+.IR udp (3)
+.SH DIAGNOSTICS
+.I Tcp_sock
+returns \-1
+if no sockets are available.

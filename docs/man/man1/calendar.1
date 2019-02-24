@@ -1,0 +1,118 @@
+.TH CALENDAR 1 
+.CT 1 time_man
+.SH NAME
+calendar \- reminder service
+.SH SYNOPSIS
+.B calendar
+[
+.B -
+]
+[
+.I n
+]
+.SH DESCRIPTION
+.I Calendar 
+consults calendar files
+and prints out lines that contain today's date or
+any date up through the
+.IR n th
+working day hence
+.RI ( n =1
+by default).
+Most American-style month-day dates such as
+.BR "Aug. 19" ,\ 
+.BR "august 19" ,\ 
+.BR "8/19" ,
+etc., are recognized, but not
+.LR 19/8 .
+The symbol 
+.L *
+denotes every month as in
+.B *
+19 or
+.BR */19 .
+A year may follow the day, as in
+.BR "August 19 86" ,\ 
+.BR "8/19/86" ,
+or
+.BR "Aug. 19, 1986" .
+.PP
+By default, the program consults the file
+.F calendar
+in directory
+.B $HOME
+(see
+.IR sh (1)),
+or in the current directory if a home directory is not known.
+Other calendar files to be consulted may be specified by calendar
+lines in one of the forms
+.IP
+.B #include
+\f5\fIfile\^\f5
+.br
+.B #include
+\f5\fImachine\f5!\fIfile\^\f5\fR
+.LP
+where
+.I file
+is the name of some other calendar and
+.I machine
+is the name of a machine or service accessible via
+.IR con (1).
+.PP
+When the optional
+.L -
+argument is present,
+.I calendar
+reminds all users of their calendar engagements by
+.IR mail (1).
+Normally this happens daily in the wee hours under control of
+.IR cron (8).
+Calendars not in home directories, or recipients not registered
+as users, may be registered
+for reminder service by placing lines of the form
+.I calendarfile mailname
+in file
+.FR /usr/lib/calendar .
+.SH EXAMPLES
+.EX
+#include /usr/pub/btlcalendar
+#include /n/coma/usr/pub/btlcalendar
+#include mh/astro/coma.calendar!/usr/pub/btlcalendar
+.EE
+.ns
+.IP
+Ways to subscribe to a public calendar by
+(1) users of
+.LR mh/astro/coma ,
+(2) users elsewhere who have
+.IR netfs (8)
+access to
+.BR coma ,
+and (3) users elsewhere without
+.I netfs
+access.
+.SH FILES
+.TF
+.TP
+.F calendar
+.PD0
+.TP
+.F /usr/lib/calendar?
+.TP
+.F /etc/passwd
+.TP
+.F /tmp/cal*
+.SH "SEE ALSO"
+.IR at (1)
+.SH BUGS
+.BR #include s
+do not nest.
+.br
+The mail reminder service doesn't work when 
+it finds fewer than two calendars.
+.br
+Your calendar must be public information for you
+to get reminder service.
+.br
+Holidays are what the program says they are.

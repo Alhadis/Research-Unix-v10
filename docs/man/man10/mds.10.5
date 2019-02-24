@@ -1,0 +1,239 @@
+.TH MDS 10.5 UCDS
+.SH NAME
+mds \- kollmorgen symbolic data format
+.SH DESCRIPTION
+.sp
+.PP
+MDS is the symbolic format for the Kollmorgen Pck Division channel router.
+This is an abbreviated description of the format. 
+.sp
+.I Introduction
+.PP
+All MDS data is made up of integers, symbols and keywords.  All coordinates
+are expressed in mils, i.e., 1/1000 of an inch (just like fizz!).  Coordinates
+can be negative or positive and are denoted by matching parentheses of
+the form (X Y).  Symbols require quotes around them if
+not made up of numbers, letters, $ or a _.
+.sp
+.I Data types
+.PP
+There are 15 data types identified by their reserved word.  The following is
+a list of valid types:
+.sp
+.ta 1.5i
+.nf
+Border	Board edges and keepouts
+Check	Design rules to check (not required)
+Design	Name of the design
+F2	From-to (before routing)
+Fail	Failed from-to (after routing)
+File	pointer to another file
+Fix	Hand routed wire
+Hole	Drill hole
+Level	Wiring surface (typically only two: COMP and PBSN)
+Net	Net
+Panel	Board of some type (optional)
+Route	Routed from-to with intermediate points at each bend
+Term	Termination site for a net (optional)
+Wire	Wire path
+Wire_region	Routing zone for layers
+.fi
+.Ce
+.sp
+.B Border id coordinates
+.PP
+Borders are closed loops composed by the coordinates and named by a identifier.
+.sp
+.B Check [rule] [-MIN: n] [-ON|-OFF]
+.PP
+Specifies what design rules should be checked by the
+.I repair
+program.
+.sp
+.B Design [name]
+.PP
+Names a design.  Strictly optional.
+.sp
+.B F2 netname coordinates [switches]
+.PP
+From-tos are the principal data format of the routing system.  They are
+created from nets by F2gen.  Intermediate points are specified by
+following the coordinate by a -I or -W.  Valid switches include:
+.ta 0.75i,1.5i
+.nf
+	-LEVEL: level
+		level name (or number)
+	-ORDER: cost_function
+		Sets cost function (see section below)
+	-IFL: n
+		number of inflection points; default 9
+	-MIN_FS_END:
+		sets minimum first and last segment length.  Default = 0.
+	-MIN_WIRE_END:
+		sets only wire end segment length.
+	-MDR: n
+		manhattan distance ratio (in tenths, default 1.5 = 15)
+	-AXIAL | -ESCAPE | -EITHER | -DIAGONAL
+		Route path direction; Axial is along axes, escape indicates
+		diagonals on ends only.
+	-AWD: n
+		Adjacent Wire Distance
+	-CLW: window
+	-XDW: window
+		CLW checks for coupled length violations within window {n,l}
+		where n is the center to center distance and l is the length.
+	-XOVER: limit
+		Crossover limit
+.fi
+.sp
+.B Fail netname coordinates [switches]
+.PP
+Fails are identical to from-tos except for be called fails.
+See above list of switches.
+.sp
+.B File [filename] [switches]
+.PP
+This include the filename.  The switch specifies what kind of file it is.
+.sp
+.B Fix sequence_no [switches] coordinates
+.PP
+Specifies a hand routed net.  It is identical to route records (see below).
+The endpoints must agree with the fail it fixes.
+.sp
+.B Hole code [switches] coordinates
+.PP
+Specifies a drilled or LASER'ed hole.  The switches are:
+.nf
+	-SIZE: n
+		size of n mils
+	-WIRED | -NOTWIRED
+		dictates if hole can be wired
+	-TOLERENCE: n
+	-LASED -LEVEL: n | -DRILLED
+		if not drilled, only one layer can be specified
+.fi
+.sp
+.B Level level [-F2_DENSITY: n]
+.PP
+Specifies wiring level directly; designs are assumed to be on one level unless
+otherwise told. The optional switch specifies density of routes on the layer.
+.sp
+.B Net [pre_switches]
+or
+.B Net name [pre_switches] coordinates [post_switches]
+.PP
+If the net name is omitted, then the switches are global.  The pre_switches
+include all of the from-to switches plus the following:
+.nf
+	-LINK: n
+		Limit of from-tos using this node; default: 2
+	-FIX | -DECOMP
+		Fixes order in from-to list or decomposes it
+	-FIX_START | -NOFIX_START
+	-FIX_END | -NOFIX_END
+		Treat first or last node as if LINK: 1; default: NOFIX
+	-TERM_TO: pool
+	-TERM_END: pool
+	-TERM_WIRE_END: pool
+	-TERM_LIMIT: n
+	-NOTERM
+		Reduces link by 1.  Assigns terminator from pool. Default is -NOTERM
+	-ORDER: cost_function
+		Possible cost functions are:
+			AIR_SL - Airline, shortest to longest
+			AIR_LS - Airline, longest to shortest
+			MAN_SL - Manhattan, shortest to longest
+			MAN_LS - Manhattan, longest to shortest
+			X_SL - X, shortest to longest
+			X_LS - X, longest to shortest
+			Y_SL - Y, shortest to longest
+			Y_LS - Y, longest to shortest
+	-BALANCE: cost_function
+		Possible cost functions are:
+			COUNT - by from-to count
+			AIR - by "airline distance"
+			MAN - by "Manhattan metric"
+			X - by X coordinate
+			Y - by Y coordinate
+	-SUPPLY | -SIGNAL
+		-SUPPLY nets are ignored; default is -SIGNAL.
+.fi
+.PP
+The post_switches are:
+.nf
+	-LINK: n
+	-FIX | -DECOMP
+	-TERM_TO: pool
+.fi
+.sp
+.B Panel [name] coordinates [-DESIGN: name]
+.PP
+Defines a coordinate system for translated output data.  Strictly optional.
+.sp
+.B Route [sequence_no] [switches] coordinates
+.PP
+If the sequence number and coordinates are
+omitted, then the switches are globally applied.
+Valid switches include:
+.nf
+	-NET: name
+	-LEVEL: level
+	-W_DIA: n
+		Used by wire clearance checks
+	-CLW: window
+	-XDW: window
+	-AWD: n
+		Adjacent Wire Distance (default 0)
+	-PASS: n
+		Set pass number (starts at 1)
+	-XOVER: limit
+		Sets limit to wire crossovers; can be NONE, ONE or TWO.
+.fi
+.sp
+.B Term pool coordinates
+.PP
+Pool together a set of coordinates of terminals given by XY coordinates.
+Typically used by the TERMGEN program to assign terminators automatically.
+Used by ECL freaks.
+.sp
+.B Wire [sequence_no] [switches] coordinates
+.PP
+Just like routes except ...
+.sp
+.B Wire_region [zone] [switches]
+.PP
+Specifies an XY plane where wiring can be done by the router.  If the zone
+is omitted then the specification is global.  The switches are:
+.nf
+	-LEVEL: level
+	-AWE_WE: n
+		Axial Wire Edge to Wire Edge distance
+	-AWE_HE: n
+		Axial Wire Edge to Hole Edge distance
+	-DWE_WE: n
+		Diagonal Wire Edge to Wire Edge distance
+	-DWE_HE: n
+		Diagonal Wire Edge to Hole Edge distance
+	-W_DIA: n
+		Wire diameter
+	-NSID: n
+		Normal/Segment Intercept Distance.
+	-MAX_HTURN: n
+		Maximum turn angle (in degrees)
+	-DIR: name | -DBECTORY: name
+		Prepend this name to map file output name.
+.fi
+.sp
+The following is a typical map file for input to Mapgen:
+.sp
+.nf
+.Cs
+Level COMP
+Level PBSN -F2_density: 50
+Net -balance: air
+Wire_region A -Level: COMP -Max_Hturn: 135 -NSID: 15 -W_dia: 8
+Wire_region A -AWE_WE: 8 -AWE_HE: 15 -DWE_WE: 27 -DWE_HE: 8
+Wire_region B -Level: PBSN -Max_Hturn: 135 -NSID: 15 -W_dia: 8
+Wire_region B -AWE_WE: 8 -AWE_HE: 15 -DWE_WE: 27 -DWE_HE: 8
+.Ce
+.fi

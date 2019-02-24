@@ -1,0 +1,179 @@
+.TH FACED 9.5
+.CT 1 sa_auto
+.SH NAME
+faced \- network face server
+.SH SYNOPSIS
+.B /usr/net/face.go
+.SH DESCRIPTION
+The network face server provides a database of 48\(mu48 bit icons
+and other facial representations.
+It is implemented as a network file system similar to
+.IR netfs (8).
+.PP
+The file system, conventionally mounted on
+.BR /n/face ,
+has a fixed three-level hierarchy.
+The first level is a machine name,
+the second level a user name,
+and the third level a resolution.
+Thus the file
+.F /n/face/kwee/pjw/48x48x1
+is the standard face icon (for user pjw) on machine kwee:
+.LP
+.ce 1000
+.nf
+.ps 6
+.ft H
+.tr x.
+.tr -
+.cs H 5
+.vs 8u
+-------------------xxxxxx-x---------------------
+-----------------xxxxxxxxxxxxx------------------
+----------------xxxxxxx-xxxxxxxx----------------
+---------------xx-xxxxxxx-xxxxxxxx--------------
+---------------xxxx-xxxxxxxxx-x-xxx-------------
+--------------x---------xxxxxxxxxxxxx-----------
+--------------x----------xxxxxxxxxxxxxxxx-------
+---------------------------xxxxx-xxxxxx---------
+------------xx-------------xxxxxxxxxxxxxxx------
+---------------------------x-x-xxxxxxxxxxx------
+----------xx---------------xxxxxxxxxxxxxxxxx----
+---------xxx----------------xxxxxxxxxxx-x-xx----
+--------xx-------------------xxxxxxxxxxxxxxxx---
+--------xxx------------------xxxxxxxxxxxxxx-x---
+-------xxxx-------------------xxxxxxxxxxxxxxx---
+------xxxx---------------------xxxxxxxxxxxxxx---
+------xxxxx--------------------xxxxxxxxxxxxxx---
+-----xxxxx----x-x---------------xxxxxxxxxxxx----
+----xxxxxxxxx-x-xxxxx-----xxxxxxx-xxxxxxxxxxx---
+----xxxxxxx------xxxxx---xx--xxxxxxxxxxxxxxxx---
+---xxxxxxxxx---xxxx-xxxxxxxxx--x-xxxxxxxxxxxx---
+---xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx---
+---xxxxxxxxx-x-xx-x--x--xxxxxxxxxxxxxxxxxxxxx---
+---xxxxxxx-x------x--x---xxxxxxxxxxxxxxxxxxx----
+----xxxxxxx-----x--------x---x-xxxxxxxxxxxxx----
+---xxxxxx-x---------x----xxx------xxxxxxxxxx----
+------xx--x--------------xx-----xx-xxxxxxxx-----
+----x-xxx----------x------xx-------xxxxxx-------
+-------xx------x-xx--------xxxxxxxxx-xxxx-------
+--------x----x-x-x-------x-xx-x--x-xxxxx--------
+--------------------x-xxxxxxx-xxxxxxxxxx--------
+-------xx----------xxxxxxxx-x---xxx-xxx---------
+------xxx------------xxxxxxx--x-x-xxxxx---------
+-------xx-----x-------xxxx-x-x-xxxx-xxxxxx------
+--------x----------------xxx-x-x-xxxxxxxx-------
+-------xxx-----xxx-x-x-xxx-xxx-x-x--xxxxx-------
+--------xx-----x-x-x-xxxxxxxxxxxxxxxxxxxx-------
+---------x----------------xxx--x-xxxxxxx--------
+---------xx--------------xx-x-xxxx--xxx---------
+-------------x-----xxxxxxxx-x-xx-xx-------------
+---------------------xxxxxxxxxxxxxxxx-----------
+--------------x------------x-x-xx-x-------------
+-------------------------x-x-xxxxx--------------
+--------------x-----------xxxxxx-x--------------
+----------------x--------x--x-xxxx--------------
+--------------x-x-xxx-xxxxxxxxx-x---------------
+----------------x---xxxxxxxxx-xxxx--------------
+---------------x-xxxx-x-x-xxxxxxxx--------------
+.tr --
+.tr xx
+.fi
+.vs
+.ps
+.ce 0
+.ft
+Many local users also have 512\(mu512 byte high-resolution faces, named
+.BR 512x512x8 .
+Other resolutions may also be present for a particular face.
+One-bit images are stored in the format used by
+.IR icon (9.1);
+eight-bit images are arrays of bytes.
+The directories for machines sharing a user community, such as those on
+a Datakit node, are linked together and given a name appropriate to the
+community.  For example,
+.B /n/face/kwee
+is a link to
+.BR /n/face/astro .
+.PP
+To access the face for a mail name
+.IB machine ! uid
+take the result of the first successful open from the following list of files:
+.IP
+.EX
+/n/face/machine/uid/48x48x1
+/n/face/misc./uid/48x48x1
+/n/face/machine/unknown/48x48x1
+/n/face/misc./unknown/48x48x1
+.EE
+.PP
+The directory
+.BR misc .\&
+holds faces for generic users such as
+.L root
+and
+.LR uucp .
+The face server is made available on a machine by running
+.B /usr/net/face.go
+from
+.IR rc (8).
+.PP
+The face server data is administered by a pair of
+.SM ASCII
+files that associate related
+machines and faces.
+The machine table
+.L machine.tab
+attaches machines to communities; in it the line
+.IP
+.B kwee=astro
+.PP
+puts machine
+.L kwee
+in community
+.LR astro .
+The people table
+.L people.tab
+associates a machine/user pair in the
+face server with a file in one of the source directories
+.F /n/kwee/usr/jerq/icon/face48
+or
+.FR /n/kwee/t0/face/512x512x8 .
+Thus
+.IP
+.B astro/pjw=pjweinberger
+.PP
+causes the images stored in source files named
+.L pjweinberger
+to be available in the face server in directory
+.BR /n/face/astro/pjw .
+As well, each disk file used by the face server is linked
+(by its original name) into the directory
+.B /n/face/48x48x1
+or
+.B /n/face/512x512x8
+for easy access to all the images.
+.SH FILES
+.TF /n/kwee/usr/net/face/machine.tab
+.TP
+.F /n/kwee/usr/jerq/icon/face48
+directory of low resolution faces
+.TP
+.F /n/kwee/t0/face/512x512x8
+directory of high resolution faces
+.TP
+.F /n/kwee/usr/net/face/people.tab
+people/file equivalences
+.TP
+.F /n/kwee/usr/net/face/machine.tab
+machine/community equivalences
+.SH SEE ALSO
+.IR netfs (8),
+.IR face (9.7),
+.IR icon (9.1),
+.IR vismon (9.1)
+.SH BUGS
+After updating the tables, an indeterminate time may pass before the
+new faces are available.
+.br
+All face server files are unwritable.

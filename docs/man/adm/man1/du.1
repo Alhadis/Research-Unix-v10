@@ -1,0 +1,103 @@
+.TH DU 1
+.CT 1 sa_mortals 
+.SH NAME
+du, df \- disk usage
+.SH SYNOPSIS
+.B du
+[
+.B -s
+]
+[
+.B -a
+]
+[
+.I file ...
+]
+.PP
+.B df
+[
+.B -i
+]
+[
+.I special ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Du
+gives the number of Kbytes allocated to data blocks
+of named
+.I files
+and, recursively, of files in named directories.
+If
+.I name
+is missing,
+.L .
+is used.
+The count for a directory includes the counts of the 
+contained files and directories.
+The options are
+.PP
+.TP
+.B -s
+Print only the grand total.
+.TP
+.B -a
+Print a count
+for every file in a directory.
+Normally counts are printed only for contained directories.
+.PP
+A file which has two (hard) links to it is counted only once.
+Symbolic links are neither counted nor followed.
+.PP
+.I Df
+printsthe amount of free space on the file system
+contained in
+.IR special ,
+or on the file system in which the specified
+.I file
+is contained.
+If no file system is specified,
+the free space on all of
+the currently mounted file systems
+is printed.
+.PP
+The reported numbers are in Kbytes,
+independently of the blocksize actually used on the file system.
+.PP
+The
+.B -i
+option also reports
+the number of inodes which are used and free.
+.SH EXAMPLES
+.TP
+.L
+df .
+.br
+How much space is there where I'm working?
+.SH FILES
+.TF /etc/fstab
+.TP
+.F /etc/fstab
+only for the root device
+.TP
+.F /etc/mtab
+list of currently mounted file systems
+.SH SEE\ ALSO
+.IR quot (8),
+.IR fstab (5),
+.IR icheck (8)
+.SH BUGS
+In the absence of option
+.B -a
+non-directories given as arguments to
+.I du
+are not listed.
+.br
+If there are too many distinct linked files,
+.I du
+counts the excess files multiply.
+.br
+Unwritten holes in files count as if real data were present,
+and indirect blocks are not counted.

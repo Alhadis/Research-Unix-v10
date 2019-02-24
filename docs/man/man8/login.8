@@ -1,0 +1,138 @@
+.TH LOGIN 8
+.CT 1 sa_auto
+.SH NAME
+login \- sign on
+.SH SYNOPSIS
+.B /etc/login
+.I name
+.br
+.B /etc/login
+.B -f
+.I name
+[
+.I cmd
+]
+.br
+.B /etc/login
+.B -p
+.I passwd-line
+[
+.I cmd
+]
+.SH DESCRIPTION
+.I Login
+is executed by
+.IR getty (8).
+See the Introduction to this volume for how to dial up initially.
+.PP
+.I Login
+asks for a password if appropriate.
+Echoing is turned off during the typing of the password.
+The
+.B -f
+option forces login of the named user, without a password.
+.B -p
+is similar to
+.BR -f ,
+but an entire line of password file information
+is supplied.
+.PP
+.I Login
+initializes the userid, the groupid, and the working directory
+according to specifications found in the password file;
+see
+.IR passwd (5).
+It also initializes environment variables
+.SM PATH
+and
+.SM HOME .
+Finally it executes a command interpreter (usually
+.IR  sh (1)).
+Argument 0 of the command interpreter is its name with
+a dash
+.RL ( - )
+prepended.
+If
+a
+.I cmd
+argument was present,
+two additional arguments
+.B -c
+.I cmd
+are passed,
+and environment variable
+.SM REXEC
+is set to
+.LR 1 .
+.PP
+Upon a successful login,
+accounting files are updated and,
+if no options are present,
+the message of the day is printed
+and the user is informed of the
+existence of mail.
+.PP
+Successful logins are recorded in
+.F /etc/utmp
+and
+.FR /usr/adm/wtmp .
+If
+.I cmd
+was present,
+.L *
+is appended to the login name in
+.IR wtmp ,
+and
+no record is made in
+.IR utmp .
+.PP
+Only the super-user may execute
+.IR login .
+.SH FILES
+.TF /usr/spool/mail/*
+.TP
+.F /etc/utmp
+accounting
+.TP
+.F /usr/adm/wtmp
+accounting
+.TP
+.F /usr/spool/mail/*
+mail
+.TP
+.F /etc/motd
+message-of-the-day
+.TP
+.F /etc/passwd
+password file
+.TP
+.F /etc/group
+groups file
+.SH "SEE ALSO"
+.IR newgrp (1),
+.IR passwd (1),
+.IR environ (5),
+.IR passwd (5),
+.IR getty (8),
+.IR init (8),
+.IR su (8),
+.IR svcmgr (8).
+.SH DIAGNOSTICS
+`Login incorrect':
+the name or the password is bad.
+.br
+`No Shell' or `no directory': the initial shell or
+home directory specified in the password file does not exist.
+.br
+`Cannot open password file': things are badly curdled.
+.SH BUGS
+Information passed to options
+.B -p
+and
+.B -f
+is not checked.
+Only trusted programs should run
+.IR login .
+Only trusted programs may usefully do so anyway;
+.I login
+has no privileges.

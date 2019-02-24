@@ -1,0 +1,120 @@
+.th "ld80" 1 1/2/78
+.sh NAME
+"ld80"  \*-  link editor for the 8080/Z80 load moduals.
+.sh SYNOPSIS
+.bd "ld80"
+[
+.bd \*-ultdb
+] name ...
+.sh DESCRIPTION
+.it "ld80"
+combines several
+object programs into one; resolves external
+references; and searches libraries.
+In the simplest case the names of several object
+programs are given, and
+.it "ld80"
+combines them, producing
+an object module which can be either executed or
+become the input for a further
+.it "ld80"
+run.
+The output of
+.it "ld80"
+is left on
+.bd "80.out".
+This file is made executable
+only if no errors occurred during the load.
+.s3
+The argument routines are concatenated in the order
+specified.  The entry point of the output is the
+beginning of the first routine.
+.s3
+If any argument is a library, it is searched exactly once
+at the point it is encountered in the argument list.
+Only those routines defining an unresolved external
+reference are loaded.
+If a routine from a library
+references another routine in the library,
+the referenced routine must appear after the
+referencing routine in the library.
+Thus the order of programs within libraries
+is important.
+.s3
+.it "ld80"
+understands several flag arguments which are written
+preceded by a `\*-'.
+Except for \fB\*-l\fR,
+they should appear before the file names.
+.s3
+.lp +4 4
+\fB\*-b\fR	This
+option is used to provide an absolute origin for the bss segment
+of the resultant "80.out".
+The supplied origin must be the next argument on the command
+line and must be a positive or negative octal (leading 0) or
+decimal number.
+The defualt is for the bss segment to immediately follow the data
+segment.
+Use of this option will cause the relocation information to
+be suppressed from the output.
+.s3
+.lp +4 4
+\fB\*-d\fR	This
+option is used to provide an absolute origin for the data segment
+of the resultant "80.out".
+The supplied origin must be the next argument on the command
+line and must be a positive or negative octal (leading 0) or
+decimal number.
+The default is to have the data placed directly
+after the text.
+Use of this option will cause the relocation information to
+be suppressed from the output.
+.s3
+.lp +4 4
+\fB\*-u\fR	take the following argument as a symbol and enter
+it as undefined in the symbol table.  This is useful
+for loading wholly from a library, since initially the symbol
+table is empty and an unresolved reference is needed
+to force the loading of the first routine.
+.s3
+.lp +4 4
+\fB\*-t\fR	This
+option is used to provide an absolute origin for the text segment
+of the resultant "80.out".
+The supplied origin must be the next argument on the command
+line and must be a positive or negative octal (leading 0) or
+decimal number.
+The default origin is 0.
+Use of this option will cause the relocation information to
+be suppressed from the output.
+.s3
+.lp +4 4
+\fB\*-l\fR	This
+option is an abbreviation for a library name.
+\fB\*-l\fR
+alone stands for `/usr/z8080/lib/z80', which
+is the standard library for assembly language
+programs.
+\fB\*-l\fIx\fR
+stands for `/usr/z8080/lib/z80\fIx\fR.a' where \fIx\fR is any character.
+A library is searched when its name is encountered,
+so the placement of a \fB\*-l\fR
+is significant.
+.i0
+.dt
+.sh FILES
+/usr/z8080/lib/z80	libraries
+.br
+"80.out"		 output file
+.sh "SEE ALSO"
+"as80" (I), ar (I)
+.sh BUGS
+Most diagnostics are self explanatory.
+The strangest is 'origin - conflict' and
+occurs whenever an origin supplied by the user via
+the -t -d or -b options causes segments to overlap.
+The numbers printed out correspond
+origins and sizes(both in octal) of each resultant segment.
+.bd "80.out"
+is produced.

@@ -1,0 +1,124 @@
+.TH MUXSTRING 9.3
+.CT 2 comm_term
+.SH NAME
+strinsure, strinsert, strdelete, strzero, setmuxbuf, getmuxbuf, movstring \- dynamic strings in mux
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B strinsure(s, n);  String *s;
+.PP
+.B "strinsert(d, i, s); String *d, *s;
+.PP
+.B "strdelete(d, i, j); String *d;
+.PP
+.B strzero(d); String *d;
+.PP
+.B setmuxbuf(s); String *s;
+.PP
+.B getmuxbuf(d); String *d;
+.PP
+.B movstring(n, sp, dp); char *sp, *dp;
+.SH DESCRIPTION
+These functions manipulate strings represented
+in the following form.
+.IP
+.EX
+.ta \w'struct 'u
+struct	String {
+	char *s;
+	short n;
+	short size;
+};
+.EE
+.LP
+The string proper occupies the first 
+.B n
+characters of a data block of
+.L size
+characters pointed to by
+.BR s .
+Initially both
+.B size
+and
+.B s
+should be 0.
+Strings are always counted, not terminated by
+.BR \e0 .
+The functions obtain space as needed from
+.IR gcalloc  ;
+see
+.IR alloc (9.3).
+Thus a
+.B String
+structure should never be copied.
+.PP
+.I Strinsure
+arranges that 
+.IB s ->size\(>= n.
+It must be called before any operation that could
+overflow the current size.
+.PP
+.I Strinsert
+inserts a copy of source
+.I s
+into destination
+.I d
+beginning at character 
+.I i
+(counted from 0),
+adding
+.IB s ->n
+to
+.IB d ->n .
+.PP
+.I Strdelete
+removes characters
+.I i
+through
+.IR j \-1
+from string
+.I d,
+subtracting
+.IR j \- i,
+which must be nonnegative, from
+.IB d ->n .
+.PP
+.IB Strzero
+frees the memory associated with
+.I d
+and sets both
+.IB d ->n
+and
+.IB d ->size
+to zero.
+.PP
+.I Setmuxbuf
+copies string 
+.I s
+into the snarf buffer maintained by
+.IR mux (9.1);
+.I getmuxbuf
+copies from the snarf buffer into
+.I d.
+.PP
+.I Movstr
+copies a block of
+.I n
+characters beginning at
+.I sp
+to a block beginning at
+.I dp.
+If
+.I n
+is negative it copies
+.RI \- n
+characters ending at
+.IR sp \- 1
+to a block ending at
+.IR dp \-1.
+Notice that
+.I movstring 
+does not operate on
+.BR String s.
+.SH SEE ALSO
+.IR libc (9.3)

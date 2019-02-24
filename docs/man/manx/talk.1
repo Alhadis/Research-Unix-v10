@@ -1,0 +1,67 @@
+.TH TALK 1 local
+.SH NAME
+talk \- talk to another user
+.SH SYNOPSIS
+.B talk
+.I user
+[
+.I ttyname
+]
+.SH DESCRIPTION
+.I Talk
+is identical to
+.IR write (1)
+except that transmission takes place one character at a time, without
+waiting for the newline at the end of each line.
+.I Talk
+copies characters from your terminal to that of
+another user.
+When first called,
+it sends the message
+.PP
+     yourname yourttyname talking...
+.PP
+The recipient of the message should talk back at this point.
+Communication continues until an interrupt (DEL) or EOT (CTRL-d) is sent.
+At that point
+.I talk
+writes `EOT' on the other terminal and exits.
+.PP
+If you want to talk to a user who is logged in more than once,
+the
+.I ttyname
+argument may be used to indicate the appropriate terminal name.
+.PP
+Permission to talk may be denied or granted by use of the
+.I mesg
+command.
+At the outset talking is allowed.
+Certain commands, in particular
+.I nroff
+and
+.IR pr (1)
+disallow messages in order to prevent messy output.
+.PP
+If the character `!' is found at the beginning of a line,
+.I talk
+calls the shell to execute the rest of the line as a command.
+.PP
+The following protocol is suggested for using
+.IR talk :
+when you first talk to another user, wait for her to
+talk back before starting to send.
+Each party should end each message with a distinctive
+signal \(em \fB(o)\fR
+for `over' is conventional \(em so that the other may reply.
+.B (oo)
+for `over and out' is suggested when conversation
+is about to be terminated.
+.SH FILES
+/etc/utmp	to find user
+.br
+/bin/sh		to execute `!'
+.SH "SEE ALSO"
+.IR write (1), 
+.IR mesg (1), 
+.IR who (1), 
+.IR mail (1)

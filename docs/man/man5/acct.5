@@ -1,0 +1,63 @@
+.TH ACCT 5
+.CT 1 sa_nonmortals
+.SH NAME
+acct \- execution accounting file
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/acct.h>
+.SH DESCRIPTION
+.IR Acct (2)
+causes an entry to be appended to an accounting file
+for each process that terminates.
+The layout of an accounting file entry, as given in
+.BR <sys/acct.h> ,
+is
+.PP
+.EX
+.ta \w'typedef 'u +\w'ASTINY 'u +\w'ac_comm[10];  'u
+typedef unsigned short comp_t;
+
+struct	acct
+{
+	char	ac_comm[10];	/* command name */
+	comp_t	ac_utime;	/* user time */
+	comp_t	ac_stime;	/* system time */
+	comp_t	ac_etime;	/* elapsed time */
+	time_t	ac_btime;	/* beginning time */
+	short	ac_uid;	/* user ID */
+	short	ac_gid;	/* group ID */
+	short	ac_mem;	/* average memory usage */
+	comp_t	ac_io;	/* number of disk IO blocks */
+	dev_t	ac_tty;	/* control typewriter */
+	char	ac_flag;	/* flag */
+};
+.EE
+.PP
+Values in
+.BR ac_flag :
+.PP
+.EX
+#define	AFORK	01	/* has executed fork, but no exec */
+#define	ASU	02	/* used super-user privileges */
+.EE
+.PP
+If the process does an
+.IR exec (2),
+the first 10 characters of the filename appear in
+.L ac_comm.
+.PP
+The type
+.B comp_t
+counts 60- or 50-cycle clock ticks in a private
+floating-point format: a
+three-bit base-8 exponent and a 13-bit unsigned mantissa.
+Thus the number of clock ticks that a process ran is expressed by
+.IR (ac_etime&017777)\^<<\^((ac_etime>>13)&03) .
+The beginning time,
+.BR ac_btime ,
+is recorded in the format of
+.IR time (2).
+.SH SEE ALSO
+.IR acct (2), 
+.IR sa (8)

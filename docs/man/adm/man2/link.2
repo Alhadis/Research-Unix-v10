@@ -1,0 +1,97 @@
+.TH LINK 2
+.CT 2 file_inq_creat
+.SH NAME
+link, symlink, readlink \(mi link to a file
+.SH SYNOPSIS
+.nf
+.B int link(name1, name2)
+.B char *name1, *name2;
+.LP
+.B int symlink(name1, name2)
+.B char *name1, *name2;
+.LP
+.B int readlink(name, buf, size)
+.B char *name, *buf;
+.fi
+.SH DESCRIPTION
+.I Link
+and
+.I symlink
+create a link to file
+.I name1
+with new name
+.IR name2 .
+Either name may be an arbitrary path name.
+.PP
+After
+.IR link ,
+.IR name2
+is entirely equivalent to
+.IR name1 ;
+it is a directory entry referring to the same file as
+.IR name1 .
+Only the super-user can make the link if
+.I name1
+is a directory.
+.PP
+After
+.IR symlink ,
+.I name2
+is a new symbolic link;
+when it is encountered in any path name,
+.IR name1
+is substituted for
+.IR name2 ,
+and path name parsing continues.
+If
+.IR name1
+begins with the 
+.L /
+character, it is interpreted with respect to the
+root directory; if not,
+it is interpreted with respect to the directory in which
+.IR name2
+resides.
+.PP
+Symbolic links are slightly slower than normal links but
+may span file systems;
+normal links are confined to a single file system.
+.PP
+.I Readlink
+copies the pathname inside
+symbolic link
+.I name
+into memory at
+.IR buf .
+No more than
+.IR size
+bytes are copied;
+the actual number of bytes read is returned.
+The contents of
+.I buf
+will not be null-terminated.
+An error is returned if
+.I name
+is not a symbolic link.
+.SH "SEE ALSO"
+.IR cp (1), 
+.IR unlink (2), 
+.IR stat (2)
+.SH DIAGNOSTICS
+all:
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR
+.br
+.IR link :
+.BR EEXIST ,
+.BR EROFS ,
+.BR EXDEV
+.br
+.IR symlink :
+.BR EEXIST ,
+.BR EROFS
+.br
+.IR readlink :
+.BR ENXIO

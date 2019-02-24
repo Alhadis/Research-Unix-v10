@@ -1,0 +1,133 @@
+.TH WHO 1
+.CT 1 comm_users sa_mortals
+.SH NAME
+who, whois, last \- who is or was on the system
+.SH SYNOPSIS
+.B who
+[
+.B -i
+]
+[
+.I who-file
+]
+.PP
+.B who am i
+.PP
+.B whois
+.I username
+.PP
+.B last
+[
+.B -f
+.I who-file
+]
+[
+.I userid ...
+]
+[
+.I terminal
+]
+.SH DESCRIPTION
+.I Who,
+without an argument,
+lists the login name, terminal name, and login time
+for each current user.
+With the
+.B -i
+option, the report includes the number of minutes
+that the user's terminal has been idle.
+.PP
+With two arguments,
+as in
+.LR "who am i" ,
+.I who
+tells who you are logged in as.
+.PP
+Without an argument,
+.I who
+examines the
+.F /etc/utmp
+file to obtain its information.
+If a file is given, that file is examined.
+Typically the given file will be
+.FR /usr/adm/wtmp ,
+which contains a record of all the logins since it
+was created.
+Then
+.I who
+lists
+logins, logouts, and crashes since the creation of
+the wtmp file.
+Each login is listed with user name,
+terminal name (with
+.L /dev/
+suppressed),
+and date and time.
+When an argument is given, logouts produce a similar line without a user name.
+Reboots produce a line with 
+.L x
+in the place of the device name,
+and a fossil time indicative of when the system went down.
+.PP
+.I Whois
+consults administrative files to identify the
+.I username.
+(Actually,
+.I whois
+uses
+.IR grep
+and can locate information by any useful key, such
+as real name or telephone number.)
+.PP
+.I Last
+reports logins and logouts in reverse chronological order.
+Optional arguments restrict attention to selected userids or
+terminals.
+Terminals
+.BR tty0 ", " tty1 ", ..."
+may be abbreviated
+.BR 0 ", " 1 ", ..."
+.PP
+By default,
+.I last
+examines the list of logins and logouts in
+.FR /usr/adm/wtmp ;
+option
+.B -f
+specifies a different file.
+.PP
+.I Last
+reports userid, terminal,
+time on, and time off for all users, or for selected
+.IR userids.
+A pseudo-user,
+.LR reboot ,
+is logged in at reboots of the system.
+.PP
+Upon interrupt,
+.I last
+tells how far back it has looked;
+upon quit 
+.RB (control- \e )
+it tells how far and keeps on looking.
+.SH EXAMPLES
+.TP
+.B last reboot
+Report recent system outages.
+.SH FILES
+.F /etc/utmp
+.br
+.F /usr/adm/wtmp
+.br
+.F /usr/adm/usrlist
+.br
+.F /etc/passwd
+.SH "SEE ALSO"
+.IR getuid (1), 
+.IR getuid (2), 
+.IR utmp (5), 
+.IR ac (8),
+.IR tty (1),
+.IR vwhois
+in
+.IR vismon (9.1)

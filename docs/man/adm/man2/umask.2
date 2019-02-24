@@ -1,0 +1,38 @@
+.TH UMASK 2
+.CT 2 file_inq_creat
+.SH NAME
+umask \(mi set file creation mode mask
+.SH SYNOPSIS
+.B int umask(complmode)
+.SH DESCRIPTION
+.I Umask
+sets the process mode mask.
+The mask modifies the
+.I mode
+argument of
+.IR creat
+(see
+.IR open (2)),
+.IR mkdir (2),
+and
+.IR mknod (2)
+thus:
+.L
+       mode &= (07777 & ~(complmode & 0777))
+.br
+In other words, the mask specifies permission bits to be turned off
+when files are created.
+.PP
+The previous value of the mask is returned by the call.
+The initial value is set by
+.IR login (8),
+and may be modified by the
+.I umask
+command of
+.IR sh (1).
+The mask is inherited by child processes.
+.SH SEE ALSO
+.IR open (2),
+.IR mkdir (2), 
+.IR mknod (2), 
+.IR stat (2)

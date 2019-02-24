@@ -1,0 +1,67 @@
+.TH CONFIG 8
+.CT 1 sa_nonmortals
+.SH NAME
+config \- configure a Unix kernel
+.SH SYNOPSIS
+.B /etc/config
+[
+.I machine
+]
+.SH DESCRIPTION
+.I Config
+generates files used to build a Unix kernel
+for the named
+.IR machine .
+The working directory should be
+.F /usr/sys/conf
+or
+.BI /usr/sys/ machine;
+if the latter,
+.I machine
+may be omitted from the command.
+.PP
+A machine description is expected in
+.IB machine /conf\fR;
+a makefile,
+a number of header files,
+and some C and assembler programs
+are generated from the description.
+.PP
+The usual way to configure a new system is:
+.IP
+.EX
+mkdir /usr/sys/newmach
+cd /usr/sys/newmach
+(create conf)
+/etc/config
+make
+.EE
+.SH FILES
+All these files are in the configuration directory.
+.br
+.ns
+.TF ../conf/makefile
+.TP
+.F ../conf/makefile
+makefile template
+.TP
+.F ../conf/files
+list of kernel source files
+.TP
+.F files
+more sources specific to this machine
+.TP
+.F ../conf/devices
+list of device handlers
+.TP
+.F devices
+more devices specific to this machine
+.TP
+.F conf
+machine description
+.SH SEE ALSO
+.IR config (5)
+.SH BUGS
+At the moment,
+it's also necessary to create
+.FR /usr/sys/machine/sparam.h .

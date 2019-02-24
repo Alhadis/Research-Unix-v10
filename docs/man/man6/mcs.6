@@ -1,0 +1,145 @@
+.ds a \fR*\fP
+.ds s \fR\h'\w'*'u'\fP
+.TH MCS 6
+.CT 1 writing_troff
+.SH NAME
+mcs \- macros for formatting cover sheets
+.SH SYNOPSIS
+.B troff -mcs
+.I file ...
+.SH DESCRIPTION
+The
+.I mcs
+package of
+.IR troff (1)
+macros generates cover sheets for Bell Labs documents.
+The macros were not meant for human production.
+Use 
+.IR docgen (1)
+to write them:
+.IP
+.L docgen -mcs
+.PP
+The
+.I mcs
+macros automatically load
+the
+.IR ms (6)
+macros.
+.PP
+In the following description
+macros marked 
+.L *
+are mandatory;
+all others are optional.
+Optional arguments are enclosed in square brackets.
+The macros must be used in the
+order presented:
+.PP
+.TF \*a\ .MT\ type\ software\ 
+.TP
+Request
+Explanation
+.PD
+.TP
+.BI "\*a .TI" " \fR[\fPdraft\fR]\fP"
+Title text follows.
+Unless there is an argument, the cover sheet will be shipped
+automatically to the Bell Labs library ITDS.
+Duplicate shipments are harmless.
+.PD0
+.TP
+.BI "\*a .AH" " author loc dept ext rm e-mailaddre co"
+.TP
+.BI "\*s .AP" " name"
+Responsible AT&T person
+.TP
+.B \*a .SA
+Begin Abstract
+.TP
+.B \*a .SE
+End Abstract
+.TP
+.BI "\*s .KW" " \fR[\fPk1 ... k9\fR]\fP"
+Keywords
+.TP
+.BI "\*a .TY" " type software"
+Memo
+.IR type :
+.L TM 
+technical memorandum,
+.L IM 
+internal memorandum,
+.L TC
+technical correspondence; 
+.IR software :
+.L y
+if memo is software related
+.TP
+.BI "\*a .NU" " org-date-seq filing_case work_project"
+Document Number
+.TP
+.BI "\*s .ED" " doc_number"
+Earlier document number.
+.TP
+.BI "\*a .MY" " \fR[\fPa1 ... a8 \fR]\fP"
+Mercury Code, positional arguments,
+.BR y - n ,
+at most 3
+.BR y :
+1 Chemistry and Materials, 2 Communications, 3 Computing,
+4 Electronics, 5 Life Science, 6 Mathematics and Statistics,
+7 Physics, 8 Manufacturing
+.TP
+.BI "\*s .RL" " code"
+.L y
+release to any AT&T employee;
+.L n
+release only on approval of each request.
+.TP
+.BR "\*s .PR " [ BR ]
+Proprietary Marking, default ATT-BL Proprietary, 
+.L 0
+unmarked,
+.L BR
+restricted
+.TP
+.B \*s .GS
+Government Security
+.TP
+.B \*s .CO
+Complete Copy Distribution List follows
+.TP
+.B \*s .CE
+End distribution lists
+.TP
+.B \*s .CV
+Cover Sheet Only Distribution List follows
+.TP
+.BI "\*a .SC" " pages"
+Total
+.I pages ;
+do not include coversheet pages
+(if old format of
+.I pages
+and
+.I otherpages ,
+the arguments are added).
+.PP
+To turn the paper into released paper format put a
+.B .RP
+before the title macro.
+To make it into a CSTR add a
+.B .TR
+before the title and 
+.B .AI
+.B .MH
+after the author macro.
+.SH FILES
+.F /usr/lib/tmac/tmac.cs
+.br
+.F /usr/lib/tmac/tmac.rscover
+.SH "SEE ALSO"
+.IR docgen (1), 
+.IR ms (6), 
+.IR sendcover (8)

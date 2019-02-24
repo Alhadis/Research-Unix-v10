@@ -1,0 +1,200 @@
+.TH SMTP 8
+.CT 1 sa_auto
+.SH NAME
+smtp, smtpqer, smtpd, smtpsched \- handle simple mail transfer protocol 
+.SH SYNOPSIS
+.B /usr/lib/upas/smtp
+[
+.I option ...
+]
+.I replyaddr
+.I dest
+.I recipient ...
+.PP
+.B /usr/lib/upas/smtpqer
+[
+.I option ...
+]
+.I replyaddr
+.I dest
+.I recipient ...
+.PP
+.B /usr/lib/upas/smtpd
+[
+.B -n
+] [
+.B -H
+.I host
+]
+.PP
+.B /usr/lib/upas/smtpsched
+[
+option ...
+] [
+.I queue ...
+]
+.SH DESCRIPTION
+.I Smtp
+reads a mail message from the standard input,
+and sends it with the Internet SMTP protocol
+to the named
+.I recipients
+at
+network address
+.IR dest .
+.I Dest
+has default network
+.B tcp
+and default
+service
+.B tcp.25
+(the conventional Internet SMTP port).
+Error reports are mailed to local address
+.IR replyaddr .
+.PP
+.I Smtp
+operates in two modes, `Internet' (default) and `Unix'.
+In Internet mode
+.I recipient
+addresses should be in full domain form.
+.L From:
+and
+.L Date:
+headers will be inserted as necessary
+to conform to Internet standards.
+In Unix mode
+addresses and message contents
+are not touched.
+The options are
+.TP
+.B -u
+Run in Unix mode.
+.TP
+.BI -H " host"
+Use
+.I host
+as the name of the sending system (taken from
+.IR whoami (5)
+by default).
+.TP
+.BI -d " domain
+Append the specified domain suffix to
+incomplete addresses.
+.PP
+.I Smtpqer
+reads a mail message from the standard input
+and stashes it away
+to be sent later
+by
+.IR smtpsched .
+By default,
+.I smtpsched
+is started immediately;
+option
+.B -n
+prevents this.
+Other options and arguments are the same as for
+.IR smtp .
+.PP
+.I Smtpd
+receives a message by
+speaking the server part of SMTP
+on the standard input and output.
+The message is stashed in a queue for later delivery
+as by
+.IR smtpqer .
+Option
+.B -n
+prevents
+.I smtpsched
+from running immediately;
+option
+.B -H
+is as for
+.I smtp.
+.PP
+.I Smtpsched
+processes the queues assembled by
+.I smtpqer
+and
+.IR smtpd ,
+calling
+.IR mail (1)
+for local messages and
+.I smtp
+for others.
+It should be run occasionally from
+.IR cron (8).
+.PP
+The
+.I queue
+arguments name particular queue directories to be processed;
+if no queue is named,
+all queues are processed.
+The options are
+.TF "-s\0nproc"
+.TP
+.BI -w " days"
+Send a warning about each message more than
+.I days
+old to the reply address.
+.TP
+.BI -r " days"
+Mail an error reply about each message more than
+.I days
+old,
+and discard the message.
+.TP
+.BI -s " nproc"
+Do not run more than
+.I nproc
+simultaneous copies of
+.I smtpsched
+started with this option.
+.TP
+.B -c
+Remove empty directories and inconsistent files.
+.TP
+.B -t
+Log actions without performing them. 
+.TP
+.B -C
+Process `C' command files
+.RI ( smtp
+calls) only.
+.TP
+.B -X
+Process `X' command files
+.RI ( rmail
+calls) only.
+.TP
+.B -v
+Enable verbose logging.
+.PD
+.PP
+The queues are kept in subdirectories of
+.FR /usr/spool/smtpq ,
+named by splitting the lower case remote system name
+into components separated by
+periods,
+concatenating the last two or fewer components,
+taking the last 14 characters,
+and stripping leading periods.
+.SH FILES
+.TF /usr/spool/smtpq/smtpqsched.log
+.TP
+.B /usr/spool/smtpq
+spooling directory
+.TP
+.B /usr/spool/smtpq/smtpqsched.log
+logging
+.TP
+.B /usr/spool/smtpq/.consumers
+list of process IDs running
+.I smptqsched -s
+.SH SEE ALSO
+.IR mail (1),
+.IR upas (8),
+.IR smstat (8)
+.br
+DARPA standards RFC 822, RFC 976

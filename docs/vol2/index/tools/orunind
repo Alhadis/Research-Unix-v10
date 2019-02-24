@@ -1,0 +1,46 @@
+if test -s ../$1/$1.ms
+then
+FILE=../$1/$1.ms
+J=`basename $1 .ms`
+O=$J.ms
+else
+if test -s ../$1/$1
+then
+FILE=../$1/$1
+J=`basename $1`
+O=$J.ms
+else
+if test -s ../$1/$1.m
+then
+FILE=../$1/$1.m
+J=`basename $1 .m`
+O=$J.m
+else
+FILE=$1
+if test $# -eq 2
+then
+if test -s ../$1/$2.ms
+then
+J=$2
+O=$J.ms
+FILE=../$1/$2.ms
+else
+J=$2
+O=$J.m
+FILE=../$1/$2.m
+fi
+else
+J=`basename $1 .ms`
+O=$J.ms
+fi
+fi
+fi
+fi
+echo file=$FILE
+tr A-Z a-z <$J.terms|sed 's/\([a-z][a-z/]*\)\.\([a-z][a-z]*\)/\1zz1\2/g'|sort|uniq|awk -f tools/dups.awk >$J.lt
+sed 's/\([a-z][a-z]*\)\.\([a-z][a-z]*\)/\1zz1\2/g' $FILE >foo
+diction -f $J.lt -o $J.hits foo >/dev/null
+sed 's/zz1/\./g' $J.hits|tr $ ~ >$J.nh
+mv $J.nh $J.hits
+doinsert $J $FILE >$O
+rm foo

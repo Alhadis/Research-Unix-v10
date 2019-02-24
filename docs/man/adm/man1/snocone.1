@@ -1,0 +1,269 @@
+.TH SNOCONE 1
+.CT 1 prog_other
+.SH NAME
+snocone \- snobol with syntactic sugar
+.SH SYNOPSIS
+.B snocone
+.I file ...
+.SH DESCRIPTION
+.I Snocone
+is a programming language, syntactically
+similar to C, that compiles into 
+.SM SNOBOL4.
+The Snocone compiler translates the concatenation of all
+the input files into a 
+.SM SNOBOL4
+program, which it writes in
+.FR a.out .
+When
+.F a.out
+is executed, the 
+.SM SNOBOL4
+interpreter will automatically be invoked.
+A synopsis of Snocone syntax follows.
+.SS Lexical conventions
+.br
+Everything after the first unquoted
+.L #
+on an input line is ignored.
+.br
+Statements normally end at the end of the line.
+If the last character on a line is an operator,
+open parenthesis or bracket, or comma, the statement is
+continued on the next line.
+.SS "Binary operators, \fRgrouped by decreasing precedence"
+.TP
+.B []
+Array and table indexing (denoted in 
+.SM SNOBOL4
+by
+.LR <> ).
+.PD 0
+.TP
+.B $ .
+conditional and immediate pattern value assignment,
+as in 
+.SM SNOBOL4
+.TP
+.B ^
+power; right-associative as in 
+.SM SNOBOL4
+.TP
+.B * / %
+multiplication, division, remainder;
+unlike 
+.SM SNOBOL4,
+all have the same precedence.
+.TP
+.B + -
+addition, subtraction
+.TP
+.B
+<  >  <=  >=  ==  !=  :<:  :>:  :<=:  :>=:  :==:  :!=:
+comparison operators; the ones surrounded by colons
+compare strings, the others compare numbers.
+These operators behave as 
+.SM SNOBOL4
+predicates: they return
+the null string if the condition is true,
+and fail if it is false.
+.TP
+.B &&
+concatenation;
+evaluates its right operand
+only after its left operand has been successfully
+evaluated.
+It therefore acts as logical
+.I and
+when applied to predicates.
+The null string may be concatenated to any value.
+.TP
+.B |\^|
+the value of the left operand if possible, otherwise
+the value of the right operand.
+.TP
+.B |
+pattern value alternation.
+.TP
+.B ?
+pattern match.
+Returns the part of the left operand matched by the
+right operand, which must be a pattern.
+May be used on the left of an assignment
+if the left operand is appropriate.
+Right-associative.
+.TP
+.B =
+assignment
+.PD
+.SS Unary operators
+.TP
+.B +
+The numeric equivalent of its argument.
+.PD 0
+.TP
+.B -
+The numeric equivalent of its argument, with the sign reversed.
+.TP
+.B *
+Unevaluated expression, as in 
+.SM SNOBOL4.
+.TP
+.B $
+If
+.I v
+is a value of type
+.BR name ,
+then
+.BI $ v
+is the variable of that name.
+.TP
+.B @
+Pattern matching cursor assignment.
+.TP
+.B ~
+Logical negation: returns the null string if its argument
+fails, and fails otherwise.
+.TP
+.B ?
+Returns the null string if its argument succeeds,
+and fails otherwise.
+.TP
+.B \&.
+Returns a value of type
+.B name
+that refers to its (lvalue) argument.
+.PD
+.SS Statements
+.PP
+Statements may be prefixed by one or more labels.
+A label is an identifier followed by a colon, as in C.
+All labels are global:
+it is a good idea to prefix labels in procedures
+with the name of the procedure.
+.TP
+.I expression
+The given
+.I expression
+is evaluated for its side effects.
+.TP
+.BI { " statement ... " }
+The
+.I statements
+are executed sequentially.
+.TP
+.BI "if (" expression ) " statement \fR[ " else " statement\fR ]"
+If evaluation of the
+.I expression
+succeeds, the first
+.I statement
+is executed.
+Otherwise, the second
+.IR statement ,
+if any, is executed.
+An
+.I else
+belongs to the closest unmatched
+.BR if .
+.TP
+.BI "while (" expression ") " statement
+The
+.I statement
+is executed repeatedly, as long as the
+.I expression
+can be successfully evaluated.
+.TP
+.BI "do " statement " while (" expression )
+Like the
+.B while
+statement, except that the
+.I statement
+is executed once before the first time the
+.I expression
+is evaluated.
+.TP
+.B
+for (\fIe1\fP, \fIe2\fP, \fIe3\fP) \fIstatement\fP
+As in C, except that commas are used instead of semicolons.
+.TP
+.BR return " [\fIexpression\fP]"
+returns the value of the
+.I expression
+from the current function.
+If
+.I expression
+fails or is missing, the value returned is that of the
+variable with the same name as the function.
+If that variable was never set, the function returns
+the null string.
+.TP
+.BR nreturn " [\fIexpression\fP]"
+The
+.I expression
+must be the name of a variable.
+That variable is returned from the current
+function as an lvalue.
+If the
+.I expression
+fails or is missing, the variable with the
+same name as the function must have been set to the
+name of a variable.
+.TP
+.B freturn
+The current function returns failure.
+.TP
+.BI goto " label"
+Transfer control to the given
+.I label.
+.HP Procedures
+.PP
+Procedures may not be textually nested, but may be recursive
+and may call each other in forward references.
+The general form of a procedure declaration is:
+.IP
+.B
+procedure \fIname\fP (\fIargs\fP) \fIlocals\fP { \fIstatement ... \fP}
+.PP
+The
+.I args
+and
+.I locals
+are lists of variable names, separated by commas.
+Since Snocone is a dynamically typed language, further
+declarations are not necessary.
+Although procedures are not textually nested, names are
+dynamically scoped: a procedure can reference the local variables
+and parameters of its caller as if they were global variables.
+.HP Input-Output
+.PP
+Assigning a (string) value to the variable
+.L output
+causes that value to be written as a single line on the
+standard output.
+Accessing the variable
+.L input
+causes a line to be read from the standard input.
+The access fails at end of file.
+Accessing or assigning to the variable
+.L terminal
+causes a line to be read from or written to the
+standard error file.
+Other input-output is as implemented by
+the Macrospitbol interpreter; see
+.IR langs (1).
+.SH SEE ALSO
+A. R. Koenig,
+`The Snocone Programming Language',
+this manual, Volume 2
+.br
+.IR langs (1)
+.SH BUGS
+Run-time diagnostics refer to 
+.SM SNOBOL4
+source statement numbers,
+not to Snocone line numbers.
+.br
+Extremely long statements can overflow the 
+.SM SNOBOL4
+compiler's
+limits on input line length.

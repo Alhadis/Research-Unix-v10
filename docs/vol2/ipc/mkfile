@@ -1,0 +1,37 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	ipc.out
+
+pg:	ipc.out
+	count ipc.ms ipc.out
+
+spell:VQ:
+	dospell ipc.ms
+
+lp:	ipc.out
+	$LP $newprereq && touch $target
+
+ipc.out:D:	ipc.ms pfig1 pfig2 pfig3 $REF
+	$PREFER ipc.ms | troff -mpm > $target
+
+pfig1:	fig1
+	pic -D fig1 >pfig1
+
+pfig2:	fig2
+	pic -D fig2 >pfig2
+
+pfig3:	fig3
+	pic -D fig3 >pfig3
+
+clean:
+	rm -f out pfig* paper.refs.ig
+
+index:V:
+	runind ipc
+	$PREFER xipc.ms | troff -mpm > /dev/null 2>ipc.x
+	mkindex ipc.x
+	rm xipc.ms
+
+pindex:V:
+	mkindex ipc.x

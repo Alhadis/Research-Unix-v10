@@ -1,0 +1,34 @@
+.TH DIS 1 SHARE
+.SH NAME
+dis \- display input as refreshed page on VDU output
+.SH SYNOPSIS
+.B dis
+.RB [ -t timeout]
+.RB [ -c refresh]
+.SH DESCRIPTION
+.I Dis
+looks up the terminal capability database for the characteristics
+of the device represented by the environment variable "TERM".
+Assuming that the standard input consists of repetitive pages,
+.I Dis
+then uses cursor addressing to write changed data only on its standard output.
+Pages are delimited by a
+.I form-feed
+or by a timeout, if requested.
+.PP
+The timeout is specified by the flag \fB-t\fR followed by a number
+representing seconds.
+.PP
+If the
+.B -c
+flag is specified, the screen is completely redrawn every
+.I refresh
+updates.
+.SH EXAMPLES
+(while true; do date; echo '\\f\\c'; sleep 10; done)|dis
+.SH FILES
+/etc/termcap
+.SH SEE ALSO
+termlib(3), or curses(3).
+.SH DIAGNOSTICS
+If your terminal doesn't have cursor addressing.

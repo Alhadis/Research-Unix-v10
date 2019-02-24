@@ -1,0 +1,185 @@
+.TH SA 8
+.CT 1 sa_nonmortals
+.SH NAME
+sa, accton \- system accounting
+.SH SYNOPSIS
+.B /etc/sa
+[
+.B -abcdDfgijkKlnrstuv
+]
+[
+.B -e prefix
+]
+[
+.I file
+]
+.PP
+.B /etc/accton
+[
+.I file
+]
+.SH DESCRIPTION
+With an argument naming an existing
+.I file,
+.I accton
+causes system accounting information for
+every process executed to be placed at the end of the file.
+If no argument is given, accounting is turned off.
+.PP
+.I Sa
+reports on, cleans up, and generally maintains
+accounting files.
+.PP
+.I Sa
+is able to condense
+the information in
+.F /usr/adm/acct
+into a summary file
+.F /usr/adm/savacct
+which contains a count of the
+number of times each command was called and the time resources
+consumed.
+This condensation is desirable because on a large system
+.F /usr/adm/acct
+can grow by 10000 blocks per day.
+The summary file is normally read before the accounting file,
+so the reports include all available information.
+.PP
+If a file name is given as the last argument,
+that file will be treated
+as the accounting file;
+.F /usr/adm/acct
+is the default.
+.PP
+Output fields are labeled:
+.L cpu
+for the sum of user and system times
+(in minutes),
+.L re
+for real time (also in minutes),
+.L k
+for cpu-time averaged core usage (in 1K units),
+.L avio
+for average number of IO operations per execution.
+With options fields labelled
+.L tio
+for total IO operations,
+.L k*sec
+for cpu storage integral (kilo-core seconds), 
+.L u
+and 
+.L s
+for user and system cpu time alone (both in minutes) will sometimes
+appear.
+.PP
+There are zillions of options:
+.TP
+.B a
+Place all command names containing unprintable characters
+and those used only once under the name
+.LR ***other .
+.TP
+.B b
+Sort output by sum of user and system time divided by number of
+calls.
+Default sort is by sum of user and system times.
+.TP
+.B c
+Besides total user, system, and real time for each command print percentage
+of total time over all commands.
+.TP
+.B d
+Sort by average number of disk IO operations.
+.TP
+.B D
+Sort by total number of disk IO operations.
+.TP
+.B e
+Set the prefix for accounting file names to the next argument
+.RB ( /usr/adm/
+is the default).
+.TP
+.B f
+Assume answer
+.L y
+for option
+.BR -v .
+.TP
+.B g
+Ignore
+.BR /usr/adm/acct .
+Useful for processing only
+.L savacct
+and
+.LR usracct .
+.TP
+.B i
+Don't read in summary file.
+.TP
+.B j
+Instead of total minutes time for each category,
+give seconds per call.
+.TP
+.B k
+Sort by cpu-time average memory usage.
+.TP
+.B K
+Print and sort by cpu-storage integral.
+.TP
+.B l
+Separate system and user time; normally they are combined.
+.TP
+.B m
+(money) Print number of processes and number of CPU minutes for each user.
+.TP
+.B n
+Sort by number of calls.
+.TP
+.B r
+Reverse order of sort.
+.TP
+.B s
+Merge accounting file into summary file
+.F /usr/adm/savacct
+when done.
+.TP
+.B t
+For each command report ratio of real time to the sum of user and
+system times.
+.TP
+.B u
+Superseding all other flags,
+print for each command in the accounting file the
+userid and command name.
+.TP
+.B v
+Followed by a number
+.I n,
+types the name of
+each command used
+.I n
+times or fewer.
+Await a reply from the terminal;
+if it begins with 
+.LR y ,
+add the command to
+the category
+.LR **junk** .
+This is used to strip out garbage.
+.SH FILES
+.TF /usr/adm/usracct
+.TP
+.F /usr/adm/acct
+raw accounting
+.TP
+.F /usr/adm/savacct
+summary
+.TP
+.F /usr/adm/usracct
+per-user summary
+.SH "SEE ALSO"
+.IR ac (8), 
+.IR acct (2)
+.SH BUGS
+.I Sa
+needs more options.

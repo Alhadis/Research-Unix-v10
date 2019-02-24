@@ -1,0 +1,116 @@
+.TH VISMON 9.1
+.CT 1 sa_mortals comm_users
+.SH NAME
+vismon, sysmon, vwhois \- system statistics and mail notification
+.SH SYNOPSIS
+.B vismon
+[
+.BI - n
+]
+[
+.B -m
+]
+[
+.I system ...
+]
+.PP
+.B sysmon
+[
+.BI - n
+]
+[
+.B -m
+]
+[
+.I system ...
+]
+.PP
+.B vwhois
+.I person
+.SH DESCRIPTION
+.I Vismon
+monitors use of one or more Unix
+.I systems.
+It displays time of day, announcements,
+and CPU usage statistics.
+.PP
+CPU usage is reported as a numerical load average (average number
+of runnable processes) and its change in the last
+minute, and a bar graph showing, left-to-right, the
+proportion of CPU time spent in: default-priority user processes,
+low priority (nice) processes, system kernel, stream I/O, and idle time.
+.PP
+Arrival of mail or communications via
+.IR wall (8)
+or
+.IR write (1)
+is announced.
+Mail announcements include an icon of the sender.
+Communications appear in a shell
+.RI ( sh (1))
+layer superimposed on
+.I vismon's
+layer.
+This layer may be used for reply.
+.PP
+The options are:
+.TP
+.BI - n
+Update the bar graph every
+.I n
+seconds.
+.RI ( n =5
+by default.)
+.TP
+.BI -m
+Do not monitor CPU usage on other systems.
+.PP
+Button 2 selectively toggles the monitoring of other systems.
+The list of systems is obtained from one of the following: 
+a file named in the VISMON enviroment variable,
+.FR $HOME/lib/vismon ,
+or
+.FR /usr/jerq/lib/vismon .
+.PP
+.I Sysmon
+is the same as
+.I vismon
+without icons.
+.PP
+.I Vwhois
+causes a dummy mail announcement from
+.I person
+to appear in
+.I vismon
+layers.
+.SH FILES
+.TF /usr/spool/mail/mail.log
+.TP
+.F /usr/jerq/mbin/sysmon.m
+terminal program
+.TP
+.F /usr/jerq/lib/sysdaemon
+remote monitoring program
+.TP
+.F /usr/jerq/lib/sysdaemon
+responder for remote monitoring
+.TP
+.F /usr/spool/mail
+.TP
+.F /usr/spool/mail/mail.log
+.TP
+.F /n/face/*
+vismon pictures
+.TP
+.F /usr/jerq/lib/vismon
+.TP
+.F $HOME/lib/vismon
+menu of machines
+.SH SEE ALSO
+.IR face (9.7),
+.IR faced (9.5)
+.SH DIAGNOSTICS
+`Can't open comm window' means a shell layer cannot be created.
+To receive any further communications, delete some layer.
+.SH BUGS
+There's more to system performance than meets the eye.

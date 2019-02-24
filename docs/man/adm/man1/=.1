@@ -1,0 +1,123 @@
+.TH = 1
+.CT 1 shell
+.SH NAME
+=, ==, =p, ==p \- redo previous shell command
+.SH SYNOPSIS
+.B =
+[
+.I pattern
+]
+[
+.I substitution ...
+]
+.br
+.B ==
+[
+.I pattern
+]
+[
+.I substitution ...
+]
+.br
+.B =p
+[
+.I pattern
+]
+[
+.I substitution ...
+]
+.br
+.B ==p
+[
+.I pattern
+]
+[
+.I substitution ...
+]
+.SH DESCRIPTION
+The 
+.I =
+command provides a simple history mechanism for the shell,
+.IR sh (1).
+The environment variable
+.BR HISTORY ,
+if set,
+names a file to which
+the shell appends the text of each command before execution.
+.I =
+searches the history file for the most recent
+command that matches the
+.I pattern,
+performs the
+.IR substitutions,
+and executes it.
+The
+.I pattern
+must agree with an initial substring of the original
+command except for variations in spacing.
+If no
+.I pattern
+is specified, the most recent command is selected.
+If no
+substitution
+is specified, the command is executed without modification.
+.PP
+.PP
+Substitutions have the form
+.IP
+.IB old = new
+.LP
+specifying that the string
+.I old
+in the command is to be replaced by
+.I new.
+Substitutions are made in order
+and operate on the first match.
+.PP
+The
+.I ==
+command is identical to
+.IR = ,
+but allows the substituted command to be edited before running.
+The command is printed,
+and a modification request is read from the terminal.
+Generally each character in the request specifies how to
+modify the character immediately above it:
+.TP
+.B #
+Delete the character.
+.PD 0
+.TP
+.B %
+Replace the character with a space.
+.TP
+.B ^
+Insert the rest of the request line before the character.
+.TP
+.B $
+Replace the characters in the command from this position on
+with the rest of the request line.
+.IP "space or tab"
+Leave the character(s) unchanged.
+.TP
+.B =
+Must be the first and only edit character.
+Back up to the next most recent
+match in the history file
+and try again.
+.IP "any other"
+This character replaces the one above it.
+.PD
+.PP
+If the request line is longer than the command,
+the overhang is appended to the command.
+.PP
+.I =p
+and
+.I ==p
+behave like
+.I =
+and
+.IR == ,
+except that they print the command on
+their standard output instead of executing it.

@@ -1,0 +1,407 @@
+.TH SDB 1
+.CT 1 debug_tune
+.SH NAME
+sdb \- symbolic debugger
+.SH SYNOPSIS
+.B sdb
+[
+.I objfil
+[
+.I corfil
+[
+.I directory
+]
+]
+]
+.SH DESCRIPTION
+.I Sdb
+is a symbolic debugger.
+It may examine source files, object files, and running or stopped
+core images.
+.PP
+.I Objfil
+is an executable program (default
+.BR a.out )
+compiled with option
+.B -g
+of
+.I cc
+or
+.IR f77 (1).
+.I Corfil
+is a core image (default
+.BR core )
+resulting from the execution of
+.I objfil .
+.I Directory
+is the home of source files,
+.L .
+by default.
+.PP
+.I Sdb
+maintains a `current line' and a `current file', initially
+the line number and source file name where 
+.I corfil
+stopped executing, or the first line in function
+.LR main
+if there is no core image.
+.PP
+Variables are referred to by name, by structure or array
+reference, or by a combination thereof.
+Variables not in scope at the current line
+are referred to as
+.IB procedure : variable
+.RI ( procedure
+may be a Fortran common block).
+In the syntax below, a `variable' may also be an integer constant
+designating a storage location, or a variable plus a constant
+designating a storage offset.
+.PP
+Line numbers in the source program are referred to as
+.IB filename : number,
+.IB procedure : number, 
+or
+.I number
+(in the current file).
+The number is always relative to the beginning of the file.
+A missing number is taken as
+the first line of the procedure or file.
+.PP
+The commands for examining data are:
+.nr xx \w'control-D\ '
+.TP \n(xxu
+.B t
+Print a stack trace of the terminated or stopped program.
+.TP
+.B T
+Print the top line of the stack trace.
+.TP
+.IB variable / lm 
+.PD
+.TP
+.IB variable ? lm 
+Print the value of the variable according to (an optional)
+length
+.I l
+and format
+.I m.
+By default
+.I l
+and
+.I m
+are taken from the variable's declaration.
+The length specifier for formats
+.B duox
+is
+.BR b 
+(1 byte),
+.BR h 
+(2 bytes),
+or
+.BR l
+(4 bytes, default).
+For formats
+.B s
+and
+.BR a 
+it is an integer string length.
+Punctuation
+.B /
+designates variables in data segments,
+.B ?
+in the text segment.
+Legal values for format
+.I m
+are:
+.PD
+.RS
+.TP
+.B c
+character
+.PD0
+.TP
+.B d
+decimal
+.TP
+.B u
+decimal, unsigned
+.TP
+.B o
+octal
+.TP
+.B x
+hexadecimal
+.TP
+.B f
+32 bit single precision floating point
+.TP
+.B g
+64 bit double precision floating point
+.TP
+.B s
+Assume variable is a string pointer and print characters until a null is
+reached.
+.TP
+.B a
+Print characters starting at the variable's address until a null
+is reached.
+.TP
+.B p
+pointer to procedure
+.TP
+.B i
+machine instruction
+.PD
+.RE
+.TP \n(xxu
+\fIvariable\f5=\fP\fIlm\fR
+.br
+.ns
+.TP
+\fIlinenumber\f5=\fP\fIlm\fR
+.br
+.ns
+.TP
+\fInumber\f5=\fP\fIlm\fR
+Print the address of the variable or line number or the value of the number
+in the specified format,
+.B lx
+by default.
+The last variant may be used to convert
+number bases.
+.TP
+.IB variable ! value
+Set the variable to the given value.
+The value may be an integer or character constant, a variable, or
+a floating-point constant
+(if
+.I variable
+is float or double).
+.PP
+The commands for examining source files are
+.TP \n(xxu
+.BI e " procedure"
+.br
+.ns
+.TP
+.BI e " filename" .c
+Set the current line and file.
+If no name is given, report the current procedure and file.
+.TP
+.BI / "regular expression" /
+Search forward as in
+.IR ed (1).
+.TP
+.BI ? "regular expression" ?
+Search backward.
+.TP
+.B p
+Print the current line.
+.TP
+.B z
+Print the current line and 9 more;
+set the current line to the last one printed.
+.TP
+control-D
+Print the next 10 lines;
+set the current line to the last one printed.
+.TP
+.B w
+Window.
+Print the 10 lines around the current line.
+.TP
+.I number
+Set the current line and print it.
+.TP
+.IB count " +"
+Advance the current line by \fIcount\fP lines.
+Print the new current line.
+.TP
+.IB count " -"
+Retreat the current line by
+.I count
+lines.
+Print the new current line.
+.PP
+The commands for controlling the execution of the source program are:
+.TP \n(xxu
+.IB count " r " args
+.br
+.ns
+.TP
+.IB count " R"
+Run the program with the given arguments.
+The
+.B r
+command with no arguments reuses the previous arguments
+to the program while the
+.B R
+command
+runs the program with no arguments.
+An argument beginning with 
+.L <
+or 
+.L >
+causes redirection for the
+standard input or output respectively.
+.I Count,
+if given,
+specifies a number of breakpoints to be ignored.
+.TP
+.IB linenumber " c " count
+.br
+.ns
+.TP
+.IB linenumber " C " count
+Continue after a breakpoint or interrupt.
+.I Count
+is as for
+.LR r .
+.B C
+continues with the signal which caused the program to stop and
+.B c
+ignores it.
+If a
+.I linenumber
+is given, a temporary breakpoint is placed there and is
+deleted when the command finishes.
+.TP
+.IB count " s"
+Single step.
+Run the program through
+.I count
+lines, one line by default.
+.TP
+.IB count " S"
+Single step, but step through subroutine calls.
+.TP
+.B k
+Kill the debugged program.
+.TP
+.IB procedure ( arg1,arg2,... )/  m 
+Execute the named procedure with the given arguments.
+Arguments can be variables in scope or integer,
+character or string constants.
+If a format,
+.BI / m,
+is given, print the result in that form, otherwise
+.LR d .
+.TP
+.I linenumber " b " commands
+Set a breakpoint at the given line.
+If a procedure name without a line number is given (e.g.
+.LR proc: ),
+a breakpoint is placed at the first line in the procedure.
+If no
+.I linenumber
+is given,
+a breakpoint is placed at the current line.
+.IP
+If no
+.I commands
+are given, stop execution just before the breakpoint.
+Otherwise, when the breakpoint is encountered perform
+the semicolon-separated
+.I commands
+and then continue execution.
+.TP
+.IB linenumber " d"
+Delete a breakpoint at the given line.
+If no
+.I linenumber
+is given,
+each breakpoint location is printed and a line is read from the standard input.
+Answer
+.L y
+or 
+.L d
+to delete it.
+.TP
+.B B
+Print a list of the currently active breakpoints.
+.TP
+.B D
+Delete all breakpoints.
+.TP
+.B l
+Print the last executed line.
+.TP
+.IB linenumber " a
+Announce.
+If
+.I linenumber
+is of the form
+.IB proc : number
+the command does 
+.LR "linenumber b\ l" 
+(print the line each time it's reached).
+If
+.I linenumber
+is of the form
+.LR proc: ,
+the command does
+.L "proc: b T" 
+(print the stack frame).
+.PP
+Miscellaneous commands.
+.TP
+.BI ! " command"
+The command is interpreted by
+.IR sh (1).
+.TP
+newline
+Advance to the next storage location or source line,
+depending on which was last printed, and display it.
+.TP
+\f5"\fI string\fR
+Print the given string.
+.TP
+.B q
+Exit the debugger.
+.PP
+The following commands are intended for
+debugging the debugger.
+.TP \n(xxu
+.B V
+Print the version number.
+.PD0
+.TP
+.B X
+Print a list of procedures and files being debugged.
+.TP
+.B Y
+Toggle debug output.
+.PD
+.SH FILES
+.F a.out
+.br
+.F core
+.SH SEE ALSO
+.IR adb (1), 
+.IR pi (9.1), 
+.IR cin (1),
+.IR nm (1),
+.IR a.out (5),
+.IR bigcore (1),
+.IR cc (1),
+.IR f77 (1)
+.SH BUGS
+.I Sdb
+is old and unmaintained.
+.br
+If a procedure is called when the program is not
+stopped at a breakpoint, a fresh core image results.
+Thus a procedure can't be used to extract data from a dump.
+.br
+.I Sdb 
+doesn't know Fortran: arrays are singly dimensioned
+and 0-indexed; scalar arguments are reported as pointers.
+.br
+The default type for printing Fortran parameters is incorrect:
+address instead of value.
+.br
+Tracebacks containing Fortran subprograms with multiple entry points
+may print too many arguments in the wrong order, but their values
+are correct.
+.br
+The meaning of control-D is nonstandard.

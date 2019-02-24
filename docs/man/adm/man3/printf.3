@@ -1,0 +1,378 @@
+.TH PRINTF 3S
+.CT 2 file_io
+.SH NAME
+printf, fprintf, sprintf, snprintf \(mi print formatted output
+.SH SYNOPSIS
+.nf
+.B "#include <stdio.h>"
+.PP
+.B "int printf(char *format, ... );
+.PP
+.B "int fprintf (FILE *stream, char *format, ... );
+.PP
+.B "int sprintf (char *s, char *format, ... );
+.PP
+.B "int snprintf (char *s, int len, char *format, ... );
+.fi
+.SH DESCRIPTION
+.I Printf
+places output on the standard output stream
+.IR stdout .
+.I Fprintf
+places output on the named output
+.IR stream .
+.I Sprintf
+places output
+followed by the null character
+.RB ( \e0 ),
+in consecutive bytes starting at
+.IR s ;
+it is the user's responsibility to ensure that
+enough storage is available.
+.I Snprintf
+corresponds to
+.IR sprintf
+except that no more than
+.IR len
+bytes are placed into
+.IR s .
+Each function returns the number of characters
+transmitted (not including the
+.B \e0
+in the case of
+.IR sprintf ),
+or
+a negative value if an output error was encountered.
+.PP
+Each of these functions
+converts, formats, and prints its
+trailing arguments
+under control of a
+.IR format 
+string.
+The
+.I format
+contains two types of objects:
+plain characters, which are simply copied to the
+output stream,
+and conversion specifications,
+each of which results in fetching of
+zero or more
+arguments.
+The results are undefined if there are arguments of the
+wrong type or too few
+arguments for the format.
+If the format is exhausted while
+arguments remain, the excess
+are ignored.
+.PP
+Each conversion specification is introduced by
+the character
+.BR % .
+After the
+.BR % ,
+the following
+appear in sequence:
+.PP
+.RS
+Zero or more
+.IR flags ,
+which modify the meaning of
+the conversion specification.
+.PP
+An optional decimal digit string specifying a minimum
+.IR "field width" .
+If the converted value has fewer characters
+than the field width,
+it is padded to the field width.
+When the width specification begins with zero, padding is
+with leading zeros.
+Otherwise padding is with leading spaces (trailing spaces,
+with the left-adjustment flag 
+.LR - ,
+described below) to the field width.
+.PP
+A
+.I precision\^
+that gives
+the minimum number of digits to appear for the
+.BR d ,
+.BR o ,
+.BR u ,
+.BR x ,
+or
+.B X
+conversions,
+the number of digits to appear after the
+decimal point for the
+.B e
+and
+.B f
+conversions,
+the maximum number of significant digits
+for the
+.B g
+conversion,
+or the maximum number of characters
+to be printed from a string in
+.B s
+conversion.
+The precision takes the form of a period
+.RB ( \&. )
+followed by a decimal digit string;
+a null digit string is treated as zero.
+.PP
+An optional
+.B l
+(ell) specifying that a following
+.BR d ,
+.BR o ,
+.BR u ,
+.BR x ,
+or
+.B X
+conversion character applies to a long
+integer
+.IR arg .
+An
+.B l
+before any other conversion character is ignored.
+.PP
+A character that indicates the type of
+conversion to be applied.
+.RE
+.PP
+A field width or precision may be
+indicated by an asterisk
+.RB ( * )
+or an exclamation point
+.RB ( ! )
+instead of a digit string.
+In this case, an integer
+.I arg\^
+supplies
+the field width or precision.
+.PP
+The flag characters and their meanings are:
+.PD 0
+.TP 10
+.B \-
+The result of the conversion is left-justified within the field.
+.TP
+.B +
+The result of a signed
+conversion always begins with a sign
+.RB ( +
+or
+.BR - ).
+.TP
+blank
+If the first character of a signed conversion is not a sign, a blank
+is prefixed to the result.
+This implies that if the blank and
+.B +
+flags both appear, the blank flag is ignored.
+.TP
+.B #
+This flag specifies that the value is to be converted
+to an ``alternate form.''
+For
+.BR c ,
+.BR d ,
+.BR s ,
+and
+.B u
+conversions, the flag has no effect.
+For
+.B o
+conversion, it increases the precision to force
+the first digit of the result to be a zero.
+For
+.B x or X
+conversion, a non-zero result has
+.B 0x or 0X
+prefixed to it.
+For
+.BR e ,
+.BR E ,
+.BR f ,
+.BR g ,
+and
+.B G
+conversions, the result always contains a decimal point,
+even if no digits follow the point (normally, a decimal point
+appears in the result of these conversions only if a digit
+follows it).
+For
+.B g
+and
+.B G
+conversions, trailing zeros are
+.I not\^
+be removed from the result
+as they normally are.
+.PD
+.PP
+The conversion characters
+and their meanings are:
+.PP
+.PD 0
+.TP 10
+\fLd\fP,\fLo\fP,\fLu\fP,\fLx\fP,\fLX\fP
+The integer
+.I arg\^
+is converted to signed decimal,
+unsigned octal, decimal, or
+hexadecimal notation
+.RB ( x
+and
+.BR X ),
+respectively;
+the letters
+.B abcdef
+are used for
+.B x
+conversion and the letters
+.B ABCDEF
+for
+.B X
+conversion.
+The precision specifies the minimum number of digits
+to appear; if the value being converted can be represented
+in fewer digits, it is expanded with leading zeros.
+(For compatibility with other versions of
+.IR printf ,
+a field width with a leading zero
+results in padding with leading zeros.
+This does not imply an octal value for the field width.)
+The default precision is 1.
+The result of converting a zero value with a precision
+of zero is a null string.
+.TP
+.BR f
+The float or double
+.I arg\^
+is converted to decimal notation
+in the style
+[\fB-\fR]\fId\fB.\fIddd\fR,
+where the number of digits after the decimal point
+is equal to the precision specification.
+If the precision
+is missing,
+six digits are output;
+if the precision is explicitly
+.LR 0 ,
+no decimal point appears.
+.TP
+.BR e , E
+The float or double
+.I arg\^
+is converted in the style
+[\fB-\fR]\fId\fB.\fIddd\fBe\(+-\fIdd\fR,
+where there is one digit before the decimal point and
+the number of digits after it is equal to the
+precision;
+when the precision is missing,
+six digits are produced;
+if the precision is zero, no decimal point appears.
+The
+.B E
+format code produces a number with
+.B E
+instead of
+.B e
+introducing the exponent.
+The exponent always contains at least two digits.
+.TP
+.BR g , G
+The float or double
+.I arg\^
+is printed in style
+.BR f
+or
+.BR e
+(or in style
+.B E
+in the case of a
+.B G
+format code),
+with the precision specifying the number of significant digits.
+The style used depends on the value converted:
+style
+.B e
+is used only if the exponent resulting from
+the conversion is less than -4
+or greater than the precision.
+Trailing zeros are removed from the result; a decimal point
+appears only if it is followed by a digit.
+.TP
+.B c
+The character
+argument is printed.
+.TP
+.B s
+The
+argument is taken to be a string (character pointer)
+and characters from the string are printed until
+a null character
+.RB ( \e0 )
+is encountered or
+the number of characters indicated by the precision
+specification is reached.
+If the precision is missing, it is taken to be infinite, so
+all characters up to the first null character are printed.
+A
+zero
+value for
+the argument yields undefined results.
+(For compatibility with other versions of
+.IR printf ,
+a field width with
+a leading zero results in zero-padding the string instead
+of blank-padding it.
+This does not imply an octal value for the field width.)
+.TP
+.B %
+Print a
+.BR % ;
+no argument is converted.
+.PD
+.PP
+In no case does a non-existent or small field width
+cause truncation of a field;
+if the result of a conversion is wider than the field width,
+the field is simply expanded to contain the conversion result.
+Characters generated by
+.I printf\^
+and
+.I fprintf\^
+are printed as if
+.IR putc
+had been called; see
+.IR getc (3).
+.SH EXAMPLES
+.TP
+.L
+printf("%s, %s %d, %d:%.2d", weekday, month, day, hour, min);
+Print a date and time in the form `Sunday, July 3, 10:02',
+where
+.I weekday\^
+and
+.I month\^
+are pointers to null-terminated strings.
+.TP
+.L
+printf("pi = %.5f", 4*atan(1.0));
+Print
+.if n .I pi\^
+.if t \(*p
+to 5 decimal places.
+.SH SEE ALSO
+.IR ecvt (3),
+.IR scanf (3),
+.IR stdio (3),
+.IR print (3)
+.SH BUGS
+The
+.L !
+indicator for field width is nonstandard.

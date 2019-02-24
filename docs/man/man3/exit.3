@@ -1,0 +1,65 @@
+.TH EXIT 3
+.CT 2 proc_man
+.SH NAME
+exit, atexit, onexit \(mi terminate process
+.SH SYNOPSIS
+.nf
+.B void exit(status)
+.B int status;
+.PP
+.B int atexit(fn)
+.B int (*fn)();
+.fi
+.SH DESCRIPTION
+.I Exit
+is the conventional way to terminate a process.
+Before calling
+.I _exit
+(see
+.IR exit (2))
+with
+.I status
+as an argument,
+it calls in reverse order all the functions
+recorded by
+.IR atexit .
+.PP
+.I Exit
+can never return.
+.PP
+.I Atexit
+records
+.I fn
+as a function to be called by
+.IR exit .
+It returns zero if it failed,
+nonzero otherwise.
+Typical uses include cleanup routines for
+.IR stdio (3)
+and profiling; see
+.IR monitor (3).
+.PP
+Calling
+.I atexit
+twice (or more) with the same function argument causes
+.I exit
+to invoke the function twice (or more).
+.PP
+The function
+.I fn
+should be declared as
+.EX
+       int fn()
+.EE
+.PP
+The function
+.I onexit
+is an obsolescent synonym for
+.I atexit.
+The constant
+.B NONEXIT
+defined in
+.B <libc.h>
+determines how many functions can be recorded.
+.SH "SEE ALSO"
+.IR exit (2)

@@ -1,0 +1,254 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH SBUF.PUB 3I+ "C++ Stream Library" " "
+.SH NAME
+streambuf \- public interface of character buffering class
+.SH SYNOPSIS
+.ft B
+.ta1i 2i
+.nf
+#include <iostream.h>
+
+typedef long streamoff, streampos;
+class ios {
+public:
+	enum	seek_dir { beg, cur, end };
+	enum	open_mode { in, out, ate, app } ;
+	// \fIand lots of other stuff ... \fP
+	} ;
+
+class streambuf {
+public :
+
+	int	in_avail();
+	int	out_waiting();
+	int	sbumpc();
+	streambuf*	setbuf(char* ptr, int len, int count=0);
+	streampos	seekpos(streampos,open_mode);
+	streampos	seekoff(streamoff,seek_dir,open_mode);
+	int	sgetc();
+	int	sgetn(char* ptr,int n);
+	int	snextc();
+	int	sputbackc(char c);
+	int	sputc(int c);
+	int	sputn(const char* s,int n);
+	void	stossc();
+	int	sync();
+	}
+.fi
+.SH DESCRIPTION
+The \f(CWstreambuf\fR
+class supports buffers into which
+characters can be inserted (put) or from which characters can be
+fetched (gotten).  Abstractly such a buffer is a sequence of
+characters together with one or
+two pointers (a get and/or a put pointer)
+that define
+the location at which characters are to be inserted or fetched.
+The pointers should be thought of as pointing between characters
+rather than at them. This makes it easier to understand the
+boundary conditions (a pointer before the first character or after
+the last).
+Some of the effects of getting and putting are defined
+by this class but most of the details are left to specialized
+classes derived from \f(CWstreambuf\fR.
+.PP
+Classes derived from \f(CWstreambuf\fR vary in their
+treatments of the get and put pointers.
+The simplest are unidirectional buffers which permit only gets or 
+only puts.  Such classes serve as pure sources (producers)
+or sinks (consumers) of characters.
+Queuelike buffers have a put and a get pointer which
+move independently
+of each other.  In such buffers characters that are stored are held
+(i.e., queued)
+until they are later fetched.
+Filelike buffers permit both gets and puts but
+have only a single pointer.
+(An alternative description is that the get
+and put pointers are tied together
+so that when one moves so does the other.)
+.PP
+Most \f(CWstreambuf\fR member functions are
+organized into two phases.
+As far as possible, operations are performed inline by storing into
+or fetching
+from arrays (the get area and the put area).
+From time to time, virtual functions are called to
+deal with collections of characters.
+Generally the user of a \f(CWstreambuf\fR does not have to know
+anything about these
+details, but some the public members pass back information
+about the
+state of the areas.
+.PP
+Assume:
+.br
+\(em \fBi\fR, \fBn\fR, and \fBlen\fR are \f(CWint\fR.
+.br
+\(em \fBc\fR is an \f(CWint\fR. It always holds a "character"
+value or \f(CWEOF\fR.  A "character" value is always positive
+even when \f(CWchar\fR is normally sign extended.
+.br
+\(em \fBsb\fR and \fBsb1\fR are \f(CWstreambuf*\fR.
+.br
+\(em \fBptr\fR is a \f(CWchar*\fR.
+.br
+\(em \fBoff\fR is a \f(CWstreamoff\fR.
+.br
+\(em \fBpos\fR is a \f(CWstreampos\fR.
+.br
+\(em \fBdir\fR is a \f(CWseekdir\fR.
+.br
+\(em \fBmode\fR is a \f(CWopen_mode\fR.
+.PP
+Public member functions:
+.TP
+\fBi=sb->in_avail()\fR
+Returns the number of characters
+that are immediately available in the get area for
+fetching.  That many characters may be fetched with
+a guarantee that no errors will be reported.
+.TP
+\fBi=sb->out_waiting()\fR
+Returns the number of characters in the put area that have not
+been consumed by virtuals.
+.TP
+\fBc=sb->sbumpc()\fR
+Moves the get pointer forward one character and returns the
+character moved over.
+Returns \f(CWEOF\fR if the get pointer is
+currently at the end of the sequence.
+.TP
+\fBpos=sb->seekoff(off,dir,mode)\fR
+Repositions the get and/or put pointers.
+\fBmode\fR specifies whether the put pointer (\fBoutput\fR bit set) or
+the get pointer (\fBinput\fR bit set) is to be modified.  Both bits
+may be set in which case both pointers should be affected.
+\fBoff\fR is interpreted as a byte offset. (Notice that it is a 
+signed quantity.)
+The meaning of possible values of \fBdir\fR are
+.RS
+.TP
+\f(CWbeg\fR
+The beginning of the stream.
+.TP
+\f(CWcur\fR
+The current position.
+.TP
+\f(CWend\fR
+The end of the stream. (End of file.)
+.RE
+Not all classes derived from \fBstreambuf\fR 
+support repositioning.  \fBseek\fR will return \f(CWEOF\fR if 
+the class does not support repositioning.  If the class does
+support repositioning, \fBseek\fR will return the new
+position or \f(CWEOF\fR on error.
+.TP
+\fBpos=sb->seekpos(pos,mode)\fR
+Repositions the streambuf get and/or put pointer to \fBpos\fR.
+\fBmode\fR specifies which pointers are affected as for \fBseekoff\fR.
+Returns \fBpos\fR (the argument) or \f(CWEOF\fR if the class does
+not support repositioning or an error occurs.
+In general a \f(CWstreampos\fR should be treated as a "magic cookie" 
+and no arithmetic should be performed on it.
+But two particular values have special meaning:
+.RS
+.TP
+\fBstreampos(0)\fR
+The beginning of the file.
+.TP
+\fBstreampos(EOF)\fR
+Used as an error indication.
+.RE
+.TP
+\fBc=sb->sgetc()\fR
+Returns the character after the get pointer.  Contrary to what most
+people expect from the name 
+\fIIT DOES NOT MOVE THE GET POINTER\fR.  Returns \f(CWEOF\fR if there is
+no character available.
+.TP
+\fBsb1=sb->setbuf(ptr,len,i)
+Offers the \fBlen\fR
+bytes starting at \fBptr\fR.
+as the reserve area.
+If \fBptr\fR is null or \fBlen\fR is zero or less, then an unbuffered
+state is requested.
+Whether the offered area is used, or a request for unbuffered
+state is honored depends on details of the derived class.
+\fBsetbuf\fR normally returns \fBsb\fR, but if it does not
+accept the offer or honor the request, it returns 0.
+.TP
+\fBi=sb->sgetn(ptr,n)\fR
+Fetches the \fBn\fR
+characters following the get pointer and copies them to the area
+starting at \fBptr\fR.
+When there are less than \fBn\fR characters left before the
+end of the sequence \fBsgetn\fR fetches whatever characters
+remain.
+\fBsgetn\fR repositions the get pointer following
+the fetched characters and
+returns the number of characters fetched.
+.TP
+\fBc=sb->snextc()\fR
+Moves the get pointer forward one character
+and returns the character following the new position.
+It returns \f(CWEOF\fR if the pointer
+is currently at the end of the sequence or is at the end of
+the sequence after moving forward.
+.TP
+\fBi=sb->sputbackc(c)
+Moves the get pointer back one character.
+\fBc\fR must be
+the current content of the sequence just before the get pointer.
+The underlying mechanism may
+simply back up the get pointer or may rearrange its internal
+data structures so the \fBc\fR is saved.  Thus the effect
+of \fBsputbackc\fR is undefined if \fBc\fR is not the character
+before the get pointer.
+\fBputbackc\fR returns \f(CWEOF\fR when it fails.
+The conditions under which it can fail depend on the details of
+the derived
+class.
+.TP
+\fBi=sb->sputc(c)
+Stores \fBc\fR after the put pointer, and moves the
+put pointer over the stored character.  Usually this extends
+the sequence.
+It returns \fBEOF\fR when an error occurs. The conditions
+that can cause errors depend on the derived class.
+.TP
+\fBi=sb->sputn(ptr,n)\fR
+Stores the \fBn\fR
+characters starting at \fBptr\fR
+after the put pointer. Moves the put
+pointer over them.
+Returns the number of characters stored successfully.
+Normally this is \fBn\fR, but it may be less when errors occur.
+.TP
+\fBsb->stossc()\fR
+Moves the get pointer forward one character.  If the pointer started at the
+end of the sequence this function has no effect.
+.TP 
+\fBi=sb->sync()\fR
+Establishes consistency between the internal data structures and the
+external source or sink.
+The details of this function depend on the derived class.
+Usually this "flushes" any characters that have been stored
+but not yet consumed, and "gives back" any characters that
+may have been produced but not yet fetched.
+.SH CAVEATS
+\fBsetbuf\fR
+does not really belong in the public interface. 
+It is there for compatibility with the stream package.
+.PP
+Requiring the program to provide
+the previously fetched character to 
+\f(CWsputback\fR is probably a botch.
+.SH SEE ALSO
+iostream(3C++),
+sbuf.prot(3C++)

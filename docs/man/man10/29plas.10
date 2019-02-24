@@ -1,0 +1,107 @@
+.TH 29PLAS 10.1 UCDS
+.SH NAME
+29plas, 29plsim \- microassembler and simulator for the 29pl series
+.SH SYNOPSIS
+.B 29plas
+[
+.B -blsw
+]
+[
+.B -t
+.I chipname
+]
+.I file
+.PP
+.B 29plsim
+[
+.BI -rxvzo number
+]
+.I file
+.SH DESCRIPTION
+.I 29plas
+assembles
+.I file
+into microcode for the AMD 29PL series of fuse programmable
+microcontrollers.
+The output of
+.I 29plas
+is suitable for use by
+.IR drom (10.1)
+or any other prom blaster.
+.TP
+.B -b
+prepare output for the DATA I/O (see
+.IR drom (10.1))
+with the 303A-FPC adaptor.
+.TP
+.B -l
+print label values on standard error.
+.TP
+.B -o
+prepare output for
+.IR drom (10.1)
+with the special adaptor.
+.TP
+.B -s
+print the values of
+.I all
+the symbols in the symbol table.
+.TP
+.B -w
+generate a pin file suitable for
+.IR cdm (10.1)
+or
+.IR cdmglob (10.1)
+rather than code.
+.TP
+.BI -t chipname
+specify which member of the 29PL series (for example,
+.BR 29PL141 ).
+.PP
+.I 29plsim
+simulates the execution of
+.I file
+instruction by instruction.
+The values of the
+test inputs from the standard input unless a batch switch is used.
+It will be silent unless told otherwise.
+.PP
+If you give a (binary)
+.IR number ,
+then this will "wire"
+the test inputs to that value.
+For example,
+.B -1000000
+will wire the CC bit high.
+.TP
+.B -o
+the output of each instruction will be put on standard output.
+If outputs are not enabled, then the high impedance state is
+indicated as a
+.B -1
+on the output.
+.TP
+.B -x
+print the values of the internal registers.
+.TP
+.B -v
+decode and print instructions.
+.TP
+.B -r
+run for 256 steps without asking for
+test inputs.
+.TP
+.B -z
+stop on a zero word. This is useful for
+stopping on jumps to nowhere. However,
+.B 0
+is a legal instruction so you
+must explicitly tell the simulator to stop.
+.SH "SEE ALSO"
+.IR drom (10.1), 
+.SH "BUGS"
+.PP
+Family members other than the 29PL141 are
+.I not
+completely implemented.
+Also, the assembler format is incompatible with AMD's.

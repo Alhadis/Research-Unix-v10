@@ -1,0 +1,255 @@
+.TH LD 1
+.CT 1 lib_obj
+.SH NAME
+ld \(mi link editor or loader
+.SH SYNOPSIS
+.B ld
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I Ld
+combines several
+object programs into one, resolves external
+references, and searches libraries.
+In the simplest case several object
+.I files
+are given, and
+.I ld
+combines them, producing
+an object module which can be either executed or
+become the input for a further
+.I ld
+run.
+(In the latter case, the
+.B -r
+option must be given
+to preserve the relocation bits.)
+The output of
+.I ld
+is left on
+.FR a.out .
+This file is made executable
+only if no errors occurred during the load.
+.PP
+The argument routines are concatenated in the order
+specified.  The entry point of the output is the
+beginning of the first routine (unless the
+.B -e
+option is specified).
+.PP
+If any argument is a library, it is searched exactly once
+at the point it is encountered in the argument list.
+Only those routines defining an unresolved external
+reference are loaded.
+If a routine from a library
+references another routine in the library,
+and the library has not been processed by
+.I ranlib
+(see
+.IR ar (1)),
+the referenced routine must appear after the
+referencing routine in the library.
+Thus the order of programs within libraries
+may be important; see
+.IR lorder (1).
+The first member of a library
+should be a file named
+.BR _\^_.SYMDEF ,
+which is understood to be a dictionary for the library as produced by
+.IR ranlib ;
+the dictionary is searched iteratively to satisfy as many references as
+possible.
+.PP
+The symbols
+.LR \_etext ,
+.LR \_edata ,
+and
+.L \_end
+.RL ( etext ,
+.LR edata ,
+and
+.L end
+in C) are reserved, and if referred to,
+are set to the first location above the program,
+the first location above initialized data,
+and the first location above all data, respectively.
+It is erroneous to define these symbols.
+.PP
+.I Ld
+understands several options.
+Except for
+.BR -l
+and
+.BR -o ,
+they should appear before the file names.
+.TP
+.B -A
+Load incrementally, so that the resulting object code
+may be read into an already executing program.
+The next argument names an object file whose symbol table will be
+added to.
+Only newly linked material will be entered into the text and
+data portions of
+.FR a.out ,
+but the new symbol table will reflect
+every symbol defined before and after the incremental load.
+.B -A
+must not follow any object file names.
+.TP
+.B -D
+Take the next argument as a hexadecimal number and pad the data segment
+with zeros to the indicated length.
+.TP
+.B  -d
+Force definition of common storage
+even if the
+.B -r
+flag is present.
+.TP
+.B -e
+The following argument is taken to be the
+name of the entry point of the loaded
+program; location 0 is the default.
+.TP
+.BI -l x
+This
+option is an abbreviation for the library name
+.BI /lib/lib x .a ,
+where
+.I x
+is a string.
+If that does not exist,
+.I ld
+tries
+.BI /usr/lib/lib x .a
+A library is searched when its name is encountered,
+so the placement of the option
+is significant.
+.TP
+.B -M
+produce a primitive load map, listing the names of the files
+which will be loaded.
+.TP
+.B -N
+Do not make the text portion read-only or sharable.  (Use `magic number' 0407.)
+.TP
+.B  -n
+Arrange that
+when the output file is executed,
+the text portion will be read-only and shared
+among all users executing the file.
+(Use magic number 0410 and
+move the data segment to a
+1024 byte boundary.)
+.TP
+.B  -o
+The
+.I name
+argument after
+.B -o
+is used as the name of the
+.I ld
+output file, instead of
+.FR a.out .
+.TP
+.B  -r
+Generate relocation bits in the output file
+so that it can be the subject of another
+.I ld
+run.
+This flag also prevents final fixing
+of `common' symbols (uninitialized C variables or
+Fortran common variables),
+and suppresses `undefined symbol' diagnostics.
+.TP
+.B  -s
+Strip the output, that is, remove the symbol table
+and relocation bits to save space (but impair the
+usefulness of the debuggers).
+This information can also be removed by
+.IR  strip (1).
+.TP
+.B -S
+Partially strip; remove all symbols that were not in the source.
+.TP
+.B -T
+The next argument is a hexadecimal number which sets the text segment origin.
+With option
+.B -A
+this origin must be a multiple of 1024.
+The default is 0, or
+.B _end
+with
+.BR -A .
+.TP
+.B -t
+(trace)  Print the name of each file as it is processed.
+.TP
+.B  -u
+Take the following argument as a symbol and enter
+it as undefined in the symbol table.  This is useful
+for loading wholly from a library, since initially the symbol
+table is empty and an unresolved reference is needed
+to force the loading of the first routine.
+.TP
+.B  -X
+Save local symbols
+except for those whose names begin with 
+.LR L .
+This option is used by
+.IR cc (1)
+to discard internally-generated labels while
+retaining symbols local to routines.
+.TP
+.B  -x
+Do not preserve local
+symbols in the output symbol table; only enter
+external symbols.
+This option saves some space in the output file.
+.TP
+.BI -y sym
+Indicate each file in which
+.I sym
+appears, its type and whether the file defines or references it.
+Many such options may be given to trace many symbols.
+(It is usually necessary to begin
+.I sym
+with an underscore
+.LR _ ,
+as external C, Fortran, and Pascal variables begin
+with underscores.)
+.TP
+.B -z
+Arrange for the process to be loaded on
+demand from the resulting executable file (magic number 413)
+rather than preloaded.
+This (default) output format
+has a 1024-byte header followed by
+a text and data segment each of which have size a multiple of 1024 bytes
+(being padded out with zeros if necessary).
+The first few BSS segment symbols may appear in the data segment
+to avoid wasting space at the end of that segment.
+.SH FILES
+.TF /usr/local/lib/lib*.a
+.TP
+.F /lib/lib*.a
+libraries
+.TP
+.F /usr/lib/lib*.a
+more libraries
+.TP
+.F a.out
+output file
+.SH "SEE ALSO"
+.IR as (1), 
+.IR ar (1), 
+.IR cc (1), 
+.IR f77 (1), 
+.IR size (1), 
+.IR nm (1), 
+.IR lorder (1),
+.IR a.out (5)
+.SH BUGS
+There is no way to force data to be page aligned.

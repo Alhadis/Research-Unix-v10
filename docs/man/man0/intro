@@ -1,0 +1,710 @@
+.SP .5i
+.TL
+INTRODUCTION
+.SP 2
+.LP
+This volume describes facilities of the version of the
+.SM UNIX
+operating system that is used
+at the system's original home, the
+computing science research center of AT&T Bell Laboratories.
+Volume 2 discusses certain aspects of the system in more detail.
+For tutorial information, consult a standard reference such as
+.I "The Unix Programming Environment
+by Kernighan and Pike.
+.LP
+Within the area it surveys, this volume attempts
+to be timely, complete and concise.
+Where the latter two objectives conflict,
+the obvious is often left unsaid in favor of brevity.
+It is intended that each program be described
+as it is, not as it should be.
+Inevitably, as snapshots of a living system, some of
+the descriptions may soon go out of date.
+When that happens, users may find the latest word in
+an on-line form of this book.
+.LP
+The volume is divided into sections;
+each section consists of a number of independent pages.
+(Some `pages' spill over beyond one sheet of paper.)
+The name of a page is in its upper corners 
+together with the section number.
+Sections 3 and 9 have further substructure as described in
+their respective introductions.
+Pages are arranged alphabetically within sections.
+Here and in much other documentation,
+the notation
+.I man (1)
+refers to the page for the
+.I man
+command in section 1.
+(This particular command prints selections from the on-line manual.)
+.LP
+There are nine printed sections and one unprinted appendix.
+.DS
+1.	Commands
+2.	System calls
+3.	Subroutines
+4.	Devices, line disciplines, and file systems
+5.	File formats and conventions
+6.	Language conventions
+7.	Information sources
+8.	Maintenance commands and procedures
+9.	Teletype 5620-related software
+A.	Other facilities
+.DE
+Section 1 describes
+programs intended to be invoked directly by
+the user, in contradistinction to subroutines, which are
+intended to be called by the user's programs.
+Essential commands generally reside in directory
+.CW /bin
+(for
+.I bin \|ary
+programs) or
+.CW /usr/bin .
+These directories are searched automatically by command interpreters.
+.LP
+Section 2 describes
+entries into the
+.UX
+kernel
+as expressed in C, the primary implementation
+language of the system.
+.LP
+Section 3 discusses
+an assortment
+of subroutines, mostly for use with C.
+The primary libraries in which they are kept are described in
+.I intro (3).
+Fortran users should consult the
+.I port (3)
+mathematical library.
+.LP
+Section 4 discusses `files'
+that actually refer to I/O devices,
+processing modules that modify the behavior
+of some devices,
+and `file systems'
+that aren't just files on a disk.
+.LP
+Section 5 gives the structure of particular
+kinds of files, for example, the form of the output of the loader and
+assembler.
+Files internal to only one command
+are excluded,
+for example compiler intermediate files.
+.LP
+Section 6 lists 
+macro packages, fonts, mail addressing conventions, etc.
+.LP
+Section 7 is a miscellaneous collection of information sources:
+library orders, news, astronomy, geography, calendar, etc.
+.LP
+Section 8 discusses commands and procedures not intended
+for use by the ordinary user.
+Most of the commands and files described here
+are kept in directory
+.CW /etc.
+.LP
+Section 9 describes software intended for use with the Teletype
+5620 terminal.
+In this category fall utilities that exploit the terminal and
+tools for writing code to run with or on it.
+.LP
+Appendix A contains information about obsolescent or 
+specialized programs.
+It is not printed, but is accessible on line through
+.I man (1).
+.LP
+Not all facilities are available across all computers.
+Pages for programs with limited distribution
+are marked at the top
+with the name of at least one computer 
+at the home site where
+they are known to reside.
+.LP
+All pages are based on a common format,
+not all parts of which necessarily appear.
+.RS
+.LP
+The
+.I NAME
+subsection lists the exact names of the commands and subroutines
+covered
+and
+a very short description of their purpose.
+.LP
+The
+.I SYNOPSIS
+subsection summarizes the use of the
+program being described.
+.LP
+The
+.I DESCRIPTION
+subsection discusses in detail the subject at hand.
+.LP
+The
+.I EXAMPLES
+subsection illustrates interesting usage.
+.LP
+The
+.I FILES
+subsection gives the names of files which are
+built into the program.
+.LP
+The
+.I
+SEE ALSO
+.R
+subsection gives pointers to related information.
+.LP
+The
+.I DIAGNOSTICS
+subsection discusses
+the diagnostic indications which may be produced.
+Messages which are intended to be self-explanatory
+are not listed.
+.LP
+The
+.I BUGS
+subsection gives
+known bugs and sometimes deficiencies.
+Occasionally also the suggested fix is
+described.
+.br
+.RE
+.LP
+The following conventions are used, particularly in 
+section 1:
+.RS
+.LP
+.CW "Program font"
+shows literals, file names, and examples.
+.LP
+.I Italics
+designate parameters or arguments.
+In descriptions italics also name programs, as a sign that the
+programs can be found described in this manual, and as a reminder
+that the name is probably a shorthand, 
+not a real file name.
+.LP
+Square brackets [ ] around an argument
+indicate that the argument is optional.
+.LP
+Ellipses `.\|.\|.' indicate that the previous item
+may be repeated.
+.LP
+A final convention is used by the commands themselves.
+An argument beginning with a minus sign 
+.CW -
+usually means a command option
+even if it appears in a position where a file name
+could appear.
+Therefore, it is unwise to have files
+whose names begin with 
+.CW - .
+.br
+.RE
+.LP
+Following this introduction are a classified table of contents,
+a permuted index, and a glossary.
+.SH
+HOW TO GET STARTED
+.LP
+This section sketches the basic information
+you need to get started on
+.UX :
+how to log in and log out,
+how to communicate through your terminal,
+and how to run a program.
+See Kernighan and Pike for a more complete introduction.
+.LP
+.I
+Logging in.\ \ 
+.R
+You must call
+.UX
+from an appropriate terminal.
+Most any \s8ASCII\s0 terminal capable of full duplex operation and generating
+the entire character set can be used.
+You must also have a valid user name,
+which may be obtained, together with necessary telephone numbers
+or computer names,
+from the system administrator.
+After a data connection is established,
+the login procedure depends on what kind of terminal
+you are using.
+.LP
+.I
+.I
+Dial-up terminals:\ \ 
+.R
+If there is a half/full-duplex switch, set it at full-duplex.
+When you have established a data connection,
+the system types out a few characters, intended to be
+.CW login: .
+If they appear as gibberish, the computer is sending at the wrong 
+baud rate.
+Depress the `break'
+key;
+this is a signal
+that a different speed terminal
+is in use.
+The system will type
+.CW login:
+at another
+speed.
+Continue depressing the break key
+until
+.CW login:
+appears, then respond with your user name.
+End each line you type with a carriage return.
+.LP
+.I
+Hard-wired terminals.\ \ 
+.R
+Hard-wired terminals usually begin at the right
+speed, up to 19200 baud; otherwise the preceding instructions
+apply.
+.LP
+.I
+Datakit\(rg terminals.\ \ 
+.R
+Make sure that any on-line/off-line switch is turned to on-line.
+If the terminal types gibberish, depress the `break' key repeatedly
+until you see the prompt
+.CW "Number please:"
+or
+.CW "Destination please:"  .
+Respond with the name of the computer you wish to connect to, 
+followed by a carriage return.
+When the computer prompts
+.CW login:
+proceed as above.
+.LP
+For all terminals, it is important
+that you type your name in lower case if possible.
+If you type
+upper-case letters, the system
+will assume that your terminal cannot generate lower-case
+letters and will translate all subsequent upper-case
+letters to lower case.
+.LP
+Upon logging in you may be presented with a `message of
+the day'.
+You may also be notified of incoming mail.
+The final evidence that you have successfully
+logged in is that a shell program
+will type a prompt (normally 
+.CW $  )
+to you.
+(The shell is described below under
+`How to run a program.')
+.LP
+Terminals come with a bewildering variety of capabilities,
+which the system may have to be aware of.
+Get somebody who knows to help customize a 
+.CW \&.profile
+description of your terminal to set things properly
+upon logging in.
+For more information, consult
+.I sh (1)
+about profiles,
+.I environ (5)
+about environments, and
+.I tabs (1),
+.I stty (1),
+.I tty (4),
+and
+.I ttyld (4)
+about terminal settings.
+.LP
+.I
+Logging out.\ \ 
+.R
+There are two ways to log out:
+.IP
+Type an end-of-file indication
+(EOT character, 
+control-\f(CWd\fP)
+to the shell.
+The shell will terminate and a
+.CW login:
+or
+.CW "Number please:"
+message
+will appear again.
+.IP
+Simply hang up or turn your terminal off.
+.LP
+.I
+How to communicate through your terminal.\ \ 
+.R
+When you type characters, a gnome deep in the system
+gathers your characters and saves them in a secret
+place.
+The
+characters will not be given to a program
+until you type a return.
+.LP
+.UX
+terminal I/O is full-duplex.
+It has full read-ahead, which means that you can
+type at any time,
+even while a program is
+typing at you.
+If you type while the computer is printing,
+the input may appear interleaved with the output.
+However, whatever you type will be saved
+up and interpreted in correct sequence.
+.LP
+In typed input, the character
+.CW @
+kills all the preceding characters in the line, so
+typing mistakes
+can be repaired.
+A backspace
+erases the last character typed.
+Successive backspaces
+erase characters back to, but
+not beyond, the beginning of the line.
+.CW @
+and backspace can be transmitted to a program
+by preceding them with
+.CW \e .
+(So, to erase
+.CW \e ,
+you need two backspaces.)
+.LP
+The `delete' or `rubout' key causes an
+.I
+interrupt signal,
+.R
+as does the
+`break' key.
+This signal
+generally causes whatever program
+you are running to terminate.
+It is typically used to stop a long printout that
+you don't want (with varying degrees of promptness).
+However, programs can arrange either to ignore
+this signal altogether,
+or to be notified, instead of being killed, when it happens.
+The editor,
+.I ed (1),
+for example, catches interrupts and
+stops what it is doing,
+instead of terminating, so that an interrupt can
+be used to halt an editor printout without
+losing the file being edited.
+.LP
+It is also possible to suspend output temporarily by typing
+control-\f(CWs\fP
+and later resume output with 
+control-\f(CWq\fP.
+.LP
+The
+.I quit ""
+signal is generated
+by typing 
+control-\f(CW\e\fP
+or
+control-\f(CW|\fP.
+It not only causes a running program to terminate
+but also generates a file with the core image
+of the terminated process.
+Quit is useful
+for debugging.
+.LP
+.I
+How to run a program; the shell.\ \ 
+.R
+When you have successfully logged in, a program
+called the shell is listening to your terminal.
+The shell reads typed-in lines, splits them up
+into a command name and arguments, and executes the command.
+A command is simply an executable program, which the
+shell finds by looking in several standard places.
+You can 
+place commands in your own directory and have the shell find them there.
+There is nothing special about system-provided
+commands except where they live.
+.LP
+The command name is always the first word on an input line;
+it and its arguments are separated from one another by
+spaces.
+.LP
+When a program terminates, the shell will ordinarily regain control and type 
+a prompt at you to indicate that it is ready for another command.
+.LP
+The shell (and the underlying system) has a distinctive
+ability to combine programs by piping the output of one into the
+input of another.
+In general, programs have been designed to be usable in pipelines
+as well as on their own.
+The shell has many other capabilities, which are described in detail in
+.I sh (1).
+.LP
+.I
+Bitmap terminals.\ \ 
+.R
+To get the most out of the Tenth Edition system, you will probably
+wish to use a Teletype 5620 or 630 terminal, run with
+.I mux (9.1).
+This provides
+mouse control, graphics, and multiple layers, each of which acts like
+a separate, simultaneously running
+.UX
+terminal, complete with its own shell.
+Text in a
+.I mux
+layer can be edited on screen.
+The editor
+.I sam (9.1)
+and the typesetter simulator
+.I proof (9.1)
+are particularly useful programs that run only under
+.I mux.
+.LP
+.I
+The current directory.\ \ 
+.R
+.UX
+has a file system arranged in a hierarchy of directories.
+When you were given a user name by a system administrator,
+you were also given a home directory (ordinarily
+with the same name as your user name).
+When you log in, any file
+name you type is by default
+in this directory.
+Since you are the owner of this directory, you have
+full permission to read, write, alter, or destroy
+its contents.
+Permissions to have your will with other directories
+and files will have been granted or denied to you
+by their owners.
+As a matter of observed fact, few users
+protect their files from perusal by other users.
+.LP
+You need not do all your work in the home directory.
+To switch to another directory use the change directory
+command
+.I cd,
+described in
+.I sh (1).
+.LP
+.I
+Path names.\ \ 
+.R
+To refer to files not in the current directory, you must
+use a path name.
+Full path names begin with
+.CW / ,
+the name of the `root' of the
+whole file system.
+After the slash comes the name of a subdirectory, another slash
+and a sub-subdirectory, and so on
+until finally a
+file name is reached.
+For example,
+.CW /usr/lem/filex
+refers to the file
+.CW filex
+in the directory
+.CW lem ;
+.CW lem
+is itself a subdirectory of
+.CW usr ;
+.CW usr
+.R
+springs directly from the root.
+.LP
+If your current directory has subdirectories,
+the path names of files therein begin with
+the name of the subdirectory with no initial 
+.CW / .
+.LP
+A path name may be used anywhere a file name is
+required.
+.LP
+Important commands which modify the contents of files
+are
+.I cp (1),
+.I mv 
+(described in
+.I cp (1)),
+and
+.I rm (1),
+which respectively copy, move (i.e. rename) and remove files.
+To find out the status of files or directories, use 
+.I ls (1).
+See
+.I mkdir (1)
+for making directories.
+.LP
+For a fuller discussion of the file system, see
+Kernighan and Pike.
+It may also be useful to glance through
+section 2 of this manual, which discusses
+system calls, even if you don't intend
+to deal with the system at that level.
+.LP
+.I
+Environment.\ \ 
+.R
+Many things can be changed in the environment:
+the already-mentioned erase
+character, properties of your terminal, directories from which
+you wish to execute commands, news notification, etc.
+Your
+.CW \&.profile
+file can make these settings automatically upon login.
+.LP
+.I
+Writing a program.\ \ 
+.R
+The principal language processors are
+.I cc (1)
+for C,
+.I f77 (1)
+for Fortran, and
+.I awk (1).
+Processors for Basic, Pascal, Snobol, Lisp, Macsyma, ML, and others are available.
+For compile-before-run languages
+enter the text of a source program into a
+file, using one of the editors,
+.I ed (1),
+.I sam (9.1),
+or
+.I vi (1).
+By convention C programs are stored in files with names
+ending in
+.CW .c ,
+Fortran programs in 
+.CW .f .
+After the program text has been entered through 
+the editor
+and written on a file, you can give the file
+to the appropriate language processor as an argument.
+The output of a compiler
+will be left in a file named
+.CW a.out
+in the current directory.
+(If the output is precious, use
+.I mv
+to move it to a less
+exposed name soon.)
+.LP
+When you have finally gone through this entire process
+without provoking any diagnostics, the resulting program
+can be run by giving its name (\c
+.CW a.out
+if you've not arranged otherwise)
+to the shell
+in response to the shell prompt.
+.LP
+Your programs can receive arguments from the command line
+just as system programs do,
+see
+.I exec (2).
+.LP
+.I
+Text processing.\ \ 
+.R
+Almost all text is entered through the editors.
+The commands most often used to display text are
+.I cat (1),
+.I pr (1),
+and
+.I troff (1).
+.LP
+The
+.I cat
+command simply dumps text
+on the terminal, with no processing at all.
+The
+.I pr ""
+command paginates the text, supplies headings,
+and has a facility for multi-column output.
+.LP
+.I Troff
+prepares documents for a
+phototypesetter.
+Used naked, it requires careful forethought, but for
+ordinary documents it has been tamed; see
+.I ms (7).
+It was used to produce this manual.
+Its output can drive various devices including
+laser printers and graphic terminals; see
+.I lp (1)
+and
+.I proof (9).
+.LP
+.I
+Status inquiries.\ \ 
+.R
+.I Who (1)
+prints a list of users presently logged in.
+.I Date (1)
+prints the current time and date.
+.I Pwd (1)
+tells what directory you're working in;
+.I where ,
+described on the same page,
+tells what machine you're on.
+.I Ls (1)
+will list the files in your directory or give
+status information about particular files.
+.LP
+.I
+Surprises.\ \ 
+.R
+Certain commands provide inter-user communication.
+Even if you do not plan to use them, it would be
+well to learn something about them, because someone else may
+aim them at you.
+.LP
+To communicate with another user currently logged in,
+.I write (1)
+may be used, but
+.I mail (1)
+is both more polite and more reliable.
+.I Mail
+leaves a message that will be announced
+to another user at next login, if not sooner.
+.I Vismon (9.1)
+and
+.I sh (1)
+provide ways to monitor incoming mail continuously.
+.LP
+.I
+Multiple machines.\ \ 
+.R
+Tenth Edition systems have tentacles to many other 
+machines.
+The file systems of other
+.UX
+systems may be accessible through
+directory 
+.CW /n .
+Thus you may change current directory to one of these machines, although
+computing on your behalf is still being done on the machine you
+logged into.
+You may transmit data among such machines just as within one machine by using
+.I cp (1)
+or I/O redirection in the shell.
+You may also log into a remote machine to do processing there with
+input and output passing through the
+local machine; see
+.I con (1).
+.LP
+Datakit connections exist throughout Bell Laboratories.
+File transmission, over Datakit and over dialup lines to
+even more remote machines, is provided by
+.I uucp (1).
+Mail extends all over the world.
+See
+.I mail (6)
+for how to send mail to destinations on networks such
+as the ARPA Internet, Bitnet, or ACSnet (in Australia.)

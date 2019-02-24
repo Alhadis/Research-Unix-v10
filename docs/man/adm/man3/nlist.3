@@ -1,0 +1,63 @@
+.TH NLIST 3
+.CT 2 debug_tune
+.SH NAME
+nlist \(mi get entries from name list
+.SH SYNOPSIS
+.nf
+.B #include <nlist.h>
+.B nlist(filename, nl)
+.B char *filename;
+.B struct nlist nl[];
+.fi
+.SH DESCRIPTION
+.I Nlist
+examines the name list in
+the given executable output file
+and selectively extracts a
+list of values.
+The list is terminated with a null name.
+.nf
+.ftL
+.ta \w'\fLstruct 'u +\w'\fLunsigned long n_value; 'u
+struct	nlist {
+	\fLchar *n_name;\fR	symbol name
+	\fLunsigned char n_type;\fP	type flag
+	\fLchar n_other;\fP	unused
+	\fLshort n_desc;\fP	unused
+	\fLunsigned long n_value;\fP	value (or offset) of this symbol 
+\fL};\fP
+.fi
+Each name is looked up in the name list of
+the file.
+If the name is found, the type and value of the
+name are inserted in
+.L n_type
+and
+.L n_value
+respectively.
+If the name is not found, both entries are set to 0.
+.PP
+This subroutine is useful for
+examining the system name list kept in
+.FR /unix .
+In this way programs can obtain system addresses
+that are up to date.
+.SH "SEE ALSO"
+.IR a.out (5)
+.SH DIAGNOSTICS
+All
+type entries are set to 0
+if the file cannot be found
+or if it is not a valid namelist.
+.SH BUGS
+On some
+.SM UNIX 
+systems you must include
+.F <a.out.h>
+rather than
+.FR <nlist.h> .
+This is unfortunate, but
+.F <a.out.h>
+can't be used on the
+VAX because it contains a union,
+which can't be initialized.

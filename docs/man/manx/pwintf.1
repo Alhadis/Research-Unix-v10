@@ -1,0 +1,178 @@
+.TH PWINTF 1 SHARE
+.SH NAME
+pwintf \- print selected limits file entries using printf formats
+.SH SYNOPSIS
+.B pwintf
+[-p shares_file] expression format [identifier..]
+.SH DESCRIPTION
+For each entry in the system shares file the expression
+argument is evaluated.
+If the result is non zero
+the remaining arguments are treated as if they were arguments
+to
+.I printf
+(see
+.IR printf (3S)).
+An alternative shares file may be specified with the
+.I -p
+option.
+.PP
+Expression elements are:
+.TP "\w'identifierXXXX'u"
+||
+Binary or. Non zero if the left hand side or the right hand side
+evaluates to a non zero value.
+.TP
+&&
+Binary and. Non zero if the left hand side and the right hand
+side are both non zero.
+.TP
+== !=
+Equal/not equal to. Non zero if the left hand side
+and the right hand side
+are equal/not equal.
+.TP
+> <
+Greater/less than. Non zero is the left hand side is
+greater/less than the right hand side.
+.TP
+>= <=
+Greater/less than or equal to. Non zero if the left hand side
+is greater/less than or equal to the right hand side.
+.TP
+~
+Regular expression matching. Non zero if the string on the left
+hand side matches the regular expression given by the string
+on the right hand side. Regular expressions are given in the
+style of
+.I ed
+(see
+.IR ed (1)).
+.TP
+!
+Unary not. Non zero if the right hand side evaluates to zero.
+.TP
+".."
+A string of characters.
+.TP
+{..}
+A date.
+Date specifications are in the style:
+.B {[[[[[yy]mm]dd]hh]mm][.ss]}.
+For example
+.B {01271200}
+would be noon on the 27th of January in the current year.
+.TP
+(..)
+A sub-expression.
+.TP
+identifier
+Any one of the identifiers described below.
+.TP
+number
+A decimal digit string.
+.PP
+Note that the expression may have to be quoted
+to stop the shell from interpreting symbols such as
+\fB&\fR
+as symbols having special meaning.
+.SH FORMATS
+All
+.I printf
+format specifications and modifiers are allowed except the
+\&'*' modifier. To facilitate the printing of dates
+which are stored as the number of seconds since
+1st January 1970,
+\fB%t\fR
+may be used. This will cause the corresponding integral
+argument to be interpreted as a time and given in the style
+of
+.I ctime
+(see
+.IR ctime (3C)).
+All modifiers will be ignored in such a time specification.
+.SH IDENTIFIERS
+In the following list words printed in
+.B "this font"
+are as defined in the include files <shares.h> and <sys/lnode.h>.
+.PD 0
+.TP "\w'assumeddisconXX'u"
+activelnode
+1 if the account has the
+.B ACTIVELNODE
+flag set.
+.TP
+changed
+1 if the account has the
+.B CHANGED
+flag set.
+.TP
+charge
+The long term accumulated costs of the account as a floating point number.
+.TP
+deadgroup
+1 if the account has the
+.B DEADGROUP
+flag set.
+.TP
+dirpath
+The initial directory of the account as a string.
+.TP
+flags
+A string containing the names of the flags set for this account.
+.TP
+gecos
+The ``gecos'' field of the account as a string.
+.TP
+gid
+The integral gid of this account.
+.TP
+lastref
+1 if the account has the
+.B LASTREF
+flag set.
+.TP
+lastused
+The time the account last did anything.
+.TP
+lname
+The login name of the account as a string.
+.TP
+notshared
+1 if the account has a
+.B NOTSHARED
+flag.
+.TP
+now
+The current time.
+.TP
+pword
+The encrypted password of the account as a string.
+.TP
+sgroup
+The uid of the scheduling group of this account.
+.TP
+sgroupname
+The lname of the scheduling group of this account.
+.TP
+shares
+The integral number of shares the account has.
+.TP
+shellpath
+The initial shell of the account as a string.
+.TP
+usage
+The usage of the account as a floating point number.
+.TP
+uid
+The integral uid of this account.
+.PD
+.SH FILES
+/etc/passwd
+.br
+/etc/shares
+.SH SEE ALSO
+printf(3S), ctime(3C), shares(5).
+.SH DIAGNOSTICS
+Yes. A summary of usage is given when pwintf
+is invoked with no arguments.

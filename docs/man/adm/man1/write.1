@@ -1,0 +1,132 @@
+.TH WRITE 1
+.CT 1 comm_term comm_users
+.SH NAME
+write, mesg \- write to other users, allow or forbid messages
+.SH SYNOPSIS
+.B write
+.I person ...
+.PP
+.B mesg
+[
+.B n
+]
+[
+.B y
+]
+.SH DESCRIPTION
+.I Write
+copies lines from your terminal to terminals of other
+.I persons
+designated either by login name or
+(to circumvent occasional ambiguities) by terminal name
+as given by
+.IR who (1).
+It announces to each
+.I  person
+your login name, your terminal,
+and the other
+.I persons.
+To respond, each recipient should execute a corresponding
+.I write
+to the
+.I  persons
+he wants to talk to.
+.PP
+When you are writing to more than one person, your
+messages are identified to the recipients.
+Writing ceases upon end of file or interrupt,
+and the message
+.B EOF
+is sent to the others.
+.PP
+.I Write
+recognizes certain commands during a conversation:
+.TP
+.BI ! cmd
+Execute a shell on the string
+.I cmd
+and then return to
+.IR write .
+.TP
+.BI :a " person"
+Add
+.I person
+to the list of people to whom you are talking,
+and send an appropriate announcement to all parties.
+They must do
+.B :a
+for themselves if they want to include the new person.
+.TP
+.BI :d " person"
+Drop
+.I person
+from your list and make appropriate announcements.
+.TP
+.B :l
+Print a list of people to whom you are talking.
+.PP
+The following protocol is suggested for using
+.IR write .
+When you invoke
+.I write,
+wait for the other user to
+write back before starting to send.
+Each party should end each message with a distinctive signal 
+that the other may reply \- the customary convention is
+.L (o)
+for `over';
+.B (oo)
+for `over and out' is suggested when conversation
+is about to be terminated.
+.PP
+.I Mesg
+with argument
+.B n
+forbids messages via
+.IR  write (1)
+by revoking non-user
+write permission on the user's terminal.
+.I Mesg
+with argument
+.B y
+reinstates permission.
+All by itself,
+.I mesg
+reports the current state without changing it.
+.PP
+Certain commands, in particular
+.I nroff
+and
+.IR  pr (1)
+disallow
+messages in order to prevent messy output.
+.SH FILES
+.TF /etc/utmp
+.TP
+.F /etc/utmp
+to find user
+.TP
+.F /bin/sh
+to execute 
+.L !
+.SH "SEE ALSO"
+.IR who (1), 
+.IR mail (1), 
+.IR vismon (9.1)
+.SH DIAGNOSTICS
+.I Mesg
+yields exit status 0 if messages are receivable, 1 if not,
+2 on error.
+.SH BUGS
+.IR Mux (9.1)
+generally prevents the receipt of
+.I write
+messages, but 
+.IR vismon (9.1)
+permits them.
+.br
+Messages ought to be identified when the recipient is receiving from
+more than one writer, rather than when a writer is sending
+to more than one recipient,
+but that requires cooperating processes and isn't
+worth the effort.

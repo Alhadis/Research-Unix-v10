@@ -1,0 +1,400 @@
+.TH READNEWS 7 alice,research
+.CT 1 comm_users
+.SH NAME
+checknews, readnews \- read netnews articles
+.SH SYNOPSIS
+.B readnews
+[
+.B -a
+.I date
+]
+[
+.B -n 
+.I newsgroup ...
+]
+[
+.B -t
+.I title ...
+]
+[
+.B -lprxhfuM
+]
+[
+.B -c
+[
+.I command
+]
+]
+.PP
+.B readnews -s
+.PP
+.B checknews
+[
+.B ynqve
+] [
+.I readnews-options
+]
+.SH DESCRIPTION
+.I Readnews
+prints unread articles that have arrived
+via the informal, worldwide `netnews' network.
+Without arguments it prints unread articles from
+newsgroups to which you subscribe.
+The options are:
+.TF -adate
+.TP 
+.B -M
+An interface to
+.IR Mail (A).
+A 
+.IR mail (1)-like
+interface.
+.TP
+.BI -c " command
+Articles are written to a temporary `mailbox' and the
+.I command
+(e.g.
+.LR "mail -f %" ) is
+invoked, with the mailbox in place of
+.LR % .
+A missing
+.I command
+gets something like
+.IR mail (1).
+.TP
+.B -p
+Articles are sent to the standard output, no questions
+asked.
+.TP
+.B -l
+Titles only.
+The file
+.F .newsrc
+will not be updated.
+.TP
+.B -r
+Print articles in reverse order.
+.TP
+.B -f
+No followup articles.
+.TP
+.B -h
+Printed in a briefer format.
+.TP
+.B -u
+Update file
+.F .newsrc
+every 5 minutes.
+.TP
+.BI -n " newsgroup ...
+Select articles that belong to 
+.I newsgroups.
+.TP
+.BI -t " titles
+Select articles whose titles contain one of the
+.I title
+strings.
+.TP
+.BI -a " date
+Select articles that were posted since
+.IR date ;
+a missing
+.I date
+means the beginning of time.
+.TP
+.B -x
+Ignore
+.FR .newsrc ;
+select previously read as well as
+unread articles.
+.TP
+.B -s
+Print subscription list.
+.PD
+.PP
+The file
+.FR $HOME/.newsrc ,
+or a file specified
+by environment variable
+.BR NEWSRC ,
+tells what topics you are interested in and
+what you have read.
+If
+.F .newsrc
+contains a line starting with options (left
+justified, continued by trailing 
+.LR \e ),
+or if the environment
+variable
+.B NEWSOPTS
+is present, options are taken from there
+as well as the command line.
+In case of conflict, an option
+on the command line take precedence, followed by 
+.F .newsrc
+and finally
+.BR NEWSOPTS .
+.PP
+.I Readnews
+invokes some other programs to perform services.
+To reply to a news item it uses 
+.IR mail (1)
+or an alternate in environment parameter
+.BR MAILER .
+It paginates
+with 
+.IR p (1),
+or an alternate in
+.BR PAGER .
+.BR PAGER
+is a
+command, perhaps containing
+.L %
+as in option
+.BR  -c ,
+or empty for no pagination.
+.PP
+The default and
+.IR mail
+interfaces support the following commands,
+and prompt with common alternatives: a newline
+accepts the first one.
+For example,
+.L [ynq]
+proposes
+yes, no, and quit; newline gets yes.
+.TP
+.B y
+Yes.
+Print current article and go on to next.
+.PD0
+.TP
+.B n
+No.
+Skip the current article.
+(In
+.I mail
+interface, it means
+.BR y .)
+.TP
+.B q 
+Quit; update
+.FR .newsrc .
+.TP
+.B c
+Cancel the article.
+Only the author or the super-user
+can do this.
+.TP
+.B r
+Reply.
+Reply to article's author via mail.
+You are placed in 
+.IR mail ,
+or an alternate in
+environment parameter
+.BR EDITOR ,
+with a header constructed from the article.
+You may change or add headers.
+Add your reply after the blank line.
+Upon exit the message is mailed.
+.TP
+.B rd
+Reply directly.
+You are placed in
+.B MAILER
+.RI ( mail
+by default).
+Type the text of the reply and then control-D.
+.TP
+.BI f " title
+Submit a followup article.
+If you omit the
+title, 
+.I readnews
+generates an appropriate one.
+You will be placed in your
+.B EDITOR
+to compose the followup.
+.TP
+.B fd
+Follow up directly.
+This is like
+.BR f ,
+but does not construct headers.
+.TP
+.BI N " newsgroup
+Go to the named 
+.IR newsgroup ,
+or the next newsgroup if none is named
+.TP
+.BI s " file
+Save.
+Append the article to
+.I file.
+The default is
+.FR Articles .
+If
+.I file
+is not a full pathname, it is taken
+relative to
+.BR HOME ,
+overridden by environment parameter
+.BR NEWSBOX .
+If the first character of
+.I file
+is
+.LR | ,
+the rest is taken as the name of a program, into which the
+article is piped.
+.TP
+.B # 
+Report the name and size of the newsgroup.
+.TP
+.B e
+Erase.
+Forget that this article was read.
+.TP
+.B h
+Print a more verbose header.
+.TP
+.B H
+Print a very verbose, complete header.
+.TP
+.B U
+Unsubscribe from this newsgroup and go on to the next.
+.TP
+.B d 
+Read a digest.
+Presents a digest as separate articles.
+.TP
+.BI D " number
+Decrypt a Caesar cipher (usually used to
+obscure off-color material in
+.LR net.jokes ).
+The rotation is normally determined line-by-line from character
+frequencies.
+If this fails, an explicit
+.I number
+(usually 13) may be given.
+.TP
+.B v
+Print the current version of the news software.
+.TP
+.B !
+Shell escape.
+.TP
+.I number
+Go to article
+.I number.
+.TP
+.if t .BI \(+- n
+.if n +-n
+Skip
+.I n
+articles, 1 by default.
+The articles skipped
+are recorded as `unread'.
+.TP
+.B -
+Go back to last article.
+This is a toggle, typing it
+twice returns you to the original article.
+.TP
+.B x
+Exit.
+Like
+.B q
+except that
+.F .newsrc
+is not updated.
+.TP
+.BI X " system
+Transmit article to the named system.
+.PD
+.PP
+A
+.L -
+following
+.BR c ,
+.BR f ,
+.BR fd ,
+.BR r ,
+.BR rd ,
+.BR e ,
+.BR h ,
+.BR H ,
+or
+.BR s
+refers to the previous article:
+.LR "r -"
+is the normal way to reply to a just-read article
+when the next one is being offered.
+.PP
+.I Checknews
+reports whether there is news present, with
+options:
+.TP
+.B y
+Report only if news is present (default).
+.PD0
+.TP
+.B n 
+Report only if news is absent.
+.TP
+.B q
+Turn off reports; nonzero exit status indicates news.
+.TP
+.B v
+Show the name of the first newsgroup containing unread news.
+.TP
+.B vv
+Explain any claim of new news, useful if checknews and
+readnews disagree.
+.TP
+.B e
+Execute
+.I readnews
+if there is news.
+.SH EXAMPLES
+.TP
+.L
+readnews
+Read all unread articles.
+.TP
+.L
+readnews -n net.langs.c -a last thursday
+Print every unread article about C since last Thursday.
+.TP
+.L
+readnews -p >/dev/null &
+Discard all unread news:
+useful after returning from a long trip.
+.TP
+.L
+readnews -c "ed %" -l
+Invoke 
+.IR ed (1)
+on a file containing the titles of all
+unread articles.
+.SH FILES
+.TF /usr/spool/news/newsgroup/number
+.TP
+.BI /usr/spool/news/ newsgroup / number
+News articles
+.TP
+.F /usr/lib/news/active 
+Active newsgroups and numbers of articles
+.TP
+.F /usr/lib/news/help
+Help file for default interface
+.TP
+.F $HOME/.newsrc
+.SH SEE ALSO
+.IR postnews (7), 
+.IR Mail (A)
+.SH BUGS
+.I Readnews
+is baroque; many users prefer to browse among
+the files in
+.FR /usr/spool/news .

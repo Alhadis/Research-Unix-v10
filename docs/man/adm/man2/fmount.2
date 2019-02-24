@@ -1,0 +1,111 @@
+.TH FMOUNT 2
+.CT 2 sa comm_proc
+.SH NAME
+fmount, funmount \- mount or remove file system
+.SH SYNOPSIS
+.nf
+.B int fmount(type, fildes, name, flag)
+.B char *name;
+.sp
+.B int funmount(name)
+.B char *name;
+.fi
+.SH DESCRIPTION
+.I Fmount
+mounts a file system of the named
+.I type
+described by the file descriptor
+.I fildes
+on pathname
+.IR name .
+Henceforth,
+references to
+.I name
+(the mount point)
+will refer to the root file
+on the newly mounted file system.
+.PP
+.I Name
+must already exist.
+Its old contents are inaccessible while the
+file system is mounted.
+.PP
+The meaning of
+.I flag
+varies with the file system type.
+.PP
+Allowed types are
+.TP
+.B 0
+Regular (block device) file system.
+.I Fildes
+must be a block special file.
+If
+.I flag
+is nonzero,
+the file system may not be written on;
+this must be used with physically write-protected media
+or errors will occur when access times are updated,
+even if no explicit write is attempted.
+.TP
+.B 2
+Process file system,
+.IR proc (4).
+.I Fildes
+is ignored.
+.TP
+.B 3
+Mounted stream.
+.I Fildes
+must refer to a stream;
+future calls to
+.IR open (2)
+on
+.I name
+will reopen that stream.
+The mount is undone
+if the other end of the stream
+is closed or hung up.
+.TP
+.B 4
+Stream (network) file system.
+.I Fildes
+is a stream
+connected to a file system server,
+.IR netfs (8).
+.PP
+Types 5 and 6
+are used internally
+to close off errors
+and for pipes;
+these types may not be mounted.
+.PP
+.I Funmount
+removes knowledge of the file system
+mounted at
+.IR name .
+The mount point
+reverts to its previous interpretation.
+.PP
+The userid owning
+.I name
+may mount or unmount file systems
+of type 3 or 4.
+For other types,
+these calls are restricted to the super-user.
+.SH SEE ALSO
+.IR mount (8),
+.IR netfs (8),
+.IR proc (4),
+.IR stream (4)
+.SH DIAGNOSTICS
+.BR EBADF ,
+.BR EBUSY ,
+.BR EINVAL ,
+.BR EIO ,
+.BR ENODEV
+.SH BUGS
+Although
+.I fildes
+for type 2 file systems is ignored,
+it must be a valid file descriptor.

@@ -1,0 +1,95 @@
+.TH SPLINE 1
+.CT 1 numbers graphics
+.SH NAME
+spline \- fit a curve
+.SH SYNOPSIS
+.B spline
+[
+.I option ...
+]
+.SH DESCRIPTION
+.I Spline
+is a filter that interpolates extra points in an
+input list suitable for
+.IR graph (1).
+It is useful for making
+smooth-looking curves with 
+.I graph
+or with
+.I grap (1).
+.PP
+The following options are recognized,
+each as a separate argument.
+.TP
+.B  -a
+Similar to
+.IR graph (1).
+Supply abscissas automatically; no
+.IR x -values
+appear in the input.
+Spacing is given by the next
+argument (default 1).
+A second optional argument is the starting point for
+automatic abscissas (default 0,
+or the lower limit given by
+.BR -x ).
+.TP
+.B -x
+Similar to
+.I graph.
+Next 1 (or 2) arguments are lower (and upper)
+.I x
+limits.
+Normally these quantities are determined automatically.
+.TP
+.B  -k
+The constant
+.I k 
+used in the boundary value computation
+.IP
+.if n .ig
+.EQ
+y sub 0 sup {prime prime}~=~ky sub 1 sup {prime prime} , ~~~
+y sub n sup {prime prime}~=~ky sub n-1 sup {prime prime} , ~~~
+.EN
+..
+.if t .ig
+.ce
+(2nd deriv. at end) = k*(2nd deriv. next to end)
+..
+.IP
+is set by the next argument.
+(Default
+.I k
+= 0.)
+.TP
+.B  -n
+Space output points
+so that approximately
+.I n
+intervals occur between the lower and upper
+.I x
+limits.
+(Default
+.I n
+= 100.)
+.TP
+.B  -p
+Make output periodic, i.e. match
+derivatives at ends.
+First and last input values should normally agree.
+.SH SEE ALSO
+.IR graph (1),
+.IR grap (1),
+.IR port (3)
+.SH DIAGNOSTICS
+When data are not strictly monotone in
+.I x,
+.I spline
+simply reproduces its input.
+.SH BUGS
+.I Spline
+quietly discards points after the first 1000.
+.br
+.I Spline's
+curves exhibit the classic ills of piecewise cubics.

@@ -1,0 +1,86 @@
+.TH FACE 9.7
+.CT 1 inst_info graphics
+.SH NAME
+face, mugs \- show faces, make face icons from pictures
+.SH SYNOPSIS
+.B face
+.IB machine ! user
+.I file ...
+.PP
+.B mugs
+[
+.B -a
+]
+.SH DESCRIPTION
+.I Face
+displays the 48\(mu48 bit icons specified by its arguments.
+If an argument contains an exclamation mark,
+it is assumed to be a machine and user pair
+and is looked up in the face file system,
+.IR faced (9.5);
+otherwise it is taken to be a file name.
+If the file does not exist and contains no slashes,
+it is looked up in
+.FR /n/face/48x48x1 .
+.PP
+When
+.IR face 's
+layer is full, it waits for a character to be typed before continuing.
+.PP
+.I Mugs
+interactively converts grey-scale images in
+the form of
+.IR picfile (5)
+into 48\(mu48 icons for display by
+.I face
+and
+.IR vismon (9.1).
+It prompts for the name of a picture file,
+displaying a large approximation to the original picture
+and a matrix of 48\(mu48 icons of varying contrast and
+brightness.  Button 1 selects one of the 48\(mu48's.
+Button 3 presents a menu with entries:
+.TP
+.B window
+Select a square window in the large picture using button 3.
+Touch down at
+the top and center of the square and slide around to adjust its size.
+Appropriately cropped 48\(mu48's will be displayed.
+.TP
+.B in
+Zoom in on a smaller part of contrast-brightness space, displaying
+an array of 48\(mu48's that look more-or-less like the selected one.
+Repeated
+.BR in s
+will zoom in farther.
+.TP
+.B out
+Opposite of
+.BR in .
+.TP
+.B save
+Type in the name of a file in which to save the currently selected 48\(mu48.
+.TP
+.B read
+Type in the name of a picture file containing the next face to process.
+.TP
+.B exit
+Confirm with button 3.
+.PP
+Option
+.B -a
+indicates that picture files have non-square pixels with
+aspect ratio 1.25, as produced by the ITI frame-grabber attached
+to kwee.
+Normally pixels are assumed to be square.
+.SH EXAMPLES
+.TP
+.L
+face /n/face/coma/*/48x48x1
+All the users of coma.
+.SH SEE ALSO
+.IR faced (9.5), 
+.IR icon (9.1), 
+.IR vismon (9.1),
+.IR imscan (1),
+.IR picfile (5)

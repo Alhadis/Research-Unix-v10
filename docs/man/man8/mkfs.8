@@ -1,0 +1,119 @@
+.TH MKFS 8
+.CT 1 sa_nonmortals
+.SH NAME
+mkfs, mkbitfs, mklost+found \- construct a disk file system
+.SH SYNOPSIS
+.B /etc/mkfs
+.I special size
+[
+.I spacing cylsize
+]
+.PP
+.B /etc/mkbitfs
+.I special size
+[
+.I spacing cylsize
+]
+.PP
+.B /etc/mklost+found
+.SH DESCRIPTION
+.I Mkfs
+.RI ( mkbitfs )
+constructs a regular (bitmapped) file system on the block device
+.IR special .
+.I Size
+is the number of 1KB (4KB)
+blocks on the special file.
+Values of
+.I size
+for various special files, e.g.
+.IR ra (4),
+are given in Section 4.
+The new file system has a single empty directory and a
+number of inodes that depends on the size.
+.PP
+.I Spacing
+and
+.I cylsize
+are used for block allocation.
+.I Spacing
+is the preferred distance between successive blocks of a file;
+.I cylsize
+is the number of blocks the system can use
+without causing a disk seek.
+Suboptimal default values
+are built into the programs;
+some reasonable values are suggested below.
+.PP
+.I Mklost+found
+creates a directory called
+.B lost+found
+in the working directory
+with several empty slots.
+This directory is used as a repository
+for disconnected files
+recovered by
+.IR fsck (8)
+and
+.IR chuck (8).
+.SH EXAMPLES
+.EX
+/etc/mkbitfs /dev/ra03 31231
+/etc/mount /dev/ra03 /mnt
+cd /mnt
+/etc/mklost+found
+.EE
+.br
+.ns
+.IP
+Notice the change of units between
+.IR ra (4)
+and here: 31231 = 249848\(**512/4096.
+.SH "SEE ALSO"
+.IR filsys (5),
+.IR fsck (8)
+.SH BUGS
+.I Fsck
+should make
+.I lost+found
+automatically
+when needed.
+.SH MACHINE DEPENDENCIES
+Here are empirically good values for 
+.I spacing
+and
+.I cylsize
+for VAX hardware.
+Minor changes, such as a new version of a controller,
+can invalidate them.
+To be certain,
+run your own experiments.
+Cylinder size doesn't seem to matter much
+on RA81 disks.
+On RA90s, it doesn't matter as long as it is large.
+.PP
+.2C
+Bitmapped (4K) file systems
+.nf
+.if n .ta 6 +6 +6
+space	cyl	disk, controller, CPU
+2	500	RA90, KDB50, VAX 8550
+4	500	RA90, UDA50, VAX 8550
+2	40	RA81, KDB50, VAX 8550
+3	40	RA81, old KDB50, VAX 8550
+3	40	RA81, UDA50, VAX 8550
+3	105	Wren VI, Viking UDD, VAX 8550
+4	40	RA81, UDA50, VAX-11/750
+3	40	RA60, UDA50, VAX-11/750
+3	40	RA81, KDA50, MicroVAX II
+1	40	RD54, RQDX3, MicroVAX II
+3	40	RA81, KDA50, MicroVAX III
+Old-style (1K) file systems
+space	cyl	disk, controller, CPU
+5	357	RA81, KDB50, VAX 8550
+7	357	RA81, UDA50, VAX-11/780
+7	357	RA81, KDA50, MicroVAX II
+7	128	RD54, RQDX3, MicroVAX II
+6	357	RA81, KDA50, MicroVAX III
+.sp5
+.1C

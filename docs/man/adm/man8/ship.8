@@ -1,0 +1,118 @@
+.TH SHIP 8
+.CT 1 comm_mach sa_nonmortals
+.SH NAME
+ship, shipstat \(mi automatic software distribution
+.SH SYNOPSIS
+.B ship
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B shipstat
+.SH DESCRIPTION
+.I Ship
+distributes the named files to other computers, where
+the files are installed under the same names.
+Shipping privileges are determined
+by the network manager on the receiving machine;
+see
+.IR svcmgr (8).
+.PP
+Destinations are taken from environment variable
+.BR dest ,
+or from
+.F /usr/lib/asd/dest/default
+if
+.B dest
+is empty.
+If a destination is the name of a file in
+.FR /usr/lib/asd/dest ,
+it is replaced by the contents of that file,
+each word of which is then examined in the same way.
+Otherwise the destination is a network address.
+The sending machine is omitted unless explicitly named in
+the environment variable,
+or unless option
+.B -f
+is present or environment variable
+.B force
+has a non-empty value.
+.PP
+.I Ship
+uses
+.I inspkg
+and 
+.IR mkpkg (8)
+to do its work.
+Links among the named files are imitated
+on the receiving computer, and
+named files that do not exist on the sending
+computer are deleted on the receiving computer.
+Other options are the same as those of
+.IR mkpkg :
+.PP
+.TP \w'\-X file 'u
+.B -v
+Emit running commentary on the standard error file.
+.TP
+.BI -D path1 = path2
+Pretend that any
+.I file
+name that begins with
+.I path1
+really begins with
+.IR path2 .
+Relative pathnames are extended to full pathnames before comparison.
+.TP
+.BI -x command
+.br
+.ns
+.TP
+.BI -X file
+Include in the package instructions to execute the shell
+.I command
+or run the shell script
+.I file
+after all files have been installed.
+Only one of these options may occur.
+The
+.I file 
+name in
+.BR -X
+is affected by
+.BR -D .
+.PP
+Shipments are generally acknowledged by mail after each destination
+has been tried at least once;
+see
+.IR asd (8)
+for details.
+.PP
+.I Shipstat
+reports the status of all its caller's
+incomplete shipments,
+with the most recent first.
+.SH FILES
+.TF/usr/lib/asd/dest/default
+.TP
+.F /usr/lib/asd/dest/*
+distribution lists
+.TP
+.F
+/usr/lib/asd/dest/default
+default distribution list
+.TP
+.BI /usr/spool/asd/ logname
+outgoing spool directories
+.SH SEE ALSO
+.IR mkpkg (8),
+.IR asd (8),
+.IR svcmgr (8)
+.SH BUGS
+The
+.B -f
+option, if given, must be the first option and
+must not be combined with any other.

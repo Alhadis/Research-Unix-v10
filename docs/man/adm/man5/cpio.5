@@ -1,0 +1,87 @@
+.TH CPIO 5
+.CT 1 comm_users
+.SH NAME
+cpio \- format of cpio archive
+.SH DESCRIPTION
+The archived files are recorded consecutively, each
+preceded by a
+.BR header .
+The  header
+structure, when the
+.B \-c
+option of
+.IR cpio (1)
+is not used, is:
+.PP
+.EX
+.ta \w'short 'u +\w'ushort 'u
+typdef unsigned short ushort;
+struct {
+	short	h_magic,
+		h_dev;
+	ushort	h_ino,
+		h_mode,
+		h_uid,
+		h_gid;
+	short	h_nlink,
+		h_rdev,
+		h_mtime[2],
+		h_namesize,
+		h_filesize[2];
+	char	h_name[h_namesize rounded to word];
+} Hdr;
+.EE
+.PP
+When the
+.B \-c
+option is used, the
+.B header
+information is printable, as described by the 
+.IR printf (3)
+call
+.IP
+.EX
+printf(Chdr, "%6o%6o%6o%6o%6o%6o%6o%6o%11lo%6o%11lo%s",
+	Hdr.h_magic, Hdr.h_dev, Hdr.h_ino, Hdr.h_mode,
+	Hdr.h_uid, Hdr.h_gid, Hdr.h_nlink, Hdr.h_rdev,
+	Longtime, Hdr.h_namesize, Longfile, Hdr.h_name
+.EE
+.PP
+.L Longtime
+and
+.L Longfile
+are equivalent to
+.L Hdr.h_mtime
+and
+.LR Hdr.h_filesize ,
+respectively.
+Every instance of
+.L h_magic
+contains the octal constant
+.LR 070707 .
+The items
+.L h_dev
+through
+.L h_mtime
+have meanings explained in
+.IR  stat (2).
+The length of the null-terminated path name
+.LR h_name ,
+including the null byte,
+is given by
+.LR h_namesize .
+.PP
+The last element
+of the archive
+is a dummy entry for the name
+.BR TRAILER!!! ,
+with padding to a multiple of 512 bytes.
+Special files, directories, and the trailer are recorded
+with
+.L h_filesize
+equal to zero.
+.SH "SEE ALSO"
+.IR cpio (1), 
+.IR find (1), 
+.IR stat (2).
+.\"	@(#)cpio.4	5.2 of 5/18/82

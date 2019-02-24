@@ -1,0 +1,90 @@
+.TH BACKUP 8
+.CT 1 sa_nonmortals
+.SH NAME
+backup \- backup client administration
+.SH SYNOPSIS
+.B /usr/lib/backup/sel
+.PP
+.B /usr/lib/backup/fcheck
+.I maxsize
+.I maxdays
+.I files ...
+.PP
+.B /usr/lib/backup/act
+[
+.I stat
+]
+.SH DESCRIPTION
+These programs select and back up files
+to the incremental file backup system,
+.IR backup (1).
+.PP
+.I Sel
+prints on the standard output
+a list of filenames that might need to be backed up.
+The initial version
+picks out files that have been changed in the past few days,
+skipping huge files
+and eliding boring names like
+.BR core .
+.I Sel
+is a shell script;
+the local administrator is expected to customize it.
+.PP
+.I Fcheck
+is a fast,
+specialized file scanning program,
+used by
+.IR sel .
+It examines each of the
+.IR files ,
+descending into directories,
+and prints the name of each file
+that has been changed in the last
+.I maxdays
+days and is smaller than
+.I maxsize
+kilobytes.
+Symbolic links are followed when presented as arguments,
+examined but not followed otherwise.
+.PP
+.I Act
+reads a list of filenames from the standard input.
+It searches the backup database
+.IR backup (5)
+for the current version of each file,
+and backs up files that aren't registered.
+.PP
+By default,
+.I act
+sends errors by
+.IR mail (1)
+to user
+.BR backup .
+If the
+.I stat
+argument is non-empty,
+errors and additional comforting chatter
+are printed on the standard output instead.
+.PP
+One way to request automatic backups is to run
+.IP
+.L
+/usr/lib/backup/sel | /usr/lib/backup/act
+.LP
+regularly from
+.IR cron (8).
+Particular files may be backed up by hand at any time
+by running
+.I act
+with a list of filenames.
+There are no special permissions involved;
+any user may run
+.IR act .
+.SH SEE ALSO
+.IR backup (1),
+.IR backup (5)
+.br
+A. Hume, `The File Motel: An Owner's Manual',
+this manual,
+Volume 2

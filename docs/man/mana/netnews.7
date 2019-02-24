@@ -1,0 +1,148 @@
+.TH NETNEWS 7 "local, not alice"
+.CT 1 comm_users inst_info
+.SH NAME
+netnews \(mi send or receive news articles
+.SH SYNOPSIS
+.B netnews
+[
+.I option ...
+]
+.PP
+.B netnews
+.B -s
+[
+.I newsgroup ...
+]
+.PP
+.B netnews
+.B -i
+.I title
+[
+.B -n
+.I newsgroup ...
+]
+.SH DESCRIPTION
+.I Netnews
+is an intercomputer news service.
+Used now only locally, it has been replaced by
+.IR postnews (7)
+and
+.IR readnews (7)
+for outside connections.
+When invoked without options it prints recent articles.
+Normally the articles printed are restricted to newsgroups
+you have signed up for and are
+newer than your last use of
+.I netnews.
+After each article
+a command is read from the standard input:
+.TP \w'newline\ 'u
+newline
+Go on to next article.
+.PD 0
+.TP
+.B p
+Print article again.
+.TP
+.B -
+Go back to previous article.
+.TP
+.B c
+Cancel (restricted to contributor and super-user).
+.TP
+.BI "w " file
+Append a copy of the article to the named
+.I file.
+.TP
+.B r
+Reply to author (via mail).
+.TP
+.B q
+Exit.
+.TP
+.B x
+Exit without update.
+.PD
+.PP
+The options are:
+.TP  \w'newline\ 'u
+.B -p
+Print with no questions asked.
+.TP
+.B -r
+Print in reverse time order.
+.TP
+.B -l
+Print titles only.
+.TP
+.BI -a " date"
+Print articles received after
+.IR date ;
+no date means the beginning of time.
+.TP
+.BI -n " newsgroup ..."
+Print articles from named newsgroups.
+.TP
+.BI -t " string ..."
+Print only titles containing one of the 
+.I strings.
+.TP
+.BI -s " newsgroup ..."
+Subscribe to named newsgroups.
+If no
+.I newsgroups
+are given,
+list your current subscriptions.
+Newsgroup
+.L all
+receives all articles;
+.L net.all
+receives all newsgroups that begin with
+.LR net. ,
+etc.
+All users subscribe to the newsgroup
+.LR general .
+.TP
+.B -i
+Insert an article
+(read from standard input)
+with title
+.I title
+to the newsgroups specified by
+.B -n
+(default
+.LR general ).
+.PD
+.SH FILES
+.TF /usr/spool/news/history
+.TP
+.F $HOME/.newsrc
+user's subscription list
+.TP
+.F /usr/spool/news/sys.nnn
+news articles
+.TP
+.F /usr/spool/news/.bitfile
+bit map of users with news
+.TP
+.F /usr/spool/news/.ngfile
+list of legal newsgroups
+.TP
+.F /usr/spool/news/.uindex
+index of netnews users
+.TP
+.F /usr/spool/news/.nindex
+index of news articles
+.TP
+.F /usr/spool/news/.seq
+sequence number of last article
+.TP
+.F /usr/spool/news/.history
+list of all articles ever seen
+.TP
+.F /usr/spool/news/.sys
+system subscription list
+.SH SEE ALSO
+.IR news (7), 
+.IR readnews (7), 
+.IR netnews (5)

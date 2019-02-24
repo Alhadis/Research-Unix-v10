@@ -1,0 +1,82 @@
+# compile: make fname.o (intermediate output) from fname.t (troff), if needed
+awk '
+function warn(s) {
+	print "compile error: " s >"/dev/stderr"
+}
+function fatal(s) {
+	print "compile fatal error: " s >"/dev/stderr"
+	exit 1
+}
+
+BEGIN {
+	lsfile = "/tmp/compile.ls"
+	missingfile = "/tmp/compile.miss"
+	system("rm -f " lsfile " " missingfile)
+	for (i = 1; i < ARGC; i++) dofile(ARGV[i])
+}
+
+function dofile(infile,   outfile, langname, i) {
+   # STARTUP
+	if (infile !~ /\.t$/) {
+		warn("usage: compile filename.t")
+		return
+	}
+	if ((getline < infile) == -1) {
+		warn("cannot open file " infile)
+		return
+	}
+	close(infile)
+	outfile = infile; sub(/\.t$/, ".o", outfile)
+	for (i in langs) delete x[i]
+	for (i in files) delete files[i]
+   # READ FILE  (if too expensive, grep first, as in doctype)
+	langname = ""
+	while ((getline <infile) > 0) {
+		sub(/^\.EQ[ \t]?/, ".begin eqn ")
+		sub(/^\.EN[ \t]?/, ".end ")
+		sub(/^\.PS[ \t]?/, ".begin pic ")
+		sub(/^\.PE[ \t]?/, ".end ")
+		sub(/^\.G1[ \t]?/, ".begin grap ")
+		sub(/^\.G2[ \t]?/, ".end ")
+		if (langname == "") { # outside .begin/.end
+			if (/^\.begin[ \t]/) {
+				langname = $2
+				langs[langname]++
+			}
+		} else { # inside ``.begin langname''
+			if (/^\.end/) {
+				langname = ""
+			} else if ($1 == "file") {
+				files[$2]++
+			}
+		}
+	}
+	close(infile)
+   # CLEANUP
+      # Check currency and return if okay
+	filestr = ""
+	for (i in files) filestr = filestr " " i
+	system("ls -t " outfile " " infile\
+		filestr " >" lsfile " 2>" missingfile)
+	if ((getline < missingfile) == 0) {
+		getline newest < lsfile
+		close(lsfile)
+		if (newest == outfile) return
+	}
+	close(missingfile)
+      # Make and execute system call
+	need["chem"] = need["newman"] = need["stills"] = need["dformat"] \
+		= need["grap"] = need["scatter"] = need["swizzle"] = "pic"
+	need["dot"] = "grap"
+	n = split("dot grap scatter newman stills dformat " \
+		  "swizzle chem pic eqn", pname)
+	for (i = 1; i <= n; i++) {
+		s = pname[i]
+		if (langs[s]) {
+			pipe = pipe " | " s
+			langs[need[s]]++
+		}
+	}
+	system("cat " infile pipe " > " outfile)
+}
+' $*

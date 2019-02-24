@@ -1,0 +1,172 @@
+.TH MOVIE 9.1
+.CT 1 graphics  writing_troff
+.SH NAME
+movie, stills \- algorithm animation
+.SH SYNOPSIS
+.B movie
+[
+.B -t
+.I termprog
+]
+[
+.B -m
+.I memory
+]
+[
+.I file
+]
+.PP
+.B stills
+[
+.I files ...
+]
+.SH DESCRIPTION
+.I Movie
+converts a `movie script'
+into an internal representation, then displays it in a window on a
+Teletype 5620, AT&T630, or X-11 system (depending on which version has been compiled).
+If the filename is of the form
+.IB file .s ,
+.I movie
+creates the intermediate form in
+.IB file .i ,
+which will be used in subsequent calls if it is more recent than
+.IB file .s ,
+The options are:
+.TP \w'\f5-t\ \fItermprog\ 'u
+.BI -t " termprog
+Load
+.I termprog
+instead of the default terminal program.
+.br
+.ns
+.TP
+.BI -m mem
+Use
+.I mem
+bytes of terminal memory instead of the default.
+.PP
+In the terminal, button 1 stops and starts the movie;
+button 2 adjusts view sizes and selects clicks;
+button 3 sets various parameters.
+.SS Movie scripts
+A movie consists of multiple independent views,
+each presented as a rectangular sub-window.
+If no 
+.B view
+statements appear, there is a single implicit view
+.BR def.view .
+Any text or geometrical object may be labeled with a name and colon.
+Labels and coordinates are local to views.
+A recurring label erases the previous
+object with that label.
+.PP
+Comments follow #; blank lines are ignored.
+.HP
+.B text
+.I options x y string
+.br
+Text is centered and medium size by default;  options: one of
+.B "center
+.B ljust
+.B rjust
+.B above
+.BR below ,
+and one of
+.BR "small
+.B medium
+.B big
+.BR bigbig .
+A leading quote is stripped from
+.IR string ,
+as is a trailing quote if a leading one is present.
+.PD 0
+.HP
+.BI line
+.I "options x1 y1 x2 y2
+.br
+Lines are solid by default;  options: one of
+.B "fat
+.B fatfat
+.B dotted
+.B dashed
+and one of
+.B "->
+.B <-
+.BR <-> .
+.HP
+.BI box
+.I "options xmin ymin xmax ymax
+.br
+A box may be
+.BR fill ed.
+.HP
+.BI circle 
+.I "options x1 y1 radius
+.br
+Radius is measured in the
+.I x
+dimension.
+A circle may be
+.BR fill ed.
+.TP
+.BI erase " label
+Erase an object explicitly.
+.TP
+.B clear
+Erase all objects currently in the current view.
+.TP
+.BI click " optional-name
+Place a mark in the intermediate with this name;
+clicks are used to control stepping in a movie or to define frames
+for a set of stills.
+.TP
+.BI view " name
+.br
+Associate subsequent objects with this view,
+until changed again.
+.PD
+.PP
+.I Stills
+converts selected frames of a movie into
+commands for
+.IR pic (1).
+Commands for
+.I stills
+begin with
+.B .begin stills
+and end with
+.B .end
+.BR stills .
+.SH FILES
+All files are in
+.BR /usr/lib/movie .
+.TF stills.awk
+.TP
+.F develop
+Shell script to control conversion from script language to internal form.
+.TP
+.F fdevelop
+C program that does the work.
+.TP
+.F stills.awk
+Awk program to process stills language into
+.IR pic (1).
+.TP
+.F anim
+Host end of the animation system.
+.TP
+.F animterm
+terminal end.
+.TP
+.F newer
+Test whether one file is newer than another.
+.SH "SEE ALSO"
+.IR flicks (9.1),
+.IR pic (1)
+.br
+J. L. Bentley and B. W. Kernighan,
+`A System for Algorithm Animation',
+this manual, Volume 2
+.SH BUGS
+The 630 can only handle 65000 bytes of memory.

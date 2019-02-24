@@ -1,0 +1,95 @@
+.TH ROUTE 8
+.CT 1 sa_auto
+.SH NAME
+route, routed, remroutes \- IP gateway routing
+.SH SYNOPSIS
+.B /usr/ipc/mgrs/routed
+[
+.B -v
+] [
+.B -t
+] [
+.B -q
+] [
+.BI - hops
+] [
+.I addr ...
+]
+.br
+.B route add
+.I "dest gateway"
+.br
+.B route delete
+.I "dest"
+.B 
+.br
+.B /etc/remroutes
+.br
+.SH DESCRIPTION
+.I Routed
+runs the 4BSD RIP routing protocol on an IP network.
+It broadcasts routing information to the network at large,
+listens for routing messages from elsewhere,
+and informs the system of the routes it receives.
+.PP
+The options are
+.TP
+.BI \-v
+Log transmitted messages on the standard output.
+.TP
+.BI \-t
+Log received messages on the standard output.
+.TP
+.BI \-q
+Accept routing information but do not broadcast any.
+.TP
+.BI \- hops
+Add
+.I hops
+(a decimal number)
+to the hop count
+when broadcasting routes.
+.PD
+.LP
+Information received for any named
+.I addrs
+is ignored.
+.PP
+.I Routed
+is usually run without options on gateway machines,
+and with the
+.B -q
+option on non-gateway machines.
+.PP
+.I Route
+sets up specific routes,
+to establish static routing
+or to adjust that set up by
+.IR routed .
+The
+.B add
+command informs the system that
+internet address
+.I dest
+may be reached through
+internet address
+.IR gateway ;
+.B delete
+removes any routing for
+.IR dest .
+The special
+destination
+.L *
+represents the default routing:
+.B route add *
+.I gate
+sets the default,
+.B route delete *
+removes any default.
+.PP
+.I Remroutes
+removes all known routes.
+.SH FILES
+.F /usr/ipc/log/routed
+.SH "SEE ALSO"
+.IR ipconfig (8)

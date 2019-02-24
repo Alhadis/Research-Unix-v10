@@ -1,0 +1,103 @@
+.TH PROF 1
+.CT 1 debug_tune
+.SH NAME
+prof \(mi display profile data
+.SH SYNOPSIS
+.B prof
+[
+.I option ...
+]
+[
+.I a.out
+[
+.I mon.out ...
+]
+]
+.SH DESCRIPTION
+.I Prof
+interprets files
+produced by
+.IR monitor (3)
+or the
+.B -p
+option of
+.I cc
+or
+.I f77.
+The symbol table in the
+named object file
+.RL ( a.out
+by default)
+is read and correlated with the
+profile file
+.RL ( mon.out
+by default).
+For each symbol, the percentage
+of time spent executing between that symbol
+and the next
+is printed (in decreasing order),
+together with the time spent there and
+the number of times that routine was called.
+If more than one profile file is specified,
+the output represents the sum of the profiles.
+.PP
+Zero call counts are tallied for subroutines not compiled
+with option
+.BR -p .
+The flag
+.BR -p
+must be passed to the loader to get the profiling output written.
+.PP
+Options are:
+.TP
+.B -l
+Sort the output by symbol value.
+.TP
+.B -n
+Sort the output by number of calls.
+.TP
+.B -s
+Produce a summary profile file in
+.FR mon.sum .
+.TP
+.BI "-v -" low " -" high
+Produce a graphic profile
+on the standard output for display by the
+.IR  plot (1)
+filters.
+Optional numbers
+.I low
+and
+.I high,
+by default 0 and 100, select
+a percentage of the profile to be plotted.
+.TP
+.B -z
+Include routines with zero usage in the output.
+.SH FILES
+.TF mon.out
+.TP
+.F mon.out
+for profile
+.TP
+.F a.out
+for namelist
+.TP
+.F mon.sum
+for summary profile
+.SH "SEE ALSO"
+.IR time (1), 
+.IR lcomp (1), 
+.IR monitor (3),
+.IR getopt (3), 
+.IR profil (2),
+.IR plot (1), 
+.IR cc (1),
+.IR f77 (1)
+.SH BUGS
+Beware of quantization errors.
+.br
+.I Prof
+is confused by
+.I f77,
+which puts the entry points at the bottom of subroutines and functions.

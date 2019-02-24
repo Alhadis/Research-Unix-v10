@@ -1,0 +1,217 @@
+IND=../index/tools
+ISTEX=0
+ENVIRON="$ENVIRON"'
+runind(){
+F=$1
+	if test -s $1.ms
+	then
+		J=$1
+		F=$1.ms
+	else if test -s $1.m
+	then
+		J=$1
+		F=$1.m
+	else if test -s $1.tex
+	then
+		J=`basename $1 .tex`
+		F=$1.tex
+		ISTEX=1
+	else if test -s $1
+	then
+		J=$1
+	else
+		echo $1 not found
+		exit
+	fi
+	fi
+	fi
+	fi
+O=x$F
+tr A-Z a-z <$J.terms|sed -e '\''s/\([a-z/]*\)\.\([a-z][a-z]*\)/\1zz1\2/g'\'' -e '\''s/^\([0-9]\)/ \1/'\'' |sort|uniq|
+awk '\''	{
+	if(last == $0)next
+	if(last "s" == $0){
+		print last
+		last = ""
+		next
+	}
+	else if(last != "")
+		print last
+	last = $0
+	}
+END	{
+	if(last != "")print last
+}'\'' >$J.lt
+sed '\''s/\([a-z/]*\)\.\([a-z][a-z]*\)/\1zz1\2/g'\'' $F >foo
+$IND/diction -f $J.lt -o $J.hits foo >/dev/null
+if test $ISTEX -eq 0
+then
+sed '\''s/zz1/\./g'\'' $J.hits|tr $ ~ >$J.nh
+mv $J.nh $J.hits
+echo troff file= $F out= $O
+awk  -v name=$J.hits '\''
+BEGIN	{
+	getterm()
+	}
+/.*/	{
+	line = $0
+	if(NR >= number){
+		putterm()
+	}
+	print line
+	if(line ~ /^\.PS[ ]*</)next
+	if(line ~ /^\.[TPI]S/){
+		while(getline > 0){
+			if($0 ~ /^\.T\&/){
+				if(NR >= number)
+					putterm()
+			}
+			print $0
+			if($0 ~ /^\.([PTI]E)|IF/)break
+		}
+	}
+	if(line ~ /^\.EQ/){
+		while(getline > 0){
+			print $0
+			if($0 ~ /^\.EN/)break
+		}
+	}
+	}
+function getterm(){
+	if((getline < name)<= 0){
+		number += 1000
+	}
+	else if($0 ~ /^[0-9]/ && NF > 1){
+		number = $1
+		sub(/^[0-9][0-9]* /,"")
+		term = $0
+	} else term=$0
+}
+function putterm(){
+	print ".Tm " term
+	getterm()
+	if(NR >= number){
+		while(NR >= number){
+			print ".Tm " term
+			getterm()
+		}
+	}
+}
+'\'' $F >$O
+else
+sed -e '\''s/zz1/\./g'\'' -e '\''s/	/<tab>/g'\'' $J.hits|tr $ ~ >$J.nh
+mv $J.nh $J.hits
+echo tex $F $O
+awk  -v name=$J.hits '\''
+BEGIN	{
+	sawbeg = 0
+	getterm()
+	}
+/\\begin\{document/	{
+	sawbeg=1
+	print $0
+	next
+	}
+/.*/	{
+	line = $0
+	if(NR >= number && sawbeg){
+		putterm()
+	}
+	print line
+	if(line ~ /\\begin\{eg\}/){
+		while(getline > 0){
+			print $0
+			if($0 ~ /^\\end\{eg\}/)break
+		}
+	}
+	}
+function getterm(){
+	if((getline < name)<= 0){
+		number += 1000
+	}
+	else if($0 ~ /^[0-9]/ && NF > 1){
+		number = $1
+		sub(/^[0-9][0-9]* /,"")
+		term = $0
+	} else term=$0
+	if(term ~ /\\em/)
+		sub(/\\em /,"",term)
+	if(term ~ /{\\tt/){
+		sub(/{\\tt /,"",term)
+		sub(/}/,"",term)
+	}
+}
+function putterm(){
+	print "\\index{" term "}"
+	getterm()
+	if(NR >= number){
+		while(NR >= number){
+			print "\\index{" term "}"
+			getterm()
+		}
+	}
+}
+'\'' $F >$O
+fi
+rm foo $J.lt			# $J.hits
+}
+
+mkindex(){		#uses either $1.x or $2.x to make base.ind
+	if test $# -eq 0
+	then
+		echo mkindex directory file or mkindex file
+		exit
+	fi
+	if test $# -eq 1
+	then
+	j=`basename $1 .x`
+	sed -n "/^\\.XX.*$j/p" ../contents/contents.ms|awk '\''{print $2 >"name"}'\''
+	else
+	j=`basename $2 .x`
+	sed -n "/^\\.XX.*$1\\/$j/p" ../contents/contents.ms|awk '\''{print $2 >"name"}'\''
+	fi
+	FILE=$j.x
+S=`cat name`
+sed -e "/^0	/d" -e "s/ #.*//" -e "s/:/!/g" -e "/^[A-Za-z.]/d" -e "/Examp/d" $FILE|
+awk '\''
+BEGIN	{FS="	" }
+NF==2	{ print str ", " $2 ": " $1
+	print $2 ", " str ": " $1
+	}
+NF==3	{
+	if($NF == "s" )print str ", " $2 ": " $1
+	else print $2 ", " str ": " $1
+}'\'' str=$S | sort -f -u -t":" +0 -1 +1n |
+awk '\''
+BEGIN	{FS=":"}
+	{ if($1 != laststr){
+		if(start){
+			if(range)pages = pages "-" npage
+			print laststr "," pages
+		}
+		start=1
+		laststr=$1
+		pages = " " $2
+		npage = 0 + $2
+		range=0
+	}
+	else {
+		if($2 == npage+1){
+			range=1
+			npage++
+			next
+		}
+		else if(range) pages = pages "-" npage "," $2
+		else pages = pages "," $2
+		npage = 0 + $2
+		range = 0
+	}
+}
+END	{
+	if(range)pages = pages "-" npage
+	print laststr "," pages
+	}
+'\''|sed -e '\''s/~/\$/g'\'' -e '\''s/!/:/g'\''>$j.ind
+rm name $j.x
+}'
+

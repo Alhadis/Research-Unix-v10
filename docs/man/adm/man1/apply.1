@@ -1,0 +1,102 @@
+.TH APPLY 1 
+.CT 1 shell
+.SH NAME
+apply, pick \- repeatedly apply a command; select arguments
+.SH SYNOPSIS
+.B apply
+[
+.BI -a c
+]
+[
+.BI - n
+]
+.I command arg ...
+.PP
+.B pick
+[
+.I arg ...
+]
+.SH DESCRIPTION
+.I Apply
+runs the named
+.I command
+on each
+argument
+.I arg
+in turn.
+Normally arguments are chosen singly; the optional number
+.I n
+specifies the number of arguments to be passed to
+.I command.
+If
+.I n
+is zero,
+.I command
+is run without arguments once for each
+.I arg.
+Character sequences of the form 
+.BI % d
+in
+.I command,
+where
+.I d
+is a digit from 1 to 9,
+are replaced by the
+.IR d th
+following unused
+.I arg.
+If any such sequences occur,
+.I n
+is ignored,
+and the number of arguments passed to
+.I command
+is the maximum value of
+.I d
+in
+.I command.
+The character
+.L %
+may be changed by the
+.B -a
+option.
+.PP
+.I Pick
+writes each argument to the standard error and reads a reply.
+If the reply is
+.LR y ,
+the argument is echoed to the standard output;
+if the reply is
+.LR q ,
+.I pick
+exits without reading any more arguments;
+there is no output for any other response.
+If there are no arguments,
+lines of the standard input are taken instead.
+.SH EXAMPLES
+.TP
+.L
+apply echo *
+Time-consuming way to do 
+.LR ls .
+.TP
+.L
+apply -2 cmp a1 b1 a2 b2
+Compare the `a' files to the `b' files.
+.TP
+.L
+wc -l `pick *.[ch]`
+Interactively select `.c' and `.h' files and count the lines in each.
+.TP
+.L
+apply "wc -l %1" `pick *.[ch]`
+Same, but use a separate process to count each file.
+.SH "SEE ALSO"
+.IR sh (1)
+.SH BUGS
+There is no way to pass a literal
+.L %2
+if
+.L %
+is 
+.I apply's
+argument expansion character.

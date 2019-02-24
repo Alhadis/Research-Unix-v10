@@ -1,0 +1,136 @@
+.TH PACK 1
+.CT 1 files
+.SH NAME
+pack, unpack, pcat, compress, uncompress, zcat \(mi compress and expand files
+.SH SYNOPSIS
+.B pack
+[
+.B -
+]
+.I file ...
+.PP
+.B unpack
+.I file ...
+.PP
+.B pcat
+[
+.I file ...
+]
+.PP
+.B compress
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B uncompress
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B zcat
+[
+.B -V
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Pack
+attempts to compress the
+.I files
+and places the results in
+corresponding files named
+.IB file .z
+with the same access modes, dates, and owner as the originals.
+Successfully packed files are removed.
+.PP
+.I Unpack
+reverses the process.
+.PP
+.I Pcat
+unpacks files to the standard output.
+.PP
+The
+.B .z
+suffix may be omitted from the name of the
+input file for
+.I unpack
+or
+.I pcat.
+.PP
+.I Pack
+encodes individual characters in a Huffman code.
+Option
+.B -
+causes statistics of the encoding to be printed.
+The option toggles on and off at each appearance among the
+list of
+.I files.
+.PP
+.I Compress, uncompress,
+and
+.I zcat
+work like
+.I pack, unpack,
+and
+.I pcat,
+putting each compressed
+.I file
+into
+.IB file .Z .
+The options are
+.TP
+.B -f
+(force)
+Compress even when it doesn't save space.
+.TP
+.B -c
+Write to the standard output; change no files.
+.I Zcat
+is identical to
+.I uncompress
+.B -c.
+.TP
+.BI -b bits
+.I Compress
+uses a modified Lempel-Ziv encoding.
+Common substrings in the file are replaced by
+variable-length codes up to size
+.I bits
+(default 16).
+Smaller limits devour less address space.
+.TP
+.B -v
+Print percent reduction for each file.
+.TP
+.B -V
+Print program version number.
+.PP
+.I Compress-uncompress
+pack better and are faster overall;
+.I pack-unpack
+work on smaller machines and are much more widely available.
+.SH "SEE ALSO"
+T. A. Welch,
+`A Technique for High Performance Data Compression,'
+.I "IEEE Computer,"
+17 (1984) 8-19.
+.SH DIAGNOSTICS
+The exit code of
+.I pack, unpack,
+or
+.I pcat
+is the number of files it failed to process.
+.PP
+The exit code of
+.I compress, uncompress,
+or
+.I zcat
+is 0 normally, 1 for error, 2 for ineffective compression
+(i.e. expansion).

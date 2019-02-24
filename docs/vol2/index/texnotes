@@ -1,0 +1,21 @@
+From howard Fri Sep 15 17:16:50 EDT 1989
+If you put
+
+\index{some stuff}
+
+in /usr/vol2/latex/latex.tex, between any two lines after
+the \begin{document} line and before the \end{document}
+line (and also not between any pair of \begin{eg} and
+\end{eg}, since those lines are printed verbatim), then
+after doing a mk in that directory you will have a
+file 'latex.idx' containing lines like
+
+some stuff<tab>249
+
+Unfortunately, the <tab> is literally those 5 characters,
+so you will have to
+
+	sed 's/<tab>/	/' < latex.idx
+
+to get what you really want.
+TeX just won't let tabs get into it or out of it.

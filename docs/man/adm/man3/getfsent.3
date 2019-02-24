@@ -1,0 +1,89 @@
+.TH GETFSENT 3
+.CT 2 sa
+.SH NAME
+getfsent, getfsspec, getfsfile, setfsent, endfsent \(mi get file system description file entry
+.SH SYNOPSIS
+.nf
+.B #include <fstab.h>
+.PP
+.B struct fstab *getfsent()
+.PP
+.B struct fstab *getfsspec(name)
+.B char *name;
+.PP
+.B struct fstab *getfsfile(name)
+.B char *name;
+.PP
+.B int setfsent()
+.PP
+.B int endfsent()
+.fi
+.SH DESCRIPTION
+.I Getfsent,
+.I getfsspec
+and
+.I getfsfile
+each return a pointer to a structure
+containing the broken-out
+fields of a line in
+.IR fstab (5),
+which describes mountable file systems.
+.PP
+.EX
+.ta \w'struct 'u +\w'char fs_spec[FSNMLG]; 'u
+struct fstab {
+	char fs_spec[FSNMLG];	\fRblock device name\fP
+	char fs_file[FSNMLG];	\fRfile system mount point\fP
+	int fs_ftype;	\fRfile system type\fP
+	int fs_flags;	\fRfile system flags\fP
+	int fs_passno;	\fRpass number for parallel \fP\fIfsck\fR(8)\fP
+};
+.EE
+.PP
+Type numbers and flags are listed in
+.IR fmount (2).
+Entries that aren't file systems
+(should not be mounted)
+have negative values for
+.LR fs_ftype :
+.TP .7i
+.L FSNONE
+(\-1) Ignore this entry.
+.PD 0
+.TP
+.L FSSWAP
+(\-2)
+.L fs_spec
+is a device available for swapping.
+.PD
+.PP
+.I Getfsent
+reads the next line of the file, opening the file if necessary.
+.PP
+.I Setfsent
+opens and rewinds the file.
+.PP
+.I Endfsent
+closes the file.
+.PP
+.I Getfsspec
+and
+.I getfsfile
+sequentially search from the beginning
+of the file until a matching
+special file name or
+file system file name is found,
+or until EOF
+is encountered.
+.SH FILES
+.TP
+.F /etc/fstab
+.SH "SEE ALSO"
+.IR fmount (2),
+.IR fstab (5)
+.SH DIAGNOSTICS
+Zero is returned on EOF
+or error.
+.SH BUGS
+The return values point to static data
+whose content is overwritten by each call.

@@ -1,0 +1,10 @@
+s/\\\*(HP/+2/g
+s/\\\*(DG/dag/g
+s/\\\*(PO/PostScript/g
+s/\\\*(PC/pic/g
+s/GD/\\\&\.&/
+s/GS/\\\&\.&/
+s/GE/\\\&\.&/
+s/\\f4//
+s/\\fP//
+s/\\fI//

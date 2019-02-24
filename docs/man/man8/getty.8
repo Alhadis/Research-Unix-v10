@@ -1,0 +1,88 @@
+.TH GETTY 8
+.CT 1 sa_auto secur
+.SH NAME
+getty  \- set terminal mode
+.SH SYNOPSIS
+.B /etc/getty
+[
+.I char
+]
+.SH DESCRIPTION
+.I Getty
+is invoked by
+.IR  init (8)
+after a terminal is opened.
+While reading the user's name
+.I getty
+attempts to adapt the system to the speed and type of terminal
+being used.
+.PP
+.I Init
+calls
+.I getty
+with an argument specified by the
+.IR ttys (5)
+entry for the terminal line.
+The argument
+.I char
+determines the line speed
+and other characteristics;
+see below.
+.I Getty
+then types a banner identifying the system (from
+.FR /etc/whoami )
+and the
+.L login:
+message.
+The user's name is then read, a character at a time.
+If a null character is received, it is assumed to be the result
+of the user pushing the `break' (`interrupt') key.
+The speed is then
+changed to another baud rate and 
+.L login:
+is typed again.
+Successive breaks cycle through a set of speeds.
+.PP
+The user's name is terminated by a newline or
+carriage return.
+The latter results in the system being set to
+treat carriage returns appropriately (see
+.IR  ioctl (2)).
+.PP
+Finally,
+.IR login (8)
+is called with the user's name as argument.
+.PP
+Here are the possible values for
+.IR char .
+If more than one speed is given,
+the first speed is used initially;
+others are selected by successive depressions of the
+BREAK key.
+Other things,
+like delays and tab expansion,
+are set in various ways as well.
+.PP
+.de fq
+\f5\\$1	\fR\\$2 \\$3 \\$4 \\$5 \\$6
+..
+.nf
+char	speed
+.fq 0 300-1200-150-110
+.fq 2 9600
+.fq 3 1200-300
+.fq 4 300
+.fq 5 300-1200
+.fq 6 2400
+.fq 7 4800
+.fq 8 9600-1200-300
+.fq 9 300-9600-1200
+.fq a 2400-1200
+.fq b 1200-2400
+.fq j exta (usually 19200)
+.fi
+.SH "SEE ALSO"
+.IR init (8), 
+.IR login (8), 
+.IR ioctl (2), 
+.IR ttys (5)

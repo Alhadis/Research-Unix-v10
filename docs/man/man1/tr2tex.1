@@ -1,0 +1,124 @@
+.TH TR2TEX 1 
+.UC 4
+.SH NAME
+tr2tex \- convert a document from troff to latex
+.SH SYNOPSIS
+.B tr2tex
+[
+.B -m
+]
+.I file ...
+.SH DESCRIPTION
+.I Tr2tex
+attempts to convert into
+.IR latex (6)
+form a document contained in
+.I files
+written in
+.IR troff (1)
+with
+.IR ms (6)
+macros,
+.IR eqn (1)
+equations, and some simple
+.IR tbl (1)
+specifications.
+The result is placed on standard output.
+There is one option.
+.TP
+.B -m
+Convert the document from
+.IR man (6)
+form to
+.IR latex (6).
+.PP
+The output may need some hand polishing.
+.I Troff
+requests that cannot be converted are left
+as comments.
+Some of the converted document may be in plain TeX.
+.SH FILES
+.HP
+.F /usr/lib/tex/troffms.sty
+.IR tex (1)
+macros into which some
+.I troff
+constructs convert.
+.br
+.ns
+.PP
+.F /usr/lib/tex/troffman.sty
+.SH BUGS
+Option
+.B -m
+does not work with 10th edition
+.I man
+macros.
+.br
+Commands that are not separated from their argument by a space are
+not properly parsed (e.g.
+.BR .sp3i ).
+.br
+.I Eqn
+operators
+.L rpile
+and 
+.L lpile
+are treated as
+.LR cpile ,
+.L rcol
+and
+.L lcol
+as
+.LR ccol .
+.br
+.I Eqn
+operators
+.LR size ,
+.LR gsize ,
+.LR fat ,
+.LR gfont ,
+.LR mark ,
+and
+.LR lineup
+are ignored.
+.br
+The closing member of a naturally bracketing pair of
+.I troff
+requests, such as
+.BR .nf - .fi 
+or
+.BR ".ft I" - ".ft R",
+is not supplied automatically after each paragraph.
+.br
+When local motions are converted to
+.L \eraise
+or
+.LR \elower ,
+an
+.L \ehbox
+must be supplied manually.
+.br
+The
+.I eqn
+expression
+.L "a sub i sub j
+is misconverted; use 
+.L "a sub { i sub j }
+instead.
+.br
+Line spacing cannot be changed within a paragraph.
+.br
+Number registers cannot be accessed via
+.BR .nr .
+.br
+Redefinition of some
+.I eqn
+operators, such as
+.LR over ,
+.LR sub ,
+or
+.LR sup ,
+will cause trouble.
+.SH AUTHOR
+Kamal Al-Yahya, Stanford University

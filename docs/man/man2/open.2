@@ -1,0 +1,129 @@
+.TH OPEN 2
+.CT 2 file_io
+.SH NAME
+open, creat, close \(mi open a file for reading or writing, create file
+.SH SYNOPSIS
+.nf
+.B int open(file, rwmode)
+.B char *file;
+.PP
+.B int creat(file, mode)
+.B char *file;
+.PP
+.B int close(fildes)
+.fi
+.SH DESCRIPTION
+.I Open
+opens the
+.I file,
+for reading if
+.I rwmode
+is 0,
+for writing if
+.I rwmode
+is 1,
+or for both if
+.I rwmode
+is 2,
+and returns an associated file descriptor.
+.I File
+is a null-terminated string representing
+a path name.
+The file pointer is set to 0.
+.PP
+.I Creat
+creates a new
+.I file
+or prepares to rewrite an existing
+.IR file ,
+opens it for writing,
+and returns an associated file descriptor.
+If the file is new,
+the owner is set to the effective userid of the creating process;
+the group to that of the containing directory;
+the mode to
+.IR mode 
+as modified by the mode mask of the creating process; see
+.IR umask (2).
+.I Mode
+need not allow writing.
+If the file already exists,
+it is truncated to 0 length;
+the mode, owner, and group remain unchanged,
+and must permit writing.
+.PP
+A program may reserve a filename for exclusive use
+by
+calling
+.I creat
+with a mode that forbids writing.
+If the file does not exist,
+.I creat
+will succeed;
+further attempts to
+.I creat
+the same file will be denied.
+More sophisticated
+(but less portable)
+concurrent access control
+may be obtained by setting the
+.B S_ICCTYP
+field in the mode;
+see
+.IR stat (2).
+.PP
+.I Close
+closes the file associated with a file descriptor.
+Files are closed upon termination of a process,
+but since
+there is a limit on the number of open files per process,
+.I close
+is necessary for programs which deal with many files.
+It is possible to arrange for files to be closed
+by
+.IR exec (2);
+see
+.B FIOCLEX
+in
+.IR ioctl (2).
+.SH "SEE ALSO"
+.IR dup (2),
+.IR pipe (2), 
+.IR read (2),
+.IR exec (2), 
+.IR ioctl (2),
+.IR stat (2),
+.IR unlink (2)
+.SH DIAGNOSTICS
+.IR "open, creat" :
+.BR EACCES ,
+.BR EBUSY ,
+.BR ECONC ,
+.BR EFAULT ,
+.BR EINTR ,
+.BR EIO ,
+.BR EISDIR ,
+.BR ELOOP ,
+.BR EMFILE ,
+.BR ENFILE ,
+.BR ENOENT ,
+.BR ENOTDIR ,
+.BR EROFS ,
+.BR ETXTBSY 
+.br
+.IR creat :
+.BR ENOSPC
+.br
+.IR close:
+.B EBADF
+.SH BUGS
+It should be possible to call
+.I open
+without waiting for carrier on communication lines.
+.br
+The group of a newly-created file should
+(once again)
+be the effective groupid of the creating process.
+.br
+The trick of creating a file with an unwritable mode
+fails for the super-user.

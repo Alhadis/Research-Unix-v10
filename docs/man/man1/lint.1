@@ -1,0 +1,313 @@
+.TH LINT 1
+.CT 1 prog_c
+.SH NAME
+lint, cyntax, cem \- C program verifiers
+.SH SYNOPSIS
+.B lint
+[
+.B -abchnpuvx
+] [
+.I option ...
+]
+.I file ...
+.PP
+.B cyntax
+[
+.I option ...
+]
+.I file ...
+.PP
+.B /usr/lib/cyntax/cem
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I Lint
+checks, more thoroughly than
+.IR cc (1),
+the syntactic validity and semantic consistency of
+one or more C program
+.I files.
+It is assumed that all the
+.I files
+are to be loaded together; they are checked for
+mutual compatibility.
+Function definitions for certain libraries are available to
+.IR lint ;
+these libraries are referred to by a
+conventional name,
+such as
+.LR -lm ,
+in the style of
+.IR ld (1).
+.PP
+Any number of the option letters in the following list
+may be used.
+The
+.BR -D ,
+.BR -U ,
+and
+.B -I
+options of
+.IR cc (1)
+are also recognized as separate arguments.
+.TP
+.B p
+Attempt to check portability to some other
+dialects of C.
+.PD 0
+.TP
+.B h
+Apply heuristics to
+intuit bugs, improve style, and reduce waste.
+.TP
+.B b
+Report
+.I break
+statements that cannot be reached.
+.TP
+.B v
+Suppress complaints about unused arguments in functions.
+.TP
+.B x
+Report variables referred to by extern declarations,
+but never used.
+.TP
+.B a
+Report assignments of long values to int variables.
+.TP
+.B c
+Complain about casts which have questionable portability.
+.TP
+.B u
+Do not complain about functions and variables used and not
+defined, or defined and not used (this is suitable for running
+.I lint
+on a subset of files out of a larger program).
+.TP
+.B n
+Do not check compatibility against the standard library.
+.PD
+.PP
+Certain conventional comments in the C source
+will change the behavior of
+.IR lint :
+.TP
+.B /*NOTREACHED*/
+at appropriate points.
+Stop comments about unreachable code.
+.PD 0
+.TP
+.BI /*VARARGS n */
+Suppress
+the usual checking for variable numbers of arguments
+in the following function declaration.
+The data types of the first
+.I n
+arguments are checked;
+a missing
+.I n
+is taken to be 0.
+.TP
+.BI /*PRINTFLIKE n */
+The data types of the first
+.I n\^
+arguments are checked as usual.
+The remaining arguments are
+checked
+against the
+.IR n th
+argument, which is interpreted as a
+.IR printf (3)
+format string.
+.TP
+.BI /*SCANFLIKE n */
+Similarly for
+.IR scanf (3).
+.TP
+.B /*NOSTRICT*/
+Shut off strict type checking in the next expression.
+.TP
+.B /*ARGSUSED*/
+Turn on the
+.B -v
+option for the next function.
+.TP
+.B /*LINTLIBRARY*/
+at the beginning of a file.  Shut off complaints about
+unused functions in this file.
+.PD
+.PP
+.I Cyntax
+makes checks similar to those of
+.I lint,
+more stringent about syntax, less observant of portability issues.
+It keeps type information gleaned from source files,
+whose names end with
+.LR .c ,
+in `object files' with corresponding names ending in
+.LR .O .
+If all goes well it will cross check among all the 
+.L .c
+and
+.L .O
+input
+.I files.
+.PP
+Options
+.BR -D ,
+.BR -I ,
+.BR -U ,
+.BR -o ,
+.BR -l
+are as in
+.IR cc (1).
+Options
+.BR -O ,
+.BR -P ,
+.BR -g ,
+.BR -p ,
+and
+.BR -s
+are ignored.
+Other options are:
+.TP
+.B -c
+Suppress cross checking.
+.PD 0
+.TP
+.B -d
+Passed to
+.IR cem .
+.TP
+.B -h
+Base object files on the basename of the source file
+rather than the full pathname.
+.TP
+.B -n
+Do not check compatibility against the standard library.
+.TP
+.B -G
+Change default directory of include files to
+.FR /usr/2include ,
+pass 
+.B -lg
+to
+.I cem
+instead of
+.BR -lc .
+.TP
+.B -j
+Change default directory of include files to
+.FR /usr/jerq/include ,
+pass 
+.B -lj
+to
+.I cem
+instead of
+.BR -lc .
+.TP
+.B -k
+Change default directory of include files to
+.FR /usr/ninclude ,
+pass 
+.B -lk
+to
+.I cem
+instead of
+.BR -lc .
+.TP
+.B -w
+Enable pedantic warning diagnostics.
+.TP
+.B -m
+equivalent to
+.LR "-j -DMUX" .
+.TP
+.B -v
+Report what
+.I cyntax
+is actually doing.
+.TP
+.BI -V func : n
+Declare function
+.I func
+to have a variable number of arguments, the first
+.I n
+of which are to be type checked.
+.PD
+.PP
+.I Cem
+(cemantics), the cross-checker, is normally invoked only by
+.IR cyntax .
+It also has options, some of which
+.I cyntax
+can't be coerced into providing.
+Besides
+.B -o
+and
+.BR -l ,
+they are:
+.TP
+.B -m
+Don't believe file modification times.
+These are normally used to avert redundant type checking.
+.PD0
+.TP
+.B -d
+Debug: print ascii version of 
+.L .O
+files on standard output.
+.TP
+.B -p
+Be pedantic about type checking.
+.TP
+.B -t
+Unconditionally include file modification times in diagnostics.
+.TP
+.B -v
+Use a verbose format for type names.
+.PD
+.SH FILES
+.TF /usr/lib/lint/llib-port
+.TP
+.F /usr/lib/lint/lint[12]
+programs
+.TP
+.F /usr/lib/lint/llib-lc
+declarations for standard functions
+.TP
+.F /usr/lib/lint/llib-lport
+declarations for portable functions
+.TP
+.F /usr/include/*
+.TP
+.F /usr/lib/cyntax/ccom
+cyntax proper
+.TP
+.F /usr/lib/cyntax/libc
+type library
+.TP
+.F /usr/lib/cyntax/libj
+.SH SEE ALSO
+.IR cc (1),
+.IR cin (1)
+.SH BUGS
+.I Lint's
+understanding of the type system of C is outmoded:
+its handling of
+.L void
+and
+.R enum
+is simply wrong.
+.br
+The unnatural default setting of
+.I lint
+option
+.B -b
+is intended to hide the ugliness of
+C code produced by
+.IR yacc (1)
+and
+.IR lex (1).

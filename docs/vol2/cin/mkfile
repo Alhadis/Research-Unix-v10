@@ -1,0 +1,37 @@
+< ../ADM/defns
+<../index/defns
+
+all:V:	cin.out
+
+pg:	cin.out
+	count cin.m cin.out
+
+spell:VQ:
+	dospell cin.m
+
+lp:	cin.out
+	$LP $newprereq && touch $target
+
+cin.out:DQ:	cin.m $REF ../ADM/monk.mac
+	$MLIB/monk -d $MLIB/db cin.m |
+		$PREFER |
+		pic |
+		eqn -d'' |
+		troff $MLIB/tmac.p - > cin.out 2> .cite
+	set +e
+	gre -v '^\.(TC|ix)' .cite
+	set -e
+	rm -f .cite
+
+index:V:
+	runind cin
+	$MLIB/monk -d $MLIB/db xcin.m |
+		$PREFER |
+		pic |
+		eqn -d'' |
+		troff $MLIB/tmac.p $IND/mtm.mac - > /dev/null 2> cin.x
+	mkindex cin.x
+	rm xcin.m
+
+pindex:V:
+	mkindex cin.x

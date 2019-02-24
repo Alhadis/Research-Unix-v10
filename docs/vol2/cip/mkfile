@@ -1,0 +1,25 @@
+< ../ADM/defns
+<../index/defns
+
+all:V:	cip.out
+
+pg:	cip.out
+	count cip.ms cip.out
+
+spell:VQ:
+	dospell cip.ms
+
+lp:	cip.out
+	$LP $newprereq && touch $target
+
+cip.out:D:	cip.ms $REF
+	$PREFER cip.ms | pic | tbl | eqn | troff -mpm > $target
+
+index:V:
+	runind cip
+	$PREFER xcip.ms | pic | tbl | eqn | troff -mpm > /dev/null 2>cip.x
+	mkindex cip.x
+	rm xcip.ms
+
+pindex:V:
+	mkindex cip.x

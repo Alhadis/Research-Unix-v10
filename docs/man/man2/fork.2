@@ -1,0 +1,43 @@
+.TH FORK 2
+.CT 2 proc_man
+.SH NAME
+fork \(mi spawn new process
+.SH SYNOPSIS
+.nf
+.B int fork()
+.fi
+.SH DESCRIPTION
+.I Fork
+is the only way new processes are created.
+The new process's image is a copy of
+that of the caller of
+.IR fork .
+The only distinction is
+that the value returned in the old (parent) process
+is the process id
+of the new (child) process,
+while the value returned in the child is 0.
+Process ids range from 1 to 30,000.
+The process id is used by
+.IR wait 
+(see
+.IR exit (2))
+and
+.I kill
+(see
+.IR signal (2)).
+.PP
+Files open before the
+.I fork
+are shared, and have a common read-write pointer.
+This is the way that
+.IR sh (1)
+passes standard input and output
+files and sets up pipes.
+.SH "SEE ALSO"
+.IR exit (2),
+.IR signal (2), 
+.IR sh (1)
+.SH DIAGNOSTICS
+.BR EAGAIN ,
+.BR ENOMEM

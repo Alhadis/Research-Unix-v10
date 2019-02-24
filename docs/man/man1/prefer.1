@@ -1,0 +1,489 @@
+.tr @|
+.TH PREFER 1 
+.CT 1 writing_troff
+.SH NAME
+prefer, pinvert, penter, plook, pconvert \- maintain and use bibliographic references
+.SH SYNOPSIS
+.B prefer
+[
+.I option ...
+]
+.PP
+.B penter
+[
+.I outfile
+]
+.PP
+.B pinvert
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B plook
+[
+.B -p
+.I dbfile
+]
+[
+.I keyword ...
+]
+.PP
+.B pconvert
+[
+.B -d 
+]
+.I file
+.SH DESCRIPTION
+.I Prefer
+is a
+.IR troff (1)
+preprocessor for bibliographic references.
+It copies a document from the standard input
+to the standard output, using a bibliographic database to
+change symbolic references
+into full references ready for typesetting by
+.IR troff (1).
+Although symbolic references are in the style of
+.IR monk (1),
+.I prefer
+does not depend on 
+.I monk.
+The options are:
+.TF dbfile
+.TP
+.B -n
+Format for
+.IR nroff .
+.TP
+.BI -o sortkey
+Under the
+.B @reference_list
+command, sort according to
+.IR sortkey ,
+any combinations of the letters
+.LR a
+(author)
+.LR d
+(date), and
+.LR t
+(title),
+rather than
+in database sequence.
+If
+.I sortkey is
+.LR sort ,
+sort according to the current style.
+.TP
+.BI -p dbfile
+Use
+.I dbfile
+as the bibliographic database (default
+.FR prefer.out ).
+.TP
+.B -r
+Format as a released paper
+(technical memorandum default).
+.TP
+.BI -s style
+Set the formatting 
+.I style ,
+one of
+.LR att 
+(default),
+.LR acm ,
+.LR apa ,
+.LR ieee ,
+.LR lsa ,
+.LR pami ,
+.LR spectrum .
+.PD
+.PP
+.I Prefer
+recognizes the following commands,
+which may appear anywhere in a document.
+Parentheses
+.B ()
+in the commands
+may be replaced by any of
+.B "{} [] <>".
+.TP
+.BI @reference_style( " style arg ..." )
+Switch to a new formatting style.
+All previous references are forgotten
+and a new list of references is begun.
+If
+.I style
+is
+.B same
+the current style remains (but all previous references are forgotten).
+Optional
+.IR args
+are:
+.RS
+.TF sequence
+.TP
+.BR tm
+Format as a technical memorandum.
+.TP
+.B rp
+Format as a released paper.
+.TP
+.B nroff
+Format for
+.I nroff.
+.TP
+.B troff
+Format for
+.I troff.
+.TP
+.B sort
+Print a
+.B @reference_list
+in an order appropriate for the current style.
+.TP
+.B sequence
+Print a
+.B @reference_list
+in database sequence.
+.TP
+.I sortkey
+Print a
+.B @reference_list
+according to the
+.IR sortkey ,
+any combination of the letters
+.LR a ,
+.LR d ,
+.LR t 
+as above.
+.PD
+.RE
+.TP
+.BI @reference( keywords
+.I %ref_fields 
+.IB %flags )
+.br
+Insert a citation mark
+in the current style
+(e.g. [7], \s-2\v'-0.4m'3\v'0.4m'\s+2, (Knuth, 1975)).
+One or more
+.I keywords
+cause selection from the bibliographic database.
+Each
+.B %
+argument must begin a new line.
+.I %ref_field
+lines override information from the database;
+with no
+.I keywords
+a complete reference
+may be given.
+For the form of reference fields, see the output of
+.I penter
+or the paper in Volume 2.
+The following 
+.I %flags
+may modify the citation.
+.RS
+.TF posttextstring
+.TP
+.B %no_author
+Exclude author information.
+.TP
+.B %no_date
+Exclude date from the citation mark.
+.TP
+.B %no_cite
+Omit the entire citation, but include the entry in the final reference list.
+.TP
+.BI %pre_text " string
+Insert
+.I string
+before the citation mark.
+.TP
+.BI %post_text " string
+Insert
+.I string
+after the citation mark
+.PD
+.RE
+.TP
+.BI @reference_include( " dbfile ..." )
+Include the contents of the database(s)
+.I dbfile(s)
+in the list of references,
+treating them as
+.B %no_cite
+entries.
+.TP 
+.B @reference_placement
+Produce a list of all references specified in
+.B @reference
+or
+.B @reference_include
+commands since
+the beginning of the document or the last
+.B @reference_style
+or
+.BR @reference_placement .
+.TP
+.BI @reference_list( " dbfile ..." )
+Format the contents of the database(s)
+.IR dbfile .
+.TP
+.BI @\^reference_database( " dbfile " )
+Switch to database
+.I dbfile
+.PP
+.I Penter
+helps build
+.I prefer
+bibliographic databses.
+It prompts for a reference type,
+and then for admissible attributes, such as author, date, etc.
+A default value proposed in brackets
+.B [] 
+may be accepted by typing a newline,
+skipped by typing spaces before the newline,
+or overridden by typing a new value.
+The character
+.L &
+appended to an attribute causes
+.I penter
+to prompt for the attribute again
+(to enter multiple authors, for example).
+.PP
+The answer
+.L ?
+to the initial prompt gets a list of all reference types.
+The answer
+.L help
+gets a subprompt for a reference type
+whose pertinent attributes will then be listed.
+The answer
+.L ?
+to the subprompt gets attributes for every type.
+.PP
+The attribute
+.B also
+permits one entry to refer to another
+by naming keywords for
+the other reference.
+An entire `also' citation may be included within a
+.B @reference
+thus:
+.br
+.ns
+.IP
+.EX
+%also_begin \fItext\fP
+\fI%ref_fields\fP
+%also_end
+.EE
+.PP
+The attribute
+.B keywords
+prompts for distinguishing keys for the current entry, in addition to
+those already occurring within author, title, etc.
+.PP
+The `reference type' 
+.B quit
+causes
+.I penter 
+to exit, first appending the collected database information to
+.I outfile
+.RF ( prefer.out
+by default).
+.PP
+The `attribute'
+.B ~e
+permits editing of the current reference with the editor
+specified by environment variable
+.BR EDITOR ,
+.IR ed (1)
+by default;
+.B ~v
+gets the editor
+.BR VISUAL ,
+.IR vi (1)
+by default.
+.PP
+.I Pinvert
+creates an inverted index to one or more bibliographic database
+.I files.
+The index is placed in
+.IB file .i ,
+where
+.I file
+is the first input file.
+An associated
+.IB file .h
+contains the names of the input files.
+The options are:
+.TF commmon
+.TP
+.BI -c common
+Do not index words listed in file
+.I common
+(default
+.FR /usr/lib/eign ).
+.TP
+.BI -i ignore
+Do not index information about attributes listed in file
+.I ignore.
+(The default 
+.F /usr/lib/prefer/ignore
+lists
+.BR %volume ,
+.BR %number ,
+.BR %part ,
+.BR %pages ,
+.B %X 
+(location status),
+.B %Y
+(read status),
+.B %Z
+(comment).)
+.TP
+.BI -k i
+Maximum number of keys kept per record (default 100).
+.TP
+.BI -l i
+Maximum length of keywords (default 6, none is less than 3).
+.TP
+.BI -p file
+The basename of the index is
+.I file.
+Prefer will write the index to
+.IB file .i .
+.TP
+.B -v
+Verbose.
+Print statistics.
+.PD
+.PP
+.I Plook
+uses the inverted index to
+retrieve bibliographic records by
+.I keywords
+from the command line
+or the standard input.
+Records that contain all the keywords in the request
+are sent to
+the standard output.
+Option
+.B -p
+is the same as for
+.I pinvert.
+.PP
+.I Pconvert
+converts a 
+.IR refer (1)
+database to 
+.I prefer
+style.
+Under option
+.B -d
+it converts
+.IR refer -style
+commands in a document to
+.I prefer
+style.
+.ig
+.SH EXAMPLES
+.EX
+@\^reference_style<apa>
+A keyword citation@reference<awk tm 1985> in the middle of a line.
+.br
+A complete citation
+.br
+@reference(
+.br
+%post_text , Chapter 6
+.br
+%type book
+.br
+%author Aho, Alfred V.
+.br
+%author Sethi, Ravi
+.br
+%author Ullman, Jeffrey D.
+.br
+%title Compilers, Principles, Techniques, and Tools
+.br
+%publisher Addison-Wesley
+.br
+%address Reading, Massachusetts
+.br
+%date 1986 ).
+.br
+\&.ce
+Bibliography
+@\^reference_placement
+..
+.SH FILES
+.TF /usr/lib/prefer/mypubenter
+.TP
+.F prefer.out
+default database
+.TP
+.F prefer.out.i
+default index file
+.TP
+.F prefer.out.h
+default header file containing names of databases
+.TP
+.F /usr/lib/eign
+default list of common words
+.TP
+.F /usr/lib/prefer/ignore
+default list of 
+.I %ref_fields
+to ignore for indexing
+.TP
+.F /usr/lib/prefer/styles/*
+.I awk
+scripts of formatting instructions for each style
+.TP
+.F /tmp/prefer*
+scratch file
+.TP
+.F /usr/lib/prefer/ptemplate
+reference type definitions, self-describing
+.TP
+.F /usr/lib/prefer/mypubenter
+program executed by penter
+.SH
+.SH SEE ALSO
+M. A. Derr,
+`Formatting References with Prefer',
+this manual, Volume 2
+.br
+.IR refer (1), 
+.IR monk (1), 
+.IR troff (1)
+.SH BUGS
+.I Prefer
+commands don't work immediately after certain
+formatting macros, e.g. .SM, .I, .B.
+.br
+.I Plook
+complains if the first key matches more references than it can store.
+Try rearranging your request so a less common word comes first.
+.br
+.I Pinvert 
+does not record options
+.B -c
+and
+.BR -l .
+If you use them with
+.I pinvert,
+you will have to supply them for
+.I prefer
+and 
+.I plook
+as well.
+.tr @@

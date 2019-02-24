@@ -1,0 +1,63 @@
+.TH CHDIR 2
+.CT 2 dirs
+.SH NAME
+chdir, chroot \(mi change working or root directory
+.SH SYNOPSIS
+.nf
+.B int chdir(dirname)
+.B char *dirname;
+.PP
+.B int chroot(dirname)
+.B char *dirname;
+.fi
+.SH DESCRIPTION
+.I Chdir
+changes the working directory
+of the invoking process to
+.IR dirname ;
+.I chroot
+changes its root directory.
+.PP
+The root directory
+is the starting point
+when searching
+for pathnames
+beginning with
+.LR / .
+The working directory is the starting point
+for pathnames that don't.
+The root directory normally points to the system root.
+.IR Login (8)
+initially sets the working directory
+as specified in the password file.
+.PP
+After
+.IR chroot ,
+it is impossible to name a file
+outside the subtree rooted at the current root, provided
+that the current directory is located within the subtree
+and there are no links pointing outside the subtree
+(except for the entry
+.L \&..
+in the root directory).
+.PP
+.I Chroot
+may only be used by the super-user.
+.SH SEE ALSO
+.IR sh (1), 
+.IR passwd (5)
+.SH DIAGNOSTICS
+.BR EACCES ,
+.BR EFAULT ,
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR ,
+.BR EPERM
+.RI ( chroot
+only)
+.SH BUGS
+Using
+.IR chroot ,
+it is quite easy to fool set-userid programs about
+the contents of the password file (for example).

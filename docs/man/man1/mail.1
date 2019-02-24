@@ -1,0 +1,324 @@
+.TH MAIL 1
+.CT 1 comm_users
+.SH NAME
+mail \(mi  send or receive mail
+.SH SYNOPSIS
+.B mail
+[
+.B -mpren
+]
+[
+.B -f
+.I file
+]
+.PP
+.B mail
+[
+.B -#
+]
+.I person ...
+.PP
+.B mail
+.PP
+.B /usr/lib/upas/gone.fishing
+[
+.I mesg
+]
+.SH DESCRIPTION
+.SS "Printing Mail"
+When
+.I persons
+are not named, 
+.I mail 
+displays your incoming computer mail.
+The options are:
+.TP
+.B -r
+Print mail in first-in, first-out order.
+.PD 0
+.TP
+.B -p
+Print all the mail messages without prompting for commands.
+.TP
+.B -m
+Use a manual style of interface, i.e., print no messages unless directed to.
+.TP
+.BI -f " file"
+Use
+.IR file ,
+e.g.
+.LR mbox ,
+as if it were the mailbox.
+.TP
+.B -e
+Check silently if there is anything in the mailbox;
+return zero (true) if so, non-zero otherwise.
+.TP
+.B -n
+Announce mail to the control terminal when it arrives.
+Do not print mail now.
+.PD
+.PP
+.I Mail
+prints a user's mail, message by message,
+prompting between messages.
+After printing a prompt
+.I mail
+reads a line from the standard input
+to direct disposition of the message.
+Commands, as in
+.IR ed (1),
+are of the form
+.RI `[ range ]
+.I command
+.RI [ arguments ]'.
+The command is applied to each message in the (optional) range
+addressed by message number and/or regular expressions
+in the style of
+.IR regexp (3).
+A regular expression in slashes searches among header
+(postmark) lines; an expression in backslashes searches on
+message content.
+.TP 1.1i
+.I address
+to indicate a single message header
+.PD0
+.TP
+.IB address , address
+to indicate a range of contiguous message headers
+.TP
+.BI g/ expression /
+to indicate all message headers matching the regular
+.I expression.
+.PD
+.PP
+The commands are:
+.PD 0
+.TP 1.1i
+.B b
+Print the headers for the next ten messages.
+.TP
+.B d
+Mark message for deletion on exiting mail.
+.TP
+.B h
+Print the disposition, size in characters, and header line of the message.
+.TP
+.BI m " person ...
+Mail the message to the named
+.I persons.
+.TP
+.BI M " person ...
+Same as
+.BI m
+except that lines typed
+on the terminal (terminated by
+.B EOT or 
+.LR . )
+are prepended to the message.
+.TP
+.B p
+Print message.	An interrupt stops the printing.
+.TP
+.B r
+Reply to the sender of the message.
+.TP
+.B R
+Like 
+.L r
+but with the message
+appended to the reply.
+.TP
+.BI s " file"
+(Save) Append the message to the named
+.I file
+.RL ( mbox
+default, in 
+.B HOME 
+directory if known, see
+.IR environ (5)).
+.TP
+.B q
+Put undeleted mail back in the mailbox and stop.
+.TP
+EOT (control-D)
+Same as 
+.LR q .
+.TP
+.BI w " file
+Same as
+.B s
+with the mail header line(s) stripped.
+.TP
+.B u
+Remove mark for deletion.
+.TP
+.B x
+Exit, without changing the mailbox file.
+.TP
+.B ?
+Print a command summary.
+.TP
+.BI | command
+Run the
+.I command
+with the message as standard input.
+.TP
+.BI ! command
+Escape to the shell to do
+.I command.
+.TP
+.B \&=
+Print the number of the current message.
+.PD
+.ne 5
+.SS "Sending Mail
+.PP
+When
+.I persons
+are named,
+.I mail
+takes the standard input up to an end-of-file,
+or (if input is from a terminal) to a line consisting of a single
+.L .
+and adds it to each
+.I person's
+mailbox.
+The message is automatically postmarked with the
+sender's name and date.
+Lines that look like postmarks are
+prefixed with 
+.LR > .
+.PP
+.I Person
+is a login name on the local system or a
+network name for a remote system; see
+.IR mail (6).
+.PP
+Option
+.B -#
+does not send mail, but reports instead
+how the mail would be sent: the sender,
+the next machine to handle the mail, and the recipient's
+address relative to that machine.
+The report reflects address translation; see
+.IR mail (6)
+and
+.IR upas (8).
+.PP
+.IR Sh (1)
+and
+.IR vismon (9.1)
+have mechanisms for timely notification of incoming mail.
+.SS Mailboxes
+Each user
+owns a mailbox for incoming mail, normally
+.BI /usr/spool/mail/ person.
+.I Mail
+creates mailboxes as necessary, and never removes them.
+Mailboxes are created readable but not writable by others.
+For more privacy, a mailbox's owner may make it unreadable; see
+.IR chmod (2).
+.PP
+If a mailbox contains the sole line
+.IP
+.B Forward to
+.I name,
+.LP
+mail for that mailbox is sent instead to
+.I name.
+.I Name
+may be a list of names.
+If the mailbox contains 
+.IP
+.B Pipe to
+.I command
+.LP
+the mail is sent to the standard input of
+.I command
+instead of being appended to the mailbox.
+The command is run with the userid and
+groupid of the mailbox's owner.
+The command is sent
+.CW SIGHUP
+(see
+.IR signal (2))
+after two minutes.
+(On System V machines, the set userid bit must be set.)
+.PP
+.I Mail
+checks centralized forwarding lists before looking in mailboxes.
+If you have accounts on many machines, but wish to receive
+mail on only one, it is usually easier to register
+in forwarding lists than to install 
+.L Forward to
+in many mailboxes; see
+.IR upas (8).
+.PP
+To use 
+.I mail
+as an answering machine while you are away,
+replace the contents of your mailbox
+with a single line like
+.IP
+.BI "Pipe to /usr/lib/upas/gone.fishing /usr/" you / mesg
+.LP
+The
+.I mesg
+file will be sent (just once) to everyone who
+sends you mail; arriving messages will be collected in
+.B gone.mail
+in your home directory.
+If you do not name a
+.I mesg
+file,
+.FR /usr/lib/upas/gone.msg 
+will be used by default.
+.SH FILES
+.TF /usr/spool/mail/mail.log
+.TP
+.F /usr/spool/mail/mail.log
+mail log file
+.TP
+.F /usr/spool/mail/*
+mailboxes
+.TP
+.F /etc/passwd
+to identify sender and locate persons
+.TP
+.F $HOME/mbox
+saved mail
+.TP
+.F $HOME/dead.letter
+unmailable text
+.TP
+.F /usr/lib/upas/edmail
+the program for editing mail
+.TP
+.F /usr/lib/upas/send
+the program for sending mail
+.TP
+.F /bin/rmail
+a link to
+.FR /bin/mail ,
+used to receive remote mail
+.TP
+.F /usr/lib/upas/gone.msg
+.TP
+.F $HOME/gone.mail
+.TP
+.F $HOME/gone.addrs
+list of senders answered by
+.I gone.fishing
+.SH "SEE ALSO"
+.IR write (1), 
+.IR vismon (9.1), 
+.IR uucp (1), 
+.IR verify (1),
+.IR mail (6), 
+.IR upas (8),
+.IR smtp (8)
+.SH BUGS
+Long headers are truncated for header search.
+.br
+Backslash quoting is impossible in content regular expressions.

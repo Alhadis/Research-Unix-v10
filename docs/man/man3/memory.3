@@ -1,0 +1,118 @@
+.TH MEMORY 3
+.CT 2 mem_man
+.SH NAME
+memccpy, memchr, memcmp, memcpy, memmove, memset \(mi memory operations
+.SH SYNOPSIS
+.nf
+.B char *memccpy(s1, s2, c, n)
+.B char *s1, *s2;
+.B int c, n;
+.PP
+.B char *memchr(s, c, n)
+.B char *s;
+.B int c, n;
+.PP
+.B int memcmp(s1, s2, n)
+.B char *s1, *s2;
+.B int n;
+.PP
+.B char *memcpy(s1, s2, n)
+.B char *s1, *s2;
+.B int n;
+.PP
+.B char *memmove(s1, s2, n)
+.B char *s1, *s2;
+.B int n;
+.PP
+.B char *memset(s, c, n)
+.B char *s;
+.B int c, n;
+.fi
+.SH DESCRIPTION
+These functions operate efficiently on memory areas
+(arrays of characters bounded by a count, not terminated by a null character).
+They do not check for the overflow of any receiving memory area.
+.PP
+.I Memccpy
+copies characters from memory area
+.I s2
+into
+.IR s1 ,
+stopping after the first occurrence of character
+.I c
+has been copied, or after
+.I n
+characters have been copied, whichever comes first.
+It returns a pointer to the character after
+the copy of
+.I c
+in
+.IR s1 ,
+or zero if
+.I c
+was not found in the first
+.I n
+characters of
+.IR s2 .
+.PP
+.PP
+.I Memchr
+returns a pointer to the first
+occurrence of character
+.I c
+in the first
+.I n
+characters of memory area
+.IR s,
+or zero if
+.I c
+does not occur.
+.PP
+.I Memcmp
+compares its arguments, looking at the first
+.I n
+characters only, and returns an integer
+less than, equal to, or greater than 0,
+according as
+.I s1
+is lexicographically less than, equal to, or
+greater than
+.IR s2 .
+.PP
+.I Memcpy
+copies
+.I n
+characters from memory area 
+.I s2
+to
+.I s1.
+It returns
+.I s1.
+.PP
+.I Memmove
+is the same as 
+.I memcpy,
+except it is guaranteed to handle overlapping strings as
+if the move had been made to a temporary and then to the destination.
+.PP
+.I Memset
+sets the first
+.I n
+characters in memory area
+.I s
+to the value of character
+.IR c .
+It returns
+.IR s .
+.SH SEE ALSO
+.IR string (3)
+.SH BUGS
+.I Memcmp
+uses native character comparison, which is signed
+on some machines, unsigned on others;
+thus the sign of the value returned when a
+character has its high-order bit set is implementation-dependent.
+.br
+Thanks to ANSI X3J11 for the 
+.IR memcpy/memmove
+distinction.

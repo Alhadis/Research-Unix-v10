@@ -1,0 +1,37 @@
+cd $1
+for i in *
+do
+	sed -n "
+	/SH *NAM/,/SH/{
+		/SH/d
+		s/, *$//
+		ty
+		:y
+		s/ *\\\\*-.*//
+		tx
+		s/ *\\\\(mi.*//
+		tx
+		s/, */\\
+/g
+		s/\\n\\n/\\
+/g
+		s/\\n/ $i&/g
+		s/\$/ $i/
+		p
+	}
+	/SH *DES/q
+	d
+	:x
+	s/ *\\\\*-.*//
+	s/ *\\\\(mi.*//
+	/^$/d
+	s/, */\\
+/g
+	s/\\n\\n/\\
+/g
+	s/\\n/ $i&/g
+	s/\$/ $i/
+	p
+	q
+" $i
+done | sort -u 

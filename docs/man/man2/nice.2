@@ -1,0 +1,42 @@
+.TH NICE 2
+.CT 2 time_man
+.SH NAME
+nice \(mi set program priority
+.SH SYNOPSIS
+.B void nice(incr)
+.SH DESCRIPTION
+The scheduling
+priority of the process is augmented by
+.IR incr .
+Positive priorities get less
+service than normal.
+Priority 10
+is recommended to users
+who wish to execute long-running programs
+without flak from the administration.
+Priority 19 is recommended for programs
+that should only execute in ``idle'' time.
+.PP
+Only the super-user can effect negative increments.
+Priorities less than \-20
+(most urgent)
+are treated as \-20.
+Priorities greater than 19
+are treated as 19.
+.PP
+The priority of a process is
+passed to a child process by
+.IR fork (2).
+For a privileged process to return to normal priority
+from an unknown state,
+.I nice
+should be called successively with arguments
+\-40
+(goes to priority
+\-20
+because of truncation),
+then 20
+(to get to 0).
+.SH "SEE ALSO"
+.IR nice (1),
+.IR fork (2)

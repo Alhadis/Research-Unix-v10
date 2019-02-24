@@ -1,0 +1,146 @@
+.TH MLD 9.1
+.SH NAME
+mld \- MC68000 link editor (loader)
+.SH SYNOPSIS
+.B mld
+[ option ] ... file ...
+.SH DESCRIPTION
+.I Mld
+combines several Motorola 68000
+object programs into one, resolves external
+references, and searches libraries.
+In the simplest case several object
+.I files
+are given, and
+.I mld
+combines them, producing
+an object module which can be either executed or
+become the input for a further
+.I mld
+run.
+(In the latter case, the
+.B \-r
+option must be given
+to preserve the relocation bits.)
+The output of
+.I mld
+is left on
+.BR a.out .
+This file is made executable
+only if no errors occurred during the load.
+.PP
+The argument routines are concatenated in the order
+specified.
+The entry point of the output is the
+beginning of the first routine.
+.PP
+A library is a collection of object modules gathered into
+a file by
+.I ar (1).
+If any argument is a library, it is searched exactly once
+at the point it is encountered in the argument list.
+Only those routines defining an unresolved external
+reference are loaded.
+If a routine from a library
+references another routine in the library,
+the referenced routine must appear after the
+referencing routine in the library.
+Thus the order of programs within libraries
+may be important.
+.PP
+The symbols `etext', `edata' and `end'
+are reserved, and if referred to,
+are set to the first location above the program,
+the first location above initialized data,
+and the first location above all data respectively.
+It is erroneous to define these symbols.
+.PP
+.I Mld
+understands several options.
+Except for
+.BR \-l ,
+they should appear before the file names.
+.TP
+.BI \-b
+relocate the program so its
+first instruction is at the absolute position indicated by the
+decimal
+.I address
+after the
+.B \-b
+option.
+.TP
+.B \-B
+Similar to
+.BR \-b ,
+but only set the base address for the BSS segment.
+This option is usually used in conjunction with
+.B \-b
+when loading programs to run from ROM.
+.TP
+.B  \-d
+Force definition of common storage
+even if the
+.B \-r
+flag is present.
+.TP 
+.BI \-l x
+This
+option is an abbreviation for the library name
+.RI `/usr/lib/lib x .a',
+where
+.I x
+is a string.
+If that does not exist,
+.I mld
+tries
+.RI `/usr/jerq/lib/lib x .a'
+A library is searched when its name is encountered,
+so the placement of a
+.B  \-l
+is significant.
+.TP 
+.B  \-o
+The
+.I name
+argument after
+.B \-o
+is used as the name of the
+.I mld
+output file, instead of
+.BR a.out .
+.TP 
+.B  \-r
+Generate relocation bits in the output file
+so that it can be the subject of another
+.I mld
+run.
+This flag also prevents final definitions from being
+given to common symbols,
+and suppresses the `undefined symbol' diagnostics.
+.TP
+.B \-s
+Remove the symbol table and relocation symbols to
+save space in the resulting binary.
+.TP
+.B \-R
+Similar to
+.BR \-r ,
+but flag an error if there are undefined symbols.
+.TP
+.B \-M
+Set the resulting a.out's magic number to 0406,
+to signify a binary runnable under
+.IR mpx (1).
+.TP
+.B \-v
+Generate copious debugging information on standard output.
+.SH FILES
+.ta \w'/usr/jerq/lib/lib*.a\ \ 'u
+/usr/jerq/lib/lib*.a	libraries
+.br
+/usr/lib/lib*.a	more libraries
+.br
+a.out	output file
+.SH "SEE ALSO"
+ld(1), mcc(1), ar(1)

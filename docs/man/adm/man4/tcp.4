@@ -1,0 +1,193 @@
+.TH TCP 4
+.CT comm_mach
+.SH NAME
+tcp, tcp_ld \- DARPA transmission control protocol
+.SH SYNOPSIS
+.B #include <sys/inio.h>
+.br
+.B #include <sys/inet/tcp_user.h>
+.SH DESCRIPTION
+The
+.I tcp_ld
+line discipline
+and the
+.F /dev/tcp*
+devices together implement the DARPA TCP circuit protocol.
+They are normally used through
+.IR tcpmgr (8)
+and the routines in
+.IR ipc (3).
+.PP
+One instance of
+.I tcp_ld
+should be pushed on an IP device stream,
+usually
+.FR /dev/ip6 ;
+see
+.IR ip (4).
+Thereafter,
+data written on the
+.I tcp
+devices is turned into IP packets
+written to the IP device,
+and vice versa.
+.PP
+Different
+.I tcp
+devices represent different software channels.
+Files with odd minor device numbers
+are for placing calls;
+while such a file is open,
+it may not be opened again.
+Files with even device numbers
+receive calls.
+.PP
+To place a call,
+open an unused odd-numbered
+.I tcp
+file;
+write a
+.B struct tcpuser
+describing the address to be called;
+and read a
+.B struct tcpuser
+for status.
+The structure is defined in
+.BR <sys/inet/tcp_user.h> :
+.PP
+.EX
+struct tcpuser {
+	int code;
+	tcp_port lport, fport;
+	in_addr laddr, faddr;
+	int param;
+};
+
+#define TCPC_LISTEN	1
+#define TCPC_CONNECT	2
+
+#define TCPC_OK		3
+#define TCPC_SORRY	4	/* unknown error */
+#define TCPC_BADDEV	5	/* tcp device is bad */
+#define TCPC_NOROUTE	6	/* no routing to dest */
+#define TCPC_BADLOCAL	7	/* bad local address */
+#define TCPC_BOUND	8	/* address already bound */
+
+#define SO_KEEPALIVE	0x2	/* generate keepalives */
+.EE
+.PP
+In the structure describing the call,
+.B code
+should be
+.BR TCPC_CONNECT ;
+.B faddr
+and
+.B fport
+are the destination IP address and TCP port number;
+.B laddr
+is the IP address associated with a local IP interface,
+or
+.B INADDR_ANY
+to let the system pick;
+.B lport
+is the local TCP port number,
+or
+0
+to let the system pick;
+.B param
+is 0 or
+.BR SO_KEEPALIVE .
+.PP
+In the structure returned for status,
+.B code
+is
+.B TCPC_OK
+if the call completed correctly;
+henceforth data written to and read from the file
+is transported on the circuit.
+Other codes mean the circuit was not set up.
+.PP
+To listen for incoming calls,
+open an odd-numbered device
+and write a
+.B struct tcpuser
+with
+.B code
+set to
+.BR TCPC_LISTEN ;
+.B laddr
+set to the local IP address for which calls should be taken,
+or
+.B INADDR_ANY
+to catch any calls not explicitly taken by another listener;
+.B lport
+set to the port on which to listen,
+or 0 for any port;
+and
+.B param
+set to 0.
+Thereafter,
+reads return successive
+.B tcpuser
+structures,
+each describing a new call;
+.B faddr
+and
+.B fport
+identify the caller,
+.B laddr
+and
+.B lport
+the assigned local address.
+The local
+.I tcp
+device number,
+.I n,
+assigned to the call
+is returned in
+.BR param .
+The corresponding device,
+.BI /dev/tcp n,
+should be opened;
+data read and written there is transported by the circuit.
+.PP
+Several
+.IR ioctl (2)
+calls, defined in
+.BR <sys/inio.h> ,
+apply to
+.I tcp
+devices:
+.nr Pw \w'\f5TCPIOMAXSEG 'u
+.TP \n(Pwu
+.B TCPIOHUP
+When the remote end of the circuit is disconnected,
+send signal
+.B SIGHUP
+to the local process group associated with the stream.
+.TP
+.B TCPMAXSEG
+The third argument points to an integer
+giving the maximum segment size for this connection:
+the greatest number of bytes to be packed into one IP packet.
+.TP
+.B TCPGETADDR
+The third argument points to a
+.BR "struct tcpuser" ;
+fill in
+.BR laddr ,
+.BR lport ,
+.BR faddr ,
+and
+.BR fport
+with the local and foreign addresses associated with the circuit.
+.SH FILES
+.F /dev/tcp??
+.br
+.F /dev/ip6
+.SH SEE ALSO
+.IR ip (4),
+.IR internet (3),
+.IR tcpmgr (8)
+.br
+DARPA standards RFC 793, 1122

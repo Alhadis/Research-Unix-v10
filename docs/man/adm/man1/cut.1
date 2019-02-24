@@ -1,0 +1,136 @@
+.TH CUT 1
+.CT 1 files
+.SH NAME
+cut, paste \- rearrange columns of data
+.SH SYNOPSIS
+.B cut 
+.BI -c list
+[
+.I file ...
+]
+.PP
+.B cut
+.BI -f list
+[
+.BI -d char
+]
+[
+.I file ...
+]
+.PP
+.B paste
+[
+.B -s
+]
+[
+.BI -d chars
+]
+.I file ...
+.SH DESCRIPTION
+.I Cut
+selects fields from each line of the
+.I files
+(standard input default).
+In data base parlance, it
+projects a relation.
+The fields
+can be fixed length,
+as on a punched card (option
+.BR -c ),
+or be marked with a delimiter character (option
+.BR -f ).
+.PP
+The meanings of the options follow.
+Elements of a 
+.I list
+are integers separated by commas, or by
+.B -
+to indicate a range, for example
+.L 1,3-5,7.
+.TF -d\ char\ \ 
+.PD
+.TP
+.BI -c list
+The
+.I list
+specifies character
+positions.
+.TP
+.BI -f list
+The
+.I list
+specifies field numbers.
+.TP
+.BI -d char
+The character
+is the delimiter for option
+.BR -f .
+Default is tab.
+.TP
+.B -s
+Suppress lines with no delimiter characters.
+Normally such lines pass through untouched under option
+.BR -f .
+.PP
+.I Paste
+concatenates corresponding lines of the input
+.I files
+and places the result on the standard output.
+The file name
+.L -
+refers to the standard input.
+Lines are glued together with
+characters taken circularly from the set
+.I chars.
+The set may contain the special escape sequences
+.B \en
+(newline),
+.B \et
+(tab),
+.B \e\e
+(backslash), and
+.B \e0
+(empty string, not a null character).
+The options are
+.TP
+.BI -d chars
+The output separator characters.
+Default is a tab.
+.TP
+.B -s
+Paste together lines of one file,
+treating every line as if it came from a distinct input.
+.SH EXAMPLES
+.TP
+.L
+cut -d: -f1,3 /etc/passwd
+Print map from login names to userids, see
+.IR passwd (5).
+.TP
+.L
+NAME=`who am i | cut -f1 -d" "`
+Set
+.L NAME
+to current login name (subtly different from
+.IR getuid (1)).
+.PP
+.EX
+ls | paste - - - -
+ls | paste -s '-d\et\en' -
+.EE
+.ns
+.IP
+4-column and 2-column file listing
+.SH SEE ALSO
+.IR gre (1), 
+.IR awk (1), 
+.IR sed (1), 
+.IR pr (1), 
+.IR column (1)
+.SH BUGS
+.I Cut
+should handle disordered lists.
+.br
+In default of file names,
+.I paste
+should read the the standard input.

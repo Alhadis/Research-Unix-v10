@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	guide.out
+
+pg:	guide.out
+	count guide.ms guide.out
+
+spell:VQ:
+	dospell guide.ms
+
+lp:	guide.out
+	$LP $newprereq && touch $target
+
+guide.out:D:	guide.ms $REF
+	$PREFER guide.ms | eqn | troff -mpm > $target
+
+index:V:
+	runind guide
+	$PREFER xguide.ms | eqn | troff -mpm > xguide.out 2>guide.x
+	mkindex guide.x
+	rm xguide.ms
+
+pindex:V:
+	mkindex guide.x

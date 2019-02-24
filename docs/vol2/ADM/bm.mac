@@ -1,0 +1,21 @@
+.de IB	\" Begin a Picture
+.	\" $1=file(page) $2=height $3=width $4=position
+.	\" Height, width, position, and offset are for the frame, flags is for
+.	\" the picture. The position flag should be l, c, or r. Omitting the
+.	\" position argument is also allowed for compatibility with the original
+.	\" version of the macro.
+.BB
+.nr z2 \\$2u
+.nr z3 \\$3u
+.if '\\$4'l' .nr z5 0u
+.if '\\$4'c' .nr z5 (\\n(.lu-\\n(z3u)/2u
+.if '\\$4'r' .nr z5 \\n(.lu-\\n(z3u
+.	\" $1=file(page) $2=height,width,yoff,xoff $3=flags
+.X COORD \\$1
+\\X'PI:\\n(.o:\\n(.i:\\n(.l:\\n(.t:\\$1:\\n(z2u,\\n(z3u,0u,\\n(z5u:\\$4:'
+.SP \\n(z2u
+.BB
+.rr z5
+.rr z2
+.rr z3
+..

@@ -1,0 +1,78 @@
+.TH CIRCLE 9.3
+.CT 2 graphics
+.SH NAME
+circle, disc, arc, ellipse, eldisc, elarc \- circle-drawing functions
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B void circle(bp, p, r, f)
+.B "Bitmap *bp; Point p; int r; Code f;
+.PP
+.B void disc(bp, p, r, f)
+.B "Bitmap *bp; Point p; int r; Code f;
+.PP
+.B void arc(bp, p0, p1, p2, f)
+.B "Bitmap *bp; Point p0, p1, p2; Code f;
+.PP
+.B void ellipse(bp, p, a, b, f)
+.B "Bitmap *bp; Point p; int a, b; Code f;
+.PP
+.B void eldisc(bp, p, a, b, f)
+.B "Bitmap *bp; Point p; int a, b; Code f;
+.PP
+.B "void elarc(bp, p0, a, b, p1, p2, f)
+.B "Bitmap *bp; Point p0, p1, p2; int a, b; Code f;
+.SH DESCRIPTION
+.I Circle
+draws the best approximate circle of radius
+.I r
+centered at Point
+.I p
+in the Bitmap
+.I bp
+with Code
+.IR f .
+The circle is guaranteed to be symmetrical about the horizontal,
+vertical and diagonal axes.
+.I Disc
+draws the corresponding disc.
+.PP
+.I Arc
+draws a circular arc centered on
+.IR p0 ,
+traveling counter-clockwise
+from
+.I p1
+to the point on the circle closest to
+.IR p2 .
+.PP
+.I Ellipse
+draws an ellipse centered at
+.I p
+with horizontal semi-axis
+.I a
+and vertical semi-axis
+.I b
+in Bitmap
+.I bp
+with Code
+.IR f .
+.IR Eldisc
+draws the corresponding elliptical disc.
+.I Elarc
+draws the corresponding elliptical arc, traveling
+counter-clockwise from the ellipse point closest to
+.I p1
+to the point closest to
+.IR p2 .
+(Beware the regrettable difference between the calling conventions for
+.I arc
+and
+.IR elarc .)
+.SH BUGS
+When an endpoint of an arc lies near a tail of
+an ellipse so thin that its ends degenerate into
+straight lines,
+.I elarc
+does not try to distinguish which side of the tail the
+point belongs on.

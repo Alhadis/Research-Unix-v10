@@ -1,0 +1,99 @@
+.TH GETOPT 3
+.CT 2 data_man
+.SH NAME
+getopt \(mi get option letter from argv
+.SH SYNOPSIS
+.nf
+.B int getopt (argc, argv, optstring)
+.B int argc;
+.B char **argv;
+.B char *optstring;
+.PP
+.B extern char *optarg;
+.B extern int optind;
+.fi
+.SH DESCRIPTION
+.I Getopt
+returns the next option letter in
+.I argv
+that matches a letter in
+.IR optstring .
+.I Optstring
+is a string of recognized option letters;
+if a letter is followed by a colon, the option
+is expected to have an argument, which may or
+may not be separated from it by white space.
+.I Optarg
+is set to point to the start of the option argument
+on return from
+.IR getopt .
+.PP
+.I Getopt
+places in
+.I optind
+the
+.I argv
+index of the next argument to be processed.
+Since
+.I optind
+is external, it is normally initialized to zero
+automatically before the first call to
+.IR getopt .
+.PP
+Option letters appear in nonempty clusters preceded by 
+.BR - .
+When all options have been processed
+(i.e., up to the first non-option argument),
+.I getopt
+returns \-1.
+The special option
+.L --
+may be used to delimit the end of the options;
+\-1
+will be returned, and
+.L --
+will be skipped.
+.SH EXAMPLES
+This fragment processes arguments
+for a command that can take option
+.B a
+and option
+.BR f ,
+which requires an argument.
+.PP
+.EX
+.ta \w'12345678'u +\w'12345678'u
+main (argc, argv) char **argv;
+{
+	int c, errflg;
+	extern int optind;
+	extern char *optarg, *ifile;
+	while((c = getopt(argc, argv, "af:")) != -1)
+		switch (c){
+		case 'a':  aflg=1; break;
+		case 'f':  ifile = optarg; break;
+		case '?':  errflg=1; break;
+		}
+	if(errflg){
+		fprintf(stderr, "usage: . . . ");
+		exit(2);
+	}
+	for( ; optind < argc; optind++){
+		if(access(argv[optind], 4)){
+			...
+		}
+	}
+	...
+}
+.EE
+.SH SEE ALSO
+.IR getflags (3)
+.SH DIAGNOSTICS
+.I Getopt
+prints an error message on
+.I stderr
+and returns a
+question mark
+.L ?
+when it encounters an option letter not included in
+.IR optstring .

@@ -1,0 +1,149 @@
+.TH MAPLE 1  "02 June 1987"  "University of Waterloo"
+.ds ]W "Symbolic Comp. Group
+.SH NAME
+maple \- interactive symbolic algebraic program
+.SH SYNOPSIS
+.B maple
+[
+.B \-b
+libname
+] [
+.B \-q
+] [
+.B \-s
+]
+\" If a constant width font is used, set cW to 1.
+\" Other set cW to 0 and use .cs to set constant spacing for examples
+.ie \w'M'>\w'.' .nr cW 0
+.el             .nr cW 1
+\"
+.SH DESCRIPTION
+Initiate a session with the
+.I maple
+symbolic algebraic program.
+Expressions are read from standard input and the results are produced
+in the standard output file as soon as each input expression has been
+read.
+Maple has the ability to algebraically manipulate unbounded integers,
+exact rational numbers, real numbers with arbitrary precision, symbolic
+formulae, polynomials, sets, lists, and equations.
+It can solve systems of equations, differentiate formulae, and integrate
+formulae.
+In the following example from a Maple session, Maple's output
+is shown to the right of the input expressions.
+.sp
+.ps 9
+.vs 10
+.nf
+.if !\n(cW .cs R 18
+.in +2
+p:=x^2\-x\-2;
+                                      2
+                                p := x  \- x \- 2
+
+q:=(x+1)^2;
+                                             2
+                                 q := (x + 1)
+
+s:=p/q;
+                                      2
+                                     x  \- x \- 2
+                               s := \-\-\-\-\-\-\-\-\-\-\-\-
+                                             2
+                                      (x + 1)
+
+diff(s,x); # differentiate with respect to x
+
+                                           2
+                            2 x \- 1       x  \- x \- 2
+                          \-\-\-\-\-\-\-\-\-\- \- 2 \-\-\-\-\-\-\-\-\-\-\-\-
+                                  2               3
+                           (x + 1)         (x + 1)
+
+normal(s);
+                                     x \- 2
+                                    \-\-\-\-\-\-\-
+                                     x + 1
+
+Digits := 47;
+                                  Digits := 47
+
+x := 3^50;
+                         x := 717897987691852588770249
+
+s;
+                            717897987691852588770247
+                           \-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-
+                            717897987691852588770250
+
+evalf(s);
+                .99999999999999999999999582113329270438496099068
+
+quit;
+
+.in -2
+.if !\n(cW .cs R
+.fi
+.ps 10
+.vs 12
+
+If there is a system-wide maple initialization file with the name
+.I init
+under the src subdirectory of the Maple library, then this file
+is read before the session starts.
+In addition, if there is a maple initialization file named
+.I .mapleinit
+in the user's home directory, this file is read next.
+If the \fI\-s\fR (suppress initialization)
+option is specified, Maple will forego reading
+any initialization file when initiating a session.
+
+
+If the
+.I \-b
+(library) option is used,
+then
+.I pathname
+should be the pathname of a directory which contains the Maple library.
+This is used to initialize the value of the Maple  variable `libname'.
+By default, `libname' is initialized with the pathname /u/maple/lib.
+Some sites may install a maple shell script which uses the \fI\-b\fR
+option to redefine the library pathname to be whatever is appropriate
+for those sites, e.g.,
+.nf
+        maple \-b /usr/public/waterloo/maple/lib  $*
+.fi
+
+The \fI\-q\fR (quiet) option will suppress the printing of Maple's
+startup logo, various informational messages (words used messages
+and garbage collection messages), and the signoff message.
+Maple is better suited for use as a filter when these messages are
+suppressed.
+.SH "SEE ALSO"
+.I "Maple: A Sample Interactive Session"
+issued by the Symbolic Computation Group as
+Research Report CS-85-01 available from the Department of Computer
+Science, University of Waterloo,
+.br
+.I "Maple User's Guide"
+by B.W. Char et al, Watcom Publications Limited, Waterloo, Ontario (1985).
+.br
+.IR mint (1)
+.SH FILES
+\&.mapleinit
+.br
+/usr/maple/lib \- Maple library (Pathname subject to change at
+each installation.)
+.SH AUTHOR
+Symbolic Computation Group, University of Waterloo
+.SH "FOR HELP"
+At Waterloo, there is the newsgroup uw.maple which contains broadcasts
+and discussions which would be of interest to general Maple users.
+You should subscribe to this newsgroup if you intend to use Maple in
+more than just a casual manner.
+Users are encouraged to post their questions regarding Maple to this
+newsgroup if they feel that their enquiries are of a general nature.
+Replies will be posted to the newsgroup for all to see.
+If you have a question that you think is of a very specific nature and
+not of interest to others, you may send a mail message to
+maple_help@watmum.

@@ -1,0 +1,273 @@
+.TH PICO 1
+.CT 1 editor graphics
+.SH NAME
+pico \(mi graphics editor
+.SH SYNOPSIS
+.B pico
+[
+.B -mfto
+]
+[
+.B -wN -hN
+]
+[
+.I files
+]
+.SH DESCRIPTION
+.I Pico
+is an interactive editor for grey-scale and color images.
+Editing operations are expressed in a C-like style.
+The options are
+.TP \w'\f5slower\ 'u
+.BI -m n
+Display on a Metheus frame buffer,
+.BI  /dev/om n.
+A missing
+.I n
+is taken to be 0.
+.TP
+.B -f
+Display on an Itoh frame buffer,
+.BR /dev/iti0 .
+.TP
+.B -t
+Show parse trees for expressions; toggled by the interactive command
+.LR tree .
+.TP
+.B -o
+Turn off the optimizer; toggled by
+.LR optim .
+.PP
+Files are referred to in expressions as
+.BI $ n,
+where 
+.I n
+is the basename or an integer,
+see
+.B f
+below.
+Otherwise file names are given as strings in double quotes,
+which may be elided from names that do not contain
+.LR / .
+.LP
+In general, the result of the previous edit
+operation is available under the name
+.LR old .
+The destination
+of the current operation is called
+.LR new .
+.LP
+.I Pico
+handles images with coordinates (0,0) in the upper left hand corner
+and
+.RB ( X , Y )
+in the lower right.
+Brightnesses range from 0 (black) to 
+.BR Z 
+(white, 
+.BR Z =255).
+The quantities
+.BR X , Y , Z
+may be used in expressions and set by options:
+.TP \w'\f5slower\ 'u
+.BI -w " n
+Set the width 
+.B X
+of the work area to
+.I n
+pixels, default 511.
+.TP
+.BI -h " n
+Set the height
+.BR Y ,
+default 511.
+.PP
+.LP
+.I Pico
+reads commands from the standard input:
+.TP
+.B help
+Give a synopsis of commands and functions.
+.TP
+.BI a " file
+.br
+.ns
+.TP
+.BI a " x y w d file"
+Attach a new file.
+Optional parameters
+.I x
+and 
+.I y
+give the origin of a subrectangle in the work buffer;
+.I w
+and
+.I d
+define width and depth of the image as stored in the file.
+.TP
+.BI d " file"
+.PD0
+.TP
+.BI "d $" n
+Delete (close) the file.
+.PD
+.TP
+.BI h " file"
+Read header information from the file.
+.TP
+.BI r " file"
+Read commands from
+.I file
+as if they were typed on the terminal.
+Can not be done recursively.
+.TP
+.BI w " file
+.br
+.ns
+.TP
+.BI "w - " file
+Write the file, restricted to the current window
+(see below).
+Use
+.I pico
+format by default.
+With a minus flag,
+write a headerless image
+(red channel only, if picture is colored); see also
+.IR picfile (5).
+.TP
+.B nocolor
+.PD0
+.TP
+.B color
+Set the number of channels updated in the work buffer to 1
+(black and white) or 3 (red, green, blue).
+.PD
+.TP
+.BI window " x y w d"
+Restrict the work area to a portion of the
+work buffer with the upper left corner at
+.RI ( x,y ),
+and the lower right at
+.RI ( x+w, y+d ).
+.TP
+.BI get " file"
+.br
+.ns
+.TP
+.BI "get $" n
+The picture file is (re)opened and read into the work area.
+.TP
+.B f
+Show names, sizes, and file numbers of open files.
+.TP
+.B faster
+.br
+.ns
+.TP
+.B slower
+In slow display the screen is updated once per pixel computed;
+in fast display (default), once per line of pixels.
+.TP
+.BI show " name"
+Show symbol table information, such as the current value of variables.
+If 
+.I name
+is omitted, the whole symbol table is shown.
+.TP
+.B functions
+Print information on all user defined and builtin functions.
+.TP
+.BI def " name \fB(\fI args \fB) {\fI program \fB}"
+Define a function, with optional arguments.
+Variables are declared in these styles:
+.PD0
+.IP
+.EX
+int var;
+global int var;
+array var[N];
+global array var[N];
+.EE
+.PD
+.TP
+.BI x " expr"
+Execute the expression in a default loop over all pixels in the
+current window.
+.TP
+.BI "x {" program " }"
+Execute the
+.I program.
+The program must define its own control flow.
+.TP
+.B q
+Quit.
+.SH EXAMPLES
+.TP
+.L "pico -w1280 -h1024 -m5"
+Get a work buffer that exactly fills a Metheus screen.
+.TP
+.L
+a "/tmp/images/rob"
+Make a file accessible.
+It will be known henceforth as
+.LR $rob .
+.PP
+.EX
+.L a 1280 0 3072 512 junk
+.L get $junk
+.EE
+.PD0
+.IP
+Direct attention to a 512\(mu512 subrectangle in the middle
+of a 3072\(mu512 image stored in a file named junk,
+and read it into the workspace.
+.LP
+.EX
+x new = Z - old
+x new[x,y] = Z - old[x,y]
+x {for(x=0; x<=X; x++) for(y=0; y<=Y; y++) new[x,y] = Z-old[x,y];}
+.EE
+.PD0
+.IP
+Three ways to make a negative image.
+Note the defaults on control flow
+and array indexing.
+.PD
+.LP
+.EX
+window 0 0 256 256
+x new = $1[xclamp(x*2), yclamp(y*2)]
+.EE
+.PD0
+.IP
+Scale a 512\(mu512 image to one quarter of the screen.
+The built-in functions
+.L xclamp
+and
+.L yclamp
+guard against indexing out of range.
+.PD
+.LP
+.EX
+x { printf("current value of %s[%d]:\et%d\en", "histo", 128, hist[128]); }
+.EE
+.PD0
+.IP
+Turn off the default control flow (curly braces) and use the
+builtin function printf to check the value of an array element.
+.SH "SEE ALSO"
+.IR bcp (1),
+.IR imscan (1),
+.IR flicks (9.1), 
+.IR rebecca (9.1), 
+.IR picfile (5), 
+.IR flickfile (9.5)
+.br
+G. J. Holzmann,
+`PICO Tutorial',
+this manual, Volume 2
+.br
+G. J. Holzmann,
+.I Beyond Photography\(emthe Digital Darkroom,
+Prentice-Hall, 1988

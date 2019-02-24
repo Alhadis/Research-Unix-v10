@@ -1,0 +1,1409 @@
+...\" Thu May 22 16:54:35 EDT 1986
+.de UC
+\&\\$3\s-2\\$1\s+2\&\\$2
+..
+.fp 1 PA
+.fp 2 PI
+.fp 3 PB
+.nr dT 8	\" tab stops this far apart in .P1/.P2
+.hy 14		\" set hyphenation: 2=not last lines; 4= no -xx; 8=no xx-
+.\"
+.\"
+.ND  "Revised, March, 1982"
+.TR 97
+....TM 80-1272-8 39199 39199-11
+.TL
+A Typesetter-independent TROFF
+.AU "MH 2C-518" 6021
+Brian W. Kernighan
+.AI
+.MH
+.AB
+.PP
+Although 
+.UC TROFF
+has been the mainstay of document preparation
+at Bell Labs for several years,
+it has heretofore been very dependent
+on one particular typesetter,
+the Graphic Systems CAT.
+.PP
+This paper describes conversion of 
+.UC TROFF
+to deal with a wide class of typesetters.
+.PP
+Some of these typesetters provide many more facilities
+than the CAT does.
+Typical extra features include
+more sizes and fonts,
+larger alphabets,
+and the ability to
+create new characters
+and to draw graphical objects.
+The paper describes the enhancements that permit
+.UC TROFF
+to take advantage of some
+of these capabilities as well.
+.AE
+.CS 12 1 13 0 0 2 
+.NH
+A Bit of History
+.LP
+.QS
+``I will be speaking today about work in progress,
+instead of completed research;
+this was not my original intention when I chose the subject
+of this lecture,
+but the fact is I couldn't get my
+computer programs working in time.''
+.sp .5
+.ta 4i
+	Donald E. Knuth
+.[
+%A Donald E. Knuth
+%T Mathematical typography
+%J Bulletin (New Series) of the American Mathematical Society
+%V 1
+%N 2
+%D 1979
+.]
+.QE
+.PP
+The
+.UC TROFF
+text formatter
+.[
+%A J. F. Ossanna
+%T NROFF/TROFF User's Manual
+%D October 1976
+%R Comp. Sci. Tech. Rep. 54
+%I Bell Laboratories
+%C Murray Hill, NJ
+.]
+was originally written by the late Joe Ossanna
+in about 1973, in assembly language for the PDP-11.
+.UC NROFF , (
+which drives terminals instead of a typesetter,
+is essentially identical to
+.UC TROFF ;
+we will use
+.UC TROFF '' ``
+as a generic term hence\%forth.)
+It was rewritten in C around 1975,
+and underwent slow but steady evolution until
+Ossanna's death late in 1977.
+.PP
+In spite of some obvious deficiencies
+\(em a rebarbative input syntax,
+mysterious and undocumented properties in some areas,
+and a voracious appetite for computer resources
+(especially when used with macro packages and preprocessors like
+.UC EQN
+and
+.UC TBL )
+\(em
+.UC TROFF
+has been the basis of document preparation at
+Bell Labs for some years,
+and is likely to remain so for years to come.
+.PP
+Early in 1979,
+the Computing Science Research Center
+decided to acquire a new typesetter,
+primarily because of our interests in typesetting graphics.
+At the same time,
+the Murray Hill Computer Center
+began to investigate the possibility of replacing their
+family of aging CAT's
+with a new, high-performance typesetter,
+simply to keep up with their rapidly expanding load.
+.PP
+My first thought
+(a thought shared by many others)
+was that this would be a glorious opportunity
+to replace 
+.UC TROFF
+with a new formatting language:
+better designed,
+easier to work with,
+and of course much faster.
+This remains a desirable goal,
+but, after quite a bit of thought spread over several
+years,
+I am still not really much closer to a better design,
+let alone an implementation.
+Furthermore,
+a great deal of software depends on 
+.UC TROFF 
+\(em
+the preprocessors, the macro packages,
+and of course all of their documentation and our accumulated expertise.
+Tossing this aside is not something to be done lightly.
+.PP
+Accordingly, in the spring of 1979,
+I set about to modify
+.UC TROFF
+so that it would run hence\%forth without change
+on a variety of typesetters.
+The ground rule was that
+.UC TROFF
+should retain its current specifications,
+so that existing software like
+.UC EQN ,
+.UC TBL
+and the macro packages would continue to work with it.
+.PP
+Since much of the rest of this paper
+is encrusted with details that could appeal only to
+maintainers or masochists,
+I will give here a brief summary of what has been done.
+Non-specialists can stop reading at the end of the section.
+.PP
+.UC TROFF
+is highly dependent on the Graphic Systems CAT typesetter,
+not just in details of code
+but also in many aspects of its design.
+The language design issues have been largely ignored
+(few are truly fundamental),
+while the code has been modified
+so that dependencies are either eliminated
+or at least parameterized.
+.PP
+.UC TROFF
+originally had parameters of the typesetter
+compiled into the code,
+often in non-obvious ways.
+The new version reads a parameter file
+each time it is invoked, to
+set values for machine resolution,
+legal sizes, fonts and characters,
+character widths
+and the like.
+.PP
+.UC TROFF
+output used to be binary device codes
+specific to the CAT and arcane beyond description.
+The output of the new version is
+.UC ASCII
+characters
+in a simple and (I hope) universal language
+that describes where each character is to be placed
+and in what size and font.
+A post-processor must be written for each typesetter
+to convert this typesetter-independent language
+into specific codes for that typesetter.
+Post-processors currently exist
+for the CAT,
+the Mergenthaler Linotron 202,
+the Autologic APS-5,
+the Tektronix 4014 terminal,
+The Imagen Canon laser printer,
+Versatec printers,
+and a bit-map terminal.
+New ones can generally be written in less than a day;
+they share much of their code with previous ones.
+.PP
+The new output language contains information that is not readily
+identifiable in the older output.
+Most notably, the beginning of each page and line
+is marked,
+so post-processors can do device-specific optimizations
+such as sorting the data vertically or printing it boustrophedonically,
+independently of
+.UC TROFF .
+.PP
+Since actual output is done by a post-processor,
+not
+.UC TROFF ,
+new capabilities for graphics have been easy to add.
+.UC TROFF
+now recognizes commands for drawing diagonal lines,
+circles, ellipses, circular arcs,
+and quadratic B-splines;
+these are used in the
+PIC
+.[
+%A Brian W. Kernighan
+%T PIC \(em A Crude Graphics Language for Typesetting
+%R Comp. Sci. Tech. Rep. 85
+%I Bell Laboratories
+%C Murray Hill, NJ
+%O Also in SIGPLAN Symposium on Text Manipulation, Portland, June 1981.
+.]
+and
+IDEAL
+.[
+%A Christopher J. Van Wyk
+%T A Graphics Typesetting Language
+%R SIGPLAN Symposium on Text Manipulation, Portland
+%D June, 1981
+.]
+languages.
+.PP
+A number of limitations have been eased or eliminated.
+A document may have an arbitrary number of fonts on any page
+(if the output device permits it, of course).
+Fonts may be accessed merely by naming them;
+``mounting'' is no longer necessary.
+Character \H'8'height\H'10' and \S'-10'sl\S'0'a\S'10'nt\S'0' may be set
+independently of width.
+.PP
+The new
+.UC TROFF
+is about 1000 bytes larger in instruction space
+and 13000 bytes larger in data space
+(thus guaranteeing that it will not run on
+PDP-11/40 style machines).
+It runs about as fast as the original version,
+though
+a simple improvement that I made could be retrofitted into 
+the earlier version to keep it about 20% faster.
+The post-processors are not included in these time comparisons;
+they typically take 10-20% of the
+.UC TROFF
+time.
+.NH
+Typesetter Dependencies
+.PP
+.UC TROFF
+turns out to be surprisingly dependent on
+the Graphic Systems CAT,
+not just in the code but in its design.
+.PP
+Some of the design dependencies are pretty obvious.
+For example, the CAT provides four fonts
+(of 102 characters each) and 15 sizes.
+The specific sizes
+are wired into the syntax of the language:
+since the CAT has no sizes larger than 36 points,
+.CW \es46
+can be uniquely decoded as a 4-point 
+.CW 6 ,
+while
+.CW \es36 
+is simply a switch into size 36.
+.PP
+.UC TROFF
+makes the assumption that there are four fonts,
+three of which are physically isomorphic
+(that is, the same characters appear in the same position in each)
+and one ``special'' font
+that is logically a part of each of the others.
+The reserved font name
+.CW S
+finds its way into several commands
+and receives special treatment in a variety of contexts.
+.PP
+Some commands have the basic resolution of the
+CAT wired into their definition;
+for example, the units of the
+.CW .ss
+command (which sets the size of the inter-word spacing)
+are 36th's of an em,
+because the CAT typesetter itself works in those units.
+.PP
+Some command line options reflect idiosyncrasies of the CAT.
+For example, the option
+.CW -p
+requests that the output all be printed in one size;
+since the CAT is excruciatingly slow at changing point sizes,
+this
+prints an approximation to final output
+comparatively quickly.
+The
+.CW -g
+option causes font information to appear in the output file
+for the benefit of the operations staff at the Murray Hill
+Computer Center.
+.PP
+At the same time,
+there are myriad places
+where the characteristics of the CAT are an integral part of
+the code for
+.UC TROFF .
+Some of these are quite evident;
+others are subtle indeed.
+.PP
+The most obvious instance is the internal encoding of
+a character.
+Within
+.UC TROFF ,
+objects are passed around as 16 bit quantities.
+There are two fundamental objects \(em
+printable characters and motions.
+An object looks like this:
+.TS
+center;
+cw(2) cw(8) cw(4) cw(2) cw(16)
+|c0|c0|c0|c0|c0|.
+1	4	2	1	8
+_
+.ft CW
+m	s	f	z	c
+.ft
+_
+.TE
+If the
+.CW m
+bit is a 1, the object represents a motion;
+if it is zero, the object is something to be printed.
+In that case,
+.CW s
+is the size (actually an index into a table of legal sizes),
+.CW f
+is the font,
+.CW z
+is the zero-motion bit
+(i.e., no space after printing),
+and
+.CW c
+is the character.
+If the high order bit of
+.CW c
+is set,
+the character is to be looked up in a table of
+special names
+(for example,
+.CW 0200
+is the hyphen
+.CW \e(hy );
+otherwise it is
+.UC ASCII .
+Furthermore,
+if
+.CW c
+is less than octal 40 or greater than octal 370,
+the character is actually some encoded control function
+or very special character
+such as
+.CW \ee 
+or
+.CW \e{ .
+.PP
+Clearly the tight packing makes it utterly impossible
+to add another size or font \(em
+there are no bits left over.
+It also implies limits on the number of characters
+in a font and on the number of special names
+(names of the form
+.CW \e(xx ).
+.PP
+Motions are encoded as
+.TS
+center;
+cw(2) cw(2) cw(2) cw(26)
+|c0|c0|c0|c0|.
+1	1	1	13
+_
+.ft CW
+m	v	n	mag
+.ft
+_
+.TE
+.CW m
+is the ``motion bit'', which is 1 for a motion,
+.CW v
+is 1 for a vertical motion,
+and
+.CW n
+is 1 for a negative motion.
+The remaining 13 bits give the magnitude.
+Since there are only 13 bits,
+the maximum amount of motion is 
+8191 machine units.
+With the CAT's resolution of 432 units per inch,
+this is a generous 19 inches.
+But for the Linotron 202 (resolution 972/inch),
+it is only 8.5 inches.
+.PP
+Within the code,
+certain character values are used in tests and assignments
+without identification.
+For instance the octal value
+.CW 0200
+is used (without identification) as a hyphen.
+But of course the mask
+.CW 0200
+also occurs many times.
+As might be imagined, it takes some study to determine whether
+any particular
+.CW 0200
+is a hyphen or a mask.
+.PP
+The basic resolution of the CAT is 432 units per inch
+horizontally and 144 vertically.
+Character widths are given as the number of units at size 6 points.
+There are 72 points in an inch.
+Thus the program contains as magic numbers
+every factor of 432,
+and \(+-1 from each factor as well.
+.PP
+Finally, 
+.UC TROFF
+is simply a big program (at least by my standards) \(em
+about 7000 lines of virtually uncommented C.
+(I am indebted to Lorinda Cherry for a new version of the C beautifier
+that made
+the code legible, if not comprehensible.)
+It was implemented before the recent additions to C,
+so there are no
+.CW typedef 's
+to distinguish among the various kinds of integers,
+relatively few macros with arguments,
+no internal
+.CW static
+variables,
+and a startling number of global variables
+with two-character names.
+.PP
+None of these remarks should be taken as denigrating
+Ossanna's accomplishment with
+.UC TROFF .
+It has proven a remarkably robust tool,
+taking unbelievable abuse from a variety of preprocessors
+and being forced into uses that were never conceived of
+in the original design,
+all with considerable grace under fire.
+.NH
+Modifying TROFF
+.PP
+The first step was to widen the 16-bit internal representation of a character
+to 32 bits, to accommodate more sizes and fonts.
+The current representation is
+.TS
+center;
+cw(2) cw(14) cw(16) cw(2) cw(30)
+|c0|c0|c0|c0|c0|.
+1	7	8	1	15
+_
+.ft CW
+z	s	f	m	c
+.ft
+_
+.TE
+If
+.CW m
+is 1, bits 16 and 17 are
+.CW v
+and
+.CW n .
+Access to this representation is entirely through
+macros;
+for example, a macro called
+.CW cbits
+fetches the character bits,
+another called
+.CW setsfbits
+sets the size and font bits, and so on.
+.PP
+This stage took several weeks of meticulous checking,
+since it was necessary to examine every integer
+constant, variable and function in the program
+to decide whether it was being used to store
+an internal character.
+These are now all identified and
+.CW typedef 'd
+for future reference.
+.PP
+Widening 16 bits to 32 turns out to be quite costly on the PDP-11,
+since the program must process
+.CW long
+integers instead of short ones.
+The result is approximately a 25% increase in program size
+and perhaps 25% increase in run time.
+Furthermore the temporary file in which
+.UC TROFF
+keeps its macro and string definitions doubles in size
+(to 256k bytes).
+.PP
+Note that at this stage the program has not been changed in any fundamental
+way \(em
+it still generates CAT output,
+so a bit-for-bit regression test against the original version can be performed after each change.
+This proved to be very important for maintaining sanity
+in both program and programmer.
+.NH
+Dynamic Machine Parameters
+.PP
+The next step was to find all the the numbers in the program that depend
+on the CAT and replace them by variables.
+This also contributed marginally to slower execution,
+since many values and expressions that were constants now became variables.
+.PP
+With parameters identified as such,
+the next step was
+to make it possible to load a description of
+the typesetter each time
+.UC TROFF
+is run, rather than creating a compiled version for each typesetter.
+Accordingly, a set of description files was designed and created
+for each typesetter and each font.
+The description really comes in two pieces \(em
+a table describing parameters of the machine,
+and a table of widths for each font.
+To illustrate, here is the parameter file for the CAT:
+.P1 .2i
+# Graphic Systems CAT-4
+res 432
+hor 1
+vert 3
+unitwidth 6
+sizes 6 7 8 9 10 11 12 14 16 18 20 22 24 28 36 0
+fonts 4 R I B S
+charset
+\e|  \e^  \e-  \e_
+hy  bu  sq  em  ru  14  12  34  mi  fi  fl  ff  Fi  Fl  de  dg  sc  fm  aa  ga
+ul  sl  *a  *b  *g  *d  *e  *z  *y  *h  *i  *k  *l  *m  *n  *c  *o  *p  *r  *s
+*t  *u  *f  *x  *q  *w  *A  *B  *G  *D  *E  *Z  *Y  *H  *I  *K  *L  *M  *N  *C
+*O  *P  *R  *S  *T  *U  *F  *X  *Q  *W  sr  ts  rn  >=  <=  ==  ~=  ap  !=  ->
+<-  ua  da  eq  mu  di  +-  cu  ca  sb  sp  ib  ip  if  pd  gr  no  is  pt  es
+mo  pl  rg  co  br  ct  dd  rh  lh  **  bs  or  ci  lt  lb  rt  rb  lk  rk  bv
+lf  rf  lc  rc
+.P2
+A
+.CW #
+introduces a comment.
+.CW res
+is the machine resolution in units per inch.
+.CW hor
+and
+.CW vert
+give the minimum number of machine units that it is possible
+to move in the corresponding direction.
+.CW unitwidth
+specifies the point size at which the character widths map directly
+into machine units.
+.CW sizes
+lists the set of legal point sizes,
+terminated by a zero.
+.CW fonts
+lists the default set of fonts 
+(which can be overridden by subsequent 
+.CW .fp
+commands).
+.CW charset
+introduces the set of legitimate special names
+(names of the form
+.CW \e(xx ,
+including some special cases like
+.CW \e| ).
+.PP
+For comparison, here is the description file for the
+Mergenthaler Linotron 202.
+The 202 has many more sizes and fonts than the CAT,
+and quite a few more characters as well.
+(The 202 actually permits nearly 250 sizes;
+no use has yet been found for most of them.)
+.P1
+# Mergenthaler Linotron 202
+fonts 10 R I B BI H HB HK PO CH S
+sizes 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+   21 22 23 24 25 26 27 28 29 30 32 34 36 38 40
+   45 50 55 60 66 72 78 84 90 96 102 108 0
+res 972
+hor 1
+vert 2
+unitwidth 4
+paperwidth 7500
+charset
+\e|  \e^  \e-  \e_
+**  *C  *D  *F  *G  *H  *L  *P  *Q  *S  *W  *a  *b  *c  *d  *e  *f  *g  *h
+*i  *k  *l  *m  *n  *p  *q  *r  *s  *t  *w  *x  *y  *z  +-  ->  <-  <=
+==  >=  L.  Sl  al  aa  ap  b0  br  bs  bu  bv  ca
+cd  ci  co  ct  cu  dd  de  dg  di  em  eq  es  fe  fm  ga  gr  hy
+ib  if  ip  is  l.  lh  ma  mi  mo  mu  no  or  pd  pl  pp  pt  rg  rh  ru
+sb  sc  sl  sp  sq  sr  tm  tp  ts  ~=  ~~  ul  rn  en
+lf  rf  lc  rc  lt  rt  lb  rb  lk  rk  !=  ua  da  12  fa  te  ma  fe
+hc  ..  ob  bx  *o  *u  b9  14  34  ss  vr
+.P2
+.CW paperwidth
+specifies the maximum width of paper in units,
+overriding the default 7\(34".
+.PP
+In addition to this description file (one per typesetter),
+there is one file per font that lists properties of that font.
+Here is part of the description of Times Roman
+for the CAT:
+.P1
+# Times Roman for CAT-4
+name R
+internalname 1
+ligatures ff fi fl ffi ffl 0
+charset
+\e|	6	0	0
+\e^	3	0	0
+a	17	0	025
+b	20	2	012
+c	16	0	027
+d	20	2	011
+e	18	0	031
+f	13	2	014
+\&...
+!	12	2	0145
+&	28	2	050
+(	16	2	0132
+)	16	2	0133
+*	16	0	0122
++	36	0	0143
+,	12	0	047
+hy	13	0	040	hyphen
+-	"	=hy
+\e-	36	0	0123
+\&.	10	0	044
+de	15	0	0136	degree
+dg	20	0	0137	dagger
+fm	8	0	0150
+rg	20	0	0141
+co	20	0	0153
+ct	19	0	0127
+\&...
+.P2
+.PP
+The
+.CW name
+is the external 
+.UC TROFF
+name, one or two characters,
+as used in
+.CW .ft
+and
+.CW \ef
+commands.
+The internal name is not used by
+.UC TROFF
+itself, but is necessary for the postprocessors.
+If the font has
+ligatures, they are listed.
+It is possible to set the width of the space for each font
+separately with the
+.CW spacewidth 
+command,
+not illustrated here.
+There is also a keyword
+.CW special
+to indicate that the font is a ``special'' font \(em
+one that is to be searched if the regular font
+does not contain the character requested.
+There is no limit on the number of special fonts,
+but they should be listed last in the
+.CW fonts
+part of the description file.
+.PP
+The four columns of data are
+the character name,
+its width,
+its ascender/descender information
+(1 \(-> descender, 2 \(-> ascender, 3 \(-> both),
+and the actual typesetter code required to print it.
+When the point size is
+.CW unitwidth ,
+the width
+is the character width in machine units.
+If the name is a single character,
+it is taken simply as a normal
+.UC ASCII
+character.
+Two or more characters
+indicate a name of the form
+.CW \e(xx  ;
+there are a handful of historical exceptions like
+.CW \e- .
+A width of
+.CW \&"
+indicates that the character is a synonym for the
+immediately preceding character,
+as in
+.CW -
+and
+.CW hy
+above.
+Comments may follow the four data fields.
+.PP
+There are significant advantages to having the font and typesetter
+descriptions merely text files that can be edited easily,
+but it is too time-consuming to load all this
+.UC ASCII
+information
+each time
+.UC TROFF
+is invoked.
+Thus a separate program called
+.CW makedev
+is used to compile
+it into a binary file that can be read by 
+.UC TROFF
+in a single read.
+When
+.UC TROFF
+is invoked,
+an argument of the form
+.CW -Txxx
+tells it to load the description file for typesetter
+.CW xxx 
+from a standard directory.
+.PP
+Descriptions for the default fonts are compiled into the description file;
+if a new font is requested by a
+.CW .fp
+command,
+its description data replaces the original values.
+The
+.CW .ft
+command has been modified so that if the requested font
+is not currently ``mounted'',
+its description data will be placed in the hidden
+font position 0.
+Since there is only one such position,
+each new non-standard font overlays the previous one.
+This mechanism is intended to make
+occasional use of non-standard fonts easy;
+the
+.CW .fp
+mechanism remains necessary for other purposes.
+.PP
+The notion of special fonts has been generalized somewhat \(em
+rather than a single special font,
+there can be several.
+The algorithm currently used is to search for each character
+on the current font;
+if it is not found there, then the special fonts are searched
+in order (as given in the description file).
+Other than that,
+the treatment of special fonts is essentially unchanged.
+.PP
+At this stage in the modifications to
+.UC TROFF ,
+all internal arithmetic is done in terms of
+the resolution of the specified typesetter.
+The character set and character widths are defined by
+the values loaded from the font description.
+Indeed, the mapping from character name to what gets printed
+is determined by this table \(em
+fonts are no longer all isomorphic.
+.PP
+Although it is certainly convenient for testing during
+program development,
+it is not clear that loading the font information for
+the typesetter each time
+.UC TROFF
+is invoked is the right way to operate in an environment
+that supports only a single kind of typesetter.
+In a production mode it might be desirable to compile in
+the default information for the standard typesetter.
+.NH
+Output Language
+.PP
+The final step is to modify the output of 
+.UC TROFF
+so that it is typesetter-independent.
+The new version of
+.UC TROFF
+produces output that is not intended to go directly to
+a typesetter.
+Rather, it is more or less independent of any typesetter,
+except that the numbers in it have been computed on the
+basis of the resolution specified in the description
+file for the intended typesetter.
+.PP
+The output language is simple:
+.P1
+.ta .7i
+s\f2n\fP	size in points
+f\f2n\fP	font as number from 1 to \f2n\fP
+c\f2x\fP	ASCII character \f2x\fP
+C\f2xy\fP	character \e(\f2xy\fP; terminate \f2xy\fP by white space
+H\f2n\fP	go to absolute horizontal position \f2n\fP. (\f2n\fP > 0)
+V\f2n\fP	go to absolute vertical position \f2n\fP (down is positive)
+h\f2n\fP	go \f2n\fP units horizontally (to the right; \f2n\fP > 0)
+v\f2n\fP	go \f2n\fP units vertically (down; \f2n\fP > 0)
+\f2nnc\fP	move right \f2nn\fP, then print \f2c\fP (\f2nn\fP is exactly 2 digits!)
+n\f2b a\fP	end of line (information only -- no action needed)
+	\f2b\fP = space before line, \f2a\fP = after
+w	paddable word space (information only -- no action needed)
+p\f2n\fP	new page \f2n\fP begins -- set V to 0
+x ...\en	device control functions
+D ...\en	drawing functions (graphics)
+.P2
+Encoding small horizontal motions followed by a character as
+.I nnc
+shrinks the output file size by about 35%
+and run-time by about 15%.
+.PP
+The device control and graphics commands are intended as open-ended
+families, to be expanded as needed.
+.P1
+.ta .7i
+x i	init
+x T \f2s\fP	name of typesetter is \f2s\fP
+x r \f2n h v\fP	resolution is \f2n\fP/inch, \f2h\fP = minimum horizontal motion, \f2v\fP = min vert
+x p	pause (can restart)
+x s	stop -- done forever
+x t	generate trailer
+x f \f2n s\fP	font position \f2n\fP contains font \f2s\fP
+x H \f2n\fP	set character height to \f2n\fP
+x S \f2n\fP	set slant to \f2n\fP
+.P2
+Subcommands like
+.CW i '' ``
+are often spelled out like
+.CW init ''. ``
+.PP
+The drawing functions are
+.P1
+.ta 1i
+Dl \f2dh dv\fP	draw line from current position by \f2dh dv\fP
+Dc \f2d\fP	draw circle of diameter \f2d\fP with left side here
+De \f2d1 d2\fP	draw ellipse of diameters \f2d1 d2\fP
+Da \f2dh1 dv1 dh2 dv2\fP
+		draw arc from current position to \f2dh1+dh2 dv1+dv2\fP,
+		center at \f2dh1 dv1\fP from current position
+D~ \f2dh1 dv1 dh2 dv2 ...\fP
+		draw B-spline from current position to \f2dh1 dv1\fP,
+		then to \f2dh2 dv2\fP, then to ...
+.P2
+In all of these, \f2dh dv\fP is an increment on the current horizontal and
+vertical position,
+with down and right positive.
+.PP
+Blanks, tabs and newlines may occur as separators
+in the input, and are mandatory to separate constructions
+that would otherwise be confused.
+.PP
+To illustrate, the following is the output from the input
+.P1
+hello
+\&.br
+\&.ps 20
+\&.ft H
+goodbye
+.P2
+using
+.CW -Tcat :
+.P1
+x T cat
+x res 432 1 3
+x init
+x font 1 R
+x font 2 I
+x font 3 B
+x font 4 S
+V0
+p1
+s10
+f1
+H416
+V72
+ch
+35e30l17l17on72 0
+x font 0 H
+f1
+H416
+f0
+s20
+V144
+cg
+70o70o70d73b73y67en72 0
+x trailer
+V4752
+x stop
+.P2
+Here is the same output from the 202.
+Notice how the numbers are more than twice as big,
+reflecting the higher resolution of the 202.
+Also notice that the font
+.CW H
+is a standard font on the 202 so no special loading is needed
+to switch to it.
+.P1
+x T 202
+x res 972 1 2
+x init
+x font 1 R
+x font 2 I
+x font 3 B
+x font 4 BI
+x font 5 H
+x font 6 HB
+x font 7 HK
+x font 8 PO
+x font 9 CH
+x font 10 S
+V0
+p1
+s10
+f1
+H936
+V156
+ch
+73e63l35l35on156 0
+H936
+f5
+s20
+V312
+cg
+h150co
+h150co
+h150cd
+h150cb
+h150cy
+h135ce
+n156 0
+x trailer
+V10692
+x stop
+.P2
+.PP
+The output is guaranteed to be
+.UC ASCII ,
+and thus amenable to processing by all the normal
+Unix
+tools.
+The language is simple \(em
+it is straightforward to write a prototype driver
+for a particular typesetter,
+especially when one can steal an existing one
+as a model,
+although it may take some effort to make one of production quality.
+This form also demystifies
+.UC TROFF
+output
+and makes it possible for anyone to write other programs
+to process or generate it.
+.PP
+On the other hand,
+it is about twice as voluminous as the output intended for
+the CAT.
+Cleverness (or sacrificing
+.UC ASCII -ness)
+could bring
+it down to not much more than one byte per character printed,
+but so far I have not felt this to be very important.
+.PP
+There is not really much to say about the post-processors.
+.UC D202
+drives the 202,
+.UC DCAT
+drives the CAT (although not very efficiently \(em
+the vital boustrophedon and size-sorting features are not there),
+.UC DAPS
+drives the APS-5,
+.UC DCAN
+drives the Canon,
+and
+.UC TC
+(notice the parallel name structure)
+drives the Tektronix 4014.
+There are also rough and ready drivers for other display terminals.
+.PP
+Since it is easy to identify page and line boundaries,
+some drivers are able to offer useful features
+that were not feasible with the older
+.UC TROFF .
+For example,
+.UC TC
+permits the user to ask for specific pages by number,
+and to skip back and forth in the document.
+.UC D202
+displays the output page number on the operator's control panel and will also
+stop at specified pages if requested.
+An experimental postprocessor
+called
+.UC DSORT
+sorts the intermediate language by vertical position,
+to minimize vertical motion;
+it is intended for printing complicated 
+.UC PIC
+diagrams and for circuit diagrams produced by
+.UC PLTROFF .
+.UC PLTROFF \& (
+converts the standard Unix
+plot language into
+.UC TROFF
+commands.)
+All of the post-processors can scan their input relatively quickly
+to print only selected pages.
+.NH
+New Things
+.PP
+During the process of making these changes to
+.UC TROFF ,
+I have made some changes to the program
+that are visible to users
+(thus violating the avowed goal of keeping it compatible).
+.PP
+Some changes are simply the easing of restrictions.
+For example,
+there is no longer any limit on the number of fonts
+that can occur on a page
+(if one's typesetter is up to it),
+nor does the
+.CW .fp
+command that requests ``mounting'' a new font
+have to occur only at the beginning.
+Furthermore, a font may be accessed merely by naming it \(em
+the command
+.P1
+\ef(ARBell Laboratories\efP
+.P2
+will produce
+.P1
+\f(ARBell Laboratories\fP
+.P2
+(The font
+.CW AR
+is Avant-Garde Book. 
+Obviously two-letter font names will have to go.)
+.PP
+Character sets can be sensibly defined
+since they no longer have to all be isomorphic.
+Thus, for example, on the 202 the ``printout'' font
+.P1
+This one
+.P2
+includes a complete
+.UC ASCII
+alphabet.
+All of the characters have the same width,
+even the word space
+(defined by the
+.CW spacewidth
+attribute in the font description file).
+Thus this font is suitable for printing program listings
+without any special precautions.
+On the other hand,
+some fonts are rather small,
+containing only a handful of characters.
+.PP
+Larger and smaller point sizes are available,
+although there are still some limitations.
+For example,
+.CW \es72
+is still parsed as a 7 point
+.CW 2 ,
+since changing this would affect at least
+.UC EQN
+and probably other programs as well.
+(Sadly,
+.UC EQN
+had to be changed
+anyway \(em
+it also accepts an option of the form
+.CW -Txxx .)
+But
+.CW .ps\ 72
+works fine:
+each input size is mapped into the closest legal size
+for the current typesetter.
+Fractional point sizes are not allowed
+and may never be.
+.PP
+Character height and slant may be set independently of character
+width, for those typesetters that allow these operations.
+.CW \eH'n'
+sets the character height to
+.CW n
+points,
+.CW \eH'\(+-n'
+sets it to
+.CW \(+-n
+from the current point size,
+and
+.CW \eH'0'
+restores it to normal height.
+.CW \eS'n'
+sets the slant to
+.CW n
+degrees positive or negative;
+if 
+.CW n
+is zero, slanting is turned off.
+.PP
+Some obsolete commands have been eliminated
+(e.g.,
+.CW .fz ,
+.CW .li ;
+the command line options for constant-size printing and
+suppressing boustrophedon;
+all code related to
+.UC GCOS ).
+.PP
+A new command
+.CW .sy
+has been added to permit calling another program from
+within
+.UC TROFF :
+.P1
+\&.sy \f2command line \fP
+.P2
+causes 
+.I "command line"
+to be executed.
+The output is
+.I not
+automatically collected anywhere,
+but the new number register
+.CW \en($$
+(the process id of the
+.UC TROFF
+process)
+can be used
+to create unique file names
+to be picked up with subsequent
+.CW .so
+commands.
+The built-in string 
+.CW \e*(.T
+contains the name of the current typesetter
+obtained from the
+.CW -T
+argument or its default.
+.NH
+Graphics Commands
+.PP
+The most significant new facility is the ability to draw
+simple graphical objects  
+\(em diagonal lines, circles, ellipses, arcs, and splines \(em
+in
+.UC TROFF .
+.PP
+The new graphical commands are
+.P1
+.ta 1i
+\eD'l\f2 dh dv\fP'	draw line from current position by \f2dh, dv\fP
+\eD'c\f2 d\fP'	draw circle of diameter \f2d\fP with left side at current position
+\eD'e\f2 d1 d2\fP'	draw ellipse of diameters \f2d1 d2\fP
+\eD'a\f2 dh1 dv1 dh2 dv2\fP'
+	draw arc from current position to \f2dh1+dh2 dv1+dv2\fP,
+	with center at \f2dh1 dv1\fP from current position
+\eD'~\f2 dh1 dv1 dh2 dv2 ...\fP'
+	draw B-spline from current position by \f2dh1 dv1\fP
+	then by \f2dh2 dv2\fP, then by \f2dh2, dv2\fP, then ...
+.P2
+For example, the input
+.CW "\eD'e0.2i 0.1i'"
+draws the ellipse
+\D'e.2i .1i'\|,
+and the input
+.CW "\eD'l.2i -.1i'\eD'l.1i .1i'"
+will draw the line
+\D'l.2i -.1i'\D'l.1i .1i'\|.
+The position after a graphical object has been drawn is
+at its ``end'', where for circles and ellipses, the end
+is at the right side.
+As with other commands,
+default units are ems horizontally and line spaces vertically.
+.PP
+Realistically, these commands are not intended for direct use,
+but for preprocessors like
+.UC PIC  
+and
+.UC IDEAL .
+.PP
+The output generated by these commands is shown in the
+discussion of 
+the
+.UC TROFF
+output language in an earlier section.
+Rather than drawing the shape in 
+.UC TROFF ,
+a command with the proper parameters is passed through to the device
+post-processor,
+which does whatever it can with the request.
+.NH
+Loose Ends
+.PP
+This version of
+.UC TROFF
+has been in use
+since September of 1979.
+Most of our experience with it has been on the
+202 and Tektronix scopes, but the CAT and APS-5 drivers have been
+exercised to some degree.
+.PP
+As mentioned, there are some obvious things that could
+be improved or that remain to be added.
+For instance,
+.UC TROFF 's
+bracket-building function
+.CW \eb
+really ought to be implemented by postprocessor,
+so that typesetters like the 202 can draw a character like
+\v'1'\H'48'{\H'10'\v'-1' directly instead of synthesizing it from pieces.
+It also appears to be necessary to add ``modes''
+to permit graphical objects to be dotted, dashed, etc.
+.PP
+Efficiency is always a problem,
+and is likely to be so forever,
+especially with the proliferation of preprocessors
+generating ever more complicated input.
+Small improvements (perhaps 10 percent)
+can be had from artifices like better table searching.
+Placing the temporary file upon which 
+.UC TROFF
+stores macro definitions in memory is good for another 10-20 percent
+on machines like the
+.UC VAX 
+that have enough memory.
+But no order-of-magnitude speedup is likely without a gross revision
+of the basic design.
+.PP
+It is clear that
+.UC TROFF
+ought to be replaced by something better,
+but, as I said above,
+it is far from clear how to do the job
+a lot better.
+So for better or worse,
+.UC TROFF
+is likely to be with us for a long time.
+.SH
+Acknowledgements
+.PP
+I am deeply indebted to Ken Thompson and Joe Condon,
+without whose efforts in taming the Mergenthaler Linotron 202
+the
+.UC TROFF
+modifications discussed here would be irrelevant.
+Thompson also provided most of the character-generating software.
+I am also grateful to Chris Van Wyk for the line and circle drawing
+algorithms and to Theo Pavlidis for the spline algorithm
+used by all the postprocessors.
+.[
+$LIST$
+.]
+.sp 100
+.SH
+Appendix:  Summary of Language Changes
+.PP
+This appendix enumerates the changes to the
+.UC TROFF
+language since the last printing of
+the 
+manual.
+.SH
+Command line arguments
+.PP
+The argument
+.CW -Txxx
+loads parameters and character definitions for typesetter
+.CW xxx ,
+which at the moment is typically one of
+.CW 202 ,
+.CW aps
+or
+.CW cat .
+.PP
+.CW -Fxxx
+causes font information to be loaded from
+directory
+.CW xxx
+instead of the default
+.CW /usr/lib/font/dev202 .
+.SH
+Graphics commands
+.PP
+As described in section 7.
+.SH
+Other new commands
+.PP
+.CW .sy
+.I commandline
+executes the command, then returns.
+Output is not captured anyplace.
+.PP
+.CW .cf
+.I file
+copies
+.I file
+into the
+.UC TROFF
+output file at this point, uninterpreted.
+Havoc ensues unless the motions in the file
+restore current horizontal and vertical position.
+This command hasn't been used much,
+and is probably a bad idea anyway.
+.PP
+.CW .pi
+.I program
+(pipe the output into
+.I program )
+now works in  
+.UC TROFF
+as well as
+.UC NROFF ,
+since it makes somewhat more sense to allow it.
+.PP
+.CW \eH'n'
+sets the character height to
+.CW n
+points.
+A height of the form
+.I \(+-n
+is an increment on the current point size;
+a height of zero restores the height to the point size.
+.PP
+.CW \eS'n'
+sets the slant to
+.CW n
+degrees.
+.I n
+may be negative.
+.PP
+The number register
+.CW $$
+contains the process id of the 
+.UC TROFF
+process.
+.PP
+The string
+.CW .T
+contains the name of the current typesetter
+(e.g.,
+.CW 202 ,
+.CW aps ,
+.CW cat ).
+.PP
+The 
+.CW .fp
+command accepts a third argument that causes the
+data for the font to be loaded from that directory.
+This has been added as a first step to allowing dynamic character definitions.
+.PP
+The
+.CW .ft
+command causes the named font to be loaded on font position 0
+(which is in all other ways inaccessible) if the font exists and is not currently mounted
+by default or by
+a
+.CW .fp
+command.
+The font must be still or again in position 0 when the line is printed.
+.PP
+Transparent mode 
+.CW \e! ) (
+has been fixed so that transparent output actually appears
+in the output;
+thus special commands can be passed through to postprocessors
+by witchcraft like
+.P1
+\&.if "\e*(.T"202" \e!x ...
+.P2
+(If this makes no sense to you,
+you shouldn't be using it anyway.)
+.SH
+Deletions
+.PP
+The
+.CW .fz
+and
+.CW .li
+commands are no more.
+The
+.CW -p ,
+.CW -g
+and
+.CW +n
+command line arguments have also been eliminated,
+as has the
+.CW hp
+number register.

@@ -1,0 +1,21 @@
+if test -s $2
+then
+FILE=$2
+else
+FILE=../$2
+fi
+awk "
+/^\.$1 /	{
+	if(\$0 ~ /\"/){
+		n=split(\$0,a,\"\\\"\")
+		term = a[2]
+	}
+	else{ term = \$2
+		if(NF == 2){
+			getline
+			if(\$0 !~ /^\./)
+				term = term \" \" \$1
+		}
+	}
+	print term
+}" $FILE

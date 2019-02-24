@@ -1,0 +1,13 @@
+cd /usr/man
+>>junk1
+for i in man[1-9]
+do
+	ls $i/* >junk
+	ed - junk <<!
+	/intro/m0
+	w
+!
+	cat junk >>junk1
+done
+sed 's/ .*//' adm/pagelist|diff - junk1
+rm junk junk1

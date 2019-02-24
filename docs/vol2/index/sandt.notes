@@ -1,0 +1,92 @@
+Indexing Vol2
+
+47 ``unrelated papers -> 40
+724 pages -> 617+index
+troff, tex, monk
+
+Term Generation
+titles & headings - with stop list for Introduction, Conclusions etc
+repeated noun phrases
+distinguished words/distinguished word+next
+	.I
+	.CW
+	.UL
+code for:	single entry only
+		global entry only
+		font change
+result: paper.terms
+
+problems:
+	single letter commands: sam a, sed s
+	common words that are commands: anim again
+	commands that match parts of words: uucp pack (not package), con
+
+	partial solution: CW a, I pack
+	but would like to match terms in tables, examples & pictures
+
+Phrase finding
+diction - fgrep for English with longest match
+	works on ``sentences'' not lines (.?!)
+	maps uppercase to lower, some punctuation to space
+	in terms: map upper to lower, substitute something for terms with .
+
+result: linenumber term1
+	term2
+	term3
+	...
+	where case is lost in term?
+restore case & terms with .
+run paper.sed to remove paper dependencies
+	i.e.	monk & tex font changes
+		paper specific string definitions
+		kludges to avoid matching problems (CW a etc)
+		add some consistency between papers (DMD5620)
+
+using line number as an approximation insert
+	.Tm phrase or \index{phrase}
+in a safe place in the paper
+	i.e. not inside .TS/.TE .PS/.PE
+	(for tex s/\t/<tab>/ in phrases)
+
+run troff/tex/monk to produce file with page numbers
+result:
+	page number<tab>phrase #.*
+
+create file of
+	phrase:papername:page_number
+	papername:phrase:page_number
+	or just 1 of above if single/global only
+
+sort by phrase & accumulating page numbers and tagging with font info
+result: paper.ind
+	con, ipc, 536	c
+	ipc, con, 536	c
+
+Making the index
+get page ranges for each paper
+trash any \\f* stuff that remains (breaks sort)
+sort */*.ind
+put size changes around strings of caps (with numbers $ / etc)
+for multiple line with the same first term
+	if term in papernames - put out papername in italic & page ranges
+	then only put out 2nd term & pages - arranging for CW font where coded
+	putting line breaks & indentation in appropriate places for long line
+results: lots better than commencial index with v7 vol2
+	about the right length - bwk books .015, bently pearls .05 gerard .01 this is .012
+
+problems
+	folding uppercase to lowercase destroys ability to recognize case where it matters
+		(sam d D commands)
+	lack of consistency between papers
+		typesetter, typesetting etc
+		-ms vs ms
+	would like some terms to be multiply entered or qualified
+		Typesetting Mathematics
+		Mathematics, Typesetting
+	papers that explain by example hard to index
+	usefulness of headings varies greatly among the papers -
+		for some they're useless, for others they're really all that's
+		needed
+	some terms simply not literally in the papers
+	it's impossible to tell what terms are missing
+

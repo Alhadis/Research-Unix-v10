@@ -1,0 +1,10 @@
+blit
+Cip
+cip
+filenames
+locanthi
+pallette
+pic
+spe
+startpoint
+tl

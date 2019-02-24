@@ -1,0 +1,119 @@
+.TH SNO 1
+.SH NAME
+sno \- Snobol language interpreter
+.SH SYNOPSIS
+.B sno
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Sno\^
+is a
+.SM SNOBOL\*S3
+(with slight differences)
+compiler and interpreter.
+.I Sno\^
+obtains input from the
+concatenation of the named
+.IR file s
+and the standard input.
+All input through a statement
+containing the label
+.B end
+is considered program and is compiled.
+The rest is available to
+.BR syspit .
+.PP
+.I Sno\^
+differs from
+.SM SNOBOL\*S3
+in the following ways:
+.PP
+There are no unanchored searches.
+To get the same effect:
+.IP 
+.LR "a ** b" "    unanchored search"
+.br
+.LR "a *x* b = x c" "    unanchored assignment"
+.PP
+There is no back referencing.
+.IP
+.L x = \&"abc"
+.br
+.LR "a *x* x" "    unanchored search for
+.L \&"abc"
+.PP
+Function declaration is
+done at compile time by the use of the (non-unique) label
+.BR define .
+Execution of a function call begins at the
+statement following the
+.BR define .
+Functions cannot be defined at run time,
+and the use of the name
+.B define
+is preempted.
+There is no provision for automatic variables
+other than parameters.
+Examples:
+.IP
+.EX
+define f( )
+define f(a, b, c)
+.EE
+.PP
+All labels except
+.B define
+(even
+.BR end )
+must have a non-empty statement.
+.PP
+Labels, functions and variables must all have
+distinct names.
+In particular, the non-empty statement on
+.B end
+cannot merely name a label.
+.PP
+If
+.B start
+is a label in the program,
+program execution will start there.
+If not, execution begins with the first
+executable statement;
+.B define
+is not an executable statement.
+.PP
+There are no builtin functions.
+.PP
+Parentheses for arithmetic are not needed.
+Normal precedence applies.
+Because of this, the arithmetic
+operators
+.B /
+and
+.B *
+must be set off by spaces.
+.PP
+The right side of assignments
+must be non-empty.
+.PP
+Either
+.L '
+or
+.L \&"
+may be used for literal quotes.
+.PP
+The pseudo-variable
+.B sysppt
+is not available.
+.SH SEE ALSO
+.IR spitbol (1), 
+.IR snocone (1), 
+.IR awk (1)
+.br
+.I \s-1SNOBOL\s+1, a String Manipulation Language,
+by D.\ J. Farber, R.\ E. Griswold, and I.\ P. Polonsky,
+.I JACM\^
+.B 11
+(1964), pp.\ 21-30.
+.DT

@@ -1,0 +1,194 @@
+.TH CHARGE 1 SHARE
+.SH NAME
+charge, charges \- change (show) charges for share system usage calculations
+.SH SYNOPSIS
+.B charge
+[\-flags]
+.br
+.B charges
+[\-flags]
+.SH DESCRIPTION
+.I Charge
+will change the costs associated with the usage calculations for the
+.IR "Share Scheduler" .
+The flag \fB\-C\fR, if used, should be mentioned first
+to cause
+.I charge
+to read the
+existing values,
+instead of working on default values.
+The alternate name is used to show the charges currently in operation,
+for which the default assumes \fB\-C\fR, unless the flag \fB\-\fP is used.
+The optional flags are as follows:-
+.TP "\w'-NmaxnormuXX'u"
+.BI -
+Causes
+.I charges
+to show the default settings for the charging parameters.
+.TP
+.BI -C
+Causes
+.I charge
+to read in the current values,
+which it will use instead of the defaults.
+\fBMust be first flag if used\fP.
+.TP
+.BI -D h1,h2
+Will set the decay rate for process priorities with normal \fInice\fP
+so that they will decay to half their initial value in
+.I h1
+seconds,
+and set the decay rate for process priorities with maximum \fInice\fP
+so that they will decay to half their initial value in
+.I h2
+seconds.
+.TP
+.BI -E half-life
+Will set the decay rate for users' process
+.I rates
+so that they will decay to half their initial value in
+.I half-life
+seconds.
+.TP
+.BI -F flags
+Sets various global scheduling flags \(em see
+.IR share (5)
+for details.
+.I Flags
+are assumed to be in octal.
+.TP
+.BI -G maxgroups
+Sets the maximum depth for the scheduling tree.
+.TP
+.BI -K half-life [s]
+Will set the decay rate for users' usages
+so that they will decay to half their initial value in
+.I half-life
+hours.
+If the
+.I half-life
+is followed by the character \fBs\fP,
+then the number will be interpreted as seconds.
+.TP
+.BI -N maxnormu
+Upper bound on 
+.I "normalised usage"
+used in process priority calculations.
+The number can be added to a running process's priority every clock tick,
+so it should be small enough not to overrun the value
+.I maxupri
+in too short a time interval
+(ie: it should be less than \fI(maxupri*(1\-pri_decay)) / \s-1HZ\s0\fP,
+see the output of \fIcharges -v\fP for the low priority value of \fIpri_decay\fP.)
+.TP
+.BI -P maxpri
+Absolute upper bound for a process's priority.
+(Something less than the largest non-negative integer.)
+.TP
+.BI -Q maxupri
+Upper bound for normal processes' priorities.
+.I Idle
+processes run with priorities in the range
+.IB maxupri < pri < maxpri .
+.TP
+.BI -R delta
+Sets the
+.I run-rate
+for the share scheduler in seconds.
+.TP
+.BI -S maxusers
+Sets the maximum number of users and groups that can be active.
+Note that this cannot exceed the maximum configured in the kernel.
+.TP
+.BI -U maxusage
+Upper bound for ``reasonable'' usages.
+Users with usages larger than this are grouped together and given a
+.I "normalised usage"
+which prevents them from interfering with ``normal'' users.
+.TP
+.BI -X maxushare
+If the
+.SM LIMSHARE
+scheduling flag is on,
+then this parameter limits the maximum effective share an
+individual user can have to
+.I maxushare
+times their allocated share.
+.TP
+.BI -Y mingshare
+If the
+.SM ADJGROUPS
+scheduling flag is on,
+and any group is getting less than
+.I mingshare
+times its allocated share,
+the costs incurred by the group members will be adjusted down to compensate.
+(Does not affect the long-term charges.)
+.TP
+.BI -b bio
+The charge for a disk block I/O operation.
+.TP
+.BI -m click
+The charge for a
+.IR "memory tick" .
+.TP
+.BI -s syscall
+The charge for a system call.
+.TP
+.BI -t tick
+The charge for a CPU tick.
+.TP
+.BI -v
+Show scheduling feed-back parameters
+.RI ( charges " only)."
+.TP
+.BI -y tio
+The charge for a stream I/O operation.
+(This is really dependent on the number of kernel buffer operations,
+so a 
+.I "write(1)"
+will cost the same as a 
+.I "write(64)"
+to an ordinary stream,
+or a 
+.I "write(1024)"
+to a pipe.)
+.TP
+.IR percent
+The percentage change to apply to all the charges.
+.SH EXAMPLES
+.B charge 10
+.RS
+will change the costs to 10% of the default.
+.RE
+.B charges 
+.RS
+show the current charges.
+.RE
+.B "charges \-"
+.RS
+show the default settings.
+.RE
+.SH SEE ALSO
+.PD 0
+.TP "\w'/usr/include/sys/charges.hXX'u"
+.IR /usr/include/sys/charges.h
+The default values in the kernel.
+.TP
+.IR /usr/include/sys/share.h
+Definition of charges structure.
+.TP
+.IR share (5)
+A description of the 
+.IR "Share Scheduler" .
+.PD
+.SH BUGS
+The percent flag will also affect any new constants,
+so bias them accordingly.
+.PP
+.I Charges
+works out the current charging percentage
+by using the difference between the default cost for ``ticks''
+and the current setting.
+.PP
+The defaults are hardly ever relevant.

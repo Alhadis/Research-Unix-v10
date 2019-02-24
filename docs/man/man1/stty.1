@@ -1,0 +1,184 @@
+.TH STTY 1
+.CT 1 comm_term
+.SH NAME
+stty \- set terminal options
+.SH SYNOPSIS
+.B stty
+[
+.I option ...
+]
+.SH DESCRIPTION
+.I Stty
+sets certain I/O options for the terminal open on
+.F /dev/tty
+(file descriptor 3).
+With no argument, it reports the current settings of the options.
+The options are:
+.TP 10n
+.B even
+Allow even parity.
+.PD 0
+.TP
+.B -even
+Disallow even parity.
+.TP
+.B odd
+Allow odd parity.
+.TP
+.B -odd
+Disallow odd parity.
+.TP
+.B raw
+Raw mode input:
+no erase, kill, interrupt, quit, EOT;
+parity bit passed to processes.
+.TP
+.B -raw
+Turn off raw mode.
+.TP
+.B 8bit
+Eight-bit mode:
+don't strip parity in the device driver.
+.TP
+.B -8bit
+Turn off eight-bit mode.
+.TP
+.B cooked
+Same as
+.LR -raw .
+.TP
+.B cbreak
+Make each character available to
+.IR read (2)
+as received; no erase and kill.
+.TP
+.B -cbreak
+Make characters available to
+.I read
+only when newline is received.
+.TP
+.B -nl
+Allow carriage return for new-line,
+and output CR-LF for carriage return or new-line.
+.TP
+.B nl
+Accept only new-line to end lines.
+.TP
+.B echo
+Echo back every character typed.
+.TP
+.B -echo
+Turn off echo.
+.TP
+.B lcase
+Map upper case to lower case.
+.TP
+.B -lcase
+Preserve case.
+.TP
+.B -tabs
+Replace tabs by spaces when printing.
+.TP
+.B tabs
+Preserve tabs.
+.TP
+.B ek
+Reset erase and kill characters to traditional backspace
+.BR @ .
+.TP
+.BI erase  \ c
+Set erase character to
+.I c
+(initially  backspace).
+In this and other character-setting options
+a 
+.L ^
+may precede
+.I c
+to signify
+.RI control- c.
+.TP
+.BI kill  \ c
+Set kill character to
+.I c
+(initially 
+.BR @ ).
+.TP
+.BI intr " c"
+Set interrupt character to
+.I c
+(initially DEL).
+.TP
+.BI quit " c"
+Set quit character to
+.I c
+(initially 
+.RB control- \e ).
+.TP
+.BI stop " c"
+Set stop character to
+.I c
+(initially 
+.RB control- S ).
+.TP
+.BI start " c"
+Set start character to
+.I c
+(initially
+.RB control- Q ).
+.TP
+.BI eof " c"
+Set `end of file' character to
+.I c
+(initially
+.RB control- D ).
+.TP
+.BI brk " c"
+Set `line-break' character to
+.I c
+(initially undefined).
+.TP
+.B  cr0 cr1 cr2 cr3
+.br
+Select style of delay for carriage return; see
+.IR ioctl (2).
+.TP
+.B  nl0 nl1 nl2 nl3
+.br
+Select style of delay for linefeed.
+.TP
+.B  tab0 tab1 tab2 tab3
+.br
+Select style of delay for tab.
+.TP
+.B  ff0 ff1
+Select style of delay for form feed.
+.TP
+.B bs0 bs1
+Select style of delay for backspace.
+.TP
+.B hup
+Hang up on last close.
+.TP
+.B 0
+Hang up immediately.
+.TP
+.B  "50 75 110 134 150 200 300 600 1200 1800 2400 4800 9600 exta extb"
+.br
+Set terminal baud rate to the number given, if possible.
+.TP
+.B old
+Arrange to use normal teletype line discipline,
+.IR ttyld (4).
+.TP
+.B old!
+Force normal teletype line discipline,
+even if no teletype driver was present.
+.TP
+.B notty
+Remove the top-level teletype driver.
+.PD
+.SH "SEE ALSO"
+.IR ttyld (4), 
+.IR ioctl (2), 
+.IR tabs (1)

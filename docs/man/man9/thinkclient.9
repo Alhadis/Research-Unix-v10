@@ -1,0 +1,46 @@
+.TH THINKCLIENT 9.3
+.CT 2 file_io
+.SH NAME
+thinkchar, thinknchars, thinkflush, thinkmap, thinkabort \- ThinkJet routines
+.SH SYNOPSIS
+.B #include <jerq.h>
+.br
+.B #include <thinkclient.h>
+.PP
+.B int thinkchar(c)
+.B int c;
+.PP
+.B int thinknchars(n, p)
+.B int n; char *p;
+.PP
+.B int thinkflush()
+.PP
+.B int thinkmap(b, r)
+.B Bitmap *b; Rectangle r;
+.PP
+.B int thinkabort()
+.SH DESCRIPTION
+These macros provide access to the routines used internally by
+.IR thinkblt (9.1).
+.I Thinkchar
+and
+.I thinknchars
+send characters to the printer; characters are buffered so that
+.I thinkflush
+must be called after the last transmission.
+.I Thinkmap
+sends all or part of a bitmap (it calls
+.I thinkflush
+automatically).
+.I Thinkabort
+stops transmission as quickly as possible, throwing away any characters
+that may be queued up.
+.SH "SEE ALSO"
+.IR thinkblt (9.1), 
+.IR newproc (9.2), 
+.IR types (9.5)
+.SH DIAGNOSTICS
+The routines return zero on success, a positive value on failure, and a
+negative value if
+.IR thinkblt (9.1)
+is not loaded.

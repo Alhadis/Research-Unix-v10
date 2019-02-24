@@ -1,0 +1,43 @@
+for i in /usr/vol2/*
+do
+	j=`basename $i`
+	if test -s $i/$j.ms
+	then
+	echo ms $j 1>&2
+	grep "^\.[cC]W" $i/$j.ms|sed -e 's/ [,.;]$//' -e 's/^\.[cC]W //' -e "s/$/, $j/"
+	else
+	if test -s $i/$j.tex
+	then
+	echo tex $j 1>&2
+	
+	else
+	if test -s $i/$j.m
+	then
+	echo monk $j 1>&2
+	
+	else
+	echo $i not found
+	for j in $i/*.ms
+	do
+	k=`basename $i`
+	l=`basename $j .ms`
+	if test -s $j
+	then
+	echo running $j to $k 1>&2
+	grep "^\.[cC]W" $j|sed -e 's/ [,.;]$//' -e 's/^\.[cC]W //' -e "s/$/, $k$l/"
+	fi
+	done
+	for j in $i/*.m
+	do
+	k=`basename $i`
+	l=`basename $j .m`
+	if test -s $j
+	then
+	echo running $j to $k 1>&2
+	
+	fi
+	done
+	fi
+	fi
+	fi
+done

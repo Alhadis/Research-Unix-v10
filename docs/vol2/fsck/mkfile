@@ -1,0 +1,36 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	fsck.out
+
+pg:	fsck.out
+	count fsck.m fsck.out
+
+spell:VQ:
+	dospell fsck.m
+
+lp:	fsck.out
+	$LP $newprereq && touch $target
+
+fsck.out:DQ:	fsck.m $REF ../ADM/monk.mac
+	$MLIB/monk -d $MLIB/db fsck.m |
+		cite |
+		$PREFER |
+		troff -Tpost - > $target 2> .cite
+	cite -s .cite > /dev/null 2> tmp2
+	set +e
+	gre -v '^\.(TC|ix)' tmp2
+	set -e
+	rm -f tmp2 .cite
+
+index:V:
+	runind fsck
+	$MLIB/monk -d $MLIB/db xfsck.m |
+		cite |
+		$PREFER |
+		troff $IND/mtm.mac - > /dev/null 2> fsck.x
+	mkindex fsck.x
+	rm xfsck.m
+
+pindex:V:
+	mkindex fsck.x

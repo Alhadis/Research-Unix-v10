@@ -1,0 +1,103 @@
+.TH MONITOR 3
+.CT 2 debug_tune
+.SH NAME
+monitor \(mi prepare execution profile
+.SH SYNOPSIS
+.nf
+.B monitor(lowpc, highpc, buffer, bufsize, nfunc)
+.B int (*lowpc)(), (*highpc)();
+.B short buffer[];
+.fi
+.SH DESCRIPTION
+An executable program created by
+.L
+cc -p
+automatically includes calls for
+.I monitor
+with default parameters;
+.I monitor
+needn't be called explicitly
+except to gain fine control over profiling.
+.PP
+.I Monitor
+is an interface to
+.IR profil (2).
+.I Lowpc
+and
+.I highpc
+are the addresses of two functions;
+.I buffer
+is the address of a (user supplied)
+array of
+.I bufsize
+bytes.
+.I Monitor
+arranges to record a histogram of
+periodically sampled values of the program counter,
+and of counts of calls
+of certain functions, in the buffer.
+The lowest address sampled
+is that of
+.I lowpc
+and the highest is
+just below
+.IR highpc .
+At most
+.I nfunc
+call counts can be kept; only calls of functions
+compiled with the profiling option
+.B -p
+of
+.IR cc (1)
+are recorded.
+For the results to be significant,
+especially where there are small, heavily
+used routines,
+it is suggested that the buffer be no more
+than a few times smaller than the range
+of locations sampled.
+The default values for
+.I bufsize
+and
+.I nfunc
+are
+(\f2highpc\fP\-\f2lowpc\fP)/8
+and 300 respectively.
+.PP
+To profile the entire program, use
+.PP
+.nf
+.ft L
+	extern etext();
+	. . .
+	monitor((int (*)())2, etext, buf, bufsize, nfunc);
+.ft P
+.fi
+.PP
+.I Etext
+lies just above all the
+program text, see
+.IR end (3).
+For the highest resolution profiling on the VAX, use
+.B
+bufsize = ((int)highpc)-((int)lowpc)+12+8*nfunc\fR.
+.PP
+To stop execution monitoring and write the results
+on the file
+.I mon.out,
+use
+.PP
+.L
+	monitor((int (*)())0);
+.LP
+then
+.IR prof (1)
+can be used
+to examine the results.
+.SH FILES
+.TP
+.F mon.out
+.SH "SEE ALSO"
+.IR prof (1), 
+.IR profil (2), 
+.IR cc (1)

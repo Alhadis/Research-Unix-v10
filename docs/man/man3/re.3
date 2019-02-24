@@ -1,0 +1,317 @@
+.TH RE 3
+.CT 2 data_man
+.SH NAME
+re_bm, re_cw, re_re \(mi string and pattern matching
+.SH SYNOPSIS
+.nf
+.2C
+.B "#include <re.h>"
+.PP
+.B "re_bm *re_bmcomp(b, e, map)"
+.B "char *b, *e;"
+.B "unsigned char map[256];"
+.PP
+.B "int re_bmexec(pat, rdfn, matchfn)"
+.B re_bm *pat;
+.B int (*rdfn)(), (*matchfn)();
+.PP
+.B void re_bmfree(pat);
+.B re_bm *pat;
+.PP
+.BR "re_cw *re_cwinit(map)"
+.B unsigned char map[256];
+.PP
+.BR "void re_cwadd(pat, b, e)"
+.B re_cw *pat;
+.B char *b, *e;
+.PP
+.BR "void re_cwcomp(pat)"
+.B re_cw *pat;
+.PP
+.B "int re_cwexec(pat, rdfn, matchfn)"
+.B re_cw *pat;
+.B int (*rdfn)(), (*matchfn)();
+.PP
+.B void re_cwfree(pat);
+.B re_cw *pat;
+.PP
+.BR "re_re *re_recomp(b, e, map)"
+.B char *b, *e;
+.B unsigned char map[256];
+.PP
+.B "re_reexec(pat, b, e, match)"
+.B re_re *pat;
+.B char *b, *e, *match[10][2];
+.PP
+.B void re_refree(pat);
+.B re_re *pat;
+.PP
+.B void re_error(str);
+.B char *str;
+.1C
+.fi
+.SH DESCRIPTION
+These routines search for patterns in strings.
+The
+.I re_re
+routines search for general regular expressions (defined below)
+using a lazily evaluated deterministic finite automaton.
+The more specialized and faster
+.I re_cw
+routines search for multiple literal strings
+using the Commentz-Walter algorithm.
+The still more specialized and efficient
+.I re_bm
+routines search for a single string using the Boyer-Moore algorithm.
+The routines handle strings designated by pointers to
+the first character of the string
+and to the character following the string.
+.PP
+To use the
+.I re_bm
+routines, first build a recognizer by calling
+.I re_bmcomp,
+which takes the search string and a character map;
+all characters are compared after mapping.
+Typically,
+.I map
+is initialized by a loop similar to
+.EE
+for(i = 0; i < 256; i++) map[i] = i;
+.EX
+and its value is no longer required after the call to
+.I re_bmcomp.
+The recognizer can be run (multiple times) by calling
+.I re_bmexec,
+which stops and returns the first non-positive return from either
+.I rdfn
+or
+.IR matchfn .
+The recognizer calls the supplied function
+.I rdfn
+to obtain input and
+.I matchfn
+to report text matching the search string.
+.PP
+.I Rdfn
+should be declared as
+.IP
+.EX
+int rdfn(pb, pe)
+char **pb, **pe;
+.EE
+.LP
+where
+.B *pb
+and
+.B *pe
+delimit an as yet unprocessed text fragment
+(none if
+.LR *pb==*pe )
+to be saved across the call to
+.IR rdfn .
+On return,
+.B *pb
+and
+.B *pe
+point to the new text, including the saved fragment.
+.I Rdfn
+returns 0 for EOF, negative for error, and positive otherwise.
+The first call to
+.I rdfn
+from each invocation of
+.I re_bmexec
+has
+.BR *pb==0 .
+.PP
+.I Matchfn
+should be declared as
+.IP
+.EX
+int matchfn(pb, pe)
+char **pb, **pe;
+.EE
+.LP
+where
+.B *pb
+and
+.B *pe
+delimit the matched text.
+.I Matchfn
+sets
+.BR *pb ,
+.BR *pe ,
+and returns a value in the same way as
+.I rdfn.
+.PP
+To use the
+.I re_cw
+routines, first build the recognizer by calling
+.IR re_cwinit ,
+then
+.I re_cwadd
+for each string, and finally
+.IR re_cwcomp .
+The recognizer is run by
+.I re_cwexec
+analogously to
+.IR re_bmexec .
+.PP
+A full regular expression recognizer is compiled by
+.I re_recomp
+and executed by
+.I re_reexec,
+which returns 1 if there was a match and 0 if there wasn't.
+The strings that match subexpressions are returned in array
+.I match
+using the above convention.
+.L match[0]
+refers to the whole matched expression.
+If
+.I match
+is zero, then no match delimiters are set.
+.PP
+The routine
+.I re_error
+prints its argument on standard error and exits.
+You may supply your own version for specialized error handling.
+If
+.I re_error
+returns rather than exits, the compiling routines (e.g.
+.IR re_bmcomp )
+will return 0.
+.PP
+The recognizers that these routines construct occupy storage
+obtained from
+.IR malloc (3).
+The storage can be deallocated by
+.I re_refree.
+.SS Regular Expressions
+The syntax for a regular expression
+.B e0
+is
+.EX
+e3:  literal | charclass | '.' | '^' | '$' | '\e'\fIn\fP | '(' e0 ')'
+
+e2:  e3
+  |  e2 REP
+REP: '*' | '+' | '?' | '\e{' RANGE '\e}'
+RANGE: int | int ',' | int ',' int
+
+e1:  e2
+  |  e1 e2
+
+e0:  e1
+  |  e0 ALT e1
+ALT: '|' | newline
+.EE
+.PP
+A literal is any non-metacharacter or a metacharacter
+(one of
+.BR .*+?[]()|\e^$ )
+preceded by 
+.LR \e .
+.PP
+A charclass is a nonempty string
+.I s
+bracketed
+.BI [ \|s\| ]
+(or
+.BI [^ s\| ]\fR);
+it matches any character in (or not in)
+.I s.
+In 
+.I s,
+the metacharacters other than
+.L ]
+have no special meaning, and
+.L ]
+may only appear as
+the first letter.
+A substring 
+.IB a - b ,
+with
+.I a
+and
+.I b
+in ascending
+.SM ASCII 
+order, stands for the inclusive
+range of
+.SM ASCII 
+characters between
+.I a
+and
+.IR b .
+.PP
+A
+.L \e
+followed by a digit 
+.I n
+matches a copy of the string that the
+parenthesized subexpression beginning with the
+.IR n th
+.LR ( ,
+counting from 1, matched.
+.PP
+A 
+.L .
+matches any character.
+.PP
+A
+.L ^
+matches the beginning of the input string;
+.L $
+matches the end.
+.PP
+The 
+.B REP
+operators match zero or more
+.RB ( * ),
+one or more
+.RB ( + ),
+zero or one
+.RB ( ? ),
+exactly
+.I m
+.BI \f1(\fP\e{ m \e}\f1),\fP
+.I m
+or more
+.BI \f1(\fP\e{ m ,\e}\f1),\fP
+and any number between
+.I m
+and
+.I n
+inclusive
+.BI \f1(\fP\e{ m , n \e}\f1),\fP
+instances respectively of the preceding regular expression 
+.BR e2 .
+.PP
+A concatenated regular expression,
+.BR "e1 e2" ,
+matches a match to 
+.B e1
+followed by a match to
+.BR e2 .
+.PP
+An alternative regular expression,
+.BR "e0 ALT e1" ,
+matches either a match to
+.B e0
+or a match to
+.BR e1 .
+.PP
+A match to any part of a regular expression
+extends as far as possible without preventing
+a match to the remainder of the regular expression.
+.SH SEE ALSO
+.IR regexp (3),
+.IR gre (1)
+.SH DIAGNOSTICS
+Routines that return pointers return 0 on error.
+.SH BUGS
+Between 
+.IR re (3)
+and
+.IR regexp (3)
+there are too many routines.

@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	security.out
+
+pg:	security.out
+	count security.ms security.out
+
+spell:VQ:
+	dospell security.ms
+
+lp:	security.out
+	$LP $newprereq && touch $target
+
+security.out:D:	security.ms $REF
+	$PREFER security.ms | troff -mpm > $target
+
+index:V:
+	runind security
+	$PREFER xsecurity.ms | troff -mpm >/dev/null 2>security.x
+	mkindex security.x
+	rm xsecurity.ms
+
+pindex:V:
+	mkindex security.x

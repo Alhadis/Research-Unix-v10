@@ -1,0 +1,24 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	spin.out
+
+pg:	spin.out
+	count spin.ms spin.out
+
+spell:VQ:
+	dospell spin.ms
+
+lp:	spin.out
+	$LP $newprereq && touch $target
+
+spin.out:D:	spin.ms $REF
+	$PREFER spin.ms | tbl | eqn | troff -mpm > $target
+
+index:V:
+	runind spin
+	$PREFER xspin.ms | tbl | eqn | troff -mpm > /dev/null 2>spin.x
+	mkindex spin.x
+	rm xspin.ms
+pindex:V:
+	mkindex spin.x

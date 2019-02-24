@@ -1,0 +1,322 @@
+|macro(top.of.page;
+	[
+'\"	;P page number register TEMP
+.nr ;! 1
+.de TP
+'sp 1v+1p
+.af ;P \\gP			\" save format of page_counter
+.af P 1				\" normal format for next line
+.nr ;P \\n P			\" must use different name for P
+.af P \\g(;P			\" restore format to P
+.af ;P 1			\" normal format for control register
+'sp 0				\"changed from 2
+.ie \\n(;!>1 \{			\" output headers
+.tl \\*(PH
+.if !\\n(;P%2 .tl \\*(EH
+.if \\n(;P%2 .tl \\*(OH \}
+.el 'sp 2+.75i-8p		\"changed from 1
+'sp 1v				\"changed from 2
+.ns
+.rr ;P				\" free storage
+.nr ;! 2
+..
+])
+
+|macro(bottom.of.page;
+[
+.deBP
+.ev2
+.if\\n(:C \{\
+.ll\\n(W0u
+.lt\\n(W0u \}
+.rs
+'sp 1+8p
+.af;P \\gP
+.afP 1
+.nr;P \\n P
+.afP \\g(;P
+.af;P 1
+.if!\\n(;P%2 .tl \\*(EF
+.if\\n(;P%2 .tl \\*(OF
+.if\\n(:C \{\
+.ll\\nWu
+.lt\\nWu \}
+.ev
+.rr;P
+..
+])
+
+|environment(titlebox;
+	;
+
+	new.page,
+	fill off, inline off, size +2, space +2, font bold, center on,
+	macro TI, font roman, size -2, space -2, SPACE,
+	blank.lines, size +1, inline on,
+|for i in 1 2 3 [
+	if "\nA>=$i",
+		string A$i,
+]
+	inline off, font roman, size -1, inline on, blank.lines 1v-6p,
+	text italics "AT&T Bell Laboratories", new.line,
+	text italics "Murray Hill, New Jersey 07974", new.line,
+	center off, fill on,
+
+	|ifvalue sawabstract on {
+		blank.lines, center on, size +1, text italics "ABSTRACT",
+		size -1, center off, minimum.lines,
+		indent +.5i, line.length -.5i, line.spacing 1, paragraph,
+		macro AS, line.length +.5i, indent -.5i,
+	}
+	minimum.lines)
+	|comment<summary: titlebox (produce title box here)>
+
+|environment(reference_placement;
+	|ifvalue sawreference on [
+		minimum.lines 1v, protect, incr S0,
+		clear S1 S2 S3,
+		set string Ts "References",
+		font bold,
+		|ifvalue sectioning bychapter [
+			number CH, text ".",
+		]
+		number S0,
+		|ifvalue sectioning bysection [
+			text ".",
+		]
+		text " ", string Ts, font roman,
+		paragraph,
+		clear string Rs,
+		|ifvalue sectioning bychapter [
+			store string.from.number Rs CH,
+			add string Rs ".",
+		]
+		|ifvalue sectioning byappendix [
+			store string.from.number Rs AC,
+			add string Rs ".",
+		]
+		add string.from.number Rs S0,
+		|ifvalue sectioning bysection [
+			contents section 1 Rs Ts,
+		]
+		|ifvalue sectioning bychapter [
+			contents section 2 Rs Ts,
+		]
+		|ifvalue sectioning byappendix [
+			contents section 2 Rs Ts,
+		]
+		reference.placement
+	];
+
+	sawreference off)
+	|comment<summary: reference_placement (produce references here)>
+
+|environment(Oreference_placement;
+	|ifvalue sawreference on [
+		minimum.lines 3,
+		set string Ts "References",
+		inline off, size +1, center on,
+		font bold, string Ts, font roman,
+		center off, size -1, inline on,
+		minimum.lines,
+		clear string Rs,
+		contents section 1 Rs Ts,
+		reference.placement
+	];
+
+	sawreference off)
+	|comment<summary: reference_placement (produce references here)>
+
+|environment(appendix;
+	blank.lines 3,
+	number format AC A, incr AC,
+	clear S0 S1 S2 S3,
+	set string Rs "Appendix ",
+	add string.from.number Rs AC,
+	divert.string Ts;
+
+	sectioning byappendix,
+	center on, size +1, font bold,
+	string Rs, blank.lines, string Ts,
+	font roman, size -1, center off,
+	minimum.lines 1, paragraph,
+	store string.from.number Rs AC,
+	contents section 1 Rs Ts)
+	|comment<summary: appendix (numbered appendix; IT)>
+
+|environment(Tappendix;
+	blank.lines -1,
+	number format AC A, incr AC,
+	clear S0 S1 S2 S3,
+	set string Rs "Appendix ",
+	add string.from.number Rs AC,
+	divert.string Ts;
+
+	sectioning byappendix,
+	center on, size +1, font bold,
+	string Rs, blank.lines, string Ts,
+	font roman, size -1, center off,
+	minimum.lines 1, paragraph,
+	store string.from.number Rs AC,
+	contents section 1 Rs Ts)
+	|comment<summary: appendix (numbered appendix; IT)>
+
+|environment(index;
+	divert.input on Ts;)
+	|comment<summary: index (toss this item for index)>
+
+|environment(section;
+	divert.string Ts;
+
+	minimum.lines 1v, protect, incr S0,
+	clear S1 S2 S3,
+	font bold,
+	|ifvalue sectioning bychapter [
+		number CH, text ".",
+	]
+	|ifvalue sectioning byappendix [
+		number AC, text ".",
+	]
+	number S0,
+	|ifvalue sectioning bysection [
+		text ".",
+	]
+	text " ", string Ts, font roman,
+	paragraph,
+	clear string Rs,
+	|ifvalue sectioning bychapter [
+		store string.from.number Rs CH,
+		add string Rs ".",
+	]
+	|ifvalue sectioning byappendix [
+		store string.from.number Rs AC,
+		add string Rs ".",
+	]
+	add string.from.number Rs S0,
+	|ifvalue sectioning bysection [
+		contents section 1 Rs Ts,
+	]
+	|ifvalue sectioning bychapter [
+		contents section 2 Rs Ts,
+	]
+	|ifvalue sectioning byappendix [
+		contents section 2 Rs Ts,
+])
+|comment<summary: section (numbered section; IT)>
+
+|associate(paragraph;
+	minimum.lines 4p;
+
+	|ifvalue localparagraph.style indented [
+		indent.line +5n,
+	]
+	|ifvalue localparagraph.style numbered [
+		incr S3, number format S3 i,
+		store string.from.number Ts S3,
+		add string Ts ") ",
+		string italics Ts,
+	]
+	|ifvalue globalparagraph.style indented [
+		localparagraph.style indented,
+	]
+	|ifvalue globalparagraph.style numbered [
+		localparagraph.style numbered,
+	]
+	|ifvalue globalparagraph.style flushed [
+		localparagraph.style flushed,
+	];
+
+	[numbered;;
+		localparagraph.style numbered]
+	[n;;
+		localparagraph.style numbered]
+	[indented;;
+		localparagraph.style indented]
+	[i;;
+		localparagraph.style indented]
+	[flushed;;
+		localparagraph.style flushed]
+	[f;;
+		localparagraph.style flushed])
+	|comment<summary: paragraph (n, i, f, numbered, indented, flushed)>
+
+|associate(p;
+	minimum.lines 4p;
+
+	|ifvalue localparagraph.style indented [
+		indent.line +5n,
+	]
+	|ifvalue localparagraph.style numbered [
+		incr S3, number format S3 i,
+		store string.from.number Ts S3,
+		add string Ts ") ",
+		string italics Ts,
+	]
+	|ifvalue globalparagraph.style indented [
+		localparagraph.style indented,
+	]
+	|ifvalue globalparagraph.style numbered [
+		localparagraph.style numbered,
+	]
+	|ifvalue globalparagraph.style flushed [
+		localparagraph.style flushed,
+	];
+
+	[numbered;;
+		localparagraph.style numbered]
+	[n;;
+		localparagraph.style numbered]
+	[indented;;
+		localparagraph.style indented]
+	[i;;
+		localparagraph.style indented]
+	[flushed;;
+		localparagraph.style flushed]
+	[f;;
+		localparagraph.style flushed])
+	|comment<summary: p (alias for paragraph)>
+
+|attribute<ps.include; nostack;
+	$file $x $y [\X'PI:\n(.o:\n(.i:\n(.l:\n(.t:\*($file:\*($y,\*($x,0,0::'\c
+]	$file $x $y $xoffset $yoffset [\X'PI:\n(.o:\n(.i:\n(.l:\n(.t:\*($file:\*($y,\*($x,\*($yoffset,\*($xoffset::'\c
+]>
+
+|associate(postscript;
+	incr D, clear T,
+	clear string T1,
+	set string T2 "8.5i",
+	set string T3 "11i",
+	set string T4 T5 "0";
+
+	if begin "!@T1@@",
+		ps.include T1 T2 T3 T4 T5,
+	if end;
+	
+	[file $; incr T, set string T1 $;]
+	[x $; incr T, set string T2 $;]
+	[y $; incr T, set string T3 $;]
+	[xoffset $; incr T, set string T4 $;]
+	[yoffset $; incr T, set string T5 $;]
+	[$; incr T, set string T\nT $;])
+|comment<summary: postscript (file, x, y, xoffset, yoffset)>
+
+|attribute<draw.rule; nostack;
+	$x [\D'l $x 0']
+	$x $y [\D'l $x $y']>
+
+|environment(ruled.display;
+	minimum.lines 1, draw.rule 3i;
+
+	minimum.lines 1, draw.rule 3i)
+	|comment<summary: ruled.display (produce ruled display here)>
+
+|attribute(figsize; ;
+$ [
+.ps$
+])
+
+|environment(figsmall;
+figsize -1; figsize +1)
+|comment<summary: small (reduce the point size)>
+
+|style(page_length -2v, page_width 6.5i, paragraph_style indented)

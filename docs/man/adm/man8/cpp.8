@@ -1,0 +1,114 @@
+.TH CPP 8
+.CT 1 prog_c
+.SH NAME
+cpp \- C language preprocessor
+.SH SYNOPSIS
+.B /lib/cpp
+[
+.I option ...
+]
+[
+.I ifile
+[
+.I ofile
+]
+]
+.SH DESCRIPTION
+.I Cpp\^
+interprets preprocessor directives
+and does macro substitution
+for
+.IR cc (1)
+and other compilers.
+The input
+.I ifile
+and output
+.I ofile
+default to standard input and standard output respectively.
+.PP
+The options are:
+.TP
+.B -P
+Do not place line number markings in output.
+.TP
+.B -C
+Do not remove comments.
+.TP
+.BI -U name\^
+.PD 0
+.TP
+.BI -D name\^
+.TP
+.BI -D name=def\^
+.TP
+.BI -I dir\^
+Same as in
+.IR cc (1).
+.B -U
+overrides
+.BR -D .
+.PD
+.TP
+.B -H
+Report all included files on standard error file,.
+.TP
+.B -M
+Attach modification date to file names in line number
+directives thus:
+.IB file @ modtime,
+where modtime is the integer number of seconds since the epoch.
+.TP
+.B -T
+Truncate preprocessor symbols to eight characters.
+.TP
+.BI -Y dir
+Use
+.I dir
+instead of
+.F /usr/include
+as the last resort in searching for include files.
+.PP
+The output file contains processed text sprinkled
+with lines that show the original input line numbering:
+.IP
+.B #
+.I linenumber
+.L
+"\fIifile\fP"
+.PP
+The input language is as described in the reference,
+with a few additions:
+.PP
+The
+.B #
+.I linenumber
+marks placed in the output are accepted as an alternative
+to the official
+.B #line
+directive.
+.PP
+These symbols are predefined in various implementations:
+.IP
+.EX
+ibm gcos os tss unix
+interdata pdp11 u370 u3b u3b5 vax
+RES RT
+lint
+.EE
+.PP
+Preprocessor formal parameters are recognized within
+quoted strings in the replacement text.
+.PP
+When comments are removed they are replaced by null strings;
+this unofficial feature makes it possible to construct
+identifiers by concatenation.
+.SH FILES
+.TF /usr/include
+.TP
+.F /usr/include
+standard directory for include files
+.SH SEE ALSO
+B. W. Kernighan and D. M. Ritchie,
+.I The C Programming Language,
+Prentice-Hall,
+1988

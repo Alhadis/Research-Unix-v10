@@ -1,0 +1,26 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	tbl.out
+
+pg:	tbl.out
+	count tbl.ms tbl.out
+
+spell:VQ:
+	dospell tbl.ms
+
+lp:	tbl.out
+	$LP $newprereq && touch $target
+
+tbl.out:D:	tbl.ms $REF
+	$PREFER tbl.ms | tbl | eqn | troff -mpm > $target 2>err
+	awk '$2=="Example" { if($1 != $4) printf "Example %s: was %d, should be %d\n", $3, $1, $4 }
+	$2!= "Example" { print }' < err
+
+index:V:
+	runind tbl
+	$PREFER xtbl.ms | tbl | eqn | troff -mpm > /dev/null 2>tbl.x
+	mkindex tbl.x
+	rm xtbl.ms
+pindex:V:
+	mkindex tbl.x

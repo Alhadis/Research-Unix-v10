@@ -1,0 +1,112 @@
+.TH JX 9.1
+.CT 1 comm_term
+.SH NAME
+jx \- 5620 execution and stdio interpreter
+.SH SYNOPSIS
+.B jx
+.I file
+[
+.I argument ...
+]
+.SH DESCRIPTION
+.I Jx
+downloads the program in
+.I file
+to the terminal or layer on its controlling tty
+and runs it there, simulating standard I/O functions of
+.IR stdio (3).
+.I Jx
+works either stand-alone or in a layer.
+.PP
+The
+.B stdout
+and
+.B stderr
+streams, if directed to the controlling terminal,
+will be squirreled away during
+execution and copied to the terminal
+after the down-loaded program exits.
+.PP
+Programs to be run by
+.I jx
+should include
+.B <jerqio.h>
+and call
+.B exit()
+upon termination in order to
+restart the default terminal program.
+Programs to be run stand-alone
+should be compiled with
+the
+.B -J
+option of
+.IR 3cc (9.1).
+No special options are required for running in a layer.
+.PP
+.IR Stdio (3)
+functions available under
+.I jx
+are
+.IP
+.EX
+.nr f \w'freopen  '
+.ta +\nfu +\nfu +\nfu +\nfu +\nfu 
+getc	putc	fopen	popen	printf	fread
+getchar	putchar	freopen	pclose	sprintf	fwrite
+fgets	puts	fclose		fprintf
+	fputs	access
+	fflush
+.EE
+.PP
+Unlike in
+.IR stdio (3),
+.I getc
+and
+.I putc
+are functions, not macros.
+.I Printf
+has only
+.BR %d ,
+.BR %s,
+.BR %c,
+.BR %o ,
+and
+.BR %x.
+.B %u
+prints an unsigned decimal number.
+.B %D
+prints an unsigned long decimal number.
+.PP
+Since
+.I jx
+uses
+.IR sendchar ,
+.IR sendnchars ,
+and
+.IR rcvchar ,
+.I jx
+programs should avoid these,
+and use only the standard I/O routines.
+.SH FILES
+.TF /usr/jerq/include/blitio.h
+.TP
+.F /usr/jerq/include/jerqio.h
+.TP
+.F /usr/jerq/lib/sysint
+standard I/O interpreter
+.TP
+.F $HOME/.jxout
+saved standard output
+.TP
+.F $HOME/.jxerr
+saved standard diagnostic output
+.SH SEE ALSO
+.IR request (9.2),
+.IR stdio (3)
+.SH BUGS
+Keyboard standard input doesn't work; use
+.IR kbdchar ;
+see
+.IR request (9.2).
+.br
+Stand-alone programs do not receive arguments.

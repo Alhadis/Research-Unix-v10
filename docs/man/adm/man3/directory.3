@@ -1,0 +1,110 @@
+.TH DIRECTORY 3  
+.CT 2 dirs
+.SH NAME
+opendir, readdir, telldir, seekdir, closedir \(mi directory operations
+.SH SYNOPSIS
+.nf
+.B #include <sys/types.h>
+.B #include <ndir.h>
+.PP
+.B DIR *opendir(filename)
+.B char *filename;
+.PP
+.B struct direct *readdir(dirp)
+.B DIR *dirp;
+.PP
+.B long telldir(dirp)
+.B DIR *dirp;
+.PP
+.B seekdir(dirp, loc)
+.B DIR *dirp;
+.B long loc;
+.PP
+.B closedir(dirp)
+.B DIR *dirp;
+.fi
+.SH DESCRIPTION
+.I Opendir
+opens the directory named by
+.I filename
+and associates a `directory stream'
+with it.
+.I Opendir
+returns a pointer to be used to identify the
+directory stream
+in subsequent operations.
+The pointer value 0
+is returned if
+.I filename
+cannot be accessed or is not a directory.
+.PP
+.I Readdir
+returns a pointer to the next directory entry.
+It returns 0
+upon reaching the end of the directory or detecting
+an invalid
+.I seekdir
+operation.
+.PP
+.I Telldir
+returns the current location associated with the named
+directory stream.
+.PP
+.I Seekdir
+sets the position of the next
+.I readdir
+operation on the
+directory stream.
+The new position reverts to the one associated with the
+directory stream
+when the
+.I telldir
+operation was performed.
+Values returned by
+.I telldir
+are good only for the lifetime of the 
+.B DIR
+pointer from
+which they are derived.
+.PP
+.I Closedir
+causes the named
+directory stream
+to be closed,
+and the structure associated with the 
+.B DIR
+pointer to be freed.
+.LP
+.nf
+.ftL
+.ta \w'struct\ 'u +\w'direct\ 'u +\w'd_name[MAXNAMLEN+1];\ 'u
+struct	direct	{
+	\fLu_long	d_ino;\fR	inode for the entry
+	\fLshort	d_reclen;\fP	don't use
+	\fLshort	d_namlen;\fP	equivalent to \fLstrlen(d_name)\fP
+	\fLchar	d_name[MAXNAMLEN+1];\fP	null-terminated entry name
+\fL};\fR
+.fi
+.PP
+The preferred way to search the current directory is:
+.ft L
+.nf
+.ta 8n +8n +8n +8n
+	DIR *dirp;
+	dirp = opendir(".");
+	for(dp = readdir(dirp); dp != 0; dp = readdir(dir))
+		if(strcmp(dp->d_name, name) == 0)
+			break;
+	closedir(dirp);
+	/* found name if dp != 0 */
+.fi
+.ft P
+.SH "SEE ALSO"
+.IR dir (5),
+.IR open (2),
+.IR dirread (2),
+.IR read (2),
+.IR lseek (2),
+.IR ftw (3)
+.SH BUGS
+The return values point to static data whose content is overwritten by each call.

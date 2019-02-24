@@ -1,0 +1,23 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	dc.out
+
+pg:	dc.out
+	count dc.ms dc.out
+
+spell:VQ:
+	dospell dc.ms
+
+lp:	dc.out
+	$LP $newprereq && touch $target
+
+dc.out:D:	dc.ms $REF
+	$PREFER dc.ms | eqn | troff -mpm > $target
+
+index:V:
+	runind dc
+	$PREFER xdc.ms | eqn | troff -mpm > /dev/null 2>dc.x
+	mkindex dc.x
+#	rm xdc.ms
+

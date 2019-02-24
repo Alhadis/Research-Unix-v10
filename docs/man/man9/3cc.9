@@ -1,0 +1,163 @@
+.TH 3CC 9.1
+.CT 1 prog_c
+.SH NAME
+3cc, 3as, 3ar, 3ld, 3nm, 3size, 3strip, cprs \- MAC-32 C compiler
+.SH SYNOPSIS
+.B 3cc
+[
+.I option ...
+]
+.I file ...
+.PP
+.B cprs
+.I infile outfile
+.SH DESCRIPTION
+.I 3cc
+is the C compiler for the MAC-32 microprocessor in the
+Teletype DMD-5620 terminal.
+Its default action is to compile programs to run under the
+.IR mux (9.1)
+environment.
+.PP
+The behavior of
+.I 3cc
+is similar to
+.IR cc (1).
+Here are listed only options with special behavior for 5620s.
+.TP
+.B -J
+Compile the named programs, and link them for running stand-alone
+on a 5620 terminal.
+.TP
+.B -O
+Invoke an object-code improver (not recommended).
+.TP
+.B -m
+Compile the named programs for ordinary (non-jerq) environments.
+.TP
+.BI -D name = def
+.br
+.ns
+.TP
+.BI -D name
+Define the
+.I name
+to the preprocessor,
+as if by
+.LR #define .
+If no definition is given, the name is defined as
+.LR 1 .
+The symbol
+.B MUX
+is predefined unless
+.B -J
+or
+.B -m
+is set.
+.TP
+.BI -I dir
+.L #include
+files whose names do not begin with 
+.L /
+are always sought first in the directory
+of the
+.I file
+argument, then in directories named in
+.B -I
+options,
+then in directories on a standard list, which includes
+.FR /usr/jerq/include .
+.PP
+Associated object-code manipulating programs exist.
+Their behavior is similar to the programs cited below.
+The loader, assembler and archive program are System V
+derivatives, and are slightly different in behavior;
+see the System V manuals.
+For typical uses, these differences are irrelevant.
+The support programs include:
+.TP
+.I 3as
+assembler, see
+.IR as (1)
+.PD 0
+.TP
+.I 3ar
+archive, see
+.IR ar (1)
+(there is no 
+.IR 3ranlib )
+.TP
+.I 3ld
+link editor, see
+.IR ld (1)
+.TP
+.I 3nm
+name list, see
+.IR nm (1),
+doesn't work on archives
+.TP
+.I 3size
+object code size, see
+.IR size (1)
+.TP
+.I 3strip
+symbol table; see
+.IR strip (1).
+.RB ( -r
+is mandatory for
+.IR mux -runnable
+binaries.)
+.PD
+.PP
+.I 3strip
+has no
+.B -g
+flag; but
+.I cprs
+removes redundant symbol table entries while
+copying
+.I infile
+to
+.IR outfile .
+.SH FILES
+.TF /usr/jerq/lib/m32/optim
+.TP
+.F a.out
+loaded output
+.TP
+.F /tmp/ctm*
+temporary
+.TP
+.F /lib/cpp
+preprocessor
+.TP
+.F /usr/jerq/lib/m32/comp
+compiler
+.TP
+.F /usr/jerq/lib/m32/optim
+optimizer
+.TP
+.F /usr/jerq/lib/*.o
+runtime startoff, etc.
+.TP
+.F /usr/jerq/lib/libc.a
+standard library
+.TP
+.F /usr/jerq/lib/libj.a
+stand-alone graphics library
+.F /usr/jerq/lib/libmj.a
+mux-runnable graphics library (default)
+.TP
+.F /usr/jerq/lib/muxmap
+loader I-file
+.TP
+.F /usr/jerq/include
+standard directory for
+.L #include
+files
+.SH "SEE ALSO"
+System V manuals for
+.I 3ar, 3ld, 3as
+and
+.I cprs
+documentation.

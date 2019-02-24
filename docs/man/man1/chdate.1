@@ -1,0 +1,76 @@
+.TH CHDATE 1
+.CT 1 files dirs
+.SH NAME
+touch, chdate \- set modification or access date of a file
+.SH SYNOPSIS
+.B touch
+[
+.B -c
+]
+.I file ...
+.PP
+.B chdate
+[
+.B -am
+]
+.I date file ...
+.SH DESCRIPTION
+.I Touch
+attempts to set the modification time of the
+.I files
+to the current time.
+If a
+.I file
+does not exist,
+it will be created unless option
+.B -c
+is present.
+.PP
+.I Chdate
+sets the access and modification times of
+.I files.
+The 
+.I date
+comprises two or more arguments: a month (3 letters or more),
+a day number, an optional time in hour:min[:sec] form, and an
+optional year.
+A missing year means a time in the last 12 months.
+The options are
+.TP
+.B -a
+Change the access time only.
+.TP
+.B -m
+Change the modification time only.
+.PP
+.I Chdate
+knows how to carry between fields of a date.
+Only a file's owner or the super-user can change its date.
+.SH EXAMPLES
+.EX
+.ta \w'chdate jul 4 12:00 1976 independence 'u
+chdate jul 4 12:00 1976 independence
+chdate jul -3 1976 independence	# backdate one week
+.EE
+.SH SEE ALSO
+.IR ls (1),
+.IR utime
+in
+.IR chmod (2),
+.IR stat (2),
+.IR timec (3),
+.IR chmod (1),
+.IR chown (8)
+.SH DIAGNOSTICS
+.I Chdate
+returns the number of files on which the date
+could not be changed.
+.SH BUGS
+.I Touch
+will not touch directories.
+.PP
+The first
+.I file
+name for 
+.I chdate
+cannot begin with a digit.

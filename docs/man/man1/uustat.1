@@ -1,0 +1,145 @@
+.\"@(#)uustat.1c	?.?
+.TH UUSTAT 1
+.CT 1 comm_mach
+.SH NAME
+uustat \- uucp status inquiry and job control
+.SH SYNOPSIS
+.B uustat
+[
+.I option
+]
+.PP
+.B uustat
+[
+.BI -s system
+]
+[
+.BI -u user
+]
+.SH DESCRIPTION
+.I Uustat\^
+will display the status of, or cancel, previously specified
+.I uucp\^
+commands, or provide general status on
+.I uucp\^
+connections to other systems.
+The options are
+.PP
+.TP \w'\fL-k\fIjobid\ 'u
+.B -a\^
+List the status of all pending
+.I uucp
+requests for all machines.
+.TP
+.BI -k jobid\^
+Kill the
+.I uucp\^
+request whose job identification is
+.IR jobid .
+The killed
+.I uucp\^
+request must belong to the person
+issuing the
+.I uustat\^
+command
+unless one is the super-user.
+.TP
+.B -m\^
+Report the status of accessibility of all machines.
+.TP
+.B -p\^
+Report on the status of all processes that are in
+the lock files.
+.TP
+.B -q\^
+List the jobs queued for each machine.
+If a status file exists for the machine, its date, time and
+status information are reported.
+A parenthesized number next to the number of
+.L C
+or
+.L X
+files gives the age in days of the oldest file for that system.
+The retry field represents the number of hours until the next possible call.
+The count field is the number of failure attempts.
+.TP
+.BI -r jobid\^
+Rejuvenate
+.I jobid\^.
+The files associated with
+.I jobid\^
+are touched so that
+their modification time is set to the current time.
+This prevents the cleanup demon
+from deleting the job until its modification
+time reaches the limit imposed by the demon.
+.TP
+.BI -s sys\^
+Report the status of all
+.I uucp\^
+requests for remote system
+.IR sys .
+.TP
+.BI -u user\^
+Report the status of all
+.I uucp\^
+requests issued by
+.IR user .
+.PP
+When no options are given,
+.I uustat\^
+outputs the status of all
+.I uucp\^
+requests issued by the current user.
+.PP
+Requests are listed in the form
+.IP
+jobid	date	type	machine	stuff
+.br
+	date	type	machine	stuff
+	...
+.br
+.PP
+.I Jobid
+identifies the request;
+it is useful for
+.B \-k
+and
+.BR \-r .
+The remainder of the line
+describes a transfer
+queued at
+.I date
+for
+.IR machine.
+.I Type
+is
+.B S
+if a file is to be sent to
+.IR machine ,
+.B R
+if it is to be received.
+Ordinary files
+are followed by the requestor's userid,
+the length of the file in bytes,
+and the name of the spooled file;
+requests for remote execution are followed by
+the userid and the command.
+If the request involves more than one file,
+the remaining files are listed without
+a
+.IR jobid .
+.PP
+The most common case is a mail request,
+which has two lines,
+one for the mail message itself
+and one for the request to execute
+.I rmail
+on the remote system.
+.SH FILES
+.F /usr/spool/uucp/*
+spool directories
+.SH SEE ALSO
+.IR uucp (1),
+.IR uux (1)
+.\"	@(#)uustat.1c	?.?

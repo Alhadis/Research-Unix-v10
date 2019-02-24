@@ -1,0 +1,165 @@
+.TH DKMGR 8
+.CT 1 sa_auto
+.SH NAME
+dkhup, dkmgr, dkzap \- manage Datakit interface
+.SH SYNOPSIS
+.B /usr/ipc/mgrs/dkhup
+[
+.B -N
+.I prefix
+]
+.br
+.B /usr/ipc/mgrs/dkmgr
+[
+.B -N
+.I prefix
+] [
+.B -m
+.I outname
+] [
+.B -n
+.I service
+]
+.br
+.B /usr/ipc/mgrs/dkzap
+[
+.B -N
+.I prefix
+]
+.SH DESCRIPTION
+.I Dkhup
+starts the common signaling channel protocol
+for a Datakit interface.
+Initially it sends several reset messages,
+and tells the controller
+to hang up all outstanding calls;
+thereafter it simply keeps the signaling protocol running.
+.PP
+.I Dkmgr
+receives and places Datakit calls.
+Outbound calls may be placed by calling
+.I ipcopen
+.RI ( ipc (3))
+with the
+.I outname
+specified by option
+.BR -m ;
+the default is
+.BR dk .
+.I Dkmgr
+announces itself to the Datakit network
+with the
+.I service
+name specified by option
+.BR -n ;
+the default is taken from
+.FR /etc/whoami .
+Inbound calls to
+.I service
+are connected to the local
+.L login
+service;
+inbound calls to
+Datakit address
+.IB service . serv
+are handed to local service
+.IR serv .
+.PP
+.I Dkhup
+and
+.I dkmgr
+are normally run once from
+.IR rc (8).
+Both programs must be running
+to make the network available.
+.PP
+.I Dkzap
+arranges for a KMC11-assisted Datakit interface
+to be reset, reloaded, and restarted.
+This should be done only if things are badly broken,
+as it hangs up all existing calls through that interface.
+.PP
+Datakit devices are expected to have names of the form
+.BI /dev/dk/dk nn
+with
+.I nn
+a two-digit channel number.
+If there are more than 100 channels,
+the first digit overflows to lower-case letters:
+channel 100 is
+.LR a0 .
+The common signaling control channel
+is named
+.BR /dev/dk/dkctl .
+All three programs accept an option
+.B -N
+.I prefix
+to change the naming convention;
+for example,
+.B -N /dev/kb/kb
+means that the files have names like
+.B /dev/kb/kb32
+and
+.BR /dev/kb/kbctl .
+.PP
+Support also exists for a less general naming convention:
+there may be two sets of files,
+named
+.BI /dev/dk/dk0 nn
+and
+.BI /dev/dk/dk2 nn\c
+,
+with control channels
+.B /dev/dk/dkctl0
+and
+.BR /dev/dk/dkctl2 .
+.I Dkhup
+and
+.I dkzap
+take the extra argument
+.B 0
+or
+.B 2
+to point at one or the other of the control names.
+A separate copy of
+.I dkhup
+is needed for each name.
+.I Dkmgr
+takes an option
+.B -u
+.IR c ,
+where
+.I c
+is
+.B 0
+or
+.B 2
+to use one set of files,
+or
+.B b
+to use both simultaneously;
+in the latter case,
+.I service
+is announced to both networks.
+This scheme is obsolete and overdue for replacement;
+the missing piece is something to pick an interface for outcalls.
+.PP
+.I Dkmgr
+records its activity in file
+.I service
+in directory
+.BR /usr/ipc/log ,
+default
+.BR /usr/ipc/log/dk .
+.SH FILES
+.F /dev/dk
+.SH "SEE ALSO"
+.IR con (1),
+.IR kmc (8),
+.IR svcmgr (8),
+.IR ipc (3)
+.SH BUGS
+.I Dkhup
+should be folded into
+.IR dkmgr ;
+it is separate for historic reasons.

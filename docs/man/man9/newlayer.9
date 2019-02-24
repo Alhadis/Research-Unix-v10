@@ -1,0 +1,81 @@
+.TH NEWLAYER 9.2
+.CT 2 comm_term
+.SH NAME
+newlayer, dellayer, downback, lbitblt, lpoint, lrectf, lsegment, ltexture, upfront \- layer control and graphics
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B Layer *newlayer(r);
+.B Rectangle r;
+.PP
+.B void dellayer(l)
+.B Layer *l;
+.PP
+.B void lbitblt(sl, r, dl, p, f)
+.B "Layer *sl, *dl; Rectangle r; Point p; Code f;
+.PP
+.B void lpoint(l, p, f)
+.B "Layer *l; Point p; Code f;
+.PP
+.B void lrectf(l, r, f)
+.B "Layer *l; Rectangle r; Code f;
+.PP
+.B void segment(l, p, q, f)
+.B "Layer *l; Point p, q; Code f;
+.PP
+.B void ltexture(l, r, t, f)
+.B "Layer *l; Rectangle r; Texture *t; Code f;
+.PP
+.B void upfront(l)
+.B "Layer *l;
+.PP
+.B void downback(l)
+.B "Layer *l;
+.SH DESCRIPTION
+.I Newlayer
+creates a layer in Rectangle
+.I r
+in the physical display bitmap, and returns its address,
+or 0 on failure.
+.IR Newproc (9.2)
+explains how to attach a process to a layer.
+.PP
+.I Dellayer
+de-allocates a layer; the associated process must also
+be freed (see
+.IR newproc (9.2)).
+.PP
+.I Upfront
+and
+.I downback
+are the subroutines corresponding to the
+.IR mux (9.1)
+menu items
+.B Top
+and
+.BR Bottom .
+.PP
+The routines
+.IR lbitblt ,
+.IR lpoint ,
+.I lsegment
+and
+.IR ltexture
+are equivalent to their
+.IR bitblt (9.3)
+counterparts
+except that they never inhibit the mouse cursor,
+so they are mainly useful only for implementation
+of efficient composite graphics operations such
+as circle-drawing.
+Because of the duality of Bitmaps and Layers,
+arguments of either type may be passed freely
+to any of the graphics primitives.
+.SH SEE ALSO
+.IR bitblt (9.3), 
+.IR newproc (9.2)
+.br
+Rob Pike,
+.I
+Graphics in Overlapping Bitmap Layers,
+ACM Trans. on Graphics, April 1983.

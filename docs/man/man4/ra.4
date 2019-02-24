@@ -1,0 +1,218 @@
+.TH RA 4
+.CT 2 sa
+.SH NAME
+ra \- DEC MSCP disks (RA60, RA80, RA81, RA90)
+.SH DESCRIPTION
+.I Ra
+devices occupy disk drives conforming to
+DEC's Mass Storage Control Protocol standard:
+drives such as the RA81
+connected via controllers such as the UDA50.
+Files with minor device numbers 0 through 7
+refer to different sections of drive 0,
+minor devices 8 through 16 refer to drive 1,
+and so on up to 63 (8 drives).
+.PP
+Normally the disk is accessed in 1024-byte blocks (1K).
+If 64 is added to the minor device number,
+4096-byte blocks (4K) are used instead.
+A 4K device mounted as a file system is bitmapped; see
+.IR filsys (5).
+.PP
+Conventionally the files are given names like
+.L ra37
+for section 7 of drive 3.
+There are no name rules distinguishing 1024-byte files
+from 4096-byte files;
+in practice the files are almost always the 4096-byte kind.
+.PP
+The start and size
+of the sections of each drive
+are as follows.
+Sizes are measured in
+512-byte hardware sectors.
+.PP
+.nf
+.ta .5i +\w'000000    'u +\w'000000    'u
+	disk	start	length
+	0	0	10240
+	1	10240	20480
+	2	30720	249848
+	3	280568	249848
+	4	530416	249848
+	5	780264	arbitrarily large
+	6	30720	749544
+	7	0	arbitrarily large
+.DT
+.fi
+.PP
+The `arbitrarily large'
+sections reach to the end of the disk.
+.I Rarct
+will display disk sizes; see
+.IR rarepl (8).
+For example,
+an RA81 has 891072 sectors,
+so section 7 is that size,
+and section 5 is
+891072\(mi780264=110808 sectors.
+An RA90 has 2376153 sectors;
+section 7 is that size,
+section 5 is
+2376153\(mi780264=1595889 sectors.
+For other disks,
+run
+.I rarct
+and do the arithmetic.
+.PP
+The
+.I ra
+files
+discussed above access the disk via the system's normal
+buffering mechanism
+and may be read and written without regard to
+physical disk records.
+There is also a `raw' interface
+which provides for direct transmission between the disk
+and the user's read or write buffer.
+A single read or write call results in exactly one I/O operation
+and therefore raw I/O is considerably more efficient when
+many words are transmitted.
+The names of the raw files
+begin with
+.L rra
+and end with a number which selects the same disk
+as the corresponding
+.L ra
+file.
+.PP
+In raw I/O the buffer must begin on a word boundary,
+and counts should be a multiple of 512 bytes
+(a disk block).
+Likewise
+.IR lseek (2)
+calls should specify a multiple of 512 bytes.
+.PP
+Several
+.IR ioctl (2)
+calls
+apply to the raw devices.
+.TF UIORRCT
+.TP
+.B UIOCHAR
+The third argument to
+.I ioctl
+points to an object 
+to be filled with drive parameters:
+.EX
+.ta .5i +\w'daddr_t 'u +\w'radsize   'u
+struct ud_unit {
+	daddr_t	radsize;	/* disk size, sectors */
+	daddr_t	rctsize;	/* RCT size, including pad */
+	long	medium;	/* medium id */
+	short	tracksz;	/* sectors per track */
+	short	groupsz;	/* tracks per group */
+	short	cylsz;	/* groups per cylinder */
+	char	rbns;	/* RBNs per track */
+	char	copies;	/* number of RCT copies */
+};
+.EE
+.TF UIORRCT
+.TP
+.B UIORRCT
+The third argument points to an object of type
+.EX
+struct ud_rctbuf {
+	caddr_t	buf;
+	int	lbn;
+};
+.EE
+.IP
+.B buf
+points to a 512-byte buffer,
+into which block
+.B lbn
+of the replacement and caching table
+(RCT)
+is read.
+As many copies of the RCT
+as necessary
+are examined to find a readable copy
+of the block.
+.TP
+.B UIOWRCT
+The third argument is like that of
+.BR UIORRCT .
+Block
+.B lbn
+of the RCT is written
+in all copies.
+.TP
+.B UIOREPL
+The third argument points to an object of type:
+.EX
+struct ud_repl {
+	daddr_t	replbn;	/* good block */
+	daddr_t	lbn;	/* bad block */
+	short	prim;	/* nonzero if primary replacement */
+};
+.EE
+.IP
+A `replace' command
+is sent to the controller,
+requesting that attempts to access logical block
+.I lbn
+henceforth be revectored to replacement block
+.IR replbn .
+.I Prim
+should be set nonzero
+if and only if
+.I replbn
+is the primary replacement block for
+.IR lbn .
+.TP
+.B UIOSPDW
+Arrange that the disk drive will spin down
+when the last file using it is closed.
+.TP
+.B UIORST
+Reset the controller
+to which this disk is connected.
+Any pending operations are abandoned and return an error.
+.SH FILES
+.F /dev/ra*
+.br
+.F /dev/rra*
+.SH SEE ALSO
+.IR rarepl (8)
+.br
+MSCP Basic Disk Functions Manual
+.br
+DEC Standard Disk Format Specification
+.SH BUGS
+In raw I/O
+.IR read (2)
+and
+.IR write 
+truncate file offsets to 512-byte block boundaries,
+and
+.I write
+scribbles on the tail of incomplete blocks.
+Thus,
+in programs that are likely to access raw devices,
+.I read, write
+and
+.IR lseek (2)
+should always deal in 512-byte multiples.
+.PP
+.B UIORRCT
+and
+.B UIOWRCT
+will misbehave if invoked on a section
+that doesn't start
+at the beginning of the disk.
+Section 7
+(the whole disk)
+is the best choice.
+.PP
+The 1K/4K flag bit in the device number is unfortunate.

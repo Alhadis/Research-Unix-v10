@@ -1,0 +1,73 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH PIPEBUF 3I+ "C++ Stream Library" " "
+.SH NAME
+pipebuf \- streambuf specialized as circular queue
+.SH SYNOPSIS
+.nf
+.ft B
+.ta1i 2i
+#include <iostream.h>
+#include <pipestream.h>
+
+class pipebuf :	streambuf {
+		pipebuf();
+	int 	empty();
+	int	full();
+	streambuf*	setbuf(char* ptr, int len);
+} ;
+.ft R
+.fi
+.SH DESCRIPTION
+A \f(CWpipebuf\fR
+uses its reserve area to support a circular
+queue of characters.
+In terms of the abstract notion of buffer a \f(CWpipebuf\fR
+is a potentially infinite sequence in which the put pointer
+and get pointer move independently.
+The put pointer is always at the end of the sequence, and
+puts extend the sequence.
+As long as the get pointer remains behind the put pointer, but
+not too far behind, fetching and storing can continue indefinitely.
+Seeks are not supported.
+.PP
+Assume
+.br
+\(em \fBpb\fR is a \f(CWpipebuf\fR.
+.br
+\(em \fBptr\fR is a \f(CWchar*\fR.
+.br
+\(em \fBi\fR and \fBlen\fR are an \f(CWint\fR.
+.br
+\(em \fBsb\fR is \f(CWstreambuf*\fR.
+.PP
+Constructor:
+.TP
+\fBpipebuf()\fR
+Constructs an empty buffer.
+.PP
+Members:
+.TP
+\fBi=pb.empty()\fR
+Returns non-zero if the get pointer is at the end of the sequence,
+and attempts to get characters will therefore fail.
+.TP
+\fBi=pb.full()\fR
+Returns non-zero if there is no more room for putting
+characters.  In the current implementation, the capacity of
+the buffer is one less than the size of the reserve area.
+.TP
+\fBsb=pb.setbuf(ptr,len)\fR
+Establishes the \fBlen\fR bytes starting at \fBptr\fR
+as the reserve area.  Normally it will return \fB&pb\fR.  But
+it will return a null pointer if it fails.  Failure occurs
+if \fBpb.empty()\fR is zero, or if \fBlen\fR is less than 2.
+.SH CAVEATS
+There ought to be a version with an unbounded capacity.
+.SH SEE ALSO
+streambuf(3C++)
+pipestream(3C++)

@@ -1,0 +1,19 @@
+awk '
+BEGIN {	n = 20; root = null = -1
+	for (i = 1; i <= n; i++)
+        	root = insert(root, null, int(1000*rand()), 0)
+}
+function insert(p, pp, x, d) { # node p, parent pp, value x, depth d
+	if (p == null) {
+        	val[p = ++nodecount] = x
+        	lson[p] = rson[p] = null
+        	if (pp != null) print "line", val[pp], 1-d, val[p], -d
+		print "text ljust", val[p], -d, "\"" x "\""
+        	print "click insert"
+	} else if (x < val[p])
+        	lson[p] = insert(lson[p], p, x, d+1)
+	else if (x > val[p])
+        	rson[p] = insert(rson[p], p, x, d+1)
+	return p
+}
+'

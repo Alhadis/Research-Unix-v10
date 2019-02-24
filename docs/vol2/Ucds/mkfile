@@ -1,0 +1,45 @@
+< ../ADM/defns
+<../index/defns
+
+S=ucds.ms
+G=*.g
+L=toy.w.l toy.pins.l toy.wx.l
+F=${G:%.g=%.pic}
+
+all:V:	ucds.out
+
+pg:	ucds.out
+	count abstract ucds.out
+
+spell:VQ:
+	dospell $S
+
+lp:	ucds.out
+	$LP $prereq && touch $target
+
+ucds.out:D: $S $F $L
+	pic $S | troff -mpm > $target
+
+figs:N: $F
+
+%.pic: %.g
+	grawp -t $prereq >$target
+
+%.l: %
+	sed 's/^/\\\&/' $prereq >$target
+
+list:Q:
+	echo mkfile $S
+
+index:V: $S
+	runind ucds
+	pic xucds.ms|troff -ms $IND/tm.mac - >/dev/null 2>ucds.x
+	mkindex ucds.x
+	rm xucds.ms
+pindex:V:
+	mkindex ucds.x
+
+NAME=toy
+JFILES=toy.j
+
+< hw.mkfile

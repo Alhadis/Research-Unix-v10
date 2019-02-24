@@ -1,0 +1,63 @@
+.TH CONSOLE 4 
+.CT 1 sa_nonmortals
+.SH NAME
+console \- VAX console interface
+.SH DESCRIPTION
+.PP
+The console terminal is either in
+program mode
+(connected to the program running in the VAX)
+or in console mode
+(connected to the console interpreter,
+which prompts with
+.LR >>> ).
+On most VAXes,
+.RB control- p
+switches to console mode.
+If the VAX CPU is still running,
+.L "SET TERM PROG"
+returns to program mode.
+If the CPU is halted,
+.L "C"
+restarts it
+and connects to the VAX.
+Hitting the break key
+in either mode
+may halt the console processor
+and produce an
+.L @
+prompt;
+hit
+.L P
+to escape.
+.PP
+On an 11/750,
+switching to console mode
+always halts the VAX;
+only
+.L C
+will escape.
+.RB Control- d
+while in console mode
+may induce micro-debugging mode,
+where the prompt is
+.LR RDM> .
+Type
+.L RET
+to return to console mode.
+.PP
+On a MicroVAX,
+the break key (only) halts the VAX and switches to console mode.
+.PP
+All these modes are implemented by the VAX hardware.
+To the operating system,
+the console looks like an ordinary terminal
+as described in
+.IR tty (4),
+except that the speed is fixed in the hardware.
+.SH FILES
+.F /dev/console
+.SH "SEE ALSO"
+.IR tty (4),
+.IR ttyld (4), 
+.IR reboot (8)

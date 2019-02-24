@@ -1,0 +1,64 @@
+.TH PASSWD 5
+.CT 1 sa_nonmortals secur
+.SH NAME
+passwd, group \- password and group files
+.SH DESCRIPTION
+The file
+.F /etc/passwd
+has one line for each user with the
+following information:
+.IP
+.nf
+name (login name, contains no upper case)
+encrypted password
+numerical user ID
+numerical group ID
+comp center account number, box number, optional user-id
+initial working directory
+program to use as shell
+.fi
+.PP
+Fields 
+are separated by colons.
+The comp center field is used only when communicating with certain
+systems, and in other installations can contain
+any desired information.
+If the password field is null, no password is demanded;
+if the shell field is null,
+.F /bin/sh
+is used.
+.PP
+The file
+.F /etc/group
+defines the membership of users in permission groups.
+It contains one line for each group with the following
+colon-separated fields:
+.IP
+.nf
+group name
+encrypted password
+numerical group ID
+comma-separated list of all users allowed in the group
+.fi
+.PP
+Each group is separated from the next by a new-line.
+If the password field is null,
+.IR newgrp (1)
+will not demand a password.
+.PP
+Because the passwords are encrypted,
+these files can and do have general read
+permission and can be used, for example,
+to map numerical ids to names.
+.SH FILES
+.F /etc/passwd
+.F /etc/group
+.SH "SEE ALSO"
+.IR newgrp (1),
+.IR getpwent (3), 
+.IR login (8), 
+.IR crypt (3), 
+.IR passwd (1)
+.SH BUGS
+.IR Passwd (1)
+won't change passwords in the group file.

@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	snocone.out
+
+pg:	snocone.out
+	count snocone.ms snocone.out
+
+spell:VQ:
+	dospell snocone.ms
+
+lp:	snocone.out
+	$LP $newprereq && touch $target
+
+snocone.out:D:	snocone.ms $REF
+	$PREFER snocone.ms | eqn | troff -mpm > $target
+
+index:V:
+	runind snocone
+	$PREFER xsnocone.ms | eqn | troff -mpm > /dev/null 2>snocone.x
+	mkindex snocone.x
+	#rm xsnocone.ms
+
+pindex:V:
+	mkindex snocone.x

@@ -1,0 +1,154 @@
+.TH TAR 1
+.CT 1 comm_dev
+.SH NAME
+tar \- tape archiver
+.SH SYNOPSIS
+.B tar
+.I key
+[
+.I file ...
+]
+.SH DESCRIPTION
+.PP
+.I Tar
+saves and restores files, normally on magnetic
+on tape.
+The
+.I key
+is a string that contains
+at most one function letter plus optional modifiers.
+Other arguments to the command are names of
+files or directories to be dumped or restored.
+A directory name implies all the contained
+files and subdirectories (recursively).
+.PP
+The function is one of the following letters:
+.TP
+.B  r
+The named files
+are written
+on the end of the tape.
+.TP
+.B  x
+Extract the named files from the tape.
+If a file is a directory, the directory is extracted recursively.
+Owners and modes are restored if possible.
+If no file argument is given, extract the entire tape.
+If the tape contains multiple entries for a file,
+the latest one wins.
+.TP
+.B  t
+List all occurrences of each 
+.I file
+on tape, or of all files if there are no
+.I file
+arguments.
+.TP
+.B  u
+Add the named files if they
+are not on the tape or are newer than the tape version.
+.TP
+.B  c
+Create a new tape; writing begins at the beginning
+of the tape instead of after the last file.
+.TP
+.B  o
+Omit owner and modes
+of directories, for compatibility with
+old versions of
+.I tar.
+.TP
+.B  p
+Restore files to their original modes,
+ignoring the present
+.IR umask (2).
+Setuid and sticky information
+will be restored when
+.IR tar
+is executed by the super-user.
+.PP
+The modifiers are:
+.TP
+.BR  0 ,..., 7
+Select a tape drive.
+The default is
+.BR 1 .
+Incompatible with modifier
+.BR f .
+.TP
+.B  v
+(verbose)
+Print the name of each file treated
+preceded by the function letter.
+With 
+.BR t ,
+give more details about the
+tape entries.
+.TP
+.B  w
+Print the action to be taken followed by file name, then
+wait for user confirmation.
+If the answer begins with
+.LR y ,
+the action is performed.
+Any other input means
+don't do it.
+.TP
+.B f
+Use the next argument as the name of the archive instead of
+the default
+.F /dev/rmt1 .
+If the name of the file is 
+.LR - ,
+tar writes to
+standard output or reads from standard input, whichever is
+appropriate.
+.I Tar
+can be used to move hierarchies thus:
+.IP
+.L
+	(cd fromdir; tar cf - .) | (cd todir; tar xf -)
+.TP
+.BI b 
+Write output in
+.IR n \(mu512-byte
+blocks, where
+.I n
+is the next argument,
+default 20, maximum 40.
+Useful for raw magnetic tape archives (see
+.B f
+above); destructive for disk archives.
+.TP
+.B l
+Complain if links cannot be resolved.
+If
+.B l
+is not specified, no
+error messages are printed.
+.TP
+.B L
+Write information needed to re-create symbolic links
+on the tape instead of following the links.
+Tapes thus written cannot be read on older versions of
+.I tar .
+.SH FILES
+.F /dev/rmt?
+.br
+.F /tmp/tar*
+.SH SEE ALSO
+.IR cpio (1),
+.IR bundle (1),
+.IR mt (4)
+.SH BUGS
+There is no way to ask for any but the last
+occurrence of a file.
+.br
+Tape errors are handled ungracefully.
+.br
+The
+.B u
+option can be slow, and works only with archives on disk files.
+.br
+File names are limited to
+100 characters.

@@ -1,0 +1,112 @@
+.TH SUBMIT 7
+.CT 1 writing_output
+.SH NAME
+submit \- install document in database
+.SH SYNOPSIS
+.B submit
+.I name
+[
+.I option ...
+]
+.SH DESCRIPTION
+.I Submit
+ships a paper to
+.FR /n/bowell/pap/spool ,
+from whence the paper will be installed under the given
+.I name
+in a database of locally-authored papers.
+The paper then becomes available for printing with
+.IR makepaper
+(see
+.IR papers (7))
+or for on-line inspection with
+.IR reader (9.7).
+.PP
+.I Submit
+expects to be run from a directory that
+contains the files for the paper.
+If only the
+.I  name 
+argument is given, 
+.I submit
+assumes that the paper is maintained by
+.IR make (1)
+and follows instructions in the makefile, which must be present.
+The options are
+.TP
+.B -mk
+Use
+.IR mk (1)
+instead of
+.I make.
+.TP
+.BI -M " makefile
+Use the given makefile.
+.TP
+.BI -m " target
+Make the given target.
+.TP
+.BI -s " script arg ..."
+Use a shell
+.I script
+instead of a makefile.
+.TP
+.BI -i " file ..."
+Format the paper with
+.IR troff (1)
+from the listed files, using macro packages and preprocessors as 
+determined by
+.IR doctype (1).
+Do not use a makefile or a shell script.
+.TP
+.BI -t " file ...
+Format the paper with
+.IR tex (1)
+from the listed files.
+Do not use a makefile or a shell script.
+Only the basenames of the files need be given.
+.TP
+.B -tatex
+The paper uses
+.IR tatex 
+(see
+.IR latex (7)).
+This option is used only in conjunction with
+.BR -t .
+.SH FILES
+.F /n/bowell/pap/spool/*
+.SH DIAGNOSTICS
+.I Submit
+complains if it can't find input or if it encounters a
+.I troff
+.L .sy
+command.
+.SH "SEE ALSO"
+.IR reader (9.7), 
+.IR troff (1), 
+.IR papers (7)
+.SH BUGS
+.I Submit
+fails if the
+.I troff
+preprocessors are run in a `hidden' way
+by calling a program (or shell script).
+.br
+When
+.I troff
+preprocessor output (i.e. 
+.IR "pic, grap, tbl, tped, ideal" )
+is included directly in the paper or with 
+.B .so
+commands,
+an attempt is made to find the preprocessor input file.
+If this attempt fails,
+.I submit
+refuses to ship the paper.
+.br
+Automatic installation fails if the system can't find
+the author's name or the author is not in the file containing
+the center organization.
+.br
+Doesn't work with 
+.IR monk (1).

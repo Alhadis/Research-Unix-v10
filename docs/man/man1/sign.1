@@ -1,0 +1,118 @@
+.TH SIGN 1 
+.CT 1 comm_term sa_mortals secur
+.SH NAME
+sign, verify, enroll, resign \(mi document certification
+.SH SYNOPSIS
+.B sign
+[
+.B -n
+.I name
+] [
+.I file
+]
+.PP
+.B verify
+[
+.B -s
+] [
+.I file
+]
+.PP
+.B enroll
+.PP
+.B resign
+.SH DESCRIPTION
+These routines
+provide a document-certification service.
+.PP
+.I Sign
+reads a document from the
+.I file
+or from the standard input, demands a signing password
+for the current login id,
+and places on standard 
+output a signed and dated copy of the document,
+with a cryptographic certificate attached.
+The resulting document can be embedded in a larger one.
+The option is
+.TP
+.BI -n " name
+Set the signing name; its password will be demanded.
+.PP
+.I Verify
+scans the
+.I file
+or the standard input for a certified document.
+If the document and date are as they were when certified,
+except possibly indented,
+the verified document is placed on the standard output
+with a statement of verification attached.
+The option is
+.TP
+.B -s
+Do not print the document; place only a statement of
+verification on the standard output.
+.PP
+The signer of a document must be registered with the
+certification service; the recipient need not be.
+Two commands handle registration:
+.PP
+.I Enroll
+demands a signing password and registers it for the current
+login id.
+It is unwise to use your login password.
+.PP
+.I Resign
+demands the signing password and, if it is correct,
+terminates the registration for the current login id.
+.PP
+A signed document and its date are tamperproof
+and thus are good for ordinary business purposes.
+The mere appearance of a certificate, however, is not proof
+of authenticity.  That can be determined only by
+.I verify.
+The output of
+.I verify
+lacks a
+certificate; its authenticity cannot be attested at a later date.
+.PP
+There is no notion of an `original' signed document;
+all copies are equally good and may be reverified at will.
+.PP
+Signers must trust 
+.I sign
+and recipients must trust
+.I verify
+not to have been tampered with on their respective machines.
+Both parties must trust the verification
+service, which is on a separate secure machine,
+and the communication channels to it.
+.SH EXAMPLES
+.TP
+.B sign <doc.raw >doc.cert
+.TP
+.B verify <doc.suspect >doc.checked
+.TP
+.B sign <letter | mail whomever
+The recipient can verify the letter from within
+.IR mail (1)
+by using
+.I mail's
+pipe command:
+.LR |verify .
+.SH SEE ALSO
+.IR notary (8)
+.SH DIAGNOSTICS
+.I Verify
+yields exit status 0 only on successful verification.
+.PP
+`Bogus' \- the document has been tampered with, or the
+original password is no longer registered.
+.SH BUGS
+Only one user with a given login name may be registered;
+thus the certification service cannot be extended too
+far.
+.br
+To minimize dependence on the certification service,
+no password check is made at signing.  A mistyped password
+will not show up until verification.

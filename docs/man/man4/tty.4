@@ -1,0 +1,114 @@
+.TH TTY 4
+.CT 2 comm_term
+.SH NAME
+tty \- serial line interface drivers
+.SH SYNOPSIS
+.B #include <sys/ttyio.h>
+.SH DESCRIPTION
+The files
+.L /dev/tty*
+refer to serial line devices
+such as the DZ11.
+They are normally used in conjunction
+with the terminal line discipline,
+.IR ttyld (4).
+.PP
+Certain device-related parameters,
+such as parity and line speed,
+may be set by
+.IR ioctl (2)
+calls:
+.TF TIOCGDEV
+.TP
+.B TIOCGDEV
+The argument points to a
+.B ttydevb
+structure to be filled in with current settings.
+.TP
+.B TIOCSDEV
+The argument points to a
+.B ttydevb
+structure from which the parameters are set.
+.PD
+.PP
+The
+.B ttydevb
+structure, as defined in
+.BR <sys/ttyio.h> ,
+is
+.PP
+.EX
+.ta \w'struct 'u +\w'ttydevb 'u +\w'ispeed; 'u
+struct	ttydevb	{
+	char	ispeed;	/* input speed */
+	char	ospeed;	/* output speed */
+	short	flags;	/* mode flags */
+};
+.EE
+.PP
+The speeds are encoded as follows.
+Impossible speeds are ignored.
+.PP
+.nf
+.ta \w'B9600   'u +5n
+\f5B0	0\fP	(hang up device)
+\f5B50	1\fP	50 baud
+\f5B75	2\fP	75 baud
+\f5B110	3\fP	110 baud
+\f5B134	4\fP	134.5 baud
+\f5B150	5\fP	150 baud
+\f5B200	6\fP	200 baud
+\f5B300	7\fP	300 baud
+\f5B600	8\fP	600 baud
+\f5B1200	9\fP	1200 baud
+\f5B1800	10\fP	1800 baud
+\f5B2400	11\fP	2400 baud
+\f5B4800	12\fP	4800 baud
+\f5B9600	13\fP	9600 baud
+\f5EXTA	14\fP	External A
+\f5EXTB	15\fP	External B
+.fi
+.DT
+.PP
+The flags are:
+.PP
+.nf
+\f5F8BIT	040\fP	eight-bit input and output
+\f5ODDP	0100\fP	odd parity
+\f5EVENP	0200\fP	even parity
+.fi
+.PP
+If
+.L F8BIT
+is set,
+all eight bits of each output character
+are transmitted
+without imposing parity,
+and all eight bits of each input character
+are passed back without
+parity checking or stripping.
+Otherwise,
+.L EVENP
+requests that even parity be accepted and generated,
+.L ODDP
+odd parity.
+If both
+.L EVENP
+and
+.L ODDP
+are set,
+or if both are clear,
+even parity is generated
+and any parity is accepted.
+.PP
+For DZ11 lines,
+1200 baud
+and 8-bit mode are the defaults.
+The transmit and receive speeds are the same;
+.B ospeed
+is ignored.
+.SH SEE ALSO
+.IR ioctl (2),
+.IR ttyld (4)
+.SH BUGS
+Every hardware interface doesn't support every operation.

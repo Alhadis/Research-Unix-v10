@@ -1,0 +1,16 @@
+#! /bin/sh
+# set -x
+# trget: convert files for troff so troff doesn't tizzify
+PATH=/bin:/usr/bin
+s1="s/\\\\/\\\\e/g"
+s2="s/^/\\\\\\&/"
+case $# in
+[01]) echo usage trget nargs input line1 line2 exitline 1>&2; exit 1
+esac
+case "$1" in
+2)	cmd="-e '$s1' -e '$s2'";;
+3)	cmd="-n -e '$s1' -e '$s2' -e '$3{;p;q;}'" ;;
+4)	cmd="-n -e '$3,$4{;$s1;$s2;p;}'" ;;
+*)	cmd="-n -e '$5{;$s1;$s2;p;q;}' -e '$3,$4{;$s1;$s2;p;}'" ;;
+esac
+(eval sed $cmd) < $2

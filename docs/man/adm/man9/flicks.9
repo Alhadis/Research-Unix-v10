@@ -1,0 +1,138 @@
+.TH FLICKS 9.1
+.CT 1 comm_term
+.SH NAME
+flicks, fflicks, preflicks, 2mux \- movie graphics for 5620
+.SH SYNOPSIS
+.B flicks
+[
+.B -fmte
+]
+.I file ...
+.PP
+.B preflicks 
+[
+.B -fmtvloics
+]
+.I file ...
+.PP
+.B fflicks
+[
+.I flickfile
+]
+.SH DESCRIPTION
+.I Flicks
+interprets each of the
+.I files
+as a grey-scale frame in the form of
+.IR picfile (5)
+(or a square raster of unsigned bytes),
+dithers them, and displays them on the terminal.
+Once the frames have been downloaded the frames can be played
+as a movie, controlled by a menu on button 3.
+Most menu selections are self-explanatory.
+.I Step
+shows individual frames,
+stepping forward with button 1, or backward with button 2.
+Button 3 brings back the main menu.
+.PP
+The size of a frame is an option:
+.TP
+.B -f
+full size: same size as the input (typically 512\(mu512)
+.TP
+.B -m
+medium size: half the input size (typically 256\(mu256) default
+.TP
+.B -t
+tiny size: quarter of the input size (typically 128\(mu128)
+.PD
+.PP
+If only one image is processed, full size is the default. For more
+than 11 pictures, tiny size is default. Anything in between is
+medium size by default.
+.PP
+The frames are rendered with dithering by default,
+and with error propagation if
+.B -e
+is specified.
+.PP
+.I Fflicks
+downloads frames
+that have been preprocessed by
+.IR preflicks
+into a
+.I flickfile.
+.I Fflicks
+downloads much faster than
+.I flicks.
+.PP
+The options for
+.I preflicks
+include
+.BR -f ,
+.BR -m ,
+and
+.B -t
+as for
+.I flicks,
+plus
+.TP
+.B -l
+Use logarithmic dither.
+.TP
+.B -v
+Chatter on standard error.
+.TP
+.B -o
+Write the flickfile onto standard output;
+by default output goes into file
+.BR _movie .
+.TP
+.B -i
+Print a summary of the contents of
+the flickfiles.
+.TP
+.B -c
+Catenate named flickfiles onto the standard output.
+.TP
+.BI -s X , Y
+the (one only) input file is assumed to be a sequence of
+.IR X\(muY -byte
+frames.
+If
+.I X
+and
+.I Y
+may be omitted, 512\(mu512 is assumed.
+.PP
+.I Fflicks
+display is controlled by a menu on button 3.
+The selection `movie rate' tries to run the display at 24 frames/sec.
+.PP
+Frames prepared with
+.I preflicks
+are compacted.
+Thus
+.I fflicks
+can play a longer sequence than
+.IR flicks :
+up to roughly 120 medium sized or 480 tiny frames (20 seconds of movie).
+Still longer sequences (about twice as long) can be downloaded if
+.I fflicks
+is run within
+.I 2mux
+instead of
+.I mux.
+The price of compaction is speed.
+Menu selections are available
+for uncompacting some (even- or odd-numbered) frames.
+.SH FILES
+.B _movie
+.br
+.B /usr/jerq/lib/2term
+.SH "SEE ALSO"
+.IR pico (1),
+.IR picfile (5),
+.IR rebecca (9.1),
+.IR flickfile (9.5),
+.IR movie (9.1)

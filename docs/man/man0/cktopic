@@ -1,0 +1,23 @@
+for i in /usr/man/man[1-9]/*
+	do
+	awk "
+/^\.TH/	{
+	page = \$2 \"(\" \$3 \")\"
+	}
+/^\.CT/	{
+	section = \$2
+	if(section !~ /[12]/){
+		print \"CT in command missing section \" page
+		exit
+	}
+	for(i=3;i<=NF;i++){
+		if(length(\$i) >10)sname[substr(\$i,1,10)]
+		else sname[\$i] = 1
+	}
+	}
+/^\.SH NAME/	{
+	if(section == \"\")print \"no CT command in \" page
+	exit
+}" $i
+done
+

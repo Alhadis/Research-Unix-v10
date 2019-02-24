@@ -1,0 +1,59 @@
+.TH GETPARTS 10.1 UCDS
+.SH NAME
+getparts, findparts, ics, pins \- manage parts
+.SH SYNOPSIS
+.B getparts
+.IB file .wx
+[
+.IB pal .p
+\&...
+]
+.PP
+.B findparts
+[
+.I file
+\&...
+]
+.PP
+.B ics
+.I ic
+\&...
+.PP
+.B pins
+.I ic ...
+.SH DESCRIPTION
+.I Getparts
+writes a parts list (chip type and count) on the standard output.
+The input is either the net list (.wx file) and/or the pal pins file (.p file).
+The physical `chip type' of a
+.SM PAL
+is derived from the output of
+.BR "lde -W" .
+.PP
+.I Findparts
+reads the output of
+.I getparts
+and finds the bin number of each part (or functional equivalent)
+in the local stockroom.
+.PP
+.I Ics
+searches the stock list to find out which bins hold the magic part(s)
+requested.  "ic" is the name of a chip (like 74F00).
+.PP
+.I Pins
+searches the standard pins file
+to find the pin names of the ic and its relevant pin numbers.
+.SH FILES
+.F /usr/ucds/lib/stock
+stock list
+.br
+.F /usr/ucds/lib/stock
+.br
+.F /usr/ucds/lib/lib/pins
+.SH BUGS
+The equivalence classes known to
+.I findparts
+are fairly crude.
+.PP
+.I Ics
+does an exact match which is not always what you want.

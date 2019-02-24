@@ -1,0 +1,347 @@
+.TH JIM 9.1
+.SH NAME
+jim, jim.recover \- text editor
+.SH SYNOPSIS
+.B jim
+[
+.I file ...
+]
+.br
+.B jim.recover
+[
+.B -f
+]
+[
+.B -t
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Jim
+is an old text editor for the jerq terminal.
+It relies on the mouse to select text and commands.
+It runs only under
+.IR mux (9.1).
+.IR Jim 's
+screen consists of a number of
+.IR frames ,
+a one-line command and diagnostic frame at the bottom
+and zero or more larger file frames above it.
+Except where indicated, these frames behave identically.
+One of the frames is always the current frame,
+to which typing and editing commands refer,
+and one of the file frames is the working frame,
+to which file commands such as pattern searching and IO refer.
+.PP
+A frame has at any time a selected region of text,
+indicated by reverse video highlighting.
+The selected region may be a null string between two characters,
+indicated by a narrow vertical bar between the characters.
+The editor has a single
+`save buffer'
+containing an arbitrary string.
+The editing commands invoke transformers between the
+selected region and the save buffer.
+.PP
+The mouse buttons are used for the most common operations.
+Button 1 (left) is used for selection.
+Clicking button 1 in a frame
+which is not the current frame makes the indicated frame current.
+Clicking button 1 in the current frame selects the null string closest
+to the mouse cursor.
+Making the same null selection twice (`double clicking') selects
+(in decreasing precedence) the bracketed or quoted string, word or line
+enclosing the selection.
+By pushing and holding button 1, an arbitrary contiguous visible string
+may be selected.
+Button 2 provides a small menu of text manipulation functions, described below.
+Button 3 provides control for inter-frame operations.
+.PP
+The button 2 menu entries are:
+.TP .7i
+.B cut
+Copy the selected text to the save buffer and delete it from the frame.
+If the selected text is null, the save buffer is unaffected.
+.TP
+.B paste
+Replace the selected text by the contents of the save buffer.
+.TP
+.B snarf
+Copy the selected text to the save buffer.
+If the selected text is null, the save buffer is unaffected.
+.TP
+.B look
+Search forward for the next occurrence of
+the selected text or, if the selection is null,
+to the next occurrence of the text in the save buffer.
+.TP
+.B <mux>
+Exchange save buffers with
+.IR mux .
+.PP
+Also stored on the button 2 menu are the last Unix command and last
+search string typed (see below); these may be selected to repeat the action.
+.PP
+Typing
+replaces the selected text with the typed text.
+If the selected text is not null,
+the first character typed forces an implicit
+.BR cut .
+Control characters are discarded, but
+BS 
+.RB (control- H ),
+ETB
+.RB (control- W )
+and ESC have special meanings.
+BS is the usual backspace character, which erases the character
+before the selected text (which is a null string when it takes effect).
+ETB erases back to the word boundary preceding the selected text.
+There is no line kill character.
+ESC selects the text typed since the last button hit or ESC.
+If an ESC is typed immediately after a button hit or ESC,
+it is identical to a
+.BR cut .
+ESC and
+.B paste
+provide the functionality for a simple undo feature.
+.PP
+The button 3 menu entries are:
+.TP
+.B new
+Create a new frame, much as in
+.IR mux .
+.TP
+.B reshape
+Change the shape of the indicated frame, as in
+.IR mux .
+The frame is indicated by a button 3 hit after the selection.
+.TP
+.B close
+Close the indicated frame and its associated file.
+.TP
+.B write
+Write the indicated frame's contents to its associated file.
+.PP
+The rest of the menu is a list of file names available for editing.
+To work in a different file, select the file from the menu.
+If the file is not open on the screen, the cursor will switch to an
+outline box to prompt for a rectangle to be swept out with button 3,
+as in the New operator of
+.IR mux .
+(Unlike
+.IR mux ,
+there is a shorthand: sweeping the empty rectangle creates the largest
+possible rectangle.)
+The file is not read until its frame is first opened.
+If the file is already open, it will simply be made the workframe and
+current frame (for typing).
+The format of the lines in the menu is
+.TP
+-
+possibly an apostrophe, indicating that the file has been modified since
+last written,
+.TP
+-
+possibly a period or asterisk, indicating the file is open (asterisk) or
+the workframe (period),
+.TP
+-
+a blank,
+.TP
+-
+and the file name.
+The file name may be abbreviated by compacting path components to keep
+the menu manageable, but the last component will always be complete.
+.PP
+The work frame has a
+`scroll bar'\(ema black vertical bar down the left edge.
+A small tick in the bar indicates the relative position of the frame
+within the file.
+Pointing to the scroll bar and clicking a button controls scrolling
+operations in the file:
+.TP 1i
+button 1
+Move the line at the top of the screen to the
+.I y
+position of the mouse.
+.TP
+button 2
+Move to the absolute position in the file indicated by the y position of the mouse.
+.TP
+button 3
+Move the line at the
+.I y
+position of the mouse to the top of the screen.
+.PP
+The bottom line frame is used for a few typed commands, modeled on
+.IR ed (1),
+which operate on the work frame.
+When a carriage return is typed in the bottom line,
+the line is interpreted as a command.
+The bottom line scrolls, but only
+when the first character of the next line is typed.
+Thus, typically, after some message appears in the bottom line,
+a command need only be typed;
+the previous contents of the line will be automatically cleared.
+The commands available are:
+.TP
+.BI e " file"
+Edit the named
+.IR file ,
+or use the current file name if none specified.
+Note that each file frame has an associated file name.
+.TP
+.BI f " file"
+Set the name of the
+file associated with the work frame, if one is specified,
+and display the result.
+.TP
+.BI g " file ..."
+Enter the named
+.I files
+into the filename menu, without duplication,
+and set the work frame to one of the named files.
+If the new work frame's file is not open, the user is prompted to create its frame.
+The arguments to
+.B g
+are passed through
+.IR echo (1)
+for shell metacharacter interpretation.
+.TP
+.BI w " file"
+Write the named
+.IR file ,
+or use the current file name if none specified.
+The special command
+.IR w \(aa
+writes all modified files with file names.
+.TP
+.B q
+Quit the editor.
+.TP
+.B =
+Print the line number of the beginning of the selected text.
+.TP
+.B /
+Search forward for the string matching the regular expression after the slash.
+If found, the matching text is selected.
+The regular expressions are exactly as in
+.IR egrep (1),
+with two additions: the character 
+.L @
+matches any character, including
+newline, and the sequence
+.L \en
+specifies a newline, even in character classes.
+The negation of a character class does not match a newline.
+An empty regular expression (slash-newline) repeats the last regular expression.
+.TP
+.B ?
+Search backwards for the expression after the query.
+.TP
+.B 94
+Select the text of line 94, as in
+.IR ed .
+.TP
+.B cd
+Set the working directory, as in the shell.
+There is no
+.B CDPATH
+search.
+.TP
+.BI > command
+Send the selected text to the standard input of the Unix
+.IR command .
+.TP
+.B < command
+Replace the selected text by the standard output of the Unix
+.IR command .
+.TP
+.B | command
+Replace the selected text by the standard output of the Unix
+.IR command,
+given the original selected text as standard input.
+.PP
+If any of
+.B < > |
+is preceded by an asterisk
+.BR * ,
+the command is applied to the entire file, instead of just the selected text.
+If the command for
+.B < 
+or
+.B | 
+exits with non-zero status, the original text
+is not deleted; otherwise, the new text is selected.
+Finally, the standard error output of the command, which is merged with the
+standard output for
+.BR > ,
+is saved in the file
+.FR $HOME/jim.err .
+If the file is non-empty when the command completes, the first line is
+displayed in the diagnostic frame.
+Therefore the command
+.L >pwd
+will report
+.I jim 's
+current directory.
+.PP
+Attempts to quit with modified files, or edit a new file
+in a modified frame, are rejected.
+A second 
+.L q
+or 
+.L e
+command will succeed.
+The 
+.L Q
+or 
+.L E
+commands ignore modifications and work immediately.
+Some consistency checks are performed for the 
+.L w
+command.
+.I Jim
+will reject write requests which it considers dangerous
+(such as writes which would change a file modified since
+.I jim
+read it into its memory).
+A second 
+.L w
+will always write the file.
+.PP
+If
+.I jim
+receives a hangup signal, it writes a file
+.FR $HOME/jim.recover ,
+which is a shell command file that, when executed, will retrieve
+the files that were modified when
+.I jim
+exited.
+The
+.B -t
+option prints a table of contents, but does not unpack the files.
+By default,
+.I jim.recover
+is interactive; the
+.B -f
+option suppresses the interaction.
+If no files are named to
+.FR jim.recover ,
+it will recover all the saved files.
+.SH FILES
+.F $HOME/jim.err
+.br
+.F $HOME/jim.recover
+.SH BUGS
+The regular expression matcher is non-deterministic,
+and may be slow for spectacular expressions.
+.br
+When reshaped, the open frames must be re-opened manually.
+.br
+The
+.B <
+and
+.B |
+operators should snarf the original text.

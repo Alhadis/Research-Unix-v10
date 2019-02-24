@@ -1,0 +1,255 @@
+.tr ~
+.TH POST 1
+.SH NAME
+post \(mi mail and directory service by name
+.SH SYNOPSIS
+.B post
+[
+.I option ...
+]
+[
+.I person ...
+]
+.PP
+.B postext
+[
+.B -c
+.I directory
+]
+.I extension ...
+.PP
+.B postorg
+[
+.B -c
+.I directory
+]
+.I organization
+.PP
+.B postorg
+[
+.B -h
+.I directory
+]
+.PP
+.B postsx
+[
+.B -c
+.I directory
+]
+.I person ...
+.SH DESCRIPTION
+.I Post
+mail and gives directory assistance based on
+a corporate database.
+Aside from addressing, it reads and sends mail in
+the manner of
+.IR mail (1).
+.PP
+Mail may be sent to a
+.I person
+by name:
+.IP
+.IB first . middle . lastname :\f2dir\f5:\f2org\f5:\f2loc\f5:paper
+.LP
+where partial fields are valid and every field except
+.I lastname
+may be omitted.
+.I Dir
+is a phone book, such as
+.L attbl
+or
+.LR attc ;
+.I loc
+is a location code such as
+.LR ih ,
+and
+.I org
+is an organization number such as
+.L 45
+or
+.LR 11271 ;
+.L paper
+sends paper mail.
+This happens automatically for persons with no electronic mail address.
+If a
+.I person
+argument is ambiguous,
+.I post
+gives a list of possibilities
+to choose from.
+.PP
+Mail may also be sent to a
+.I person
+specifed as
+.IB system ! userid
+for electronic mail.
+.PP
+Options are:
+.TP
+.BI -c " directory"
+Search for
+.I persons
+only in the given
+.I directory.
+.TP
+.B -p
+Send paper mail.
+.TP
+.B -w
+Directory assistance.
+Give the full directory entry for each
+.I person.
+The answer comes by mail if your machine is a remote post office.
+.PP
+The following options are not to be accompanied by
+.I persons
+or
+.I addresses.
+.TP
+.BI -A " dafile"
+Send mail to all names in
+.I dafile
+where
+.I dafile
+is output from a
+.B -w
+request.
+.TP
+.BR -B " [ \fImbox\fR ]"
+Read mail from a specified
+.I mbox
+file or from the default
+.LR $HOME/mbox .
+.TP
+.BR -D " [ \fIdirectory\fR ]"
+Give modification times for the
+.I directory
+or for all
+.I post
+directories if no directory name is given.
+.TP
+.B -S
+Start an interactive session to send
+change-of-address notices to
+an update site.
+.TP
+.B -v
+Give the current version of
+.I post
+and tell whether the local post office is general, 
+.LR g ,
+(has a  directory) or remote, 
+.LR r ,
+(no directory).
+.TP
+.B -X
+Start an interactive set-up session.
+Should be used by new users.
+.PP
+To maintain mailing lists or to avoid typing long addresses,
+you may keep an address book
+in
+.L $HOME/.mailrc .
+Each line in this file begins
+with the word
+.L alias
+followed  by
+the alias and the
+.I persons
+or previous aliases that it stands for.
+.PP
+If environment variable
+.BR POSTETC=ON ,
+the
+.IR passwd (5)
+file is treated as a directory so that login names may be used as
+.I persons.
+In any case a login name on the local system
+can be written
+.BI ! userid.
+.PP
+.I Post
+will ask for verification of recipient addresses
+if environment variable
+.BR CONFIRM=ON .
+.PP
+.I Post
+searches directories sequentially.
+The directory search path may be altered by setting the
+environment variable
+.B DIRPATH
+similarly to
+.B PATH
+in
+.IR sh (1).
+.PP
+.I Postext
+is like
+.LR "post -w" ,
+but retrieves by phone number instead of by name:
+.IP
+.IB number : dir : loc :\f2org\fP
+.LP
+.I Postorg
+retrieves by organization:
+.IP
+.IB org : dir : loc :\f2occlevel\fP
+.LP
+where
+.I occlevel
+is a (possibly partial) occupation level.
+Option
+.B -h
+lists occupation levels.
+.PP
+.I Postsx
+retrieves names phonetically similar to
+.I persons.
+.SH EXAMPLES
+.TP
+.B post s.j.griesmer
+Send mail.
+.TP
+.B post -c attc -w smith
+Who are all the smiths in attc?
+.TP
+.B post -w jackson:452:ih >dafile; post -A dafile
+.PD
+.SH FILES
+.TF /usr/post/postlib/postversion
+.TP
+.F /usr/mail/*
+mailboxes
+.TP
+.F dead.letter
+unmailable text
+.TP
+.F $HOME/mail
+default directory for secure saving of mail
+.TP
+.F $HOME/.mailrc
+Mail options
+.TP
+.F $HOME/mbox
+default mail repository
+.TP
+.F /usr/post/info/post/*db*
+LLA database components
+.TP
+.F /usr/post/info/post/postsys
+post administrative address
+.TP
+.F /usr/post/postlib/postoff
+local and remote directories
+.TP
+.F /usr/post/postlib/postversion
+version number
+.TP
+.F /usr/post/tmp/post/postlog
+log of command executions
+.PD
+.SH SEE ALSO
+.IR mail (1)
+.SH DIAGNOSTICS
+Exit status is 0 on total success,
+1 on lookup failure, 2 on partial failure (e.g. ambiguous entries).

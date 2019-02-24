@@ -1,0 +1,185 @@
+.TH OPS5 1
+.SH NAME
+ops5 \- a rule-based production-system environment
+.SH SYNOPSIS
+.B ops5
+.SH DESCRIPTION
+Ops5 is a rule-based language built on Lisp.
+A program consists of a collection of
+if\(enthen rules and a global `working memory'.
+Each rule has a conditional expression, the
+.SM `LHS'
+and a
+sequence of actions, the
+.SM `RHS'.
+A
+.SM LHS
+consists of one or more patterns and is
+`satisfied' when every pattern
+matches an element in working memory.
+.PP
+The rule interpreter executes a `recognize-act' cycle:
+.IP 1.
+Match: Evaluate the
+.SM LHS\*Ss
+of the rules to determine which are satisfied.
+.IP 2.
+Conflict Resolution: Select one rule from among the ones with satisfied
+.SM LHS\*Ss.
+If no 
+.SM LHS\*Ss
+is satisfied halt execution.
+.IP 3.
+Act: Perform the operations specified in the
+.SM RHS
+of the selected rule.
+.PP
+The top level commands
+in order of usefulness are:
+.TP 12
+.B watch
+report on firings and working memory changes
+.EX
+(watch) ;Report current watch level
+(watch 0) ;No report
+(watch 1) ;Report rule names and working memory time tags
+(watch 2) ;Report rule names, working memory time tags
+ ;and changes to working memory
+.EE
+.TP
+.B load
+load working memory and rule declarations
+.EX
+(load 'billing.l) ;Load file `billing.l'
+.EE
+.TP
+.B run
+start the rule interpreter
+.EX
+(run) ;Run until no rules are satisfied or halt executed
+(run 1) ;Run one rule firing
+.EE
+.TP
+.B exit
+exit
+.I ops5
+.EX
+(exit)
+.EE
+.B
+.TP
+.B back
+back up the rule interpreter
+.EX
+(back 32) ;Back up 32 rule firings
+.EE
+.TP
+.B wm
+display working memory
+.EX
+(wm 32) ;Display working memory element 32	
+.EE
+.TP
+.B ppwm
+display parts of working memory
+.EX
+(ppwm customer ^record bad) ;Display all customer working memory
+	;elements with `bad' records
+.EE
+.TP
+.B pm
+display production or rule memory
+.EX
+(pm good-customer) ;Display rule `good-customer'
+.EE
+.TP
+.B cs
+print the conflict set
+.EX
+(cs)
+.EE
+.TP
+.B matches
+print matches for condition elements of a rule
+.EX
+(matches bad-customer) ;Display matches for rule `bad-customer'
+.EE
+.TP
+.B pbreak
+set a break point after a production firing
+.EX
+(pbreak bad-but-long-term-customer) ;Set break point after rule
+	;`bad-but-long-term-customer'
+.EE
+.TP
+.B make
+make working memory elements
+.EX
+;Make a customer working memory element
+(make customer ^name Terry ^record bad ^years 22)
+.EE
+.TP
+.B remove
+remove working memory elements
+.EX
+(remove *) ;Remove all working memory elements
+(remove 17) ;Remove working memory element 17
+.EE
+.TP
+.B excise
+remove rules
+.EX
+;Remove `good-customer' and `bad-customer' rules
+(excise good-customer bad-customer)
+.EE
+.TP
+.B openfile
+open a file
+.EX
+;Open `ruletrace.ops' as output
+;and associate it with traceoutput port
+(openfile traceoutput |ruletrace.ops| out)
+;Open `answers' as input and associate it with stdin port
+(openfile stdin |answers| in)
+.EE
+.TP
+.B closefile
+close a file
+.EX
+(closefile traceoutput stdin) ;Close traceoutput and stdin ports
+.EE
+.TP
+.B default
+change default input and output files
+.EX
+(default nil trace) ;Change trace port back to default
+(default traceoutput write) ;Change write port to traceoutput
+(default stdin accept) ;Change accept port to stdin
+.EE
+.TP
+.B strategy
+select rule interpreter strategy.
+.EX
+(strategy) ;Report current strategy
+(strategy mea) ;Selects mea strategy
+(strategy lex) ;Selects lex strategy (default on startup)
+.EE
+.SH FILES
+.TF /usr/lib/lisp
+.TP
+.F /usr/lib/lisp
+lisp library
+.SH "SEE ALSO"
+Forgy, C. L.,
+.IR "OPS5 User's Manual" ,
+Department of Computer Science,
+Carnegie-Mellon University,
+July, 1981
+.br
+lisp (1)
+.SH DIAGNOSTICS
+When
+.I ops5
+stops executing for any reason, you are placed in the
+.I lisp
+top-level routine.

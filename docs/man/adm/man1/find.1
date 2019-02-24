@@ -1,0 +1,182 @@
+.TH FIND 1 
+.CT 1 files dirs
+.SH NAME
+find \- find files
+.SH SYNOPSIS
+.B find
+.I pathname ... expression
+.SH DESCRIPTION
+.I Find
+recursively descends
+the directory hierarchy for each
+.I pathname,
+seeking files that match a boolean
+.I expression,
+which consists of one or more arguments.
+It does not follow symbolic links.
+In the following descriptions of primary expressions,
+.I n
+is a decimal integer;
+.BI + n
+may be written to specify more than 
+.I n
+and
+.BI - n
+to specify less. 
+.TP 10n
+.BI -name " filename"
+True if the
+.I filename
+argument matches the current file name.
+Normal shell filename metacharacters may be used if quoted.
+.TP
+.BI -perm " onum"
+True if the file permission flags
+exactly
+match the
+octal number
+.I onum
+(see
+.IR  chmod (1)).
+If
+.I onum
+is prefixed by a minus sign,
+more mode bits (017777, see
+.IR   stat (2))
+become significant and
+the modes are compared:
+.IR (mode&onum)==onum .
+.TP
+.BI -type " c"
+True if the type of the file
+is
+.I c,
+where
+.I c
+is
+.BI b ", " c ", " d ", "
+.BI f ", "
+or
+.B L
+for
+block special file, character special file,
+directory, plain file or symbolic link.
+.TP
+.BI -links " n"
+True if the file has
+.I n
+links.
+.TP
+.BI -user " uname"
+True if the file belongs to the user
+.I uname
+(login name or numeric userid).
+.TP
+.BI -group " gname"
+True if the file belongs to group
+.I gname
+(group name or numeric groupid).
+.TP
+.BI -size " n"
+True if the file is
+.I n
+blocks long (512 bytes per block).
+.TP
+.BI -inum " n"
+True if the file has inode number
+.I n.
+.TP
+.BI -atime " n"
+True if the file has been accessed in
+.I n
+days.
+.TP
+.BI -mtime " n"
+True if the file has been modified in
+.I n
+days.
+.TP
+.BI -ctime " n"
+True if the inode has been changed in
+.I n
+days.
+.TP
+.BI -exec " command"
+True if the executed command returns
+a zero value as exit status.
+The end of the command must be punctuated by an escaped
+semicolon.
+A command argument 
+.L {}
+is replaced by the
+current pathname.
+.TP
+.BI -ok " command"
+Like
+.B -exec
+except that the generated command is written on
+the standard output, then the standard input is read
+and the command executed only upon response
+.BI y .
+.TP
+.B  -print
+Always true;
+causes the current pathname to be printed.
+.TP
+.BI -newer " file"
+True if
+the file has been modified more recently than the argument
+.I file.
+.TP
+.BI -status " n
+True if
+.IR lstat 
+(see
+.IR stat (2))
+applied to the file yields error number
+.IR n ;
+see
+.IR intro (2).
+Testing
+.L -status
+turns off diagnostics that errors normally produce.
+On ordinary systems a nonzero error number occurs when a file 
+disappears underfoot or a file system is in trouble.
+.PP
+The following operators, listed in order of decreasing precedence,
+may be used to combine primary expressions.
+.TP 
+.BI ( " expression " )
+Group with parentheses.
+.TP
+.BI ! " expression
+Negation.
+True if and only if
+.I expression 
+is not true.
+.TP
+.I expression expression
+Conjunction.
+True if both expressions are true.
+.TP
+.IB expression " -o " expression
+Disjunction.
+True if either expression is true.
+.SH EXAMPLES
+.HP
+.L
+find / \e( -name a.out -o -name '*.o' \e) -atime +7 -exec rm '{}' \e;
+.br
+Remove all files named
+.L a.out
+or
+.L *.o
+that have not been accessed for a week.
+.SH FILES
+.F /etc/passwd
+.br
+.F /etc/group
+.SH "SEE ALSO"
+.IR sh (1), 
+.IR test (1), 
+.IR filsys (5)

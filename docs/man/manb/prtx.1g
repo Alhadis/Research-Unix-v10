@@ -1,0 +1,148 @@
+.TH prtx 1G "WH" MARX
+.SH NAME
+prtx \- graphics mode output filter for matrix printers
+.SH SYNOPSIS
+.HP 10 
+prtx [ -\fBi\fR p ]  [ -\fBo\fR device ] [ -\fBn\fR font ] 
+[ -\fBw\fR width ] [ -\fBOcxf\fR ] files
+.HP 10
+prtx [ -\fBi\fR t ]  [ -\fBo\fR device ] [ -\fBn\fR font ] 
+[ -\fBw\fR width ] [ -\fBOcxf\fR ] [ -\fBs\fR charsize ] files 
+.HP 10
+prtx [ -\fBi\fR g ]  [ -\fBo\fR device ] 
+[ -\fBn\fR font ] [ -\fBOcxuf\fR ] [ -\fBr\fR region ] files 
+.SH DESCRIPTION
+.P
+.I prtx
+reads commands from the specified files and constructs pictures.
+printronix matrix printer.
+If no files are specified it reads from the standard input.
+The file name "-" also specifies the standard input.
+.P
+The options are: 
+.TP 5
+-\fBo\fR device
+Output appropriate for the designated device.
+Currently supported devices are:
+.RS 10 
+.TP 5
+prtx
+A printronix matrix printer.  This is the default assumed if
+the -\fBi\fR option is omitted.
+.TP 5
+hrprtx
+High resolution printronix.  Some printronix printers have
+twice the horizontal resolution of the standard printer.
+This option produces output for such printers.
+.TP 5
+tty
+Any ascii terminal. The output in this mode is crude and  
+it is intented only for previewing command files whose output
+is ultimately intended for another device.
+.TP 5
+trilog.  A trilog color printer.
+.RE
+
+.TP
+-\fBi\fR format
+This option specifies the format of the command file.  The 
+possible values are:
+.RS 10
+.TP 5
+\fBprtx\fR
+"Prtx" format.  
+Ascii commands suitable for hand
+construction described in \fIprtx\fR(5). 
+(This is the default format.)
+.TP 5
+\fBtplot\fR
+"Tplot" format.  Commands usually given to \fItplot\fR(1)  
+as described in \fIplot\fR(5).  The -\fBs\fR option specifies
+the size of characters as an integer 
+multiple of the normal height.
+(The default is 1.)
+.TP 5
+\fBtroff\fR
+"troff" format.  Output from \fInewtroff\fR.
+.TP 5
+\fBgps\fR
+\fIGps\fR(5) format. Normally used for display on Tektronix
+terminals.  Produced by the \fIstat\fR(1) commands. 
+The -\fBr\fR and -\fBu\fR options are as for \fIged\fR(1).
+.RE 
+.TP 12
+-\fBn\fR font
+\fIFont\fR is a file that describes an alternate character set.
+If it starts with a '/' it is interpreted as a full path
+name. If it starts with './' it is relative to the current
+directory. 
+Otherwise it is relative to the font library.
+If this option is omitted "\fIDEVICE\fR.font" is assumed. Where
+\fIDEVICE\fR is the -\fBo\fR option.
+.TP 12
+-\fBw\fR width
+\fIWidth\fR is the width (in inches) of the paper.
+It is a floating point number.
+It overrides the default width for the device.
+.TP 5
+-\fBO\fR
+Overlays all files into one picture.
+(Normally each file goes on a separate page.)
+
+.TP 5
+-\fBx\fR
+Exchange rows and columns.  That is, turn picture on its side.
+
+.TP 5
+-\fBc\fR
+Let output continue vertically across page boundaries.
+This permits pictures of any height to be drawn.
+
+.TP 5
+-\fBf\fR
+Fit the output the to a page.  
+I.e. rescale the locations of points so that the picture fits
+exactly on the page.  The  original picture may have been
+bigger or smaller than a page.  
+
+.SH EXAMPLES
+Typical use is: 
+.sp
+prtx <sample | lpr -uk -o 
+.sp
+The "-o" is necessary so that lpr doesn't complain about
+unprintable characters.
+Another example is 
+.sp
+graph <numbers | prtx -t | lpr -uk -o 
+
+.SH SEE ALSO
+.I prtx(5), prtxfont(5), graphics(1), graph(1), plot(5), gps(5). 
+.SH FILES
+The font library is /usr/marx/lib.
+.SH DIAGNOSTICS
+Many diagnostics are printed on the standard error output.
+In general an attempt is made to continue.
+.SH BUGS
+.P
+The 
+.I boxit
+prefix cannot always determine the boundary of the prefixed 
+command.
+.P
+This command is a descendant of one that only produced output
+for the printronix, hence its name.
+.P
+The printronix, and trilog are slow devices in graphics mode.
+.P
+Small narrow ellipses do not work.
+.P
+Large input files can result in very poor performance because
+of a problem with \fImalloc\fR.
+.P
+The "a" (arc) command for troff input is not yet implemented.
+.P
+Many characters expected by troff users are not in the current 
+font.
+.SH AUTHOR
+Jerry Schwarz (harpo!jerry)

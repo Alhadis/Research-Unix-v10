@@ -1,0 +1,23 @@
+< ../ADM/defns
+<../index/defns
+
+all:V:	adb.out
+
+pg:	adb.out
+	count adb.ms adb.out
+
+spell:VQ:
+	dospell adb.ms
+
+lp:	adb.out
+	$LP $newprereq && touch $target
+
+adb.out:D:	adb.ms $REF
+	$PREFER adb.ms | pic | tbl | troff -mpm > $target
+
+index:V:	adb.ms
+	runind adb
+	$PREFER xadb.ms | pic | tbl | troff -mpm > /dev/null 2>adb.x
+	mkindex adb.x
+	rm xadb.ms
+

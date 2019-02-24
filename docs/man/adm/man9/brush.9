@@ -1,0 +1,301 @@
+.TH BRUSH 9.1
+.CT 1 games
+.SH NAME
+brush \- painting program
+.SH SYNOPSIS
+.B brush
+[
+.B -f
+.I fontdir
+]
+[
+.B -p
+.I picdir
+]
+[
+.B -t
+.I texdir
+]
+.SH DESCRIPTION
+.I Brush
+paints images under mouse control.
+Options are
+.TP
+.B -f
+font directory 
+.RF ( /usr/jerq/font
+by default)
+.PD 0
+.TP
+.B -p
+the directory in which to keep pictures
+(current directory by default)
+.TP
+.B -t
+texture directory, where brushes and shades live
+(current directory by default)
+.PD
+.PP
+In general, button 1 draws, button 2 erases;
+the cursor assumes the shape of the current brush.
+Button 3 is used to select options, sweep out areas,
+or cancel operations in progress.
+.PP
+The borders on either side of the drawing area contain menus of
+available shades and brushes.
+The current brush and shade are outlined by boxes.
+To choose another, click button 3 at it.
+.PP
+The top border contains
+a help area,
+drawing options,
+and certain commands.
+Selections are made by pointing with button 3.
+Some cycle through options; others bring up menus.
+The items are:
+.TP
+help
+Icons in three boxes indicate what buttons
+1, 2, and 3 will do at any given time:
+.PD
+.IP
+.nf
+.ta \w'\f5square with arrow  'u
+paintbrush	draw with this button
+pencil eraser	erase with this button
+menu with cursor	menu on this button
+thumbs down	cancel or finish an operation
+pointing hand	indicate a point
+square with arrow	sweep a rectangle
+circle with arrow	sweep a circle
+skull	exit the program
+.fi
+.DT
+.TP
+smooth
+Smooth the contours of magnified images.
+.TP
+align
+Force circles, discs, text, and other images
+to align with texture cell boundaries.
+.TP
+.B image
+Manipulate the
+`current image',
+(box, ellipse, etc.)\&
+selected from the drawing menu described below.
+Button 3 makes the image disappear, reserved for future use.
+The image menu contains:
+.RS
+.TF magnify
+.TP
+.B same
+Bring back the current image.
+.TP
+.B magnify
+Sweep a rectangle indicating the
+size of the magnified image.
+The numbers that appear are horizontal and vertical
+magnification factors.
+.TP
+.B shrink
+Shrink to 1/4 size.
+Indicate whether image is shaded or black & white.
+.TP
+.B flip
+Reflect left-right or top-bottom.
+.TP
+.B rotate
+Rotate counterclockwise or clockwise 90 degrees.
+.TP
+.B slant
+Drag the current image rectangle into a parallelogram.
+.TP
+.B outline
+Replace the current image with its outline.
+.TP
+.B shadow
+Draw a `shadow' behind the current image.
+.TP
+.B shadow
+Draw a `shadow' behind the current image.
+.TP
+.B new
+Make a new image by copying a rectangular portion of the screen.
+.RE
+.PD
+.TF Smooth
+.IP 
+To move an image on the screen, select
+.B new
+from the
+.B image
+menu.
+Sweep the area to be moved, click button 2 to erase it,
+move it, and click button 1 to draw it.
+.PD 
+.TP
+drawing style
+Select continuous curves, dotted lines,
+disconnected dots, or an `airbrush' effect when painting.
+.PD 0
+.TP
+constrain
+Select freehand (wavy-line icon) or 
+horizontal-vertical drawing (angular icon).
+.PD
+.TP
+reflect
+Draw symmetric figures.
+The icon shows the symmetries:
+.B x=0
+(left-right), 
+.B y=0
+(top-bottom),
+or
+.BR both ,
+relative to the center of the screen.
+.PD0
+.TP
+draw mode
+Set the drawing mode to one of
+.BR or ,
+.BR xor ,
+.BR store ,
+.BR and ,
+.B copy
+(preserves interior whitespace of images).
+.TP
+text style
+Set the text style to one of
+.BR normal ,
+.BR outline ,
+.BR bold ,
+.BR shadow ,
+.BR italic .
+.TP
+font name
+Set the text font.
+Menu selection
+.B new
+prompts for a font name
+from the font directory.
+.PD
+.TP
+.B i/o
+Interact with host machine.
+Menu items are:
+.PD 0
+.RS
+.TF recall
+.TP
+.B save
+Copy screen, brushes, or shades to a file.
+Prompts for a file name, starting with the default picture
+directory (if any).
+Backspace past this if you wish to save elsewhere;
+hit return to quit.
+Next sweep a rectangle to be saved.
+Bitmaps are saved in
+.IR bitfile (9.5)
+format.
+.TP
+.B recall
+Prompts for a file name.
+The recalled picture becomes the
+current image.
+.TP
+.B exit
+Leave the program.
+Confirm by
+two clicks on button 3.
+.PD
+.RE
+.PP
+The menu on button 3 in the drawing area contains these selections:
+.TF Smooth
+.TP
+.B lines
+Indicate first point, then position cursor with rubber band line
+for subsequent lines.
+Button 1 draws, button 2 erases.
+.PD
+.TP
+.B curves
+Indicate first control point, then position cursor with rubber band line
+for subsequent control points.
+A curve (spline) will be drawn (erased) using these control points,
+depending on whether the last button hit is button 1 (draw), or button 2 (erase).
+.PD 0
+.TP
+.B box
+.TP
+.B ellipse
+.TP
+.B disc
+(A disc is a filled ellipse).
+Sweep a rectangle;
+numbers show the dimensions.
+A single dot marks the center of an ellipse.
+The image becomes the current image;
+use buttons 1 and 2 to draw or erase with it.
+.PD
+.TP
+.B string
+Type in text.
+The string becomes the current image.
+.TP
+.B texture
+Sweep a rectangle.
+The current image
+becomes a rectangle of this size textured with current shade.
+.TP
+.B fill
+Sweep a rectangle, then indicate interior seed points
+using button 1, or button 3 to quit.
+Enclosed regions will be filled with current shade.
+Any button cancels the fill.
+.PD 0
+.TP
+.B clear
+.TP
+.B invert
+Sweep a rectangle to be cleared or color-inverted.
+.PD
+.TP
+.B fade
+Sweep a rectangle.
+Holding button 2 will fade this area, as if
+erasing in
+spray paint mode with
+a random pattern instead of a shade.
+.PD 0
+.TP
+.B new brush
+.TP
+.B new shade
+Menu select whether to edit or snarf from screen (with button 3).
+If editing,
+the current brush (shade) will appear magnified in upper left corner.
+Edit with buttons 1 and 2, quit with 3.
+Several `spare' brushes appear at the bottom of the brush menu.
+.PD
+.TP
+.B details
+Select an area with box cursor to be magnified for detailed editing.
+.PD
+.SH "SEE ALSO"
+.IR paint (9.1),
+.IR mbits (6),
+.IR bitfile (9.5)
+.SH BUGS
+The smoothing operation fully smooths only
+for magnification factors that are powers of two.
+.br
+Bitmaps moved off the top or bottom
+of the physical screen can pick up noise.
+.br
+.B Copy
+mode generates a mask the first time a given image is moved.
+This can take a while for large images.
+Be patient.

@@ -1,0 +1,30 @@
+< ../ADM/defns
+< ../index/defns
+FIGS=fig1.x fig2.x fig6.x fig7.x fig8.x fig9.x fig10.x fig11.x
+
+all:V:	auth.out
+
+pg:	auth.out
+	count auth.ms auth.out
+
+spell:VQ:
+	dospell auth.ms
+
+lp:	auth.out
+	$LP $newprereq && touch $target
+
+auth.out:D:	auth.ms $REF $FIGS
+	$PREFER auth.ms | troff -mpm > $target
+
+index:V:
+	runind auth
+	$PREFER xauth.ms | pic | tbl | troff -mpm > /dev/null 2>auth.x
+	mkindex auth.x
+	rm xauth.ms
+
+pindex:V:
+	mkindex auth.x
+
+
+%.x: %.pic
+	pic $stem.pic > $%.x

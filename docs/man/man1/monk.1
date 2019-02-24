@@ -1,0 +1,341 @@
+.TH MONK 1
+. \".TH MONK 1 EXPTOOLS
+.CT 1 writing_other
+.SH NAME
+monk, monksample, monkspell, monkmerge \- typeset documents and letters
+.SH SYNOPSIS
+.B monk
+[
+.I options
+|\ 
+.I files
+]
+.PP
+.B monksample
+[
+.I sample
+]
+.PP
+.B monkspell
+[
+.I options
+]
+...
+[
+.I files
+]
+...
+.PP
+.B monkmerge
+[
+.I files
+]
+.SH DESCRIPTION
+.I Monk
+formats the text in the named
+.I files
+for
+phototypesetting, using other
+.IR troff (1)
+preprocessors as necessary.
+.I Options\^
+are given below.
+Any other arguments or flags (e.g.,
+.BR -o1-2 )
+are passed
+to
+.I troff.
+Options can occur in any order and can be intermixed with files.
+.PP
+.PD 0
+.TP
+.BI -A commands
+Invoke the
+.I commands
+after all preprocessors and before
+.IR troff .
+.TP
+.BI -B commands
+Invoke the
+.I commands
+after
+.I monk
+and before any other preprocessor.
+.PD
+.TP
+.B -E
+Invoke the
+.B -e
+option of
+.IR troff .
+.TP
+.BR -N
+Use the uncompressed monk databases.
+This facilitates debugging monk database entries.
+.TP
+.BI -R file
+Use
+.I file
+as the index file for
+.IR prefer (1).
+.TP
+.BI -S dest
+Send output to device
+.IR dest .
+Supported forms are:
+.RS
+.TF -Sapsend
+.TP
+.BR -Sapsend
+Linotronic L200P; see
+.IR apsend (1).
+.TP 
+.BR -Sd202
+Mergenthaler Linotron 202; see
+.IR d202 (A).
+. \".TP
+. \".BR -Si300
+. \"\s-1EXPTOOLS\s+1 spooler; see
+. \".IR i300 (1).
+.TP
+.BR -Slp
+Postscript line printer; see
+.IR lp (1)
+(default).
+. \".TP
+. \".BR -Slpr
+. \"Allentown spooler; see
+. \".IR lpr (1)
+.TP
+.BR -Sproof
+Teletype 5620 or 630 terminal; see
+.IR proof (9.1).
+. \".TP
+. \".BR -Sprt
+. \"Unison spooler; see
+. \".IR prt (1).
+.TP
+.BR -Sthink
+HP ThinkJet; see
+.IR thinkblt (9.1).
+.TP
+.BR -S-
+Standard output.
+.PD
+.RE
+.TP 0
+.BI -T device
+Prepare output for device specified as in
+.B -T
+option of
+.IR troff (1).
+.TP
+.B -x
+Shows the preprocessors that are being invoked.
+.PD
+.PP
+The following options are not normally needed because monk automatically
+determines which preprocessors are required.
+However, if the commands in
+.B -A
+or
+.B -B
+options require a preprocessor, their use can be forced by
+the following options.
+.PP
+.PD 0
+.TP
+.B -c
+.I col
+postprocessor; see
+.IR column (1).
+(Automatically invoked for many printing terminals.)
+.TP
+.B -cn
+.IR cite (A)
+. \".TP
+. \".B -cw
+. \".IR cw (1)
+.TP
+.B -e
+.IR eqn (1)
+.TP
+.B -g
+.IR grap (1)
+.TP
+.B -i
+.IR ideal (1)
+.TP
+.B -ipa
+.IR ipa (A)
+.TP
+.B -p
+.IR pic (1)
+.TP
+.B -r
+.IR prefer (1)
+.TP
+.B -t
+.IR tbl (1)
+.TP
+.B -tp
+.IR tped ;
+see
+.IR ped (9.1)
+.PD
+.PP
+.I Monksample
+produces on the standard output a skeleton document that you can
+redirect into a file and edit.
+If no argument is given,
+.I monksample
+prints a list of the available
+.I samples.
+They are:
+.TF centerpb
+.TP
+.B acm
+Association for Computing Machinery galley sheets.
+.TP
+.B centerpb
+Center Phone Book.
+.TP
+.B cspress
+Computer Science Press galley sheets.
+.TP
+.B form1
+AT&T Bell Laboratories merit review form 1.
+.TP
+.B im
+AT&T Bell Laboratories internal memorandum.
+.TP
+.B kluwer
+Kluwer Academic Publishers book format.
+.TP
+.B letter
+Letters with optional AT&T letterhead.
+.TP
+.B memo
+Internal AT&T correspondence.
+.TP
+.B model
+IEEE/ACM model sheets.
+.TP
+.B research
+AT&T Bell Laboratories bi-annual research report.
+.TP
+.B rp
+AT&T Bell Laboratories release paper.
+.TP
+.B song
+Song sheets for singing at nursing homes.
+.TP
+.B tc
+AT&T Bell Laboratories technical correspondence.
+.TP
+.B tm
+AT&T Bell Laboratories technical memorandum.
+.PD
+.PP
+.I Monkspell
+looks up words from the named
+.I files
+(standard input default)
+in a public spelling list and in a private list.
+Possible misspellings\(emwords 
+that occur in neither and are not plausibly derivable
+from the former\(emare placed on the standard output.
+It ignores constructs of
+.IR monk (1),
+.IR troff (1)
+and its standard preprocessors.
+It runs
+.IR demonk (1)
+with all specified options and passes its output to
+.IR spell (1). 
+The following options, in addition to all options for
+.IR deroff (1),
+are available:
+.TP
+.BI -d dir
+Use non-standard 
+.I monk
+database directory
+.I
+dir.
+.TP
+.B -i
+Ignore
+.I monk
+.L |\^insert
+and
+.L |\^source
+commands as well as
+.I troff
+.L .so
+and
+.L .nx
+requests.
+.PP
+.I Monkmerge
+reads each file and copies it to standard output,
+replacing
+.I monk
+.B insert
+commands with the file contents.
+It ignores
+.I monk
+.B source
+commands, which include a file without processing the
+.I monk
+commands within.
+If no input file is given,
+.I monkmerge
+reads from standard input.
+.SH EXAMPLES
+.TP
+.L
+monk paper
+Format the file using the default typesetter fonts and output device.
+.TP
+.L
+monk -Sproof paper
+Format a file and proof it on a 5620 terminal.
+.SH FILES
+.TF $MHOME/sample
+.TP
+.F $MHOME/cite
+forward and backward reference preprocessor
+.TP
+.F $MHOME/db
+monk databases
+.TP
+.F $MHOME/monk
+monk compiler
+.TP
+.F $MHOME/tmac.p
+macros for
+.IR pic (1)
+preprocessor
+.TP
+.F $MHOME/sample
+directory for existing samples
+.SH "SEE ALSO"
+.IR prefer (1),
+.IR troff (1),
+.IR deroff (1),
+.IR tex (1),
+.IR lp (1),
+.IR apsend (1),
+.IR d202 (A),
+.IR thinkblt (9.1),
+.IR proof (9.1)
+.br
+Murrel, S. L.,
+Kowalski, T. J.,
+`Typing Documents on the UNIX System: Using Monk 0.6',
+this manual, Volume 2
+. \".SH AUTHOR
+. \"Sharon Peeters and T. J. Kowalski
+. \".SH PROVIDER
+. \"Alan Hastings

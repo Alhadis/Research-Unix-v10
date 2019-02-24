@@ -1,0 +1,74 @@
+.TH BITFILE 9.5
+.CT 1 comm_other
+.SH NAME
+bitfile \- format of bitmap file
+.SH DESCRIPTION
+Binary files produced by
+.IR blitblt (9.1)
+and other bitmap-generating programs
+are formatted as follows:
+.TP 12
+Byte no.
+Description
+.TP
+0, 1:
+Zero.
+.TP
+2, 3:
+.IR x -coordinate
+of the rectangle origin (low-order byte, high-order byte).
+.TP
+4, 5:
+.IR Y -coordinate
+of the rectangle origin (low-order byte, high-order byte).
+.TP
+6, 7:
+.IR x -coordinate
+of the rectangle corner (low-order byte, high-order byte).
+.TP
+8, 9:
+.IR Y -coordinate
+of the rectangle corner (low-order byte, high-order byte).
+.TP
+remainder:
+Compressed raster data.
+Each raster is exclusive-or'd
+with the previous one, and
+zero-extended (if necessary) to a 16-bit boundary.
+It is then encoded into
+byte sequences, each of which consists of a control byte followed by
+two or more data bytes:
+.TP 12
+Control
+Data
+.TP
+.IR n " (< 127)"
+.RI 2\(mu n
+bytes of raster data, running from left to right.
+.TP
+.BI "0x80+" n
+2 bytes of raster data, to be replicated from left to right
+.I n
+times.
+.LP
+There are also two
+.SM ASCII
+formats in current use.
+Textures and 16\(mu16 icons,
+as created by
+.IR icon (9.1),
+are encoded as a
+.B Texture
+declaration with initializer,
+to be copied unchanged into C program source; see
+.IR types (9.5).
+Faces and other large icons
+are without any surrounding C syntax.
+In either case, each scan line of the
+bitmap is a comma-separated list of C-style short
+hexadecimal constants; scan lines are separated by newlines.
+.SH "SEE ALSO"
+.IR blitblt (9.1), 
+.IR icon (9.1), 
+.IR types (9.5), 
+.IR vismon (9.1)

@@ -1,0 +1,93 @@
+.TH VSW 1
+.CT 1 prog_other
+.SH NAME
+vsw \- video switcher
+.SH SYNOPSIS
+.B vsw
+[
+.I option
+] [
+.I iopair ...
+]
+.SH DESCRIPTION
+.I Vsw
+controls Dynair (System 10 and Dynasty) video switches.
+There is a composite video switch and a 3 channel (rgb) switch.
+Each switch has ten or more inputs and outputs.
+Inputs may be attached to one or more outputs (fanout).
+Outputs may not be attached to more than one input (no mixing).
+.PP
+The optional
+.I iopair
+arguments are two letters
+.I io
+which mean attach input letter
+.I i
+to output channel letter
+.IR o .
+The options are
+.TP
+.B -c
+Use the composite video switch.
+Exactly one of
+.B -c
+and
+.B -r
+must be specified.
+.PD 0
+.TP
+.B -d
+Describe the input and output channels.
+.TP
+.B -i
+Initialize the switch to a default setting.
+.TP
+.B -p
+Print the current switch configuration suitable for processing with
+.IR vsw .
+.TP
+.B -r
+Use the rgb video switch.
+Exactly one of
+.B -c
+and
+.B -r
+must be specified.
+.TP
+.B -v
+Be more verbose.
+.PD
+.PP
+By convention, video switch access to monitors is for
+`INPUT B',
+which is normally selected by a button on the front.
+The Barco monitor is an exception; use
+`COMP VIDEO 1'.
+.SH EXAMPLES
+.TP
+.B x=`vsw -cp`
+Save the current configuration.
+.TP
+.B vsw $x
+Restore the configuration.
+.SH SEE ALSO
+.IR 2500 (1)
+.SH BUGS
+For timing reasons,
+.I vsw
+only works from fast or unloaded machines.
+.br
+The input/output names are a little terse.
+.br
+To power-cycle the rgb switch, look for the blue ribbon
+cable that daisy chains the three boxes.
+The box at
+one end of the chain has a coax cable connected to `comm';
+start power cycling at the other end of the daisy chain.
+.br
+The switch may need to be reset after prolonged power outages
+(in this case,
+.I vsw
+will complain) by
+.br
+.B "cd /n/bowell/usr/src/cmd/vsw; mk init.vsw"

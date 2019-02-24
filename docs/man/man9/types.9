@@ -1,0 +1,147 @@
+.TH TYPES 9.5
+.CT 2 graphics
+.SH NAME
+Word, Point, Rectangle, Bitmap, Texture, Pt, Rect, Rpt, display, Drect, Jrect \- graphics data types
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B typedef int Word;
+.br
+.B typedef struct Point Point;
+.br
+.B typedef struct Rectangle Rectangle;
+.br
+.B typedef struct Bitmap Bitmap;
+.br
+.B typedef struct Texture Texture;
+.PP
+.B extern Bitmap display;
+.br
+.B extern Rectangle Drect, Jrect;
+.PP
+.B Point Pt(x, y)
+.B int x, y;
+.PP
+.B Rectangle Rect(x0, y0, x1, y1)
+.B int x0, y0, x1, y1;
+.PP
+.B Rectangle Rpt()
+.B Point p0, p1;
+.SH DESCRIPTION
+A
+.B Word
+is a 32-bit integer, and is the unit of storage used in the graphics software.
+.PP
+A
+.B Point
+is a location in a Bitmap
+(see below),
+such as the display, and is defined as:
+.IP
+.EX
+typedef struct Point {
+	short x;
+	short y;
+} Point;
+.EE
+.PP
+The coordinate system has
+.I x
+increasing to the right and
+.I y
+increasing down.
+All objects and operators in the graphics world live in the same coordinate space\(emthat of the display bitmap.
+.PP
+A
+.B Rectangle
+is a rectangular area in a Bitmap.
+.EX
+.IP
+typedef struct Rectangle {
+	Point origin;	/* upper left */
+	Point corner;	/* lower right */
+} Rectangle;
+.EE
+.PP
+By definition,
+.B origin.x <= corner.x
+and
+.BR "origin.y <= corner.y" .
+By convention, the right (maximum
+.IR x )
+and bottom (maximum
+.IR y )
+edges are
+excluded from the represented rectangle, so abutting rectangles have no
+points in common.
+Thus,
+.B corner
+contains the coordinates of the first point beyond the rectangle.
+The image on the display is contained in the Rectangle
+.BR "{0, 0, XMAX, YMAX}" ,
+where
+.BR XMAX =800
+and
+.BR YMAX =1024.
+.PP
+A 
+.B Bitmap
+holds a rectangular image, stored in contiguous memory starting at
+.IR base .
+.EX
+.IP
+typedef struct Bitmap {
+	Word	*base;		/* pointer to start of data */
+	unsigned width;		/* width in Words of total data area */
+	Rectangle rect;		/* rectangle in data area, screen coords */
+} Bitmap;
+.EE
+.PP
+Each
+.B width
+Words of memory form a scan-line of the image, and
+.B rect
+defines the coordinate system inside the
+.BR Bitmap :
+.B rect.origin
+is the location in the Bitmap
+of the upper-leftmost point in the image.
+The coordinate system is arranged so
+.I x
+positions equal to 0 mod 32
+are in the leftmost bit of a Word.
+.PP
+A
+.B Texture
+is a 16\(mu16 dot bit pattern.
+.IP
+.EX
+typedef struct {
+	Word bits[16];
+} Texture;
+.EE
+.PP
+Textures
+are aligned to absolute display positions,
+so adjacent areas colored with the same Texture
+mesh smoothly.
+.PP
+The functions
+.IR Pt ,
+.I Rect
+and
+.I Rpt
+construct geometrical data types from their components.
+Since they are implemented as macros, they only work
+in function argument lists.
+.PP
+The global
+.I display
+is a Bitmap
+describing the display area of the process.
+.I Drect
+is a Rectangle defining, in screen coordinates,
+the display area available to the program (inside the layer's border).
+.I Jrect
+is the Rectangle
+.BR "{0, 0, XMAX, YMAX}" .

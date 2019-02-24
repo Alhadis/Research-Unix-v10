@@ -1,0 +1,75 @@
+.TH REV 1
+.CT 1 writing_output files
+.SH NAME
+rev, revpag \- reverse lines or pages
+.SH SYNOPSIS
+.B rev
+[
+.I file ...
+]
+.PP
+.B revpag
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Rev
+copies the standard input or the named files to the standard output, reversing
+the order of characters in every line.
+.PP
+.I Revpag
+copies the standard input or the named files to the standard output,
+reversing the order of the pages.
+(The name 
+.L -
+means the standard input.)
+Options define what constitutes a `page':
+.TP
+.BI -d
+The input is
+.IR troff (1)
+output; page breaks are encoded in it.
+.TP
+.BI -f
+Append a new-page character (014) to the last input page (which is the first
+page on the output), if this page is not of the declared length.
+.TP
+.BI -l " n"
+Set the number of lines per page in
+ordinary
+.SM ASCII 
+input (66 by default).
+A new-page character (014) is also recognized
+as a page break.
+.TP
+.BI -o " list"
+Output only pages whose page numbers appear in
+the comma-separated
+.I list
+of numbers and ranges.
+A `page number' means the ordinal position of a page
+in the input.
+A range
+.IB n - m 
+means pages
+.I n
+through
+.I m.
+In a range, a missing
+.I m
+means the beginning; a missing
+.I n
+means the end.
+.SH EXAMPLES
+.TP
+.B "rev <webster | sort | rev >walker
+From a standard Webster's dictionary,
+produce Walker's rhyming dictionary, which is alphabetized
+from right to left.
+.TP
+.B "tail -r <forward >backward
+Reverse the order of lines in a file; see
+.IR tail (1).

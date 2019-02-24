@@ -1,0 +1,232 @@
+.TH A.OUT 5
+.CT 1 lib_obj
+.SH NAME
+a.out \- object file format
+.SH SYNOPSIS
+.B #include <a.out.h>
+.SH DESCRIPTION
+.I A.out
+is the default name of the output file of the assembler
+.IR as (1)
+or the link editor
+.IR ld (1).
+Both programs make
+.I a.out
+executable if there were no
+errors and no unresolved external references.
+An object file has five sections:
+a header, the program text and data,
+relocation information, a symbol table and a string table (in that order).
+The last three may be absent; see
+.IR strip (1)
+and option
+.B -s
+of
+.IR ld (1).
+The header format, given in 
+.BR <a.out.h> ,
+is
+.PP
+.EX
+.ta \w'#define  'u +\w'unsigned  'u +\w'a_dirsize  'u +4n
+struct exec {
+	long	a_magic;	/* magic number */
+	unsigned	a_text;	/* size of text segment */
+	unsigned	a_data;	/* size of initialized data */
+	unsigned	a_bss;	/* size of uninitialized data */
+	unsigned	a_syms;	/* size of symbol table */
+	unsigned	a_entry;	/* entry point */
+	unsigned	a_trsize;	/* size of text relocation */
+	unsigned	a_drsize;	/* size of data relocation */
+};
+#define	OMAGIC	0407	/* old impure format */
+#define	NMAGIC	0410	/* read-only text */
+#define	ZMAGIC	0413	/* demand load format */
+.EE
+.PP
+Macros which take
+.L exec
+structures as arguments and tell whether
+the file has a reasonable magic number or return offsets:
+.EX
+#define	N_BADMAG(x) (((x).a_magic)!=OMAGIC && \e
+	((x).a_magic)!=NMAGIC && ((x).a_magic)!=ZMAGIC)
+#define	N_TXTOFF(x) \e
+	((x).a_magic==ZMAGIC ? 1024 : sizeof (struct exec))
+#define N_SYMOFF(x) (N_TXTOFF(x) + (x).a_text+(x).a_data + \e
+	(x).a_trsize+(x).a_drsize)
+#define	N_STROFF(x) (N_SYMOFF(x) + (x).a_syms)
+.EE
+.DT
+.PP
+Sizes are expressed in bytes.
+The size of the header is not included in any of the other sizes.
+.PP
+When an
+.F a.out
+file is executed, a memory image of three segments is
+set up: the text segment, the data segment,
+and a stack.
+The text segment begins at virtual address 0.
+Following the text segment is the data segment, in which
+explicitly initialized data come first, then
+other data, initialized to 0.
+The stack occupies the highest possible locations
+in the core image, automatically growing downwards from
+.lg 0
+.BR 0x7ffff400 
+.lg 1
+as needed.
+The data segment may be extended by
+.IR brk (2).
+.PP
+If the magic number in the header is
+.BR OMAGIC ,
+the text
+segment is neither write-protected nor shared and
+the data segment is immediately contiguous
+with the text segment.
+This kind of executable program is rarely used.
+If the magic number is
+.BR NMAGIC 
+or
+.BR ZMAGIC ,
+the data segment is loaded at the first 0 mod 1024 address
+following the text segment,
+and the text segment is write-protected and shared among
+all processes that are executing the same file.
+.BR ZMAGIC
+format, which
+.IR ld (1)
+produces by default, supports demand paging: the
+text and data segments are multiples of
+1024 bytes long and begin at byte offsets of 0 mod 1024
+in the
+.F a.out
+file.
+.PP
+Macros are provided to compute the absolute offset of various
+parts of the file:
+.TF N_TXTOFF
+.TP 
+.B N_TXTOFF
+Text segment.
+.TP
+.B N_SYMOFF
+Symbol table.
+.TP
+.B N_STROFF
+String table.
+.PD
+.PP
+The offsets of the data segment, text relocation information,
+and data relocation information are obtained by successively
+adding to 
+.B N_TXTOFF
+the size fields
+.BR a_text ,
+.BR a_data ,
+and
+.BR a_trsize .
+The first 4 bytes of the string table contain it size, including
+the 4 bytes.
+.PP
+The layout of a symbol table entry, as given in
+.BR <a.out.h> ,
+is
+.PP
+.EX
+.ta \w'#define  'u +\w'char'u-1u +\w'unsigned  'u+1u +\w'*n_name 'u
+struct nlist {
+	union {
+		char	*n_name;	/* for use when in-core */
+		long	n_strx;	/* index into file string table */
+	} n_un;
+	unsigned char	n_type;	/* type flag; see below */
+	char	n_other;
+	short	n_desc;	/* see \fIstab\fR(5)\f5 */
+	unsigned	n_value;	/* value of this symbol (or struct offset) */
+};
+.EE
+.PP
+Basic values for
+.BR n_type :
+.PP
+.EX
+#define	N_UNDF	0x0	/* undefined */
+#define	N_ABS	0x2	/* absolute */
+#define	N_TEXT	0x4	/* text */
+#define	N_DATA	0x6	/* data */
+#define	N_BSS	0x8	/* bss */
+#define	N_COMM	0x12	/* common (internal to ld) */
+#define	N_FN	0x1f	/* file name symbol */
+#define	N_EXT	01	/* external bit, or'ed in */
+#define	N_TYPE	0x1e	/* mask for all the type bits */
+.EE
+.PP
+Other permanent symbol table entries have some
+.B N_STAB
+bits set.
+These are given in
+.LR <stab.h> :
+.EX
+#define	N_STAB	0xe0	/* if any of these bits set, keep */
+.EE
+.DT
+.PP
+The field
+.B n_un.n_strx
+gives an index into the
+string table; 0
+indicates that no name is associated
+with the entry.
+The field
+.B n_un.n_name
+can be used
+to refer to the symbol name only if the program sets this up using
+.B n_strx
+and appropriate data from the string table.
+.PP
+A symbol of type undefined external with nonzero value field
+names a common region; the value specifies its size.
+.PP
+Relocation
+information occupies eight bytes per
+relocatable datum:
+.PP
+.EX
+.ta \w'#define  'u +\w'unsigned  'u +\w'r_symbolnum:24,  'u +4n
+struct relocation_info {
+	int	r_address;	/* address of datum to be relocated */
+	unsigned	r_symbolnum:24,	/* local symbol ordinal */
+		r_pcrel:1, 	/* is referenced relative to pc */
+		r_length:2,	/* 0=byte, 1=word, 2=long */
+		r_extern:1,	/* symbol value unknown */
+		:4;	/* nothing, yet */
+};
+.EE
+.DT
+.PP
+If
+.B r_extern 
+is 1, the datum designated by
+.B r_address 
+and
+.B r_length
+will be relocated by adding to it the value of the associated
+external symbol.
+If
+.B r_extern
+is 0, 
+.BR r_symbolnum
+is encoded in the style of
+.B n_type
+and the value will be relocated by adding the relocated base of
+the designated area (text, initialized data, or common data).
+.SH "SEE ALSO"
+.IR adb (1), 
+.IR as (1), 
+.IR ld (1), 
+.IR nm (1), 
+.IR stab (5), 
+.IR strip (1)

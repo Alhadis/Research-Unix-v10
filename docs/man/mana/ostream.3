@@ -1,0 +1,249 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH IOS.OUT 3I+ "C++ Stream Library" " "
+.SH NAME
+ostream \- formatted and unformatted output
+.SH SYNOPSIS
+.ft B
+.ta1i 2i
+.nf
+#include <iostream.h>
+
+typedef long streamoff, streampos;
+class ios {
+public:
+	enum	seek_dir { beg, cur, end };
+	enum	open_mode { in, out, ate, app } ;
+	// \fIand lots of other stuff ... \fP
+	} ;
+
+class ostream : ios {
+public:
+	ostream&	flush();
+	int	opfx();
+	ostream&	put(char c);
+	ostream&	seekp(streampos pos);
+	ostream&	seekp(streamoff off, seek_dir d);
+	streampos	tellp();
+	ostream&	write(const char*  ptr,int n);
+	ostream&	write(const unsigned    char* ptr, int n);
+	ostream&	operator<<(const char*);
+	ostream&	operator<<(char);
+	ostream&	operator<<(short);
+	ostream&	operator<<(int a);
+	ostream&	operator<<(long);
+	ostream&	operator<<(double);
+	ostream&	operator<<(unsigned char);
+	ostream&	operator<<(unsigned short);
+	ostream&	operator<<(unsigned int);
+	ostream&	operator<<(unsigned long);
+	ostream&	operator<<(void*);
+	ostream&	operator<<(const streambuf&);
+	ostream&	operator<<(ostream& (*)(ostream&));
+};
+
+class ostream_withassign {
+		ostream_withassign();
+	istream&	operator=(istream&);
+	istream&	operator=(streambuf*);
+};
+
+extern ostream_withassign cout;
+extern ostream_withassign cerr;
+extern ostream_withassign clog;
+
+
+ostream&	endl(ostream& i) ;
+ostream&	ends(ostream& i) ;
+ostream&	flush(ostream&	i) ;
+.fi
+.ft R
+.SH DESCRIPTION
+\f(CWistream\fRs support
+insertion (storing) into an \f(CWstreambuf\fR.
+These are commonly refered to as output operations.
+.PP
+Assume:
+.br
+\(em \fBouts\fR is an \f(CWostream\fR.
+.br
+\(em \fBoutswa\fR is an \f(CWostream_withassign\fR.
+.br
+\(em \fBoutsp\fR is an \f(CWostream*\fR.
+.br
+\(em \fBc\fR is a \f(CWchar\fR.
+.br
+\(em \fBptr\fR is a \f(CWchar*\fR or \f(CWunsigned char*\fR.
+.br
+\(em \fBsb\fR is a \f(CWstreambuf*\fR
+.br
+\(em \fBi\fR and \fBn\fR are \f(CWint\fR.
+.br
+\(em \fBpos\fR is a \f(CWstreampos\fR.
+.br
+\(em \fBoff\fR is a \f(CWstreamoff\fR.
+.br
+\(em \fBdir\fR is a \f(CWseek_dir\fR.
+.br
+\(em \fBmanip\fR is a function with type \f(CWostream& (*)(ostream&)\fR.
+.PP
+.PP
+Constructors and assignment:
+.TP
+\fBostream(sb)\fR
+Initializes \fBios\fR state variables and associates stream with
+buffer \fBsb\fR.
+\fBostream_withassign()\fR
+Does no initialization.  This allows a file static
+variable of this type
+(\fBcout\fR for example) to be used before it is constructed provided
+it is assigned to first.
+.TP
+\fBoutswa=sb\fR
+Associates \fBsb\fR with \fBswa\fR and initializes the entire
+state of \fBoutswa\fR.
+.TP
+\fBinswa=ins\fR
+Associates \fBins->rdbuf()\fR with \fBswa\fR and initializes the entire
+state of \fBoutswa\fR.
+The inserters:
+.TP
+\fBouts<<x\fR
+First call \fBouts.opfx()\fR.  If that returns 0 do nothing.
+Otherwise insert a sequence of characters
+representing \fBx\fR into \fBouts.rdbuf()\fR.
+Errors are indicated by setting
+the error state of \fBouts\fR.
+\fBouts\fR is always returned.
+.RS
+.PP
+\fBx\fR is converted into a sequence of characters
+(its representation) according
+to rules that depend on \fBx\fR's type and
+\fBouts\fR's format state variables (see \fIios\fR(3C++)):
+.TP
+\f(CWchar*\fR
+The representation is the sequence of characters up to
+(but not including)
+the terminating null of the string \fBx\fR points at.
+.TP
+\fIany integral type\fR
+If \fBx\fR is positive
+the representation contains a sequence of
+decimal, octal, or hexadecimal digits with no leading zeros
+according to whether
+\fBouts.convbase()\fR is 10, 8, or 16 respectively.
+If \fBx\fR is zero the representation is a single
+zero character(\f(CW0\fR).
+If \fBx\fR is negative, decimal conversion converts is to a minus
+sign (\f(CW-\fR) followed by decimal digits.
+The other conversions treat all values as unsigned.
+A value of 0 for \fBouts.convbase()\fR
+also causes decimal conversion.
+The effect of other values of \fBouts.convbase()\fR is undefined.
+If \fBouts.showbase()\fR
+is non-zero the hex representation contains 
+\f(CW0x\fR before the hex digits.
+If \fBouts.showbase()\fR is non-zero the octal representation contains
+a leading 0.
+.TP
+\f(CWvoid*\fR
+Pointers are cast to integral values and then converted
+to hexadecimal numbers as if \fBouts.showbase()\fR were set.
+.TP
+\f(CWfloat\fR, \f(CWdouble\fR
+The arguments are converted according to the current values
+of \fBouts.precision()\fR, \fBouts.floatfmt()\fR, and \fBouts.width()\fR
+using the printf formatting conventions for
+\f(CW"%\fBfloatfmt\f(CW"\fR.
+The default values for \fBouts.floatfmt()\fR and \fBouts.precision()\fR
+are \f(CWg\fR and 6 respectively.
+.PP
+After the representation is determined, padding occurs.
+If \fBouts.width()\fR
+is greater than 0
+and the representation contains less than \fBouts.width()\fR
+characters, then enough \fBouts.fill()\fR characters are added
+to bring the total number of characters to \fBios.width()\fR.
+If \fBios.ladjust()\fR is non-zero the sequence is left adjusted.
+That is, characters are added after the characters determined above.
+Otherwise the padding is added before the characters determined
+above. \fBios.width()\fR is reset to 0, but all other format
+state variables are unchanged.  The resulting sequence (padding
+plus representation) is inserted into \fBouts.rdbuf()\fR.
+.RE
+.TP
+\fBouts<<sb\fR
+If \fBouts.opfx()\fR returns non-zero
+the sequence of characters that can be fetched from \fBsb\fR
+are inserted into \fBouts.rdbuf\fR.  Insertion stops when
+no more characters can be fetcheded from \fBsb\fR.  No padding
+is performed.  Always return \fBouts\fR.
+.PP
+Other members:
+.TP
+\fBi=outs.opfx()\fR
+If \fBouts\fR's error state is nonzero returns immediately.
+If \fBouts.tie()\fR is non-null flush it.
+Returns non-zero except when \fBouts\fR'es error state is nonzero.
+.TP
+\fBoutsp=&outs.flush()\fR
+storing characters into a streambuf does not always
+cause them to be consumed (e.g., written to the external file)
+immediately.
+\fBflush\fR
+causes any characters that may have been stored but not yet consumed
+to be consumed by calling \fBouts.rdbuf()->sync\fR.
+.TP
+\fBouts<<manip\fR
+Equivalent to \fBmanip(outs)\fR.
+Syntactically this looks like an insertion
+operation, but semantically it does an arbitrary operations
+rather than converting \fBmanip\fR to a sequence of characters as
+do the insertion operators.
+.PP
+Unformatted output functions:
+.TP
+\fBoutsp=&outs.put(c)\fR
+Inserts \fBc\fR into \fBouts.rdbuf()\fR.  Sets the error state if
+the insertion fails.
+.TP
+\fBoutsp=&outs.write(s,n)\fR
+Inserts the
+\fBn\fR
+characters starting at \fBs\fR into \fBouts.rdbuf()\fR.
+These characters may include zeros (i.e., \fBs\fR need not be
+a null terminated string).
+.PP
+Positioning functions:
+.TP
+\fBoutsp=&ins.seekp(off,dir)\fR
+Repositions \fBouts.rdbuf()\fR's put pointer.
+See \fIsbuf.pub\fR(3C++)\fR for a discussion of positioning.
+.TP
+\fBoutsp=&outs.seekp(pos)\fR
+Repositions \fBouts.rdbuf()\fR's put pointer.
+See \fIsbuf.pub\fR(3C++)\fR for a discussion of positioning.
+.TP
+\fBpos=outs.tellp()\fR
+The current position of \fBouts.rdbuf()\fR's put pointer.
+See \fIsbuf.pub\fR(3C++)\fR for a discussion of positioning.
+.PP
+Manipulators:
+.TP
+\fBouts<<endl\fR
+Ends a line by inserting a newline character and flushing.
+.TP
+\fBouts<<ends\fR
+Ends a string by inserting a null(0) character.
+.TP
+\fBouts<<flush\fR
+Flushes \fBouts\fR
+.SH SEE ALSO
+ios(3C++)
+sbuf.pub(3C++)
+manip(3C++)

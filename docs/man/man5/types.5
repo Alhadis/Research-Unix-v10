@@ -1,0 +1,42 @@
+.TH TYPES 5
+.CT 2 sa data_man
+.SH NAME
+types \- primitive system data types
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.SH DESCRIPTION
+The data types defined in the include file
+are used in the operating system.
+Some data of these types are useful in user code.
+.PP
+.EX
+.ta \w'typedef 'u +\w'unsigned short 'u +\w'label_t[14]; 'u
+typedef	long	daddr_t;	\fRdisk block number, see \fIfilsys\fR(5)\f5
+typedef	char *	caddr_t;	\fRgeneral memory pointer\f5
+typedef	unsigned short	ino_t;	\fRinode number, \fIfilsys\fR(5)\f5
+typedef	long	size_t;	\fRfile size, \fIstat\fR(2)\f5
+typedef	long	time_t;	\fRtime, \fItime\fR(2)\f5
+typedef	unsigned short	dev_t;	\fRdevice code, \fIstat\fR(2)\f5
+typedef	long	off_t;	\fRfile offset, \fIlseek\fR(2)\f5
+.EE
+.PP
+The following macros analyze and synthesize device numbers;
+see
+.IR intro (4).
+.PP
+.EX
+#define	major(x)	((int)(((unsigned)(x)>>8)&0377))
+#define	minor(x)	((int)((x)&0377))
+#define	makedev(x,y)	((dev_t)(((x)<<8) | (y)))
+.EE
+.PP
+The file contains other definitions as well,
+internal to the system
+or specific to particular system calls.
+Pages in section 2
+tell which calls need
+.BR <sys/types.h> .
+.SH SEE ALSO
+.IR filsys (5), 
+.IR time (2),
+.IR intro (4)

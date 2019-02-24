@@ -1,0 +1,46 @@
+.TH SETBUF 3S
+.CT 2 file_io
+.SH NAME
+setbuf \(mi assign buffering to a stream
+.SH SYNOPSIS
+.nf
+.B #include <stdio.h>
+.PP
+.B setbuf(stream, buf)
+.B FILE *stream;
+.B char buf[BUFSIZ];
+.fi
+.SH DESCRIPTION
+.I Setbuf
+is used after a stream has been opened but before it
+is read or written.
+It causes the character array
+.I buf
+to be used instead of an automatically allocated buffer.
+If
+.I buf
+is the constant pointer
+.LR NULL ,
+input/output will be completely unbuffered.
+.PP
+A buffer is normally obtained from
+.IR  malloc (3)
+upon the first
+.IR getc (3)
+or
+.IR  putc
+on the file.
+Initially,
+the standard stream
+.I stderr
+is unbuffered,
+and the standard stream
+.I stdout
+is flushed automatically
+whenever new data is read by
+.IR getc .
+The latter magic may be dissolved by a call to
+.IR setbuf .
+.SH "SEE ALSO"
+.IR stdio (3), 
+.IR malloc (3)

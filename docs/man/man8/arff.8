@@ -1,0 +1,64 @@
+.TH ARFF 8
+.CT 1 sa_nonmortals
+.SH NAME
+arff \- read RT11 files
+.SH SYNOPSIS
+.B arff
+[
+.I key
+]
+[
+.I name ...
+]
+.SH DESCRIPTION
+.I Arff
+reads and writes files
+on an RT11 volume,
+such as the VAX-11/780 console floppy or 
+11/750 console tape.
+Its actions are controlled by the
+.I key
+argument, in the manner of
+.IR ar (1).
+Other arguments
+are the names of files
+to be read or written.
+.PP
+The RT11 filesystem restricts names to the character set
+.BR a - z0 - 9.\| ,
+and there are no subdirectories.
+Filename arguments are trimmed to the last pathname element
+and mapped to lower case.
+.PP
+The key must contain one of the letters
+.LR rxdt ,
+which mean the same as in
+.I ar.
+Unlike
+.I ar,
+however,
+.I arff
+may reorder files to fit without moving existing files.
+.PP
+Other key letters are
+.TP
+v
+Verbose.
+.TP
+.B f
+The next argument is the name of the archive instead
+of the default
+.FR /dev/floppy .
+.TP
+.B m
+Omit the DEC-standard sector interleaving algorithm;
+needed when the file isn't a floppy;
+e.g. the 11/750 console cassette.
+.SH FILES
+.F /dev/floppy
+.SH BUGS
+Floppy errors are handled ungracefully.
+.br
+The program is too floppy-dependent.
+Mapping belongs in the device driver,
+or at least shouldn't be the default.

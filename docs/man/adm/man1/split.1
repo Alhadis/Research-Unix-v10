@@ -1,0 +1,117 @@
+.TH SPLIT 1
+.CT 1 files
+.SH NAME
+split, fsplit \- split a file into pieces
+.SH SYNOPSIS
+.B split
+[
+.I option ...
+]
+[
+.I file
+]
+.PP
+.B fsplit
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Split
+reads
+.I file
+(standard input by default)
+and writes it in pieces of 1000
+lines per output file.
+The names of the
+output files are
+.BR xaa ,
+.BR xab ,
+and so on to
+.BR xzz .
+The options are
+.TP
+.BI - n
+Split into
+.IR n -line
+pieces.
+.TP
+.BI -e " expression"
+File divisions occur at each line
+that matches a
+.IR grep -style
+regular
+.IR expression ;
+see 
+.IR gre (1).
+Multiple
+.B -e
+options may appear.
+If a subexpression of
+.I expression
+is contained in escaped parentheses
+.BR \e( ... \e) ,
+the output file name is the portion of the
+line which matches the subexpression.
+.TP
+.BI -f " stem
+Use
+.I stem
+instead of
+.B x
+in output file names.
+.TP
+.BI -s " suffix
+Append
+.I suffix
+to names identified under
+.BR -e .
+.TP
+.B -x
+Exclude the matched input line from the output file.
+.TP
+.B -i
+Ignore case in option
+.BR -e ;
+force output file names (excluding the suffix)
+to lower case.
+.PP
+.I Fsplit
+splits a collection of Fortran subprograms in one
+.I file
+into separate files.
+The options are
+.TP
+.B -f
+.PD0
+.TP
+.B -e
+.TP
+.B -r
+Set the file suffix: procedure
+.L proc
+will go into file
+.L proc.f
+(default),
+.LR proc.e ,
+or
+.L proc.r
+accordingly.
+Block data subprograms will go into files named
+.LR BLOCKDATA1.f ,
+etc.
+.PD
+.TP
+.B -i
+Force output file names to lower case.
+.TP
+.B -s
+Strip off data beyond column 72 together with any resulting trailing blanks.
+.SH SEE ALSO
+.IR sed (1), 
+.IR awk (1)
+.IR grep
+in
+.IR gre (1)

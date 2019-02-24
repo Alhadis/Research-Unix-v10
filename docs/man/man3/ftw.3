@@ -1,0 +1,165 @@
+.TH FTW 3
+.CT 2 dirs
+.SH NAME
+ftw \- file tree walk
+.SH SYNOPSIS
+.nf
+.B #include <ftw.h>
+.PP
+.B int ftw(path, fn, depth)
+.B char *path;
+.B int (*fn)();
+.B int depth;
+.PP
+.B #include <sys/types.h>
+.B #include <sys/stat.h>
+.PP
+.IB fn "(name, statb, code, S)"
+.B char *name;
+.B struct stat *statb;
+.B struct FTW *S;
+.fi
+.SH DESCRIPTION
+.I Ftw
+recursively descends the directory hierarchy
+rooted in
+.IR path .
+For each entry in the hierarchy,
+.I ftw
+calls
+.IR fn ,
+passing it information about the entry:
+a pointer to a null-terminated pathname
+string, a pointer to a
+.B stat
+structure (see
+.IR stat (2)),
+and a pointer to the following structure.
+.PP
+.EX
+.ta \w'struct 'u +\w'int level  'u
+struct	FTW {
+	int quit;	\fRsee below\fP
+	int base;	&name[base] \fRpoints to basename\fP
+	int level;	\fRrecursion level (initially 0)\fP
+};
+.EE
+.LP
+Possible values of
+.IR code ,
+defined in
+.FR <ftw.h> ,
+are
+.TF FTW_DNR
+.PD 0
+.TP
+.B FTW_D
+Entry is a directory (before visiting descendants).
+.TP
+.B FTW_DP
+Entry is a directory (after visiting descendants).
+.TP
+.B FTW_SL
+Entry is a symbolic link.
+.TP
+.B FTW_F
+Entry is some other kind of file.
+.TP
+.B FTW_DNR
+Entry is a directory that cannot be read;
+no descendants will be visited.
+.TP
+.B FTW_NS
+.I Lstat
+(see
+.IR stat (2))
+failed on
+.IR name ;
+contents of
+.I statb
+are undefined
+.TP
+.B FTW_NSL
+.I Lstat
+succeeded, but
+.I stat
+failed; contents of
+.I statb
+are undefined.
+.PD
+.PP
+The tree traversal continues until the tree is exhausted or
+.I fn
+returns a nonzero value.
+When the tree is exhausted,
+.I ftw
+returns zero.
+When
+.I fn
+returns a nonzero value,
+.I ftw
+stops and returns that value.
+.PP
+Normally symbolic links are not followed.
+But if on a symbolic link
+.RB ( FTW_SL )
+.IR fn
+sets
+.B S->quit
+to
+.BR FTW_FOLLOW ,
+.IR ftw
+will next attempt to follow the link.
+.PP
+.I Ftw
+normally visits a readable directory twice, before and
+after visiting its descendants.
+But if on a previsit
+.RB ( FTW_D )
+.I fn
+sets
+.B S->quit
+to
+.B FTW_SKD,
+.I ftw
+will skip the descendants and the postvisit
+.RB ( FTW_DP ).
+.PP
+.I Ftw
+uses one file descriptor for each level in the tree up to a
+maximum of
+.I depth
+(or 1, if
+.IR depth <1)
+descriptors.
+.I Depth
+must not exceed the number of available file descriptors; small
+values of 
+.I depth 
+may cause
+.I ftw
+to run slowly, but will not change its effect.
+.SH "SEE ALSO"
+.IR stat (2),
+.IR directory (3)
+.SH DIAGNOSTICS
+.I Ftw
+returns \-1
+with
+.I errno
+set to
+.B ENOMEM
+when
+.IR malloc (3)
+fails.
+.PP
+.I Errno
+is set appropriately when
+.I ftw
+calls
+.I fn
+with code
+.BR FTW_DNR ,
+.BR FTW_NS ,
+or
+.BR FTW_NSL .

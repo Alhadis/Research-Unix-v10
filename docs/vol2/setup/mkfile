@@ -1,0 +1,24 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	setup.out
+
+pg:	setup.out
+	count setup.ms setup.out
+
+spell:VQ:
+	dospell setup.ms
+
+lp:	setup.out
+	$LP $newprereq && touch $target
+
+setup.out:D:	setup.ms
+	tbl setup.ms | troff -mpm > $target
+
+index:V:
+	runind setup
+	tbl xsetup.ms | troff -mpm > /dev/null 2>setup.x
+	mkindex setup.x
+	rm xsetup.ms
+pindex:V:
+	mkindex setup.x

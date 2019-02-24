@@ -1,0 +1,22 @@
+S=/usr/spool/man
+M=/usr/man
+(cd $S) || exit
+cd $M
+for i in man[1-9aw] man10
+do	for j in $i/*.? $i/*.??
+	do	newer $j $S/$j &&
+		eval `doctype -n $j` |
+		sed '
+			:x
+			/^$/{
+				N
+				s/\n$//
+				tx
+			}
+		' >$S/$j
+	done
+done
+$M/adm/cachelinks
+case "`date`" in
+*Sun*)	$M/adm/cachindex
+esac

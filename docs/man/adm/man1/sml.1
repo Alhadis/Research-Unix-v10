@@ -1,0 +1,90 @@
+.TH SML 1
+.CT 1 prog_other
+.SH NAME
+sml \(mi Standard ML compiler
+.SH SYNOPSIS
+.B sml
+[
+.I arg ...
+]
+.SH DESCRIPTION
+.I Sml
+is the Standard ML of New Jersey compiler.
+It reads declarations and expressions incrementally from standard input,
+compiles and evaluates them, and
+places results on the standard output.
+Some useful system-related facilities are
+.TP
+.B "System.argv : unit -> string list" 
+Return the argument list with which
+.I sml
+was invoked.
+.PD0
+.TP
+.B "System.environ : unit -> string list
+Return the environment list with which
+.I sml
+was invoked.
+.TP
+.B use : string -> unit
+Temporarily take 
+.I sml
+source from the file named in the argument.
+.TP
+.B exportML : string->bool
+Save the current memory image as the named file, which may later
+be executed as an argumentless
+.SM UNIX
+command.
+Return
+.B true
+in the original and
+.B false
+upon resumption of the saved image.
+.TP
+.B system : string -> unit
+Invoke a shell command.
+.TP
+.B cd : string -> unit
+Change working directory.
+.TP
+.B System.Control.primaryPrompt : string ref
+.TP
+.B System.Control.secondaryPrompt : string ref
+Primary and secondary prompts analogous to
+.B PS1
+and
+.B PS2
+of
+.IR sh (1).
+.TP
+.B System.Control.Print.printDepth : int ref
+Limit on depth of printing complex objects; default 5.
+.TP
+.B System.Control.Print.stringDepth : int ref
+Limit on length to which strings will be printed; default 70.
+.TP
+.B System.Control.Print.signatures : bool ref
+Print signatures only if true.
+.SH EXAMPLES
+.EX
+fun timeit (f: unit->'a) =   (* use the system timer *)
+     let open System.Timer
+         val start = start_timer()
+         val result = f()
+      in print(makestring(check_timer(start)));
+         print "\en";
+         result
+     end;
+.EE
+.SH "SEE ALSO"
+Robert Harper,
+`Introduction to Standard ML',
+Edinburgh University report ECS-LFSC-86-14 (1986)
+.br
+Robert Harper,
+Robin Milner, and
+Mads Tofte,
+.I
+The Definition of Standard ML,
+MIT Press (1990)

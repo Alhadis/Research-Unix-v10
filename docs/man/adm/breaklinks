@@ -1,0 +1,14 @@
+M=/usr/man/adm
+for i in 1 2 3 4 5 6 7 8 9 a
+do 
+	cd $M
+	ls /usr/man/man$i >junk1
+	ls /usr/spool/man/man$i >junk2
+	r=`comm -13 junk1 junk2`
+	cd /usr/spool/man/man$i
+	case "$r" in
+	"")	continue
+	esac
+	rm $r
+done
+rm $M/junk1 $M/junk2

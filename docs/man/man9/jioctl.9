@@ -1,0 +1,74 @@
+.TH JIOCTL 9.4
+.CT 2 comm_term
+.SH NAME
+jioctl \- mux ioctl requests
+.SH SYNOPSIS
+.B
+#include "/usr/jerq/include/jioctl.h"
+.\" not <jioctl.h>: /usr/jerq/include is not in the cc include path 
+.PP
+.B ioctl(fd, request, 0)
+.PP
+.B ioctl(fd, JWINSIZE, win)
+.br
+.B struct winsize *win;
+.SH DESCRIPTION
+.IR Mux (9.1)
+supports several 
+.IR ioctl (2)
+requests for Unix programs attached to layers.
+The requests are:
+.TF JBOOT
+.TP
+.B JMUX
+returns 0 if file descriptor
+.I fd
+is connected to a
+.I mux
+layer, \-1 otherwise.
+.PD
+.TP
+.B JTERM
+resets the layer connected to
+.I fd
+to the default terminal program.
+.TP
+.B JBOOT
+initiates the down-load protocol to replace the layer's terminal program.
+Usually called by
+.IR 32ld (9.1).
+.TP
+.B JZOMBOOT
+is the same as
+.IR JBOOT ,
+but disables execution of the program when the download is complete
+(see the
+.B -z
+flag of
+.IR 32ld ).
+.TP
+.B JWINSIZE
+returns, in the location pointed to by the third argument,
+a structure describing the size of the layer connected to
+.IR fd ,
+with character 
+.L 0
+being the unit of size.
+The structure is:
+.IP
+.EX
+.ta 7n +7n +\w'bytesx, bytesy;  'u"
+struct winsize {
+	char	bytesx, bytesy;	/* size in characters */
+	short	bitsx, bitsy;	/* size in pixels */
+};
+.EE
+.TP
+.B JEXIT
+causes
+.I mux
+to exit.
+.SH SEE ALSO
+.IR 32ld (9.1), 
+.IR mux (9.1), 
+.IR ioctl (2)

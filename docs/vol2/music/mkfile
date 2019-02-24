@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	music.out
+
+pg:	music.out
+	count music.ms music.out
+
+spell:VQ:
+	dospell music.ms
+
+lp:	music.out
+	$LP $newprereq && touch $target
+
+music.out:D:	music.ms $REF
+	$PREFER music.ms | troff -mpm > $target
+
+index:V:
+	runind music
+	$PREFER xmusic.ms | troff -mpm > /dev/null 2>music.x
+	mkindex music.x
+	rm xmusic.ms
+pindex:V:
+	mkindex music.x
+

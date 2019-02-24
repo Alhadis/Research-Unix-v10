@@ -1,0 +1,176 @@
+.TH CON 1
+.CT 1 comm_mach
+.SH NAME
+con, rx \- remote login and execution
+.SH SYNOPSIS
+.B con
+[
+.B -l
+]
+.I machine
+.PP
+.B rx
+[
+.B -n
+]
+.I machine
+[
+.I command-word ...
+]
+.PP
+.BI /usr/bin/m/ machine
+[
+.I command-word ...
+]
+.SH DESCRIPTION
+.I Con
+connects to the computer whose network address is
+.I machine
+and logs in if possible.
+Standard input and output go to the local machine.
+Option
+.B -l
+prevents automatic login; a normal login dialog ensues.
+.PP
+The quit signal (control-\e) is a local escape.
+It prompts with the local machine name and
+.BR >> .
+Legitimate responses to the prompt are
+.TP \w'\fL!\fIcommand\ \ 'u
+.B i
+Send a quit [sic] signal to the remote machine.
+.PD0
+.TP
+.BR q , " x" ", or " .
+Exit.
+.TP
+.B b
+Send a break.
+.TP
+.BI ! command
+Execute
+.I command
+locally.
+.PD
+.PP
+.I Rx
+executes one shell command
+on the remote machine as if logged in there,
+but with local standard input and output.
+Unquoted shell metacharacters in the command
+are interpreted
+locally, quoted ones remotely.
+The assignment
+.B REXEC=1
+appears in the remote environment.
+With no arguments, 
+.I rx
+just diagnoses availability.
+Option
+.B -n 
+ignores sporadic end-of-file indications on a
+sick network.
+.PP
+Network addresses for both
+.I con
+and
+.I rx
+have the form
+.IB network ! host
+or simply
+.I host.
+Supported networks are
+.L dk
+(Datakit) and
+.L tcp
+(TCP/IP, usually Ethernet).
+.PP
+Directory
+.F /usr/bin/m
+contains machine names as commands:
+.BI /usr/bin/m/ machine
+with no argument runs an appropriate flavor of
+.I con
+for the named
+.I machine.
+If given arguments,
+.BI /usr/bin/m/ machine
+runs
+.I rx
+with those arguments.
+If
+.F /usr/bin/m
+is in the
+.IR sh (1)
+search path,
+the names become commands for navigating the
+local cluster.
+.SH EXAMPLES
+.TP
+.L
+rx overthere cat file1 >file2
+Copy remote
+.I file1
+to local
+.IR file2 .
+.TP
+.L
+rx overthere cat file1 ">file2"
+Copy remote
+.I file1
+to remote
+.IR file2.
+.TP
+.L
+eqn paper | rx pipe troff -ms | rx arend lp
+Parallel processing:
+do each stage of a pipeline on a different machine.
+.SH FILES
+.TF /usr/ipc/lib/auth*
+.TP
+.F /usr/ipc/lib/auth*
+authentication
+.TP
+.F /usr/ipc/lib/serv*
+servers
+.SH "SEE ALSO"
+.IR push (1),
+.IR dcon (1),
+.IR cu (1),
+.IR dkmgr (8),
+.IR svcmgr (8),
+.IR tcpmgr (8),
+.IR ipc (3)
+.br
+D. L. Presotto,
+`Interprocess Communication in the Eighth Edition
+.SM UNIX
+System',
+this manual, Volume\ 2
+.SH BUGS
+The remote standard error and standard output are combined 
+and go inseparably to the local standard output.
+.br
+Under
+.I rx,
+a program
+that should behave specially towards terminals may not:
+.IR sh (1)
+will not prompt,
+.IR vi (1)
+will not manage the screen, etc.
+.I Nrx
+(see
+.IR dcon (1))
+avoids this trouble, but has others of its own.
+.br
+.I Con
+and
+.I rx
+may not guess the right kind of connection.
+In case of trouble, try the programs in
+.IR dcon (1).
+.br
+The names in
+.F /usr/bin/m
+are conventions, not actual network addresses.

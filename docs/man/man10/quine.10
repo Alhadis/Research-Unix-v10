@@ -1,0 +1,67 @@
+.TH QUINE 10.1 UCDS
+.SH NAME
+quine, cover, hazard \- logic programs
+.SH SYNOPSIS
+.B quine
+.br
+.B cover
+[
+.B -s
+]
+.br
+.B hazard
+[
+.BI - n
+] ...
+.SH DESCRIPTION
+.IR Quine , cover ,
+and
+.I hazard
+are programs that read the standard input and write the standard
+output, both in the format of
+.IR minterm (10.5).
+.PP
+.I Quine
+produces a Quine-McCluskey reduction of the input data.
+.I Cover
+does the covering problem, which is exponentially hard
+and may not finish in reasonable time.
+.B Cover -s
+does not do the complete problem and goes faster.
+.I Hazard
+adds terms to eliminate internal hazards that can occur
+in PAL's and PLA's. The hazard can occur when the form of the
+equations is
+.RI ( a & x )
+|
+.RI ( b &
+.RI ! x ).
+When
+.I a
+and
+.I b
+are both true
+a glitch may appear on the output when
+.I x
+is changed.
+.I Hazard
+eliminates it by
+adding another term
+.RI ( a & b ).
+If there are any
+.BI - n
+option flags for
+.IR hazard ,
+only those outputs whose symbols are in the set of
+.IR n 's
+will be modified by hazard, otherwise all outputs are
+(possibly) modified.
+.SH SEE ALSO
+.IR lde (10.1),
+.IR minterm (10.5),
+.IR pal (10.1)
+.SH FILES
+.BI qtmp n
+and
+.BI bsort n
+in the working directory for temporaries.

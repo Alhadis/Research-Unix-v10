@@ -1,0 +1,25 @@
+M=/usr/man/man0
+cd $M
+for i in /usr/man/man[1-9]
+do
+	sh /usr/man/man0/makind1 $i
+done >$M/junk1
+cd $M
+sh /usr/man/man0/makind1 /usr/man/mana | sed '
+	s/([1-9])/(A)/
+	s/(3I+)/(A)/
+	s/(9\..)/(A)/
+' >>junk1
+cd $M
+ptx -f -w 100 -i ignore -b bfile -r junk1 >junk2
+gre -F -v -i -f suppress.fgrep junk2 |
+	awk -f dup1.awk >junk3
+until
+	awk -f dup2.awk junk3 |
+	awk -f dup1.awk |
+	sort -dfut\" +5 -6 +1 -2 +8 +0 >junk4
+	cmp -s junk3 junk4 
+do
+	mv junk4 junk3
+done
+mv junk3 permindex

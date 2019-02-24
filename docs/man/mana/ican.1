@@ -1,0 +1,203 @@
+.TH ICAN 1 
+.CT 1 writing_output comm_dev
+.SH NAME
+ican, ibcan, idcan, itcan \- interface to Imagen laser-printer spooler
+.SH SYNOPSIS
+.B ican
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B ibcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B idcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B itcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+These commands print 
+.I files
+(standard input by default) on Imagen laser printers.
+The four commands
+handle particular kinds of data files:
+.TP
+.I ican
+ASCII text
+.TP
+.I ibcan
+bitmap images created by 
+.IR blitblt (9.1)
+.TP
+.I idcan
+output from
+.IR troff (1)
+.TP
+.I itcan
+output for a Tektronix 4014 terminal, as produced by
+.IR plot (1)
+.PP
+The destination printer is determined in the following ways,
+listed in order of decreasing precedence.
+.IP
+option
+.B -d
+.I dest
+.br
+environment variable
+.L ICANDEST
+.br
+printer named in file
+.F /etc/icandest
+.LP
+Printers at the mother site are:
+.RS
+.TP
+.B 1
+1st floor, stair 8 (sid)
+.PD0
+.TP
+.B 3
+3rd floor, stair 8 (shannon)
+.TP
+.B 5
+5th floor, 2C-5 (hunny)
+.TP
+.B j
+5th floor, 2D-5 (jones)
+.TP
+.BI / name
+printer attached to machine with Datakit destination 
+.I name
+.RE
+.PD
+.PP
+Options:
+.PP
+.TP
+.BI -c " n"
+Number of copies to be printed.
+.TP
+.BI -d " dest"
+Select the destination printer.
+.TP
+.BI -f " font"
+Set the font (default
+.LR CW.11 )
+for
+.IR can ;
+see 
+.IR font (7).
+.TP
+.B -L
+(landscape) Rotate
+.I ibcan 
+pages 90 degrees.
+.TP
+.BI -l " n"
+Set number of lines per page for
+.I can
+(default 66).
+.TP
+.BI -m " n"
+Set 
+.I ibcan
+magnification to a power of 2,
+where
+.I n
+= 0, 1, or 2
+(default 1).
+.TP
+.BI -o " list"
+Print only pages whose page numbers appear in
+the comma-separated
+.I list
+of numbers and ranges.
+A range
+.IB n - m
+means pages
+.I n
+through
+.IR m ;
+a range
+.BI - b
+means from the beginning to page
+.IR n ;
+a range
+.IB n -
+means from page
+.I n
+to the end. 
+.B -o
+implies
+.BR -r .
+.TP
+.B -r
+print
+pages in reverse order
+(default for 
+.IR ican " and " idcan ).
+.TP
+.BI -u " user"
+set the name which appears on the banner page;
+default is login name.
+.TP
+.BI -x " n"
+set the horizontal
+offset of the print image, measured in dots (default 60).
+There are 300 dots to the inch.
+.TP
+.BI -y " n"
+set the vertical
+offset of the print image (default 0),
+except in
+.I itcan,
+where this option specifies
+.I n
+extra tekpoints vertically.
+.SH FILES
+.TF /usr/spool/lp
+.TP
+.F /etc/icandest
+default destination
+.PD0
+.TP
+.F /usr/lib/font/devi300
+font directory
+.TP
+.F /usr/spool/lp
+spool directory
+.SH SEE ALSO
+.IR pr (1), 
+.IR blitblt (9.1), 
+.IR plot (1), 
+.IR font (7)
+.SH BUGS
+The `landscape' option is supported only by
+.IR ibcan ;
+.BR -o
+is supported only by
+.I ican
+and
+.I idcan.
+.br
+There ought to be a way to determine the service class from the input data.

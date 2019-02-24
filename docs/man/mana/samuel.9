@@ -1,0 +1,420 @@
+.TH SAMUEL 9.1
+.SH NAME
+samuel \(mi text editor and C browser
+.SH SYNOPSIS
+.B samuel
+[
+.I options
+] [ files ]
+.SH DESCRIPTION
+.I Samuel
+is the editor
+.IR sam (9.1)
+with additional features, including a browser for C and C++ programs.
+Most new features
+are available from the button 3 menu or commands typed in the
+command window.
+The new menu entries are
+.BR unopen ,
+.BR smudge ,
+.BR advisor ,
+.BR browser ,
+and
+.BR interpreter .
+.SS Unopen
+.B Unopen
+closes a window or file without removing the file name from the
+menu.
+.SS Smudge
+.B Smudge
+associates a descriptive tag with a window and places the
+tag in the
+.B smudge
+submenu.
+The tag may be hit like a file name to switch to the window.
+.SS Advisor
+.B Advisor
+gives information about the selected library function name or
+C keyword.
+.SS Browser
+.PP
+When
+.B browser
+is first hit, the browser's data base is initialized
+for the currently active
+files.
+A submenu then shows browsing functions.
+.TF definition
+.TP
+.B reference
+Find all references to the selected C symbol.
+`Selected' means either highlighted
+with button 1 or contained in the snarf buffer.
+.TP
+.B definition
+Find the definition of the selected function name, #define
+symbol, structure, union, class or typedef name.
+.TP
+.B called\ by
+Find all functions called by the selected function name.
+.TP
+.B calls\ to
+Find all calls to the selected function name.
+.TP
+.B find
+Find all instances of the selected pattern.
+.TP
+.B egrep
+Find all instances of the selected pattern, interpreted as in
+.IR egrep (1).
+.TP
+.B all\ defs
+Find definitions of all functions.
+.TP
+.B files
+List files currently in browser data base.
+.TP
+.B rebuild
+Rebuild the data base with the current list of files.
+.TP
+.B exit
+Exit the browser.
+.TP
+.B \~\~samuel\~\~
+Replace the contents of dot with the results of the last search.
+.PD
+.PP
+Search results are placed in a 
+.B browser
+submenu labeled with the search string.
+Hitting an item in a
+search submenu closes the currently active window
+(unless that would lose data) and opens
+a window of the same size for the file containing the item, with the
+window positioned at the item.
+.SS Interpreter
+.PP
+When
+.B interpreter
+is first hit, the interpreter is initialized for interactive use, and
+a submenu then shows interpreting functions.
+.TF interrupt
+.TP
+.B \~\~cin\~\~
+Toggle the use of the command window.  The first hit allows the user to send information to
+the interpreter from the command window.  The second hit returns the command window to the
+editor.  This interface will change in the near future.
+.TP
+.B doit
+Send the selected text to the interpreter.
+`Selected' means either highlighted
+with button 1 or contained in the snarf buffer.
+.TP
+.B load
+Load a file into the interpreter.  The user selects the window to load when the `bullseye'
+prompt is presented.  The
+.B load
+submenu provides functions to
+.B load
+a single file,
+.B loadall
+files in the editor,
+or load the
+.B function
+that contains dot (the edit point).
+.TP
+.B view
+Sets the current view.  The
+.B view
+submenu provides functions to set the current
+.BR view ,
+a list of all
+.BR views ,
+describe
+.B whatis
+the selected identifier, and
+.B where
+the execution stopped in the interpreter.
+.TP
+.B return
+Returns from a breakpoint.  The
+.B return
+submenu provides functions to
+.B return
+from a breakpoint, set a
+breakpoint
+.RL ( break ),
+and clear a breakpoint
+.RL ( unbreak ).
+.TP
+.B interrupt
+Interrupt the interpreter.
+.TP
+.B eof
+Sends an EOF to the interpreter.  Useful when the user program expects to see a
+.BR <control-d> .
+.TP
+.B exit
+Exit the interpreter.
+.PD
+.SS Other features
+.I Help.
+Press button 1 simultaneously with button 2 or 3 to see
+a short description of the button 2 or 3 item.
+In a search submenu, the information includes file name,
+line number and, where appropriate, function name;
+for a smudge submenu, the file name associated with the tag.
+.PP
+.I File menu.
+When too many files appear in the button 3 menu, they are moved
+to a submenu.
+.PP
+.I Font.
+On the 630 MTG Terminal, the button 2 menu includes a
+.L font
+item with a submenu that lists fonts in the terminal's cache.
+The font may be set independently in each window.
+New windows and menus use the last font selected.
+.SS Commands
+.PD 0
+.TP .5i
+.BI z
+Make
+.I samuel
+menu items visible; see
+.B \-v
+below.
+Start the browser unless
+it is already running.
+.TP
+.BI z-
+Make
+.I samuel
+menu items invisible.
+.TP
+.BI zF " dbfile
+If
+.I dbfile
+is specified, start, or restart, the browser with
+.I dbfile
+as a read-only data base file; see options
+.B -f
+and
+.B -F
+below.
+Otherwise display the current
+database file.
+.TP
+.BI zA " advisordb
+If
+.I advisordb
+is specified, set the
+.B ADVISOR
+environment variable.
+Otherwise display the value of
+.BR ADVISOR .
+.TP
+.BI za " keyword
+Search for
+.I keyword
+in the advisor database.
+.TP
+.BI zu " file-list
+Unopen the named files.  If no files are named, the current file is unopened.  It is an
+error to
+.B zu
+a modified file, but a subsequent
+.B zu
+will unopen such a file.
+.TP
+.B zc
+Delete dot and save the deleted text in the snarf buffer.
+.TP
+.B zp
+Replace the text in dot by the contents of the snarf buffer.
+.TP
+.B zs
+Save the text in dot in the snarf buffer.
+.I keyword
+in the advisor database.
+.PD
+.SS Options
+.PD 0
+.TP .5i
+.BI -f " file.db
+Create the data base in the named file.
+If the file
+already exists and any files
+have been modified since the last build, update the data base.
+.TP
+.BI -F " file.db
+The data base already exists in the named
+file.
+The file is read-only; rebuilds are not allowed.
+.TP
+.BI -i " filenames
+Use the named files in creating the data base.
+.TP
+.BI -I " includedir
+Search directory
+.I includedir
+for included files.
+This option may appear more than once.
+.TP
+.BI -s " sourcedir
+Search directory
+.I sourcedir
+for referenced function definitions.
+This option may appear more than once.
+.TP
+.BI -D name=def
+.TP
+.BI -D name
+Define the
+.I name
+to
+.I cin ,
+as if by
+.BR #define .
+If no definition is given, the name is defined as 1.
+.TP
+.BI -U name
+Remove any initial definition of
+.IR name .
+.TP
+.BI -l x
+This option is an abbreviation for the library name
+.BI /lib/lib x .a ,
+where
+.I x
+is a string.  If that does not exist,
+.I cin
+tries
+.BI /usr/lib/lib x .a .
+A library is searched when its name is encountered, so the placement of a
+.B -l
+is significant.
+.TP
+.BI -u name
+Enters
+.I name
+as undefined into
+.IR cin 's
+symbol table.  This is useful for loading wholly from a library, since initially
+the symbol table is empty and an unresolved reference is needed to force the loading
+of the first routine.
+.TP
+.BI -V func:n
+Declare function
+.I func
+to have a variable number of arguments, the first
+.I n
+of which are to be type checked.
+.PD
+.TP
+.B -c
+If the terminal is a 630 MTG, cache the terminal portion of
+.IR samuel ;
+later invocations will be executed from the cache without downloading.
+.TP
+.B -v
+Make
+.I samuel
+behave like
+.IR sam ;
+use the
+.L z
+command to restore
+.I samuel.
+.PD
+.SS Environment Variables
+.TF SAMUEL
+.TP 
+.B INCLUDEDIRS
+Colon-separated list of directories to search for
+.B #include
+files.
+.TP
+.B SOURCEDIRS
+Colon-separated list of directories to search for additional source files.
+.TP
+.B SAMUEL
+Directory containing samuel utilities.
+Overrides the default locations listed below.
+.TP
+.B TMPDIR
+Directory used to create temporary files,
+.F/tmp
+by default.
+.TP
+.B ADVISOR
+Colon-separated list of advisor data base files.
+These are searched in
+specified order followed by the standard samuel data base file.
+.TP
+.B DMD
+Directory for standard dmd software,
+.F /usr/jerq/lib
+by default.
+.PD
+.SH FILES
+.TF $DMD/samuel/samuel.ca.dat
+.TP
+.F $HOME/sam.err
+saved diagnostic output from Unix commands
+.TP
+.F $HOME/sam.save
+bundled files on unexpected exit
+.TP
+.F $DMD/samuel/samuel.m
+terminal support program for samuel
+.TP
+.F $DMD/samuel/samuel.cs
+C browser support program for samuel
+.TP
+.F $DMD/samuel/samuel.ca
+C advisor support program
+.TP
+.F $DMD/samuel/samuel.ca.dat
+C advisor data base
+.TP
+.F $DMD/samuel/samuel.st
+samuel statistics gathering program
+.TP
+.F $TMPDIR/cscope*.0
+default data base file
+.TP
+.F $TMPDIR/cscope*.1
+results of last search
+.TP
+.F $TMPDIR/cscope*.2
+temporary
+.SH SEE ALSO
+sam(9.1)
+.br
+J. J. Puttress,
+.I "The C Browser"
+(11229-861017-19TMS).
+.br
+J. J. Puttress,
+.I "The C Browser: Examples"
+(11229-861014-18TMS).
+.br
+T. J. Kowalski, H. H. Goguen, J. J. Puttress,
+.I "The C Interpreter: A Tutorial for Cin Version 0.18"
+(11229-880606-07TMS).
+.br
+R. Pike,
+.I "The Text Editor Sam"
+(11271-870423-06TMS).
+.br
+R. Pike,
+.I "A Tutorial for the SAM Command Language"
+(11271-860924-07TMS).
+.br
+J. L. Steffen, Interactive Examination of a C Program with Cscope.
+.IR "USENIX Winter Conference Proceedings Dallas 1985" ,
+170-175.
+.SH BUGS
+.I Samuel
+will not correctly browse C source with syntax errors.

@@ -1,0 +1,186 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH MANIP 3I+ "C++ Stream Library" " "
+.SH NAME
+manipulators \- iostream out of band manipulations
+.SH SYNOPSIS
+.ft B
+.ta1i 2i
+.nf
+#include <iostream.h>
+#include <iomanip.h>
+
+IOMANIPdeclare(T) ;
+
+class SMANIP(T) {
+	SMANIP(T)( ios& (*)(ios&,T), T);
+};
+
+class SAPP(T) {
+	SAPP(T)( ios& (*)(ios&,T));
+	SMANIP(T) operator()(T);
+};
+
+ios& SMANIP(T)::operator<<(ios&);
+ios& SMANIP(T)::operator>>(ios&);
+istream& SMANIP(T)::operator>>(istream&);
+ostream& SMANIP(T)::operator<<(ostream&);
+iostream& SMANIP(T)::operator<<(iostream&);
+iostream& SMANIP(T)::operator>>(iostream&);
+
+class IMANIP(T) {
+	IMANIP(T)( istream& (*)(istream&,T), T);
+};
+
+class IAPP(T) {
+	IAPP(T)( istream& (*)(istream&,T));
+	IMANIP(T) operator()(T);
+};
+
+istream& operator>>(IMANIP(T), istream&);
+
+class OMANIP(T) {
+	OMANIP(T)( ostream& (*)(ostream&,T), T);
+};
+
+class OAPP(T) {
+	OAPP(T)( ostream& (*)(ostream&,T));
+	OMANIP(T) operator()(T);
+};
+
+ostream& operator<<(OMANIP(T), ostream&);
+
+class IOMANIP(T) {
+	IOMANIP(T)( ios& (*)(ios&,T), T);
+};
+
+class IOAPP(T) {
+	IOAPP(T)( ios& (*)(ios&,T));
+	IOMANIP(T) operator()(T);
+};
+
+iostream& operator<<(SMANIP(T), iostream&);
+iostream& operator>>(SMANIP(T), iostream&);
+
+
+IOMANIPdeclare(int) ;
+
+IOMANIP(int)	setbase(int b)	;
+IOMANIP(int)	setw(int w) ;
+.fi
+.ft R
+.SH DESCRIPTION
+Manipulators are values that may be "inserted into" or
+"extracted from" streams in order to achieve some effect
+(other than to insert a representation of their value).
+Ideally the types relating to manipulators would be parameterized
+as "templates".
+The macros defined in \f(CWiomanip.h\fR are used to simulate a templates.
+\BIOMANIP(T)\fR declares 
+the various classes and operators. (All code is declared as inlines
+so that no separate definitions are required.)  Each of the other
+\fBT\fR is used to construct the real names and therefore
+must be a single
+identifer.  Each of the other macros also requires an identifier
+and expands to a name.
+.br
+\(em \fBt\fR is a \fBT\fR.
+.br
+\(em \fBs\fR is an \f(CWios\fR.
+.br
+\(em \fBi\fR is an \f(CWistream\fR.
+.br
+\(em \fBo\fR is an \f(CWostream\fR.
+.br
+\(em \fBio\fR is an \f(CWiostream\fR.
+.br
+\(em \fBf\fR is an \f(CWios& (*)(ios&)\fR.
+.br
+\(em \fBif\fR is an \f(CWistream& (*)(istream&)\fR.
+.br
+\(em \fBof\fR is an \f(CWostream& (*)(ostream&)\fR.
+.br
+\(em \fBiof\fR is an \f(CWiostream& (*)(iostream&)\fR.
+.TP
+\fBs<<SMANIP(T)(f,t)\fR
+.nf
+.in -.5i
+\fBs<<SMANIP(T)(f,t)\fR
+\fBs>>SMANIP(T)(f,t)\fR
+\fBs<<SAPP(T)(f)(t)\fR
+\fBs>>SAPP(T)(f)(t)\fR
+\fBi>>SMANIP(T)(if,t)\fR
+\fBi>>SAPP(T)(if)(t)\fR
+\fBo<<SMANIP(T)(of,t)\fR
+\fBo<<SAPP(T)(of)(t)\fR
+\fBio<<SMANIP(T)(iof,t)\fR
+\fBio>>SMANIP(T)(iof,t)\fR
+\fBio<<SAPP(T)(iof)(t)\fR
+\fBio>>SAPP(T)(iof)(t)\fR
+.in
+.fi
+Returns \fBfct(s,t)\fR, where \fBs\fR is the left operand of
+the insertion or extractor operator and \fBfct\fR is \fBf\fR,
+\fBif\R, \fBof\fR or \fBiof\fR.
+.sp
+.nf
+.in -.5i
+\fBi>>IMANIP(T)(if,t)\fR
+\fBi>>IAPP(T)(if)(t)\fR
+.in
+.fi
+Return \fBif(i,t)\fR.
+.sp
+.nf
+.in -.5i
+\fBo<<OMANIP(T)(of,t)\fR
+\fBo<<OAPP(T)(of)(t)\fR
+.in
+.fi
+Return \fBof(i,t)\fR.
+.sp
+.nf
+.in -.5i
+\fBio<<IOMANIP(T)(iof,t)\fR
+\fBio>>IOMANIP(T)(iof,t)\fR
+\fBio<<IOAPP(T)(iof)(t)\fR
+\fBio>>IOAPP(T)(iof)(t)\fR
+.in
+.fi
+Return \fBiof(s,t)\fR.
+.PP
+\f(CWiomanip.h\fR contains a declaration, \f(CWIOMANIPdeclare(int)\fR
+and some functions:
+.sp
+.nf
+.in -.5i
+\fBo<<setbase(n)\fR
+\fBi>>setbase(n)\fR
+\fBio<<setbase(n)\fR
+\fBio>>setbase(n)\fR
+.in
+.fi
+Sets the conversion base of the stream (left hand operand) to \fBn\fR.
+.sp
+.nf
+.in -.5i
+\fBo<<setw(n)\fR
+\fBi>>setw(n)\fR
+\fBio<<setw(n)\fR
+\fBio>>setw(n)\fR
+.in
+.fi
+Sets the \f(CWwidth\fR format state variable
+the stream (left hand operand) to \fBn\fR.
+.SH CAVEATS
+Syntax errors will be reported if
+\fBIOMANIP(T)\fR occurs more than once in a file with the
+same \fBT\fR.
+.SH SEE ALSO
+ios(3C++)
+istream(3C++)
+ostream(3C++)

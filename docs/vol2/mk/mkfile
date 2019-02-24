@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	mk.out
+
+pg:	mk.out
+	count mk.ms mk.out
+
+spell:VQ:
+	dospell mk.ms
+
+lp:	mk.out
+	$LP $newprereq && touch $target
+
+mk.out:D:	mk.ms $REF
+	$PREFER mk.ms | pic | tbl | troff -mpm > $target
+
+index:V:
+	runind mk
+	$PREFER xmk.ms | pic | tbl | troff -mpm > xmk.out 2>mk.x
+	#mkindex mk.x
+	rm xmk.ms
+
+pindex:V:
+	mkindex mk.x

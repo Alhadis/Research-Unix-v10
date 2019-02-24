@@ -1,0 +1,91 @@
+< ../ADM/defns
+LP=$LPFONTS
+
+all:V:	contents.out contents.list
+
+pg:	contents.out
+	count contents.ms contents.out
+
+spell:VQ:
+	dospell contents.ms
+
+lp:	contents.out
+	$LP $newprereq && touch $target
+
+contents.list:QPcmp -s:	contents.nlist
+	cp $prereq $target
+	grep -v Contents $target | awk -F= '{
+		file = $4; gsub("/", "\\/", file)
+		printf "/^\\.XX [^ ][^ ]* [0-9]* %s/s/ [0-9]* / %d /\n", file, $3
+	}
+	END	{ print "w" }' | ed - contents.ms
+
+contents.nlist contents.out odd.pages:DQ:	contents.ms $REF
+	echo 'troffing contents.ms ...'
+	$PREFER -sapa contents.ms | troff -mpm > contents.out 2> /tmp/$$
+	(cat /tmp/$$; rm /tmp/$$) | awk -F= 'BEGIN	{ page = 1; }
+	{ printf "=%s=%d=%s=%s\n", $2, page, $4, $5;
+	  name = $4;
+	  file = "../" $4 ".pg"; getline < file; pp = $0; close(file)
+	  page += pp
+	  if((page%2) == 0){
+		spare++;
+		printf "%s: odd page count %d\n", name, page >"odd.pages";
+		page++;
+	}
+	}
+	END	{ printf "%d pages.\n%d blank pages.\n", page-1, spare >"/dev/fd/2" }' > contents.nlist
+
+headers:Q:	contents.list
+	f(){		# f(file, secno, startpage, title)
+		if [ -f $1 ]
+		then
+	echo $1
+			case $1 in
+			*.ms)
+				echo "2s=XX.*=XX $2 $3 \"$4\"=
+				w" | sed -e 's/\\/\\\\/g' | ed - $1
+				;;
+			*/ms)
+				echo "3s=XX.*=XX $2 $3 \"$4\" \\\" do not move=
+				w" | sed -e 's/\\/\\\\/g' | ed - $1
+				;;
+			*.m)
+				echo "/VOL2HEADER/s=VOL2HEADER.*=VOL2HEADER)|set_counter(page $3-1)|set_string(page_headers \"'''\")|set_string(even_headers \"'$4''\\f(NI$2\\fP'\")|set_string(odd_headers \"'\\f(NI$2\\fP''$4'\")|set_string(even_footers \"_\\\\nP__UNIX Papers_\")|set_string(odd_footers \"'Tenth Edition''\\\nP'\")=
+				w" | sed -e 's/\\/\\\\/g' | ed - $1
+				;;
+			*.tex)
+				echo "2s=XX.*=XX{$3}{$4}{$2}=
+				w" | ed - $1
+				;;
+			*)
+				echo "$1: unknown file type"
+				;;
+			esac
+		else
+			echo $1 seems broken!
+		fi
+	}
+	export f
+	awk -F= '{ print "f", "../"$4, $2, $3, "\""$5"\"" }' contents.list | sh
+	touch $target
+
+photo.out:D:	photo1.ms photo2.ms photo0.pic photo1.pic photo2.pic
+	pic photo0.pic > photo0.pic.o
+	pic photo1.pic > photo1.pic.o
+	pic photo11.pic > pho11.pic.o
+	pic photo2.pic > photo2.pic.o
+	pic photo22.pic > pho22.pic.o
+	troff -mpm photo1.ms > photo1.out
+	troff -mpm photo2.ms > photo2.out
+
+div.out:D:	div.ms
+	troff -mpm div.ms > $target
+
+title.out:D:	title.tr
+	troff title.tr > $target
+
+index:V:
+	touch contents.ind
+pindex:V:
+	touch contents.ind

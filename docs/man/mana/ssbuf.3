@@ -1,0 +1,130 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH SSBUF 3I+ "C++ Stream Library" " "
+.SH NAME
+strstreambuf \- streambuf specialized to arrays
+.SH SYNOPSIS
+.ta1i 2i 4i
+.ft B
+.nf
+#include <iostream.h>
+#include <strstream.h>
+
+class strstreambuf : streambuf {
+public:
+		strstreambuf() ;
+		strstreambuf(char*,int,char*);
+		strstreambuf(int);
+		strstreambuf(unsigned char*, int, unsigned char*);
+		strstreambuf(void* (*a)(long), void(*f)(void*));
+
+	void	freeze(int n=1) ;
+	char*	str();
+	streambuf*	setbuf(char*,int)
+};
+.fi
+.ft R
+.SH DESCRIPTION
+A \f(CWstrstreambuf\fR
+is a \f(CWstreambuf\fR that uses an array of bytes (a string) to hold
+the sequence of characters.
+Given the convention that a \f(CWchar*\fR should be interpreted as
+pointing just before the \f(CWchar\fR it really points at, the mapping
+between the abstract get/put pointers and \f(CWchar*\fR pointers
+is direct.  Moving the pointers corresponds exactly to incrementing
+and decrementing the \f(CWchar*\fR values.
+.PP
+To accommodate the need for arbitrary length strings
+\f(CWstrstreambuf\fRs
+supports an automatic mode.
+When a \fBstrstreambuf\fR is in automatic mode, space for
+the character sequence is
+allocated as needed.
+When the sequence is extended too far, it will be copied
+to a new array.
+.PP
+Assume
+.br
+\(em \fBssb\fR is a \f(CWstrstreambuf*\fR.
+.br
+\(em \fBn\fR is an \f(CWint\fR.
+.br
+\(em \fBptr\fR and \fBpstart\fR are \f(CWchar*\fR or \f(CWunsigned char*\fR.
+.br
+\(em \fBa\fR is \f(CWvoid* (*)(long)\fR.
+.br
+\(em \fBf\fR is \f(CWvoid* (*)(void*)\fR.
+.PP
+The constructors:
+.TP
+\fBstrstreambuf()\fR
+Constructs an empty buffer in dynamic mode.  This means that
+space will be automatically allocated to accomodate the
+characters that are put into the buffer (using operators \f(CWnew\fR
+and \f(CWdelete\fR).  Because this may require copying the
+original characters, it is recommended that when large strings
+will be used that \fBsetbuf\fR be used (as described below) to
+inform the \f(CWstrstreambuf\fR.
+.TP
+\fBstrstreambuf(a,f)\fR
+Constructs an empty buffer in dynamic mode.
+\fBa\fR is used as the allocator function
+in dynamic mode.  If it is null, \f(CWoperator new\fR will be used.
+\fBf\fR is used to free (or delete) areas returned by \fBa\fR.
+If it is null \f(CWoperator delete\fR is used.
+.TP
+\fBstrstreambuf(n)\fR
+Constructs an empty buffer in dynamic mode.  The initial allocation
+of space will be at least \fBn\fR bytes.
+.TP
+\fBstrstreambuf(ptr,n,pstart)\fR
+Constructs a buffer to use the bytes starting at
+\fBptr\fR.  If \fBn\fR is positive and the \fBn\fR bytes starting
+at \fBptr\fR are used.  If \fBn\fR is zero, \fBptr\fR is assumed
+to point to the beginning of a null terminated strings and
+the bytes of that string (not including the terminating null character)
+will constitute the buffer.  If \fBn\fR is negative the buffer is
+assumed to continue indefinitely.
+The get pointer is initialized to \fBptr\fR.  The
+put pointer is initialized to \fBpstart\fR.  If \fBpstart\fR is
+null then stores will be treated as errors.  If \fBpstart\fR
+is non null then the initial sequence (for fetching) consists
+of the bytes between \fBptr\fR and \fBpstart\fR.  If \fBpstart\fR
+is null then the initial sequence consists of the entire array.
+.PP
+Member functions:
+.TP
+\fBssb->freeze(n)\fR
+Inhibits (\fBn\fR nonzero) or permits (\fBn\fR zero) automatic
+deletion
+of the current array.
+Deletion normally occurs when more space is needed
+or when \fBssb\fR is being destroyed.  Only
+space obtained dynamic allocation is ever freed.
+It is an error (and the effect is undefined) to store characters
+into a buffer that was in automatic allocation mode and is now
+frozen.
+It is possible, however, to thaw (unfreeze) such a buffer and
+resume storing characters.
+.TP
+\fBptr=ssb->str()\fR
+Returns a pointer to the first char of the current array and freezes
+\fBssb\fR.  If \fBssb\fR was constructed with an explicit array
+\fBinit\fR,
+\fBptr\fR will point to that array.
+If \fBssb\fR is in automatic
+allocation mode, but nothing has yet been stored, \fBptr\fR may
+be null.
+\fBstr\fR freezes \fBssb\fR.
+.TP
+\Bssb->setbuf(0,n)\fR
+\fBssb\fR remembers \fBn\fR and the next time it does a dynamic
+mode allocation, it makes sure that at least \fBn\fR bytes
+are allocated.
+.SH SEE ALSO
+sbuf.pub(3C++)
+strstream(3C++)

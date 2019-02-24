@@ -1,0 +1,59 @@
+.TH COS 9.3
+.CT 2 math
+.SH NAME
+cos, sin, atan2, sqrt, norm \- integer math functions
+.SH SYNOPSIS
+.B int cos(d)
+.B int d;
+.PP
+.B int sin(d)
+.B int d;
+.PP
+.B int atan2(x, y)
+.B int x, y;
+.PP
+.B int norm(x, y, z)
+.B int x, y, z;
+.PP
+.B int sqrt(x)
+.B long x;
+.PP
+.SH DESCRIPTION
+.I Cos
+and
+.I sin
+return scaled integer approximations to the trigonometric functions.
+The argument values are in degrees.
+The return values are scaled so that
+.BR cos(0)==1024 .
+Thus, to calculate the mathematical expression
+.if t .IR x \|=\| a\^ cos( d ),
+.if n .IR x = x0 *cos( d ),
+the multiplication must be scaled:
+.IP
+.L
+x = muldiv(x0, cos(d), 1024)
+.PP
+.I Atan2
+returns the approximate arc-tangent of
+.IR  y / x .
+The return value is in integral degrees.
+.PP
+.I Sqrt
+returns the 16-bit signed integer closest to the
+square root of its 32-bit signed argument.
+.PP
+.I Norm
+returns the Euclidean length of the three-vector
+.RI ( x ,
+.IR y ,
+.IR z ).
+.SH DIAGNOSTICS
+.I Sqrt
+returns 0 for negative arguments; and
+.BR atan2(0,0)==0.
+.IR Norm
+does not protect against overflow.
+.SH BUGS
+.I Atan2
+may be off by as much as two degrees.

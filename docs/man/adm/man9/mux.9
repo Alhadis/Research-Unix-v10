@@ -1,0 +1,207 @@
+.TH MUX 9.1
+.CT 1 comm_term
+.SH NAME
+mux, ismux, invert \- layer multiplexer for 5620
+.SH SYNOPSIS
+.B mux
+[
+.B -l
+.I command ...
+]
+.PP
+.B mux exit
+.PP
+.B mux cd
+.I directory
+.PP
+.B ismux
+[
+.B -
+]
+.PP
+.B invert
+.SH DESCRIPTION
+.I Mux
+manages asynchronous windows, or layers.
+Upon invocation, it loads the terminal with a
+program
+(default
+.FR /usr/jerq/lib/muxterm ,
+settable by the environment variable
+.BR MUXTERM )
+that is
+the primary user interface.
+Option
+.B -l
+also creates a layer and invokes the shell to run
+.I commands
+in it.
+(See
+.IR windows (9.1)).
+.PP
+The command
+.L mux exit
+leaves
+.I mux,
+destroying all layers;
+.L mux cd
+changes the directory of
+.IR mux ,
+and hence of layers later created,
+but not of the current layers.
+.PP
+Each layer is essentially a separate terminal.
+Characters typed into the layer are sent to the standard input of
+a Unix process bound to the layer, and characters written on the
+standard output of that process appear in the layer.
+When a layer is created, a separate shell
+(the value of the
+.B SHELL
+environment variable, or
+.I sh
+by default)
+is established, and bound to the layer.
+.PP
+Layers are created, deleted, and rearranged using the mouse.
+Depressing mouse button 3 activates a menu of layer operations.
+Releasing button 3 then selects an operation.
+At this point, a gunsight or box cursor indicates that an operation is pending.
+Hitting button 3 again activates the operation on the layer pointed to by the cursor.
+.PP
+The
+.B New
+operation, to create a layer,
+requires a rectangle to be swept out,
+across any diagonal, while button 3 is depressed.
+A box outline cursor indicates that a rectangle is to be created.
+The
+.B Reshape
+operation, to change the size and location of a layer on the screen,
+requires first that a layer be indicated (gunsight cursor) and a new rectangle
+be swept out (box cursor).
+The other operations are self-explanatory.
+.PP
+In a non-current layer,
+button 1 is a shorthand for
+.B Top
+and
+.BR Current ,
+which pulls a layer to the front
+of the screen and makes it the active layer for keyboard and mouse input.
+Th current layer is indicated by a heavy border.
+.PP
+There is a point
+in each layer, called the `Unix point', where
+the next character from the host Unix system will be inserted.
+The Unix point advances whenever characters
+are received from the host, but not when echoing typed characters.
+When a newline is typed after the Unix point,
+characters between the Unix point and the newline,
+inclusive, are sent to the host and the
+Unix point advanced to after the newline.
+This means that
+shell prompts and other output will be inserted before
+characters that have been typed ahead.
+No other characters are sent to the host (but see the discussion of raw mode
+below).
+Therefore partially typed lines or text anywhere before the Unix
+point may be edited.
+.PP
+The default terminal program allows any text on the screen to be edited,
+much as in
+.IR sam (9.1).
+Text may be selected by sweeping it with button 1 depressed.
+Typed characters replace selected text.
+.PP
+All layers share a common `snarf buffer' (distinct from
+.IR sam 's).
+The
+.B cut
+operation on button 2 deletes selected text and puts it
+in the buffer;
+.B snarf
+copies selected text to the buffer;
+.B paste
+replaces selected text (which may be null) from the buffer; and
+.B send
+copies the snarf buffer to after the Unix point.
+.PP
+Normally the terminal doesn't scroll
+as text is received, but a button 2 menu item selects scrolling.
+.PP
+A scroll bar indicates what portion of all the text stored
+for a layer is on the screen.
+(It measures characters, not lines.)
+Releasing button 1 in the scroll bar brings the line at the top
+of the screen to the cursor;
+releasing button 3 takes the line at the cursor
+to the top of the screen.
+Button 2, treating the scroll bar as a ruler, brings the indicated
+point in the whole stored text to the top of the screen.
+Slide the cursor off either end of the scroll bar with button 2
+depressed to get right to an end of the file.
+.PP
+The
+.SM NUM LOCK
+key advances a half page.
+.PP
+.I Ismux
+reports on its standard error whether its standard output is a
+.I mux
+layer, and also generates the appropriate exit status.
+With option
+.LR - ,
+no message is produced.
+.PP
+.I Invert
+reverses the sense of video, from black on white to
+white on black, or
+.I vice
+.IR versa .
+.PP
+Independent user-level programs can be loaded into layers, see
+.IR 32ld (9.1).
+.SM SHIFT-SETUP
+freezes
+.I mux
+and complements the video of the layer of the running user-level terminal process.
+Hitting button 2 in this state will attempt to kill the process;
+1 or 3 will leave it running.
+.PP
+In raw mode or no-echo mode (see
+.IR ttyld (4))
+the Unix point advances with each character
+typed after it.
+.SH FILES
+.F /tmp/.mux*
+temporary file used by
+.B -l
+option
+.SH SEE ALSO
+.IR 32ld (9.1), 
+.IR sam (9.1), 
+.IR jx (9.1), 
+.IR term (9.1),
+.IR windows (9.1)
+.br
+R. Pike,
+`Blit Download Protocols',
+this manual, Vol. 2
+.SH DIAGNOSTICS
+.I Mux
+refuses to create a layer when there is not enough memory.
+Space can be recovered by deleting a layer.
+.br
+Error messages from
+.I mux
+are written directly to the layer which caused them.
+They are usually meaningful only to system administrators,
+and indicate system difficulties.
+.SH BUGS
+Reshape only works properly for processes that arrange to see if they have
+been reshaped, although most programs
+make this arrangement.
+.br
+The behavior of raw mode prohibits editing
+partially typed lines when running
+.IR cu (1).

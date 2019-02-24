@@ -1,0 +1,384 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH IOSTREAM 3I+ "C++ Stream Library" " "
+.SH NAME
+ios \- input/output formatting
+.SH SYNOPSIS
+.nf
+.ta1i 2i
+.ft B
+#include <iostream.h>
+
+struct fmtinfo {
+	ostream*	tie;
+	short	convbase;
+	short	width;
+	short	precision;
+	char	fill;
+	char	ladjust;
+	char	showbase;
+	char	skip;
+	char	floatfmt;
+};
+
+class ios {
+public:
+	enum	io_state { goodbit=0, eofbit, failbit, badbit };
+	enum	open_mode { in, out, ate, app };
+	enum	seek_dir { beg, cur, end };
+public:
+		ios(streambuf* b);
+
+	int	bad();
+	void	clear(state_value i = _good);
+	int	convbase();
+	void	convbase(int i);
+	int	eof();
+	int	fail();
+	char	fill();
+	void	fill(char c);
+	char	floatfmt();
+	void	floatfmt(char c);
+	fmtinfo	fmt();
+	void	fmt(fmtinfo& info);
+	int	ladjust();
+	void	ladjust(int a);
+	int	good();
+	int	operator!();
+		operator int();
+	int	popfmt();
+	int	precision();
+	void	precision(int i);
+	void	pushfmt();
+	streambuf*	rdbuf();
+	int	rdstate();
+	int	showbase();
+	void	showbase(int i);
+	int	skip();
+	int	skip(int i);
+	void	sync_with_stdio();
+	streampos	tellg();
+	ostream*	tie();
+	ostream*	tie(ostream* iosp);
+	int	width();
+	void	width(int i);
+
+	ios&	operator<<(ios& (*)(ios&));
+	ios& 	operator>>(ios& (*)(ios&));
+private:
+		iostream(iostream&) ;
+	iostream&	operator=(iostream&)	;
+};
+
+class ios_withassign : ios {
+		ios_withassign();
+	ios&	operator=(ios&);
+	ios&	operator=(streambuf*);
+} ;
+
+ios&	dec(ios& i) ; 
+ios&	hex(ios& i) ;
+ios&	oct(ios& i) ;
+ios&	popfmt(ios& i) ;
+ios&	pushfmt(ios& i) ;
+.fi
+.ft R
+.SH DESCRIPTION
+The stream classes derived from \f(CWios\fRs
+provide a high level interface that
+supports transferring
+formatted and unformatted information into and out of
+\f(CWstreambuf\fRs.
+.PP
+In the following assume:
+.br
+\(em \fBs\fR is an \f(CWios\fR.
+.br
+\(em \fBswa\fR is an \f(CWios_withassign\fR.
+.br
+\(em \fBsp\fR is a \f(CWios*\fR.
+.br
+\(em \fBi\fR and \fBn\fR are \f(CWint\fR.
+.br
+\(em \fBc\fR is a \f(CWchar\fR.
+.br
+\(em \fBosp\fR is an \f(CWostream*\fR.
+.br
+\(em \fBsb\fR is a \f(CWstreambuf*\fR.
+.br
+\(em \fBpos\fR is a \f(CWstreampos\fR.
+.br
+\(em \fBoff\fR is a \f(CWstreamoff\fR.
+.br
+\(em \fBinfo\fR is a \f(CWformatinfo\fR.
+.br
+\(em \fBdir\fR is a \f(CWseek_dir\fR.
+.br
+\(em \fBmode\fR is a \f(CWseek_dir\fR.
+.br
+\(em \fBfct\fR is a function with type \f(CWios& (*)(ios&)\fR.
+.PP
+Constructors and assignment:
+.TP
+\fBios(sb)\fR
+\fBsb\fR becomes the \f(CWstreambuf\fR associated with the
+constructed \fBios\fR.  This association is fixed for
+the life of the \f(CWios\fR. If \fBsb\fR is null the effect is
+undefined.
+.TP
+\fBios_withassign()\fR
+Uninitialized variable.
+.sp
+.nf
+.in -.5i
+\fBios(ios&)\fR
+\fBios=ios\fR
+.in
+.fi
+Copying of \f(CWios\fR's is not in general
+well defined and the constructor and assignment operators
+are made private so that the compiler will complain about attempts to
+do so.  Usually what is desired
+is copying of pointers to \f(CWiostream\fRs.
+.TP
+swa=sb
+Associates \fBsb\fR with \fBswa\fR and initializes the entire
+state of
+\fBswa\fR. 
+.TP
+swa=s
+Associates \fBs->rdbuf()\fR with \fBswa\fR and
+initializes the entire state of
+\fBswa\fR. 
+.PP
+An \fBios\fR has an internal error state (which is a collection
+of the bits declared as \f(CWio_state\fRs).  Members related
+to the error state:
+.RS
+.TP
+\fBi=s.rdstate()\fR
+Returns the current error state.
+.TP
+\fBs.clear(i)\fR
+Stores \fBi\fR as the error state.  If \fBi\fR is zero
+this clears all bits.  To set a bit without clearing previously
+set bits requires something like \fBs.clear(badbit|s.rdstate())\fR.
+.TP
+\fBi=s\fR
+The \f(CWint\fR conversion operator is non-zero if \f(CWbadbit\fR or
+\f(CWfailbit\fR is set in the error state.
+.TP
+\fBi=s.good()\fR
+Non-zero if the error state has no bits set.
+.TP
+\fBi=s.eof()\fR
+Non-zero if \f(CWeofbit\fR is set in the error state.  Normally this
+bit is set when an end of file has been encountered doing extraction.
+.TP
+\fBi=s.fail()\fR
+Non-zero if either \f(CWbadbit\fR or \f(CWfailbit\fR are set in the
+error state.  Normally this indicates that some operation has failed.
+.TP
+\fBi=s.bad()\fR
+Non-zero if \fBbadbit\fR is set in the error state.
+Normally this indicates
+that some operation on \fBs.rdbuf()\fR has failed.
+.RE
+.PP
+An \f(CWios\fR has a collection of format state variables
+that are used by input and output operations to control the
+details of formatting operations.  Otherwise their values
+have no particular effect and they may be set and examined arbitrarily
+by user code.
+.RS
+.TP
+\fBs.convbase(i)\fR
+Sets the "conversion base" format state variable to \fBi\fR.
+.TP
+\fBi=s.convbase()\fR
+Returns the "conversion base" format state variable.
+.TP
+\fBs.fill(c)\fR
+Sets the "fill character" format state variable to \fBc\fR.
+.TP
+\fBc=s.fill()\fR
+Returns the "fill character" format state variable.
+.TP
+\fBs.fill(c)\fR
+Sets the "fill character" format state variable to \fBc\fR.
+.TP
+\fBc=s.fill()\fR
+Returns the "fill character" format state variable.
+.TP
+\fBs.floatfmt(c)\fR
+Sets the "floating format" format state variable to \fBc\fR.
+.TP
+\fBc=s.floatfmt()\fR
+Returns the "floating format" format state variable.
+.TP
+\fBs.ladjust(i)\fR
+Sets the "left adjustment" format state variable to \fBi\fR.
+.TP
+\fBi=s.ladjust()\fR
+Returns the "left adjustment" format state variable.
+.TP
+\fBs.precision(i)\fR
+Sets the "precision" format state variable to \fBi\fR.
+.TP
+\fBi=s.precision()\fR
+Returns the "precision" format state variable.
+.TP
+\fBs.showbase(i)\fR
+Sets the "show explicit base" format state variable to \fBi\fR.
+.TP
+\fBi=s.showbase()\fR
+Returns the "show explicit base" format state variable.
+.TP
+\fBsp=s.skip(sp)\fR
+Sets the "skip whitespace" format state variable to \fBsp\fP.
+.TP
+\fBsp=s.skip()\fR
+Returns the "skip whitespace" format state variable.
+.TP
+\fBosp=s.tie(osp)\fR
+Sets the "tie" format state variable \fBsp\fP.
+.TP
+\fBosp=s.tie()\fR
+Returns the "tie" format state variable.
+.TP
+\fBs.width(i)\fR
+Sets the "field width" format state variable to \fBi\fP.
+.TP
+\fBi=s.width()\fR
+Returns the "field width" format state variable.
+.TP
+\fBs.fmt(info)\fR
+Sets the collection of all format state variables to \fBinfo\fP in
+a single operation.
+.TP
+\fBinfo=s.fmt()\fR
+Returns the collection of all format state variables in
+a single operation.
+.TP
+\fBs.pushfmt()\fR
+Pushes a \f(CWformatinfo\fR structure onto a (dynamically allocated)
+stack associated with \fBs\fR.  This copies the current
+values of format state variables without changing them.
+.TP
+\fBi=s.popfmt()\fR
+Pops the topmost \f(CWformatinfo\fR from the stack associated with
+\fBs\fR and sets the format state variables accordingly.  Normally
+\fBi\fR is non-zero, but it will be zero if the stack is empty
+(i.e., more \fBpopfmt\fR than \fBpushfmt\fR operations have been
+performed.
+.RE
+.PP
+Other members:
+.TP
+\fBsb=s.rdbuf()\fR
+Returns a pointer to the \f(CWstreambuf\fR associated with
+\fBs\fR when \fBs\fR was constructed.
+.TP
+\fB((ios*)0)->sync_with_stdio()\fR
+Solves problems that arise when mixing stdio and
+iostreams.   The first time it is called it will reset the
+standard iostreams (\f(CWinstream\fR, \f(CWoutstream\fR, \f(CWerrstream\fR,
+\f(CWlogstream\fR) to be streams
+using  \f(CWstdiobuf\fRs.
+After that input and output using these streams may
+be mixed with input and output using the corresponding \f(CWFILE\fRs and
+will be properly synchronized.
+.RE
+.PP
+Convenient manipulators (functions that take an \f(CWios&\fR
+and return their argument).
+.TP
+\fBios<<dec
+.in -.5i
+.br
+.nf
+\fBios<<dec
+\fBios>>dec\fR
+.fi
+.in
+Sets the convbase to 10.
+.sp
+.nf
+.in -.5i
+\fBios<<hex
+\fBios>>hex\fR
+.in
+Sets the convbase to 16.
+.sp
+.nf
+.in -.5i
+\fBios<<oct
+\fBios>>oct\fR
+.fi
+.in
+Sets the convbase to 8.
+.sp
+.nf
+.in -.5i
+\fBios<<popfmt
+\fBios>>popfmt\fR
+.fi
+.in
+Does \fBs.popfmt()\fR
+.in -.5i
+.sp
+.nf
+\fBios<<pushfmt
+\fBios>>pushfmt\fR
+.fi
+.in
+Does \fBs.pushfmt()\fR
+.PP
+The \f(CWstreambuf\fR associated with an \f(CWios\fR may be manipulated
+by other methods than through \f(CWios\fR.  For example, characters may
+be stored in a queuelike \f(CWstreambuf\fR through an \f(CWostream\fR
+while they are being fetched through an \f(CWistream\fR.
+Or for efficiency some
+part of a program may choose to do \f(CWstreambuf\fR gets
+directly rather than through the \f(CWios\fR.
+In most cases
+the program does not have to worry about this possibility, because
+an \f(CWios\fR never saves information about the internal state
+of a \f(CWstreambuf\fR.  For example if the \f(CWstreambuf\fR is
+repostitioned between extraction operations the extraction (input) 
+will proceed normally.
+.SH CAVEATS
+.PP
+The effect of \fBios.sync_with_stdio()\fR
+does not depend on \fBios\fR.
+\fBsync_with_stdio\fR ought
+to be a global function but it is a member of \fBiostream\fR to
+avoid name space pollution.
+The need for \fBsync_with_stdio\fR is a wart.  The old stream
+package did this as a default, but in the iostream package
+unbuffered \f(CWstdiobuf\fRs are too inefficient to be the default.
+.PP
+The stream package had a constructor that took a \fBFILE*\fR argument.
+This is now replaced by \f(CWstdiostream\fR.
+It is not declared even as an obsolete form to avoid
+having \f(CWiostream.h\fR
+depend on \f(CWstdio.h\fR.
+.PP
+The old stream package allowed copying of streams.  This is disallowed
+by the iostream package.  Old code using copying can usually be
+rewritten to use pointers and copy pointers.
+.PP
+For compatibility with the old stream package, the versions of 
+.I tie
+and
+.I skip
+that set the state variables also return the old value.
+.SH SEE ALSO
+IOS.INTRO(3C++)
+streambuf(3C++)
+istream(3C++)
+ostream(3C++)

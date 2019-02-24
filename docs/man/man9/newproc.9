@@ -1,0 +1,193 @@
+.TH NEWPROC 9.2
+.CT 2 proc_man
+.SH NAME
+P, newproc, muxnewwind, newwindow, tolayer, debug, getproc, getproctab, putname, getname \- jerq process control
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B extern struct Proc *P;
+.PP
+.B struct Proc *newproc(f)
+.B void (*f)();
+.PP
+.B struct Proc *newwindow(f);
+.B void (*f)();
+.PP
+.B void tolayer(l)
+.B Layer *l;
+.PP
+.B void debug();
+.PP
+.B struct Proc *getproc();
+.PP
+.B struct Proc *getproctab();
+.PP
+.B int putname(string, data)
+.B char *string; long data;
+.PP
+.B struct Nqueue *getname(string)
+.B char *string;
+.PP
+.B #include <msgs.h>
+.br
+.B void muxnewwind(p, c)
+.B struct Proc *p; int c;
+.SH DESCRIPTION
+Processes in the jerq consist of a coroutine-style process
+structure and an associated layer
+(see
+.IR newlayer (9.2)),
+allocated independently.
+This section describes the process allocation and control
+primitives.
+They are direct links to the system's own
+control structures, so given
+.IR mux 's
+open addressing, they should be used with care.
+.PP
+Each process has a global variable
+.I P
+that points to its process structure.
+The only regular use of
+.I P
+is to check that the process has been moved or reshaped:
+.IP
+.EX
+if(P->state & RESHAPED){
+	do_reshape();
+	P->state &= ~RESHAPED;
+}
+.EE
+.PP
+The definition of
+.B struct Proc
+is in the include file
+.BR <jerqproc.h> ,
+which is included automatically by
+.BR <jerq.h> .
+.PP
+.I Newproc
+allocates a new process, returning a pointer to it, or 0
+if one cannot be allocated.
+Argument
+.I f
+points to the program text to be executed.
+The special case
+.IR f =0
+creates a process running the default terminal program,
+and is almost always how
+.I newproc
+should be called; use
+.IR 32ld (9.1)
+to run non-standard programs.
+A process is disabled by setting
+.I p->state
+to zero.
+After calling
+.IR newproc,
+the process must be bound to a layer and
+Unix told of its presence, typically as:
+.IP
+.EX
+struct Proc *p;
+Rectangle r;
+p = newproc((struct Proc *)0);
+if(p == 0)
+	error();
+p->layer = newlayer(r);
+if(p->layer == 0){
+	p->state = 0;
+	error();
+}
+p->rect = r;
+muxnewwind(p, C_NEW);
+.EE
+.PP
+The second argument to
+.I muxnewwind
+should be
+.B C_RESHAPE
+if an existing process is being given a new layer.
+If the process is
+.I not
+running the default terminal program, its variables
+.L display
+and
+.L Drect
+must be set:
+.IP
+.EX
+struct udata *u=((struct udata *)p->data);
+u->Drect=p->rect;
+u->Jdisplayp=p->layer;
+.EE
+This procedure works regardless of whether the process being manipulated is itself.
+.PP
+.I Newwindow
+creates a process by the above procedure, going through the
+standard user interface to select the rectangle for the process's
+layer.
+.PP
+.I Tolayer
+takes an argument
+.I layer
+pointer and makes the process in that layer the receiver of
+mouse and keyboard events.
+.PP
+.I Getproc
+presents the user with a gunsight cursor and returns the
+address of the process whose layer is indicated with the mouse.
+.I Getproctab
+simply returns the address of the base of the process table array.
+This is an array of
+.B NPROC
+process structures.
+.B NPROC
+is stored in the word immediately lower in address than the
+process table.
+.PP
+.I Debug
+announces to the system that the calling process is prepared
+to handle exceptions by other processes.
+.PP
+.I Putname
+and 
+.I getname
+manage a bulletin board for interprocess communication.
+Further communication may be arranged through shared memory.
+.I Putname
+associates
+.I data
+with
+.I string,
+returning nonzero normally, or 0 if the data could not be stored.
+.I Getname
+returns a pointer 
+to a structure which contains
+.TP
+.B struct Proc *proc
+pointer to the process structure of the layer that
+most recently announced the string
+.TP
+.B long data
+the corresponding data
+.LP
+.I Getname
+returns 0 if no such string has been announced.
+A pointer returned by
+.I getname
+remains valid: a client may rendezvous with a server by
+calling
+.I getname
+once and repeatedly testing
+the associated
+.B proc
+pointer thereafter.
+.SH BUGS
+These primitives are awkward at best, and are
+subject to change.
+.br
+Creating a process without a layer or
+.I
+vice versa
+is dangerous.

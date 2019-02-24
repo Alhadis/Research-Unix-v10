@@ -1,0 +1,78 @@
+.if t .ds ' \h@.05m@\s+4\v@.333m@\'\v@-.333m@\s-4\h@.05m@
+.if n .ds ' '
+.if t .ds ` \h@.05m@\s+4\v@.333m@\`\v@-.333m@\s-4\h@.05m@
+.if n .ds ` `
+.TH GETOPT 1
+.SH NAME
+getopt \- parse command options
+.SH SYNOPSIS
+.B set \-\- \*`getopt optstring $\(**\*`
+.SH DESCRIPTION
+.I Getopt\^
+is used to break up options in command lines for easy parsing by shell
+procedures, and to check for legal options.
+.I Optstring\^
+is a string of recognized option letters (see getopt(3C));
+if a letter is followed by a colon, the option
+is expected to have an argument which may or
+may not be separated from it by white space.
+The special option \fB\-\-\fP is used to delimit the end of the
+options.
+.I Getopt\^
+will place \fB\-\-\fP in the arguments at the end
+of the options, or recognize it if used explicitly.
+The shell arguments ($1 $2 . . .) are reset so that each option
+is preceded by a \fB\-\fP and in its own shell argument; each option
+argument is also in its own shell argument.
+.SH DIAGNOSTICS
+.I Getopt\^
+prints an error message on
+the standard error
+when it encounters an option letter not included in
+.IR optstring .
+.SH EXAMPLES
+The following code fragment shows how one might process the arguments
+for a command that can take the options
+.B a
+and
+.BR b ,
+and the option
+.BR o ,
+which requires an argument.
+.PP
+.RS
+.nf
+.ss 18
+set \-\- \*`getopt abo: $\(**\*`
+if [ $? != 0 ]
+then
+	echo $USAGE
+	exit 2
+fi
+for i in $\(**
+do
+	case $i in
+	\-a \(bv \-b)	FLAG=$i; shift;;
+	\-o)		OARG=$2;	shift; shift;;
+	\-\-)		shift;	break;;
+	esac
+done
+.fi
+.ss 12
+.RE
+.PP
+This code will accept any of the following as equivalent:
+.PP
+.RS
+.nf
+.ss 18
+cmd \-aoarg file file
+cmd \-a \-o arg file file
+cmd \-oarg \-a file file
+cmd \-a \-oarg \-\- file file
+.fi
+.ss 12
+.RE
+.SH SEE ALSO
+.IR sh (1),
+.IR getopt (3C).

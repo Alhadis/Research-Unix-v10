@@ -1,0 +1,18 @@
+awk '
+/^[0-9][0-9]*/	{
+	if(start)print cmd
+	number=$1
+	sub(/^[0-9][0-9]* /,"")
+	laststr=$0
+	cmd = number "i\\\n.Tm " $0
+	start=1
+	next
+	}
+/.*/	{
+	if($0 != laststr){
+		cmd = cmd "\\\n.Tm " $0
+		laststr=$0
+	}
+	}
+END	{print cmd}
+' $1

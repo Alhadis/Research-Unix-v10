@@ -1,0 +1,79 @@
+.TH MEM 4
+.CT 2 sa
+.SH NAME
+mem, kmem, kUmem, mtpr, fineclock \- memory and VAX processor registers
+.SH DESCRIPTION
+.lg
+.I Mem
+is a file that is an image of the main memory
+of the computer.
+It may be used to examine
+(and even to patch) the system.
+Byte addresses in
+.I mem
+are interpreted as physical memory addresses.
+References to non-existent locations return errors.
+.PP
+.IR Kmem
+and
+.I kUmem
+are like
+.IR mem ,
+but access kernel-mode virtual memory.
+.I KUmem
+promises that reads and writes will be done
+in two-byte quantities;
+this is convenient for UNIBUS accesses.
+.PP
+.I Mtpr
+accesses
+VAX internal processor registers.
+Each register is 4 bytes long;
+register
+.I n
+may be read or written at address
+.IR n \(**4.
+.PP
+.I Fineclock
+reads a high-resolution clock.
+Reading four bytes returns a 32-bit unsigned integer
+representing the number of microseconds since
+the epoch 00:00:00 GMT, Jan. 1, 1970,
+with high-order bits discarded.
+.PP
+.IR Mem ,
+.IR kmem ,
+.IR kUmem ,
+and
+.IR mtpr
+have minor device numbers
+0, 1, 3, and 5.
+.I Fineclock
+is a separate driver;
+the minor device number is ignored.
+.SH FILES
+.EX
+.F /dev/mem
+.F /dev/kmem
+.F /dev/kUmem
+.F /dev/mtpr
+.F /dev/fineclock
+.EE
+.SH SEE ALSO
+.IR time (2)
+.br
+VAX Hardware Handbook
+.SH BUGS
+Examining and patching device and processor registers may
+give unexpected results when read-only or write-only
+bits are present.
+.br
+An attempt to read a nonexistent processor register
+returns 0
+instead of an error.
+.br
+The
+.I fineclock
+counter overflows every hour or so.
+It is only as precise as the hardware;
+hence it is inaccurate on a MicroVAX.

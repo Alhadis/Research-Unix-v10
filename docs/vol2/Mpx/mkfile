@@ -1,0 +1,23 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	proto.out
+
+pg:	proto.out
+	count proto.ms proto.out
+
+spell:VQ:
+	dospell proto.ms
+
+lp:	proto.out
+	$LP $newprereq && touch $target
+
+proto.out:D:	proto.ms
+	tbl $prereq | troff -mpm > $target
+
+index:V:
+	runind proto
+	tbl xproto.ms | troff -mpm > /dev/null 2>proto.x
+	mkindex proto.x
+	rm xproto.ms
+

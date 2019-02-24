@@ -1,0 +1,176 @@
+.TH PC 1
+.CT 1 prog_other
+.SH NAME
+pc \- pascal language compiler
+.SH SYNOPSIS
+.B pc
+[
+.I option
+]
+[
+.B \-i
+.I name ...
+]
+.I name ...
+.SH DESCRIPTION
+.I Pc
+compiles the Pascal source file
+.IB name .p
+into an executable file called, by default,
+.IR a.out .
+.PP
+Multiple 
+.B .p
+files are compiled into object files suffixed
+.B .o
+in place of
+.BR .p .
+Object files may be combined by
+.IR ld (1)
+into an executable
+.I a.out
+file.
+Exactly one object file must supply a 
+.B program
+statement.
+The other files contain
+declarations which logically nest within the program.
+Objects shared between separately compiled files
+must be declared in
+.BR include d
+header files, whose names must end with
+.BR .h .
+An
+.B external
+directive, similar to
+.BR forward ,
+declares
+.BR function s
+and
+.BR procedure s
+in
+.B .h
+files.
+.PP
+These options have the same meaning as in
+.IR cc (1):
+.BR "-c -g -w -p -O -S -o" .
+The following options are peculiar to
+.IR pc .
+.TP
+.B -C
+Compile code to perform runtime checks,
+verify
+.B assert
+statements,
+and initialize variables to zero as in
+.IR pascal (1).
+.PD 0
+.TP
+.B  -b
+Block buffer the file
+.I output.
+.TP
+.B  -i
+Produce a listing for
+the specified procedures, functions and
+.B include
+files.
+.TP
+.B  -l
+Make a program listing during translation.
+.TP
+.B  -s
+Accept standard Pascal only;
+non-standard constructs cause warning diagnostics.
+.TP
+.B  -z
+Allow execution profiling with
+.IR pxp (A)
+by generating statement counters, and arranging for the
+creation of the profile data file
+.I pmon.out
+when the resulting object is executed.
+.PD
+.PP
+Other arguments
+are taken
+to be loader option arguments,
+perhaps libraries of
+.IR pc -compatible
+routines; see
+.IR ld (1).
+Certain options can also be controlled in comments within the program
+as described in the
+.I "Berkeley Pascal User's Manual."
+.SH FILES
+.TF /usr/lib/pc2.0strings
+.TP
+.B file.p
+pascal source files
+.TP
+.B /usr/lib/pc0
+compiler
+.TP
+.B /lib/f1
+code generator
+.TP
+.B /usr/lib/pc2
+runtime integrator (inline expander)
+.TP
+.B /lib/c2
+peephole optimizer
+.TP
+.B /usr/lib/pc3
+separate compilation consistency checker
+.TP
+.B /usr/lib/pc2.0strings
+text of the error messages
+.TP
+.B /usr/lib/how_pc
+basic usage explanation
+.TP
+.B /usr/lib/libpc.a
+intrinsic functions and I/O library
+.TP
+.B /usr/lib/libm.a
+math library
+.TP
+.B /lib/libc.a
+standard library, see
+.IR intro (3)
+.SH "SEE ALSO"
+.IR pascal (1),
+.IR pxp (A) ,
+.IR cc (1),
+.IR ld (1),
+.IR adb (1),
+.IR sdb (1),
+.IR prof (1)
+.br
+W. N. Joy, Susan L. Graham, C. B. Haley,
+`Berkeley Pascal User's Manual', in
+Unix Programmer's Manual, Seventh Edition, Virtual VAX-11 Version,
+1980, Vol 2C
+(Berkeley).
+.SH DIAGNOSTICS
+See 
+.IR pascal (1)
+for an explanation of the error message format.
+Internal errors cause messages containing the word `SNARK'.
+.SH BUGS
+The keyword
+.B packed
+is recognized but has no effect.
+.br
+The binder is not as strict as it might be.
+.br
+The
+.B -z
+flag doesn't work for separately compiled files.
+.br
+Because
+.B -s
+is used by 
+.I pc,
+it can't be passed to the loader.

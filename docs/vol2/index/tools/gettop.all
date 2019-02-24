@@ -1,0 +1,45 @@
+M=/usr/vol2/xindex/tools
+for i in /usr/vol2/*
+do
+	j=`basename $i`
+	if test -s $i/$j.ms
+	then
+	echo ms $j
+	$M/topic $i/$j.ms|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+	ls -l $j.top
+	else
+	if test -s $i/$j.tex
+	then
+	echo tex $j
+	$M/topic $i/$j|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+	else
+	if test -s $i/$j.m
+	then
+	echo monk $j
+	
+	else
+	echo $i not found
+	for j in $i/*.ms
+	do
+	k=`basename $i`
+	l=`basename $j .ms`
+	if test -s $j
+	then
+	echo running $j to $k
+	$M/topic $j|sed 's/^.....//'|sort|awk -f $M/dups.awk >$k$l.top
+	fi
+	done
+	for j in $i/*.m
+	do
+	k=`basename $i`
+	l=`basename $j .m`
+	if test -s $j
+	then
+	echo running $j to $k
+	$M/topic $j|sed 's/^.....//'|sort|awk -f $M/dups.awk >$k$l.top
+	fi
+	done
+	fi
+	fi
+	fi
+done

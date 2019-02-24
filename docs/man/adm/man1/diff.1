@@ -1,0 +1,271 @@
+.TH DIFF 1
+.CT 1 files 
+.SH NAME
+diff, diff3 \- differential file comparison
+.SH SYNOPSIS
+.B diff
+[
+.I option ...
+]
+.I file1 file2
+.PP
+.B diff3
+[
+.B \-ex3
+]
+.I file1 file2 file3
+.SH DESCRIPTION
+When run on regular files
+.I diff
+tells what lines must be changed in the files to bring them into agreement.
+Except in rare circumstances,
+.I diff
+finds a smallest sufficient set of differences.
+If neither file
+is a directory, then one
+may be 
+.LR - ,
+meaning the standard input.
+If one file
+is a directory,
+then a file in that directory with basename the same as that of
+the other file is used.
+.PP
+If both files are directories,
+similarly named files in the two directories
+are compared by the method of
+.I diff
+for text files and
+.IR cmp (1)
+otherwise.
+Options when comparing directories are:
+.TP
+.B -r
+Apply
+.I diff
+recursively to similarly named subdirectories.
+.TP
+.B -s
+Report files that are the same (normally not mentioned).
+.PP
+There are several options for output format;
+the default output format contains lines of these forms:
+.IP
+.IB n1 a
+.IB n3 , n4
+.br
+.IB n1 , n2 d
+.I n3
+.br
+.IB n1 , n2 c
+.IB n3 , n4
+.PP
+These lines resemble
+.I ed
+commands to convert
+.I file1
+into
+.IR file2 .
+The numbers after the letters pertain to
+.IR file2 .
+In fact, by exchanging 
+.L a
+for 
+.L d
+and reading backward
+one may ascertain equally how to convert 
+.I file2
+into
+.IR file1 .
+As in 
+.I ed,
+identical pairs where
+.IR n1 = n2
+or
+.I n3 = n4
+are abbreviated as a single number.
+.PP
+Following each of these lines come all the lines that are
+affected in the first file flagged by 
+.LR < ,
+then all the lines that are affected in the second file
+flagged by 
+.LR > .
+.PP
+Except for
+.B -b,
+which may be given with any of the others,
+the following options are mutually exclusive:
+.TP
+.B -e
+Produce a script of
+.LR a ,
+.LR c ,
+and 
+.L d
+for
+.IR ed (1)
+to recreate
+.I file2
+from
+.IR file1 .
+When comparing directories, produce a
+.IR sh (1)
+script to convert text files common to the two directories.
+.TP
+.BI -c n
+Include
+.I n
+extra lines of context with each set of differences.
+The output format is modified:
+the output begins with identification of the files involved and
+their creation dates and changes are separated
+by lines of *'s.
+Lines removed from
+.I file1
+are marked with
+.LR - ;
+those added to
+.I file2
+are marked 
+.LR + .
+Lines which are changed from one
+file to the other are marked in both files with 
+.LR ! .
+.TP
+.B -h
+Do a fast, half-hearted job,
+useful only when changed stretches are short
+and well separated,
+but does work on files of unlimited length.
+.TP
+.B -b
+Ignore trailing blanks (spaces and tabs) and treat other
+strings of blanks as if they were a single space. 
+.PP
+.I Diff3
+compares three versions of a file
+and publishes the various disagreeing ranges of text.
+One of the following indicators introduces each reported
+difference.
+.TP
+.B ====
+All three files differ.
+.TP
+.BI ==== f
+File
+.I f
+differs, where
+.I f
+is 1, 2, or 3.
+.PP
+Disagreeing fragments from the three files follow the
+.B ====
+line, each identified by a
+.IR diff -like
+range indication:
+.TP
+.IB f  :  n1  a
+File
+.I f
+lacks text that other files have; their text would
+be appended after line
+.I n1.
+.TP
+.IB f : n1 , n2 c
+.br
+.ns
+.TP
+.IB f : n1 c
+Lines
+.I n1
+through
+.I n2
+(or line
+.I n1
+only) of file
+.I f
+would have to be changed to agree with some other file.
+The original contents follow, unless a higher-numbered file
+has the same contents.
+.PP
+Under option
+.BR -e ,
+.I diff3
+publishes a script for 
+.IR ed (1)
+that will incorporate into
+.I file1
+all changes between
+.I file2
+and
+.I file3,
+i.e. the changes that normally would be flagged 
+.B ====
+and
+.BR ====3 .
+Option
+.B \-x
+(\fB\-3\fR)
+produces a script to incorporate
+only changes flagged 
+.B ====
+.RB ( ====3 ).
+.SH EXAMPLES
+.TP
+.L
+(cat diff0-1 diff1-2 diff2-3; echo '1,$p') | ed - file0 >file3
+An ancestral
+.L file0
+has been kept along with a chain of version-to-version
+difference files made thus:
+.LR "diff -e file0 file1 >diff0-1" .
+The shell command reconstructs the latest version.
+.PP
+.EX
+if diff3 mod1 old mod2 | grep -s '^====$'
+then :
+else (diff3 -e mod1 old mod2; echo '1,$p') | ed - mod1 >new
+fi
+.EE
+.PD0
+.IP
+Compare two different modified versions with an old file.
+If no modifications interfere with each other
+.RI ( grep
+finds no 
+.B ====
+lines), make a new file incorporating both modifications.
+.PD
+.SH FILES
+.F /tmp/d*
+.br
+.F /usr/lib/diffh
+for 
+.B -h
+.br
+.F /usr/lib/diff3
+.SH "SEE ALSO"
+.IR cmp (1),
+.IR comm (1), 
+.IR ed (1),
+.IR idiff (1)
+.SH DIAGNOSTICS
+.I Diff
+yields exit status is 0 for no differences, 1 for some, 2 for trouble.
+.SH BUGS
+Text lines that consist of a single `.' will
+defeat options
+.BR -e ,
+.BR -x ,
+and
+.BR -3 .
+.br
+Superfluous output may result for files that differ
+only in insignificant blanks when comparing directories
+under option
+.BR -b .
+.br
+Option
+.B -c
+is superfluous.

@@ -1,0 +1,62 @@
+.TH UUENCODE 1
+.SH NAME
+uuencode, uudecode \- encode/decode a binary file for
+transmission via mail
+.SH SYNOPSIS
+.B uuencode
+[
+.I file
+]
+.I remotedest
+.br
+.B uudecode
+[
+.I file 
+]
+.SH DESCRIPTION
+These routines are useful for sending binary files by
+.IR mail (1).
+.PP
+.I Uuencode
+places on the standard output an encoded version of the named
+.I file
+(standard input by default).
+The encoding, which uses only printing ASCII characters,
+includes the mode of the file and a name 
+.I remotedest
+into which it will be decoded.
+.PP
+.I Uudecode
+reads encoded data from a
+.I file
+or from the standard input and recreates the
+original data with the mode and name given in the file.
+As the encoded file is ordinary text, the name or
+mode can be changed by editing.
+.PP
+An encoded file contains noise lines, a header line, data,
+trailer, and more noise in that order.
+The header contains
+.LR begin ,
+the octal mode, and the remote name separated by spaces.
+Each data line contains a count in the range 0-63, encoded
+as a single byte with value offset by 040 (space), followed
+by the encoding of that many bytes of source.
+24-bit (3-byte) segments of source are
+coded in 4 6-bit pieces, again represented in
+offset-040 code.
+The trailer is a data line with count 0 and then
+the line
+.LR end .
+.B SEE ALSO
+.IR uucp (1),
+.IR mail (1)
+.SH BUGS
+The interface is meretricious.
+The remote name should be decided by
+the recipient, not the sender.
+The command
+.L uuencode myfile
+does not encode
+.L myfile ,
+but rather reads from standard input.

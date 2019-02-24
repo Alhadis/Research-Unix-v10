@@ -1,0 +1,351 @@
+.TH BACKUP 1
+.CT 1 sa_mortals 
+.SH NAME
+backup \- backup and recover files
+.SH SYNOPSIS
+.B "backup recover"
+[
+.I option ...
+]
+.I file ...
+.PP
+.B "backup grep"
+[
+.I option ...
+]
+.I pattern ...
+.PP
+.B "backup fetch"
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B "backup stats"
+[
+.I option ...
+]
+.PP
+.B "backup backup"
+[
+.I file ...
+]
+.PP
+.B "backup munge"
+.PP
+.B "backup mount"
+[
+.I option ...
+]
+.I mountpt
+.SH DESCRIPTION
+The
+.I backup
+programs save and restore archival copies of files in an optical disk
+store on a central system (see
+.IR backup (5)).
+Backup occurs automatically daily (see
+.IR backup (8))
+and upon specific request via
+.IR "backup backup" .
+.I "Backup grep"
+shows backup copy names for specific files, and
+.I "backup fetch"
+restores data from specific backup copies.
+.I "Backup recover"
+is a combination of these two;
+it fetches the most recent copy.
+All the
+.I backup
+programs describe their options when presented
+with a bad option such as
+.BR -? .
+.PP
+.I "Backup recover"
+retrieves
+.I files
+by name.
+The names should be full pathnames rooted at
+.BR /n/ ;
+if not,
+.I backup
+tries to guess names that begin with
+.BR /n/ .
+Directories should be recovered before their contents.
+Regular files that are linked together will stay linked if they
+are recovered together.
+The options for
+.I recover
+are:
+.TP
+.BI -o " dir"
+The argument is restored as an entry in the directory
+.IR dir .
+.PD 0
+.TP
+.B -v
+Verbose (enforced).
+.TP
+.B -F
+Restore directories as files containing a null-terminated list of element names.
+.TP
+.B -r
+Recursively recover any subdirectories.
+.TP
+.B -d
+Create any missing intermediate directories.
+.TP
+.BI -D old = new
+Replace the prefix
+.I old
+of the original filename with
+.I new
+to form the new output filename.
+.TP
+.B -m
+The names are backup copy names, as determined from
+.I backup grep,
+not original filenames.
+.TP
+.BI -fdevice
+Use
+.I device
+rather than
+.B /dev/worm0
+for the WORM.
+.I Device
+may be on another machine:
+.IB machine ! device\fR.
+An initial
+.B w
+implies a WORM device; a
+.B j
+implies a jukebox.
+A numeric 
+.I device
+means
+.BI /dev/worm device\fR.
+.TP
+.B -e
+Cause the
+.I worm fetch
+server on the backup system to terminate gracefully.
+.TP
+.B -i
+Append
+.BI . n
+to the output name for each file where
+.I n
+is an increasing integer.
+This is useful for recovering multiple copies of the same file.
+.PD
+.PP
+A diagnostic like
+.B "need disk backup2a"
+means you need to mount the
+A side of the cartridge labeled
+.BR backup2 .
+.PP
+.I "Backup grep"
+searches for names of backed up files that match the strings
+.IR patterns .
+If the pattern is a literal (no
+.BR -e )
+that looks like a filename, 
+it reports the filename catenated with
+.B //
+and the time
+of the most recent backup copy.
+If the pattern is a literal that looks like the output under option
+.BR -d , 
+it reports the name of the corresponding backup copy.
+The options are:
+.TP
+.B -d
+Print file change times 
+.RB ( ctime ,
+see
+.IR stat (2))
+as integers rather than as dates.
+.PD 0
+.TP
+.B -e
+Interpret
+.I patterns
+as regular expressions
+given in the notation of
+.IR regexp (3).
+Warning:
+this option can execute extremely slowly;
+it is almost always better to use
+.IR gre (1)
+on
+.F /usr/backup/filenames
+on the backup machine; see
+.IR backup (5).
+.TP
+.B -a
+Print all names in the database.
+.TP
+.B -V
+Treat
+.I pattern
+as a literal filename
+and list all versions of the file.
+.TP
+.BI -< n
+Only list entries with a date less than or equal to
+.IR n .
+If
+.I n
+is not a simple integer date, it is interpreted as by
+.IR timec (3).
+.TP
+.BI -> n
+Only list entries with a date greater than or equal to
+.IR n .
+.TP
+.B -D
+Print the most recent entry for every file name starting with
+.I pattern,
+taking into account any cutoff date, but turning off option
+.BR -e .
+.PD
+.PP
+.I Backup fetch
+takes from its arguments or from standard input
+backup copy names as reported by
+.I backup grep
+(such as
+.BR v2345/987 )
+and restores the corresponding files.
+It accepts the same options as
+.I backup recover
+except 
+.BR -m ;
+.B -v
+is really optional.
+Irrelevant prefixes are stripped from backup copy names.
+Thus the output of the
+.I "backup grep"
+command can be used directly.
+.PP
+.I "Backup stats"
+provides statistics about the files backed up.
+By default, it looks for all systems and all users and gives a grand total.
+The options are
+.nr xx \w'\f5-u \fIusers '
+.TP \n(xxu
+.B -i
+Give information per system or user 
+rather than a total.
+.TP
+.BI -s " systems
+.br
+.ns
+.TP
+.BI -u " users
+With option
+.BR -i ,
+restrict the total to the systems or users named in
+comma-separated lists.
+The name
+.L *
+expands to all systems or all users.
+.TP
+.B -d
+Print average number of files and bytes for the last 1 day,
+7 days and 30 days.
+.PP
+.I "Backup backup"
+backs up files.
+If no file names are given,
+they are taken from standard input.
+File names are interpreted as in
+.IR "backup recover" .
+The files are safely on the backup system when the command exits but
+will normally take a day to get into the backup database.
+.PP
+.I "Backup munge"
+causes the backup system to process any received files.
+When this terminates (assuming no errors), the files have been
+put onto backup media and have been absorbed into the database.
+.PP
+.I "Backup mount"
+is an experimental way to access backed up files.
+The specified part of the backup files
+(set by
+.BI -D root
+or
+.B /
+by default) is mounted at
+.IR mountpt .
+There is one option
+.TP \n(xxu
+.BI -d " date
+Make the mounted hierarchy reflect the state at 
+the given date.
+The mounting can be reversed with
+.IR umount ;
+see
+.IR mount (8).
+.SH EXAMPLES
+.TP
+.L
+backup stats -i -s '*'
+Get totals for all systems.
+.TP
+.L
+backup fetch `backup grep -d \e`backup grep -d /n/bowell/etc/passwd\e``
+What 
+.I backup recover
+does for you.
+.TP
+.L
+backup recover /n/coma/usr/rob/fortunes
+.br
+.ns
+.TP
+.L
+cd /n/coma/usr/rob; backup recover fortunes
+Two ways to get the latest available copy of
+.BR /n/coma/usr/rob/fortunes .
+.TP
+.L
+backup grep -V /n/coma/usr/rob/fortunes
+List all available copies of
+.B /n/coma/usr/rob/fortunes
+with their dates.
+.TP
+.L
+backup recover -m -o /tmp /n/wild/usr/backup/v/v919/678
+.br
+.ns
+.TP
+.L
+backup recover -m -o /tmp v919/678
+Two ways to recover a specific backup copy and place the result in
+.BR /tmp .
+.B /n/wild/usr/backup/v/v919/678
+is the name of the backup copy; the file will be restored to
+its home machine, not to
+.BR wild .
+.TP
+.L
+backup grep -V /n/coma/usr/rob/fortunes | backup fetch -i -o .
+Recover all the versions of the fortunes file into
+.BR fortunes.1 ,
+.BR fortunes.2 ,
+\&... in the current directory.
+.PD
+.SH FILES
+.F /usr/lib/backup
+\h'.5i'home of all datafiles and executables (on client machines)
+.SH "SEE ALSO"
+.IR worm (8),
+.IR backup (5), 
+.IR backup (8)
+.SH BUGS
+Recovery via symbolic links may not work; use the non-linked pathname.

@@ -1,0 +1,84 @@
+.TH DEPRECATED 2
+.CT 2 misc
+.SH NAME
+reboot, vadvise, vlimit, vswapon, getgroups,
+setgroups \(mi system calls to be avoided
+.SH SYNOPSIS
+.nf
+.B int reboot(how)
+.PP
+.B int vadvise(how)
+.PP
+.B int vlimit(what, limit)
+.PP
+.B int vswapon(special)
+.B char *special;
+.PP
+.B #include <sys/param.h>
+.PP
+.B int getgroups(ngroups, gidset)
+.B short *gidset;
+.PP
+.B setgroups(ngroups, gidset)
+.B short *gidset;
+.fi
+.SH DESCRIPTION
+These calls are hangovers from prior versions of the system.
+Some exist only for system maintenance purposes;
+some depend on the virtual memory implementation.
+None should be used except as a last resort.
+Most are not included in
+.BR /lib/libc.a .
+.PP
+.I Reboot
+finishes any pending I/O
+and reboots the system
+(if
+.I how
+is 0)
+or puts the system into a tight loop with interrupts disabled
+(if
+.I how
+is 8).
+It is restricted to the super-user.
+.PP
+.I Vadvise
+gives the virtual memory system
+hints about the paging behavior
+of the current process.
+.PP
+.I Vlimit
+sets various resource limits,
+such as the amount of memory allowed for text and data,
+and the maximum size of core images.
+.PP
+.I Vswapon
+adds
+the block device
+.I special
+to the pool of swap space.
+The device must be listed in a table
+compiled into the operating system;
+.I vswapon
+merely enables it.
+.PP
+.I Getgroups
+stores at most
+.I ngroups
+elements of the group access list of the current process
+in the array 
+.IR gidset .
+.PP
+.I Setgroups
+sets the group access list of the current user process from
+.IR gidset .
+.I Ngroups
+gives the number of entries; it must not exceed
+.BR NGROUPS ,
+defined in
+.BR <param.h> .
+Only the super-user may add groups to the list.
+.SH SEE ALSO
+.I
+Unix Programmer's Manual, Seventh Edition, Virtual VAX-11 Version,
+Volume 1, 1980 (Berkeley)

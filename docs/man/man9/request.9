@@ -1,0 +1,238 @@
+.TH REQUEST 9.2
+.CT 2 comm_term time_man proc_man
+.SH NAME
+request, own, wait, alarm, sleep, nap, kbdchar, rcvchar, realtime, sendchar, sendnchars, kill, exit \- 5620 input/output requests
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B void request(r) int r;
+.PP
+.B int own(r) int r;
+.PP
+.B int wait(r) int r;
+.PP
+.B void alarm(t) unsigned t;
+.PP
+.B void sleep(t) unsigned t;
+.PP
+.B void nap(t) unsigned t;
+.PP
+.B long realtime();
+.PP
+.B int kbdchar();
+.PP
+.B int rcvchar();
+.PP
+.B void sendchar(c) int c;
+.PP
+.B "void sendnchars(n, cp) int n; char *cp;"
+.PP
+.B void kill(s)
+.B int s;
+.PP
+.B void exit();
+.SH DESCRIPTION
+.I Request
+announces a program's intent to use I/O devices and resources,
+and is usually called once early in a program.
+The bit vector
+.I r
+indicates which resources are to be used by
+OR'ing together one or more of the elements
+.B KBD
+(keyboard),
+.BR MOUSE ,
+.B RCV
+(characters received by terminal from Unix),
+.B SEND
+(characters sent from terminal to Unix)
+and
+.BR ALARM .
+For example,
+.B request(MOUSE|KBD)
+indicates that the process
+wants to use the mouse and keyboard.
+If the keyboard is not requested,
+characters typed will be sent to the standard input of the Unix process.
+If the mouse is not requested,
+mouse events in the process's layer will be interpreted by the
+system rather than passed to the process.
+.B SEND
+and
+.B CPU
+(see 
+.B wait
+below) are always implicitly
+requested.
+.I Request
+sleeps for one clock tick to synchronize mouse control with the kernel.
+.PP
+.I Own
+returns a bit vector
+of which I/O resources have data available.
+For example,
+.BR own()&KBD
+indicates
+whether a character is available to be read by
+.I kbdchar
+(see below),
+.B own()&MOUSE
+tells if the process's
+.B mouse
+structure (see
+.IR button (9.2))
+is current, and
+.B own()&ALARM
+indicates whether the alarm timer has fired.
+.PP
+.IR Wait 's
+argument
+.I r
+is a bit vector composed as for
+.IR request .
+.I Wait
+suspends the process,
+enabling others,
+until at least one of the requested resources is available.
+The return value is a bit vector indicating which of the requested resources
+are available \(em the same as
+.BR own()&r .
+.PP
+Processes wishing to give up the processor to enable other processes to run
+may call
+.BR wait(CPU) ;
+it will return as soon as all other active processes have had a chance to run.
+.B CPU
+is a fake resource which is always
+requested.
+The
+.B SEND
+pseudo-resource is unused;
+.B wait(SEND)
+always succeeds.
+.PP
+.I Alarm
+starts a timer which will fire
+.I t
+ticks (60ths of a second) into the future.
+A pseudo-resource
+.B ALARM
+can be used to check the status of the timer with
+.I own
+or
+.IR wait .
+Calling
+.I alarm
+implicitly requests the
+.B ALARM
+pseudo-resource.
+.PP
+.I Nap
+busy loops for
+.I t
+ticks of the 60Hz internal clock.
+To avoid beating with the display, programs drawing rapidly changing scenes
+should
+.I nap
+for two ticks
+between updates, to synchronize the display and memory.
+.I Nap
+busy loops until the time is up;
+.I sleep
+is identical except that it
+gives up the processor for the interval.
+Except when unwilling to give up
+the mouse, a program should call
+.I sleep
+in preference to
+.IR nap .
+.I Sleep
+does not interfere with
+.IR alarm ,
+and vice versa.
+.PP
+.I Realtime
+returns the number of 60Hz clock ticks since
+.I mux
+started.
+.PP
+.I Kbdchar
+returns the next keyboard character typed to the process.
+If no characters have been typed, or
+.B KBD
+has not been
+.IR request ed,
+.I kbdchar
+returns
+\-1.
+.PP
+.I Rcvchar
+returns the next character received from the host,
+typically written on the standard output of a Unix process.
+If there are no characters available, or
+.B RCV
+has not been
+.IR request ed,
+.I rcvchar
+returns
+\-1.
+.PP
+.I Sendchar
+sends a single byte to the host,
+which will normally be read on the standard input of the Unix process.
+.I Sendnchars
+sends to the host
+.I n
+characters pointed to by
+.IR p .
+.PP
+.I Kill
+sends the associated Unix process the signal
+.IR s ;
+see 
+.IR signal (2).
+.PP
+.I Exit
+terminates the process.
+Unlike on Unix,
+.I exit
+does not return an exit status to a parent.
+Calling
+.I exit
+replaces the running process by the default terminal program.
+Any associated Unix process must arrange for its own demise;
+.I exit
+is a purely local function.
+When a process calls
+.IR exit ,
+all local resources: keyboard, mouse, storage, etc.,
+are deallocated automatically.
+.PP
+.I Realtime
+returns the number of sixtieths of a second elapsed since
+.IR mux (9.1)
+was started.
+.SH EXAMPLES
+.EX
+request(KBD|RCV);
+for(;;){
+	r=wait(KBD|RCV);
+	if(r&KBD)
+		keyboard(kbdchar());
+	if(r&RCV)
+		receive(rcvchar());
+}
+.EE
+.PD0
+.IP
+Take input from either the keyboard or the host.
+.PD
+.SH SEE ALSO
+.IR button (9.2)
+.SH BUGS
+.B own()&MOUSE
+does not guarantee that you own the mouse.
+The correct test is
+.EX
+	(own()&MOUSE) && ptinrect(mouse.xy, Drect)
+.EE

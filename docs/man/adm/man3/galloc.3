@@ -1,0 +1,75 @@
+.TH GALLOC 3
+.CT 2 mem_man
+.SH NAME
+galloc, gfree, garbage \(mi storage allocation with garbage collection
+.SH SYNOPSIS
+.nf
+.B char *galloc(n)
+.B unsigned n;
+.PP
+.B void gfree(p)
+.B char *p;
+.PP
+.B void garbage()
+.fi
+.SH DESCRIPTION
+These functions perform heap storage allocation with
+garbage collection.
+.PP
+.I Galloc
+allocates a block of at least
+.I n
+bytes and returns a pointer to it.
+.I Gfree
+frees a block previously allocated by
+.I galloc.
+.PP
+When space gets tight, garbage blocks
+are freed automatically.
+A block allocated by
+.I galloc
+is deemed to be garbage unless it is reachable.
+A reachable block is one whose first byte is
+pointed to by a declared C variable
+or by a pointer in a reachable block.
+.PP
+The frequency of garbage collection is controlled by external
+variables declared
+.IP
+.B "long gcmax = 5000, gcmin = 50;"
+.LP
+No more than
+.I gcmax
+allocations may intervene between automatic collections; this feature
+will help contain the growth of virtual address space.
+At least
+.I gcmin
+allocations must intervene, otherwise
+garbage collection will be abandoned as fruitless.
+.I Garbage
+may be called to do garbage collection at an arbitrary time.
+.PP
+.IR Malloc (3)
+and
+.I galloc
+allocate from the same arena, but garbage collection
+affects only
+.I galloc
+blocks.
+.I Free
+(see
+.IR malloc (3))
+must not be used on blocks allocated with
+.IR galloc .
+.SH SEE ALSO
+.IR malloc (3)
+.SH DIAGNOSTICS
+.I Galloc
+returns 0
+when space cannot be found.
+.SH BUGS
+Garbage collection is conservative;
+blocks that appear to be pointed to from
+within declared storage will not be freed,
+regardless of whether the apparent `pointers'
+were declared as such.

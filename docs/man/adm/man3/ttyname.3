@@ -1,0 +1,84 @@
+.TH TTYNAME 3
+.CT 2 comm_term
+.SH NAME
+ttyname, isatty, nametty \(mi find or set name of a terminal
+.SH SYNOPSIS
+.B char *ttyname(fildes)
+.PP
+.B isatty(fildes)
+.PP
+.B nametty(fildes, file)
+.br
+.B char *file;
+.SH DESCRIPTION
+.I Ttyname
+returns a pointer to the null-terminated path name
+of the terminal device associated with file descriptor
+.IR fildes .
+.PP
+.I Isatty
+returns 1 if
+.I fildes
+is associated with a terminal device,
+0 otherwise.
+.PP
+.I Nametty
+arranges that future opens of
+.I file
+will refer to
+the stream opened on
+.IR fildes .
+.I File
+must exist before
+.I nametty
+is called.
+The arrangement is terminated
+when the other end of the stream
+is closed or hung up.
+.SH FILES
+.F /lib/ttydevs
+	list of tty directories for
+.I ttyname
+.SH SEE ALSO
+.IR fmount (2),
+.IR ioctl (2)
+.SH DIAGNOSTICS
+.I Ttyname
+returns
+.L NULL
+if
+.I fildes
+does not describe an entry in any of the directories
+listed in
+.FR /lib/ttydevs .
+.PP
+.I Nametty
+returns 1 for success,
+0 for failure
+.RI ( file
+does not exist,
+.I fildes
+is not a stream).
+.SH BUGS
+The return value of
+.I ttyname
+points to static data
+whose content is overwritten by each call.
+.br
+If
+.I fildes
+connects to a remote machine, as when serving
+.I dcon
+or
+.I rx
+(see
+.IR con (1)),
+.I isatty
+answers no, regardless of whether the stream 
+leads ultimately to a terminal on the remote machine.
+Similarly, when serving
+.I ndcon
+or
+.I nrx,
+it always answers yes.
+

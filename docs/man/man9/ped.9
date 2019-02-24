@@ -1,0 +1,318 @@
+.TH PED 9.1
+.CT 1 editor writing_troff graphics
+.SH NAME
+ped, tped \- picture editor
+.SH SYNOPSIS
+.B ped
+[
+.B -f
+]
+[
+.I file ...
+]
+.PP
+.B tped
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Ped
+is an interactive drawing program for
+5620 terminals.
+A
+.I file
+argument is equivalent to
+an 
+.L e
+command as described below.
+Most features of
+.I ped
+are menu-controlled and self-explanatory; further details
+are in the reference.
+.PP
+Button 1 selects actions
+from a permanent menu and to draw or pick up an object.
+Button 3 terminates drawing actions or changes
+the permanent menu.
+Button 2 causes the permanent menu to revert to
+.LR basic .
+.PP
+The operation of
+.I ped
+is split between host and terminal.
+When a file is first read, it is kept on
+the host;
+.L bring in
+gets it to the 5620.
+.PP
+Option
+.B -f
+causes
+.I ped
+to display all text in one size to save time and space.
+.PP
+Some of the actions on permanent menus (switched by button 3)
+are described below.
+The last action is usually remembered and may be
+executed repeatedly
+until another is selected.
+Thus, for example, one can fill many polygons with
+one button click per polygon.
+Actions marked
+.L (t)
+in the menu toggle on and off.
+.PP
+.B basic
+menu
+.RS
+.TF rotate
+.TP
+.B blitblt
+Copy part of the screen to file
+.FR BLITBLT ,
+see
+.IR blitblt (9.1).
+.TP
+.B exit
+Leave
+.IR ped ,
+requires a confirming push of button 3.
+.TP
+.B markers
+Make visible the defining points of objects;
+these are the only points sensitive to selection by button 1.
+.RE
+.TP
+.B type comm
+Take input from the keyboard.
+.RS
+.TF rotate
+.TP
+.BI e " file"
+Begin editing
+.IR file,
+remember its name, as in
+.IR ed (1).
+Commands
+.B f
+(file name),
+.B r
+(read),
+.B w
+(write),
+behave similarly.
+.TP
+.B qq
+Same as
+.B exit
+in
+.B basic
+menu; altered files will be saved in
+.FR ped.save .
+.TP
+.B cd
+Change working directory.
+.TP
+.B pwd
+Print working directory.
+.TP
+newline
+Reactivate mouse.
+.TP
+.BI u " string"
+Remember
+.I string
+as a shell command for the selection
+.L user oper
+in menu
+.LR refine.
+.PD
+.RE
+.TP
+.B ch size
+.PD0
+.RS
+.TF rotate
+.TP
+.B rotate
+displays a vector from the center (of the bounding box) of an object to the
+selected point.
+The object is rotated and scaled to bring that point to
+a second selected position.
+.TP
+.B h-elong
+Change aspect ratio.
+The inverse is
+.BR v-elong .
+.RE
+.PD
+.TP
+.B move
+Button 3 cancels a move or copy.
+To help untangle overlapping objects, the cancellation
+does not take place until returning to the basic menu.
+.RS
+.PD0
+.TF rotate
+.TP
+.B attach
+Move an open polygon (a broken line)
+and hook it to the end of another.
+.TP
+.B join
+Connect the ends of two polygons with a new line.
+.TP
+.B link
+Cause multiple polygons to move and be filled as one
+(useful for making holes).
+Linked polygons must all be open or all be closed.
+.TP
+.B match
+Move objects to bring selected points together.
+.TP
+.B center
+Move objects to bring their centers together.
+.TP
+.B family/pt
+Select objects to be moved or deleted together.
+.RE
+.PD
+.TP
+.B draw
+Button 1 fixes a point;
+button 3 terminates an object.
+.PD0
+.RS
+.TF rotate
+.TP
+.B text
+Type one or more lines terminated by an empty line.
+.TP
+.B grid
+Snap points to locations on
+a grid, which indexes through settings FMC (fine, medium, coarse, none).
+.TP
+.B fix sz
+Set option
+.BR -f .
+.TP
+.B family/bx
+Sweep a box around objects to be moved or deleted together.
+.RE
+.PD
+.TP
+.B reshape
+.RS
+.TF rotate
+.TP
+.B formal
+Adjust nearly rectangular lines to be perfectly so.
+.TP
+.B spline
+A piecewise parabolic fit tangent to the midpoints of
+a broken line.
+.TP
+.B corner
+Make a guiding point of a spline to be multiple \- a corner
+in an otherwise smooth curve.
+.PD
+.RE
+.TP
+.B refine
+.RS
+.TF rotate
+.TP
+.B adj t
+Left-justify, right-justify, or center text.
+.TP
+.B edit text
+Display text at the top, where button 1 selects a
+position for inserting by typing or deleting by backspacing.
+Button 3 concludes the editing.
+.RE
+.PD
+.TP
+.B shade
+Assign textures for filling polygons, circles, or spline-bounded regions.
+Curves are filled schematically on the 5620, but accurately on
+the host.
+.TP
+.B color
+Assign colors for display on other devices.
+.TP
+.B remote
+Perform all editing on the host using the terminal
+as a display device only.
+.PP
+.I Tped
+converts files of graphic information produced by
+.I ped
+into typesetting requests for
+.IR troff (1).
+The options are:
+.TP
+.BI -T dev
+Prepare output for particular devices known to
+.IR troff :
+.B -Taps
+or
+.BR -T202 .
+.PD 0
+.TP
+.B -b
+Place a box around each picture.
+.PD
+.PP
+The input may be straight
+.I ped
+output or may be arbitrary text files with
+.I ped
+output embedded between
+pairs of delimiting lines:
+.PD0
+.IP
+.BI .GS " \fR[\fI size \fR]\fI"
+ped file
+\&. . .
+.B .GE
+.LP
+or in another file:
+.IP
+.BI .GS " \fR[\fI size \fR]\fI pedfilename"
+.PD
+.PP
+The optional size gives width or height:
+.BI w= inches
+or
+.BI h= inches.
+.SH FILES
+.F .pederr
+.br
+.F ped.save
+.SH SEE ALSO
+.IR cip (9.1),
+.IR paint (9.1),
+.IR brush (9.1), 
+.IR graphdraw (9.1),
+.IR pic (1), 
+.IR ideal (1),
+.IR blitblt (9.1)
+.br
+T. Pavlidis,
+`PED Users Manual',
+this manual, Volume 2
+.SH DIAGNOSTICS
+Error messages from the host
+are placed in file
+.BR .pederr .
+.SH BUGS
+Pictures may spill into the menu or message areas.
+.br
+Some experimentation with
+.I tped
+printout parameters
+may be needed to
+obtain satisfactory results.

@@ -1,0 +1,283 @@
+.TH POSTSCRIPT 8
+.CT 1 sa_auto
+.SH NAME
+dpost, postdaisy, postdmd, postprint \- filters to produce postscript
+.SH SYNOPSIS
+.B /usr/bin/postscript/dpost
+[
+.I option ...
+] [
+.I file ...
+]
+.PP
+.B /usr/bin/postscript/postdaisy
+[
+.I option ...
+] [
+.I file ...
+]
+.PP
+.B /usr/bin/postscript/postdmd
+[
+.I option ...
+] [
+.I file ...
+]
+.PP
+.B /usr/bin/postscript/postprint
+[
+.I option ...
+] [
+.I file ...
+]
+.PP
+.B /usr/bin/postscript/posttek
+[
+.I option ...
+] [
+.I file ...
+]
+.SH DESCRIPTION
+These programs convert files of various formats into
+PostScript.
+The input formats are
+.nr xx \w'\fL-p\ \fImode\ 'u
+.TP \n(xxu
+.I dpost
+.IR troff (1)
+output
+.TP
+.I postdaisy
+Diablo 1640 daisy-wheel
+.TP
+.I postdmd
+.IR bitfile (9.5)
+files, as produced by
+.IR blitblt (9.1)
+.TP
+.I postprint
+.SM
+ASCII
+text
+.TP
+.I posttek
+Tektronix 4014 graphics
+.PP
+Except as noted,
+the options are common to all the programs:
+.TP \n(xxu
+.BI \-c num
+Print
+.I num
+copies of each page.
+By default only one copy is printed.
+.TP
+.BI \-m num
+Magnify each logical page by the factor
+.I num.
+Pages are scaled uniformly about the origin,
+located near the upper left corner of
+the page.
+The default magnification is 1.0.
+.TP
+.BI \-n num
+Print
+.I num
+logical pages on each piece of paper.
+The default is 1.
+.TP
+.BI \-o list
+Print only pages specified in
+the comma-separated
+.I list
+of numbers and ranges.
+A range
+.IB N - M
+means pages
+.I N
+through
+.IR M ;
+an initial
+.BI - N
+means
+from the beginning to page
+.IR N ;
+and a final
+.IB N -
+means
+from
+.I N
+to the end.
+Print only pages whose numbers are given in the comma-separated
+.IR list .
+The list contains single numbers
+.I N
+and ranges
+.IB N1 \- N2.
+A missing 
+.I N1
+means the lowest numbered page, a missing
+.I N2
+means the highest.
+.TP
+.BI \-p mode
+Print
+in
+.I mode
+.B p
+(portrait)
+or
+.B l
+(landscape).
+The default is
+.BR p .
+.TP
+.BI \-x num
+Translate the origin
+.I num
+inches along the positive x axis.
+By default,
+the origin is
+fixed near the
+upper left corner of the page, with positive
+x to the right and positive y down the page.
+Positive
+.I num
+moves everything right.
+The default offset is 0 inches.
+.TP
+.BI \-y num
+Translate the origin
+.I num
+inches along the positive y axis.
+Positive
+.I num
+moves text down the page.
+The default offset is 0.
+.TP
+.BI \-A file
+Append a simple accounting record to
+.I file
+after all input
+.I files
+have been successfully translated.
+By default no accounting data is produced.
+.TP
+.BI \-L file
+Use
+.I file
+as the PostScript prologue.
+.TP
+.BI \-f name
+Print
+.I files
+using font
+.I name.
+Any PostScript font can be used,
+but constant width fonts yield the best results.
+The default font is Courier.
+.RI ( postdaisy,
+.IR postprint,
+and
+.IR posttek
+only)
+.TP
+.BI \-f
+Flip the sense of the bits in
+.I files
+before printing the bitmaps.
+.RI ( postdmd
+only)
+.PP
+In addition, three options allow the insertion of arbitrary PostScript
+at controlled points in the translation process:
+.TP \n(xxu
+.BI \-C file
+Copy
+.I file
+to the output file.
+.I File
+follows the prologue but
+precedes any job initialization commands.
+.I File
+becomes part of the job's global environment
+and must contain legitimate PostScript commands.
+.TP
+.BI \-P string
+Like
+.BR -C ,
+using a
+.I string
+instead of the contents of a file.
+.TP
+.BI \-R action
+Requests special
+.I action
+(e.g. manualfeed) on a per page or global basis.
+The
+.I action
+string has the general form
+.IB request : page : file,
+from which 
+.BI : page : file
+or
+.B : file
+can be omitted.
+An omitted or 0 page number
+applies to all pages.
+If file is omitted the request
+lookup is done in 
+.FR /usr/lib/postscript/ps.requests .
+The collection of recognized requests can be modified or extended
+by changing this file.
+Multiple occurrences of the
+.B \-R
+option behave as expected.
+.SH FILES
+.TF /usr/lib/font/devpost/charlib/*
+.TP
+.F /usr/lib/font/devpost/*.out
+.TP
+.F /usr/lib/font/devpost/charlib/*
+.TP
+.F /usr/lib/postscript/*.ps
+default prologues 
+.TP
+.F /usr/lib/tmac/tmac.pictures
+.I troff
+macros for PostScript
+.SH SEE ALSO
+.IR lp (1),
+.IR postio (8)
+.SH DIAGNOSTICS
+Exit status 2
+usually means a syntax error in some input file.
+.SH BUGS
+Output files
+will often violate Adobe's
+file structuring conventions.
+Pipe the output of
+.I dpost
+through
+.I postreverse
+to produce a minimally conforming PostScript file.
+.PP
+Although
+.I dpost
+can handle files formatted for any 
+.IR troff
+device, emulation is expensive and
+can easily double the print time and the size of the output file.
+.PP
+No attempt has been made to implement the character sets
+or fonts available on all devices supported by
+.I troff.
+Missing characters are replaced by white space;
+unrecognized fonts are replaced by one of the Times fonts.
+.PP
+.I Dpost
+requires an
+.B x res
+command before the first
+.B x init
+and any file data.

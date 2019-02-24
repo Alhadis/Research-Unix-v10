@@ -1,0 +1,78 @@
+.TH PIPE 2
+.CT 2 comm_proc
+.SH NAME
+pipe \(mi create an interprocess channel
+.SH SYNOPSIS
+.nf
+.B int pipe(fildes)
+.B int fildes[2];
+.fi
+.SH DESCRIPTION
+.I Pipe
+creates a buffered channel for interprocess I/O communication.
+Two file descriptors returned in
+.I fildes
+are the ends of pair of cross-connected streams;
+see
+.IR stream (4).
+Data written via
+.B fildes[1]
+is available for reading via
+.B fildes[0]
+and vice versa.
+.PP
+After the pipe has been set up,
+cooperating processes
+created by subsequent
+.IR fork (2)
+calls may pass data through the
+pipe with
+.I read
+and
+.I write
+calls.
+The bytes placed on a pipe
+by one 
+.I write
+are contiguous even if many process are writing.
+.I Writes
+induce a record structure: a
+.I read
+will not return bytes from more than one 
+.IR write ;
+see
+.IR read (2).
+.PP
+Write calls on a one-ended pipe raise signal
+.BR SIGPIPE .
+Read calls on a one-ended pipe with no data in it
+return an end-of-file for the first several attempts, then raise
+.BR SIGPIPE ,
+and eventually
+.BR SIGKILL .
+.SH "SEE ALSO"
+.IR sh (1), 
+.IR fork (2),
+.IR read (2),
+.IR select (2),
+.IR stream (4)
+.SH DIAGNOSTICS
+.BR EIO ,
+.BR EMFILE ,
+.BR ENFILE ,
+.BR ENXIO
+.SH BUGS
+Buffering in pipes connecting multiple processes may cause deadlocks.
+.PP
+Some line discipline modules
+discard the record delimiters
+inserted by
+.IR write .
+.PP
+On many other versions of the system,
+only
+.B fildes[0]
+may be read
+and only
+.B fildes[1]
+may be written.

@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	f77.out
+
+pg:	f77.out
+	count f77.ms f77.out
+
+spell:VQ:
+	dospell f77.ms
+
+lp:	f77.out
+	$LP $newprereq && touch $target
+
+f77.out:D:	f77.ms $REF
+	$PREFER f77.ms | tbl | eqn | troff -mpm > $target
+
+index:V:
+	runind f77
+	$PREFER xf77.ms | tbl | eqn | troff -mpm >/dev/null 2>f77.x
+	mkindex f77.x
+	rm xf77.ms
+
+pindex:V:
+	mkindex f77.x

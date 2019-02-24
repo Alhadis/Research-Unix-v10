@@ -1,0 +1,80 @@
+.TH LASM 10.1 UCDS
+.SH NAME
+lasm \- lde preprocessor
+.SH SYNOPSIS
+.B  lasm
+.SH DESCRIPTION
+.I Lasm
+reads standard input and writes
+.I lde
+format (10.5) to standard output.
+The input format is a sugaring of
+.I lde
+format in the direction of
+.I PALASM
+(see Intel)
+in terms of ease of use.  '/' is reserved for logical negation and can preceed identifiers or expressions.
+Identifiers must be alphanumeric only \- trailing plus and minus signs a la
+.I lde
+are not allowed.
+.PP
+Pins are declared in a 
+.B ".p"
+area as a sequence of identifiers with or
+without preceeding slashes.
+.I Lasm
+uses this area and the preceeding ".tt" area to output
+.B ".i"
+and 
+.B ".o"
+areas for
+.I lde.
+A '4' in the ".tt" area indicates a feedback term;
+the pin is declared as input in the 
+.B ".o"
+area, while an identifier
+with the same sense but inverted capitalization is declared locally in
+the 
+.B ".i"
+area.
+Pins names may be used in expressions or assignment statements without
+regard to their logical sense at declaration.
+.I Lasm
+supplies the appropriate !, \-, capitalization, etc., for
+.I lde.
+.PP
+.I Lasm
+declares output enables automatically from information in the ".tt" area.
+Fields declared in the 
+.B ".f"
+area are duly noticed and appropriate
+feedback terms and output enables are output.
+Logical inversion of field
+.I f
+of width
+.I p
+is accomplished via
+.RI (( 2 ** p \- 1
+.RI )^ f ).
+.PP
+.IR output = expression ;
+.br
+sets the output enables in addition to doing the assignment.
+.br
+.IR output { expression0 }
+.RI = expression1 ;
+.br
+uses
+.I expression0
+as the output enable term.
+.PP
+.I Lasm
+ignores '#' and characters following until end-of-line.
+.SH SEE ALSO
+.PP
+lde(10.1) pal(10.1)
+.SH FILES
+.SH BUGS
+.PP
+This program is a hack.  The proper thing to do is fix
+.I lde.

@@ -1,0 +1,73 @@
+.TH TCPMGR 8
+.CT 1 sa_auto
+.SH NAME
+tcpmgr \- accept and place calls via the TCP protocol
+.SH SYNOPSIS
+.B /usr/ipc/mgrs/tcpmgr
+[
+.BI -m " outnet"
+]
+.SH DESCRIPTION
+.I Tcpmgr
+receives and places TCP calls on an Internet TCP/IP network.
+Outbound TCP calls may be placed by calling
+.I ipcopen
+with network name
+.B tcp
+(see
+.IR ipc (3)).
+Inbound calls to TCP port
+.I n
+are handed to the local service
+listed for that port in
+.FR /usr/ipc/lib/inservices ,
+or to service
+.BI tcp. n
+if there is no listing.
+.PP
+Option
+.B -m
+tells
+.I tcpmgr
+to claim to place outbound calls for network
+.I outnet
+rather than
+.BR tcp .
+.PP
+The TCP protocol runs atop one or more IP networks.
+.I Tcpmgr
+arranges to receive all inbound TCP calls on all active IP networks,
+but other arrangements
+must be used to activate the IP networks themselves;
+see
+.IR ipconfig (8).
+.PP
+.I Tcpmgr
+records its activity
+in file
+.I outnet
+in directory
+.BR /usr/ipc/log ,
+default
+.BR /usr/ipc/log/tcp .
+.PP
+This command is usually run once from
+.IR rc (8).
+.SH FILES
+.TP 2i
+.PD 0
+.F /usr/ipc/log/tcp
+.TP
+.FR /dev/tcp*
+TCP network devices
+.TP
+.F /dev/iptcp
+IP channel for the TCP protocol
+.TP
+.F /usr/ipc/lib/inservices
+mapping between service name and port number
+.SH "SEE ALSO"
+.IR con (1),
+.IR ipconfig (8),
+.IR svcmgr (8),
+.IR ipc (3)

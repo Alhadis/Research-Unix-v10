@@ -1,0 +1,63 @@
+.TH FD 4
+.CT 2 file_io 
+.SH NAME
+fd, stdin, stdout, stderr, tty \- file descriptor files
+.SH DESCRIPTION
+These files, conventionally called
+.BR /dev/fd/\^0 ", " /dev/fd/1 ", ... " /dev/fd/127 ,
+refer to files accessible through file descriptors.
+If file descriptor
+.I n
+is open,
+these two system calls have the same effect:
+.IP
+.EX
+fd = open("/dev/fd/\fIn\fP", mode);
+fd = dup(\fIn\fP\^);
+.EE
+.LP
+On these devices
+.I creat
+(see
+.IR open (2))
+is equivalent to
+.I open,
+and
+.I mode
+is ignored.
+As with
+.IR dup ,
+subsequent reads or writes on
+.I fd
+fail unless the original file descriptor
+allows the operations.
+.SH FILES
+.TF /dev/stdout
+.TP
+.F /dev/fd/*
+.TP
+.F /dev/stdin
+linked to
+.F /dev/fd/0
+.TP
+.F /dev/stdout
+linked to
+.F /dev/fd/1
+.TP
+.F /dev/stderr
+linked to
+.F /dev/fd/2
+.TP
+.F /dev/tty
+linked to
+.F /dev/fd/3
+.SH SEE ALSO
+.IR open (2), 
+.IR dup (2)
+.SH DIAGNOSTICS
+.I Open
+returns \-1
+and
+.B EBADF
+if the related file descriptor is not open
+and in the appropriate mode (reading or writing).

@@ -1,0 +1,107 @@
+.TH KMC 8
+.CT 1 sa_nonmortals
+.SH NAME
+kmc, kdiload, kmcdump \- control KMC11 input/output processors
+.SH SYNOPSIS
+.B /etc/kdiload
+[
+.I dev
+[
+.I file
+] ]
+.PP
+.B /etc/kmcdump
+[
+.I dev
+]
+.SH DESCRIPTION
+These commands control the KMC11-B
+microprocessors
+used for Datakit protocol processing.
+.PP
+.I Kdiload
+resets KMC device
+.IR dev ,
+copies the microcode in
+.IR file
+into the KMC's memory,
+and starts the KMC.
+.I Dev
+may be a pathname
+or a single character key
+identifying the KMC;
+the default is
+.LR 2 .
+.I File
+defaults to that specified in
+.F /etc/kmctab
+if a single character key is used,
+.F /etc/dkk.dubhi
+otherwise.
+.PP
+.I Kmcdump
+stops the KMC
+and copies its state into files
+in the working directory.
+.I Dev
+may be a single character key
+or a pathname;
+the default is
+.LR 2 .
+The KMC's memory is copied to the file
+.BI core. k . nnn\c
+,
+where
+.I k
+is the keyletter
+and
+.I nnn
+is some number;
+the state of the KMC's registers and some trace information from Unix
+is written to
+.BI regs. k . nnn\c
+\&.
+.PP
+These commands search the file
+.F /etc/kmctab
+for KMC devices and microcode files.
+The file contains lines of
+three blank-separated fields:
+.PP
+.RS
+single character identifying this KMC
+.br
+full pathname of the KMC device file
+.br
+full pathname of the microcode to be used in this KMC
+.RE
+.PP
+The KMC with key
+.I K
+uses Datakit special files with names like
+.BI /dev/dk/dk K 03\c
+\&.
+If there is only one KMC for Datakit,
+its key is
+.LR 2 .
+If the only KMC is the only Datakit interface in a machine,
+its key is
+.LR 2 ,
+and its special files look like
+.BR /dev/dk/dk03 .
+.SH FILES
+.F /etc/kmctab
+.br
+.F /bin/kasb
+.SH SEE ALSO
+.IR dkmgr (8)
+.SH BUGS
+For the moment,
+the only permissible keys are
+.L 0
+and
+.LR 2 .
+The KMC and Datakit filename conventions
+are arcane,
+and based on obsolete notions;
+they should be replaced.

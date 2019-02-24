@@ -1,0 +1,116 @@
+.TH CHUCK 8
+.CT 1 sa_nonmortals
+.SH NAME
+chuck \- a file system checking program
+.SH SYNOPSIS
+.B /etc/chuck
+[
+.I option ...
+]
+.I device
+.PP
+.B /etc/chuck
+.B -M
+.I blocks
+.I device
+.PP
+.B /etc/upchuck
+[
+.B -w
+] [
+.B -p
+.I program
+]
+.SH DESCRIPTION
+.PP
+.I Chuck
+checks and optionally repairs the file system on the named
+.I device.
+It is normally invoked by
+.I upchuck
+by
+.IR rc (8)
+during reboots.
+The
+.B -w
+flag to
+.I upchuck
+is passed on to
+.I program.
+If
+.I program
+is not present, the default is
+.FR /etc/chuck .
+(Try, as super-user,
+.B "/etc/upchuck -p /bin/echo
+to see the normal arguments to
+.IR chuck .)
+If
+.I upchuck
+can read the raw version of
+.I device,
+it will, except for the root file system.
+.PP
+The options are
+.TP
+.B -w
+Try to do standard repairs.
+.TP
+.BI -b " blocksize
+Specify file system block size; default is 4096.
+.TP
+.B -i
+Interactive.
+Ask approval for each change.
+.TP
+.BI -I " inode ...
+.br
+.ns
+.TP
+.BI -B " block ...
+Report on inodes or blocks specified by number.
+.TP
+.B -v
+Verbose.
+Give more commentary.
+.PP
+.I Chuck
+can also make a new file system:
+.B "chuck -M"
+.I size device
+makes a bitmapped file system (only)
+of
+.I size
+4096-byte blocks
+on
+.IR device .
+It asks approval before writing.
+.SH FILES
+.F /etc/fstab
+.SH "SEE ALSO"
+.IR fstab (5), 
+.IR filsys (5), 
+.IR fsck (8),
+.IR reboot (8)
+.SH BUGS
+.I Chuck
+does not replace real expertise.
+It will not automatically repair a file system with duplicate blocks.
+In complicated situations it may have to be run
+several times to get complete consistency.
+.br
+It will not recover from I/O errors in reading the inodes,
+and does not yet extend
+.F lost+found
+when necessary.
+.br
+It uses memory freely (about 12 bytes per file system block
+and 84 bytes per inode).
+.br
+.I Chuck
+is still experimental,
+and acts the part.
+Error messages are usually inscrutable.
+.br
+It believes even preposterous super-blocks and
+consequently can get core images.

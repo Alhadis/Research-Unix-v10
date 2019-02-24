@@ -1,0 +1,91 @@
+.TH INTRO 4
+.SH NAME
+intro \- introduction to devices, line disciplines, and file systems
+.SH DESCRIPTION
+This section describes drivers for
+devices,
+stream line disciplines,
+and file systems.
+.PP
+Devices are accessed through
+special files of type
+.L S_IFBLK
+(block devices)
+or
+.L S_IFCHR
+(character devices);
+see
+.IR stat (2).
+Block devices use a block buffering scheme
+within the system,
+so that sectored devices like disks
+may be accessed a byte at a time.
+Character devices don't use the block buffers.
+Only block devices may be mounted as disk file systems.
+Most block devices
+have associated `raw' character devices
+that bypass all buffering for fast direct I/O.
+.PP
+The device associated with a special file is
+identified by a pair of numbers:
+a major device number
+naming the driver,
+and a minor device number
+picking some particular device or subunit.
+Major numbers are listed in
+.IR mknod (8).
+Minor numbers are specific to each driver;
+see the writeups in this section.
+Minor numbers are stored in a single unsigned byte;
+they are chosen from the range 0-255.
+.PP
+Some character devices are also
+stream devices.
+These use a different internal buffering mechanism
+to allow data to flow asynchronously.
+Various special operations are possible on streams;
+see
+.IR stream (4).
+.PP
+Line disciplines are
+processing modules that may be inserted into streams.
+They are identified by integers
+passed to the calls that insert and remove them.
+The C library
+contains global variables
+initialized to the numbers
+for various line disciplines;
+.IR stream (4)
+has a list.
+.PP
+There are several different types of file system:
+conventional disk volumes,
+remote file systems
+accessed
+by the system sending messages though a stream
+to a server as described in
+.IR netfs (8),
+a file system containing a file representing
+each process in the system,
+and so on.
+All of these
+appear the same to ordinary processes,
+except that not all file systems
+implement all operations;
+for example,
+a process file has a name,
+and may be opened, read, and written
+like an ordinary file,
+but may not be renamed because
+.IR proc (4)
+doesn't allow that.
+.PP
+File system types are
+identified by integers,
+used by and listed in
+.IR fmount (2).
+They are just magic numbers at present.
+.SH SEE ALSO
+.IR fmount (2),
+.IR stream (4),
+.IR mknod (8)

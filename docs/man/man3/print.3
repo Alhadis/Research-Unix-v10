@@ -1,0 +1,274 @@
+.TH PRINT 3
+.CT 2 file_io
+.SH NAME
+print, fprint, sprint, fmtinstall \(mi print formatted output
+.SH SYNOPSIS
+.nf
+.BR "int print(format \fR[\fP , arg \fR]\fP ... )"
+.B char \(**format;
+.PP
+.BR "int fprint(fildes, format \fR[\fP , arg \fR]\fP ... )"
+.B int fildes;
+.B char \(**format;
+.PP
+.BR "int sprint(s, format \fR[\fP , arg \fR]\fP ... )"
+.B char \(**s, \(**format;
+.PP
+.B fmtinstall(c, fn)
+.B char c;
+.B int (*fn)();
+.PP
+.B strconv(s, f1, f2)
+.B char *s;
+.PP
+.B extern int printcol;
+.fi
+.SH DESCRIPTION
+.I Print
+places output on the standard output.
+.I Fprint
+places output on the named output
+file descriptor;
+a buffered form
+is described in
+.IR fio (3).
+.I Sprint
+places output
+followed by the null character
+.RB ( \e0 )
+in consecutive bytes starting at
+.IR s ;
+it is the user's responsibility to ensure that
+enough storage is available.
+Each function returns the number of characters
+transmitted (not including the
+.B \e0
+in the case of
+.IR sprint ),
+or
+a negative value if an output error was encountered.
+.PP
+Each of these functions
+converts, formats, and prints its
+trailing arguments
+under control of a
+.IR format 
+string.
+The
+.I format
+contains two types of objects:
+plain characters, which are simply copied to the
+output stream,
+and conversion specifications,
+each of which results in fetching of
+zero or more
+arguments.
+The results are undefined if there are arguments of the
+wrong type or too few
+arguments for the format.
+If the format is exhausted while
+arguments remain, the excess
+are ignored.
+.PP
+Each conversion specification has the following format
+.PP
+.B "% [flags] [[\(mi] digits [. digits]] verb
+.PP
+The
+.I flags
+modify the meaning of
+the conversion verb.
+The first (possibly negative) number is called
+.IR f1 ,
+the second number is
+.IR f2 .
+The flags and numbers are arguments to
+the
+.I verb
+described below.
+.PP
+The numeric verbs
+.BR d ,
+.BR o ,
+and
+.B x
+format their arguments in decimal,
+octal and hex respectively.
+Each interprets the flags
+.BR h ,
+.BR l ,
+.BR u ,
+to mean short,
+long,
+and unsigned.
+If neither
+short nor long is specified,
+then the arg is an
+.BR int .
+If unsigned is specified,
+then the arg is interpreted as a
+positive number and no sign is output.
+.I F1
+is the minimum field width and,
+if negative,
+means left justified rather than right justified;
+in both cases, padding is done with blanks.
+The converted number is padded with
+.B 0
+on the left to at least
+.I f2
+characters.
+.PP
+The floating point verbs
+.BR f ,
+.BR e ,
+and
+.B g
+take a double argument.
+No flags apply to floating point conversions.
+.I F1
+is the minimum field width and,
+if negative,
+means left justified.
+.I F2
+is the number of digits that are converted after the decimal place.
+The first unconverted digit has suffered decimal rounding.
+The 
+.B f
+verb produces output of the form
+.RB [ - ] digits [ .digits\fR].
+.B e
+conversion appends an exponent
+.BR e [ - ] digits .
+The
+.B g
+verb will output the arg in either
+.B e
+or
+.B f
+with the goal of producing the smallest output.
+.PP
+The
+.B s
+verb copies a string
+(pointer to character)
+to the output.
+The number of characters copied
+.RI ( n )
+is the minimum
+of the size of the string and
+.IR f2 .
+These
+.I n
+characters are justified within a field of
+.I f1
+characters as described above.
+.PP
+The
+.B c
+verb copies a single character (int)
+justified within a field of
+.I f1
+characters as described above.
+.PP
+.I Fmtinstall
+is used to install your own conversions and flags.
+.I Fn
+should be declared as
+.EX
+        int fn(o, f1, f2, f3)
+        void *o;
+        int f1, f2, f3;
+.EE
+.I Fn
+is passed a pointer
+.I o
+to whatever argument appears in
+the list to
+.IR print .
+.I Fn
+should return the size of the argument in bytes so
+.I print
+can skip over it.
+.I F1
+and
+.I f2
+are the decoded numbers in the conversion.
+A missing
+.I f1
+is denoted by the value zero.
+A missing
+.I f2
+is denoted by a negative number.
+.I F3
+is the logical or of all the
+flags seen in the conversion.
+If
+.I c
+is a flag,
+.I fn
+should return a negative number
+that is negated and then logically
+.IR or ed
+with any other flags
+and ultimately
+passed to a conversion routine.
+All interpretation of
+.IR f1 ,
+.IR f2 ,
+and
+.I f3
+is left up to the conversion routine.
+The standard flags are
+.LR h (2),
+.LR l (1),
+and
+.LR u (4).
+.PP
+.I Sprint
+is designed to be recursive in order to
+help prepare output in custom conversion routines.
+.PP
+The output of any conversion routine must be passed through
+.IR strconv .
+.I S
+is the character string,
+.I f1
+and
+.I f2
+have the same meaning as above.
+.PP
+.I Printcol
+indicates the position of the next output character.
+Tabs, backspaces and carriage returns are interpreted appropriately.
+.SH EXAMPLES
+This adds a verb to print complex numbers.
+.EX
+typedef struct {
+	double r, i;
+} complex;
+complex x = { 1.5, -2.3 };
+int Xconv();
+
+main()
+{
+
+	fmtinstall('X', Xconv);
+	print("x = %X\en", x);
+}
+
+Xconv(o, f1, f2, f3)
+	complex *o;
+{
+	char str[50];
+
+	sprint(str, "(%g,%g)", o->r, o->i);
+	strconv(str, f1, f2);
+	return(sizeof(complex));
+}
+.EE
+.SH SEE ALSO
+.IR fio (3), 
+.IR printf (3)
+.SH BUGS
+There are internal buffers which may overflow silently.

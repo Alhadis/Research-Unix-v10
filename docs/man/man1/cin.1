@@ -1,0 +1,906 @@
+. \" Copyright 1984,1985,1986,1987,1988,1989,1990 AT&T Bell Laboratories
+.TH CIN 1
+.CT 1 prog_c
+.SH NAME
+cin \- C interpreter
+.SH SYNOPSIS
+.B cin
+[
+.I option ...
+]
+[
+.I file ...
+]
+[
+.B --
+.I arg ...
+]
+.SH DESCRIPTION
+.I Cin
+interprets a C program comprising the
+.I file
+arguments as in
+.IR cc (1).
+The special name
+.L -
+signifies standard input.
+When called with no
+.I file
+arguments,
+.I cin
+defaults to
+.BR -i .
+Arguments
+.I arg
+are passed to the interpreted program as
+.BR cin_argv[1] ,
+.BR cin_argv[2] ,
+\&...
+and
+.BR cin_argc .
+.PP
+Options
+.BI -D name = def ,
+.BI -D name ,
+.BI -L name ,
+.BI -U name ,
+.BI -I name ,
+.BI -l x ,
+.BI -o name ,
+and
+.BI -u name
+are as in
+.IR cc .
+Options
+.B -O
+and
+.B -g
+are ignored.
+Other options are:
+.TP
+.BI -0 name
+Pass
+.I name
+to the interpreted program as
+.BR cin_argv[0] .
+.TP
+.BI -C name
+Use
+.I name
+as the interpreter startup file
+(by default, the file
+.FR $HOME/.cin.c ).
+The interpreter startup file is ignored by using
+.BR -C/dev/null .
+.TP
+.BI -F i : o : e
+Use file descriptors
+.IR i , o , e
+as standard input, standard output, and standard error for the
+interpreter, as distinct from the interpreted code
+(by default, 0, 1, and 2).
+.TP
+.B -S
+Enable interactive mode after run-time errors.
+.TP
+.BI -V name : n
+Declare function
+.I name
+to have a variable number of arguments, the first
+.I n
+of which are to be type-checked.
+.TP
+.B -c
+Parse files but do not execute the program.
+.TP
+.B -i
+Enable interactive interpretation.
+C statements are evaluated immediately using local and global variables.
+Non-void values are printed.
+Function, variable, and C pre-processor declarations are stored
+in the current `view'.
+A function definition must include its return type.
+Declarations and statements can appear in any order and
+identifiers can be redeclared.
+.TP
+.B -r
+Prohibit multiply-declared global variables.
+.TP
+.B -s
+Do not catch signals using
+.IR signal (2)
+(by default,
+.I cin
+catches
+.BR SIGBUS ,
+.BR SIGEMT ,
+.BR SIGFPE ,
+.BR SIGILL ,
+.BR SIGINT ,
+.BR SIGIOT ,
+.BR SIGSEGV ,
+.BR SIGSYS ,
+.BR SIGTRAP ).
+.TP
+.B -v
+Print the user and system times associated with loading files and executing
+the program, as in
+.IR time (1).
+.TP
+.BI + option
+Turn off the specified
+.IR option .
+.PP
+The functions and variables listed below are predefined in
+.I cin
+and
+.IR libcin.a .
+Their arguments are typed according to these conventions:
+.IP
+.B char
+.BI * func ,
+.BI * message ,
+.BI * mod ,
+.BI * name ,
+.BI * ref ,
+.BI * string ;
+.br
+.B enode
+.BI * code ;
+.br
+.B int
+.IB level ,
+.IB line ;
+.br
+.B long
+.BI (* after )();
+.br
+.B unsigned
+.B long
+.IB addr ;
+.br
+.B void
+.BI (* before )(),
+.BI (* routine )();
+.PP
+This first group of functions and variables are the most commonly used.
+To use them load
+.F libcin.a
+and include
+.FR cin.h .
+.PP
+.HP
+.BI "int cin_break(" name ,
+.IB line ,
+.IB string )
+.br
+If
+.I string
+is
+.BR "(char *)0" ,
+place a
+.B cin_system
+in file
+.I name
+before line number
+.IR line .
+Otherwise,
+place the C-language statement specified by
+.I string
+in file
+.I name
+before line number
+.IR line .
+Thus,
+.IR string
+is read and evaluated
+within the prevailing context of the function
+without stopping execution.
+Return 0 if line number
+.I line
+cannot be found in file
+.IR name .
+.TP
+.BI "int cin_dump(" name )
+Create an
+.F a.out
+and place it in the file
+.IR name .
+Return 0 if
+.I name
+cannot be created.
+.TP
+.BI "void cin_info(" string )
+Where
+.I string
+is:
+.RS
+.TP
+.B breakpoint
+Print
+.IR cin 's
+.BR cin_break s
+and
+.BR cin_stopin s.
+.TP
+.B log
+Print
+.IR cin 's
+interactive mode log file name.
+.TP
+.B memory
+Print
+.IR cin 's
+memory usage.
+.TP
+.B spy
+Print
+.IR cin 's
+spies.
+.TP
+.B symboltable
+Print
+.IR cin 's
+symbol table.
+.TP
+.B undefined
+Print
+.IR cin 's
+undefined variables.
+.TP
+.B usage
+Print
+.IR cin 's
+usage message.
+.TP
+.B version
+Print
+.IR cin 's
+version number.
+.TP
+.B view
+List the available views.
+The current view is starred
+.RB ( * ).
+.TP
+.B where
+Print a trace of function calls.
+.TP
+.B wrapper
+Print
+.IR cin 's
+wrappers.
+.RE
+.TP
+.BI "int cin_load(" string )
+Evaluate
+.I string
+as invocation arguments of
+.IR cin .
+Return 0 if arguments are not valid.
+.TP
+.BI "int cin_log(" name )
+.IR mv (1)
+the interactive mode session log to file
+.IR name .
+Return 0 if
+.I name
+cannot be
+.IR mv ed.
+.TP
+.BI "void cin_make(" string )
+If
+.I string
+is
+.BR "(char *)0" ,
+then re-load any file that is out of date.
+Otherwise,
+run
+.BR $MAKE ,
+passing
+.I string
+as arguments, and scan
+its standard output for lines that begin with pound sign
+.RB ( # ).
+Characters following the pound sign are executed as
+a C-language statement.
+.HP
+.BI "int cin_pp(" func ,
+.IB level )
+.br
+Print the C-language for the function
+.IR func .
+Where
+.I level
+is:
+.RS
+.TP
+.B 0
+Print declaration.
+.TP
+.B 1
+Print declaration and body.
+.PP
+Return 0 if
+.I func
+cannot be found.
+.RE
+.TP
+.B "void cin_quit()"
+Flush output and exit
+.IR cin .
+If all else fails,
+use
+.IR _exit(2) .
+.TP
+.B "int cin_reset()"
+Preserve function definitions,
+zero bss variables,
+and restore initialized data variables to their original values.
+Return 0 if
+state cannot be reset.
+.TP
+.B "void cin_return()"
+Return from a call to
+.BR cin_system .
+.TP
+.BI "void cin_run(" string )
+Set
+.BR cin_argv[1] ,
+.BR cin_argv[2] ,
+\&...
+and
+.B cin_argc
+from
+.I string
+and then
+.BR "main(cin_argc, cin_argv)" .
+.HP
+.BI "int cin_spy(" func ,
+.IB name ,
+.IB mod ,
+.IB ref )
+.br
+Trace variable references and modifications.
+If
+.I mod
+is not
+.BR "(char *)0" ,
+place the C-language statement specified by
+.I mod
+after the variable
+.I name
+is modified in the function
+.IR func .
+If
+.I ref
+is not
+.BR "(char *)0" ,
+place the C-language statement specified by
+.I ref
+before the variable
+.I name
+is referenced in the function
+.IR func .
+If function value
+.I func
+is
+.BR "(char *)0" ,
+search all functions.
+Return 0 if
+.I name
+cannot be found in
+.IR func .
+.TP
+.B "void cin_step()"
+Step over function calls
+to the next C-language statement in the current or previous function.
+.TP
+.B "void cin_stepin()"
+Step into any function to the next C-language statement.
+.TP
+.B "void cin_stepout()"
+Step out of the current function back to the next C-language statement
+in the previous function.
+.HP
+.BI "int cin_stopin(" func ,
+.IB string )
+.br
+If
+.I string
+is
+.BR "(char *)0" ,
+place a
+.B cin_system
+before the first
+executable line in the function
+.IR func ,
+either in the current view or wherever
+.I func
+can be found.
+Otherwise,
+place the C-language statement specified by
+.I string
+before the first
+executable line in the function
+.IR func ,
+either in the current view or wherever it can be found.
+Thus,
+.IR string
+is read and evaluated
+within the prevailing context of the function
+without stopping execution.
+Return 0 if function
+.I func
+cannot be found.
+.TP
+.BI "char *cin_sync(" string )
+Where
+.I string
+is:
+.RS
+.TP
+.B filename
+Return the non-interactive C source file name being executed.
+.TP
+.B lineno
+Return the non-interactive C source line number being executed.
+.RE
+.TP
+.B "void cin_system()"
+Start a
+.BR cin_read - cin_eval - cin_print
+loop.
+.HP
+.BI "int cin_unbreak(" name ,
+.IB line ,
+.IB string )
+.br
+Clear a 
+.B cin_break
+or a
+.B cin_stopin
+in file
+.I name
+before line number
+.I line
+with string
+.IR string .
+Return 0 if
+.B cin_break
+or
+.B cin_stopin
+cannot be cleared.
+.TP
+.BI "int cin_unload(" name )
+Unload the object file
+.IR name .
+Return 0 if
+.I name
+cannot be unloaded.
+.HP
+.BI "int cin_unspy(" func ,
+.IB name ,
+.IB mod ,
+.IB ref )
+.br
+Remove the C-language statement specified by
+.I mod
+after the variable
+.I name
+is modified,
+and the C-language statement specified by
+.I ref
+before the variable
+.I name
+is referenced in the function
+.IR func .
+Return 0 if spy cannot be cleared.
+.HP
+.BI "int cin_unstopin(" func ,
+.IB string )
+.br
+Clear a 
+.B cin_stopin
+or
+.B cin_break
+at the first
+executable line in the function
+.I func
+with string
+.I string
+in either the current view or wherever
+.I func
+can be found.
+Return 0 if the
+.B cin_stopin
+or
+.B cin_break
+cannot be cleared.
+.HP
+.BI "int cin_unwrapper(" func ,
+.IB before ,
+.IB after )
+.br
+Remove the call of function
+.I before
+before the function
+.I func
+is called.
+Remove the call of function
+.I after
+after the function
+.I func
+is called.
+Return 0 if
+.I func
+cannot be found.
+.TP
+.BI "int cin_view(" name )
+Change the current view to
+.IR name .
+Return 0 if the view cannot be found.
+.HP
+.BI "int cin_wrapper(" func ,
+.IB before ,
+.IB after )
+.br
+If
+.I before
+is not
+.BR "(void (*)())0" ,
+call the function
+.I before
+with the arguments of function
+.I func
+before the function
+.I func
+is called.
+If
+.I after
+is not
+.BR "(long (*)())0" ,
+call the function
+.I after
+with the argument of the return value of function
+.I func
+after the function
+.I func
+is called.
+The return value of function
+.I after
+is substituted for the return value of function
+.IR func .
+Return 0 if
+.I name
+cannot be found either in the current view or any other view.
+.TP
+.B "extern int cin_argc"
+The number of elements passed to the interpreted program.
+.TP
+.B "extern char **cin_argv"
+An array of the arguments passed to the interpreted program.
+.TP
+.B "extern char *cin_filename"
+The current C source file name being executed.
+.TP
+.B "extern int cin_level"
+The number of nested calls to
+.BR cin_system .
+.TP
+.B "extern char *cin_libpath"
+A colon
+.RB ( : )
+-separated list of libraries to search for undefined routines
+(by default,
+the libraries specified on the command line and
+.FR -lc ).
+.TP
+.B "extern int cin_lineno"
+The current C source line number being executed.
+.TP
+.B "extern char *cin_prompt"
+The interactive mode prompt (by default,
+the string
+.RB `` cin> " '')."
+.PP
+These are some of the less frequently used functions and variables in
+.IR cin .
+They are primarily used by
+.I cin
+library or language developers.
+.TP
+.BI "enode *cin_compile(" code )
+Analyze
+.I code
+and return an optimized program.
+Return
+.B "(enode *)0"
+if
+.I code
+cannot be compiled.
+.TP
+.BI "int cin_epp(" func )
+Print the
+.BR enode s
+for function
+.IR func .
+Return 0 if
+.I func
+cannot be found.
+.TP
+.BI "enode *cin_eprint(" code )
+Print the
+.I code
+as
+.BR enode s.
+Return the argument.
+.HP
+.BI "char *cin_error_code_set(" message ,
+.IB string )
+.br
+Where
+.I message
+is:
+.RS
+.TP
+.B dynamic error
+When
+.I cin
+detects
+a divide by zero,
+a modulus by zero,
+a null pointer access,
+or
+an abnormal signal
+execute the C-language statement specified by
+.IR string .
+.TP
+.B undefined function
+When
+.I cin
+detects an undefined function execute the C-language statement specified by
+.IR string .
+.TP
+.B undefined symbol
+When
+.I cin
+detects
+an undefined symbol execute the C-language statement specified by
+.IR string .
+.PP
+If
+.I string
+is
+.BR "(char *)0" ,
+execute
+.BR cin_system() .
+Return the old
+.I string
+for
+.IR message .
+.RE
+.TP
+.BI "enode *cin_eval(" code )
+Execute the
+.I code
+as if it were present in the program where
+.B cin_eval
+is called.
+Return the resulting program.
+.TP
+.BI "ident *cin_find_ident(" name )
+If
+.I name
+is not
+.BR "(char *)0" ,
+return the identifier for the variable
+.I name
+either in the current view or wherever
+.I name
+can be found.
+If
+.I name
+is
+.BR "(char *)0" ,
+return the identifier for the previous non-
+.B "(char *)0"
+value of the variable
+.I name
+in the next view where
+.I name
+can be found.
+Return
+.B "(ident *)0"
+if
+.I name
+cannot be found.
+.TP
+.BI "struct nlist *cin_find_nlist(" addr )
+Return the loader symbol table entry for the external address
+.IR addr .
+Return
+.B "(struct nlist *)0"
+if
+.I addr
+cannot be found.
+.HP
+.BI "void (*cin_info_set())(" string ,
+.IB routine )
+.br
+Inform
+.B cin_info
+that it should call
+.I routine
+when it is passed
+.IR string .
+Return the old
+.I routine
+for
+.IR string .
+.TP
+.BI "char *cin_ltof(" line )
+Return the function name at line number
+.I line
+in the current view.
+Return
+.B "(char *)0"
+if a function cannot be found for
+.IR line .
+.TP
+.BI "void cin_pop(" level )
+Replace
+.I level
+interpreted function calls from the stack with
+.BR cin_system .
+.HP
+.BI "enode *cin_print(" code ,
+.IB level )
+.br
+Print the
+.I code
+as C-language code.
+Where
+.I level
+is:
+.RS
+.TP
+.B 0
+Print declaration.
+.TP
+.B 1
+Print declaration and body.
+.PP
+Return the
+.I code
+argument.
+.RE
+.TP
+.BI "enode *cin_read(" string )
+Read
+.I string
+and return a program.
+Return
+.B "(enode *)0"
+if
+.I string
+cannot be parsed.
+.TP
+.BI "char *cin_slashify(" string )
+Return a pointer to storage obtained from
+.IR malloc (3)
+and there create a character array from
+.I string
+by translating
+backspace,
+form feed,
+newline,
+carriage return,
+horizontal tab,
+vertical tab,
+backslash,
+single quote,
+and double quote
+into
+.BR \eb ,
+.BR \ef ,
+.BR \en ,
+.BR \er ,
+.BR \et ,
+.BR \ev ,
+.BR \e\e ,
+.BR \e' ,
+and
+.B \e"
+respectively.
+Other non-printable characters are translated into
+.BI \e ddd
+octal notation.
+.TP
+.B "extern int cin_err_fd"
+.IR Cin 's
+standard error file descriptor.
+.TP
+.B "extern int cin_in_fd"
+.IR Cin 's
+standard input file descriptor.
+.TP
+.B "extern int cin_out_fd"
+.IR Cin 's
+standard output file descriptor.
+.TP
+.B "extern stackelem *cin_stack"
+The trace of function calls.
+.TP
+.B "extern view *cin_views"
+The list of available views.
+.SH EXAMPLES
+.TP
+The world's shortest ``Hello world'' program.
+.EX
+cin> printf("Hello world\en");
+Hello world
+(int)12
+.EE
+.TP
+Setting breakpoints and tracing function calls.
+.EX
+$ cin -lcin
+cin> int f(x) { return x <= 1 ? 1 : x * f(x - 1); }
+extern int f();
+cin> cin_stopin("f", (char*)0);
+/tmp/cin006795: 1: f: set breakpoint: (char *)0
+(int)1
+cin> f(2);
+/tmp/int006795: 1: f: stopped execution:
+cin> cin_return();
+/tmp/int006795: 1: f: stopped execution:
+cin> (void)cin_info("where");
+/tmp/cin006795: 5: cin_system: info: where: ()
+/tmp/cin006795: 1: f: info: where: (x = (int)1)
+/tmp/cin006795: 1: f: info: where: (x = (int)2)
+/tmp/cin006795: 3: cin_system: info: where: ()
+cin> x;
+(int)1
+cin> cin_return();
+(int)2
+cin> cin_quit();
+$
+.EE
+.SH FILES
+.TF /usr/include/cin.h
+.TP
+.F /tmp/cin*
+default interactive log
+.TP
+.F /usr/include/cin.h
+various function and variable declarations
+.TP
+.F /usr/lib/libcin.a
+various predefined functions
+.TP
+.F $HOME/.cin.c
+interpreter startup file
+.HP
+other files as in
+.IR cc (1)
+.SH "SEE ALSO"
+.I "Cin User Manual"
+.br
+.I "Cin Reference Manual"
+.br
+B. W. Kernighan and D. M. Ritchie,
+.IR "The C Programming Language" ,
+Prentice-Hall,
+1978
+.br
+.IR lint (1),
+.IR ar (1),
+.IR cc (1)
+.SH BUGS
+The addresses of
+.IR etext ,
+.IR edata ,
+and
+.I end
+are not meaningful with incrementally loaded code.

@@ -1,0 +1,534 @@
+.PD .2i
+.ds or \fP\ |\ \fB
+.de cg
+.sp
+.PP
+.ne 5
+.B \\$1
+.PP
+..
+.TH CDL 10.5 UCDS(almost obsolete)
+.SH NAME
+cdl \- circuit description language
+.SH DESCRIPTION
+The circuit descriptions used by the various design aid programs
+are expressed in dialects of the circuit design language described below.
+A complete description consists of two parts;
+an electrical circuit with chips, pins and connecting signals,
+and a physical layout with pins and chip positions.
+The commands described below are recommended;
+others exist and may work but are regarded as obsolete.
+.sp
+.PP
+.SS LOGICAL DESIGN
+.PP
+A circuit consists of
+.I chips
+connected by
+.I signals.
+The point of connection is denoted by a
+.I pin.
+Each chip has a
+.I type
+which describes its logical and electrical
+characteristics.
+(For example, \fB74S181\fP is a chip type.)
+.PP
+Types, signals and chips are identified by name.
+Pins  are identified by name and number.
+A
+.I name
+is a string of letters,
+digits or any of the characters
+.BR +\-.\ $\ /:<=>[]\(ul .
+Sometimes, the first character
+may not be a digit.
+A name may not be longer than 16 characters.
+.PP
+In the following description,
+literals appear as
+.B bold,
+whereas names are in
+.I italic.
+[ ] enclose an optional item and
+a list of items is written
+.PP
+.RS
+{\fIitem\fR}
+.RE
+.PP
+Commands are separated by either newline or
+semi-colon.
+A comment
+starts with a
+.B %
+and ends with a newline
+and may appear on any line.
+All white space serves only to separate tokens.
+.cg General
+.B .p
+.I number
+.br
+Specifies the page number for subsequent input.
+.PP
+.B .f
+[
+.I file
+]
+.br
+Subsequent input originated in
+.IR file .
+If
+.I file
+is not present, the previous file name is restored.
+.PP
+.B .q
+.br
+End of file.
+.cg Signal\ Description
+.I signal
+[
+.I pin-number
+] [ [
+.I ,
+]
+.I pin-name
+]
+.br
+.I name
+=
+.I signal
+.br
+Lines that do not start with a period are signal
+definition lines.
+Signal definitions refer to the most recent
+.B .c
+command, the pin name and number refers to the chip.
+.cg Circuit\ Description
+.B .c
+.I name
+[ [
+.B ,
+]
+.I type
+]
+.br
+.B .o
+.I name
+[ [
+.B ,
+]
+.I type
+]
+.br
+Instantiates a chip
+.I name,
+of type
+.IR type .
+This is typically used for I/O connectors.
+The command may occur more than once.
+The type of a chip need only be specified
+once in a circuit description.
+Signal descriptions that follow
+a
+.B .c
+or
+.B .o
+command refer to pins on the chip.
+.PP
+.ne 10
+.B .c
+.I name
+.B =
+.I chip
+.br
+.I chip
+must be previously defined and
+.I name
+is a synonym for
+.I chip.
+.PP
+.B .m
+.I name1 name2
+.br
+Macro parameter definition.
+The signal
+.I name1
+is to be associated with macro parameter
+.I name2\|.
+.PP
+.B .h
+.I signal
+.br
+Hand wired signal.
+The argument is the
+.I name
+of a signal that will be ignored by an
+automatic wiring program.
+.cg Chip\ Type\ Description
+.B .t
+.I name package
+.RI [ pin ]\ ...
+.br
+Define a chip type
+.I name.
+The name of the
+.I package
+in which it is installed,
+and pin numbers,
+.I pin,
+for the special signal connections
+are specified.
+The special voltage
+pin numbers, if present, must be in the same
+sequence with which the special signals are numbered.
+This usage is discouraged;
+use the \f3.t[tT]\fP commands described below.
+(See
+.B .v
+command.)
+All commands of the form ".t?" are meant to follow a .t line.
+.PP
+.B .t
+.I name
+.B =
+.I type
+.br
+.I name
+is a synonym for
+.IR type .
+.PP
+.BI .tt \ sequence_of_single_character_pin_descriptors
+.br
+The number of characters must equal the numbers of pins on this \fItype\fP\|.
+The meaning of the descriptors is given in \fIwcheck\fP\|.
+.PP
+.BI .tT \ sequence_of_single_character_pin_descriptors
+.br
+This means the same as the equivalent
+.B .tt
+command except that every
+.B [gvwxyz]
+pin must have a corresponding
+.B .vb
+pin.
+.PP
+.B .ta
+.I pin1
+\&...
+.I pin2
+\&...
+.br
+.I pin1
+\&...
+is the set of address pins, in order,
+such that the most significant address bit
+appears first in the list.
+.I pin2
+\&...
+is the set of output pins.
+.PP
+.B .td
+.I delay
+.I pin1
+\&...
+.B \-
+.I pin2
+\&...
+.br
+The propagation delay (conventionally in nanoseconds) from inputs
+.I pin1 ...
+to outputs
+.I pin2 ...
+is given.
+.PP
+.B .ti
+.I hi
+.I lo
+.I pin
+\&...
+.br
+The input (or output) current range for the set of pins
+is given by
+.I hi
+and
+.I lo.
+Current is conventionally expressed in milliamperes.
+.PP
+.B .tp
+.I name
+.I number
+\&...
+.br
+The given
+pin
+.I name
+is associated with the pin
+.I number.
+.I Name
+may contain generators such as
+.B Q[0-7]
+which cause pin names
+.B Q0
+.B \&...
+.B Q7
+to be assigned to the pin numbers given.
+Multiple bracket constructs may be used.
+In any case, the resulting list is lexicographically sorted before
+assigning to pin numbers.
+.PP
+.B .ts
+.I setup
+.I pin
+\&...
+.br
+Specifies the setup time required by the device
+at the pins given.
+.PP
+.B .tw
+.I c1
+.I c2
+.br
+.I c1
+is the average current drawn by the device
+in milliamperes and
+.I c2
+is the maximum.
+Both are specified as floating point numbers.
+.SH
+.ne 9
+.sp
+.PP
+.B PHYSICAL DESIGN
+.PP
+The physical design
+consists of a
+.I board
+containing
+.IR pin-holes .
+The description details the positions of the pin-holes and the
+position and orientation of the chips.
+No special case is made of I/O connectors;
+they are best considered as unmoveable packages.
+The description is divided into two files;
+details can be found in
+.IR board (7).
+.PP
+The coordinate system for the board is with
+.I x
+increasing to the right and
+.I y
+increasing upwards.
+The origin is at the lower left corner;
+thus, no coordinate should ever be negative.
+The circuit board and components mounted on it are described
+as rectangles.
+They are positioned so that their sides are parallel to one or other
+of the axes used to describe circuit board geometry.
+Measurements are expressed in
+units of
+.B 1/100
+of an inch.
+All are integers and have no explicit decimal point.
+Coordinates are expressed as pairs of integers separated by `\fB/\fR'
+with
+the
+.I x
+coordinate appearing first.
+All rectangular regions are half open;
+the upper and right edges are outside the rectangle.
+.PP
+It is sometimes necessary to provide a list of
+coordinates.
+Invariably each coordinate is associated with a numbered item
+(say, a pin number).
+A one item list consists of the item
+number followed by its coordinates as in
+.RS
+.PP
+28 170/250
+.RE
+A series of equally spaced
+and consecutively numbered items can be described by
+giving the first and last item descriptions and separating the
+two with `\fB\-\fR' as in
+.RS
+.PP
+28 170/250 \- 30 190/200
+.RE
+(item number 29 appears at position 180/225).
+If the item numbers are equally spaced but not consecutive
+a step size can follow the `\fB\-\fR' as in
+.RS
+.PP
+12 200/700 \-9 147 200/100
+.RE
+(which describes the positions of items numbered 12, 21, 30 etc.).
+.cg Board\ Description
+.B .B
+.I string
+.br
+The board name is set to
+.IR string .
+.PP
+.B .A
+.I coord coord coord coord
+.br
+The points used in board alignment are
+.IR "coord , coord , coord , coord ."
+.PP
+.B .K
+.I "name pmin pmax ox oy cx cy"
+.br
+Define a package
+.I name
+with a bounding rectangle with lower left corner
+.I (ox,oy)
+and upper right corner
+.I (cx,cy)
+as values relative to pin
+.I pmin
+of the package.
+The package has pins numbered from
+.I pmin
+to
+.I pmax
+inclusive;
+expect trouble if
+.I pmin
+is not zero or one.
+Placement of a package involves both its pins and rectangle.
+The rectangle must not intersect any other placed package,
+and there must be a pin-hole for each of the pins.
+.PP
+.B .ka
+.I anything
+.br
+After skipping white space
+the rest of the line is stored as an artwork reference.
+.PP
+.B .kd
+.I letter
+.br
+Specifies the drill type for following
+.B .kp
+commands.
+There can be multiple
+.B .kd
+commands per package.
+Currently recognized drill types are found in
+\f(CW/usr/jhc/pins/drills\fP.
+.PP
+.B .kp
+.RI {\| pin
+.IR coord }
+.br
+One or more
+.B .kp
+commands following a
+.B .k
+command
+gives the list of pins
+and their coordinates relative to pin
+.IR pmin .
+.PP
+.B .ku
+.br
+Guarantees this package will not be moved by any automatic process.
+.PP
+.B .v
+.I number name
+.br
+Define Voltage and Ground special signals.
+The special signals are numbered consecutively from zero to five.
+The arguments are
+the special signal
+.I number
+and the signal
+.I name
+to which it corresponds.
+.PP
+.B .vb
+.RI { pin
+.IR coord }
+.br
+Special signal pin positions.
+One or more
+.B .vb
+commands following a
+.B .v
+command gives the list of pins
+and their positions on the circuit board.
+The pins should be numbered consecutively from one.
+.PP
+.B .vd
+.I number
+.br
+Specifies the drill type for following
+.B .vb
+commands.
+There can be multiple
+.B .vd
+commands.
+The types are as descibed for \f3.kd\fP.
+.PP
+.B .C
+.I name coord orientation flags
+.br
+Specifies the position and orientation for the chip
+.IR name .
+The orientation is the number of right angles clockwise to
+rotate the package.
+The meaning of
+.I flags
+can be found in
+.IR /usr/include/cdl.h ;
+it should be initialised to zero.
+.PP
+.B .P
+.I coord lx ly spacing diam
+.br
+Define a rectangular array of pin-holes with diameter of
+.IR diam .
+The lower left corner of the rectangle is
+.IR coord ,
+and the width and height are
+.I lx,ly
+respectively.
+The pins are placed
+.I spacing
+apart.
+If
+.I spacing
+is of the form
+.IR sx / sy ,
+the spacings in the
+.IR x and y
+directions are set independently.
+.PP
+.B .R
+.I coord lx ly type
+.br
+Define a special rectangular region.
+Type 
+.B .A
+defines a region that will not be used by the
+automatic placement algorithm.
+.PP
+.B .W
+.I chip1 pin1 chip2 pin2 net
+.br
+Define a wire link between
+.I pin1
+of
+.I chip1
+and
+.I pin2
+of
+.IR chip2 .
+The net name is
+.IR net .
+.sp 2
+A line with any undefined key causes most programs to halt.
+.SH SEE ALSO
+.IR cdm (10.1)

@@ -1,0 +1,105 @@
+.TH ETHERNET 4
+.CT 2 comm_mach
+.SH NAME
+ethernet \(mi Ethernet interface
+.SH SYNOPSIS
+.B #include <sys/enio.h>
+.br
+.B #include <sys/ethernet.h>
+.SH DESCRIPTION
+There are drivers for several hardware interfaces to Ethernet.
+All have the same programming interface.
+.PP
+There are eight software channels for each hardware device.
+A channel sends and receives packets
+for a single Ethernet interface;
+hence eight protocols
+may be used independently on the same device.
+If a channel is open,
+it may not be opened again.
+.PP
+.I Read
+and
+.I write
+deal in Ethernet packets,
+consisting of a header
+followed by no less than 46
+but no more than 1500 bytes of data.
+The header,
+defined in
+.BR <sys/ethernet.h> ,
+is as follows:
+.LP
+.EX
+#define	ETHERALEN	6	/* bytes in an ethernet address */
+
+struct etherpup {
+	unsigned char dhost[ETHERALEN];	/* destination address */
+	unsigned char shost[ETHERALEN];	/* source address */
+	unsigned short type;	/* protocol type */
+};
+.EE
+.LP
+The protocol type is in the network's byte order,
+most significant byte first.
+.PP
+.I Read
+on a channel returns at most one complete packet.
+If only part of a packet fits in the
+.I read
+buffer,
+successive reads return the remainder.
+.I Write
+should be given a single complete packet;
+.B dhost
+and
+.B type
+must be filled in.
+The system supplies
+.BR shost .
+.PP
+There are a few
+.I ioctl
+calls,
+defined in
+.BR <sys/enio.h> :
+.TP "\w'ENIOTYPE 'u"
+.B ENIOTYPE
+The third argument
+points to a short integer;
+use that as the protocol type for this channel.
+.TP
+.B ENIOADDR
+The third argument
+points to a six-character buffer;
+copy the hardware address of this interface there.
+.PP
+Minor device numbers
+0-7
+are the eight channels of the first hardware device
+of a given type;
+8-15 are the second device,
+and so on.
+File names usually end in two digits,
+like
+.B /dev/il13
+for the fourth channel of the second Interlan device.
+.SH FILES
+.TF /dev/bna??
+.TP
+.F /dev/il??
+Interlan NI1010A devices
+.TP
+.F /dev/qe??
+DEQNA devices
+.TP
+.F /dev/bna??
+DEBNA devices
+.SH SEE ALSO
+.IR internet (3),
+.IR ipconfig (8)
+.SH BUGS
+The DEQNA driver
+fills in the protocol type field
+in transmitted packets;
+other drivers don't.

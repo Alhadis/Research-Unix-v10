@@ -1,0 +1,46 @@
+.TH ACCT 2
+.CT 2 sa
+.SH NAME
+acct \(mi turn accounting on or off
+.SH SYNOPSIS
+.nf
+.B int acct(file)
+.B char *file;
+.fi
+.SH DESCRIPTION
+.IR Acct ,
+with a null-terminated string naming an existing file
+as argument, turns on accounting;
+records for each terminating process are appended to
+.IR file .
+An argument of
+.L
+(char *)0
+causes accounting to be turned off.
+.PP
+.I Acct
+may only be invoked by the super-user.
+.PP
+The accounting file format is given in
+.IR acct (5).
+.SH "SEE ALSO"
+.IR acct (5), 
+.IR sa (8)
+.SH DIAGNOSTICS
+.B EACCES
+(file not a regular file),
+.B EBUSY
+(accounting already turned on),
+.BR EFAULT ,
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR ,
+.BR EPERM ,
+.BR EROFS ,
+.BR ETXTBSY
+.SH BUGS
+No accounting is produced for programs running
+when a crash occurs.
+In particular nonterminating programs are never
+accounted for.

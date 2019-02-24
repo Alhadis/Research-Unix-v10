@@ -1,0 +1,130 @@
+.TH GETC 3S
+.CT 2 file_io
+.SH NAME
+getc, getchar, fgetc, getw, putc, putchar, fputc, putw  \(mi character- or word-at-a-time stream input/output
+.SH SYNOPSIS
+.2C
+.nf
+.B #include <stdio.h>
+.PP
+.B int getc(stream)
+.B FILE *stream;
+.PP
+.B int getchar()
+.PP
+.B int getw(stream)
+.B FILE *stream;
+.PP
+.B int fgetc(stream)
+.B FILE *stream;
+.PP
+.B int putc(c, stream)
+.B char c;
+.B FILE *stream;
+.PP
+.B putchar(c)
+.PP
+.B putw(w, stream)
+.B FILE *stream;
+.PP
+.B fputc(c, stream)
+.B FILE *stream;
+.1C
+.fi
+.SH DESCRIPTION
+.I Getc
+returns the next character from the named input
+.IR stream .
+.PP
+.IR Getchar ()
+is identical to
+.IR getc ( stdin ).
+.PP
+.I Getw
+returns the next
+word (32-bit integer on a VAX) from the named input
+.IR stream .
+.I Getw
+assumes no special alignment in the file.
+.PP
+.I Putc
+appends the character
+.I c
+to the named output
+.IR stream .
+It returns the character written.
+.PP
+.IR Putchar ( c )
+is identical to
+.IR putc ( "c, stdout" ).
+.PP
+.I Putw
+appends word
+(i.e.\&
+.BR int )
+.I w
+to the output
+.IR stream .
+It returns the word written.
+.I Putw
+neither assumes nor causes special alignment in the file.
+.PP
+.I Fgetc
+and
+.I fputc
+behave like
+.I getc
+and
+.I putc,
+but are genuine functions, not  macros;
+they may be used to save object text.
+.PP
+The standard output stream
+.B stdout
+is normally buffered,
+but is flushed whenever 
+.IR getc
+causes a buffer to be refilled from
+.BR stdin .
+The standard error stream
+.B stderr
+is normally unbuffered.
+These defaults may be changed by
+.IR setbuf (3).
+When an output stream is unbuffered, information appears on the
+destination file or terminal as soon as written.
+When an output stream is buffered, many characters are saved up and written as a block.
+.I Fflush
+may be used to force the block out early; see
+.IR fopen (3).
+.SH "SEE ALSO"
+.IR fopen (3),
+.IR ungetc (3),
+.IR stdio (3)
+.SH DIAGNOSTICS
+These functions return the integer constant
+.B EOF
+at end of file or upon read error.
+For
+.I getw
+or
+.I putw
+this indication is ambiguous;
+.IR  ferror (3)
+may be used to distinguish.
+.SH BUGS
+Because they are implemented as macros,
+.I getc
+and
+.I putc
+treat
+.I stream
+arguments with side effects incorrectly.
+For example,
+.B getc(*f++)
+is wrong.
+.br
+The routines in
+.IR printf (3)
+provide temporary buffering
+even when buffering has been turned off.

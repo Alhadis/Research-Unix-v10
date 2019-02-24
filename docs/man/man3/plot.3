@@ -1,0 +1,161 @@
+.TH PLOT 3
+.CT 2 comm_term
+.SH NAME
+vec, move, etc. \(mi plot graphics interface
+.SH SYNOPSIS
+.nf
+.2C
+.B #include <plot.h>
+.PP
+.B openpl(s)
+.B char *s;
+.PP
+.B closepl()
+.PP
+.B erase()
+.PP
+.B move(x, y)
+.B double x, y;
+.PP
+.B rmove(dx, dy)
+.B double dx, dy;
+.PP
+.B point(x, y)
+.B double dx, dy;
+.PP
+.B vec(x, y)
+.B double x, y;
+.PP
+.B rvec(dx, dy)
+.B double dx, dy;
+.PP
+.B line(x1, y1, x2, y2)
+.B double x1, y1, x2, y2;
+.PP
+.B "arc(x1, y1, x2, y2, x, y, r)"
+.B "double x1, y1, x2, y2, x, y, r;"
+.PP
+.B circle(xc, yc, r)
+.B double xc, yc, r;
+.PP
+.B box(x1, y1, x2, y2)
+.B double x1, y1, x2, y2;
+.PP
+.B sbox(x1, y1, x2, y2)
+.B double x1, y1, x2, y2;
+.PP
+.B "parabola(x1, y1, x2, y2, x3, y3)"
+.B "double x1, y1, x2, y2, x3, y3;"
+.PP
+.B fill(n, arr) int n[];
+.B double *arr[];
+.PP
+.B poly(n, arr) int n[];
+.B double *arr[];
+.PP
+.B spline(n, arr)
+.B int n[];
+.B double *arr[];
+.PP
+.B cspline(n, arr)
+.B int n[];
+.B double *arr[];
+.PP
+.B fspline(n, arr)
+.B int n[];
+.B double *arr[];
+.PP
+.B lspline(n, arr)
+.B int n[];
+.B double *arr[];
+.PP
+.B dspline(n, arr)
+.B int n[];
+.B double *arr[];
+.PP
+.B text(s)
+.B char *s;
+.PP
+.B color(s)
+.B char *s;
+.PP
+.B cfill(s)
+.B char *s;
+.PP
+.B pen(s)
+.B char *s;
+.PP
+.B range(x1, y1, x2, y2)
+.B double x1, y1, x2, y2;
+.PP
+.B frame(x1, y1, x2, y2)
+.B double x1, y1, x2, y2;
+.PP
+.B grade(x)
+.B double x;
+.PP
+.B save()
+.PP
+.B restore()
+.PP
+.B ppause()
+.1C
+.ft P
+.SH DESCRIPTION
+These functions generate either a device-independent
+graphic stream (see
+.IR plot (5))
+or device-dependent graphics commands.
+The include file
+.B <plot.h>
+is used only for device-independent output.
+An alternative include file,
+.BR <iplot.h> ,
+supports device-independent output using identically named
+functions of integer, instead of double, arguments.
+.PP
+Libraries for different devices are loaded with the following
+.IR ld (1)
+flags:
+.TF -lblit
+.TP
+.B -lplot
+general stream output
+.TP
+.B -l2621
+HP2621 terminal
+.TP
+.B -l4014
+Tektronix 4014 terminal
+.TP
+.B -ltr
+Troff input, tuned for the Mergenthaler Linotron 202 phototypesetter
+.TP
+.B -lpen
+HP7580 pen plotter
+.TP
+.B -l5620
+5620 terminal running
+.I mux
+.PD
+.PP
+String arguments are null-terminated and may not contain
+embedded newlines.
+For details on string arguments, see
+.IR plot (5).
+.I Poly, fill,
+and the various spline functions
+take an integer array and an array of pointers
+to double floating point arrays.
+The integers specify the number of vertices
+.RI ( x-y
+pairs)
+in the floating point array.
+The last integer entry should be 0.
+.SH "SEE ALSO"
+.IR plot (1), 
+.IR plot (5)
+.SH BUGS
+The
+.B -ltr
+library should be tuned for PostScript.

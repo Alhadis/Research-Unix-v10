@@ -1,0 +1,64 @@
+< defns
+
+default:VQ:
+	echo there is no default
+
+cover.out:	cover.ms
+	troff -mpm $prereq > $target
+
+summary:VQ:
+	awk '/^n/	{ notrcv++; }
+	/^d/		{ rcv++; pages += $2; }
+	/^r/		{ rev++; pages += $2; }
+	END		{ total = notrcv+rcv+rev;
+			printf "%d/%d(%.0f%%) not received\n", notrcv, total, 100*notrcv/total
+			printf "%d/%d(%.0f%%) received, not processed\n", rcv, total, 100*rcv/total
+			printf "%d/%d(%.0f%%) reviewable\n", rev, total, 100*rev/total
+			printf "%d pages received; est. total %d pages\n", pages, pages*total/(rcv+rev)
+			}' < authors
+
+vol2.ref.i:	vol2.ref
+	pinvert -v -l16 -c/dev/null $prereq
+
+ref.out:D:	vol2.ref.i
+	echo '.TL
+	Volume 2 References
+	.LP
+	.sp 2
+	.2C
+	.LP
+	|reference_list(vol2.ref)' | $PREFER -o author | troff -mpm > $target
+
+renumber:V:
+	mk vol2.ref.i incpg
+	(cd ../contents; mk headers)
+	mk incpg
+
+backup:V:
+	/usr/lib/backup/fcheck 512 7 /usr/vol2 | grep -v '\.out$' | /usr/lib/backup/act x
+
+PAPERS=`cd /usr/vol2; echo [a-z]*`
+LPS=${PAPERS:%=%.lp}
+ALLS=${PAPERS:%=%.all}
+PGS=${PAPERS:%=%.pg}
+SPELLS=${PAPERS:%=%.spell}
+
+inclp:V:	$LPS
+
+%.lp:V:
+	cd ../$stem; mk lp
+
+incall:V:	$ALLS
+
+%.all:V:
+	cd ../$stem; mk all
+
+incpg:V:	$PGS
+
+%.pg:V:
+	cd ../$stem; mk pg
+
+incspell:V:	$SPELLS
+
+%.spell:VQ:
+	cd ../$stem; mk spell

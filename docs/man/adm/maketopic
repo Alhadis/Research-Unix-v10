@@ -1,0 +1,107 @@
+mkdir tjunk 2>/dev/null
+cd tjunk
+rm [12]* 2>/dev/null
+for i in /usr/man/man[1-9]/*
+do
+	awk '
+/^\.TH/	{
+	page = $2 "(" $3 ")"
+	}
+/^\.CT/	{
+	page = FILENAME
+	sub(/.*\//,"",page)
+	n=gsub(/\./,"(",page)
+	if(n>1)
+		for(i=1;i<n;i++)
+			sub(/\(/,".",page)
+	sub(/$/,")",page)
+	section = $2
+	for(i=3;i<=NF;i++){
+		if(length($i) >10)sname[substr($i,1,10)]
+		else sname[$i] = 1
+	}
+	}
+/^\.SH NAME/	{
+	while(getline && $0 !~ /^\./)
+		name = name $0
+	for(i in sname)
+		print name "	" page  >>( section "." i)
+	exit
+}' $i
+done
+for i in 1* 2*
+do
+	sort $i >s$i
+	awk "
+BEGIN	{FS = \"	\" }
+	{
+	st = \"\"
+	if(length(\$1) > 107){
+		n=split(\$1, arr, \"\\\\\")
+		print \".ne 2\"
+		if(length(arr[1]) > 100){
+			m=split(arr[1], l, \",\")
+			for(i=1;i<m;i++){
+				st = st l[i] \",\"
+				if(length(st) >= 90){
+				print st \"	\" \$2
+				st = \"\"
+				}
+			}
+			st = st l[m]
+			print \".ti .5i\"
+			if(length(st)+length(arr[2])>=90){
+				print st
+				print \".ti .5i\"
+				print \" \\\\\" arr[2]
+			}
+			else print st \" \\\\\" arr[2]
+			next
+		}
+		if(length(arr[2]) > 100){
+			m=split(arr[2],l,\",\")
+			st = arr[1] \" \\\\\"
+			for(i=1;i<m;i++){
+				st = st l[i] \",\"
+				if(length(st) >= 90){
+				if(flag==0)print st \"	\" \$2
+				else print st
+				flag=1
+				print \".ti .5i\"
+				st = \"\"
+				}
+			}
+			st = st l[m]
+			print st
+			next
+		}
+		print arr[1] \"	\" \$2
+		print \".ti .5i\"
+		print \"\\\\\" arr[2]
+		next
+	}
+	print \$0
+	}
+" s$i >$i
+done
+awk "
+BEGIN	{ FS = \"	\" }
+{
+	if(\$1 ~ /[0-9]/){
+		section = \$1
+		print \".yy \\\"\" \$2 \"\\\"\"
+		next
+	}
+	if(\$1 == \"\")next
+	print \".xx \\\"\" \$2 \"\\\"\"
+	if(length(\$1 > 10))
+		name = substr(\$1,1,10)
+	else name = \$1
+	system(\"cat \" section \".\" name)
+}" /usr/man/adm/categories >topindex
+exit
+#rm 1* 2* s[12]* x[12]*
+mv topindex ..
+cd ..
+rmdir tjunk
+

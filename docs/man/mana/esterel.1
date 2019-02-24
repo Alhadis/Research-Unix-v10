@@ -1,0 +1,258 @@
+.EV
+.TH esterel 1 local INRIA-CMA Esterel
+.SH NAME
+esterel \- Esterel compiler
+.SH SYNTAX
+.B esterel
+[options] [file] ...
+.SH DESCRIPTION
+The 
+.I esterel 
+command invokes the various utilities constituting the Esterel language
+development tools:
+.IP "\fIstrlic\fP"
+The Esterel front-end: receives files containing Esterel source
+(\fB.strl\fP suffix) producing intermediate code (\fB.ic);
+.IP "\fIiclc\fP"
+The Esterel binder, performing the expansion of the \fBcopymodule\fP
+statements; it receives several \fB.ic\fP (or \fB.lc\fP)
+files and builds an unique linked code file (\fB.lc\fP);
+.IP "\fIlcoc\fP"
+The Esterel compiler, which produces from an unique \fB.lc\fP file,
+Esterel automata in portable format (\fB.oc\fP);
+.IP "\fIocl\fP"
+A generic name for Esterel code generators,
+translating portable automata (\fB.oc\fP) into a program written in one of
+the supported target languages (see the \fB-L\fP option below).
+.PP
+If no files are given to the \fIesterel\fP command, the standard input
+is used. Any suffix in the list \fB.strl\fP, \fB.ic\fP, \fB.lc\fP,
+or \fB.oc\fP is recognized in the files names: the \fIesterel\fP command
+will arrange for only the appropriate utilities to be called.
+.SH OPTIONS
+The following option is for the \fIesterel\fP command itself:
+.IP "\fB-n\fP"
+Tell what is to be done, but don't do it.
+.PP
+The option
+.IP "\fB-version\fP"
+display the version number of the \fIesterel\fP command, as well as the
+ones of the various utilities including all known code generators.
+.PP
+The following options are passed to all four utilities:
+.IP "\fB-v\fP"
+Verbose mode: the \fIesterel\fP command and the various utilities
+tell what they are doing;
+.IP "\fB-w\fP"
+Suppresse all warning messages; 
+.IP "\fB-W\fP"
+Display all warning messages (the default is to display only "selected"
+warnings); 
+.IP "\fB-stat\fP"
+Display various time statistics;
+.IP "\fB-memstat\fP"
+Display statistics on dynamically allocated memory.
+.PP
+The three following options enable to stop the compilation process at
+some intermediate stage:
+.IP "\fB-ic\fP"
+Just use \fIstrlic\fP to convert \fB.strl\fP files into \fB.ic\fP files
+(with the same base name), ignoring all other files;
+.IP "\fB-lc\fP"
+Stop after running the binder (\fIiclc\fP);
+.IP "\fB-oc\fP"
+Stop after running the compiler (\fIlcoc\fP).
+.PP
+For the \fB-lc\fP and \fB-oc\fP options, one can specify the output
+file name(s) with the \fB-B\fP and \fB-D\fP options.
+.IP "\fB-B \fP\fIname\fP"
+\fIname\fP denotes the output files default base name.
+The appropriate suffix is added automatically (and possibly a working
+directory name --see the following option).
+If this option is omitted and if the \fIesterel\fP command
+is invoked with only one file name, \fIname\fP defaults to the 
+base name of this unique file with the appropriate suffix; 
+otherwise it defaults to the base name \fBesterel\fP, still followed
+by the appropriate suffix.
+.IP "\fB-D \fP\fIdirectory\fP"
+Specify a directory where the files produced by the command will be
+placed. The default is the current directory.
+
+The \fB-B\fP and \fB-D\fP options and the corresponding
+default rules apply to the files produced by
+the \fB-K\fP (except \fB-Kic\fP) and \fB-L\fP options below.
+.PP
+The \fIesterel\fP command removes all the intermediate files it has created,
+unless one of the following options is given:
+.IP "\fB-Kic\fP
+Keep all the \fB.ic\fP files (their names being the original ones, with
+the suffix \fB.strl\fP replaced by \fB.ic\fP);
+.IP "\fB-Klc\fP"
+Keep the (unique) \fB.lc\fP file; 
+.IP "\fB-Koc\fP"
+Keep the (unique) \fB.oc\fP file;
+.IP "\fB-K"
+Keep all the intermediate files.
+.PP
+The binder \fIiclc\fP recognizes some specific options:
+.IP "\fB-Rs\fP"
+Trace signal captures and renaming;
+.IP "\fB-Rc\fP"
+Trace constant captures and renaming;
+.IP "\fB-R\fP"
+Trace both signal and constant captures and renaming.
+.PP
+The compiler \fIlcoc\fP recognizes also some specific options:
+.IP "\fB-size\fP"
+Display the final size (states and bytes) of the generated automata; 
+.IP "\fB-show\fP"
+Display dynamically the number of states generated so far.  
+.PP
+The code generators (\fIocl\fP) recognize an unique option:
+.IP "\fB-L\fP[\fIlanguage\fP][:\fIspecific_options\fP]"
+.br
+Set the target language: at this time only \fBc\fP, \fBlelisp\fP, 
+\fBtex\fP, \fBplm\fP, \fBauto\fP,
+and \fBdebug\fP are known; it is likely that other languages be added.
+The code generators have a name of the form \fBoc\fP\fIlanguage\fP.
+If the \fB-L\fP option or the language are omitted, the default is \fBc\fP.
+The string \fIspecific_options\fP allows to transmit language dependent
+options to a given code generator (see \fBocl(1)\fP).
+.IP
+There can be as many \fB-L\fP options as needed.
+.PP
+Finally, there is a particular option to do as much as specified (by the
+stop options) but producing nothing.
+.IP "\fB-s\fP"
+Perform all the compilation process, as specified by the other options,
+but produce nothing.
+.SH EXAMPLES
+The simple command
+.sp
+.RS
+.B esterel foo.strl
+.RE
+.sp
+performs a full Esterel compilation, leaving the produced automaton,
+in C language form, in the file \fBfoo.c\fP.
+.PP
+To produce debug format while keeping the generated automaton in portable
+format, try
+.sp
+.RS
+.B esterel -Koc -Ldebug foo.strl
+.RE
+.sp
+.PP
+A little more complex, the following command
+.sp
+.RS
+.B esterel -Kic -Koc -Bautom -Llisp 
+.B f1.strl f2.ic f3.lc
+.RE
+.sp
+will pass \fBf1.strl\fP through \fIstrlic\fP and keep the \fBf1.ic\fP file;
+then it will pass \fBf1.ic\fP, \fBf2.ic\fP, and \fBf3.lc\fP 
+through \fIiclc\fP and \fIlcoc\fP, producing the file \fBautom.oc\fP
+(the intermediate files are discarded); finally,
+this last file will be converted into the LeLisp file \fBautom.ll\fP
+by \fIoclelisp\fP.
+.PP
+The command
+.sp
+.RS
+.B esterel -K -Bfoo -D/a/b f1.strl f2.strl f3.ic f4.oc 
+.RE
+.sp
+produces the following files: \fB/a/b/f1.ic\fP, \fB/a/b/f2.ic\fP,
+\fB/a/b/foo.lc\fP, \fB/a/b/foo.oc\fP, and \fB/a/b/foo.c\fP.
+.PP
+To illustrate the \fB-s\fP option, note that
+.sp
+.RS
+.B esterel -s foo.strl
+.RE
+.sp
+performs a full compilation upto C code generation, but the C file is not
+produced; similarly, 
+.sp
+.RS
+.B esterel -ic -s foo.strl
+.RE
+.sp
+will only execute the front-end \fIstrlic\fP without producing any \fB.ic\fP
+file.
+.PP
+Finally, 
+.sp
+.RS
+.B esterel -Lc -Lauto:"-signal EV1,EV2" foo.strl
+.RE
+.sp
+performs a full compilation of the Esterel source file \fBfoo.strl\fP
+to auto format (\fBfoo.auto\fP), passing the arguments 
+\fB-signal EV1,EV2\fP untouched to the corresponding code generator
+(here \fIocauto\fP).
+.SH DIAGNOSTICS
+The command returns with exit code 0 if (and only if)
+no error was detected by the various utilities.
+.PP
+Various error or warning messages indicate 
+incompatible or redundant options, or error
+conditions related to file handling.
+.SH BUGS
+The command checks whether it generates a file which is already
+present in its argument list, and if so, stops with an error, to
+avoid clobbering the file.
+.PP
+The corresponding test is based on the name of files as given
+by the user and is rather rustic.
+For instance, the following erroneous condition (or any similar one)
+is not detected
+.sp
+.RS
+.B esterel -K -Bfoo  -D.. foo.strl .././foo.lc
+.RE
+.sp
+and will certainly result in loosing the original content of ../foo.lc
+(use the \fB-n\fP  option to see what will occur).
+.SH FILES
+.PP
+In the following, $lib designates the default library directory for
+Esterel utilities (usually /usr/local/lib/esterel). This default 
+path can be modified by the installer of the Esterel system, or by any
+user setting the environment variable ESTERELLIB.
+.sp
+.ta \w'mmmmmm'u +\w'$lib/strlic   'u
+.br
+.ti0
+	$lib/strlic	Esterel front-end
+.ti0
+	$lib/iclc	Esterel binder
+.ti0
+	$lib/lcoc	Esterel compiler (automaton generator)
+.ti0
+	$lib/oc*	Esterel code generators
+.ti0
+
+	*.strl		Esterel source files
+.ti0
+	*.ic		Intermediate code files
+.ti0
+	*.lc		Linked intermediate code file
+.ti0
+	*.oc		Portable automata file
+.ti0
+	esterel.*	Default names for keeping intermediate files
+.SH SEE ALSO
+strlic(l), iclc(l), lcoc(l), ocl(l)
+.br
+\fIEsterel V3 Reference Manual\fP
+.br
+\fIEsterel V3 System Manuals\fP
+.SH IDENTIFICATION
+Author: Jean-Paul Rigault, Ecole des Mines de Paris, CMA
+.br
+$Revision: 1.1 $ 
+.br
+$Date: 88/04/07 13:39:34 $

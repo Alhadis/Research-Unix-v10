@@ -1,0 +1,255 @@
+.\"@(#)uucp.1c	5.2
+.TH UUCP 1
+.CT 1 comm_mach
+.SH NAME
+uucp, uulog, uuname \- unix-to-unix remote file copy
+.SH SYNOPSIS
+.B uucp
+[
+.I options ...
+]
+.I source ... destination
+.PP
+.B uulog
+[
+.I option ...
+]
+[
+.I system
+]
+.PP
+.B uuname
+[
+.B -l
+]
+.SH DESCRIPTION
+.I Uucp\^
+copies
+.I source
+files to the
+.I destination
+file or directory.
+A file name may be an ordinary path name, or may
+have the form:
+.IP
+.IB system-name ! filename
+.PP
+where
+.I system-name\^
+is a computer that
+.I uucp\^
+knows about.
+.PP
+Quoted shell metacharacters
+.BR ? ,
+.B \(**
+and
+.B [ ]
+appearing in a remote
+.I filename
+will be expanded on the remote system.
+.PP
+Path names may be:
+.TP
+(1)
+a full path name;
+.TP
+(2)
+a path name preceded by
+.BI ~ user /
+where
+.I user\^
+is a login name on the specified system
+and is replaced by that user's login directory;
+.TP
+(3)
+a path name preceded by
+.BI ~/ destination\^
+where
+.B ~
+stands for
+.FR /usr/spool/uucppublic .
+The destination will be treated as a file name unless
+more than one file is being transferred by this request,
+the destination is already a directory,
+or the destination ends with 
+.LR / .
+For example,
+.L ~/dan/
+as the destination will make the directory
+.L /usr/spool/uucppublic/dan
+if it does not exist, and put the requested file(s)
+in that directory.
+.TP
+(4)
+anything else is prefixed by the current directory.
+.PP
+If the result is an erroneous path name for the remote system
+the copy will fail.
+If the
+.I destination\^
+is a directory, the basename of the
+.I filename
+is used.
+.ig
+If a simple
+.I ~user\^
+destination is inaccessible to
+.IR uucp ,
+data is copied to a spool directory and the user
+is notified by
+.IR mail (1).
+..
+.I Uucp\^
+preserves execute permissions across the transmission
+and gives 0666 read and write permissions (see
+.IR chmod (2)).
+.PP
+For obvious security reasons,
+the domain of remotely accessible files may
+be severely restricted.
+You will very likely not be able to fetch files
+by path name;
+ask a responsible person on the remote system to
+send them to you.
+Similarly you will probably not be able
+to send files to arbitrary path names.
+By default, the only remotely accessible files are
+those whose names begin
+.F /usr/spool/uucppublic/
+(equivalent to
+.LR ~/ ).
+.PP
+The options are
+.TF -ggrade
+.TP
+.B -C
+Copy files in their present state to a spool directory for later transfer.
+.PD 0
+.B -c
+Do not copy to the spool directory; 
+send files in their state at the time of transmission
+(default).
+.TP
+.B -d
+Make all necessary directories for the file copy (default).
+.TP
+.B -f
+Do not make intermediate directories for the file copy.
+.TP
+.BI -g grade\^
+Grade is a single letter/number;
+earlier
+.SM ASCII 
+sequence characters will cause the job to be transmitted
+earlier during a particular conversation.
+The default is
+.BR N .
+.TP
+.B -j
+Output the job identification
+.SM ASCII
+string on the standard output.
+This job identification can be used by
+.I uustat\^
+to obtain the status
+or terminate a job.
+.TP
+.B -m
+Send mail to the requester when the copy is
+completed.
+.TP
+.BI -n user\^
+Notify
+.I user\^
+on the remote system that a file was sent.
+.TP
+.B -r
+Don't start the file transfer, just queue the job.
+.TP
+.BI -x debug-level\^
+Produce debugging output.
+The
+.I debug_level
+is a number between 0 and 9;
+higher numbers give more detailed information.
+.PD
+.PP
+.I Uulog\^
+queries a log file
+of
+.I uucp\^
+or
+.I uuxqt
+transactions, optionally limited to a given
+.I system.
+Its options are
+.TF -ggrade
+.TP
+.B -f
+.PD 0
+Print recent transactions
+and follow further transactions as they occur.
+.TP
+.B -x
+Look in the uuxqt log file for the given system.
+.TP
+.BI - number\^
+Print the last
+.I number
+transactions.
+.PD
+.PP
+.I Uuname\^
+lists the uucp names of known systems.
+The
+.B -l
+option returns the local system name.
+.SH FILES
+.PD 0
+.TF/usr/spool/uucp/.Log/uuxqt/system
+.TP
+.F /usr/spool/uucp
+spool directories
+.TP
+.F /usr/spool/uucppublic
+public directory for receiving and sending
+.TP
+.F /usr/lib/uucp/*
+other data and program files
+.TP
+.BI /usr/spool/uucp/.Log/uuxqt/ system
+log of uuxqt transactions with
+.I system
+.TP
+.BI /usr/spool/uucp/.Log/uucico/ system
+log of uucp transactions with
+.I system
+.PD
+.SH SEE ALSO
+.IR uuto (1),
+.IR mail (1),
+.IR push (1),
+.IR rcp (1),
+.IR uux (1),
+.IR uustat (1),
+.IR uucico (8)
+.br
+P. Honeyman,
+`UUCP\(emthe Program that Wouldn't Go Away',
+this manual, Volume 2
+.SH BUGS
+For various reasons remote systems may decline to forward
+files transmitted through them.
+.br
+All files received by
+.I uucp\^
+will be owned by user `uucp'.
+.br
+Option
+.B -m
+works only with a single file.
+.br
+.I Uucp
+may run under a daemon userid, in which case files
+to be sent need general read permission.

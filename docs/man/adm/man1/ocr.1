@@ -1,0 +1,161 @@
+.TH OCR 1 coma,pipe,crab
+.CT 1 graphics
+.SH NAME
+ocr \- optical character recognition
+.SH SYNOPSIS
+.B ocr
+[
+.I option ...
+]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Ocr
+reads a black-and-white image of a page from
+.IR file ,
+and writes ASCII to the standard output.
+If no
+.I file
+is specified, it reads from the standard input.
+.PP
+The input is a
+.IR picfile (5)
+image of one column of machine-printed text.
+Fonts, sizes, and line-spacings may vary within the column,
+but each line should have a constant size and baseline.
+Lines should be parallel and roughly horizontal.
+.PP
+In the output, white space approximates the original page layout.
+Words are checked and corrected by reference to the
+.IR spell (1)
+dictionary, and hyphenations across lines are recombined.
+.PP
+The options are:
+.nr xx \w'\fL-pn,m\ \ '
+.TP \n(xxu
+.BI -a s
+The alphabet is the union of symbol sets selected by characters in string
+.IR s ,
+from among:
+.RS
+.PD
+.nr yy \w'\fLA\ \ '
+.TP \n(yyu
+.B A
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+.PD0
+.TP
+.B a
+abcdefghijklmnopqrstuvwxyz
+.PD0
+.TP
+.B 0
+0123456789
+.PD0
+.TP
+.B .
+\&.\^,\|-\^:\^;\|*\^'\|\^"\|?\^!\|/\|&\|$\^(\^)\^[\|\^]\|#\|@\|% \0\0\0\0\0\0\0 \kz(basic punctuation)
+.ig
+should include ` /(em + ???
+shouldn't include []#@% ???
+..
+.PD0
+.TP
+.B ^
+^\|\f(CW~\fR\^`\|\^\\\||\|\^{\|}\|_ \h'|\nzu'(extended punctuation)
+.ig
+should include []#@% ???
+shouldn't include ` ???
+..
+.PD0
+.TP
+.B +
++\^\-\^*\|/\|<\^>\^=\^.\^E\|e\|[\|] \h'|\nzu'(for numerical tables)
+.PD0
+.TP
+.B s
+.ie t \(sc\^\(dg\^\(dd\^\(ct\|\(bu\|\(rg\|\(co\|\(de\^\(fm\^\(en\|\^\(mi\|\(em \h'|\nzu'(selected non-ASCII)
+.el \\(sc\\(dg\\(dd\\(ct\\(bu\\(rg\\(co\\(de\\(fm\\(en\\(mi\\(em (selected non-ASCII)
+.PD0
+.TP
+.B l
+.ie t \(fi\|\(fl\|f\h'-.1m'f\|f\h'-.1m'\(fi\|f\h'-.1m'\(fl\|\N'114'\|\N'115'\|\N'105'\|\N'106' \h'|\nzu'(ligatures and digraphs)
+.el fi fl ff ffi ffl ae AE oe OE \h'|\nzu'(ligatures & digraphs)
+.PD
+.PP
+The default is
+.BR -aAa0.+^ ,
+the full printable-ASCII set, which may be abbreviated as
+.BR -ap .
+Thus,
+.B -apsl
+selects all of the above.
+.RE
+.PD
+.TP \n(xxu
+.BI -m l[,r]
+Trim the left and right margins of the image by
+.I l
+and
+.I r
+inches, respectively, before looking for columns.
+If
+.I r
+is omitted, it is assumed to equal
+.IR l.
+.TP
+.BI -n n
+Find the
+.I n
+largest columns.
+Each column should be compactly-printed
+and separated from the others by at least 5 ems of horizontal white space.
+.TP
+.BI -p n,m
+Point sizes lie in the range [
+.I n, m
+]; other sizes are discarded.
+The default is
+.BR -p6,24 .
+.TP
+.B -t
+Write
+.IR troff (1)
+format.
+Each column is shown on a separate page, left- and top-justified.
+Lines are placed at their original height in the column,
+and each word starts at its original horizontal location in the line.
+Characters are printed approximately original size in Times roman.
+Hyphenated words are not recombined.
+.TP
+.B -u
+Unspellable words are prefixed with `?' or, if
+.B -t
+is specified, printed boldface.
+.TP
+.BI -w w
+Find the largest column of width
+.I w
+inches.
+.SS Fonts
+Times, Helvetica, Palatino, Constant Width, Printout, Baskerville, Memphis,
+Caslon Old, Zapf, Optima, Futura, Euro, Spartan, Garamond, Breughel, Textype,
+Bembo, Souvenir and similar fonts are recognized in roman,
+italic, bold, condensed, and expanded styles.
+Also Tibetan, on request.
+.SH SEE ALSO
+.IR bcp (1),
+.IR cscan (1),
+.IR font (6),
+.IR picfile (5),
+.IR spell (1),
+.IR troff (1)
+.SH BUGS
+For best results, use images of high-contrast, cleanly-printed original
+documents digitized at a resolution of 400 pixels/inch or higher.
+It sometimes helps to restrict the alphabet and sizes to what's there.
+Multiple-column finding is chancy; if it goes wrong, runtimes may be excessive.
+.ig
+8.7 CPU minutes on pipe to read this page, September 1989.
+..

@@ -1,0 +1,154 @@
+.TH MP 3X
+.CT 2 math
+.SH NAME
+itom, mfree, madd, msub, mult, mdiv, sdiv, msqrt, mgcd, min, mout,
+fmin, fmout, move, mcmp,
+rpow, mpow \(mi multiple precision integer arithmetic
+.SH SYNOPSIS
+.nf
+.2C
+.B "#include <mp.h>"
+.B "#include <stdio.h>"
+.PP
+.B mint *itom(n)
+.B short n;
+.PP
+.B mfree(a)
+.B mint *a;
+.PP
+.B madd(a, b, c)
+.B mint *a, *b, *c;
+.PP
+.B msub(a, b, c)
+.B mint *a, *b, *c;
+.PP
+.B mult(a, b, c)
+.B mint *a, *b, *c;
+.PP
+.B mgcd(a, b, c)
+.B mint *a, *b, *c;
+.PP
+.B mdiv(a, b, q, r)
+.B mint *a, *b, *q, *r;
+.PP
+.B sdiv(a, n, q, r)
+.B mint *a, *q;
+.B short n, *r;
+.PP
+.B \&
+.B msqrt(a, b, r)
+.B mint *a, *b, *r;
+.PP
+.B rpow(a, n, c)
+.B mint *a, *c;
+.PP
+.B mpow(a, b, m, c)
+.B mint *a, *b, *m, *c;
+.PP
+.B move(a, b)
+.B mint *a, *b;
+.PP
+.B mcmp(a, b)
+.B mint *a, *b;
+.PP
+.B int min(a)
+.B mint *a;
+.PP
+.B mout(a)
+.B mint *a;
+.PP
+.B int fmin(a, f)
+.B mint *a;
+.B FILE *f;
+.PP
+.B fmout(a, f)
+.B mint *a;
+.B FILE *f;
+.1C
+.SH DESCRIPTION
+These routines perform arithmetic on arbitrary-length integers
+of defined type
+.I mint.
+The functions are obtained with the
+.IR ld (1)
+option
+.BR -lmp .
+.PP
+Pointers to
+.I mint
+must be initialized using the function
+.IR itom ,
+which sets the initial value to
+.IR n .
+Thereafter space is managed automatically.
+The space may be freed by
+.IR mfree ,
+making the variable uninitialized.
+.PP
+.I Madd, msub, mult,
+and
+.I mgcd
+assign to their third arguments the sum, difference,
+product, and greatest common divisor, respectively, of their first two arguments.
+.PP
+.I Mdiv
+assigns the quotient and remainder, respectively,
+to its third and fourth arguments.
+The remainder is nonnegative and less than the divisor in magnitude.
+.I Sdiv
+is like
+.I mdiv
+except that the divisor is an ordinary integer.
+.PP
+.I Msqrt
+assigns the square root and remainder to its second and third arguments,
+respectively.
+.PP
+.I Rpow
+calculates
+.I a
+raised to the power
+.IR n ;
+.I mpow
+calculates this reduced modulo
+.IR m .
+.PP
+.IR Move
+assigns (by copying) the value of its first argument to its second argument.
+.PP
+.IR Mcmp
+returns a negative, zero, or positive integer if the value of its
+first argument is less than,
+equal to, or greater than, respectively,
+the value of its second argument.
+.PP
+.I Min
+and
+.I mout
+do decimal conversion from
+.B stdin
+and to
+.BR stdout ,
+.I fmin
+and
+.I fmout
+use file 
+.IR f ;
+see
+.IR stdio (3).
+.I Min
+and
+.I fmin
+return
+.B EOF
+on end of file.
+.SH DIAGNOSTICS
+Illegal operations and running out of memory
+produce messages and core images.
+.SH BUGS
+.I Itom
+and
+.I sdiv
+fail if 
+.I n
+is the most negative short integer.

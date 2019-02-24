@@ -1,0 +1,83 @@
+.TH ALARM 2
+.CT 2 time_man
+.SH NAME
+alarm, nap, pause \(mi schedule timing delays
+.SH SYNOPSIS
+.nf
+.B unsigned alarm(seconds)
+.B unsigned seconds;
+.PP
+.B void nap(ticks)
+.PP
+.B void pause()
+.fi
+.SH DESCRIPTION
+.I Alarm
+causes signal
+.BR SIGALRM ,
+see
+.IR signal (2),
+to be sent to the invoking process
+in the number of seconds given by the argument.
+Unless caught or ignored, the signal terminates the process.
+.PP
+Alarm requests are not stacked;
+successive calls reset the alarm clock.
+If the argument is 0,
+any alarm request is canceled.
+Because the clock has a one second resolution,
+the signal may occur up to one second early;
+because of scheduling delays,
+resumption of execution of when the signal is
+caught may be delayed an arbitrary amount.
+.PP
+The return value is the amount of time
+previously remaining in the alarm clock.
+.PP
+.I Nap
+suspends execution of
+the current process
+for 
+the specified number of clock ticks.
+If
+.I ticks
+is negative,
+it is taken to be zero;
+if it is greater than two seconds,
+it is taken to be two seconds.
+.PP
+.I Pause
+only returns upon termination of a signal handler started during the
+.IR pause .
+It is used to give up control while waiting for
+a signal,
+usually from
+.I kill
+(see
+.IR signal (2)),
+.IR alarm (2),
+or the terminal driver
+.IR ttyld (4).
+.SH "SEE ALSO"
+.IR kill (1), 
+.IR signal (2), 
+.IR setjmp (3), 
+.IR sleep (3)
+.SH BUGS
+If the argument to
+.I alarm
+is greater than 65535,
+it is treated as 65535.
+.br
+If the alarm clock expires
+during a call to
+.IR alarm ,
+the return value will be 0,
+and the signal will be delivered
+immediately after the system call returns.
+If the routine calling
+.I alarm
+saves the return value
+and later restores it,
+it will disable any alarm
+set by the signal handler.

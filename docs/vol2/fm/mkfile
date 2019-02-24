@@ -1,0 +1,29 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	fm.out
+
+pg:	fm.out
+	count fm.ms fm.out
+
+spell:VQ:
+	dospell fm.ms
+
+lp:	fm.out
+	$LP $newprereq && touch $target
+
+fm.out:D:	fm.ms $REF
+	$PREFER fm.ms | tbl | troff -mpm > $target
+
+index:V:
+	runind fm
+	$PREFER xfm.ms | tbl | troff -mpm >/dev/null 2>fm.x
+	mkindex fm.x
+	sed -f last.sed fm.ind >xfm.ind
+	mv xfm.ind fm.ind
+	rm xfm.ms
+
+pindex:V:
+	mkindex fm.x
+	sed -f last.sed fm.ind >xfm.ind
+	mv xfm.ind fm.ind

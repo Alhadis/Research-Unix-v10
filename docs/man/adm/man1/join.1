@@ -1,0 +1,133 @@
+.TH JOIN 1
+.CT 1 files
+.SH NAME
+join \(mi relational database operator
+.SH SYNOPSIS
+.B join
+[
+.I options
+]
+.I file1 file2
+.SH DESCRIPTION
+.I Join
+forms, on the standard output,
+a join
+of the two relations specified by the lines of
+.I file1
+and
+.IR file2 .
+If
+.I file1
+is 
+.LR - ,
+the standard input is used.
+.PP
+.I File1
+and
+.I file2
+must be sorted in increasing
+.SM ASCII 
+collating
+sequence on the fields
+on which they are to be joined,
+normally the first in each line.
+.PP
+There is one line in the output
+for each pair of lines in
+.I file1
+and
+.I file2
+that have identical join fields.
+The output line normally consists of the common field,
+then the rest of the line from
+.IR file1 ,
+then the rest of the line from
+.IR file2 .
+.PP
+Input fields are normally separated by blank, tab or newline;
+output fields by blank.
+In this case, multiple separators count as one, and
+leading separators are discarded.
+.PP
+These options are recognized:
+.TP
+.BI -a n
+In addition to the normal output,
+produce a line for each unpairable line in file
+.IR n ,
+where
+.I n
+is 1 or 2.
+.TP
+.BI -e \ s
+Replace empty output fields by string
+.IR s .
+.TP
+.BI -j n\ m
+Join on the
+.IR m th
+field of file
+.IR n .
+If
+.I n
+is missing, use the
+.IR m th
+field in each file.
+.TP
+.BI -o \ field \ \fR...
+Each output line comprises the named fields, each designated
+as 0, meaning the join field, or as
+.IR n . m ,
+where
+.I n
+is a file number and
+.I m
+is a field number.
+.PP
+.TP
+.BI -t c
+Use character
+.I c
+as the only separator (tab character) on input and output.
+Every appearance of
+.I c
+in a line is significant.
+.SH EXAMPLES
+.TP
+.L
+sort /etc/password | join -t: -a1 -e "" - bdays
+Add birthdays to password information, leaving unknown
+birthdays empty.
+The layout of 
+.F /etc/passwd
+is given in
+.IR passwd (5);
+.B bdays
+contains sorted lines like
+.LR "ken:Feb\ 4" .
+.TP
+.L
+tr : ' ' </etc/passwd | sort +2 >temp
+.br
+.ns
+.TP
+.L
+join -j1 3 -j2 3 -o 1.1 2.1 temp temp | awk '$1 < $2'
+Print all pairs of users with identical userids.
+.SH "SEE ALSO"
+.IR sort (1), 
+.IR comm (1), 
+.IR awk (1)
+.SH BUGS
+With default field separation,
+the collating sequence is that of
+.LR "sort\ -b" ;
+with
+.BR -t ,
+the sequence is that of a plain sort.
+.br
+The field conventions of
+.I join, sort, comm, uniq, look
+and
+.IR awk (1)
+are wildly incongruent.

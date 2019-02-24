@@ -1,0 +1,28 @@
+< ../ADM/defns
+<../index/defns
+
+all:V:	anim.out
+
+lp:	anim.out
+	$LP $newprereq && touch $target
+
+pg:	anim.out
+	count anim.ms anim.out
+
+spell:VQ:
+	dospell anim.ms
+
+anim.out:	anim.ms $REF
+	$PREFER anim.ms | pic | eqn '-d@@' | troff -mpm > $target
+
+clean:
+	rm *.i *.o *.out
+
+index:V:
+	runind anim
+	$PREFER xanim.ms | pic | eqn '-d@@' | troff -mpm > /dev/null 2>anim.x
+	mkindex anim.x
+	rm xanim.ms
+
+pindex:V:
+	mkindex anim.x

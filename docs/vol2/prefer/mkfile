@@ -1,0 +1,50 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	prefer.out
+
+pg:	prefer.out
+	count prefer.m prefer.out
+
+spell:VQ:
+	dospell prefer.m
+
+lp:	prefer.out
+	$LP $newprereq && touch $target
+
+examples:VQ:
+	cd example; make all
+
+prefer.out:DQ: prefer.m prefer.cite $REF ../ADM/monk.mac
+	while :
+	do
+		echo 'monking ...'
+		/usr/lib/monk/monk -d $MLIB/db prefer.m |  $MLIB/cite |
+		$PREFER | pic | tbl | eqn -d'' |
+		troff $MLIB/tmac.p - > prefer.out 2> .cite
+		$MLIB/cite -s .cite > tmp1 2> tmp2
+		set +e
+		gre -v '^\.(TC|ix)' tmp2
+		set -e
+		if cmp -s tmp1 prefer.cite
+		then
+			break;
+		else
+			cp tmp1 prefer.cite
+		fi
+	done
+	rm -f tmp1 tmp2 .cite
+
+clean:
+	rm -f tmp.out.[hi] mycite .cite
+	cd example; make clean
+
+index:V:
+	runind prefer
+	$MLIB/monk -d $MLIB/db xprefer.m | $MLIB/cite |
+	$PREFER | tbl | troff $IND/mtm.mac - >xprefer.out 2>prefer.x
+	mkindex prefer.x
+	rm xprefer.m
+
+pindex:V:
+	mkindex prefer.x

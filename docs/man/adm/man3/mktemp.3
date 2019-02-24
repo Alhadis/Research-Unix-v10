@@ -1,0 +1,45 @@
+.TH MKTEMP 3
+.CT 2 file_inq_creat
+.SH NAME
+mktemp, tmpnam \(mi make a unique file name
+.SH SYNOPSIS
+.nf
+.B char *mktemp(template)
+.B char *template;
+.PP
+.B #include <tmpnam.h>
+.PP
+.B char *tmpnam(s)
+.B char s[L_tmpnam];
+.fi
+.SH DESCRIPTION
+.I Mktemp
+replaces
+.I template
+by a unique file name, and returns the
+address of the template.
+The template should look like a file name with six trailing
+.LR X s,
+which will be replaced with the
+current process id and a unique letter.
+.PP
+.I Tmpnam
+places in the string pointed to by
+.I s
+a unique file name referring to the standard
+.F /tmp
+directory for temporary files and returns
+.I s.
+If
+.I s
+is 0,
+.I tmpnam
+returns the address of a fixed internal buffer that contains the name.
+(Note: it is bad form to leave files in the temporary directory.)
+.SH "SEE ALSO"
+.IR getpid " in"
+.IR getuid (2)
+.SH BUGS
+After many calls to
+.IR tmpnam ,
+the resulting filenames may have strange characters.

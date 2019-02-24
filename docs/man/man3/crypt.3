@@ -1,0 +1,71 @@
+.TH CRYPT 3
+.CT 2 data_man
+.SH NAME
+crypt, setkey, encrypt \(mi DES encryption
+.SH SYNOPSIS
+.nf
+.B char *crypt(key, salt)
+.B char *key, *salt;
+.PP
+.B setkey(key)
+.B char *key;
+.PP
+.B encrypt(block, edflag)
+.B char *block;
+.fi
+.SH DESCRIPTION
+.I Crypt
+is the password encryption routine.
+It is based on the NBS Data Encryption Standard, with
+variations intended (among other things) to frustrate use of hardware
+implementations of the DES for key search.
+.PP
+The first argument to
+.I crypt
+is a user's typed password.
+The second is a 2-character string chosen from the
+set
+.BR [a-zA-Z0-9./] .
+The
+.I salt
+string is used to perturb the DES algorithm in one of 4096
+different ways, after which the password
+is used as the key to encrypt repeatedly a constant string.
+The returned value points to the encrypted password,
+in the same alphabet as the salt.
+The first two characters are the salt itself.
+.PP
+The other functions provide (rather primitive)
+access to the actual DES algorithm.
+The argument of
+.I setkey
+is a character array of length 64 containing only the characters
+with numerical value 0 and 1.
+If this string is divided into groups of 8,
+the low-order bit in each group is ignored,
+leading to a 56-bit key which is set into the machine.
+.PP
+The argument to 
+.I encrypt
+is also a character array of length 64
+containing 0's and 1's.
+The 64 argument `bits' are encrypted in place by the DES
+algorithm using the key previously set by
+.I setkey.
+If
+.I edflag
+is 0, the argument is encrypted;
+if non-zero,
+it is decrypted.
+.SH "SEE ALSO"
+.IR crypt (1), 
+.IR passwd (1), 
+.IR passwd (5), 
+.IR getpass (3)
+.SH BUGS
+The return value
+points to static data whose content is overwritten
+by each call.
+.br
+.I Encrypt
+is not available outside the United States and Canada.

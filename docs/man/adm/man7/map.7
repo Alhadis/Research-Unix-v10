@@ -1,0 +1,402 @@
+.TH MAP 7 bowell
+.CT 1 inst_info
+.SH NAME
+map \- draw maps on various projections
+.SH SYNOPSIS
+.B map
+.I projection
+[
+.I param ...
+]
+[
+.I option ...
+]
+.PP
+.SH DESCRIPTION
+.I Map
+prepares on the standard output a
+map suitable for display by any
+plotting filter described in
+.IR  plot (1).
+A menu of projections is produced in response to an unknown
+.IR projection .
+For the meanings of
+.I params
+pertinent to particular projections
+see
+.IR  map (3).
+.PP
+The default data for
+.I map
+are world shorelines.
+Option
+.B -f
+accesses more detailed data
+classified by feature.
+.TP
+.BR -f " [ \fIfeature\fR ... ]"
+Known
+features are ranked 1 to 4 from major to minor,
+with a higher-numbered rank including all lower-numbered ones.
+A missing rank is taken to be 1.
+Features are
+.RS
+.TF country[1-3]
+.TP
+.BR shore [ 1 - 4 ] 
+seacoasts, lakes, and islands; option
+.B -f
+always shows
+.B shore1
+.TP
+.BR ilake [ 1 - 2 ] 
+intermittent lakes
+.TP
+.BR river [ 1 - 4 ] 
+rivers
+.TP
+.BR iriver [ 1 - 3 ] 
+intermittent rivers
+.TP
+.BR canal [ 1 - 3 ] 
+.BR 3 =irrigation
+canals
+.TP
+.BR glacier
+.TP
+.BR iceshelf [ 12 ] 
+.TP
+.BR reef
+.TP
+.BR saltpan [ 12 ] 
+.TP
+.BR country [ 1 - 3 ] 
+.BR 2 =disputed
+boundaries,
+.BR 3 =indefinite
+boundaries
+.TP
+.BR state
+states and provinces (US and Canada only)
+.PD
+.RE
+.PP
+In the following list of other options
+all coordinates are in degrees, with north latitude
+and west longitude counted as positive.
+.TP 0
+.BI -l " S N E W"
+the southern and northern latitude
+and the eastern and western longitude limits of the desired map.
+Missing arguments are filled out from the list
+\-90, 90, \-180, 180,
+or lesser limits suitable to the
+projection at hand.
+.TP
+.BI -k " S N E W
+Set the scale as if for a map with limits
+.B -l
+.I "S N E W".
+Do not consider any
+.B -l
+or
+.B -w
+option in setting scale.
+.TP
+.BI -o " lat lon rot"
+Orient the map in a nonstandard position.
+Imagine a transparent gridded sphere around the globe.
+First turn the overlay about the North Pole
+so that the Prime Meridian (longitude 0)
+of the overlay coincides with meridian
+.I lon
+on the globe.
+Then tilt the North Pole of the
+overlay along its Prime Meridian to latitude
+.I lat
+on the globe.
+Finally again turn the
+overlay about its `North Pole' so
+that its Prime Meridian coincides with the previous position
+of meridian
+.IR rot .
+Project the desired map in
+the standard form appropriate to the overlay, but presenting
+information from the underlying globe.
+Missing arguments are filled out from the list
+90, 0, 0.
+Default orientation is 90, 0,
+.I m,
+where
+.I m
+is the middle of the longitude range.
+.TP
+.BI -w " S N E W"
+Window the map by the specified latitudes
+and longitudes in the tilted, rotated coordinate system.
+Missing arguments are filled out from the list \-90, 90, \-180, 180.
+(It is wise to give an encompassing
+.B -l
+option with
+.BR -w .
+Otherwise for small windows computing time
+varies inversely with area!)
+.TP
+.BI -d " n"
+Alter the density of points
+by plotting only every
+.IR n th
+one.
+.TP
+.B  -r
+Reverse left and right side of map,
+for star charts and inside-out views.
+.ns
+.TP
+.B  -s
+Save the screen, don't erase before drawing.
+Output made under
+.B -s
+must be appended to output of another
+.I map
+command.
+.TP
+.BI -g " dlat dlon res"
+Grid spacings are
+.I dlat,
+.I dlon
+(10 degrees by default).
+Zero spacing means no grid.
+Missing
+.I dlat
+is taken to be zero.
+Missing
+.I dlon
+is taken the same as
+.IR dlat .
+Grid lines are drawn to a resolution of
+.I res
+(2 degrees or less by default).
+.TP
+.BI -p " lat lon extent"
+Position the point
+.I lat, lon
+at the center of the plotting area, and
+scale so that the height (and width) of the
+nominal plotting area is
+.I extent
+times the size of one degree of latitude
+at the center.
+For example, a standard 
+Mercator wall map comes out as if positioned
+and scaled
+with
+.BR "-p 0 0 360" .
+An
+.I extent
+overrides option
+.BR -k .
+.TP
+.BI -c " x y"
+After all other positioning and scaling operations
+have been performed, move the center of the map
+to position
+.I x, y,
+where the nominal plotting area is
+.RI \-1 \(<= x \(<= 1,
+.RI \-1 \(<= y \(<= 1.
+.TP
+.BR -m " [ \fIfile\fP ... ]"
+Use
+map data from named files instead of the defaults.
+If no files are named, omit map data.
+Names that are not the pathname of real files are looked up in
+a standard directory, which contains, in addition to the
+data for
+.BR -f ,
+.RS
+.LP
+.TF counties
+.TP
+.B world
+World Data Bank I from CIA (the default map)
+.TP
+.B states
+US map from Census Bureau
+.TP
+.B counties
+US map from Census Bureau
+.PD
+.RE
+.IP
+The environment variables
+.B MAP 
+and
+.B MAPDIR 
+change the default
+map and default directory.
+.TP
+.BI -b " \fR[\fPlat lon\fR... ]"
+Suppress the drawing of the normal boundary
+(defined by option
+.BR -l ).
+Coordinates, if present, define the vertices of a
+drawn polygon to which the map is clipped.
+If only two vertices are given, they are taken to be the
+diagonal of a rectangle.
+.TP
+.BI -t " file ..."
+The following arguments name ASCII files that
+contain lists of points,
+given as latitude-longitude pairs in degrees.
+If the first file is named 
+.LR - ,
+the standard input is taken instead.
+The points of each list are plotted as connected `tracks'.
+.IP
+Points in a track file may be followed by label strings.
+A label breaks the track.
+A label may be prefixed by
+\f5"\fR,
+.LR : ,
+or 
+.L !
+and is terminated by a newline.
+An unprefixed string or a string prefixed with
+.L
+"
+is displayed at the designated point.
+The first word of a
+.L :
+or
+.L !
+string names a special symbol (see option
+.BR -y ).
+An optional numerical second word is a scale factor
+for the size of the symbol, 1 by default.
+A
+.L :
+symbol is aligned with its top to the north; a
+.L !
+symbol is aligned vertically on the page.
+.TP
+.BI -u " file ..."
+Same as
+.BR -t ,
+except the tracks are
+unbroken lines.
+.RB ( -t
+tracks appear as dot-dashed lines if the plotting filter supports them.)
+.TP
+.BI -y " file
+The
+.I file
+contains 
+.IR plot (5)-style
+data for
+.L :
+or
+.L !
+labels in
+.B -t
+or
+.B -u
+files.
+Each symbol is defined by a comment
+.BI : name
+then a sequence of
+.L m
+and
+.L v
+commands.
+Coordinates (0,0) fall on the plotting point.
+Default scaling is as if the nominal plotting range were
+.LR "ra -1 -1 1 1" ;
+.L ra
+commands in
+.I file
+change the scaling.
+.SH EXAMPLES
+.TP
+.L
+map perspective 1.025 -o 40.75 74
+A view looking straight down on New York from 100 miles
+(0.025 earth radius) up.
+The job can be done faster by limiting the map so as not to `plot'
+the invisible part of the world:
+.L
+map perspective 1.025 -o 40.75 74 -l 20 60 30 100
+.TP
+.L
+map mercator -o 49.25 -106 180
+An `equatorial' map of the earth
+centered on New York.
+The pole of the map is placed 90 degrees away (40.75+49.25=90)
+on the
+other side of the earth.
+A 180-degree twist around the pole of the map arranges that the
+`Prime Meridian' of the map runs from the pole of the
+map over the North Pole to New York
+instead of down the back side of the earth.
+The same effect can be had from
+.L
+map mercator -o 130.75 74
+.TP
+.L
+map albers 28 45 -l 20 50 60 130 -m states
+A customary curved-latitude map of the United States.
+.SH FILES
+.TF /usr1/maps/[1-4]??
+.TP
+.F /usr1/maps/[1-4]??
+World Data Bank II
+.TP
+.F /usr1/maps/world
+World Data Bank I
+.TP
+.F /usr1/maps/states
+DIMECO
+.TP
+.F /usr1/maps/counties
+DIMECO
+.TP
+.F /usr/lib/map
+the program
+.SH "SEE ALSO"
+.IR map (5), 
+.IR proj (3), 
+.IR plot (1)
+.SH DIAGNOSTICS
+`Map seems to be empty'\(emthe intersection of the
+limits and the window seems to be null;
+for very local maps,
+the grid resolution
+.I res
+may have to be refined.
+.SH BUGS
+Border lines are drawn only along edges arising from
+.B -b
+or 
+.B -l
+options (including default
+.BR -l ).
+No borders appear along edges arising from
+.B -w
+or from visibility limits.
+.br
+Border lines arising from
+.B -b
+cannot be suppressed.
+.br
+Segments that cross a border are dropped, not clipped.
+.br
+Because `close' messages stop some plotting filters,
+.I map
+puts no close message on the standard output.
+This prevents such filters from stopping early
+when an overlay follows with option
+.BR -s .
+However such filters may not like to see an end of file;
+if funny things happen at the end of a map, tack on a
+close message (see
+.IR plot (5)).

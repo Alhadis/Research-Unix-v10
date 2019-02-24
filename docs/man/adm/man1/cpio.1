@@ -1,0 +1,184 @@
+.TH CPIO 1
+.CT 1 comm_users
+.SH NAME
+cpio \- copy file archives in and out
+.SH SYNOPSIS
+.B cpio
+.BI -o
+[
+.I acBv
+]
+.PP
+.B cpio
+.BI -i
+[
+.I BcdmrtuvfsSb6
+]
+[
+.I pattern ...
+]
+.PP
+.B cpio
+.BI -p
+[
+.I adlmruv
+]
+.I directory
+.SH DESCRIPTION
+.B Cpio -o
+(copy out)
+reads the standard input to obtain a list of path names
+and copies those files onto the
+standard output
+together with path name and status information.
+.PP
+.B Cpio -i
+(copy in)
+extracts files from the
+standard input
+which is assumed to be the product of a previous
+.BR "cpio -o" .
+Only files with names that match the
+.I patterns
+are selected.
+.I Patterns
+are given in the name-generating notation of
+.IR sh (1);
+the default is
+.BR * 
+(all files).
+The extracted files are conditionally created and copied
+into the current directory tree
+based upon the options described below.
+File ownership is preserved if possible.
+.PP
+.B Cpio -p
+(pass) reads from the standard input a list of path names
+of files to copy
+into the destination
+.IR directory.
+.PP
+The options are:
+.PP
+.PD 0
+.TP
+.B a
+Reset access times of input files after they have been copied.
+.TP
+.B B
+Input/output is to be blocked 5,120 bytes to the record
+(does not apply to the
+.I pass\^
+option; meaningful only with data directed to or from
+.FR /dev/rmt? ).
+.TP
+.B d
+.I Directories\^
+are to be created as needed.
+.TP
+.B c
+Write header
+information in
+.SM ASCII
+character form for portability.
+.TP
+.B r
+Interactively rename
+files.
+An empty name (newline only) causes a file to be skipped.
+.TP
+.B t
+Print a table of contents
+of the input.
+No files are created.
+.TP
+.B u
+Copy unconditionally
+(normally an older file will not overwrite a newer file).
+.TP
+.B v
+(Verbose)
+List file
+names;
+.B -vt
+looks like
+.BR "ls -l" .
+.TP
+.B l
+Whenever possible, link files rather than copying them.
+Usable only with
+the
+.B -p
+option.
+.TP
+.B m
+Retain previous file modification time.
+This option is ineffective on directories that are being copied.
+.TP
+.B f
+Copy in all files except those in
+.I patterns.\^
+.TP
+.B s
+Swap bytes.
+Use only with the
+.B -i
+option.
+.TP
+.B S
+Swap halfwords.
+Use only with the
+.B -i
+option.
+.TP
+.B b
+Swap both bytes and halfwords.
+Use only with the
+.B -i
+option.
+.TP
+.B 6
+Process an old (i.e.,
+.SM UNIX Sixth\^
+Edition format)
+file.
+Only useful with
+.B -i
+(copy in).
+.PD
+.SH EXAMPLES
+.TP
+.L
+ls | cpio -oc >/dev/mt1
+Copy the contents of the current directory to a tape.
+.PP
+.EX
+mkdir newdir
+cd olddir
+find . -print | cpio -pd ../newdir
+.EE
+.ns
+.IP
+Reproduce a directory hierarchy;
+.B newdir
+must exist.
+.PD
+.SH SEE ALSO
+.IR ar (1), 
+.IR bundle (1),
+.IR tar (1),
+.IR find (1), 
+.IR cpio (5), 
+.IR cp (1)
+.SH BUGS
+Path names are restricted to 128 characters.
+.br
+Does not know about symbolic links.
+.br
+If there are too many unique linked files,
+linking information is lost.
+.br
+Only the super-user can copy special files.
+.br
+The archive size is reported in archaic `blocks' of 512 bytes.
+.\"	@(#)cpio.1	5.2 of 5/18/82

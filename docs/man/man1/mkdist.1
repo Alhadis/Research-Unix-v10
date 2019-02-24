@@ -1,0 +1,66 @@
+.TH MKDIST 1
+.SH NAME
+mkdist, insdist \(em make and install distribution packages
+.SH SYNOPSIS
+.ft CW
+/usr/lib/dist/mkdist [-v] [-D \fIold\fP=\fInew\fP] [-[Xx] \fIcommand\fP] \fIfiles ...\fP
+.sp
+/usr/lib/dist/insdist [-v] [-D \fIold\fP=\fInew\fP] [-R \fIrootdir\fP]
+.SH DESCRIPTION
+.I Mkdist
+packages the named files into a distribution package on the standard output.
+A distribution package is an ordinary
+.IR tar (1)
+file, containing the files of the package as well as installation information
+for use by
+.IR insdist .
+.PP
+The
+.B -D
+option to both
+.I mkdist
+and
+.I insdist
+allows prefix substitution to be performed on pathnames going into the
+distribution.  (\c
+.I Mkdist
+arranges for all file names in the distribution to be absolute path names,
+by prepending the current directory to any relative pathname arguments.)
+At most one
+.B -D
+option will be applied to any name in the distribution, so there are no
+substitution loops.  If multiple
+.B -D
+options might match a given file name, the leftmost one from the command
+line is chosen.
+The
+.B -R
+option (\c
+.I insdist
+only) additionally specifies that all files are to be unpacked relative
+to the given root directory.
+.PP
+The
+.B -X
+and
+.B -x
+options to
+.I mkdist
+allow a command to be given that will be executed
+when the distribution is unpacked by
+.I insdist .
+These options are identical, except that pathname prefix substitution from
+.B -D
+options will be applied to a command specified in a
+.B -X
+option.
+.PP
+The
+.B -v
+option turns on verbose output describing what's going on.
+.SH "SEE ALSO"
+.IR tar (1)
+.SH BUGS
+The
+.B -v
+option should show more.

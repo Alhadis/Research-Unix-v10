@@ -1,0 +1,274 @@
+.TH MAP 3+
+.CT 2 datatype
+.SH NAME
+Map \- associative array classes
+.SH SYNOPSIS
+.nf
+.B "#include <Map.h>"
+.PP
+.ds 1s \*S
+.ds S \fIS\fP
+.ds T \fIT\fP
+.ft L
+Mapdeclare(\*S,\*T)
+Mapimplement(\*S,\*T)
+.PP
+.ft L
+struct Map(\*S,\*T) {
+	Map(\*S,\*T)();
+	Map(\*S,\*T)(const \*T&);
+	Map(\*S,\*T)(const Map(\*S,\*T)&);
+	~Map(\*S,\*T);
+	Map(\*S,\*T)& operator= (const Map(\*S,\*T)&);
+	\*T& operator[] (int);
+	int size();
+	Mapiter(\*S,\*T) element(const \*S&);
+	Mapiter(\*S,\*T) first();
+	Mapiter(\*S,\*T) last();
+};
+.PP
+.ft L
+struct Mapiter(\*S,\*T) {
+	Mapiter(\*S,\*T) (const Map(\*S,\*T)&);
+	~Mapiter(\*S,\*T);
+	operator int();
+	\*S key();
+	\*T value();
+	Mapiter(\*S,\*T)& operator++ (Mapiter(\*S,\*T)&);
+	Mapiter(\*S,\*T)& operator-- (Mapiter(\*S,\*T)&);
+};
+.ft R
+.fi
+.SH DESCRIPTION
+A
+.I map
+is a collection of
+.I elements,
+each of which contains a
+.I key
+part of type
+.I S
+and a
+.I value
+part of type
+.I T,
+where
+.I S
+and
+.I T
+are type names.
+Both
+.I S
+and
+.I T
+must have value semantics:
+assignment or initialization have the effect of copying.
+(It is unlikely for
+.I S
+and
+.I T
+to be pointers.)
+.PP
+Map elements are ordered by key: type
+.I S
+must have a transitive boolean
+.BR operator< .
+.PP
+The macro call
+.L Mapdeclare(\*S,\*T)
+declares the classes
+.B Map(\*S,\*T)
+and
+.BR Mapiter(\*S,\*T) .
+It must appear once in every source file that uses either.
+The macro call
+.B Mapimplement(\*S,\*T)
+defines the functions that implement the map classes.
+It must appear exactly once in the entire program.
+.SS Map constructors
+.nr xx \w'\fLMap(\*S,\*T)(m)\ \fP'
+.TP \n(xxu
+.B Map(\*S,\*T)()
+An empty map.
+The value part of future elements
+is the value of an otherwise uninitialized
+static object of type
+.I T .
+.TP
+.BI Map(\*S,\*T)( x )
+An empty map whose future elements have
+default value
+.I x .
+.TP
+.BI Map(\*S,\*T)( m )
+A copy of map
+.I m
+obtained by copying the elements and default value of
+.I m.
+.SS Map operators
+.TP  \n(xxu
+.IB n " = " m
+All the elements of map
+.I n
+are deleted and and
+copies of the elements of
+.I m 
+are added.
+The default value of
+.I n
+does not change.
+Running time is
+.IR O (log(| m |)
++
+.RI log(| n |)),
+where
+.RI | m |
+means
+.IB m .size() .
+.TP
+.IB m [ k ]
+A reference
+to the value part of the element of map
+.I m
+with key
+.BR k .
+If the element does not exist, it is created.
+Running time is
+.IR O (log(| m |)) .
+.SS Other Map functions
+.TP  \n(xxu
+.IB m .size()
+The number of elements in
+.LR m .
+Running time is
+.IR O (1).
+.TP
+.IB m .element( k )
+A map iterator 
+referring to the element of
+.I m
+with key
+.I k
+if such an element exists.
+Otherwise the result is vacuous.
+Running time is
+.IR O (log(| m |)) .
+.TP
+.IB m .first()
+.br
+.ns
+.TP
+.IB m .last()
+A map iterator
+referring to the element of
+.I m
+with the smallest (or largest) key.
+If
+.L m
+has no elements, the result is vacuous.
+Running time is
+.IR O (log(| m |)) .
+.SS "Map iterators"
+For every class
+.B Map(\*S,\*T)
+there is a class
+.BR Mapiter(\*S,\*T) .
+A map iterator identifies a map object and possibly
+an element in that map.
+An iterator that does not identify an element is
+.IR vacuous .
+.SS Mapiter constructors
+.TP  \n(xxu
+.BI Mapiter(\*S,\*T)( m )
+A vacuous iterator referring to map
+.I m.
+Running time is
+.IR O (1).
+.SS Mapiter operators
+.TP  \n(xxu
+.IB i " = " j
+Make iterator
+.I i
+refer (for now) to the same map as does
+.I j.
+.TP
+.BI (int) i
+Zero if iterator
+.I i
+is vacuous, otherwise nonzero.
+.TP
+.BI ++ i
+.br
+.ns
+.TP
+.BI -- i
+If iterator
+.I i
+is vacuous, make it refer to the map element with
+the smallest (or largest) key
+Otherwise, make it refer to the map element with the
+next key greater (or less) than the key of the
+current element.
+If no such element exists,
+.I i
+becomes vacuous.
+The running time of a single increment
+operation for map
+.I m
+is
+.IR O (log(| m |)).
+However an iterator 
+takes only time
+.IR O (| m |)
+to sequence through the whole map.
+.SS Other mapiter functions
+.TP  \n(xxu
+.IB i .key()
+.br
+.ns
+.TP
+.IB i .value()
+The key (or value) part of the element referred to by
+.I i .
+If
+.I i
+is vacuous, return
+the value of an otherwise uninitialized static
+object of appropriate type.
+Running time is
+.IR O (1).
+.SH EXAMPLES
+.EX
+struct city { char name[100]; };
+typedef int population;
+int operator< (const city&, const city&);
+.EE
+.PP
+.B Mapdeclare(name,population)
+.PP
+.B Map(name,population) gazetteer;
+.PP
+.B "// Print big cities; set populations of others to zero.
+.PP
+.EX
+	for(Mapiter(name,population) i = gazetteer.first(); i; i++)
+		if(i.value() > 1000000)
+			printf("%s\en", i.key().name);
+		else
+			gazetteer[i.key()] = 0;
+.EE
+.SH BUGS
+A `type name'
+.B Map(\*S,\*T)
+or
+.BR Mapiter(\*S,\*T) 
+that contains spaces will be mangled by
+.IR cpp (8).
+.br
+There is no way to delete a single element.
+.br
+Ambiguities can occur if the type name
+.I S
+contains an underscore.
+.br
+No precautions are taken against running out of memory.

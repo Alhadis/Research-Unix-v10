@@ -1,0 +1,101 @@
+.TH DOCSUBMIT 1
+.CT 1 writing_output
+.SH NAME
+docsubmit \- send document to library
+.SH SYNOPSIS
+.B docsubmit
+[
+.B -c
+.I cover-file
+]
+[
+.B -C
+]
+[
+.B -r
+.I ref-file
+]
+[
+.B -t
+]
+[
+.B -f
+.I copyf
+]
+[
+.B -d
+]
+.I file ...
+.SH DESCRIPTION
+.I Docsubmit
+sends the full text of a TM, including cover sheet,
+to the Bell Laboratories library network, for inclusion
+in the libraries' Linus database.
+The 
+.I files
+are those that would be mentioned in a
+.I troff
+command to print the paper; files included by
+.B .so
+macros or by preprocessors such as
+.IR pic (1)
+should not be mentioned.
+The options are
+.TP
+.BI -c " coverfile
+Cover sheet is in a file by itself.
+.TP
+.B -C
+Cover sheet is in the document.
+One of
+.B -c
+or
+.B -C
+must be specified.
+.TP
+.BI -r " ref-file
+Specify a separate reference file for
+.IR refer (1)
+or
+.IR prefer (1).
+.TP
+.B -t
+The single
+.I file
+is
+.IR tex (1)
+source; only the base name, without
+.BR .tex ,
+should be specified.
+.TP
+.BI -f copyf
+Include a copy of
+.I copyf
+in the cpio file. This flag should only be necessary for
+things like awk scripts executed inside the paper with .sy commands.
+.TP
+.B -d
+Don't consided include files that can't be found as fatal errors.
+.PP
+Electronic submission
+is not a substitute for the official paper submission.
+For more information
+contact your local library or call (201)582-4840.
+.SH EXAMPLES
+.EX
+docgen cover-file
+eqn cover-file file.1 file.2 | troff | lp
+docsubmit -c cover-file file.1 file.2
+.EE
+.SH FILES
+.F /usr/lib/docsubmit/*
+.SH "SEE ALSO"
+.IR troff (1), 
+.IR docgen (1)
+.SH BUGS
+Only documents that may be viewed by any AT&T employee can
+have their full text made available under Linus.
+.br
+Documents with a complicated construction process,
+such as a shell script or makefile, cannot be handled
+directly.

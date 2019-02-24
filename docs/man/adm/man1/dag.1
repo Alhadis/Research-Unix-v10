@@ -1,0 +1,281 @@
+.TH DAG 1
+.CT 1 writing_troff graphics
+.tr @"
+.SH NAME
+dag \- preprocessor for drawing directed graphs
+.SH SYNOPSIS
+.B dag
+[
+.I option ...
+] [ file ... ]
+.SH DESCRIPTION
+.I Dag
+is a
+.IR pic (1)
+or PostScript preprocessor for laying out directed graphs.
+It does well on
+acyclic graphs (dags) and other graphs that can be drawn
+hierarchically.
+Graph statements are contained between
+.B .GD
+(node ranks increase downward) or
+.BR .GR 
+(rightward) and
+.BR .GE .
+Edges point in the direction of increasing rank if possible;
+the other direction is favored for edges within rank.
+A summary of statements follows.
+.PP
+.B edge from
+.I tail
+.B to
+.IB "head0 edge-items" ,
+.B to
+.IB "head1 edge-items" ,
+.B to
+.IB "head2 edge-items..." ;
+Create edges from the tail node
+to the head node(s).
+Nodes are created if they do
+not already exist.
+Edge-items
+(described below) and the noise words
+.BR edge ,
+.BR from ,
+.BR to ,
+and comma are optional.
+Node names may be quoted to protect blanks or keywords.
+.PP
+.B ordered
+.IB "tail head0 head1 head2..." ;
+Make edges with heads in given left-to-right order 
+on the same rank.
+May contain noise words and edge-items.
+.PP
+.B path
+.IB "node0 node1 node2..." ;
+Make a path of edges.
+May contain noise words and edge-items.
+.PP
+.B backedge
+.IB "tail head0 head1 head2..." ;
+Same as edges with opposite node ranking preferred.
+.PP
+.B backpath
+.IB "node0 node1 node2..." ;
+Make a path of backedges.
+.PP
+.B draw nodes
+.IB node-items ;
+Set properties of subsequently created
+nodes.
+Legal
+.IR node-items :
+.RS
+.TF color\ string
+.TP
+.BI as " shape
+Known shapes are
+.BR Box ,
+.BR Circle ,
+.BR Doublecircle ,
+.BR Ellipse 
+(default),
+.BR Diamond ,
+.BR Square ,
+.BR Plaintext .
+Other shapes may be specified within braces
+.B {}
+in the output language (e.g.
+.IR pic )
+or defined; see below.
+.TP
+.BI label " @string@
+Label with
+.I string 
+instead of node name.
+.TP
+.BI pointsize " points
+.TP
+.BIwidth " inches
+.TP
+.BI height "inches
+.TP
+.BI color " @string@
+Hue-saturation-brightness
+triple; works only with PostScript.
+.PD
+.RE
+.PP
+.B draw
+.IB "nodelist node-items" ;
+Set properties of listed nodes.
+.PP
+.B draw edges
+.IB edge-items ;
+Set properties of subsequently created edges.
+Legal
+.IR edge-items :
+.RS
+.TF color\ string
+.HP
+.BR dotted ,
+.BR dashed ,
+.BR solid ,
+.BR invis 
+.TP
+.BI label " @string@
+.TP
+.BI weight " n
+High-weight edges are kept short. Default weight 1.
+.TP
+.BI color " @string@
+.TP
+.BI pointsize " points
+.PD
+.RE
+.PP
+.B minimum rank
+.IB nodelist ;
+Listed nodes must be on the topmost rank (leftmost with
+.BR .GR ).
+.PD0
+.PP
+.B maximum rank
+.IB nodelist ;
+Bottommost or rightmost rank.
+.PP
+.B same rank
+.IB nodelist ;
+.PD
+.HP
+.B separate ranks
+.IB "inches how " ;
+Set minimum separation between ranks.
+The optional
+.I how 
+is
+.B exactly
+or
+.BR equally .
+.PD 0
+.TP
+.BI "separate nodes " inches " ;
+.PD
+.PP
+.ne 3
+The options are
+.TF -Tsimple
+.PD
+.TP
+.B -O 
+Place nodes `optimally';
+practical for graphs of a few
+dozen nodes.
+.TP
+.B -Tps
+Prepare output for PostScript rather than
+.I pic.
+.PD0
+.TP
+.B -Tsimple
+Output similar to that of
+.IR graphdraw (9.1).
+.TP
+.B -Tcip
+Output readable by
+.IR cip (9.1).
+.PD
+.TP
+.BI -p width x height , marginwidth\fPx\fPmarginheight
+Set PostScript page dimensions; 
+.I marginwidth
+and/or
+.I marginheight
+may be omitted.
+.TP
+.B -l
+Disable automatic loading of the
+.IR dag
+graphics library.
+.PP
+The introductory
+.B .GD
+or
+.B .GR
+line may carry optional parameters in the form
+.B .GD
+.I width
+.I height
+.BR fill .
+.I Width
+and
+.I height
+are maximum values in inches;
+.B fill
+causes the graph to be stretched to the full dimensions.
+.PP
+Graphics code written in the output language
+.RI ( pic
+or PostScript)
+may be embedded between 
+.B .PS
+and
+.BR .PE .
+Macros defined
+with three arguments\(emlabel, width, and height\(emmay
+be used as shape names in node-items.
+.SH EXAMPLES
+.EX
+\&.GD 2 2
+a b c;
+path a x y;
+draw nodes as Box;
+a z label "hi" weight 1000;
+draw edges dashed;
+b x;
+same rank b x;
+\&.GE
+.EE
+.if n .ig
+.GD 2 2
+a b c;
+path a x y;
+draw nodes as Box;
+a z label "hi" weight 1000;
+draw edges dashed;
+b x;
+same rank b x;
+.GE
+..
+.SH FILES
+.TF $TOOLS/daglib.pic
+.TP
+.F $TOOLS/daglib.pic
+default
+.BR TOOLS = /usr/lib
+.TP
+.F $TOOLS/daglib.ps
+.SH SEE ALSO
+.IR pic (1),
+.IR lp (1),
+.IR graphdraw (9.1),
+.IR psi (9.1),
+.IR troff (1)
+.br
+E. R. Gansner, S. C. North,  K. P. Vo,
+`DAG\(emA Program that Draws Directed Graphs',
+this manual, Volume 2
+.SH BUGS
+The delimiter
+.B .GD
+is nonstandard; it may be called
+.B .GS
+in installations where
+.IR ped (9.1)
+is not used.
+.br
+.I Troff 
+lacks dotted or dashed splines; use PostScript.
+.br
+Edge labels may overlap.

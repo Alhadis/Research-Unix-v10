@@ -1,0 +1,121 @@
+.TH EXIT 2
+.CT 2 time_man proc_man
+.SH NAME
+_exit, wait wait3 \(mi terminate process, wait for child to terminate
+.SH SYNOPSIS
+.nf
+.B void _exit(status)
+.B int status;
+.PP
+.B int wait(status)
+.B int *status;
+.PP
+.B int wait((int *)0)
+.PP
+.B #include <sys/vtimes.h>
+.PP
+.B wait3(status, options, ch_vt)
+.B int *status;
+.B struct vtimes *ch_vt;
+.fi
+.SH DESCRIPTION
+.I _exit
+closes all the process's files and notifies the parent process
+when the parent executes
+.IR wait .
+The low-order 8 bits of
+.I status
+are available to the parent process.
+The call never returns.
+.PP
+The function
+.IR exit (3),
+which is the normal means of terminating a process,
+may cause cleanup actions before finally calling
+.IR _exit .
+Therefore,
+.I _exit
+should be called to terminate a child
+process after a
+.IR fork (2)
+to avoid flushing buffered output twice.
+.PP
+.I Wait
+delays until a signal is received or until
+a child processes terminates or receives signal
+.BR SIGSTOP  .
+There is no delay if any child has died since the last
+.I wait,
+or if there are no extant children.
+The normal return yields the process id 
+and status of one terminated child.
+The status of other children 
+may be learned from further
+.I wait
+calls.
+.PP
+If
+.I status
+is nonzero,
+.I wait
+sets
+.IR \f5*\fPstatus " = (" s <<8)+ t
+where
+.I s
+is the low 8 bits
+of
+.I status
+from the child's
+.IR exit ,
+if any,
+and
+.I t
+is the termination status of the child.
+See
+.IR signal (2)
+for a list of termination statuses (signals);
+status 0 indicates normal termination, 0177
+a (restartable) process stopped on
+.BR SIGSTOP .
+If the 0200
+bit of the termination status
+is set,
+a core image of the process was produced
+by the system.
+.PP
+.I Wait3
+is similar to
+.I wait.
+An
+.I option
+value of 1 prevents waiting for extant, non-stopped children.
+If
+.I ch_vt
+is nonzero, resource usage data for the child are reported
+as by
+.IR vtimes (2).
+.PP
+If the parent process terminates without
+waiting on its children,
+they are inherited by
+process 1
+(the initialization process, 
+.IR init (8)).
+.SH "SEE ALSO"
+.IR fork (2), 
+.IR exit (3),
+.IR signal (2), 
+.IR sh (1)
+.SH DIAGNOSTICS
+.IR wait ,
+.IR wait3 :
+.B ECHILD
+.SH BUGS
+If the argument to
+.I wait
+is bogus, the user program gets a memory fault rather than an
+.BR EFAULT .
+.br
+The 0 third argument to
+.I wait3
+is a required historical dreg.

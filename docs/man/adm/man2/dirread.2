@@ -1,0 +1,63 @@
+.TH DIRREAD 2
+.CT 2 file_io dirs
+.SH NAME
+dirread \(mi read from directory, hiding format
+.SH SYNOPSIS
+.nf
+.B int dirread(fildes, buffer, nbytes)
+.B char *buffer;
+.fi
+.SH DESCRIPTION
+.I Dirread
+reads at most
+.I nbytes
+bytes of directory information
+from the file pointer location
+in the directory associated with
+.I fildes
+into memory at
+.IR buffer .
+The information is converted into a canonical form,
+independent of the format used by the file system in which
+the directory resides.
+.PP
+Each canonicalized entry consists of a decimal ASCII inode number,
+a tab character,
+a file name,
+and an ASCII NUL.
+.I Buffer
+is filled with as many entries
+as will fit;
+the number of bytes used is returned.
+0 is returned when there are no more entries.
+.PP
+The file pointer is advanced by
+the number of bytes passed over in the directory,
+not the number of bytes placed in
+.IR buffer .
+Ask
+.I lseek
+for the new pointer;
+don't try to compute it.
+.SH "SEE ALSO"
+.IR open (2),
+.IR read (2),
+.IR directory (3),
+.IR dir (5)
+.SH DIAGNOSTICS
+.BR EBADF ,
+.BR ENOSPC 
+(buffer too small),
+.BR ENOTDIR ,
+.BR EFAULT ,
+.B EINVAL
+.SH BUGS
+Not all file system types
+support
+.IR dirread .
+The routines in
+.IR directory (3)
+know how to cope.
+.br
+Seeking in directories is dangerous,
+because the contents often change under foot.

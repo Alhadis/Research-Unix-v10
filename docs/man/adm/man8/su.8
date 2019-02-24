@@ -1,0 +1,47 @@
+.TH SU 8
+.CT 1 sa_nonmortals secur
+.SH NAME
+su, setlog \- substitute userid temporarily, become super-user
+.SH SYNOPSIS
+.B /etc/su
+[
+.I user
+]
+.PP
+.B /etc/setlog
+.I logname
+.I command ...
+.SH DESCRIPTION
+.I Su
+changes the userid to that of
+.I user
+(root by default)
+with groupid and login shell determined from 
+the password file.
+If the current userid is not the super-user,
+the password for the new user is demanded.
+The userid stays in force until the new shell exits.
+.PP
+The current directory and environment
+are unchanged unless the new userid is super-user,
+in which case the environment variables 
+.B PS1
+and
+.BR PATH ,
+if present, are set to standard values
+(white space and 
+.BR /bin:/usr/bin:/etc ).
+.PP
+.I Setlog
+executes the specified
+.I command
+with login name
+.IR logname .
+The environment is otherwise unchanged;
+in particular,
+the userid is not set.
+Only the super-user may use this command.
+.SH "SEE ALSO"
+.IR sh (1),
+.IR getuid (2),
+.IR passwd (5)

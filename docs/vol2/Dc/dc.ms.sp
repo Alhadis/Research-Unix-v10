@@ -1,0 +1,13 @@
+0si
+ascii
+bc
+dC
+dc
+i.e
+li10
+lip1
+pic
+sa
+si
+spe
+tl

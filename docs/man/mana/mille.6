@@ -1,0 +1,223 @@
+.TH MILLE 6
+.SH NAME
+mille \- card game
+.SH SYNOPSIS
+.B /usr/games/mille
+[
+.I file
+]
+.SH DESCRIPTION
+.I Mille
+plays a two-handed game
+reminiscent of
+the Parker Brother's game of Mille Bournes.
+If a file name is given on the command line,
+the game saved in that file is started.
+.PP
+When a game is started up,
+the bottom of the score window will contain a list of commands.
+They are:
+.TP
+.B P
+Pick a card from the deck.
+This card is placed in the 
+.L P
+slot in your hand.
+.PD0
+.TP
+.B D
+Discard a card from your hand.
+To indicate which card,
+type the number of the card in the hand
+(or 
+.L P
+for the just-picked card)
+followed by a newline or space.
+.TP
+.B U
+Use a card.
+The card is again indicated by its number.
+.TP
+.B O
+Sort the cards in your hand.
+This command toggles on and off.
+.TP
+.B Q
+Quit the game.
+.TP
+.B S
+Save the game in a file.
+You will be asked for a file name.
+A newline without a name terminates the command, but not the game.
+.TP
+.B R
+Redraw the screen from scratch.
+.TP
+.B W
+Toggle window type.
+This switches the score window between the startup window
+(with all the command names)
+and the end-of-game window.
+The end-of-game window
+saves time by eliminating the switch at the end of the game
+to show the final score.
+.SS Cards
+The number of such cards appears after the card name:
+.PP
+.nf
+.ne 10
+.ta \w'Speed Limit (3)'u+3n \w'Speed Limit (3)'u+\w'End of Limit (6)'u+6n
+Hazard	Repair	Safety
+.sp
+Out of Gas (2)	Gasoline (6)	Extra Tank (1)
+Flat Tire (2)	Spare Tire (6)	Puncture Proof (1)
+Accident (2)	Repairs (6)	Driving Ace (1)
+Stop (4)	Go (14)	Right of Way (1)
+Speed Limit (3)	End of Limit (6)
+.PP
+.ce
+25 \- (10), 50 \- (10), 75 \- (10), 100 \- (12), 200 \- (4)
+.SS Rules
+The object of the game is to get a total of 5000 points
+in several hands.
+Each hand is a race to put down exactly 700 miles
+before your opponent does, making points on the way.
+.PP
+The game is played with a deck of 101 cards.
+.I Distance
+cards represent a number of miles traveled:
+25, 50, 75, 100, and 200.
+When one is played,
+it adds that many miles to the player's trip so far this hand.
+.I Hazard
+cards prevent your opponent from putting down Distance cards.
+They can only be played if your opponent has a
+.I Go
+card on top of the Battle pile.
+The hazards are
+`Out of Gas,' `Accident', `Flat Tire',
+`Speed Limit and `Stop'.
+.I Remedy
+cards fix hazards:
+`Gasoline', `Repairs', `Spare Tire', `End of Limit',
+and `Go'.
+.I Safety
+cards prevent your opponent playing Hazard cards:
+`Extra Tank', `Driving Ace', `Puncture Proof',
+`Right of Way'.
+.PP
+The board is split into several areas.
+From top to bottom, they are:
+SAFETY AREA:
+(unlabeled) where the safeties will be placed.
+HAND:
+The cards in your hand.
+BATTLE:
+This is the Battle pile.
+where the Hazard and Remedy Cards are played,
+excep Speed Limit and End of Limit.
+Only the top card is displayed,
+as it is the only effective one.
+SPEED:
+The Speed pile.
+Speed Limit and End of Limit
+cards are played here
+to control the speed at which the player is allowed to put down miles.
+MILEAGE :
+Miles are placed.
+The total of the numbers shown here is the distance traveled so far.
+Not more than two 200-mile cards may be played in one turn.
+.PP
+The first pick alternates between the two players.
+Each turn usually starts with a pick from the deck.
+The player then plays a card,
+or if this is not possible or desirable,
+discards one.
+Normally, a play or discard of a single card
+constitutes a turn.
+If the card played is a safety,
+however,
+the same player takes another turn immediately.
+.PP
+This repeats until one of the players reaches exactly 700 points
+or the deck runs out.
+If someone reaches 700,
+they have the option of going for an `Extension',
+which means that the play continues until 1000 miles.
+.SS Hazards and Remedies
+.IP Go
+(Green Light)
+must be the top card on your Battle pile
+for you to play any mileage,
+unless you have played Right of Way.
+.IP Stop
+is played on your opponent's
+Go card.
+.IP "Speed Limit"
+is played on your opponent's Speed pile.
+Until they play an End of Limit
+they can only play 25 or 50 mile cards.
+.IP "End of Limit"
+is played on your Speed pile
+to nullify a Speed Limit.
+.IP "Out of Gas"
+is played on your opponent's Go.
+They must play  Gasoline
+and then Go before they can play any more mileage.
+.IP "Flat Tire"
+and Accident are played similarly.
+.PP
+.IP "Safety Cards"
+prevent your opponent
+from playing the corresponding Hazards
+for the rest of the hand.
+It cancels the hazard,
+and entitles the player to an extra turn.
+.IP "Right of Way"
+prevents both Stop and Speed Limit cards and acts
+as a permanent Go.
+.PP
+A hand ends whenever one player gets exactly 700 miles or the deck runs out.
+In that case, play continues until someone reaches 700,
+or neither player can use any cards in their hand.
+If the trip is completed after the deck runs out,
+this is called
+.IR "Delayed Action" .
+.PP
+Coup Fourre:
+This is a French fencing term for a counter-thrust move as part of a parry
+to an opponents attack.
+In Mille Bournes,
+it is used as follows:
+If an opponent plays a Hazard card,
+and you have the corresponding Safety in your hand,
+you play it immediately,
+eve before
+you draw.
+This immediately removes the Hazard card from your Battle pile,
+and protects you from that card for the rest of the game.
+This
+gives you more points.
+.PP
+.BR Scoring :
+Scores are totaled at the end of each hand,
+whether or not anyone completed the trip.
+The terms used in the Score window are:
+.PP
+.nf
+Milestones Played: sum of miles
+Each Safety: 100 points
+All 4 Safeties: 300 points
+Each Coup Foure:
+300 points for each Coup Fourre accomplished.
+Trip Completed: 400 points
+Safe Trip: 300 points bonus for completing trip without 200 mile
+Delayed Action:
+300 points for finishing after the deck was exhausted.
+Extension: 200 points bonus for a 1000 mile trip.
+Shut-Out: 500 points for completing while opponent has 0 miles
+.PP
+.SH AUTHOR
+Ken Arnold
+.SH "SEE ALSO"
+.IR curses (3)

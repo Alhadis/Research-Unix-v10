@@ -1,0 +1,214 @@
+.TH PS 1
+.CT 1 proc_man sa_mortals
+.SH NAME
+ps \(mi process status
+.SH SYNOPSIS
+.B ps
+.I option
+\&...
+.SH DESCRIPTION
+.I Ps
+prints information about processes.
+.PP
+For each process reported,
+the process id,
+control terminal,
+status,
+cpu time,
+and command name are printed.
+Status is at least one of the following letters:
+.TP
+.PD 0
+.B R
+Runnable.
+.TP
+.B S
+Asleep for less than 20 seconds.
+.TP
+.B I
+Asleep for 20 seconds or more.
+.TP
+.B P
+Waiting for memory to be paged in.
+.TP
+.B T
+Stopped by a debugger.
+.TP
+.B W
+Swapped out of memory.
+.TP
+.B N
+Positive scheduling priority;
+see
+.IR nice (2).
+.PD
+.PP
+These options modify the report for each process:
+.TP
+.B f
+Print additional lines listing each open file in use by the process.
+.PD 0
+.TP
+.B ff
+Print open files,
+but omit the process id at the beginning of each line.
+.TP
+.B h
+Print column headers.
+.TP
+.B l
+Also print virtual size and current resident size in kilobytes,
+parent process id,
+and wait channel.
+.TP
+.B n
+Don't sort the output.
+.TP
+.B u
+Also print effective userid
+and recent cpu share;
+sort by cpu share
+rather than by process id.
+.PD
+.PP
+By default,
+processes running under the current real userid
+that don't appear to be shells
+are reported.
+These options pick different processes:
+.TP
+.B a
+Report processes running under any userid.
+.PD 0
+.TP
+.BI F file
+Report processes using the named
+.IR file .
+.TP
+.B r
+Report processes with real or effective userid
+matching the current real userid.
+.TP
+.BI t s
+Report processes with controlling terminal
+.IR s .
+.I S
+may be
+.L .
+(the current controlling terminal)
+or one of the abbreviations printed by
+.IR ps ,
+e.g.
+.L 03
+for
+.FR /dev/tty03 ,
+.L dk26
+for
+.FR /dev/dk/dk26 ,
+or
+.L ?
+for processes with no control terminal.
+.TP
+.B x
+Include processes that appear to be shells.
+.TP
+.I num
+Report the process with process id
+.IR num .
+.PD
+.PP
+Multiple
+.BR F ", " t ", and"
+.I num
+options are allowed; the union of all selections is printed.
+.PP
+By default,
+.I ps
+looks for process data in the process file system
+.IR proc (4),
+but reads
+.F /dev/drum
+for information about swapped processes
+(to avoid swapping them in just to look at them)
+and
+.F /dev/kmem
+for information about open files.
+These options cause it to gather information differently:
+.TP
+.B o
+.PD 0
+Ignore
+.IR proc (4);
+read directly from
+.F /dev/mem
+and the swap area.
+Useful mostly in single-user mode
+or when examining a crash dump.
+.TP
+.BI M mem
+Read memory data from
+.IR mem
+instead of
+.F /dev/mem
+or
+.FR /dev/kmem .
+.TP
+.BI D swap
+Read swap data from
+.I swap
+instead of
+.FR /dev/drum .
+.TP
+.BI Nname
+Read symbols from
+.I name
+instead of
+.FR /unix .
+This matters only under
+option
+.BR o .
+.PD
+.PP
+To examine a crash dump,
+use
+.BI "ps oM" dumpfile.
+Option
+.B M
+changes the default swap device to
+.FR /dev/null .
+.SH FILES
+.TF /lib/ttydevs
+.TP
+.F /proc
+process images
+.TP
+.F /dev/drum
+swap device
+.TP
+.F /dev/kmem
+kernel memory
+.TP
+.F /dev/mem
+physical memory
+.TP
+.F /lib/ttydevs
+searched to find tty names
+.TP
+.F /etc/fstab
+searched to find local file system names
+.SH "SEE ALSO"
+.IR kill (1), 
+.IR proc (4), 
+.IR load (1),
+.IR pstat (8)
+.SH BUGS
+Things can change while
+.I ps
+is running.
+.br
+Since
+.I ps
+is usually set-userid,
+filename arguments like that to
+.L -M
+are potential security botches.

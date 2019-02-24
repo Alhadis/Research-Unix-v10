@@ -1,0 +1,184 @@
+.TH TDC 1
+.SH NAME
+tdc \- fill out TDC form
+.SH SYNOPSIS
+.B tdc
+.PP
+.B tdc
+[
+.B -b
+]
+.PP
+.B tdc
+.I bill-info
+[
+.I card-info
+]
+.SH DESCRIPTION
+This command will prepare a PostScript job that will produce
+a standard Telephone Discount Concession form (ATT363) when printed.
+With no arguments it simply gives usage information on the standard
+error output.  Option
+.B -b
+causes PostScript for a blank form to be generated.  To have the
+form filled in,
+.I bill-info
+and, optionally,
+.I card-info
+should be supplied.  Each of these consists of five arguments, with
+the first set corresponding to the telephone bill and the second set
+corresponding to AT&T Universal Card calls.  The five arguments are
+as follows, and must appear in the order shown:
+.TP
+.I month
+Billing month for the bill.  This can be a month abbreviation or
+a month number.  There is not room on the form for the full month
+name.
+.TP
+.I day 
+Billing day for the bill.
+.TP
+.I year
+Billing year for the bill.
+.TP
+.I amount
+Total Inter-LATA Toll Charges, including taxes (note that this is
+not quite the same as section 1 of the form\(emit's just the total
+amount as it appears on the bill).
+.TP
+.I exclusions
+Total non-eligible charges as defined in section 2 of the form.  The
+simplest way to compute this is to add the actual charges for all
+ineligible calls.
+.PP
+By default, the information for filling in the form is gleaned from 
+the file
+.B $HOME/.tdc.
+If this file does not exist,
+.B tdc
+will prompt you for the name of an alternate
+.B tdc
+profile residing in your $HOME directory.
+This profile should consist of a number of lines, each giving one
+piece of information for the form.  The format of the lines is
+an item name followed by the information.  The names and the
+expected information are:
+.TP
+.B firstname
+Your first name.
+.TP
+.B homephone
+Your home phone number (the one for which you are vouchering
+the calls).  The format is three numbers, giving area code,
+exchange and line number, with no extra characters like parenthesis
+or dashes.
+.TP
+.B last8cardno
+The last 8 digits of your AT&T Universal Card number.
+.TP
+.B lastname
+Your last name.
+.TP
+.B middleinitial
+Your middle initial.
+.TP
+.B officephone
+Your office phone number; see the description of
+.B homephone
+for the format of this entry.
+.TP
+.B payment
+How you are paid.  This can be
+.B weekly,
+.B bi-weekly,
+or
+.B monthly
+(the default).
+.TP
+.B program
+The program you are in (see item 6 of the form).  The possibilities are
+.B management
+(the default),
+.B occupational1,
+or
+.B occupational2.
+.TP
+.B ssnumber
+Your Social Security number, with internal dashes,
+.B xxx-xx-xxxx .
+.TP
+.B title
+Your title.  The default is
+.B MTS.
+.PP
+Some of these have default values, as indicated.  The others will
+not appear on the form if you don't specify them.  In addition to
+these values there are five others that are location-specific whose
+default values are built into
+.B tdc
+but which may be overridden in
+.B $HOME/.tdc.
+These values are:
+.TP
+.B location1
+.TP
+.B location2
+.TP
+.B location3
+Three lines of address information for your BL location.
+.TP
+.B paycode
+Your Payroll Unit Code Number.
+.TP
+.B tax
+The tax rate (as a percentage) used on your phone bill.  In New Jersey
+this is 9 (for 9%).
+.SH EXAMPLES
+If you prepare TDC forms for more than one person, you should 
+keep each person's data in separate 
+.B .tdc
+files.
+For example, one file might be called 
+.B $HOME/.tdcSmith,
+and another might be called 
+.B $HOME/.tdcJones.
+Then, if
+.B tdc
+cannot find 
+.B $HOME/.tdc,
+it will prompt for the profile to be used:
+.IP
+.EX
+Enter profile suffix: Smith
+.EE
+.PP
+A typical
+.B .tdc
+file might look like this:
+.IP
+.EX
+firstname Joe
+middleinitial Q.
+lastname Schlabotnik
+ssnumber 123-45-6789
+officephone 908 582 0000
+homephone 908 999 0000
+.EE
+.PP
+If you are paid weekly and are in the second occupational category of
+part 6 of the form, you would add these two lines:
+.IP
+.EX
+payment weekly
+program occupational2
+.EE
+.PP
+A typical usage of
+.B tdc
+might be:
+.IP
+.EX
+tdc Dec 26 1992 134.28 15.44 | lp
+.EE
+.SH FILES
+.B $HOME/.tdc*		tdc data profiles

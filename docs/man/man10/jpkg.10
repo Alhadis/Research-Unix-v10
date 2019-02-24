@@ -1,0 +1,56 @@
+.TH JPKG 10
+.SH NAME
+jpkg \(mi transform
+.I fizz
+package definitions into macros for
+.I jraw
+.SH SYNOPSIS
+.B jpkg
+.RB [ -b ]
+.I pkg-file
+.br
+.B jpict
+.I j-file
+.SH DESCRIPTION
+Package definitions in
+.I fizz
+format consist of a name, a bounding rectangle and pin placements.
+These are transformed by
+.B jpkg
+into macros for
+.IR jraw ,
+which are produced on
+.IR stdout .
+The option
+.L -b
+gives a bottom view of the chips.
+.PP
+When collected in a file (preferably with suffix
+.LR .j )
+they can be read by
+.I jraw
+and placed by hand.
+The shell-script
+.B jpict
+will process the resulting file, giving
+.IR troff (5)
+output that can be printed or previewd with
+.IR proof (9).
+.SH EXAMPLE
+.EX
+jpkg q.pkg > qpkg.j
+jraw qpkg.j
+jpict qpkg.j | proof
+.EE
+.SH SEE ALSO
+.IR fizz (10),
+.IR jraw (10)
+.SH BUGS
+One seems to have to take care in manipulating with
+.IR jraw ,
+as sometimes
+.I pic
+(called by
+.BR jpict )
+or the printer scheduler objects.
+Best is to fit all objects onto one A4 page and keep all coordinates positive.

@@ -1,0 +1,88 @@
+.TH NICE 1
+.CT 1 proc_man
+.SH NAME
+nice, renice, nohup \(mi run commands at low priority or immune to hangup
+.SH SYNOPSIS
+.B nice
+[
+.BI - number
+]
+.I command
+[
+.I argument ...
+]
+.PP
+.B /etc/renice
+[
+.BI - number
+]
+.I pid ...
+.PP
+.B nohup
+.I command
+[
+.I argument ...
+]
+.SH DESCRIPTION
+.I Nice
+executes
+.I command
+with low scheduling priority.
+If the
+.I number
+argument is present, the priority is incremented (higher
+numbers mean lower priorities) by that amount up to a limit of 19.
+The default
+.I number
+is 10.
+.PP
+The super-user may run commands with
+priority higher than normal
+by using a negative
+.I number,
+e.g.
+.LR --10 .
+.PP
+.I Renice
+increments the scheduling priority
+of the processes with the named
+.I process-ids
+by
+.IR number .
+The default
+.IR number
+is 19,
+making the process least likely to run.
+.PP
+Only the owner of the process
+or the super-user may change the priority.
+Only the super-user may use negative increments.
+.PP
+.I Nohup
+executes
+.I command
+immune to hangup and terminate signals from the controlling terminal.
+The priority is incremented by 5.
+.PP
+Any output not explicitly redirected is appended to
+the file
+.F nohup.out
+in the current directory.
+.SH FILES
+.FR nohup.out
+default destination for standard output and standard error
+.SH "SEE ALSO"
+.IR nice (2)
+.SH FILES
+.F /proc
+.RI ( renice )
+.SH DIAGNOSTICS
+.I Nice
+returns the exit status of the subject command.
+.SH BUGS
+Quoted
+.I arguments
+don't work right in all cases.
+The difficulty may be avoided by quoting the
+.I command,
+with arguments in inner quotes.

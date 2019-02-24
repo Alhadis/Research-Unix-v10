@@ -1,0 +1,117 @@
+.TH SCSI 4
+.CT 2 sa
+.SH NAME
+scsi \- SCSI interface
+.SH SYNOPSIS
+.B "#include <scsi.h>"
+.SH DESCRIPTION
+The special file
+.F /dev/scsi
+provides a low level interface to a SCSI bus.
+Commands are transmitted to the bus by
+.IR write ;
+the response to each command is received with
+.IR read (2).
+The format of a command is
+.IP
+.EX
+.ta \w'unsigned char scsistatus;  'u
+unsigned long tran_id;	/* transaction id */
+unsigned char target;	/* SCSI id of target device */
+unsigned char flags;	/* flags for this transaction */
+char cmd[10];	/* SCSI command */
+char data[];	/* optional data */
+.EE
+.LP
+Thus, to send 
+.I n
+bytes of data, the byte count for
+.I write
+should be
+.IR n +16.
+Possible flags are
+.B SCSI_WR
+(data goes from host to SCSI),
+.B SCSI_RD
+(data goes from SCSI to host),
+.B SCSI_BRESET
+(reset the SCSI bus),
+.B SCSI_RESET
+(reset the controller),
+and
+.B SCSI_SENSE
+(return extended sense data on error).
+For most controllers, 
+.B SCSI_BRESET
+implies
+.BR SCSI_RESET .
+Flags are OR'ed together, and there must be exactly one of
+.B SCSI_WR
+and
+.BR SCSI_RD .
+.LP
+The data read is structured as
+.IP
+.EX
+unsigned long tran_id;	/* transaction id */
+unsigned char status;	/* scsi status byte */
+unsigned char message;	/* scsi message byte */
+unsigned char flags;	/* flags for this transaction */
+unsigned char c_type;	/* 1=td 2=us */
+unsigned short c_reg1;	/* td=sa, us=csr */
+unsigned short c_reg2;	/* td=mscp, us=per */
+unsigned char sense[22];	/* extended sense data */
+char data[];	/* any data */
+.EE
+.LP
+Thus, to read 
+.I n
+bytes of data. the byte count to
+.I read
+should be
+.IR n +34.
+If
+.I flags
+has the
+.B SCSI_CERR
+bit set,
+there was a controller error, which is described by the
+.B c_
+fields.
+The values of
+.B csr
+(or
+.BR sa )
+and
+.B per
+(or
+.BR mscp )
+are documented in the interface manual for the U.S. Design 1158
+Unibus controller (or T.D. Systems Viking controller).
+If the
+.B SCSI_SENSE
+bit was set in the 
+.I write,
+and the status byte shows a check condition,
+an attempt is made to get extended sense information.
+If the attempt succeeds the
+.B SCSI_SENSE
+is set in
+.I flags.
+Otherwise, the status and message bytes for the failed
+attempt are placed in
+.B sense[0]
+and
+.B sense[1]
+respectively.
+.PP
+The transaction id identifies which
+.I write
+caused the results for this
+.IR read .
+This will become more important when multiple simultaneous transactions
+are allowed.
+.SH FILES
+.F /dev/scsi
+.SH "SEE ALSO"
+.IR scsish (8)

@@ -1,0 +1,232 @@
+.if n .pH g1.picasso @(#)picasso	1.0 of 1/2/90
+.TH PICASSO 1
+.SH NAME
+picasso \- a line drawing program
+.SH SYNOPSIS
+\f3picasso  [ \-b\f2size\fP \-F\f2path\fP \-I\f2path\fP \-l\f2n\fP \-M\f2n\fP \-m\f2margin\fP \-p\f2m\fPx\f2n\fP \-t \-x ]  [ \- ]  [ \f2file_name\^(s)\fP ]
+.ft 1
+.SH DESCRIPTION
+.B Picasso
+is a
+processor for a PIC-like drawing language that produces PostScript output.
+By default, this output is scaled to fit an 8 by 10 inch print area, and
+centered on the page.
+.PP
+.B \-b
+.IR size
+specifies a buffer of \f2size\f1 objects accumulated before translation
+into PostScript.
+By default, an entire picture is buffered;
+on machines with small memories, a buffer of a few thousand objects 
+can prevent thrashing when processing a very large picture.
+This option is for exceptional cases and is not often needed.
+.PP
+.B \-I
+.IR path
+overrides the standard path for searching for the PostScript prologue
+and font descriptions (not needed in normal use).
+.PP
+.B \-F
+.IR path
+overrides the standard path for font width tables.
+The default is to use the \f(CWtroff\fP tables.
+.PP
+.B \-l
+.IR n
+processes layer \f2n\f1 only, as specified by \f(CWcurlayer=\f2n\fP.
+.PP
+.B \-M
+.IR n
+magnifies the output image by \f2n\f1 (shrinks if 0 < \f2n\fP < 1).
+.PP
+.B \-p
+.IR m\f3x\fPn
+.ft 1
+specifies output device size in inches (8.5x11 default).
+.PP
+.B \-t
+packages the PostScript with surrounding troff input so that the
+output file may be passed down a pipeline to
+.BR troff (1).
+The Drechsler/Wilks
+.B mpictures
+macro package can be used with
+.B troff
+to insert the pictures appropriately within the document.
+Without the flag
+.B picasso
+outputs \fIonly\fR PostScript, dropping any text outside the markers
+(.PS and .PE) delimiting each picture.
+.PP
+.B \-m
+.IR margin
+specifies an empty border, in printer's points, that
+.B picasso
+will place around each picture.
+This may be useful at times to prevent too tight clipping against
+adjacent text or the edge of the paper.
+By default no margin is supplied;
+to cause a 1/8" (9 point) margin, for example, specify
+.BR \-m9 .
+.PP
+.B \-x
+suppresses the default scaling and centering.
+.PP
+The
+.B picasso
+picture description language is object oriented, the basic objects being
+.BR arrow ,
+.BR arc ,
+.BR box ,
+.BR circle ,
+.BR ellipse ,
+.BR line ,
+.BR sector ,
+.BR spline ,
+and (quoted) text.
+These can be combined, hierarchically, into
+.BR blocks .
+Primitive objects can be drawn with
+.BR solid ,
+.BR dashed ,
+.BR dotted ,
+or
+.B invisible
+edges.
+These edges may be of varying
+.B weight
+(thickness)
+and of any shade of gray (from black = 0 to white = 1) or color.
+The predefined colors are
+.BR black ,
+.BR white ,
+.BR red ,
+.BR green ,
+.BR blue ,
+.BR cyan ,
+.BR magenta ,
+and
+.BR yellow .
+.PP
+Objects may be named and referred to by name or by anonymous
+references such as
+1st box, 4th object, or 2nd last circle.
+Object names require an initial upper case letter;
+names beginning with lower case or an underscore are numeric variables.
+There are a number of predefined variables such as
+.BR circlerad ,
+.BR boxwid ,
+.BR linecolor .
+.B Picasso
+provides a limited set of programming language constructs
+(loops, if statements, macros, some arithmetic)
+for combining simple objects into relatively complex pictures. 
+.PP
+By default, objects are placed on the page adjacent to each other
+and from left to right.
+The default direction may be changed, and any object can be placed
+.B at
+a specific postion,
+given either in absolute coordinates or by reference to other objects and
+points of interest.
+Any object has a
+.BR top ,
+.BR bottom ,
+.BR left ,
+and
+.B right
+point;
+these points may also be refered to directionally as
+.BR north ,
+.BR south ,
+.BR west ,
+and
+.B east
+(or
+.BR n ,
+.BR s ,
+.BR w ,
+and
+.BR e .)
+The ``corner'' points may also be specified,
+.IR e.g. ,
+.B northwest
+or
+.BR nw.
+Lines have
+.B start
+and
+.B end
+points;
+you may also refer to
+.BR 1st ,
+.BR 2nd ...
+.B nth
+points along a line.
+Boxes, circles, and ellipses have eight predefined points corresponding
+to the directional references mentioned above, the first point being in
+the eastern direction and the 8th point towards the southeast.
+For any object, the ``corner'' points really lie on the corners of a box
+surrounding the object while the ``counted'' points lie on the object itself.
+This distinction is normally relevant only for circles and ellipses, but
+since an object can be rotated or otherwise transformed it occasionally
+has significance for other objects as well.
+.SH EXAMPLE
+The following is a simple no-smoking sign described in the
+.B picasso
+language.
+
+.in +.5i
+.ft CW
+.nf
+ .PS
+ d = 0.5
+ [ box ht d wid 3.5 weight d/20
+   box ht d wid d/2 filled 0.5 noedge
+   spline weight 0.2 edge .75 right d then up d \\
+                         then right d then up d
+ ] 
+ linecolor = red; lineweight = 0.375
+ circle rad 3 at last block
+ line from last circle .4th to last circle .8th
+ .PE
+.in -.5i
+.fi
+.ft R
+
+If this is used in a
+.B troff
+document and processed through
+.B picasso
+with the
+.B -t
+flag, the .PS marking the start of the picture can specify the size and
+placement of the picture at that point in your document.
+For example, to place the no smoking sign centered on the page in a 3
+inch square area, flag the start of the picture with\f(CW .PS 3 3 c\fR.
+.SH "SEE ALSO"
+.BR troff (1),
+.BR troff (5)
+.SH REFERENCE
+R. L. Drechsler and A. R. Wilks,
+.I PostScript pictures in troff documents.
+.br
+B. W. Kernighan,
+.I PIC \(em A Crude Graphics Language for Typesetting
+.br
+N-P. Nelson, M. L. Siemon,
+.I
+Picasso 1.0, An OPEN LOOK Drawing Program
+.ft P
+.\"	@(#)picasso.1	1.0 of 1/4/84
+.SH BUGS
+.B Picasso
+is not completely compatible with
+.BR pic (1).
+Besides having a number of new keywords and predefined variable names,
+.B picasso
+also centers pictures on a page rather than placing them at upper left.
+.P
+The interactive version is unable to generate many elements
+of the language, nor will it preserve such elements (e.g., loops)
+if they are read in then written out.

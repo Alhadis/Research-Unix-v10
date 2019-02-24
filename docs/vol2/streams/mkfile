@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	streams.out
+
+pg:	streams.out
+	count streams.ms streams.out
+
+spell:VQ:
+	dospell streams.ms
+
+lp:	streams.out
+	$LP $newprereq && touch $target
+
+streams.out:D:	streams.ms
+	$PREFER $prereq | pic | troff -mpm > $target
+
+index:V:
+	runind streams
+	$PREFER xstreams.ms | pic | troff -mpm > /dev/null 2>streams.x
+	mkindex streams.x
+	rm xstreams.ms
+
+pindex:V:
+	mkindex streams.x

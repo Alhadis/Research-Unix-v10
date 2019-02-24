@@ -1,0 +1,92 @@
+.TH LIM 1 SHARE
+.SH NAME
+lim \- change shares for users
+.SH SYNOPSIS
+\fBlim\fP limit{+|\-|=}string[,string...][;...]  \-|name|uid-uid|uid\fB..\fP ...
+.SH DESCRIPTION
+.I Lim
+changes shares file records for several users,
+a range of uids
+or a list from standard input.
+The changeable limits are designated by their names as defined
+in the files
+.IR <sys/lnode.h> ,
+and
+.I <shares.h>
+as follows:
+.TP "\w'lastusedXXXXXX'u"
+.B charge
+Long term account charge.
+.TP
+.B flags
+The only specifiable flag is:-
+.IR notshared .
+Only the first few letters needed to ensure a unique match are required.
+.TP
+.B lastused
+Date account last used.
+.TP
+.B sgroup
+Scheduling group for the account.
+.TP
+.B shares
+Allocated shares.
+.TP
+.B usage
+Usage for scheduling.
+.PP
+The next character designates that the limit is to be
+incremented (\c
+\fB+\fR\c
+), decremented (\c
+\fB\-\fR\c
+), or set (\c
+\fB=\fR\c
+).
+.PP
+The third group of characters is interpreted as a number,
+a date (if the string contains a `/'),
+or as a string
+(or as a comma-separated list)
+depending on the type of limit being changed.
+However, if the first character is '\fB?\fR',
+then an explanation of the
+options available with the given limit will be listed.
+.PP
+Additional limits are specified by a semi-colon separated list.
+.PP
+If any following argument is just a `\fB\-\fR',
+then the standard input is read for a list of user names,
+one per line.
+If any following argument \fIcontains\fP a `\fB\-\fR'
+then it is interpreted as a range of uids,
+otherwise if it ends in trailing dots (eg: 100\fB..\fR)
+it is interpreted as a range running from the first uid up to the
+maximum number of registered users.
+Otherwise the argument is interpreted as a name.
+.PP
+A list of valid limits is printed out if
+.I lim
+is invoked with invalid arguments (or no arguments).
+.SH FILES
+.PD 0
+.TP 16
+/etc/shares
+for share details.
+.TP
+/etc/passwd
+for user names and \s-1ID\s0s.
+.PD
+.SH SEE ALSO
+pl(1), lnode(5), shares(5).
+.SH DIAGNOSTICS
+.TP
+\&... could not change kernel lnode ...
+The limits system call failed for a logged in user,
+usually because you are attempting to change a scheduling group
+to one that isn't currently active.
+.SH BUGS
+.I Lim
+does not use
+.IR getshput (3),
+so be careful something else is not updating the same entry simultaneously.

@@ -1,0 +1,108 @@
+.TH THINKBLT 9.1
+.CT 1 comm_dev
+.SH NAME
+thinkblt, think \- print on thinkjet
+.SH SYNOPSIS
+.BI thinkblt
+[
+.I stream
+]
+.LP
+.B think 
+[
+.B -o
+.I stream
+]
+[
+.I file ...
+]
+.LP
+.B nroff
+.B -Tthink
+.I \&... 
+.B | think
+[
+.B -o
+.I stream
+]
+.SH DESCRIPTION
+.I Thinkblt
+downloads an interrupt driver for the
+HP ThinkJet printer, provides a menu of
+operations for printing various data residing in the terminal, and
+sets up a
+.I stream
+.RF ( $HOME/.THINK
+by default) on which
+.I think
+can print data from the host.
+It is intended to be down-loaded
+once per terminal session.
+Most of the menu items are identical to
+those of
+.IR blitblt (9.1).
+The remaining ones are:
+.nr xx \w'\f5print mux buffer\f1'u+2n/1n
+.TP \n(xx
+.B print bitmap
+Print whatever bitmap is currently selected, in analogy to
+.IR blitblt (9.1).
+The widest printable bitmap is 640 pixels across.
+.TP
+.B print mux buffer
+Print the
+.I mux
+`snarf' buffer.
+.TP
+.B reset printer
+Sends
+.RB ESC- E .
+.PP
+While the printer is operating, a different menu
+allows one to abort or pause the print operation.
+The
+printer has a fairly large internal buffer, so response may be
+slow.
+.PP
+Files on the host may be printed by giving them as arguments or standard input to
+.IR think .
+When used with
+.IR nroff ,
+names like 
+.B \e('e
+may be used to access the special characters
+provided by the hardware; the
+.I nroff
+terminal driving file has a complete list; see
+.IR troff (1).
+Both
+.I nroff
+and
+.IR pr (1)
+will paginate properly if top-of-form is set so that the paper tear is aligned
+flush with the top of the metal clip which holds the absorber.
+.SH FILES
+.F $HOME/.THINK
+.br
+.F /usr/lib/term/tab.think
+nroff descriptor file
+.SH SEE ALSO
+.IR troff (1), 
+.IR pr (1), 
+.IR blitblt (9.1)
+.SH BUGS
+The 5620 ROM program is unable to cope with interrupts from the printer;
+it is therefore necessary to download
+.IR mux (9.1)
+before turning on the printer.
+.br
+.I Thinkblt
+substitutes its own interrupt routine for the (trivial) one provided by
+.IR mux (9.1).
+The latter is restored upon exit, but havoc may result if the
+.I thinkblt
+layer is simply deleted.
+.br
+The special
+.I nroff
+character names are not currently supported by any other device.

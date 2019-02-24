@@ -1,0 +1,76 @@
+>filref			# list of files & man pages that mention them
+>filnam			# file names only
+for i in /usr/man/man[123456789]
+do
+cd $i
+for j in *
+do
+>junka
+>junkb
+sed -n '
+/^.TH  *.[^ ]*  *.[^ ]*  *\(..*\)/{
+	s//\1/
+	ty
+	d
+	:y
+	h
+}
+/^\.F  */{
+	s///
+	b x
+}
+/^\.FR  */{
+	s///
+	s/ .*//
+	b x
+}
+/^\.RF  */{
+	s///
+	s/^[^ ]* *//
+	s/ .*//
+	b x
+}
+d
+:x
+/</{
+	s/^</\/usr\/include\//
+	s/>$//
+}
+/</!{
+	G
+	/^\/.*\n./ s/\(.*\)\n\(.*\)/\/n\/\2\1/
+	s/\n.*//
+}
+w junka
+s/$/ '"$j"'/
+w junkb
+/\/\* .*/!d
+s///
+w junka
+s/$/ '"$j"'/
+w junkb
+' $j
+cat junka >>../filnam
+cat junkb >>../filref
+done
+rm -f junka junkb
+cd ..
+done
+sort -u filnam -o filnam
+sort -u filref -o filref
+e - filnam 2>/dev/null <<'!'
+g/ /d
+1,$g/./s/$/ /
+1,$-15g/./.,.+15j
+g/^/s//ls -d /
+w junka
+!
+sh junka 2>junkc >/dev/null
+sed '
+/.*: \(.*\): .*/!d
+s//\1/
+' junkc | sort -u  >junkd
+sed '
+/ .* /d
+/^ /d
+' filref | join - junkd 

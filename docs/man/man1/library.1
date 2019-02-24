@@ -1,0 +1,236 @@
+.TH LIBRARY 1
+.SH NAME
+library \- send information requests to appropriate organization
+.PD
+.SH SYNOPSIS
+.B library [-1234567] [request string]
+.PD
+.SH DESCRIPTION
+.I library
+sends document/information requests to the
+appropriate organization within the Library Network.
+It also handles a variety of requests for other AT&T organizations
+(e.g., Engineering Information Services).
+It requires the user to discriminate between seven classes of requests
+as indicated by the menu it displays:
+.sp
+.nf
+1)  Order by number - this includes nearly everything announced
+	by the AT&T Library Network (e.g. TMs, bulletin items) or handled
+	by the Engineering Information Services (e.g. J docs, CPSs).
+2)  Order item not announced by the AT&T Library Network. Available:
+	 Buy a copy of a book; Address labels; Technical Reports; 
+	 Internal document by date (id unknown); Photocopies; 
+	 Subscribe to a journal; foreign language services.
+3)  Subscribe or unsubscribe to a bulletin (e.g. Mercury, CTP)
+4)  Submit a database search. Examples of available databases:
+	book catalog, internal documents, AT&T personnel, released papers
+5)  Request human assistance / interaction. Type(s) available:
+	 General AT&T Library Network assistance; Reference question.
+6)  Request AT&T Library Network information/services. Examples:
+	LINUS info, products/services descriptions, loan/reserve status
+7)  Read AT&T Library Network email transmissions
+
+.fi
+Note that the first class includes anything announced by the Library Network operated by AT&T Bell Laboratories.  
+.PP
+The main menu level of 
+.I library 
+can be skipped by giving
+the number of the desired option (1 - 7)
+as the first parameter to the
+\f2library\f1.
+.PP
+The secondary menu levels in
+.I library
+(presently in options 2, 4, 5 and 6)
+can be bypassed by selecting the desired option as the second
+parameter.
+For example, to do order a photocopy, use the
+command
+.ce
+library -2 -p
+.PP
+Similarly, if you want to do a search of the personnel database,
+you can do the command line
+.ce
+library -4 -p waldstein, r k
+.PP
+Requests for objects that can be meaningfully described with one
+line can be entered on the command line.
+This includes the things orderable by options 1, 3, 4, and 6.
+Note that library tries in this case to function with a minimum
+of interaction.
+For example, if you request a TM this way,
+you will not be given a chance to enter remarks connected with the request.
+.PP
+When permitted, the command line requests can include more than one item
+(presently only options 1 and 3 support this).
+An example command line is
+.ce
+library -1 123456-851234-56tm  5d123 ad-123456 
+.PP
+In options 2, 5, and 6,
+.I library
+will prompt for a variety of information of varying complexity.
+A period (.) at any point in this session will delete the 
+request being entered.
+Blank lines (just hit return) will cause optional information to
+be left out of the request.
+A line consisting of tilde e (\~e) will, when a long response is 
+permitted, put you into an editor.
+This editor defaults to ed(1).
+However, if the environment variable EDITOR is set, the specified
+editor is used.
+A line consisting of tilde r (\~r) will, when a long response is 
+permitted, read in the indicated file.
+.PP
+Option 7 is a misfit, in that it is primarily a reader, not a
+request transmitter; although it does allow requesting items.
+This option is intended for reading electronic transmissions
+from the library network: primarily responses to option 4 search
+requests and ASAP (specialized searches like electronic Mercury).
+A convenient way to use option 7 is to invoke it via a pipe
+from mail(1), mailx(1) or post(1).
+.ce
+ | 3 "library -7"
+This assumes that mail message 3 consists of a search result.
+The quote marks are required due to post(1) and mailx(1) syntax.
+.PP
+Break causes 
+.I library
+to exit
+without sending any requests.
+.PP
+In general for more information about what the library command can
+do, go into each option and enter a question mark.
+This will cause a description of how the option works and
+what it can request.
+.PP
+Several other pieces of information can be passed
+to
+.I library
+to ease and improve its usage.
+This information is looked up in a file called .lib (or the file indicated
+by the LIBFILE shell variable).
+It expects this file to contain lines of the form:
+.sp
+.ti 10
+ID: \f2individual's PAN or Social Security Number\f1
+.ti 10
+libname: \f2individual's last name\f1
+.ti 10
+liblog: \f2name of log file\f1
+.ti 10
+libcntl: \f2control information\f1
+.ti 10
+reader: \f2reader control information\f1
+.ti 10
+liblocal: \f2control information\f1
+.PP
+If this file is not found or lines of this form are not found,
+then 
+.I library
+prompts for name and ID (PAN or SS#).
+.PP
+This information can also be passed to 
+.I library
+as the shell parameters: LIBID, LIBNAME, LIBLOG, LIBCNTL, and LIBLOCAL.
+.PP
+.I library
+keeps a log of requests sent via library if a line in the .lib
+file exists giving a log file name, i.e., if you have in
+your .lib file a line of the form
+.ce
+liblog: \f2name of log file\f1
+.PP
+.I library
+keeps a log of requests in that file.
+This file is created in a form that can be read and manipulated
+by the 
+.I mail
+command.
+To read or modify the log file, type
+.ce
+mail -f \f2name of log file\f1
+.PP
+.I library
+creates the log file in your HOME directory unless the file name
+given starts with a slash (/).
+.I library
+will automatically check option 1 requests
+for duplicates in the log file.
+.PP
+The libcntl information is sent with the request to the program
+that receives the requests for the library networks.
+Control information containing the letter ``a''
+will cause an acknowledgement to be mailed back to you that
+your request has been received.
+Control information of the form ``m\f2number\f1''will determine the
+maximum number of items retrieved by a search request.
+For example, a control line of the form
+.sp
+.ce
+libcntl: am100
+.PP
+will cause requests to be acknowledged and a maximum of 100 retrieved
+search items to be mailed back to you.
+.PP
+The reader control information is intended to let you personalize
+the way
+.I library
+option 7 works for you.
+Each letter after the colon indicates a different option turned
+on or off.
+Presently available are the following:
+.RS
+.TP 5
+b
+causes library -7 to leave a
+blank line between records when more than one is displayed on the screen.
+.TP 5
+c
+causes 
+.I library
+to confirm that you want the entered requests transmitted.
+It does this at the end of the session, before finishing.
+.TP 5
+n
+is an interesting features causing no introductory menu
+of available announcements to be displayed.
+The reader then goes straight into the first announcement to be read,
+and moves directly from one announcement to the next, without
+displaying the menu of those available at each stage.
+.RE
+.PP
+The liblocal information is used to control the execution of 
+.I library.
+Presently the only meaningful control is \f2x\fP.
+This causes library(1) to assume you are an expert and the
+prompts are generally much shorter.
+.PP
+.I library
+also uses your .lib file to save various repetitious responses
+for its own use.
+These will prevent you from having to duplicate responses.
+.PD
+.SH BUGS
+.I library
+checks upon input whether the request is reasonable.
+New styles of request numbers require program modification
+before they are valid.
+.PD
+.SH FILES
+.PD 0
+.TP 15
+$HOME/.lib
+This optional file contains a PAN and name for
+.I library
+to use.
+.TP 15
+/usr/lib/library/library.help
+The help message displayed by library.
+.PD
+.SH "SEE ALSO"
+mail(1), post(1), mailx(1)
+.\"	@(#)library.1	1.12  11/26/90 RnD added

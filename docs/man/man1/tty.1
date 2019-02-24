@@ -1,0 +1,62 @@
+.TH TTY 1
+.CT 1 comm_term
+.SH NAME
+tty, logtty \- get terminal name
+.SH SYNOPSIS
+.B tty
+[
+.B -s
+]
+.PP
+.B logtty
+.SH DESCRIPTION
+.I Tty
+prints the pathname associated with the standard input file
+if it can be found in
+the
+.F /dev
+directory,
+.L "nameless pipe/"
+and a unique string if the file is a pipe,
+.L "not a tty"
+otherwise.
+Option
+.L -s
+suppresses output,
+returning exit status only.
+.PP
+.I Logtty
+prints the pathname associated with the terminal
+on which the current session was logged in.
+If the login terminal can't be found,
+.L "no login tty"
+is printed.
+.PP
+In a 
+.IR mux (9.1)
+window,
+.I tty
+reports the name of the window, while
+.I logtty
+reports the name of the terminal.
+But see 
+.SM BUGS.
+.SH "SEE ALSO"
+.IR who (1)
+.SH DIAGNOSTICS
+Exit status is
+0 if a real pathname was printed,
+1 for
+.LR "not a tty"
+or
+.LR "no login tty" ,
+2 for a pipe.
+.SH BUGS
+Mounting something atop the login terminal
+hides it from
+.IR logtty .
+.IR Vismon (9.1)
+does this.
+.PP
+Try
+.LR "tty </" .

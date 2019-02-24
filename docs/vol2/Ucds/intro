@@ -1,0 +1,66 @@
+.NH
+Introduction.
+.LP
+A design has a logical part and a physical part.
+The logical part consists of circuit schematics, generally
+supplemented by 
+.SM PAL
+equations.  The physical part includes board layout and routing.
+.LP
+A circuit contains
+.I chips
+each identified by
+.I name
+(which is arbitrary, and of mnemonic value to the designer) and
+.I type
+(which is generic, e.g.,
+.CW 74LS74 ")."
+Schematics can be hierarchical; what appears syntactically as
+a chip is in fact an instance of a
+.I macro ,
+(i.e., another drawing) if the file
+.I "type\c"
+.CW ".w"
+.R
+exists.
+Real chips have
+.I pins ,
+each identified by a
+.I "pin name"
+and
+.I "pin number" ","
+and a
+.I "package type" "."
+Pin names and their mapping onto pin numbers are a property of
+the chip type; the mapping from pin numbers to physical coordinates
+is a property of the package type.
+.LP
+Pins are connected by
+.I nets ","
+which have unique
+.I "net names"
+(assigned by the drawing package if
+omitted by the user).  It is an error for a pin to
+be connected to more than one net.
+Nets such as
+.CW VCC
+and
+.CW GND
+generally need different routing algorithms from ordinary nets;
+these are called
+.I "special-signal nets"
+in cases where the distinction is important.
+.LP
+A
+.I board
+is a physical mounting for packages.  It is mostly characterized by its
+.I "pin holes"
+(available for package insertion) and
+.I "special-signal pins"
+(connected to special-signal nets).  An
+.I
+.SM I/O
+.R
+.I connector ","
+where signals enter or leave the board, is simply a special case
+of a chip.

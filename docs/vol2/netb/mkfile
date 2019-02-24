@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	netb.out
+
+pg:	netb.out
+	count netb.ms netb.out
+
+spell:VQ:
+	dospell netb.ms
+
+lp:	netb.out
+	$LP $newprereq && touch $target
+
+netb.out:D:	netb.ms $REF
+	$PREFER netb.ms | tbl | troff -mpm > $target
+
+index:V:
+	runind netb
+	$PREFER xnetb.ms | tbl | troff -mpm > /dev/null 2>netb.x
+	mkindex netb.x
+	rm xnetb.ms
+
+pindex:V:
+	mkindex netb.x

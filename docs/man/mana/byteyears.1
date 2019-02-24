@@ -1,0 +1,38 @@
+.TH BYTEYEARS 1 
+.SH NAME
+byteyears \- time-space product for file residency
+.SH SYNOPSIS
+.B byteyears
+[
+.B \-a
+]
+[
+.I file
+]
+. . .
+.SH DESCRIPTION
+.I Byteyears
+reports the product of the age of each
+.I file
+in years
+and the length in bytes.
+Files for which this number is large
+may be reasonable candidates for deletion.
+If the file is a directory,
+.I byteyears
+reports (recursively) on everything in that
+directory.
+If no arguments are given, the current directory is assumed.
+If the
+.B \-a
+option is given, the time since last access
+is used instead of the time since last modification.
+.PP
+Each line of output contains
+the number of byte years (rounded to the nearest integer),
+the size of the file in bytes, the time last
+modified, and the name of the file.
+.SH EXAMPLES
+.TP
+byteyears | sort \-r | sed 10q
+List the ten leading candidates in the current directory.

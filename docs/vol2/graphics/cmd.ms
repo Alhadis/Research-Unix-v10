@@ -1,0 +1,1467 @@
+.so ../ADM/mac
+.XX raster 483 "The 10th Edition Raster Graphics System"
+.fp 5 T CW	\" T for Typewriter
+.de TP	\" An indented paragraph describing some command, tagged with the command name
+.IP "\\fT\\$1\\fR" 8
+.if \\w'\\fT\\$1\\fR'-7n .br
+..
+.de CI
+.nr Sf \\n(.f
+\%\&\\$3\f(CW\\$1\fI\&\\$2\f\\n(Sf
+..
+.TL
+The 10th Edition Raster Graphics System
+.AU
+Tom Duff
+.AI
+.MH
+.AB
+The current (late 1989) state of generating and displaying raster graphics
+in Research
+.UX
+is described.
+.AE
+.2C
+.NH
+Introduction
+.PP
+The Research
+.UX
+system contains a number of commands to capture, manipulate,
+display and record monochrome and full-color raster images.  Three groups of
+commands may be identified:
+interactive programs that operate on a frame buffer,
+commands that operate on images stored in picture
+files (see
+.I picfile (5)),
+and programs that interface to various graphical I/O devices:
+video cameras, scanners, paper plotters, film cameras and video tape
+recorders.
+.NH
+Video Facilities
+.PP
+No discussion of our raster graphics software can ignore the
+hardware on which it runs.  The hardware available at different
+sites will, of course, vary.  For definiteness, and to provide
+help for the local audience, this section will discuss the
+hardware available in Center 1127's graphics and image processing
+laboratory (MH 2C-524) and its neighborhood.  Most other environments
+will have hardware that is similar in spirit if different in detail.
+.PP
+There are seven work stations in 2C-528.  On the day this was written,
+four of them had TTY 5620 terminals, two had Gnot terminals and
+one had a SUN-3 workstation computer.  Eventually, most of the 5620's
+will be replaced with Gnots.  Each work station also has
+a Sony GDM-1901-12 video monitor that displays high-resolution
+video signals.
+.PP
+The room contains other video displays and recorders, including
+a Barco video projector in the ceiling, a 35-inch Mitsubishi monitor
+at the front of the room, a 19-inch Barco monitor at work station 6,
+two small Sony monitors in the video rack next to the audio console,
+two Panasonic Super-VHS recorders, a Sony 3/4-inch (U-MATIC) video
+player, a multi-standard (SECAM, NTSC, PAL) VHS player, a
+Sony BVH-2500 1-inch (SMPTE-C) video tape recorder and a Sony video
+camera.
+.PP
+The video equipment supports at least three incompatible video formats.
+High-resolution
+RGB video has 1024 scan lines, a 60 hz non-interlaced vertical scan rate,
+and transmits red, green and blue information on separate cables with
+synchronization pulses superimposed on the green channel.
+Low-resolution RGB video has between 480 and 488 scan lines, 30hz
+interlaced vertical scan, and separate RGB with sync on green.
+NTSC (National Television Standards Committee) video has the same timing
+characteristics as low-resolution RGB video, but encodes red, green, blue
+and sync into a single signal.
+NTSC is the encoding used by American, Canadian and Japanese television
+broadcasters, and by almost all video recording and playback equipment
+in those countries.
+.PP
+Various computer terminals generate video in other formats that our
+equipment handles with only limited success.  Gnots, 630s,
+5620s, Sun terminals, IBM-compatible PCs and Macintoshes all generate
+mutually incompatible video.  Their vertical and horizontal scan-rates
+differ.  The voltages and impedances of the signals they produce differ.
+Their color encodings differ.  Monitors that can display video from all
+of these sources are rare, let alone hardware to convert from one format
+to another.  For example, the only reliable way to record a signal from
+any of these sources is to place a camera in front of a monitor.  The
+quality of the resulting recordings is often bad.  It is a black art
+to adjust our Barco video projector to handle non-standard signals,
+but with a few days notice it can often be done.  Again, the results
+are not often as good as one might like \(mi the projector does not
+focus as tightly as a monitor and its brightness is limited.  As better
+video displays become available our situation will improve.
+Table 1 summarizes the equipment available and the
+video formats that each supports.
+.1C
+.KF
+.TS
+center box;
+l| c| c| c| c| c| c.
+Equipment	High-res	Low-res	NTSC	Gnot	IBM	PAL/SECAM
+	RGB	RGB
+=
+workstation monitors	\(bu
+_
+Barco projector	\(bu	\(bu	\(bu	\(bu	maybe	maybe
+_
+35-inch Mitsubishi 		\(bu	\(bu		\(bu
+_
+Barco  at work station 6		\(bu	\(bu
+_
+Sony rack monitors			\(bu
+_
+Super-VHS recorders			\(bu
+_
+U-MATIC player			\(bu
+_
+1-inch recorder			\(bu
+_
+multi-standard player			\(bu			\(bu
+_
+camera		\(bu	\(bu
+_
+Metheus frame buffers	\(bu
+_
+ITI frame buffer		\(bu
+_
+Pixel Machine	\(bu	\(bu
+.TE
+.sp .3
+.ce
+\fBTable 1. \fRVideo devices
+.SP .5
+.KE
+.2C
+.PP
+We have several Metheus 3610 frame buffers (seven on
+.CW pipe ,
+one on
+.CW arend ,
+one on
+.CW encke )
+and an Imaging Technology, Inc. (ITI) RGB-512.  All of our
+frame buffers store 32 bits at each pixel, one byte each for red, green
+blue and alpha.  The 3610's generate high-resolution (1280\(mu1024)
+video.  The ITI generates low-resolution (512\(mu480) video that may
+be recorded on video tape after conversion to NTSC.  Connected to
+.CW pyxis ,
+a four CPU SGI 4D-240, is an AT&T Pixel Machine with
+58 processors.  It can generate either high- or low-resolution video
+under software control; the Pixel Machine documentation can tell you how.
+.PP
+Each piece of video equipment may be connected to any other
+via a video patch bay in 2C-538 (the
+.CW alice
+room.)  Alternating
+rows of the patch bay present video outputs and inputs.  If
+an output and the input immediately below it are not plugged
+into anything, an internal connection routes one to the other.
+The patch bay has been layed out so that the most useful
+configurations require no patch cords.  The patch bay is carefully
+labelled so that its proper use ought to be obvious.
+.PP
+The Sony BVH-2500 video recorder produces very high
+quality recordings on 1" video tape.  Since it can overwrite
+arbitrary single frames of the tape, it is an ideal machine
+on which to record animation.
+.PP
+Before using a new tape,
+you must record (``grind'') time-code on it, numbering
+each frame of the tape.
+Time-code values are usually denoted by values
+of the form
+.I hh.mm.ss.ff
+(like
+.CW 02.43.17.15 ).
+The 2500's monitor output, available on the video patch bay,
+displays time-code superimposed on the 2500's
+output signal.
+.PP
+To grind time-code, use
+the patch bay
+to connect the color bar generator
+to the 2500's input, thread up a tape, and manually set the
+2500 to record by pushing its
+.CW REC
+and
+.CW PLAY
+buttons simultaneously.  Let it go until the tape runs out.
+.PP
+The
+.I 2500
+command operates the recorder, reading instructions
+from its standard input.  Its instruction set is
+moderately complicated; for most uses the following
+subset is adequate:
+.TP "cue \fIhh.mm.ss.ff
+Cue the tape to the given time code.  The
+time-code displayed on the 2500's monitor
+output may be a few frames off,
+but the recorder will be cued to the correct point.
+.TP "still mode on
+Put the recorder in single-frame record mode.
+.TP "still mode off\fP
+Put the recorder out of single-frame record mode.
+.TP "snap [\fIn\fT]
+Record
+.I n
+frames (default 1) at the current cue point, and
+advance the cue point by
+.I n
+frames.  The recorder must be in single frame mode.
+.TP "play
+Start playing back from the current cue point.
+.TP "stop
+Stop the recorder.
+.TP "!\fIunix-command
+Run the given
+.I unix-command
+using
+.CW /bin/sh .
+.PP
+We currently have only two sources of digital video that
+may be recorded on video tape.  These are the Pixel Machine
+and the ITI frame buffer attached to
+.CW kwee .
+To use either
+one, you must patch its output to the NTSC color encoder,
+and patch the encoder's output to the video recorder.
+The ITI frame buffer is also useful as a frame-grabber,
+capturing its video input in its memory whence it may
+be saved in a picture file or otherwise manipulated.
+.PP
+The ITI is served by an ancient software regime whose
+commands all begin with the letters
+.CW iti .
+.TP "itifbinit [-x]
+Re-initialize the ITI to the state expected by the
+rest of the software.  The ITI is often unused for
+days at at time, during which its health often
+decays.
+.CW itifbinit
+is its restorative.  The
+.CW -x
+flag causes its output signal to be synchronized to the
+sync pulses of its input, instead of running from its
+internal clock.
+This is always a good idea.
+.TP itigamma
+Load the ITI's color map to correct intensities
+for display on CRT monitors.
+.TP "itigrab [-gs]
+Run the frame-grabber.  The
+.CW -g
+flag starts the frame-grabber running.
+The displayed image will track the ITI's input
+video.
+.CW -s
+stops the frame-grabber, freezing the image.
+Unadorned by flags,
+.CW grab
+starts the frame-grabber and stops it one frame
+later.
+.TP "itigit \fIpicture-file
+Copy the image stored in
+.I picture-file
+into the ITI.
+.TP "itisiv \fIpicture-file
+Save the image in the ITI in
+.I picture-file .
+.NH
+Other output devices
+.PP
+Many modern laser printers and typesetters read data in the PostScript format.
+.TP "pic2ps [-h \fIheight\fP] [\fIpicture\fP]
+converts a picture file into encapsulated PostScript, suitable for inclusion
+in any PostScript document.  The
+.CW -h
+option specifies the height, in inches, of the output image.  It is
+not often required, as document processors usually insert PostScript illustrations
+in a scale-independent manner.
+.PP
+The
+.CW alice
+room contains an Imagitex scanner that can be used to
+convert photographs to digital form.  To use it, place the image to be scanned
+under the hold-down leaves, slide the leaves to make a window around the section
+you wish to scan, and use the
+.I imscan
+command.
+.TP "imscan [-s\fIscale\fP] [-l\fIlens\fP] file" .
+The
+.CW -l
+option causes the scanner to use a lens of
+focal length
+.I lens
+inches.
+The possibilities are 5 (754 dots per inch) and 8 (480 dots per inch); 8 is the default.
+The
+.CW -s
+option sets the sub-sampling
+.I scale ,
+which can vary from 1 to 9.  One pixel in each
+.I scale
+by
+.I scale
+square will be stored.  The default is 4.  In conjunction with
+the default 8-inch lens, this causes scans to be stored at 120 dot-per-inch resolution.
+.PP
+There is a high-resolution one-bit-per-pixel Canon document scanner at the back of the graphics lab accessed through the
+.I cscan
+command.
+.TP "cscan [-f\fIx\fP,\fIy\fP] [-fL] [-s\fIseconds\fP] [-v] [\fIfile ...\fP]
+scans pages into the given files (default, one page onto standard output.)
+The
+.CW -f
+option sets the size of the scan in pixels (400 to the inch);
+.CW -fL
+sets double-letter size (11 by 17 inches, the largest possible.)
+The
+.CW -s
+option sets the number of seconds to wait before scanning each page after
+the first.
+.PP
+In the Alice room is a Matrix Instruments QCR digital film recorder.
+It will record color or black-and-white images in a variety of photographic
+formats, include 8x10 Polaroid, 4x5 and 35mm.  The
+.I qsnap (1)
+command will output an image to film.
+\ \ \ \ \ \ \ 
+.NH
+Frame buffer commands
+.PP
+A frame buffer is a large memory organized as a two-dimensional array of
+pixels.  Our Metheus 3610 frame buffers have 1024 scan lines of 1280 pixels
+each.  The ITI frame buffer has 480 lines of 512 pixels.  The coordinate
+system has (0,0) in the upper left-hand corner, with x increasing to
+the right, and y increasing down.  This apparent weirdness is fairly standard,
+since it makes video output happen in row-major order.
+.PP
+Here we will mostly discuss commands for the Metheus displays.  The corresponding
+ITI commands have the same names, but prefixed with the string
+.CW iti .
+.PP
+There are seven Metheus frame buffers attached to pipe, named
+.CW /dev/om[0-6] .
+All of the commands discussed below determine which one to use
+by examining the environment variable
+.CW FB .
+It is often hard to tell what frame buffer is displayed on which monitor
+because of connections in the patch bay.  The
+.CW fbi
+(frame buffer identification) command displays each frame buffer's name in it.
+.PP
+Our frame buffers all have 32 bits per pixel, divided into
+four 8-bit channels.  The channel values are normally thought of
+as fractions ranging from 0 to 1, although frame buffer commands perversely
+refer to them as integers between 0 and 255.
+Three of the channels specify the red, green and
+blue color components of the image.  The fourth channel, called
+.I alpha ,
+is used to indicate whether or not the image covers the pixel, and is not
+normally displayed.
+.I Alpha
+is used to control image compositing operations|reference(porter duff compositing digital images).
+Fractional values of
+.I alpha
+describe pixels that the image partly or translucently covers, and
+facilitate anti-aliased compositing.
+.PP
+Each frame buffer contains three 256 entry look-up tables that specify
+mappings from the values stored in the red, green and blue channels
+to the voltages supplied at the frame buffers' video outputs.
+A couple of commands manipulate these mappings.
+.TP "gamma [\fIpower\fP]
+command loads these tables with a function that
+inverts the power-law relation between voltage and luminous flux
+normally encountered in CRT displays.  Thus, pixel values normally
+correspond directly to displayed intensities.
+.I Power
+is the exponent of the power-law.  The default of 2.3 is adequate
+for all our displays.
+.TP "getmap \fIfile\fP [...]
+command, whose arguments are a list of files containing color maps.
+On the ITI, the argument `\fT%\fP' refers
+to the current content of the frame buffer's color map.  (The Metheuses'
+color maps are write-only.)  The functional composition of the specified
+color maps is loaded into the frame buffer's color map.
+.I Getmap
+searches for files in
+.CW . ,
+then
+.CW /fb/cmap ,
+then
+.CW /usr/td/2d/cmap/lib .
+A color map file contains 256 records of 3 bytes each, specifying the output
+values for the corresponding red, green and blue input values.
+.TP ranmap
+command loads random values into the color map.
+.PP
+The
+.I zoom
+and
+.I movie
+commands support magnification and animation of images.
+.TP "zoom [\fIamount\fP [\fIx y\fP]]
+magnifies part of the image.
+With three arguments,
+.I zoom
+magnifies by
+.I amount ,
+mapping the point
+.I x,y ) (
+(default (0,0)) to the upper left-hand corner of the screen.
+With no arguments,
+.I amount
+defaults to 1.
+The Metheuses can magnify by any integral factor from 1 to 16.
+The ITI can magnify only by 1 or 2.
+.TP "movie \fIxsize ysize nx ny\fP [\fIdelay\fP]
+views an array of images in sequence by zooming and panning.
+The arguments are the size of the individual
+frames, the number of frames in the array in each
+direction, and optionally the number of 60ths of a second
+to delay between frames.  The frames must be arranged
+boustrophedonically, with alternate rows proceeding from
+left to right and right to left.  (This is because neither
+Metheus nor ITI frame buffers can pan in x and y simultaneously
+without glitching.)
+.PP
+There are a number of commands to load simple patterns into the frame buffer:
+.TP "clr [-w \fIx0 y0 x1 y1\fT] [\fIr\fT [\fIg b\fT [\fIalpha\fT]]]
+sets all pixels to the given value.  If only
+.I r
+is given,
+.I g
+and
+.I b
+are set to
+.I r .
+If
+.I alpha
+is not given, it is set to 255 (completely opaque.)
+The
+.CW -w
+flag restricts attention to pixels inside the window whose upper-left corner is
+.I x0,y0 ) (
+and with
+.I x1,y1 ) (
+just diagonally outside the lower-right corner.
+.TP cbars
+displays a color-bars test pattern.  The 8 bars at the top exercise all combinations
+of the 3 primary colors.  The 9 patches at the bottom are a logarithmic
+(perceptually uniform) grey scale.
+.TP "ramp [-w \fIx0 y0 x1 y1\fT] [-v] [[\fIc0\fT] \fIc1\fT]
+displays a horizontal ramp whose color is
+.I c0
+at the left
+and
+.I c1
+at the right.
+Colors are specified as for
+.CW clr
+(green and blue default equal to red, alpha defaults to 255).
+.I C0
+defaults to
+.CW "0 0 0 255" .
+.CW -w
+restricts
+.CW ramp
+to the given window.
+.CW -v
+gives a vertical ramp with
+.I c0
+at the top
+and
+.I c1
+at the bottom.
+.TP "colors [-gfr]
+displays a 16 by 16 array of grey-colored (equal red, green and blue) squares in
+the middle of the screen with red, green and blue ramps at the top.  This is
+mostly useful for examining color maps.  The flags modify the display in small ways.
+.CW -r
+suppresses the ramps.
+.CW -g
+suppresses the gaps between the squares.
+.CW -f
+expands the display to fill the full screen, making the patches non-square and
+suppressing the ramps.
+.PP
+The
+.I xhair
+command can be used to examine the contents of the frame buffer.
+It is named after the cross-hair that it draws on the screen.  Single
+character commands manipulate the cross-hair, magnify the video and
+print pixel values.  The commands are
+.nf
+.ta 8n
+\fTh\fP	print the help message
+\fTlrud\fP	move left, right, up or down 1 pixel
+\fTLRUD\fP	move left, right, up or down 16 pixels
+\fT0\fP	move to center of screen (x=256, y=240)
+\fT1-8\fP	magnify \(mu1\-8
+\fT9\fP	magnify \(mu16
+\fTp\fP	print current coordinates and pixel value
+\fTP\fP	print pixel after each command (toggle)
+\fTm\fP	type coordinates to move to
+\fTx\fP	type x coordinate to move to
+\fTy\fP	type y coordinate to move to
+\fTc\fP	change the crosshair display to a rectangle
+\fTs\fP	manipulate other corner of rectangle
+\fT^D,q\fP	exit xhair and run command
+\fTQ\fP	exit xhair, don't demagnify or run command
+\fTX\fP	exit and don't run command
+.PP
+If
+.I xhair
+is given arguments, they represent a command to be executed before exiting,
+after making substitutions for any argument whose first character is
+.CW % .
+The substitutions made are:
+.ta 8n
+.nf
+\fT%r\fP	the current rectangle
+\fT%w\fP	the current rectangle
+\fT%p\fP	the upper-left corner of the rectangle
+\fT%o\fP	the upper-left corner of the rectangle
+\fT%c\fP	the lower-right corner of the rectangle
+\fT%x\fP	the x coordinate of the upper-left corner
+\fT%y\fP	the y coordinate of the upper-left corner
+\fT%X\fP	the x coordinate of the lower-right corner
+\fT%Y\fP	the y coordinate of the lower-right corner
+.PP
+The
+.I mplot
+command is a version of the standard UNIX
+.I plot (1)
+filter that produces output in a Metheus frame buffer. 
+.NH
+Picture file commands
+.PP
+Most of our raster graphics commands require no special hardware.  They synthesize
+images in picture files from textual or other descriptions, they modify images
+in picture files, producing results in picture files, or they combine the contents
+of several picture files to produce composite images, again storing the result in
+a picture file.
+.PP
+The
+.I pcp
+command takes two names of picture files or frame buffers and copies the first onto the second.
+As with all picture file commands, the special names
+.CW IN
+and
+.CW OUT
+refer to standard input and standard output.
+Frame buffers are designated by names that begin with \fT%\fP:
+.ta 8n
+.nf
+\fT%0\fP	Metheus frame buffer #0.
+\&...
+\fT%9\fP	Metheus frame buffer #9.
+.fi
+.PP
+.I Pcp
+has a number of options that alter the copied picture:
+.TP "-o\ \fIx y
+Add
+.I x,y ) (
+to the picture's window coordinates.
+.TP "-w \fIx0\ y0\ x1\ y1
+Clip the input picture's window to the given coordinates.
+If
+.CW -o
+and
+.CW -w
+are both given, the window is clipped before being offset.
+.TP "-t\ \fItype
+The output picture will have
+.CW "TYPE= \fItype" .
+.TP "-c\ \fIchannels
+The output picture will be assembled from the given
+channels of the input picture.  In many cases, a request
+for a channel not found in the input picture will be
+satisfied by standard conversions.
+For example, if
+.I channels
+includes
+.CW m ,
+but the input picture has only
+.CW rgb ,
+a monochrome channel is synthesized by computing
+NTSC luminance (\fTm=.299r+.587g+.114b\fP).
+Conversely,
+.CW rgb
+will be synthesized from
+.CW m
+by lookup in the input's color map, if it has one, or by
+.CW r=g=b
+otherwise.
+If
+.I channels
+mentions
+.CW a
+and the input has none, 255 is used.
+If
+.I channels
+mentions
+.CW z...
+and the input has none, 1.0 (floating point) is used.
+Any other channel missing in the input is set to zero.
+.TP "-C\ \fIchannels"
+Put
+.CW CHAN=\fIchannels
+in the output's header.  Without this option, the
+output's
+.CW CHAN
+attribute is taken from the
+.CW -c
+option, or failing that from the input's
+.CW CHAN
+attribute.
+.CW -C
+is useful, for example, to create a monochrome (\fTCHAN=m\fP)
+image from the red channel of a color image using
+.CW "pcp -cr -Cm" .
+.PP
+The
+.I lam
+command combines any number of images, writing a picture file whose window
+is large enough to contain all the windows of its inputs.  The input files
+are combined with pixels of later images overwriting earlier ones.
+This is only really useful if the windows of the input images differ.
+.CI -o " file
+specifies the output file name (standard output by default).
+All input images must have the same
+.CW NCHAN .
+.PP
+The
+.I posit
+and
+.I 3matte
+commands combine images using the two- and three-dimensional compositing
+operations described in |reference(porter duff compositing digital images)
+and |reference(duff composite3d).
+Each takes a list of picture file names as arguments, producing a composite
+on standard output.  The
+.CW -a
+option will cause either program to output only the
+.CW rgb
+channels, suppressing
+.CW a
+(and
+.CW z...
+in the case of
+.I 3matte ).
+.PP
+There is an army of commands to read an image and, under the control of a few
+parameters, write a modified image on standard output.  Those that read
+a single picture file by default use standard input, so they are usable
+in a pipeline.
+They include:
+.TP "lum [\fIpicture\fP]
+File
+.I picture
+(default standard input) contains a color image or a monochrome image with a color map.
+A gray-level image is written on standard output,
+using the NTSC luminance formula.
+.TP "clip [-o \fIx y\fP] \fIx0 y0 x1 y1\fP [\fIpicture\fP]
+Clip an image to have
+.CW "WINDOW=\fIx0 y0 x1 y1" .
+A picture that does not fill out the window is filled with black pixels.
+.TP "xpand [-s] [\fIpicture\fP] [\fIlo hi\fP [\fIinlo inhi\fP]]
+The input picture has its dynamic range adjusted so that pixels in the
+range
+.I inlo
+to
+inhi
+are mapped to the range
+.I lo
+to
+.I hi
+(default 0 to 255).
+The default values for
+.I inlo
+and
+.I inhi
+are determined per channel by examining the input picture.
+The
+.CW -s
+option causes all channels to be examined together.
+.I Lo ,
+.I hi ,
+.I inlo
+and
+.I inhi
+may have any values whatsoever.  If
+.I hi
+is smaller than
+.I lo ,
+pixel values will be inverted, producing a negative image.
+Any output pixel that would be mapped outside the range
+0\-255 is set to 0 or 255.
+.TP "dither [\fIpicture\fP]
+Convert a full-color (3 channel) picture to one channel with a color map
+by dithering.
+.TP "floyd [\fIpicture\fP]
+Convert an 8-bit gray-scale picture to one bit per pixel using a version of the Floyd-Steinberg
+error-diffusion method.
+.TP "halftone \fIscreen\fP [\fIpicture\fP]
+Convert an 8-bit gray-scale picture to one bit using a given half-tone
+.I screen .
+A description of the screen is read from a file in
+.CW /usr/td/lib/screens .
+The available screens include (among others)
+.KS
+.in 2n
+.TS
+lFCW	l.
+ALLEBACH	Allebach's ordered-dither
+BAYER	Standard ordered-dither
+BLUENOISE	A pebble-screen pattern
+CLASSIC	A 3-pixel-wide dot screen
+CLASSIC2	Another 3-pixel-wide dot screen
+CLASSIC3	A 4-pixel-wide dot screen
+CLASSIC4	An 8-pixel-wide dot screen
+DIAMOND	Rao and Arce's ordered-dither
+LINE	Ulichney's line screen
+RING	A concentric ring screen
+TILT18	A tilted dot screen
+.TE
+.KE
+.TP "he [\fIpicture\fP]
+Histogram equalization: the intensity histogram
+of the input image is measured.  The output image
+has its contrast altered for maximum use of the
+output range, equalizing the histogram
+as much as possible.
+.TP "hysteresis \fIlow high\fP [\fIpicture\fP]
+Pixel values of 
+.I picture
+below
+.I low
+are mapped to zero.
+Those above
+.I high
+are mapped to 255.
+If
+.I low
+and
+.I high
+are not equal, any region
+below
+.I high
+that has any 8-connected neighbors below
+.I low
+is mapped to zero.
+.TP "picaverage \fIweight picture1 picture2
+The output picture is a weighted average of
+.I picture1
+and
+.I picture2 .
+.I Weight
+determines the fraction of the average contributed by
+.I picture1 .
+.TP "piccat \fIpicture ...
+The input
+.I picture s
+are concatenated one atop another.  The
+output has the width of the widest input.
+.TP "picjoin \fIpicture ...
+The input
+.I picture s
+are concatenated side by side.  The
+output has the height of the highest input.
+.TP "adapt [\fIpicture\fP]
+Adaptive contrast enhancement: a 7 by 7 neighborhood around each pixel
+is examined  for its minimum and maximum values.  The center pixel is
+remapped linearly in a way that would send the neighborhood's maximum to
+255 and its minimum to 0.  That is,
+.CW "cen=255*(cen-min)/(max-min)" .
+.TP "ahe [\fIpicture\fP]
+Adaptive histogram equalization: each pixel of the output image
+is the histogram-equalized value of the center of a 17\(mu17 pixel
+window surrounding it in the input image.
+.TP "clean [\fIpicture\fP]
+Bayer-Powell noise removal filter.  If the center pixel of each 3\(mu3
+window in the input differs from the average of the other 8 pixels by
+more than 64, it is replaced by the periphery-average.  This has the
+effect of flattening isolated noise pixels.
+.TP "crispen [\fIpicture\fP]
+3\(mu3 linear crispening filter.  Convolves the input image with
+the kernel
+.P1 20n
+-1 -1 -1
+-1  9 -1
+-1 -1 -1
+.P2
+This is a mild high-pass filter.
+.TP "edge [\fIpicture\fP]
+3\(mu3 linear edge-detection filter.
+Convolves the input image with
+the kernel
+.P1 20n
+-1 -1 -1
+-1  8 -1
+-1 -1 -1
+.P2
+This is just the difference between the original image and the output of
+.CW crispen .
+.TP "edge2 [\fIpicture\fP]
+3\(mu3 non-linear edge-detection (Sobel operator) filter.
+.TP "extremum [\fIpicture\fP]
+3\(mu3 extremum filter.  Replaces the center pixel of each
+by the value in the 3\(mu3 window surrounding it that most
+differs from it.
+.TP "laplace [\fIpicture\fP]
+3\(mu3 Laplacian filter.
+Convolves the input image with
+the kernel
+.P1 20n
+ 0 -1  0
+-1  5 -1
+ 0 -1  0
+.P2
+This is a fairly extreme high-pass filter.
+.TP "median [\fIpicture\fP]
+3\(mu3 median filter.  Each pixel is replaced by the
+median of the 3\(mu3 window surrounding it.
+.TP "smooth [\fIpicture\fP]
+3\(mu3 Bartlett filter.
+Convolves the input image with
+the kernel
+.P1 20n
+1/16 2/16 1/16
+2/16 4/16 2/16
+1/16 2/16 1/16
+.P2
+This is a moderately strong low-pass filter.
+.TP "3to1 [-e] \fIcolormap\fP [\fIpicture\fP]
+Converts the input picture from full-color (\fTrgb\fP) to a single
+channel mapping each pixel to the closest entry of
+.I colormap .
+.TP "mcut [\fIpicture\fP]
+Reads a picture, and writes a color map on standard output suitable for use by
+.I 3to1 .
+.I Mcut
+uses Heckbert's median-cut algorithm to pick a color map that
+matches
+.I picture 's
+colors pretty well.
+.TP "improve \fIcolormap\fP [\fIpicture\fP]
+Given a color map and a picture file, this outputs a new color map
+that better represents the colors of the picture.  The algorithm
+is to  output the centroid of those pixel values that are closest
+to each input color map entry.  Running
+.I improve
+several times may produce better and better color maps.
+.TP "quantize [\fIpicture\fP]
+Convert a full-color picture to an 8-bit picture with color map.
+This is just a command file that calls
+.I mcut ,
+.I improve
+and
+.I 3to1 .
+It does a much better job than
+.I dither .
+.TP "remap \fIcolormap\fP [\fIpicture\fP]
+The input picture should be full color (\fTCHAN=rgb\fP).
+The output will have its pixel values will be altered
+so that when mapped through the given
+.I colormap
+they will be as close as possible to the input's pixel
+values.
+.TP "resample \fIwidth\fP [\fIpicture\fP] [\fIB C\fP]
+Resample the input image to be
+.I width
+pixels wide.
+The default filter used in resampling minimizes both
+pre- and post-aliasing.
+Numeric parameters
+.I B
+and
+.I C
+(both default to 1/3)
+pick the resampling kernel from a Mitchell and Netravali's two-parameter
+family of piecewise cubic kernels.
+.TP "transpose [-vhadrlui] [-o \fIx y\fP] [\fIpicture\fP]
+Transpose the input picture.  This is useful in conjunction with
+commands that operate on scan-lines, like
+.I resample ,
+to perform operations on columns instead of rows.
+Under control of its options,
+.I transpose
+can perform any symmetry operation of the integer lattice.
+The
+.CW -v
+option reflects through a vertical line.
+The
+.CW -h
+option reflects through a horizontal line.
+The
+.CW -a
+option reflects through an ascending diagonal line.
+The
+.CW -d
+option reflects through a descending diagonal line
+(the default).
+The
+.CW -r
+option rotates right (clockwise 90 degrees).
+The
+.CW -l
+option rotates left (counterclockwise 90 degrees).
+The
+.CW -u
+option flips the image upside down (180 degree rotation.)
+For completeness, the
+.CW -i
+option does the identity transformation.
+The
+.CW -o
+option translates the picture, adding
+.I x,y ) (
+to all coordinates.  Without this option, the upper-left
+corner of the image's window does not change.
+.TP "shear \fIangle\fP [\fIpicture\fP]
+Rotate the input image by the given
+.I angle
+(in degrees).  It's called
+.I shear
+because it operates by shearing the image 3 times
+(horizontally, then vertically, then horizontally).
+.TP "lx [-o\fIfile\fP] [-A\fIaspect\fP] [-a] [-s\fIscale\fP] [-r\fIrot\fP] [-x\fIxscale\fP] [-y\fIyscale\fP] [\fIpicture\fP]
+Perform a linear transformation on the input image.
+The
+.CW -o
+option specifies the output file name.  The default is standard output.
+The
+.CW -A
+option specifies the aspect ratio of the pixels.  The default is 1.
+The ITI frame-grabber produces images whose pixel aspect-ratio is 1.25.
+The
+.CW -a
+option suppresses the writing of an alpha channel.  Normally
+an alpha channel is computed even for input images that don't have one,
+since the output picture is often rotated and thus doesn't completely
+cover its window.
+.IP
+The transformation is specified by a sequence of options.  The specified
+transformations are combined in the order given to yield a composite transformation.
+The relevant options are:
+.nf
+.ta 8n
+\fT-s\fIscale\fR	scale by \fIscale\fR.
+\fT-r\fIrot\fR	rotate by \fIrot\fR degrees clockwise.
+\fT-x\fIxscale\fR	scale in x by \fIxscale\fR.
+\fT-y\fIyscale\fR	scale in y by \fIyscale\fR.
+.PP
+There are several commands to generate images from
+three-dimensional geometric descriptions of various sorts.
+Most of these produce
+.CW CHAN=rgbaz...
+images that may be combined using
+.I 3matte .
+In their output files, points at the near clipping plane will be mapped to
+points having
+.I z=0 ,
+and points at the far clipping plane will have
+.I z=1 .
+.TP "ncpr [-a \fIaspect\fT] [-w \fIx0 y0 x1 y1\fT] [-c \fIrgbaz\fT] \fIinput\fT [\fIoutput\fT]
+New Cheezy Polygon Renderer.
+.I Output
+(default standard output) is the name of the picture file that will contain the rendered
+version of the scene described in
+.I input ,
+a text file specifying a polygonal scene.
+The
+.CW -a
+option sets the pixel aspect-ratio (default 1.)
+The
+.CW -w
+option sets the window of the output picture.
+The
+.CW -c
+option specifies which channels should be written to the output picture.
+.IP
+The input file contains a sequence of single-letter commands, each with several
+numeric parameters.  The commands are:
+.IP
+\fTv \fIfov near far ex ey ez lx ly lz ux uy uz\fR
+.br
+Set viewing parameters.
+.I Fov
+is the angle subtended vertically by the screen at the eye point.
+Points whose distance from the eye is not between
+.I near
+and
+.I far
+will be clipped away before drawing.  However tempted, do not set
+.I near
+to zero, lest underflow or divide-check occur.
+.I ex,ey,ez ) (
+is the coordinate of the eye, the point from which the scene is viewed
+and the center of perspective.
+.I lx,ly,lz ) (
+is a vector pointing from the eye toward the center of the scene.
+The point
+.I lx+ex,ly+ey,lz+ez ) (
+is mapped into the center of the screen.
+.I ux,uy,uz ) (
+is the up vector, the direction of the zenith.  The point
+.I lx+ux,ly+uy,lz+uz ) (
+is mapped into a point somewhere above the center of the screen.
+.IP
+\fTl \fIx y z\fR
+.br
+Set the direction of the light source to
+.I x,y,z ). (
+The light source is ``at infinity'' in the given direction.
+.IP
+\fTb \fIred green blue alpha\fR
+Clear the screen to the given color.
+.I Red ,
+.I green ,
+.I blue
+and
+.I alpha
+should all be between 0 and 255.
+.IP
+\fTc \fIindex red green blue alpha\fR
+Set a color table entry.  Indices into the color table are used
+to specify the colors of polygons (see below.)
+The table has 500 entries.  Unless reloaded by the
+.CW c
+command, the first 256 entries contain the 256 shades of gray,
+the following 12 entries (256-267) are set to 12 logarithmically
+spaced (perceptually equal) gray shades, and the next 20 entries
+(268-287) to 20 logarithmically spaced gray shades.
+.IP
+\fTt \fIx0 y0 z0 x1 y1 z1 x2 y2 z2 c0 c1\fR
+.br
+Render a triangle with vertices
+.I x0,y0,z0 ), (
+.I x1,y1,z1 ) (
+and
+.I x2,y2,z2 ). (
+The side the normal (calculated using the right hand rule) out of has color
+.I c0 ,
+on the other it is
+.I c1 .
+If
+.I c0
+or
+.I c1
+is positive, the polygon's color is found in the corresponding color
+table entry.  If negative, the color is found by modifying the color
+table entry as though the surface were illuminated by a light source
+whose direction was specified by the
+.CW l
+command.
+.IP
+\fTp \fIc0 c1 x0 y0 z0 x1 y1 z1 ... xn yn zn \fT;\fR
+.br
+Render a polygon whose color is
+.I c0
+on one side and
+.I c1
+on the other.
+The polygon's vertices are
+.I x0,y0,z0 ), (
+.I x1,y1,z1 ), (
+\&...,
+.I xn,yn,zn ). (
+.in -8n
+.TP "quad [-a] [-z] [-w \fIx0 y0 x1 y1\fP] \fIin out
+.br
+Compute an image of a quadric surface.  The
+.CW -a
+option suppresses writing out the alpha channel.
+The
+.CW -z
+option suppresses writing out the z channel.
+The
+.CW -w
+option specifies the output window.
+The input file should contain 34 floating point numbers.
+The first ten numbers are the upper triangle of the symmetric
+matrix describing the quadratic form (in screen coordinates.)
+The next 16 numbers are a matrix that converts screen-space
+coordinates into world-space normals for illumination computations.
+The next three numbers are the direction of the light source.
+The next four numbers are the red, green, blue and alpha of the
+surface's color.  The last number is the amount of ambient light
+in the environment.
+.TP "terrain \fIin out ex ey ez lx ly fov near far
+Render a terrain image.
+The input file
+is a 2-channel picture file containing 16-bit elevation data on a regular grid.
+.I ex,ey,ez ) (
+is the eye position.
+.I lx,ly,0 ) (
+is a vector pointing from the eye to the center of the scene.
+The up direction is
+.I 0,0,1 ). (
+.I Fov
+is the vertical field-of-view angle.
+.I Near
+and
+.I far
+are the distances from the eye to the near and far clipping planes.
+.TP "bg \fIr0 g0 b0 r1 g1 b1 out
+Generate a background card whose color varies smoothly
+from
+.I r0,g0,b0 ) (
+at the top to
+.I r1,g1,b1 ) (
+at the top.
+Its z coordinate is set to 2, which is beyond the far clipping plane.
+.TP "aplot [-t \fItype\fP] [-r \fIrange\fP] [-w \fIx0 y0 x1 y1\fP] \fIinput
+Produces an anti-aliased isometric plot of a square array of binary data, read from
+its input file.
+The
+.CW -r
+option specifies the maximum absolute value of the data.
+This may be adjusted to affect the height of the highest peaks in the plot.
+By default, the input is examined to find its range.
+The
+.CW -w
+option specifies the window in which the plot will be drawn.
+The data file is just a binary dump of a square array.
+It has no header, and in particular is not a picture file.
+The
+.CW -t
+option (default
+.CW -tf)
+specifies the type of data in the array.
+.KS
+.TS
+center;
+c c
+aFCW a.
+_
+option	type
+=
+-tf	float
+-ts	short int
+-ti	int
+-tl	long int
+-td	double
+-tc	char
+-tu	unsigned char
+_
+.TE
+.KE
+.NH
+Animation
+.PP
+To use a command-based raster graphics system as described here to
+for animation requires writing command files to create and record
+long sequences of images.  Typical command files contain long sequences
+of repeated commands with slowly changing numeric parameters.  Several
+sequences starting and ending at different times may be interleaved
+to describe overlapping motion.  They are at best tedious and at worst
+tricky to generate by hand or using the usual tools.
+.PP
+.I Moto
+is a command generator tailored for an animator's needs.  Its input is
+a concise description of the animation to be performed; its output is
+a command file suitable for input to
+.I sh ,
+.I rc
+or some other command interpreter.
+Its arguments are an optional file name containing a
+.I moto
+program (default standard input) and list of numeric parameters
+that are made available to the program.
+.PP
+A
+.I moto
+program consists of a list of groups of commands.  Each block is
+guarded by a range of frames.  Here is an example:
+.P1
+1,5:	pcp this %0
+	pcp %0 that
+.P2
+This generates
+.P1
+pcp this %0
+pcp %0 that
+pcp this %0
+pcp %0 that
+pcp this %0
+pcp %0 that
+pcp this %0
+pcp %0 that
+pcp this %0
+pcp %0 that
+.P2
+The command group is repeated for each of frames 1 to 5.
+.PP
+Groups may contain parameter ranges enclosed in brackets
+.CW [] :
+.P1
+1,5:	pcp frame.[1,5] %0
+	echo snap|2500
+.P2
+This generates:
+.P1
+pcp frame.1 %0
+echo snap|2500
+pcp frame.2 %0
+echo snap|2500
+pcp frame.3 %0
+echo snap|2500
+pcp frame.4 %0
+echo snap|2500
+pcp frame.5 %0
+echo snap|2500
+.P2
+.PP
+Programs may have multiple groups, each guarded by
+a separate range of frames.  For each frame,
+.I moto
+checks each group and processes those
+whose guards include the current frame number.
+.PP
+Two special guards,
+.CW BEGIN
+and
+.CW END ,
+specify actions to be taken before an after processing frames:
+.P1
+BEGIN:	clr
+1,5:	pcp section[1,5] %0
+END:	pcp %0 composite
+.P2
+This generates
+.P1
+clr
+pcp section1 %0
+pcp section2 %0
+pcp section3 %0
+pcp section4 %0
+pcp section5 %0
+pcp %0 composite
+.P2
+.LP
+.I Moto
+allows complex computations inside parameter brackets:
+.P1 0
+1,10:	clr [127.5*(1-cos([0,360]))]
+.P2
+This generates
+.P1
+clr 0
+clr 29.82933350233
+clr 105.35985734747
+clr 191.25
+clr 247.3108091502
+clr 247.3108091502
+clr 191.25
+clr 105.35985734747
+clr 29.82933350233
+clr 0
+.P2
+.PP
+Expressions may include constants and variables.
+All values are double-precision floating point numbers.
+The operators
+.CW = ,
+.CW / ,
+.CW + ,
+.CW -
+(both unary and binary),
+.CW < ,
+.CW > ,
+.CW <= ,
+.CW >= ,
+.CW == ,
+.CW != ,
+.CW "? :"
+and
+.CW ! ,
+all with their meanings as in C, except that all results
+are coerced to
+.CW double .
+The result of
+.CW a%b
+is
+.CW a-b*(int)(a/b) .
+The result of
+.CW "a && b
+is
+.CW "a?b:a .
+The result of
+.CW "a || b
+is
+.CW "a?a:b .
+The exponentiation operator is
+.CW ^ ,
+also written
+.CW ** .
+The expression
+.CW [a,b]
+varies from
+.CW a
+to
+.CW b ,
+linearly as the frame number varies between the guards of the
+group containing the expression.
+The expression
+.CW a[b,c]
+has the value
+.CW a*b+(1-a)*c .
+Its value varies from
+.CW b
+to
+.CW c
+as
+.CW a
+varies from 0 to 1.
+The expression
+.CW $i
+has the value of the
+.CW i 'th
+parameter following the file name on
+.I moto 's
+command line.
+.PP
+The precedence of operators is, from lowest to highest:
+.P1
+=
+? :
+||
+&&
+< <= == != > >=
++ -
+* / %
+[ ]
+^ **
+- \fR(unary)\fP ! $
+.P2
+Expressions may be parenthesized to alter precedence.
+.SP 10
+...........
+.PP
+The following math functions are available:
+.KS
+.TS
+center;
+lFCW lFCW lFCW lFCW.
+acos	besy0	exp	log10
+asin	besy1	fabs	sin
+atan	besyn	floor	sinh
+besj0	ceil	gamma	sqrt
+besj1	cos	hypot	tan
+besjn	cosh	log	tanh
+.TE
+.KE
+All math functions are as described in the C library,
+except that angles are measured in degrees rather than
+radians for the trig and inverse trig functions.
+In addition
+.I hypot
+may have two or three arguments,
+.I atan
+may take two arguments instead of one,
+and may also be spelled
+.I atan2 .
+.PP
+For parameterization, and to allow even more complex
+computations,
+.I moto
+has variables, assignment and computation groups.
+A computation group is distinguished from a command group
+by having a double colon separating its guard from the
+expressions to be computed:
+.P1 0
+BEGIN::	n=5
+1,n::	x=512*sin([0,90])
+1,n:	pcp -w 0 0 [x] 488 pic.[1,n] %0
+.P2
+This generates
+.P1 0
+pcp -w 0 0 0 488 pic.1 %0
+pcp -w 0 0 195.93391737093 488 pic.2 %0
+pcp -w 0 0 362.03867196751 488 pic.3 %0
+pcp -w 0 0 473.02632064578 488 pic.4 %0
+pcp -w 0 0 512 488 pic.5 %0
+.P2
+.1C
+.KF bottom
+.sp 4
+.P1
+BEGIN::	 nchase=108
+	 nrun=195
+	 d1=12
+	 d2=32
+	 end=nrun+d2
+	 chase=end-nchase+1
+1,end:	inputs=				# empty the input list
+1,nrun:	inputs="$inputs run.[1,nrun]"	# add the first saucer to the input list
+1+d1,nrun+d1:
+	inp="$inputs run.[1,nrun]"	# add the second saucer
+chase,end:
+	inp="$inputs chase.[1,nchase]"	# add the chasing saucer
+1,end:
+	3matte -a $inp bg frame.[1,end]	# create the composite
+.P2
+.SP
+.ce
+\fBFigure 1.\fP  Flying saucer script
+.KE
+.2C
+.PP
+Upon occasion it is useful to split
+.I moto 's
+output into several files, under program control.
+A group that is separated from its guards by an at-sign
+.CW @
+instead of a colon names a file into which
+subsequent output is to be written.  For example,
+.P1
+1,5@	file.[1,5]
+1,5:	This is file.[1,5].
+.P2
+creates 5 files, with names
+\fTfile.1\fR,...,\fTfile.5\fR.
+Each file's contents will announce its name.
+.PP
+As is true for all sufficiently large programs,
+.I moto
+has a shell escape.  A group separated from its
+guards by an exclamation point
+.CW !
+instead of a colon has its result text interpreted
+by a subshell.
+.PP
+Finally, Figure 1 shows an example taken from a real application.
+This
+.I moto
+program composites the frames of a short movie showing
+two flying saucers, flying in formation, chased by a third,
+racing over New Jersey.  The flying
+saucer images (files
+.CW run.*
+and
+.CW chase.* )
+and the background (file
+.CW bg )
+have been computed in advance.  In the composite, the
+.CW run.*
+images are re-used, staggered in time, to do the
+first two saucers.
+.NH
+References
+.PP
+|reference_placement
+.BP
+photo page
+.BP
+divider with title
+.sp
+.ce
+Implementation and Maintenance

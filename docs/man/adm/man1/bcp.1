@@ -1,0 +1,292 @@
+.TH BCP 1 
+.CT 1 graphics
+.SH NAME
+bcp \(mi reformat black-and-white picture files
+.SH SYNOPSIS
+.B bcp
+[
+.I option ...
+]
+[
+.I file1
+[
+.I file2
+]
+]
+.SH DESCRIPTION
+.I Bcp
+copies black-and-white (B&W) image
+.I file1
+to
+.I file2,
+optionally changing the file format and transforming the image.
+If
+.I file1
+is a directory name,
+then every leaf of its file tree is processed in turn; and, in this case,
+if
+.I file2
+also is specified, it is made the root directory
+of an isomorphic tree of output files.
+If
+.I file2
+is not specified, all output is catenated to stdout.
+.PP
+.I Bcp
+can copy among all the B&W
+.IR picfile (5)
+formats, and some others.
+The default output format is 
+.BR TYPE=ccitt-g4 .
+Image transformations include trimming, translation, scaling, and rotation,
+performed in that order (not in argument order).
+.PP
+Input files in
+.IR picfile (5)
+format must begin with an ASCII 
+.BI TYPE= type
+header line.
+.I Types
+supported both as input and output are:
+.nr xx \w'\fLccitt-g4\ '
+.TP \n(xxu
+.B dump
+One byte/pixel.
+.B NCHAN=1
+is required.
+On input, the grey pixel values are thresholded
+to B&W;
+see option
+.BR -T .
+On output, black becomes 0 and white 255.
+.TP
+.B bitmap
+One bit/pixel.
+Essentially Sun rasterfile format, with a
+.IR picfile (5)
+header replacing the Sun binary header.
+.TP
+.B ccitt-g4
+CCITT Group 4 FAX encoding, strongly compressive on printed text.
+Also,
+.B ccitt-g31
+(Group 3, 1-dim)
+and
+.B ccitt-g32
+(Group 3, 2-dim).
+.LP
+Other supported
+.I types
+are:
+.TP \n(xxu
+.B binary
+One bit/pixel encoding; obsolescent, but needed for old image archives.
+Both input and output.
+.TP
+.B rle
+Fast run-length encoding; obsolescent, but needed for old image archives.
+Input or output, but not both.
+.TP
+.B pico
+Same as
+.BR dump .
+Input only.
+.TP
+.B cdf
+`Compound document format', used in AT&T FAX Connection product.
+Input only.
+Only the first of multiple pages is read.
+.LP
+Other formats not using a 
+.BI TYPE= type
+header,
+and thus supported only on output, are:
+.IR bitfile (9.5)
+format; 
+PostScript bitmap format; and
+Sun rasterfile format (with the Sun binary header).
+.PP
+The options are:
+.TP \n(xxu
+.B -B
+Write
+.IR bitfile (9.5)
+format (no 
+.BI TYPE= type
+header).
+.TP
+.B -M
+Write 
+.B TYPE=bitmap
+format.
+.TP
+.B -P
+Write Postscript bitmap format.
+.TP
+.BI -R x , y
+Force output resolutions to 
+.I x,y
+(pixels/inch).
+If 
+.BI , y
+is missing, it is taken to be the same as
+.I x.
+Overrides
+.BI -x x , y .
+Requires a 
+.BI RES= "x y
+line in the header (but, see 
+.BR -Z ).
+.TP
+.B -R=
+Force the
+.I x,y
+resolutions to be equal to the greater of
+.I x
+and
+.IR y .
+.TP
+.B -S
+Write Sun rasterfile format (no 
+.BI TYPE= type
+header).
+.TP
+.BI -T t
+Threshold.
+When reading 
+.BR TYPE=dump ,
+assign black to grey levels less than
+.I t,
+and white to others.
+Default:
+.BR -T128 .
+.TP
+.BI -Z x , y
+Supply missing input 
+.BI RES= "x y
+header line.
+.TP
+.B -b
+Write 
+.B TYPE=binary
+format.
+.TP
+.B -g4
+.br
+.ns
+.TP
+.B -4
+Write 
+.B TYPE=ccitt-g4
+format.
+Similarly, 
+.B -g31
+or
+.B -31
+and 
+.B -g32
+or
+.BR -32 .
+.TP
+.BI -k n
+Set the `k' for 
+.B ccitt-g32
+encoding on output (default
+.BR -k4 ).
+.TP
+.BI -o x , y
+Offset (translate) the image by 
+.I x,y
+pixels.
+The width and height of the picture are not changed.
+.TP
+.B -p
+Write 
+.B TYPE=dump NCHAN=1
+format.
+Map black to 0, white to 255.
+.TP
+.B -r
+Write 
+.B TYPE=rle
+format.
+.TP
+.B -tl
+Rotate the image to bring the left edge of the page to the top.
+Set top-left corner of the rotated
+image at the top-left corner of the image.
+.TP
+.BI -t d
+Rotate the image 
+.I d
+degrees counterclockwise about its center.
+.I d
+is a real number.
+.TP
+.BI -w l , t , r , b
+Specify window (trim the image):
+.I l,t
+is the left-top corner and 
+.I r,b
+the right-bottom corner measured in pixels.
+If the new margins are outside the original picture,
+the new area is set to white.
+An argument given as
+.L %
+leaves the edge unchanged.
+.TP
+.BI -x x , y
+Expand/contract (scale) the image, by real factors 
+.I x
+and
+.I y.
+If
+.BI , y
+is missing,
+.I y
+is taken to be the same as
+.I x.
+May be overridden by 
+.BI -R x , y.
+Requires a 
+.BI RES= "x y
+line in the header (but, see 
+.BR -Z ).
+.SH SEE ALSO
+.IR cscan (1),
+.IR imscan (1),
+.IR ocr (1),
+.IR pico (1),
+.IR picfile (5)
+.br
+CCITT facsimile coding standards Rec. T.4(1988) and T.6(1988).
+.SH BUGS
+Only one page per input file is supported.
+.br
+Scaling is accomplished by naive replication/deletion of pixels.
+.br
+Rotation by small angles exhibits aliasing effects, and is slow.
+.br
+Rotations
+.B -tr
+and
+.B -tb
+are unfinished.
+.br
+CCITT FAX `uncompressed' (or, `transparent') mode is not implemented.
+.br
+Postscript output is useful only for small images.
+.br
+.BI WINDOW= "l t r b
+where
+.I l
+or
+.I t
+is non-zero
+may not be handled correctly for every combination of file types.
+.br
+.B TYPE=rle
+can't be both input and output.
+.br
+Should be merged with T. Duff's
+.I pcp.

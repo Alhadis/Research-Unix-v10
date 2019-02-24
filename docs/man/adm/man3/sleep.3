@@ -1,0 +1,29 @@
+.TH SLEEP 3
+.CT 2 time_man
+.SH NAME
+sleep \(mi suspend execution for an interval
+.SH SYNOPSIS
+.nf
+.B sleep(seconds)
+.B unsigned seconds;
+.fi
+.SH DESCRIPTION
+The current process is suspended from execution for the number
+of seconds specified by the argument.
+The actual suspension time may be up to
+one
+second less than
+that requested, because scheduled wakeups occur at fixed
+second
+intervals,
+and an arbitrary amount longer because of other activity
+in the system.
+.PP
+The routine is implemented by setting an alarm clock signal
+and pausing until it occurs.
+The previous state of this signal is saved and restored.
+If the sleep time exceeds the time to the alarm signal,
+the process sleeps only until the signal would have occurred, and the
+signal is sent one second later.
+.SH "SEE ALSO"
+.IR alarm (2)

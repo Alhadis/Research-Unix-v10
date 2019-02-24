@@ -1,0 +1,50 @@
+.TH GETSHPUT 3 SHARE
+.SH NAME
+getshput \- read, modify, and write shares file entry
+.SH SYNOPSIS
+.B "#include <shares.h>"
+.br
+.sp
+.B "unsigned long getshput(lp, func)"
+.br
+.B "struct lnode * lp;"
+.br
+.B "unsigned long (*func)();"
+.SH DESCRIPTION
+.I Getshput
+finds the shares entry with the same uid as
+.I lp\->l_uid
+and reads it into an internal
+.I lnode
+structure.
+The function pointed to by
+.I func
+is then called with two arguments,
+the first pointing to the original
+.I lnode
+structure,
+and the second pointing to the internal
+.I lnode
+structure.
+If
+.I func
+returns with a value other than 0
+the (presumably modified) second structure is written back to the shares file,
+with the ``extime'' field in the shares record filled with the value returned by
+.IR func .
+Otherwise
+.I getshput
+simply returns.
+.I Getshput
+returns the value returned by
+.IR func .
+.SH "SEE ALSO"
+closeshares(3),
+getshares(3),
+openshares(3),
+putshares(3),
+sharesfile(3).
+.SH DIAGNOSTICS
+.I Getshput
+returns 0
+if the entry can't be modified.

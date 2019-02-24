@@ -1,0 +1,24 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	user.out
+
+pg:	user.out
+	count user.ms user.out
+
+spell:VQ:
+	dospell user.ms
+
+lp:	user.out
+	$LP $newprereq && touch $target
+
+user.out:D:	user.ms $REF
+	$PREFER user.ms | ideal -q | eqn | troff -mpm > $target
+
+index:V:
+	runind user
+	$PREFER xuser.ms | ideal -q | eqn | troff -mpm > /dev/null 2>user.x
+	mkindex user.x
+	rm xuser.ms
+pindex:V:
+	mkindex user.x

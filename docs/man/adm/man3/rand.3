@@ -1,0 +1,75 @@
+.TH RAND 3
+.CT 2 math
+.SH NAME
+rand, lrand, frand, nrand, srand \(mi random number generator
+.SH SYNOPSIS
+.nf
+.B int rand()
+.PP
+.B long lrand()
+.PP
+.B double frand()
+.PP
+.B int nrand(val)
+.B int val;
+.PP
+.B srand(seed)
+.B int seed;
+.fi
+.SH DESCRIPTION
+.I Rand
+uses a linear feedback
+random number generator
+to return uniform pseudo-random
+numbers
+.I x,
+.if t .RI 0\(<= x <2\u\s715\s10\d,
+.if n 0<=x<2^15,
+with period about
+.if t 2\u\s732\s0\d.
+.if n 2^32.
+.PP
+.I Lrand
+returns a uniform long
+.I x,
+.if t .RI 0\(<= x <2\u\s731\s10\d,
+.if n 0<=x<2^31,
+with period about
+.if t 2\u\s748\s0\d.
+.if n 2^48.
+.PP
+.I Frand
+returns a uniform double
+.I x,
+.if t .RI 0.0\(<= x <1.0,
+.if n 0.0<=x<1.0,
+always a multiple of
+.if t 2\u\s7\-31\s0\d.
+.if n 2^-31.
+.PP
+.I Nrand
+returns a uniform integer
+.I x,
+.if t .RI 0\(<= x < val.
+.if n 0<=x<val.
+.PP
+The generators are initialized by calling
+.I srand
+with whatever you like as argument.
+To get a different starting value each time,
+.IP
+.L
+srand((int)time((long *)0));
+.LP
+will work as long as it is not called more often
+than once per second.
+.SH BUGS
+.I Rand
+and
+.I lrand
+are quite machine-dependent.
+Although
+.I frand
+and
+.I nrand
+are more portable, they appear in few versions of Unix.

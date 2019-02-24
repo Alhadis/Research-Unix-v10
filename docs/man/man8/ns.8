@@ -1,0 +1,153 @@
+.TH NS 8
+.CT 1 sa_auto
+.SH NAME
+ns \- name server database
+.SH SYNOPSIS
+.B /usr/ipc/mgrs/ns
+[
+.B -m
+.I server
+] [
+.B -d
+]
+.SH DESCRIPTION
+.I Ns
+maintains a database
+of naming information,
+accessed by
+.IR qns (7)
+and other programs.
+It should be run once from
+.IR rc (8).
+.PP
+The database is accessed
+through local service
+.BR ns ,
+or service
+.I server
+if option
+.B -m
+was specified.
+.PP
+The file
+.F /usr/ipc/lib/ns.db
+contains instructions for building the database.
+These instructions are lines 
+of one of the following forms:
+.TP \w'#include\0file\0\0\0\0'u		\" wrong fonts; near enough?
+.BI #uusys " file"
+Read the named
+.I uucp
+.B Systems
+.IR file .
+For entries using caller
+.LR ACU ,
+add a database entry containing
+.RS
+.IP
+.I system\0
+.IB telephone-number ,tel\0
+.B uucp,svc
+.PP
+For entries using caller
+.LR DK
+or
+.LR DKH ,
+add an entry containing
+.IP
+.I system\0
+.IB datakit-address ,dk\0
+.B uucp,svc
+.PP
+For any other entry,
+add
+.IP
+.I system\0
+.B uucp,svc
+.RE
+.TP
+.BI #inhost " file"
+For each line in the named
+4BSD-style internet hosts
+.IR file ,
+add a database entry of the form
+.RS
+.IP
+.IB ip-address ,in\0
+.I hostname\0
+.IB host-domain-name ,dom
+.RE
+.TP
+.BI #innet " file"
+For each line in the named
+4BSD-style internet networks
+.IR file ,
+add a database entry of the form
+.RS
+.IP
+.IB ip-net-address ,in\0
+.I netname
+.RE
+.TP
+.BI #include " file"
+Interpret
+the contents of
+.IR file
+in the same format
+as
+.BR ns.db .
+.PP
+In all cases,
+.I file
+may be followed by
+a list of
+.I value,attribute
+pairs to be included with any
+database entries caused by that file.
+If the filename doesn't begin with
+.LR / ,
+it is prefixed with
+.BR /usr/ipc/lib .
+.PP
+Blank lines
+and
+lines beginning with
+.L #
+followed by a space or tab
+are ignored.
+.PP
+Any other lines are taken as literal database entries:
+a collection of
+.I value,attribute
+pairs separated by spaces.
+Each line is a single entry.
+.PP
+The database is ephemeral;
+it is rebuilt whenever
+.I ns
+starts,
+when requested by
+.BR "qns reset" ,
+or when
+.I ns
+notices that
+.B ns.db
+or one of the files named therein
+has changed.
+Rebuilding can take several minutes,
+especially on a busy machine.
+During a rebuild,
+the server appears active but does not answer requests;
+calls will block until the rebuild finishes.
+.PP
+.I Ns
+leaves remarks in file
+.FR /usr/ipc/log/ns .
+There are more remarks if the
+.B -d
+option was used.
+.SH FILES
+.F /usr/ipc/lib/ns.db
+.SH SEE ALSO
+.IR ipc (3),
+.IR qns (7)

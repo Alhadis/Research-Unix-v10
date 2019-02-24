@@ -1,0 +1,123 @@
+.TH NETNEWS 5
+.CT 1 inst_info
+.SH NAME
+netnews \- usenet news articles, utility files
+.SH DESCRIPTION
+.PP
+There are two formats of news articles:
+A and B.
+Format A is the only format that the older
+.IR netnews (A)
+understands.
+.I Readnews
+and
+.IR postnews (7)
+deal with both formats, but produce B
+by default.
+.PP
+Format A looks like this:
+.LP
+.BI A article-ID
+.br
+.I newsgroups
+.br
+.I path
+.br
+.I date
+.br
+.I title
+.br
+.I body of article
+.br
+.LP
+Format B
+contains two extra pieces of information:  receipt date and expiration
+date.
+A file in B format consists of a series of headers and then the body.
+A header
+is a line with a capital letter in the 1st column and
+a colon somewhere on the line.
+Unrecognized header fields are ignored.
+News is stored in whichever format it was created.
+The following fields are among those recognized:
+.IP
+.EX
+From:
+Newsgroups:
+Subject:
+Date:
+Date-Received:
+Expires:
+Reply-To:
+References: \fRID of article this is a follow-up to\fP
+Control: \fRText of a control message\fP
+.EE
+.LP
+Each line of the control file
+.F /usr/lib/news/sys
+file line has four fields, separated by colons:
+.LP
+.IB system-name : subscriptions : flags ":\fItransmission command\fP"
+.PP
+Only the
+.I system-name
+and
+.I subscriptions
+need to be present.
+.PP
+The
+.I system name
+is the name of the system being sent to.
+The
+.I subscriptions
+are the newsgroups it gets.
+The
+.L flags
+are a set of letters describing how the article should be transmitted.
+The default is
+.BR  B .
+Valid flags include
+.BR A ,
+.BR B ,
+.B N
+(use ihave/sendme protocol),
+.B U
+(use
+.L uux -c
+and the name of the stored article in a
+.L %s
+string).
+.LP
+The
+.I transmission command
+is executed by the shell with the article to be transmitted as the standard
+input.
+The default is
+.BI "uux \- \-z \-r " sysname !rnews .
+.LP
+Somewhere in the control 
+file, there must be a line for the host system.
+This line has no
+.IR flags
+or
+.I transmission commands.
+A 
+.L #
+as the first character in a line denotes a comment.
+.SH FILES
+.TF /usr/spool/netnews/*
+.TP
+.F /usr/lib/news/*
+.TP
+.F /usr/spool/news/*
+.SH SEE ALSO
+.IR postnews (7),
+.IR readnews (7)
+.br
+M. Horton,
+.I 
+Standard for the Interchange of USENET Messages,
+RFC850,
+DARPA Information Processing Techniques Office,
+Arlington VA,
+1983

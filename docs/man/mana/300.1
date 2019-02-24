@@ -1,0 +1,228 @@
+.TH 300 1
+.SH NAME
+300, 300s \- handle special functions of DASI 300 and 300s terminals
+.SH SYNOPSIS
+.B 300
+[
+.B +12
+]
+[
+.B \-n
+]
+[
+.BI \-d t,l,c
+]
+.PP
+.B 300s
+[
+.B +12
+]
+[
+.B \-n
+]
+[
+.BI \-d t,l,c
+]
+.SH DESCRIPTION
+.I 300\^
+supports special functions and optimizes the use of the
+.SM DASI
+300
+(\s-1GSI\s+1 300 or
+.SM DTC
+300) terminal;
+.I 300s\^
+performs the same functions for the
+.SM DASI
+300s (\s-1GSI\s+1 300s or
+.SM DTC
+300s) terminal.
+It converts half-line forward, half-line reverse, and full-line reverse
+motions to the correct vertical motions.
+It also
+attempts to draw Greek letters and other special symbols.
+It permits convenient use of 12-pitch text.
+It also reduces printing time 5 to 70%.
+.I 300\^
+can be used
+to print equations neatly, in the sequence:
+.PP
+.RS
+neqn file
+.B \&.\|.\|.
+\(bv nroff \(bv 300
+.PP
+.RE
+.SM WARNING:
+if your terminal has a
+.SM PLOT
+switch, make sure it is turned
+.I on\^
+before
+.I 300\^
+is used.
+.PP
+The behavior of
+.I 300\^
+can be modified by the optional flag arguments to handle
+12-pitch text, fractional line spacings, messages, and delays.
+.TP 9
+.B +12
+permits use of 12-pitch, 6 lines/inch text.
+.SM DASI
+300 terminals normally allow only two combinations: 10-pitch, 6 lines/inch,
+or 12-pitch, 8 lines/inch.
+To obtain the 12-pitch, 6 lines per inch combination, the user should turn the
+.SM PITCH
+switch to 12, and use the
+.B +12
+option.
+.TP 9
+.BI \- n\^
+controls the size of half-line spacing.
+A half-line is, by default,
+equal to 4 vertical plot increments.
+Because each increment equals 1/48 of an inch,
+a 10-pitch line-feed requires 8 increments,
+while a 12-pitch line-feed needs only 6.
+The first digit of
+.I n\^
+overrides the default value, thus allowing for individual taste
+in the appearance of subscripts and superscripts.
+For example,
+.IR nroff (1)
+half-lines could be made to act as quarter-lines by using
+.BR \-2 .
+The user could also obtain appropriate half-lines for
+12-pitch, 8 lines/inch mode by using the option
+.B \-3
+alone,
+having set the
+.SM PITCH
+switch to 12-pitch.
+.TP 9
+.BI \-d t , l , c\^
+controls delay factors.
+The default setting is
+.BR \-d3,90,30 .
+.SM DASI
+300 terminals sometimes produce
+peculiar output when faced with
+very long lines,
+too many tab characters,
+or long strings of blankless, non-identical characters.
+One null (delay) character is inserted in a line for every set of
+.I t\^
+tabs,
+and for every contiguous string of
+.I c\^
+non-blank, non-tab characters.
+If a line is longer than
+.I l\^
+bytes, 1+(total length)/20 nulls are inserted at the end of that line.
+Items can be omitted from the end of the list,
+implying use of the default values.
+Also, a value of
+zero
+for
+.I t\^
+.RI ( c )
+results in two null bytes per tab (character).
+The former may be needed for C programs, the latter for files like
+.BR /etc/passwd .
+Because terminal behavior varies according to the specific characters printed and
+the load on a system,
+the user may have to experiment with these values to get correct output.
+The
+.B \-d
+option exists only as a last resort
+for those few cases that do not otherwise print properly.
+For example, the file
+.B /etc/passwd
+may be printed using
+.BR \-d3,30,5 .
+The value
+.B \-d0,1
+is a good one to use for C programs that have many
+levels of indentation.
+.IP
+Note that the delay control interacts heavily
+with the prevailing carriage return and
+line-feed delays.
+The
+.IR stty (1)
+modes
+.B "nl0 cr2"
+or
+.B "nl0 cr3"
+are recommended for most uses.
+.PP
+.I 300\^
+can be used with the
+.I nroff\^
+.B \-s
+flag or
+.B \&.rd
+requests, when it is necessary to insert paper manually or change fonts
+in the middle of a document.
+Instead of hitting the
+return
+key in these cases,
+you must use the
+line-feed
+key to
+get any response.
+.PP
+In many (but not all) cases, the following sequences are equivalent:
+.RS
+.PP
+nroff \-T300 files
+.B \&.\|.\|.
+\ \ and\ \ \ nroff files
+.B \&.\|.\|.
+\(bv 300
+.br
+nroff \-T300\-12 files
+.B \&.\|.\|.
+\ \ and\ \ \ nroff files
+.B \&.\|.\|.
+\(bv 300\ +12
+.PP
+.RE
+The use of
+.I 300\^
+can thus often be avoided unless
+special delays or options are required;
+in a few cases, however, the additional movement optimization of
+.I 300\^
+may produce better-aligned output.
+.PP
+The
+.IR neqn (1)
+names of, and
+resulting output for, the Greek and special characters supported
+by
+.I 300\^
+are shown in
+.IR greek (7).
+.SH SEE ALSO
+.IR 450 (1),
+.IR eqn (1),
+.IR graph (1G),
+.IR mesg (1),
+.IR stty (1),
+.IR tabs (1),
+.IR tbl (1),
+.IR tplot (1G),
+.IR troff (1),
+.IR greek (7).
+.SH BUGS
+Some special characters cannot be correctly printed in column 1
+because the print head cannot be moved to the left from there.
+.br
+If your output contains Greek and/or reverse line-feeds,
+use a friction-feed platen instead of a forms tractor;
+although good enough for drafts,
+the latter has a tendency to slip when reversing direction,
+distorting Greek characters and misaligning the first line of text after one or more
+reverse line-feeds.

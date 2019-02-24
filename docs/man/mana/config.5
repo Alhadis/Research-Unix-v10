@@ -1,0 +1,164 @@
+.TH CONFIG 5
+.CT 1 sa_nonmortals
+.SH NAME
+config \- system configuration files
+.SH DESCRIPTION
+These files are used as input by
+.IR config (A).
+Except as noted,
+they are kept in
+.FR /usr/sys/conf .
+.PP
+The file named
+.F files
+lists the kernel source files.
+Each line consists of a filename
+(relative to
+.FR /usr/sys )
+followed by some magic words.
+For example:
+.IP
+.L
+sys/acct.c	standard
+.PP
+is a file used by any version of the system;
+.IP
+.L
+dev/uba.c	standard device-driver
+.PP
+is also always used,
+and contains device register references
+(which may require special compilation hacks);
+.IP
+.L dev/ju.c	optional ju device-driver
+.PP
+is included only if the
+.L ju
+device is expected;
+.IP
+.L dev/ttyld.c	optional tty pseudo-device
+.PP
+is included only if the
+.L tty
+pseudo-device is requested.
+.PP
+The file
+.F devices
+describes possible device drivers,
+file system handlers,
+and line disciplines;
+the information is used to generate
+handler dispatch tables.
+It consists of lines with the following blank-separated fields:
+.PP
+Type of handler:
+.IP
+.B device
+for character devices
+.PD0
+.IP
+.B stream-device
+.IP
+.B  block-device
+.IP
+.B file-system
+.IP
+.B line-discipline
+.PD
+.IP
+If the type is preceded by the word
+.L standard
+.RI ( e.g.
+.LR "standard block-device" ),
+the handler is always included;
+otherwise,
+it is included only if requested.
+.PP
+Table index:
+major device number,
+file system type,
+or line discipline number.
+.PP
+Driver name:
+used in
+.FR files
+and
+.FR conf .
+.PP
+.I Config
+writes a header file
+.IB name .h
+for each device;
+if that device
+is configured, then the upper case
+.I NAME
+is defined to be
+the number of devices
+of that type.
+.IP
+Entry point name.
+Used as a prefix for data structure
+and driver entry points.
+.IP
+Entry points.
+.br
+For block devices:
+some of
+.BR open ,
+.BR close ,
+.BR strategy ,
+.BR dump ,
+.BR B_TAPE
+(the last puts the flag
+.L B_TAPE
+in the
+.L d_flags
+entry in the block device switch).
+.br
+For character devices:
+.BR open ,
+.BR close ,
+.BR read ,
+.BR write ,
+.BR ioctl ,
+.BR reset .
+.br
+For stream devices
+and line disciplines,
+.B info
+should be specified.
+.br
+For file system handlers:
+.BR put ,
+.BR get ,
+.BR free ,
+.BR updat ,
+.BR read ,
+.BR write ,
+.BR trunc ,
+.BR stat ,
+.BR nami ,
+.BR mount ,
+.BR ioctl .
+.PP
+As a special case,
+lines beginning with
+.L :
+are copied intact to
+.FR conf.c .
+This can be used for hacks like
+.IP
+.L
+: int mem_no = 3;	/* major device number of memory special file */
+.PP
+Addenda to
+.F files
+and
+.F devices
+specific to a particular machine
+may be kept in
+.BI /usr/sys/ machine /files
+and
+.BI /usr/sys/ machine /devices .
+The addenda are treated as if appended to the
+general files.

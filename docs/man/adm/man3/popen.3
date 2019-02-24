@@ -1,0 +1,108 @@
+.TH POPEN 3S
+.CT 2 comm_proc
+.SH NAME
+popen, ppopen, vepopen, pclose \(mi open a pipe to/from a process
+.SH SYNOPSIS
+.nf
+.B #include <stdio.h>
+.PP
+.B FILE *popen(command, type)
+.B char *command, *type;
+.PP
+.B FILE *ppopen(command, type)
+.B char *command, *type;
+.PP
+.B FILE *vepopen(command, type, args, env)
+.B char *command, *type, **args, **env;
+.PP
+.B int pclose(stream)
+.B FILE *stream;
+.fi
+.SH DESCRIPTION
+The first argument to
+.I popen
+is a pointer to a null-terminated string
+containing a command line for
+.IR sh (1).
+.I Type
+is as in
+.IR fopen (3).
+.I Popen
+creates a pipe between
+the calling process and
+the command and returns
+a stream pointer that
+can be used to write to the standard input
+of the command or to read from the standard output.
+.PP
+.I Ppopen
+uses the
+.B -p
+shell flag to restrict the environment of the shell.
+Both
+.I popen
+and
+.I ppopen
+set the effective userid to the real userid
+before calling the shell.
+.PP
+.I Vepopen
+has arguments akin to those of
+.I execve 
+(see
+.IR exec (2)):
+a file to be executed,
+a mode as above,
+a null-terminated vector of argument strings,
+and a null-terminated vector of environment strings.
+The shell is not called, and the effective userid is preserved.
+.PP
+A stream opened by these routines
+should be closed by
+.I pclose,
+which waits for the associated process to terminate
+and returns the exit status of the command.
+.PP
+Because the 
+.I command
+inherits open files, in particular standard input and output, a type
+.L
+"r"
+call may be used to insert a filter in the input, and type
+.L
+"w"
+in the output.
+.SH "SEE ALSO"
+.IR exec (2),
+.IR pipe (2),
+.IR fopen (3),
+.IR stdio (3),
+.IR system (3)
+.SH DIAGNOSTICS
+.I Popen
+returns a null pointer
+if files or processes cannot be created, or the Shell
+cannot be accessed.
+.PP
+.I Pclose
+returns \-1
+if there is
+no process to wait for.
+.SH BUGS
+Buffered reading before opening an input filter
+may leave the standard input of that filter mispositioned.
+Similar problems with an output filter may be
+forestalled by calling
+.IR fflush ;
+see
+.IR fopen (3).
+.br
+The resetting of the userid
+is probably gratuitous;
+it is there as a defense against incautious use
+of the routine by set-uid programs.
+.br
+I/O type
+.L
+"r+w"
+exists but is not useful.

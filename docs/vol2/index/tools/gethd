@@ -1,0 +1,28 @@
+M=/usr/vol2/index/tools
+j=`basename $1`
+if test -s ../$1/$j.ms
+then
+echo ms $j
+awk -f $M/headings.awk ../$1/$j.ms|sed -f $M/head.sed >$j.hd
+else
+if test -s ../$1/$j.tex
+then
+echo tex $j
+awk -f $M/theadings.awk ../$1/$j.tex|sed -f $M/head.sed >$j.hd
+else
+if test -s ../$1/$j.m
+then
+echo monk $j
+awk -f $M/mheadings.awk ../$1/$j.m|sed -f $M/head.sed >$j.hd
+else
+if test -s $1
+then
+echo found $1
+j=`basename $1 .ms`
+awk -f $M/headings.awk $1|sed -f $M/head.sed >$j.hd
+else
+echo no file $1
+fi
+fi
+fi
+fi

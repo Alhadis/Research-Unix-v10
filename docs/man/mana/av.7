@@ -1,0 +1,121 @@
+.TH DIST 7 purdy
+.CT 1 inst_info
+.SH NAME
+dist, dme, plan, path, cross \(mi aviation navigation
+.SH SYNOPSIS
+.B /usr/ken/bin/dist
+.I obj obj ...
+.PP
+.B /usr/ken/bin/dme
+.I obj radial dist
+.PP
+.B /usr/ken/bin/plan
+[
+.BI - dist1
+[
+.BI - dist2
+]]
+.I obj obj
+.PP
+.B /usr/ken/bin/path
+[
+.BI - dist
+]
+.I obj obj ...
+.PP
+.B /usr/ken/bin/cross
+[
+.BI - dist
+]
+.I obj
+.SH DESCRIPTION
+These routines provide navigation services
+using an aviation database.
+.I Objects
+in the database are of four types:
+VORs ending in 
+.BR .v ,
+airports ending in 
+.BR .a ,
+NDBs ending in 
+.BR .n ,
+and intersections ending in 
+.BR .i .
+An ambiguous object specified without
+suffix is interpreted in the above order.
+.PP
+The canonical program in this series,
+.IR dist ,
+prints the magnetic bearing and distance in
+nautical miles between a set of two or more specified objects.
+The magnetic correction is applied at the first of a pair
+of objects,
+so the bearing from Morristown to San Diego is
+281 degrees while the reverse is 50 degrees.
+.I Dist
+also prints a frequency for objects.
+For VORs and NDBs,
+the frequency is obvious.
+For airports,
+the frequency is sometimes the tower frequency,
+sometimes UNICOM and sometimes zero.
+Intersections have no frequency.
+.PP
+.I Dme
+prints the latitude and longitude
+of a point that is a bearing and distance from an object.
+The format printed is the source form of the database of objects.
+.I Dme
+is used to create new objects for the database \(mi usually intersections.
+.PP
+.I Plan
+finds a shortest distance from one object to another traveling
+along a route of VORs.
+The optional argument
+.I dist1
+is the maximum allowable distance between VORs
+en route (default 100 nautical miles) and
+.I dist2
+is the maximum allowable distance between the starting
+object and the first VOR and the last VOR and terminal object
+(default 50).
+.PP
+.I Path
+lists all objects in the database that lie
+within
+.I dist
+(default 10 nautical miles)
+of the great circle route between two objects.
+If more than two arguments are given,
+routes are calculated for each pair of objects.
+The list is ordered by distance along the route.
+The tangential distance to each object is given
+with negative to the left and positive to the right.
+.PP
+.I Cross
+prints all objects in the database
+within
+.I dist
+(default 50 nautical miles)
+from the given object.
+.SH FILES
+.TP /usr/ken/lib/obj
+objects
+.SH SEE ALSO
+.IR avw (7)
+.SH BUGS
+The database is old and should not be used for navigation purposes.
+.br
+Frequencies for airports are inconsistent.
+.br
+.I Plan
+uses low power (terminal) VORs when very often these
+cannot be tracked from 50 miles.
+.br
+.I Plan
+will cheerfully plan routes through prohibited areas,
+over open water and over high mountains.
+The only criterion is the distance between objects.
+.br
+.I Cross
+has bugs.

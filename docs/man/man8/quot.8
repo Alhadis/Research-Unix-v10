@@ -1,0 +1,135 @@
+.TH QUOT 8
+.CT 1 sa_mortals
+.SH NAME
+quot, findo \- file system usage and hogs
+.SH SYNOPSIS
+.B /etc/quot
+[
+.I option ...
+]
+[
+.I filesystem
+]
+.PP
+.BI findo
+[
+.B -f
+]
+[
+.B -n 
+]
+[
+.B -u
+.I userid
+]
+.I device mount-directory
+.SH DESCRIPTION
+.I Quot
+prints the number of blocks in the named
+.I filesystem
+device currently owned by each user.
+If no
+.I filesystem
+is named,
+.F /dev/usr
+is assumed.
+The options are:
+.TP
+.B -n
+Use as in the example below to list all files and owners.
+.TP
+.B -c
+Print three columns giving file size in blocks, number of
+files of that size, and cumulative total of blocks
+in files of that size or smaller.
+.TP
+.B -f
+Print count of number of files as well as space owned by each user.
+.TP
+.B -b
+Print space-time product in block-years in addition to space owned by
+each user.
+.PP
+.I Findo
+discovers files you might want to delete on the
+given block
+.I device,
+which must be mounted on the given directory.
+It lists, on the standard output, the
+sizes, ages in days, and names of files 
+with any of the following characteristics:
+.IP -
+.IR Troff (1)
+output files older than 24 hours.
+The names are marked
+.L troff:
+in the output.
+.IP -
+Week-old files named
+.BR core ,
+.BR a.out ,
+.BR mon.out ,
+.BR .pilog ,
+.BR junk* ,
+.BR temp* ,
+.BR ed.hup ,
+.BR qed.hup:* ,
+.BR jim.recover ,
+.BR sam.save ,
+.BR sam.err ,
+.BR ~~sam~~ ,
+.BR [a-z] ,
+.BR dead.letter ,
+.BR foo[0-9]* ,
+.BR rst[0-9]+ ,
+.BR .jx* ,
+.BR *.dvi ,
+and files whose names
+resemble 
+.IR apnews (7)
+spool entries.
+.IP -
+Files over a month old named
+.BR *.o .
+The names are marked
+.LR old: .
+.IP -
+Files owned by users selected with option
+.BR -u ;
+the names are marked
+.LR user: .
+.PP
+The options are
+.TP
+.B -f
+List files owned by users not in the password file.
+.TP
+.BI -u " userid
+List files over 2 days old owned by the user with the given numeric
+.I userid.
+.TP
+.B -n
+List files of any age owned by the specified users.
+.SH EXAMPLES
+.TP
+.L
+ncheck filesystem | sort -n | quot -n filesystem
+List all files and their owners.
+.SH FILES
+.F /etc/passwd
+to get user names
+.SH "SEE ALSO"
+.IR ls (1), 
+.IR du (1),
+.IR icheck (8),
+.IR fstab (5)
+.SH BUGS
+.I Quot
+counts holes in files as if they actually occupied space.
+.br
+Patterns specifying the names and ages are compiled into
+.I findo.
+.br
+.I Findo's
+age distinction for files owned by a specific user is a 
+historical dreg.

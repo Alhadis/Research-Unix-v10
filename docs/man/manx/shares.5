@@ -1,0 +1,64 @@
+.TH SHARES 5 SHARE
+.SH NAME
+/etc/shares \- shares data-base file for share system
+.SH DESCRIPTION
+.I /etc/shares
+is an direct access data-base indexed on
+.I uid
+containing the uid, scheduling group and allocated shares
+for each user on the system.
+It also contains other scheduling data as defined in the files
+.I <shares.h>
+and
+.IR <sys/lnode.h> .
+.P
+Operations on the shares file are made via the shares routines
+described in section 3.
+.P
+Data from the shares file are installed in kernel
+.I lnode
+structures for active users by
+.IR login (8).
+When users become inactive,
+the lnode structures are removed from the kernel
+and updated in the shares file by
+.IR sharer (8).
+.P
+The number of shares and the scheduling group of a user may be changed by using
+.IR passwd (1),
+with the -a or -n flags,
+or by
+.IR lim (1).
+Data in the shares file may be examined with either
+.IR pl (1)
+or
+.IR pwintf (1).
+.SH FILES
+.PD 0
+.TP "\w'/usr/include/sys/lnode.hXX'u"
+/etc/shares
+User data base.
+.TP
+/usr/include/shares.h
+Format of an /etc/shares record.
+.TP
+/usr/include/sys/lnode.h
+Format of an
+.I lnode
+structure in an /etc/shares record.
+.PD
+.SH "SEE ALSO"
+lim(1),
+pl(1),
+pwintf(1),
+closeshares(3),
+getshares(3),
+getshput(3),
+openshares(3),
+putshares(3),
+setupshares(3),
+sharesfile(3),
+lnode(5),
+share(5),
+login(8),
+sharer(8).

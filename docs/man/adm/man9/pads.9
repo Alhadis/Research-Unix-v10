@@ -1,0 +1,102 @@
+.TH PADS 9.5
+.CT 2 comm_term
+.SH NAME
+pads \- user interface package
+.SH DESCRIPTION
+.I Pads
+is a mouse-based interface for browsing a network
+of windows.
+.PP
+Button 1 points.
+Pointing at a window makes it current, with a heavy border;
+pointing at a line of text makes it current, inverts its video,
+and scrolls it to the middle of the window.
+A scroll bar at the left of each window shows how
+much of the text of a window is visible;
+pointing into the scroll region controls what text is displayed.
+.PP
+Button 2 has a menu of operations that apply to the current line.
+Operations above the 
+.B ~~~~~ 
+separator are specific to each line;
+operations below the separator are generic line operations:
+.TF truncate
+.TP
+.B cut
+Remove the line.
+.PD
+.TP
+.B sever
+Remove the line and all lines above it.
+.TP
+.B fold
+If lines pass the right margin, continue them on following lines.
+.TP
+.B truncate
+Truncate lines at the right margin.
+.LP
+Button 3 has a menu of window-level operations, and is in three parts.
+Below the lower separator is a list of windows;
+selecting one makes it current.
+They appear in front-to-back screen order, current at the top.
+Operations above the upper separator are specific to each window;
+operations between the separators are generic window operations:
+.TF truncate
+.TP
+.B reshape
+.TP
+.B move
+.TP
+.B close
+Like
+.BR reshape ,
+.BR move ,
+and
+.B delete
+in 
+.IR mux (9.1).
+.PD
+.TP
+.B fold 
+.br
+.ns
+.TP
+.B truncate
+apply to all lines in the window.
+.PP
+Keyboard characters accumulate at the bottom of the layer.
+If the current line accepts input, it flashes with each keystroke;
+otherwise, if the current window accepts input, its border flashes.
+Carriage return is ignored until a line or window
+accepts the text, whereupon
+the input line is sent to the line or window.
+The ESC key substitutes the
+.IR mux (9.1)
+global snarf buffer.
+.PP
+If the first character of a line from the keyboard is
+.B <
+or
+.B >
+the remainder of the line is interpreted as a shell command.
+For
+.BR < ,
+each line of the command's standard output is sent to the line or window,
+as though it had come from the keyboard.
+For
+.BR > ,
+the line or lines of the window become the command's standard input.
+Each line or window that accepts keyboard input produces
+some help in response to
+.BR ? .
+Special cursor icons occasionally appear:
+.TP
+arrow-dot-dot-dot
+The host is completing an operation; the terminal is ready
+asynchronously.
+.TP
+exclamation mark
+Confirm a dangerous menu selection by pressing that menu's button again.
+.SH SEE ALSO
+T. A. Cargill,
+.I Pads Programming Guide

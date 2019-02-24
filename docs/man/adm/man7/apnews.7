@@ -1,0 +1,196 @@
+.TH APNEWS 7 alice
+.CT 1 inst_info
+.SH NAME
+apnews, ap.keys \- present AP wire stories
+.SH SYNOPSIS
+.B apnews
+[
+.B -f
+.I dir
+]
+[
+.B -r
+]
+.SH DESCRIPTION
+.I Apnews
+presents news from the AP wire on a cursor-addressed screen.
+The top half of the screen contains 20
+story slugs (two-word labels).
+.I Apnews
+responds to these commands:
+.TP "\w'c file  'u"
+.I n
+Print story for slug
+.IR n ;
+page through it by typing newlines.
+.TP
+.B m
+Present more slugs.
+.TP
+.B \&.
+Return to current slug list.
+.TP
+.B t
+Top.  Return to first list of slugs
+.TP
+.BI s " keywords"
+Present slugs for stories containing these keywords.
+.TP
+.B y
+Present slugs for stories containing words from the last story read.
+.TP
+.BI c " file"
+Copy.  Add story being read to named file or directory.
+.TP
+.B ?
+Print some help.
+.PP
+To suggest interest,
+slugs may be followed by a bracketed number that shows
+the average number of pages (up to 5) that readers
+have perused.
+Option
+.B -r
+turns this feature off.
+.PP
+Option
+.B -f
+directs the attention of
+.I apnews
+to a specified directory of AP stories, as may be collected by
+.FR ap.keys .
+.PP
+To monitor news automatically, put a file
+.F ap.keys
+in your home directory.
+This file contains instructions marked by
+.LR * ,
+each followed by one or more search lines.
+Instructions specify what to capture:
+.TP
+.B S
+whole story
+.PD0
+.TP
+.B P
+first paragraph
+.TP
+.B H
+heading
+.PD
+.LP
+then what to do with it:
+.TP
+.BI | " command
+specifying a command (often mail) to be executed with the
+story as standard input
+.PD0
+.TP
+.BI > " file"
+.PD
+specifying a file or directory to add the story to;
+pathnames are relative to your home directory
+.PP
+If no instruction is present, the default is
+.IP
+.L *S | mail yourself
+.PP
+Search lines may contain:
+.IP (1)
+a sequence of blank-separated words; these words
+must occur in this order
+.PD0
+.IP (2)
+a sequence of words separated
+by commas; these words must appear in the same sentence
+.IP (3)
+a sequence of words separated by periods; these words may
+occur anywhere in the story, but all must appear
+.PD
+.PP
+Combinations
+are allowed, e.g.\&
+.L " x . y, z"
+specifies
+.L y
+and
+.L z
+in the same sentence and
+.L x
+somewhere in the same story.
+The character 
+.L !
+means not, so that
+.L !chocolate chip
+means
+.L chip
+not preceded by
+.LR chocolate .
+Some suffixes are removed; and
+capitals are ignored except when entire words are
+capitalized.
+Thus
+.L ERA
+and
+.L era
+are distinguished, but
+.L Waters
+and
+.L waters
+are not.
+Special `words' specify story types:
+.TP
+.B #f
+flash
+.PD0
+.TP
+.B #b
+bulletin
+.TP
+.B #u
+urgent news
+.TP
+.B #r
+regular news
+.TP
+.B #d
+deferred news
+.PD
+.SH EXAMPLES
+.EX
+*S > stuff
+bell laboratories
+FCC . telephone, regulation
+*P | mail joe
+#b
+AM-NewsDigest
+.EE
+.SH FILES
+.F ap.keys
+.br
+.F /usr/spool/ap/*
+.SH BUGS
+.I Apnews
+can fail to work well in a
+.IR mux (9.1)
+window, for two reasons.
+.br
+(1) The window needs a terminal emulator.
+Before invoking 
+.I apnews,
+do 
+.L "exec term 5620"
+(or
+.BR 2621 );
+see
+.IR term (9.1).
+.br
+(2) Remote execution needs a transparent connection.
+If logged in elsewhere make the connection to the serving machine by doing, for example,
+.L "ndcon alice
+or
+.LR "nrx alice apnews" 
+(after downloading an emulator, if 
+necessary);
+see
+.IR dcon (1).

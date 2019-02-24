@@ -1,0 +1,17 @@
+sed '/man[0-9]/!d
+s/ .* / /' pagenumbers |sort >junk1
+grep -n . permindex | sed '
+s/.* \(.*\)(\(.\).*)/man\2\/\1.\2 &/' |
+sort >junk2
+join -a1 junk2 junk1 | 
+sed 's/[^ ]* //' |
+sort -n|sed 's/^[^:]*://' >junk3
+sed 's/[^"]*$//' junk3 >junk4
+sed '
+	s/.* \([^ ]*)\)[ 0-9]*$/\1/
+' junk3|tr a-z A-Z  >junk5
+sed '
+	s/.*) *//
+	' junk3 >junk6
+paste junk4 junk5 junk6 |
+sed 's/	/ /g' >npermindex

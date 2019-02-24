@@ -1,0 +1,151 @@
+.TH C++ 1
+.CT 1 prog_c
+.SH NAME
+CC, cfront \- C++ compiler
+.SH SYNOPSIS
+.B CC
+[
+.I option ...
+]
+.I file ...
+.PP
+.B cfront
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I CC
+compiles and links C++ programs in the manner of
+.IR cc (1).
+It handles source files with names ending in
+.LR .c  ,
+assembler files in
+.LR .s ,
+and object files in
+.LR .o .
+Various passes of the compiler can be substituted via
+environment variables listed under
+.SM `FILES'.
+Options include those of
+.IR cc (1)
+except
+.BR -B 
+and
+.BR -t ,
+those of
+.IR ld (1),
+those of
+.I cfront,
+and in addition
+.TP
+.BR -F
+Run only the macro preprocessor 
+.IR cpp (8)
+and
+.I cfront
+on the named 
+.B .c
+files, and send the result to the
+standard output.
+.TP
+.BI -. suffix
+Instead of the standard output, place
+.B -E 
+and
+.B -F
+output in files whose name is that of the source with 
+.BI . suffix
+substituted for
+.LR .c .
+.PP
+.I Cfront
+reads C++ code (without preprocessing) from the standard input
+and writes equivalent C code on the standard output.
+The options are
+.TP
+.B +d
+Don't expand inline functions.
+.TP
+.BI +x file
+Take size and alignment information from
+.I file
+for cross compiling.
+.TP
+.B +e0
+.PD0
+.TP
+.B +e1
+Make external declarations 
+.RB (+e0)
+or definitions
+.BR (+e1)
+for virtual function tables.
+These tables may appear as static data in
+every compilation;
+the options are intended to save redundant space.
+.PD
+.TP
+.B +a0
+Produce classic C output (default).
+.TP
+.B +a1
+Produce 
+.SM ANSI
+C output.
+If this option is used with
+.I CC,
+then an
+.SM ANSI
+C compiler such as
+.I lcc
+must be specified in environment variable
+.BR ccC .
+.TP
+.BI +f name
+Use
+.I name
+to identify the source file in diagnostics.
+.TP
+.B +L
+Produce
+.SM ANSI
+standard
+.B #line
+directives instead of
+.BI # number.
+.SH FILES
+.TF cfrontC=/usr/bin/cfront
+.TP
+.B cppC=/lib/cpp
+C preprocessor
+.TP
+.B cfrontC=/usr/bin/cfront
+C++ translator
+.TP
+.B ccC=/bin/cc
+C compiler
+.TP
+.B munchC=/usr/lib/munch
+linker postprocessor for static initialization
+.TP
+.F /usr/lib/libC.a
+C++ library
+.TP
+.F /usr/include/CC
+standard directory for C++
+.L #include
+files
+.TP
+Other files as in \fIcc\fR
+.SH SEE ALSO
+.IR cc (1),
+.IR ld (1)
+.br
+B. Stroustrup,
+.I The C++ Programming Language,
+Addison-Wesley, 1986
+.br
+B. Stroustrup,
+.I C++ Reference Manual,
+AT&T Bell Laboratories, May 1989

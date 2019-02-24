@@ -1,0 +1,24 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	paper.out
+
+pg:	paper.out
+	count paper.ms paper.out
+
+spell:VQ:
+	dospell paper.ms
+
+lp:	paper.out
+	$LP $newprereq && touch $target
+
+paper.out:D:	paper.ms $REF
+	$PREFER paper.ms | eqn | tee temp | troff -mpm > $target
+
+index:V:
+	runind paper
+	$PREFER xpaper.ms | eqn | troff -mpm > /dev/null 2>paper.x
+	mkindex paper.x
+
+pindex:V:
+	mkindex paper.x

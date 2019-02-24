@@ -1,0 +1,94 @@
+.TH MALLOC 3 
+.CT 2 mem_man
+.SH NAME
+malloc, free, realloc, calloc, cfree \- memory allocator
+.SH SYNOPSIS
+.nf
+.B char *malloc(size)
+.B unsigned size;
+.PP
+.B free(ptr)
+.B char *ptr;
+.PP
+.B char *realloc(ptr, size)
+.B char *ptr;
+.B unsigned size;
+.PP
+.B char *calloc(nelem, elsize)
+.B unsigned nelem, elsize;
+.PP
+.B cfree(ptr)
+.B char *ptr;
+.fi
+.SH DESCRIPTION
+.I Malloc
+and
+.I free
+provide a simple memory allocation package.
+.I Malloc
+returns a pointer to a new block of at least
+.I size
+bytes.
+The block is suitably aligned for storage of any type of object.
+No two active pointers from
+.I malloc
+will have the same value.
+.PP
+The argument to
+.I free
+is a pointer to a block previously allocated by
+.IR malloc ;
+this space is made available for further allocation.
+.PP
+.I Realloc
+changes the size of the block pointed to by
+.I ptr
+to
+.I size
+bytes and returns a pointer to the (possibly moved)
+block.
+The contents will be unchanged up to the
+lesser of the new and old sizes.
+The call
+.B "realloc((char*)0, size)
+means the same as
+.LR malloc(size) .
+.PP
+.I Calloc
+allocates space for
+an array of
+.I nelem
+elements of size
+.I elsize.
+The space is initialized to zeros.
+.I Cfree
+frees such a block.
+.SH SEE ALSO
+.IR galloc (3), 
+.IR brk (2),
+.IR pool (3),
+.IR block (3)
+.SH DIAGNOSTICS
+.I Malloc, realloc
+and
+.I calloc
+return 0 if there is no available memory
+or if the arena has been detectably corrupted.
+.SH BUGS
+When
+.I realloc
+returns 0, the block pointed to by
+.I ptr
+may have been destroyed.
+.PP
+User errors can corrupt the storage arena.
+The most common gaffes are (1) freeing an already freed block,
+(2) storing beyond the bounds of an allocated block, and (3)
+freeing data that was not obtained from the allocator.
+To help find such errors, a diagnosing allocator
+may be loaded; use flag 
+.B -ldmalloc
+of
+.IR cc (1).
+An even more stringently checking version may be created
+by recompilation; see the source.

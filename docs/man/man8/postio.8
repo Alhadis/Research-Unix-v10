@@ -1,0 +1,205 @@
+.TH POSTIO 8
+.CT 1 sa_auto
+.SH NAME
+postio \- serial interface for postscript printers
+.SH SYNOPSIS
+.B /usr/bin/postscript/postio
+[
+.I option ...
+] [
+.I file ...
+]
+.SH DESCRIPTION
+.I Postio
+sends
+.I files
+to a PostScript printer.
+It is usually called by the innards of
+.IR lp (1).
+If no files are named,
+the standard input is sent.
+.PP
+Mandatory argument
+.B -l
+names the printer.
+If
+the first character of
+.I line
+is
+.LR / ,
+it is assumed to be a local filename like
+.LR /dev/tty37 .
+Otherwise it is taken to be a network address,
+with default network
+.LR dk ,
+to which the printer is connected.
+.PP
+These options are probably the most useful:
+.nr xx \w'\fL-b\ \fIspeed\ 'u
+.TP \n(xxu
+.BI \-b speed
+Transmit data 
+at baud rate
+.I speed,
+one of 1200, 2400, 4800, 9600 (default), and 19200.
+.TP
+.B \-q
+Disable status queries while
+.I files
+are being sent to the printer.
+When status queries are disabled a dummy message is appended
+to the log file before each block is transmitted.
+.TP
+.BI \-B num
+Set the internal buffer size for reading and writing
+.I files
+to
+.I num
+bytes, 2048 by default.
+.TP
+.B \-D
+Debug mode:
+copy everything read from the printer
+to the log file
+or standard error.
+.TP
+.BI \-L file
+Log data read from the printer in
+.IR file .
+Standard error is the default.
+Normally only messages indicating a change in the printer's state are logged.
+.TP
+.BI \-P string
+Send
+.I string
+to the printer before any input
+.IR files .
+The default
+is PostScript code that disables timeouts.
+.TP
+.BI \-R num
+If
+.I num
+is
+.LR 1 ,
+run as a single process;
+if
+.LR 2 ,
+use separate processes for reading and writing.
+.PP
+These options are not useful to spoolers like
+.IR lp .
+.TP \n(xxu
+.B \-i
+Interactive mode:
+send the
+.I files
+to the printer,
+then copy standard input to the printer
+and printer output to standard error.
+Overrides many other options.
+To have a friendly chat with the printer,
+begin by typing
+.L executive
+on a line by itself.
+.TP
+.B \-t
+Copy printer output that doesn't look like
+status information to the standard output;
+intended for use with PostScript programs that write results.
+.PP
+This option should be used only as a last resort:
+.TP \n(xxu
+.B \-S
+Take special measures to send data slowly.
+Limits the internal buffer to 1024 bytes,
+implies
+.B -R1
+and disables
+.BR -q 
+and
+.BR -i .
+Expensive in CPU time.
+.PP
+When
+.I postio
+starts,
+it attempts to force the printer into IDLE state
+by sending a sequence of
+.RB control- t
+(status query),
+.RB control- c
+(interrupt),
+and
+.RB control- d
+(end of job)
+characters.
+When the printer is idle,
+the files are transmitted
+with an occasional
+.RB control- t
+interspersed
+(except under
+.BR -q ).
+After all data have been sent,
+.I postio
+waits until the printer appears to have finished
+before exiting.
+Fatal error messages from the printer
+cause
+.I postio
+to exit prematurely.
+.SH EXAMPLES
+.TP
+.L
+postio -l/dev/tty01 file1 file2
+Runing as a single process at 9600 baud, send file1 and file2
+to printer
+.LR /dev/tty01 .
+.TP
+.L
+postio -R2 -B4096 -l/dev/tty01 -Llog file1 file2
+Similarly,
+but use two processes
+and a 4096-byte buffer,
+and copy printer messages to file
+.BR log .
+.TP
+.L
+postio -t -l/dev/tty22 -Llog program >results
+Send the PostScript
+.L program 
+to printer
+.BR /dev/tty22 ,
+place any data in
+.BR results ,
+put error messages in
+.BR log .
+.TP
+.L
+postio -i -l/cs/dk!my/printer
+Connect interactively to the printer at network address
+.BR /cs/dk!my/printer .
+.SH SEE ALSO
+.IR lp (1),
+.IR postscript (8)
+.SH DIAGNOSTICS
+Exit status 1 means a system error
+(e.g. can't open the printer),
+2 means a PostScript error,
+3 means both.
+Status 2 is usually caused by a syntax error in an input file.
+.SH BUGS 
+Multiple
+files
+with PostScript end-of-job marks
+are not guaranteed to work.
+.PP
+If a network is involved, 
+.B \-b
+may be ineffective and attempts by
+.I postio
+to flow-control data in both directions may not work.
+Option
+.B \-q
+can help if the printer is connected to Radian Datakit.

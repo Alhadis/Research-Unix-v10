@@ -1,0 +1,68 @@
+.TH BDIFF 1
+.SH NAME
+bdiff \- big diff
+.SH SYNOPSIS
+.B bdiff
+file1 file2 [n]
+.RB [ \-s ]
+.SH DESCRIPTION
+.I Bdiff\^
+is used in a manner analogous to
+.IR diff (1)
+to find which lines must be changed in two files to bring them
+into agreement.
+Its purpose is to allow processing of files which are too large
+for
+.IR diff .
+.I Bdiff\^
+ignores lines common to the beginning of both files,
+splits the remainder of each file into
+.IR n -line
+segments, and invokes
+.I diff\^
+upon corresponding segments.
+The value of
+.I n\^
+is 3500 by default.
+If the optional third argument is given, and it is
+numeric, it is used as the value for
+.IR n .
+This is useful in those cases in which 3500-line segments are
+too large for
+.IR diff ,
+causing it to fail.
+If
+.I file1\^
+.RI ( file2 )
+is \fB\-\fR,
+the standard input is read.
+The optional
+.B \-s
+(silent) argument specifies that
+no diagnostics are to be printed by
+.I bdiff\^
+(note, however, that this does not suppress possible exclamations by
+.IR diff .
+If both optional arguments are specified, they must appear in the
+order indicated above.
+.PP
+The output of
+.I bdiff\^
+is exactly that of
+.IR diff ,
+with line numbers adjusted to account for the segmenting of the files
+(that is, to make it look as if the files had been processed
+whole).
+Note that
+because of the segmenting of the files,
+.I bdiff\^
+does not necessarily find a
+smallest sufficient set of file differences.
+.SH FILES
+/tmp/bd?????
+.SH "SEE ALSO"
+diff(1).
+.SH DIAGNOSTICS
+Use
+.IR help (1)
+for explanations.

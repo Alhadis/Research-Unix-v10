@@ -1,0 +1,109 @@
+.TH TIMEC 3
+.CT 2 data_man time_man
+.SH NAME
+timec, timegm, timelocal \- convert ASCII to time
+.SH SYNOPSIS
+.nf
+.B #include <time.h>
+.PP
+.B long timec(string)
+.B char *string;
+.PP
+.B long timegm(timep)
+.B struct tm *timep;
+.PP
+.B long timelocal(timep, zone)
+.B struct tm *timep;
+.B char *zone;
+.fi
+.SH DESCRIPTION
+These routines are inverse to
+.IR ctime (3)
+and its relatives.
+See
+.IR ctime (3)
+for data layouts.
+.PP
+.I Timec
+converts to system format a date
+.I string
+as produced by
+.I ctime,
+.IR date (1),
+or
+.IR ls (1).
+An optional day of the week is ignored.
+A month name and day are required.
+A missing hour:min[:sec] field is taken to be 
+.BR 00:00:00 .
+An optional time zone (local time by default)
+may appear before or after the year.
+A missing year is assumed to be the past 12-month interval.
+.PP
+.I Timegm
+returns the system-format time corresponding to
+the broken-down GMT time
+pointed to by
+.IR timep .
+In a copy of the broken-down time
+.BR tm_mon 
+is reduced mod 12 by carrying (positively or negatively) to
+.BR tm_year .
+Next
+.B tm_mon
+and
+.B tm_mday
+are added to
+.B tm_yday
+appropriately for
+.BR tm_year .
+Then
+.BR tm_sec ,
+.BR tm_min ,
+.BR tm_hour ,
+.BR tm_yday ,
+and
+.B tm_year 
+are adjusted by carrying.
+Finally the system-format date
+is calculated from these 5 fields.
+.PP
+.I Timelocal
+is like
+.I timegm,
+except that the broken-down time belongs to the specified time
+.I zone,
+or is local time if
+.I zone 
+is zero.
+.PP
+Time zones and months are recognized by the first three
+characters, regardless of case.
+.I Strings
+for
+.I ctime
+may contain names longer than three characters
+and may contain extra white space and commas.
+.SH EXAMPLES
+.TP
+Set a date ahead one month:
+.EX
+struct tm brk_out = *localtime(&date);
+brk_out.tm_yday = 0;
+brk_out.tm_mon++; 
+date = timelocal(&brk_out,0);
+.EE
+.HP
+Convert a
+.IR date (1)
+string to system format:
+.EX
+date = timec("Sat Sep 27 20:59:11 EDT 1986");
+.EE
+.SH SEE ALSO
+.IR ctime (3),
+.IR time (2)
+.SH BUGS
+Unknown time zone names are taken to be GMT.
+.br
+Times before the epoch yield nonsense.

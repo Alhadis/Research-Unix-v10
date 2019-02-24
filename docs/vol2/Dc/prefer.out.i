@@ -1,0 +1,17 @@
+1965 :prefer.out 202/174
+acm :prefer.out 202/174
+alloca :prefer.out 202/174
+arbitr :prefer.out 0/201
+articl :prefer.out 202/174
+attbl :prefer.out 0/201
+calcul :prefer.out 0/201
+cherry :prefer.out 0/201
+desk :prefer.out 0/201
+fast :prefer.out 202/174
+knowlt :prefer.out 202/174
+langua :prefer.out 0/201
+morris :prefer.out 0/201
+oct :prefer.out 202/174
+precis :prefer.out 0/201
+storag :prefer.out 202/174
+techre :prefer.out 0/201

@@ -1,0 +1,179 @@
+.TH MKPKG 8
+.CT 1 comm_mach
+.SH NAME
+mkpkg, inspkg, seal, unseal \- package files for automatic software distribution
+.SH SYNOPSIS
+.B mkpkg
+[
+.I option ...
+]
+.I file ...
+.PP
+.B inspkg
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B seal
+[
+.I option
+]
+[
+.I file ...
+]
+.PP
+.B unseal
+[
+.I option
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+These programs are used by
+.IR ship (8)
+to keep files identical across machines.
+.PP
+.I Mkpkg
+packages
+.I files
+and writes the result on the standard output.
+.I Inspkg
+installs the named packages
+or the standard input.
+.PP
+Non-existent files given to 
+.I mkpkg
+are deleted upon installation.
+Directories are copied with all their contents.
+Hard links are reproduced.
+Symbolic links and special files
+are reproduced with the same inode contents.
+File modification and access times and owner and group names
+are reproduced as far as possible.
+Old versions of files are removed before installation:
+.I inspkg
+needs write permission in containing directories.
+.PP
+Options for both
+.I mkpkg
+and
+.IR inspkg :
+.nr xx \w'\f5-K \f2keyfile '
+.TP \n(xxu
+.B -v
+Place running commentary on the standard error file.
+.br
+.ns
+.TP
+.BI -D path1 = path2
+Pretend that any pathname beginning with
+.I path1
+really begins with
+.IR path2 .
+Relative pathnames are extended to full pathnames before comparison.
+.PP
+Options for
+.IR mkpkg ;
+only one may occur:
+.TP \n(xxu
+.BI -x command
+Include in the package instructions to execute the shell
+.I command
+after all files have been installed.
+.I Command 
+is unaffected by option
+.BR -D .
+.br
+.ns
+.TP
+.BI -X file
+Include in the package instructions to
+run the shell script
+.I file
+after all files have been installed.
+The file name is subject to option
+.BR -D .
+.PP
+Options for
+.IR inspkg :
+.TP \n(xxu
+.B -n
+Skip the actual installation, but verify
+the input packages and produce a backup if requested.
+.br
+.ns
+.TP
+.B
+-b
+Write on the standard output a backup package
+that contains whatever was destroyed.
+.PP
+A package is an
+.IR ar (1)
+archive containing an extra 
+.SM ASCII
+file named
+.FR Instructions .
+.PP
+.I Seal
+concatenates the named
+.I files
+or the standard input
+onto the standard output in 
+an error-detecting form suitable for shipment by
+.IR mail (1).
+.I Unseal
+reverses the process, concatenating copies of all the
+original inputs onto the standard output.
+When
+.IR asd (8)
+uses
+.IR uucp (1), 
+it sends sealed packages.
+.PP
+A sealed file is printable, has
+fewer than 128 characters per line, and has no lines
+consisting of a single period.
+The first line is
+.L !<seal>
+and the last one begins with
+.LR !end .
+Other lines, such as mail headers, can be added to
+either end of a sealed file
+without hindering
+.IR unseal .
+.PP
+Options for 
+.I seal
+and
+.IR unseal :
+.TP \n(xxu
+.B -k
+A key will be demanded to encrypt the
+checksum calculation.
+.br
+.ns
+.TP
+.BI -K " keyfile"
+Same, but taking the first line of
+.I keyfile
+as the key.
+.SH SEE ALSO
+.IR ar (1), 
+.IR cpio (1), 
+.IR tar (1), 
+.IR bundle (1),
+.IR ship (8),
+.IR ar (5),
+.IR asd (8)
+.SH BUGS
+The pipeline
+.L mkpkg ... | inspkg
+fails if input and output files overlap.
+.br
+.I Inspkg
+fills any holes in files.

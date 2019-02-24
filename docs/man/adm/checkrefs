@@ -1,0 +1,57 @@
+H=`pwd`
+for i in 1 2 3 4 5 6 7 8 9 
+do cd /usr/man/man$i
+	egrep '\([1-9][A-Z]?\+?|9\.[0-9]|A\)' *.*|\
+	sed "s/^/man$i\\//"
+done |\
+sed '
+/IR.*[^ ](/w needblank
+s/  *(/(/g
+s/)\.*).*/)/
+tx
+:x
+s/^\([^:]*:\)\(.*\), /\1\2\
+\1/
+tx
+'|\
+sed -n '
+s/)[,.;:]/)/
+s/.IR *//
+s/.RI[^(]*( //
+/(.*)/!{
+d
+}
+/0[1234567]*(8)/d
+/^\(.*\):\([^(]*([^)]*)\)$/!{
+w nonref
+d
+}
+s//\2 \1/
+s/^[ 	]*//
+w xref
+s/ .*//w ref
+'
+tr A-Z a-z <xref | sort -u -o xref
+tr A-Z a-z <ref | sort -u -o ref
+for i in 1 2 3 4 5 6 7 8 
+do cd /usr/man/man$i
+	ls *.* |\
+	sed "s/\\.[^.]*$/($i)/"
+done >junk
+cd /usr/man/man9
+sed -n '
+/\.TH/{
+	s/.TH *//
+	s/ *\(9\.[1-8]\).*/(\1)/
+	p
+}' * | tr A-Z a-z >>$H/junk
+cd $H
+#grep '\.so.*usr' `find man[1-8] -size 1 -print` |\
+#sed '
+#s/:.*//
+#s/\.\([^.]\).*/(\1)/
+#s/.*\///
+#'|sort - junk|uniq -u >def
+sort -u junk >def
+comm -23 ref def >misref
+join misref xref >badref

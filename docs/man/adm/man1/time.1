@@ -1,0 +1,68 @@
+.TH TIME 1
+.CT 1 proc_man time_man debug_tune
+.SH NAME
+time \- time a command
+.SH SYNOPSIS
+.B time
+[
+.B -usrtdmfio
+]
+[
+.B -v
+]
+.I command
+.SH DESCRIPTION
+The
+given command is executed; after it is complete,
+.I time
+reports statistics about the program on its standard error output.
+The statistics printed are controlled by the option string;
+the default is
+.BR -usr ;
+.B -v
+reports everything.
+The statistics are:
+.TP
+.B u
+User cpu time consumed by the command
+.TP
+.B s
+System cpu time attributed to the command
+.TP
+.B r
+Real (clock) time taken by the command
+.TP
+.B t
+Average resident text size, in Kb.
+.TP
+.B d
+Average resident data size, in Kb.
+.TP
+.B m
+Maximum total resident size, in Kb.
+.TP
+.B f
+Number of page faults resulting in disk I/O.
+.TP
+.B i
+Number of disk blocks read.
+.TP
+.B o
+Number of disk blocks written.
+.PP
+After the statistics,
+.I time
+prints a tab and the command, up to the fifth argument.
+Times are reported in seconds.
+The numbers are the sum of those for
+.I command
+and any children it spawns and waits for.
+.SH "SEE ALSO"
+.IR lcomp (1),
+.IR prof (1)
+.SH BUGS
+Elapsed time is accurate to the second,
+while the CPU times are measured
+to 1/60 second.
+Thus the sum of the CPU times can be up to a second larger
+than the elapsed time.

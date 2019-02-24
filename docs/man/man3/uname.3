@@ -1,0 +1,54 @@
+.TH UNAME 3
+.CT 2 sa
+.SH NAME
+uname \- identify machine and kernel
+.SH SYNOPSIS
+.nf
+.B #include <utsname.h>
+.PP
+.B int uname(name)
+.B struct utsname *name;
+.fi
+.SH DESCRIPTION
+.I Uname
+stores information identifying the current UNIX system in the
+structure pointed to by
+.I name.
+.nf
+.ft L
+.ta 8n 16n
+struct utsname {
+	char sysname[32];
+	char nodename[32];
+	char release[32];
+	char version[32];
+};
+.fi
+.ft R
+.PP
+.I Uname
+returns a null-terminated character string naming the current UNIX system
+in the character array
+.I sysname.
+Similarly, 
+.I nodename
+contains the name that the system is known by on some communications network.
+.I Release
+and
+.I version
+further identify the operating system.
+.SH FILES
+.TP
+.F /etc/whoami
+.SH BUGS
+Since a machine can have different names on different networks, 
+.I nodename
+is pretty useless.
+.PP
+This call is a partial simulation of one appearing in other systems.
+.I Sysname
+and
+.I nodename
+are copied from
+.FR /etc/whoami ;
+the other fields are meaningless.

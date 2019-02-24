@@ -1,0 +1,33 @@
+sed -e 's/<tab>/:/' -e 's/^ //' $1.idx|sort|uniq|awk '
+BEGIN	{FS=":"}
+	{ if($1 != laststr){
+		if(start){
+			if(range)pages = pages "-" npage
+			if(global != "")print laststr "," pages "	" global
+			else print laststr "," pages
+		}
+		start=1
+		laststr=$1
+		global=$3
+		pages = " " $2
+		npage = 0 + $2
+		range=0
+	}
+	else {
+		if($2 == npage+1){
+			range=1
+			npage++
+			next
+		}
+		else if(range) pages = pages "-" npage "," $2
+		else pages = pages "," $2
+		npage = 0 + $2
+		range = 0
+	}
+}
+END	{
+	if(range)pages = pages "-" npage
+	if(global != "")print laststr "," pages "	" global
+	else print laststr "," pages
+	}
+' >$1.index

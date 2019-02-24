@@ -1,0 +1,51 @@
+.TH SETUPSHARES 3 SHARE
+.SH NAME
+setupshares \- set kernel shares for a user
+.SH SYNOPSIS
+.B setupshares(uid, efp)
+.br
+.B int uid;
+.br
+.B void (*efp)();
+.SH DESCRIPTION
+This library routine sets up a kernel shares structure
+for the user represented by
+.IR uid .
+It extracts the share details for the user from the shares data-base,
+decays the usage figure up to the current time,
+and uses
+.IR setlimits (3)
+to install the shares in the kernel.
+.PP
+If the system is out of
+.I lnode
+structures, then the structure for the default user ``other'' is used.
+If this also fails, then the structure for the super-user is used.
+.PP
+If there are any errors, and the second argument is non-NULL,
+the function will be called with a
+.IR printf (3)
+format string and at most one extra argument.
+A non-zero result is returned for un-recoverable errors.
+Otherwise,
+.I setupshares
+returns \fB0\fP.
+.PP
+This routine is safe to use on systems
+where the share scheduler has not been installed,
+or is inactive.
+.SH DIAGNOSTICS
+.I Setupshares
+returns a non-zero result if
+.IR setlimits (3)
+returns an error other than
+.SM ETOOMANYU.
+The optional error routine is called if
+.IR setlimits (3)
+returns any error,
+or if no shares have been allocated to the user.
+.SH "SEE ALSO"
+getshares(3),
+closeshares(3),
+setlimits(3),
+share(5).

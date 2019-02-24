@@ -1,0 +1,58 @@
+.TH TIME 2
+.CT 2 time_man
+.SH NAME
+time, ftime \(mi get date and time
+.SH SYNOPSIS
+.nf
+.B long time((long *)0)
+.PP
+.B long time(tloc)
+.B long *tloc;
+.PP
+.B #include <sys/types.h>
+.B #include <sys/timeb.h>
+.B ftime(tp)
+.B struct timeb *tp;
+.fi
+.SH DESCRIPTION
+.I Time
+returns the time since the epoch 00:00:00 GMT, Jan. 1, 1970, measured
+in seconds.
+.PP
+If
+.I tloc
+is nonnull,
+the return value is also stored in the
+place to which
+.I tloc
+points.
+.PP
+.I Ftime
+stores a more accurate time and other horological data in the
+structure pointed to by
+.IR tb :
+.PP
+.nf
+.ta \w'\fLnnnnnnnn\fP'u +\w'\fLunsigned short millitm; \fP'u
+\fLstruct timeb
+{
+	\fLtime_t time;\fR	time since the epoch in seconds
+	\fLunsigned short millitm;\fP	up to 1000 milliseconds of more-precise interval
+	\fLshort timezone;\fP	local time zone measured in minutes of time
+			westward from Greenwich
+	\fLshort dstflag;\fP	if nonzero, daylight saving time applies locally
+			during the appropriate part of the year
+\fL};\fP
+.fi
+.SH "SEE ALSO"
+.IR date (1), 
+.IR stime (2), 
+.IR ctime (3)
+.SH DIAGNOSTICS
+.IR ftime :
+.B EFAULT
+.SH BUGS
+If the argument to
+.I time
+is bogus, the user program gets a memory fault rather than an
+.BR EFAULT .

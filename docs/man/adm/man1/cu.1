@@ -1,0 +1,248 @@
+.TH CU 1
+.CT 1 comm_mach 
+.SH NAME
+cu, ct \- call out to a terminal or another system
+.SH SYNOPSIS
+.B cu
+[
+.B -htn
+] [
+.B -p
+.I parity
+] [
+.B -s
+.I speed
+]
+.I telno
+[
+.I service-class
+]
+.PP
+.B ct
+[ option ...
+]
+.I phone-number
+[
+.I service-class
+]
+.SH DESCRIPTION
+.I Cu
+places a data call to a given telephone number
+and expects a computer to answer.
+It manages an interactive conversation with possible
+transfers of text files.
+.I Telno
+is the telephone number, consisting of digits with minus signs at appropriate
+places to indicate delay for second or subsequent dial tones.
+A telephone number may also be expressed symbolically.
+A symbolic number is looked up in the files
+.F $HOME/lib/cunumber
+and
+.F /usr/lib/cunumber
+whose lines look like this:
+.IP
+symbolic-number
+actual-number
+service-class
+comment
+.LP
+The actual number
+may be preceded by options
+such as
+.BR \-t .
+The
+.I comment,
+if present, is printed out when the connection is made.
+.PP
+The options are
+.TP
+.B -n
+Print the the called number but do not call it.
+.TP
+.B -t
+Tandem:
+use DC1/DC3 
+.RB (control- S /control- Q )
+protocol to stop transmission from
+the remote system when the local terminal buffers are almost full.
+This argument should only be used if the remote system
+understands that protocol.
+.TP
+.B -h
+Half-duplex:
+echo locally the characters that are sent to the remote system.
+.TP
+.BI -s " speed"
+Set the line speed;
+.L 1200
+means 1200 baud, etc.
+The default depends on service class.
+.TP
+.BI -p " parity"
+Set the parity of transmitted characters:
+.BR 0 ,
+.BR 1 ,
+.BR e ,
+.BR o
+mean
+zero,
+one,
+even,
+odd parity.
+.B 0
+is the default.
+.PP
+The service class is expressed as in 
+.IR dialout (3).
+A special class
+.L direct
+causes the
+.I telno
+argument to be taken
+as the pathname
+of a terminal line.
+.I Cu
+opens the file,
+sets line speed and other modes,
+and proceeds as if connected.
+The default line speed is
+9600 baud.
+.PP
+An explicit service class on the command line overrides
+any specified in a
+.L cunumber
+file.
+.PP
+After making the connection,
+.I cu
+runs as two processes:
+the sending
+process reads the standard input and
+passes most of it to the remote system;
+the receiving
+process reads from the remote system and passes
+most data to the standard output.
+Lines beginning with
+.L ~
+have special meanings.
+.PP
+The sending
+process interprets:
+.TP `\fL~%break\ 'u
+.B ~.
+.br
+.ns
+.TP
+.BR ~ EOT
+Terminate the conversation.
+.TP
+.BI ~< file
+Send the contents of
+.I file
+to the remote system,
+as though typed at the terminal.
+.TP
+.B ~!
+Invoke an interactive shell on the local system.
+.TP
+.BI ~! cmd
+Run the command on the local system
+(via
+.LR "sh -c" ).
+.TP
+.BI ~$ cmd
+Run the command locally and send its output
+to the remote system.
+.TP
+.B ~b
+.br
+.ns
+.TP 
+.B ~%break
+Send a break (300 ms space).
+.TP
+.BI ~%take " from \fR[\fIto\fR]"
+Copy file
+.I from
+(on the remote system)
+to file
+.I to
+on the local system.
+If
+.I to
+is omitted,
+the
+.I from
+name is used both places.
+.TP
+.BI ~%put " from \fR[\fIto\fR]"
+Copy file
+.I from
+(on local system)
+to file
+.I to
+on remote system.
+If
+.I to
+is omitted, the
+.I from
+name is used both places.
+.TP
+.BI ~~ text
+send
+the line
+.BI ~ text .
+.PD
+.PP
+WARNING: Using
+.I cu
+to reach your home machine from a machine you don't trust
+can be hazardous to your password.
+.PP
+.I Ct
+places a telephone call to a remote terminal
+and allows a user to log in on that terminal
+in the normal fashion.
+The terminal must be equipped with an auto-answer
+modem.
+.PP
+The
+phone number and service class
+are as in
+.I cu.
+The options are
+.TP
+.BI -c " count"
+If the number doesn't answer, try 
+.I count
+times before giving up (default 5).
+.TP
+.BI -w " interval
+Space retries
+.I interval
+seconds apart (default 60).
+.TP
+.B -h
+Try to hang up the phone before placing the
+call.
+This is useful for a
+`call me right back' arrangement.
+.SH FILES
+.F /usr/lib/cunumber
+.br
+.F $HOME/lib/cunumber
+.SH "SEE ALSO"
+.IR con (1),
+.IR ttyld (4), 
+.IR dialout (3)
+.SH BUGS
+Unless erase and kill characters are the same on the two machines,
+they will be damaged by
+.BR ~%put .
+.br
+.B ~%take
+uses
+.BR ~>
+at the beginning of line to synchronize transmission.
+This sequence can cause misfunction if it is received
+for any other purpose.

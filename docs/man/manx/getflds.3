@@ -1,0 +1,86 @@
+.TH GETFLDS 3S
+.SH NAME
+getflds \(mi read a line from a file and break it into fields
+.SH SYNOPSIS
+.nf
+.B #include <stdio.h>
+.PP
+.B char **getflds(stream)
+.B FILE *stream;
+.fi
+.SH DESCRIPTION
+.I Getflds
+reads a line from the
+.I stream
+given as argument, breaks it into fields,
+and returns a pointer to a null-terminated array of
+character pointers, each of which points
+to a null-terminated string representing one field.
+These strings, and the array that points to them,
+persist until the next call to
+.IR getflds .
+On end of file, a null pointer is returned.
+.PP
+If the first character of a line is a
+.LR # ,
+that line is considered to be a comment and ignored.
+.PP
+Fields are separated by white space (spaces or tabs).
+Leading and trailing white space on a line is ignored.
+White space may appear inside a field in one of three
+ways: each space or tab may be preceded by a backslash,
+the white space may be enclosed in single or
+double quotes, or characters may described
+in octal, as detailed below.
+.PP
+A field, or any parts of a field, may be enclosed in single
+or double quotes.
+Within quotes, white space and
+quotes of the other sort are treated as
+ordinary characters, but a closing quote
+is silently inserted before a newline.
+.PP
+Inside or outside quotes, a backslash
+and the character(s) after it are changed as follows:
+.nf
+.ta 10n
+\fL\eb\fR	backspace
+\fL\ef\fR	form feed
+\fL\en\fR	newline
+\fL\er\fR	return
+\fL\et\fR	horizontal tab
+\fL\ev\fR	vertical tab
+\fL\e\e\fR	\e
+\fL\e\'\fR	\'
+\fL\e"\fR	"
+\fL\e#\fR	#
+\fL\e\fIspace\fR	space
+\fL\e\fItab\fR	tab
+\fL\e\fInewline\fR	completely ignored; this allows a logical line to span any number of physical lines.
+\fL\e\fIdigits\fR	the one, two, or three octal digits are the value of the character to be used.
+.fi
+.PP
+If any other character follows the
+.LR \e ,
+both
+characters lose their special interpretation.
+.SH DIAGNOSTICS
+If
+.I getflds
+detects an error, it returns
+.LR 0 ,
+just as it does at end of file.
+However, the error will have changed
+.I errno
+(see
+.IR intro (2)).
+To distinguish between error and
+end of file set
+.I errno
+to zero before calling
+.I getflds
+and test it afterwards.
+.SH BUGS
+.I Getflds
+provides no way to distinguish a null character
+within a field from the end of the field.

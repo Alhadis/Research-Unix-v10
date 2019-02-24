@@ -1,0 +1,384 @@
+.TH INTRO 2
+.de en
+.HP
+\\$1  \fL\\$2\fP  \\$3
+.br
+..
+.SH NAME
+intro, errno \(mi introduction to system calls and error numbers
+.SH SYNOPSIS
+.B #include <errno.h>
+.SH DESCRIPTION
+Section 2 describes the entries into the operating system.
+.SS "File I/O"
+Files are opened for input or output
+by
+.IR open (2)
+or
+.IR creat .
+These calls return a integer called a
+.IR "file descriptor"
+which identifies the file
+to subsequent I/O calls,
+notably
+.IR read (2)
+and
+.IR write .
+File descriptors range from 0 to 127 in the current system.
+The system gets to pick the numbers,
+but they may be reassigned by
+.IR dup (2)
+and
+.IR dup2 .
+.PP
+By agreement among user programs,
+file descriptor 0 is the standard input,
+1 is the standard output,
+2 is for error messages,
+and 3 is the controlling terminal if any.
+The operating system is unaware of these conventions;
+it is permissible to close file 0,
+or even to replace it by a file open only for writing,
+but many programs will be confused by such chicanery.
+.PP
+Files are normally read or written in sequential order.
+.IR Lseek (2)
+addresses arbitrary locations.
+.PP
+Files have associated status,
+consisting of ownerships,
+permission modes,
+access dates,
+and so on.
+The status is retrieved by
+.IR stat (2);
+the calls in
+.IR chmod (2)
+alter parts of it.
+.PP
+New files are made with
+.I creat
+(in
+.IR open (2)).
+An existing file may be given an additional name
+by
+.IR link (2)
+or
+.IR symlink ;
+names are removed by
+.IR unlink (2).
+Directories are created and removed by
+.IR mkdir (2)
+and
+.IR rmdir .
+.PP
+Device files and communication channels
+(streams)
+admit a plethora of special operations,
+most specific to the device in question;
+see
+.IR ioctl (2)
+and the device writeups in section 4,
+especially
+.IR ttyld (4)
+for terminals
+and
+.IR stream (4)
+for communications.
+.IR Pipe (2)
+creates nameless streams,
+useful for local communication.
+Several streams may be monitored in parallel by
+.IR select (2).
+.SS "Process execution and control"
+A new process is created
+when an existing one calls
+.IR fork (2).
+The new (child) process starts out with
+copies of the address space and most other attributes
+of the old (parent) process.
+In particular,
+the child starts out running
+the same program as the parent;
+.IR exec (2)
+will bring in a different one.
+.PP
+Each process has an integer process id,
+unique among all currently active processes;
+a process group id,
+used to distribute signals
+among processes in the same session
+or window;
+a userid and groupid,
+which determine access permissions;
+and
+a character-string login name
+for the current user
+(not the same as permissions).
+The calls in
+.IR getuid (2)
+retrieve and change these values.
+.PP
+Various events cause software traps (signals):
+program errors like addressing violations,
+software events like the interrupt key on the terminal,
+the alarm clock set by
+.IR alarm (2),
+calls to
+.IR kill
+(in
+.IR signal (2)).
+Most signals terminate the process by default;
+.IR signal (2)
+will arrange to trap or ignore them instead.
+.PP
+A process terminates
+on receiving a signal
+or by calling
+.IR exit (2).
+A parent process may call
+.I wait
+(in
+.IR exit (2))
+to wait for some child to terminate.
+A single byte of status information
+may be passed from
+.I exit
+to
+.IR wait .
+.SS "Timekeeping"
+.IR Time (2)
+and
+.I ftime
+return the time of day
+and related information.
+.IR Times (2)
+returns runtime accounting
+for this process
+and its children.
+.IR Profil
+arranges to increment various locations
+in memory whenever the clock ticks;
+it is useful for execution profiling.
+.PP
+.IR Times ,
+.IR profil ,
+and a few other calls
+measure time in clock ticks.
+The clock frequency is given by the constant
+.B HZ
+in
+.BR <sys/param.h> ;
+60 ticks per second
+in this system.
+.SH SEE ALSO
+.IR intro (3),
+.IR perror (3)
+.SH DIAGNOSTICS
+A `Diagnostics' paragraph appears in the page for each system call
+that has an error return.
+Unless otherwise stated, the error value is the integer \-1,
+and the success value is 0.
+When an error occurs,
+an error number is assigned to
+the external variable
+.IR errno .
+.I Errno
+is not cleared on successful calls, so it should be tested only
+after an error has occurred.
+.PP
+There is a table of messages that describe the errors
+and a routine for printing them;
+see
+.IR perror (3).
+The list below gives
+the number, the name (as defined in
+.BR <errno.h> ),
+and the
+.I perror
+message for each error type.
+The reasons for error returns are explained in general terms;
+further explanations for less obvious error returns
+appear in the writeups of individual system calls.
+.en 0 \h'\w'EIO'u' "Error 0
+No error has occurred.
+.en 1 EPERM "Not owner
+An attempt was made to modify a file in some way forbidden
+except to its owner or the super-user,
+or an ordinary user attempted to do something
+allowed only to the super-user.
+.en 2 ENOENT "No such file or directory
+A file name was specified
+and the file should exist but didn't, or one
+of the directories in a path name did not exist.
+.en 3 ESRCH "No such process
+The process whose number was given to
+.I kill
+did not exist, or was already dead.
+.en 4 EINTR "Interrupted system call
+A signal
+which the user has elected to catch
+occurred during a system call.
+If execution is resumed
+after processing the signal,
+it will appear as if the interrupted system call
+returned this error condition.
+.en 5 EIO "I/O error
+A physical I/O error
+or timeout occurred,
+usually in
+.IR read ,
+.IR write ,
+or
+.IR ioctl .
+This error may in some cases be returned
+on a call following the one to which it actually applies.
+.en 6 ENXIO "No such device or address
+I/O on a special file referred to a device which does not
+exist or is off line,
+or beyond the limits of the device.
+.en 7 E2BIG "Arg list too long
+An argument list longer than 16384 bytes
+was presented to
+.IR exec .
+.en 8 ENOEXEC "Exec format error
+A request was made to execute a file
+which, although it had the appropriate permissions,
+did not start with a valid magic number, see
+.IR a.out (5).
+.en 9 EBADF "Bad file number
+A file descriptor referred to no
+open file,
+or a
+.I read
+(resp.
+/IR write )
+a file which was open only for writing (resp. reading).
+.en 10 ECHILD "No children
+In
+.IR wait ,
+the process had no
+living or unwaited-for children.
+.en 11 EAGAIN "No more processes
+In
+.IR fork ,
+the system's process table was full
+or the user was not allowed to create any more
+processes.
+.en 12 ENOMEM "Not enough memory
+During
+.I exec
+or
+.I brk,
+a program asked for more memory or swap space
+than the system was able to supply.
+.en 13 EACCES "Permission denied
+An attempt was made to access a file in a way forbidden
+by the protection system.
+.en 14 EFAULT "Bad address
+The system encountered a hardware fault in attempting to
+access the arguments of a system call.
+.en 15 EHASF "Directory not empty
+An attempt was made to remove a nonempty directory.
+.en 16 EBUSY "In use
+An attempt was made to mount a device that was already mounted
+(or crashed or was copied in mounted state),
+to dismount a device
+on which there was an active file
+(open file, current directory, mounted-on file, active text segment),
+or to remove the current directory of some process.
+.en 17 EEXIST "File exists
+An existing file was mentioned in an inappropriate context,
+e.g.
+.IR link .
+.en 18 EXDEV "Cross-device link
+A link to a file on another device
+was attempted.
+.en 19 ENODEV "No such device
+An attempt was made to apply an inappropriate
+system call to a device;
+e.g. read a write-only device.
+.en 20 ENOTDIR "Not a directory
+A non-directory was specified where a directory
+is required,
+for example in a path name or
+as an argument to
+.IR chdir .
+.en 21 EISDIR "Is a directory
+An attempt to write on a directory.
+.en 22 EINVAL "Invalid argument
+Some invalid argument:
+dismounting a non-mounted
+device,
+mentioning an unknown signal in
+.IR signal ,
+reading or writing a file for which
+.I lseek
+has generated a negative pointer.
+Also set by math functions, see
+.IR intro (3).
+.en 23 ENFILE "File table overflow
+The system's table of open files was full,
+and temporarily no more
+.I opens
+could be accepted.
+.en 24 EMFILE "Too many open files
+The limit is 128 per process.
+.en 25 ENOTTY "Illegal ioctl
+The function code mentioned in
+.I ioctl
+does not apply to the file or device.
+.en 26 ETXTBSY "Text file busy
+An attempt to execute a pure-procedure
+program which was open for writing,
+or to open for writing a pure-procedure
+program that was being executed.
+.en 27 EFBIG "File too large
+The size of a file exceeded the maximum (about
+.if t 10\u\s-29\s+2\d
+.if n 1.0E9
+bytes).
+.en 28 ENOSPC "No space left on device
+During a
+.I write
+to an ordinary file,
+there was no free space left on the device.
+.en 29 ESPIPE "Illegal seek
+.I Lseek
+was issued to a stream device.
+.en 30 EROFS "Read-only file system
+An attempt to modify a file or directory
+was made
+on a device mounted read-only.
+.en 31 EMLINK "Too many links
+An attempt to make more than 32767 links to a file.
+.en 32 EPIPE "Broken pipe
+.I Write
+to a stream that has been hung up,
+usually a pipe with no process to read the data.
+This condition normally generates a signal;
+the error is returned if the signal is ignored.
+.en 33 EDOM "Math argument
+The argument of a function in the math package (3M)
+was out of the domain of the function.
+.en 34 ERANGE "Result too large
+The value of a function in the math package (3M)
+was unrepresentable within machine precision.
+.en 35 ELOOP "Link loop
+An endless cycle of symbolic links was encountered.
+.en 36 ECONC "Concurrency violation
+An
+.I open
+or
+.I creat
+was in violation of the concurrent access specified
+for the file.
+.en 37 EGREG "It's all Greg's fault
+Something went wrong.
+.SH BUGS
+Device and file system drivers
+may use error codes in
+unexpected or unconventional ways;
+it is infeasible to list them all.
+The writeups in section 4
+list some such special cases.

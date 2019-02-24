@@ -1,0 +1,116 @@
+.TH FSM 10.5 UCDS
+.SH NAME
+fsm \- finite state machine language format
+.SH DESCRIPTION
+.B Fsm
+is designed to write finite state machines.
+It assumes that there are
+some number of input and output pins.
+These must be declared first.
+The input clock speed can also be declared so that the compiler will
+calculate the length of loops given in the time format.
+The input programs resemble C.
+There must be a procedure
+named
+.B main
+for the compiler to proceed.
+Procedures declared "inline"
+are called directly by the compiler to generate inline code.  Otherwise
+the syntax is very familiar.
+Note that all procedures
+.B must
+be declared void.
+Therefore, there are no expressions on the return
+statement.
+.PP
+The
+.IR yacc (1)
+syntax for
+.I fsm
+is given below:
+.sp
+.nf
+.ta 20n +3n
+program	:	declarations procedures
+declarations	:	declarations declaration ;
+	|	empty
+declaration	:	input
+	|	outputDecl
+input	:	\f5INPUT\fP inputDetails
+inputDetails	:	BIT ID
+	|	\f5FIELD ID < NUMBER : NUMBER >\fP
+	|	\f5CLOCK\fP clockFrequency frequency
+clockFrequency	:	\f5NUMBER\fP
+	|	\f5NUMBER . NUMBER\fP
+frequency	:	\f5MHZ\fP
+	|	\f5KHZ\fP
+outputDecl	:	\f5OUTPUT\fP outputDetails
+outputDetails	:	\f5BIT ID\fP
+	|	\f5FIELD ID < NUMBER : NUMBER >\fP
+procedures	:	procedures procedure
+	|	empty
+procedure	:	inline \f5VOID ID\fP ( id_list ) statement
+inline	:	\f5INLINE\fP
+	|	empty
+statements	:	statements statement
+	|	empty
+statement	:	output
+	|	loop
+	|	do
+	|	enabled
+	|	ifprefix statement
+	|	ifelseprefix statement
+	|	while
+	|	repeat
+	|	goto
+	|	break
+	|	continue
+	|	call
+	|	label statement
+	|	\f5{\fP statements \f5}\fP
+	|	\f5;\fP
+call	:	\f5ID (\fP expression_list \f5) ;\fP
+loop	:	\f5LOOP\fP statement
+enabled	:	\f5ENABLED\fP statement
+ifprefix	:	\f5IF\fP boolean
+ifelseprefix	:	ifprefix statement \f5ELSE\fP
+while	:	\f5WHILE\fP whileHead boolean whileTail statement
+do	:	\f5DO\fP statement dopart \f5;\fP
+dopart	:	\f5UNTIL\fP boolean
+	|	\f5WHILE\fP boolean
+repeat	:	\f5REPEAT NUMBER DO\fP statement
+output	:	\f5OUTPUT (\fP field_list \f5)\fP outputSuffix \f5;\fP
+outputSuffix	:	\f5FOR\fP timesOrCycles
+timesOrCycles	:	\f5NUMBER\fP times
+	|	\f5NUMBER CYCLES\fP
+times	:	\f5NS\fP
+	|	\f5US\fP
+	|	\f5MS\fP
+goto	:	\f5GOTO ID\fP
+break	:	\f5BREAK\fP
+continue	:	\f5CONTINUE\fP
+label	:	\f5ID :\fP
+boolean	:	\f5(\fP expression \f5)\fP
+id_list	:	\f5ID\fP
+	|	id_list \f5, ID\fP
+	|	empty
+expression_list	:	expression
+	|	expression_list \f5,\fP expression
+	|	empty
+field_list	:	field
+	|	field_list \f5,\fP field
+field	:	\f5ID =\fP expression
+expression	:	\f5(\fP expression \f5)\fP
+	|	expression \f5+\fP expression
+	|	expression \f5-\fP expression
+	|	expression \f5&\fP expression
+	|	expression \f5|\fP expression
+	|	expression \f5^\fP expression
+	|	expression \f5>>\fP expression
+	|	expression \f5<<\fP expression
+	|	\f5~\fP expression
+	|	\f5!\fP expression
+	|	\f5INPUT ( ID )\fP
+	|	\f5ID\fP
+	|	\f5NUMBER\fP
+.fi

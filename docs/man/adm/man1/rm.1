@@ -1,0 +1,56 @@
+.TH RM 1
+.CT 1 dirs files
+.SH NAME
+rm \- remove (unlink) files
+.SH SYNOPSIS
+.B rm
+[
+.B -fri
+]
+.I file ...
+.SH DESCRIPTION
+.I Rm
+removes directory entries.
+If an entry was the last link to a file, the file
+is destroyed.
+If an entry is a directory it is removed only if empty.
+Removal of a file requires write permission in its directory,
+but neither read nor write permission on the file itself.
+.PP
+If a file lacks write permission
+and the the standard input is a terminal,
+a query is written to the standard output and
+a line is read from the standard input.
+If that line begins with 
+.L y
+the file is deleted,
+otherwise the file remains.
+The options are
+.TP
+.B -f
+(force)
+Ask no questions about unwritable files and report no errors.
+.TP
+.B -r
+Recursively delete the
+entire contents of a directory
+and the directory itself.
+.TP
+.B -i
+(interactive) 
+Ask whether to delete each file,
+and, under
+.BR -r ,
+whether to examine each directory.
+If the first character of the response is
+.LR y ,
+the answer is yes;
+otherwise the answer is no.
+.SH "SEE ALSO"
+.IR unlink (2)
+.SH DIAGNOSTICS
+It is forbidden to remove the file
+.L ..
+merely to avoid the
+antisocial consequences of inadvertently doing something like
+.LR "rm -r .*" .

@@ -1,0 +1,103 @@
+.TH WORM 5
+.CT 1 dirs
+.SH NAME
+worm \- format of worm disks
+.SH SYNOPSIS
+.B #include <worm.h>
+.SH DESCRIPTION
+A 
+.SM WORM
+disk is a linked list of `superblocks', roughly one for every
+.I "worm write"
+on the 
+.SM WORM.
+The `governing' superblock is at block zero if it exists and
+has a valid magic number;
+otherwise the governing superblock is the last superblock in
+the linked list starting at block 1.
+(The link to the next superblock is preallocated
+and thus the last superblock in the list will be unwritten.)
+Each superblock has some status information and a pointer
+to a set of `inodes' describing a set of files.
+The status information for the 
+.SM WORM
+is that of the governing superblock;
+the set of files on the 
+.SM WORM
+is the accumulation of all the superblocks
+taken in order.
+The structure of a superblock as given in the
+include file is:
+.LP
+.EX
+.ta \w'#define 'u +\w'unsigned 'u +\w'mment[128]; 'u
+#define	SMAGIC	0x21746967
+#define	VLINK	1	/* linked list superblock */
+#define	VBTREE	2	/* cbt superblock */
+typedef struct superblock
+{
+	long magic;		/* magic number for superblock */
+	unsigned short blocksize; /* physical size of blocks */
+	short version;		/* type of superblock */
+	long nblocks;		/* number of blocks on device */
+	long zero;		/* first logical data block */
+	long nfree;		/* number of free blocks */
+	long ninodes;		/* number of inodes */
+	long ninochars;		/* number of bytes of inode names */
+	long binodes;		/* start of inodes */
+	long nextffree;		/* next free file block */
+	long nextsb;		/* next superblock */
+	short fd;		/* fildes for device (in core) */
+	char vol_id[128];		/* name the disk can be mounted as */
+	char comment[128];		/* comments */
+	long myblock;		/* where this superblock is */
+	long nF;		/* bytes for .F (VBTREE) */
+	long nT;		/* bytes for .T (VBTREE) */
+	long ctime;		/* create time for this superblock */
+} superblock;
+.EE
+.PP
+superblocks are padded with zeros to
+.BR blocksize .
+.PP
+Following each
+.B VLINK
+superblock is a set of inodes, a string table, and then the data blocks
+for the files described by the inodes.
+Following a (there is at most one)
+.B VBTREE
+superblock
+there is a set of inodes, a string table and the 
+.B .F
+and
+.B .T
+files for a
+.IR cbt (1)
+database where the keys are filenames and the data is an inode number.
+.LP
+.EX
+#define	DMAGIC	0x3A746967
+typedef struct Inode
+{
+	long magic;		/* magic number for Dirent */
+	long block;		/* starting block of file */
+	long nbytes;		/* bytes in file */
+	long ctime;		/* creation time */
+	union {
+		char *n;	/* core - name */
+		long o;	/* disk - offset into chars block */
+	} name;		/* filename */
+	long pad1		/* to 32 bytes */
+	short mode		/* as in \fIstat\fP(2) */
+	short uid		/* owner */
+	short gid		/* owner */
+	short pad2		/* to 32 bytes */
+} Inode		
+.EE
+.PP
+If the
+.B block
+field of an inode is negative,
+the file has been deleted.
+.SH "SEE ALSO"
+.IR worm (8)

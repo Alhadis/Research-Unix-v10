@@ -1,0 +1,148 @@
+.TH SMOKE 10.1 UCDS
+.SH NAME
+smoke \- static circuit checks
+.br
+wcheck \- static circuit checker
+.SH SYNOPSIS
+.B smoke
+[
+.B -abclmnpsxL
+]
+.I files
+.br
+.B wcheck
+.I files
+.SH DESCRIPTION
+.I Smoke
+reads and checks a circuit and reports simple
+errors like
+.IR lint(1)
+would find in C programs.
+.PP
+The circuit description language is 
+.IR cdl (7).
+The
+.I files
+are usually a circuit description file(s) made with
+.IR jraw -w (10.1)
+and/or
+.IR cdmglob (10.1)
+and the pins files with
+.B \&.tt
+lines like those given to
+.IR cdmglob.
+Files with net lists come first, pins files come second.
+.PP
+.I Wcheck
+reads and checks a circuit description and reports simple errors found.
+.PP
+The circuit description language is 
+.IR cdl (7).
+The
+.I files
+are usually a board description file
+.RB ( .wb )
+made with
+.BR "board -w",
+a chips description file made with
+.BR "mkchip -t" ,
+and
+(a) circuit description file(s) made with
+.B "draw -w"
+and/or
+.BR cdm .
+.PP
+The .tt line contains one character per pin on the chip according to
+the following table:
+.sp
+.nf
+	\fB1\fP	open collector output
+	\fB2\fP	totem pole ttl output
+	\fB3\fP	3-state output
+	\fBi\fP	input
+	\fBp\fP	pull-up (for 1)
+	\fBd\fP	pull-down
+	\fB0\fP	1 and p
+	\fB4\fP	3 and i
+	\fB5\fP	1 and i
+	\fB6\fP	1 and p and i
+	\fBj\fP	p and i
+	\fBk\fP	d and i
+	\fB9\fP	voltage source
+	\fBv\fP	vcc sink (.vb 1)
+	\fBw\fP	.vb 2 sink
+	\fBx\fP	.vb 3 sink
+	\fBy\fP	.vb 4 sink
+	\fBz\fP	.vb 5 sink
+	\fBg\fP	ground
+	\fBn\fP	no connect (use as tie point prohibited)
+	\fB8\fP	analog output
+.fi
+.sp
+The following are
+.IR smoke
+declarations only.
+.nf
+	\fBa\fP	analog input
+	\fBA\fP	analog input/output pin
+	\fBs\fP	switch contact
+	\fBt\fP	terminator
+	\fBb\fP	PAL undeclared pin
+	\fBI\fP	current source (not supported)
+	\fBJ\fP	current sink (not supported)
+	\fBD\fP	+ driver
+	\fBd\fP	- driver
+	\fBR\fP	+ receiver
+	\fBr\fP	- receiver
+	\fBP\fP pulldown
+	\fB.\fP	no type
+.fi
+.sp
+.PP
+The various options for
+.IR smoke
+are
+.TP 7
+.B -a
+Don't print out errors on analog nets.
+.TP 7
+.B -b
+Don't print out errors on nets with bidirectional pins.
+.TP 7
+.B -c
+Print out the entire circuit with type declarations by each pin (but
+Does \fBnot\fP do any checking.
+.TP 7
+.B -l
+Don't complain about loading errors.
+.TP 7
+.B -m
+Don't complain about lone pins on macro signals.
+.TP 7
+.B -n
+Turn on `complete' nets; when errors occur, nets will be completely printed
+out (when used with
+.BR -x ).
+.TP 7
+.B -p
+Turn on paranoid mode;
+.IR smoke
+normally doesn't complain if 
+there are any undeclared pins in a net.  Now it will.
+.TP 7
+.B -s
+Ignore multiple source messages.  Not recommended for general use.
+.TP 7
+.B -x
+Turn on extra (excessive) mode.  Offending nets will be printed out in
+gory detail; \fIvery\fP useful for debugging the nets it complains about.
+.TP 7
+.B \-L
+Ignore lonely pins with names beginning with
+.B $
+(local names).
+.SH BUGS
+In
+.IR smoke,
+the last definition of the chip is the one that counts.
+Doesn't handle ECL.

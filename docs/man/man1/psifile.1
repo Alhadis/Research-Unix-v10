@@ -1,0 +1,156 @@
+.TH PSIFILE 1
+.CT 1 writing_output
+.SH NAME
+psifile, mhssend\- postscript interpreter/fax sender
+.lg 0
+.SH SYNOPSIS
+.B psifile
+[
+.I option ...
+] [
+.I file
+]
+.br
+.B mhssend
+.I phone_number
+.I file
+.SH DESCRIPTION
+.I Psifile
+reads Postscript input from
+.I file
+or from standard input
+and produces a file containing an image of the page.
+The format of the output file is specified by the following options:
+.TF /make/it
+.TP
+.B -fax
+runs at 200 dpi and produces g31 fax in the multipage fax format called
+.BR mhs ,
+putting its output in file
+.B fax\fI$$\fP.mhs
+by default. If a phone number is supplied,
+the output file is pushed to
+.B /tmp
+on fama
+and
+.B mhssend
+is run to send the fax.
+.TP
+.BI -P " phone_no"
+specifies the destination phone number for
+.BR -fax .
+.TP
+.B -g4
+runs at 300 dpi and produces a fax g4 file called
+.B psi.out.g4
+by default that
+can be displayed on the gnots with
+.IR rbits .
+.TP
+.B -bm
+produces
+.IR bitfile (9.5)
+output in file
+.B psi.out
+by default.
+.I -bm
+is useful for debugging postscript programs because
+it has better diagnostics than the printers.
+.PP
+Other options are
+.TF /this/is
+.TP
+.B -s
+assumes the file is in
+.B mhs
+format and sends it to the phone number provided with
+.B -P
+above.
+.TP
+.BI -o " name"
+use
+.I name
+as the basename of the output file.
+.TP
+.BI -p " page"
+only output postscript page number
+.I page
+as determined by
+.B %%Page
+comments in the file.
+.sp
+.PP
+Fonts are implemented with 24 point bitmap fonts.
+Those available are
+Symbol, Courier, Times-Roman, Times-Italic, Times-Bold, Times-BoldItalic, Helvetica,
+Helvetica-Oblique, Helvetica-Bold, Helvetica-BoldOblique.
+Fonts
+Courier-Bold,
+Courier-Oblique,
+and
+Courier-BoldOblique
+are mapped to
+Courier.
+Postscript type 1 fonts are implemented and work if supplied
+with the input.
+.sp
+.PP
+For best results with TeX documents, run
+.B dvips
+with the
+.B -Tfax
+or
+.B "-D 200"
+option to get fonts of the proper resolution.
+.SH EXAMPLES
+.TP
+.L
+troff -ms memo | lp -dstdout -H | psifile -fax -P 4223
+.br
+.TP
+.L
+troff -ms memo | dpost | psifile -fax -P 4223
+Two equivalent ways to format a memo, convert it to PostScript,
+and produce a fax file.
+.SH FILES
+.TF /usr/lib/psi/psifaxg4
+.TP
+.F fax\fI$$\fP.mhs
+default
+.B -fax
+output file
+.TP
+.F psi.out.g4
+default
+.B -g4
+output file
+.TP
+.F psi.out
+default
+.B -bm
+output file
+.TP
+.B /usr/lib/psi/psifax
+postscript\->mhs format program
+.TP
+.B /usr/lib/psi/psifaxg4
+postscript\->fax g4 program
+.TP
+.B /usr/lib/psi/psibm
+postscript\->bitfile program
+.SH SEE ALSO
+.IR psi (9.1),
+.IR lp (1),
+.IR dvips (1),
+.IR postscript (8),
+.IR proof (9.1) ,
+.IR bcp (1)
+.SH DIAGNOSTICS
+.PP
+Symbols that lack bitmaps are replaced by `?'
+and an error is reported.
+.SH BUGS
+Unimplemented PostScript features are rotated images
+and half tone screens.
+Imagemasks may only be rotated by multiples of 90 degrees,
+not by arbitrary angles.

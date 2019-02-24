@@ -1,0 +1,33 @@
+if test -s ../$1/$1.ms
+then
+FILE=../$1/$1.ms
+else
+if test -s ../$1
+then
+FILE=../$1
+else
+if test -s $1
+then
+FILE=$1
+fi
+fi
+fi
+echo $FILE
+awk '
+/^\.I /	{
+	if($0 ~ /"/){
+		n=split($0,a,"\"")
+		term = a[2]
+	}
+	else{ term = $2
+		if(NF == 2){
+			getline
+			term = term " " $1
+		}
+	}
+	print term
+}
+/^\.I$/	{
+	getline
+	print $0
+}' $FILE

@@ -1,0 +1,127 @@
+.TH REBOOT 8
+.CT 1 sa_auto
+.SH NAME
+reboot \- bootstrapping procedures
+.SH DESCRIPTION
+.PP
+Here are some recipes for booting and crashing the operating system
+on VAXes.
+.SS Rebooting a running system
+The preferred way to reboot is to log in on the console as super-user,
+invoke
+.B kill 1
+to take the system to single user,
+unmount file systems with
+.B /etc/umount -a
+and halt and restart the system
+as described below under `Console boots.'
+.SS Power fail and crash recovery
+The system will reboot itself at power-up or after crashes if
+auto-boot is enabled on the machine front panel
+or in the console software.
+If auto-restart is enabled,
+the system will first attempt to save a copy of physical memory
+on a reserved piece of disk.
+An automatic consistency check of the file systems is performed.
+Unless this fails the system will resume multi-user operations.
+.SS Console boots
+Sync the disks if necessary and possible.
+To recover hardware control of the console, type a
+.RB control- P .
+This will yield a
+.L >>>
+prompt from the VAX
+console subsystem (sic).
+The command
+.IP
+.B >>> H
+.LP
+will halt the CPU
+(except on the 11/750,
+where
+.RB control- P
+halts the CPU right away).
+.PP
+On MicroVAXes,
+.RB control- P
+doesn't work;
+hit the
+.SM BREAK
+key instead.
+.PP
+To boot multi-user with an automatic file system check,
+give the console command
+.IP
+.B >>> B
+.LP
+Commands to boot single-user vary.
+On the VAX-11/750 and on MicroVAXes,
+use
+.IP
+.B >>> B/3
+.LP
+On the VAX-11/780 and VAX 8550 and 8700,
+use
+.IP
+.B >>> B MAN
+.LP
+This will prompt with 
+.LR *
+for the name of the file to boot.
+The filename should be an executable image
+in the root directory
+of the filesystem at the beginning of the disk.
+.SS System core images
+If the system crashes
+and auto-restart is enabled,
+a copy of physical memory is written
+to a reserved piece of disk.
+To save a core image of a hung system, type on the console (after
+.RB control- P
+if necessary):
+.IP
+.EX
+>>> S 80000010
+.EE
+.PP
+The system will write the core image,
+then reboot automatically.
+.PP
+If the core image was written on
+.LR /dev/ra11 ,
+the following incantation will print a stack traceback
+from the time of the crash:
+.IP
+.EX
+adb /unix /dev/ra11
+$<crash
+$c
+.EE
+.PP
+To save disk space,
+the core image is sometimes overlaid on part of the swap area,
+where normal system operation will soon overwrite it.
+.IR Savecore (8)
+will copy the core image
+to an ordinary disk file.
+.SH FILES
+.TP
+.F /unix
+default system binary
+.SH "SEE ALSO"
+.IR fsck (8), 
+.IR init (8), 
+.IR rc (8),
+.IR savecore (8)
+.SH BUGS
+Older boot programs with different syntax are still around in a few places,
+especially on machines with Emulex UNIBUS disk controllers,
+for which silly boot ROMs are common.
+.PP
+There are commands
+.B /etc/reboot
+and
+.B /etc/halt
+which attempt to reboot and halt the system;
+their function is indeterminate
+and likely to change.

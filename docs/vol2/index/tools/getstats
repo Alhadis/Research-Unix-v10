@@ -1,0 +1,41 @@
+I=/usr/vol2/index/junk
+L=/usr/vol2/index/junk1
+K=/usr/vol2/index/junk2
+for i in /usr/vol2/[a-z]*
+do
+	cd $i
+	if test -s $i/*.ind
+	then
+	for j in *.ind
+	do
+	J=`basename $j .ind`
+	wc -l $j|sed 's/[a-z].*//'|tee -a $L >$I
+	if test -s $J.ms
+	then
+	wc -w $J.ms|tee -a $K|sed 's/[a-z].*/3k\/p/' >>$I
+	else
+	if test -s $J.m
+	then
+	wc -w $J.m|tee -a $K|sed 's/[a-z].*/3k\/p/' >>$I
+	else
+	if test -s $J.tex
+	then
+	wc -w $J.tex|tee -a $K|sed 's/[a-z].*/3k\/p/' >>$I
+	else
+	if test -s $J
+	then
+	wc -w $J|tee -a $K|sed 's/[a-z].*/3k\/p/' >>$I
+	else
+	echo $J not found
+	fi
+	fi
+	fi
+	fi
+	echo `basename $i` $J `dc < $I`
+done
+fi
+done|sort -nr +2
+sed '2,$s/$/+/' $L >$L.x
+sed -e 's/[a-z].*//' -e '2,$s/$/+/' -e '$s/$/3k\/p/' $K >>$L.x
+dc <$L.x
+

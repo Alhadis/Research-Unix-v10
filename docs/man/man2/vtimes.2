@@ -1,0 +1,51 @@
+.TH VTIMES 2
+.CT 2 time_man
+.SH NAME
+vtimes \- get usage of time, space, and paging resources
+.SH SYNOPSIS
+.B #include <sys/vtimes.h>
+.PP
+.B vtimes(par_vm, ch_vm)
+.br
+.B struct vtimes *par_vm, *ch_vm;
+.SH DESCRIPTION
+.I Vtimes
+places accounting information for the current process in the
+area pointed to by
+.I par_vm
+and for its terminated children in the
+area pointed to by
+.I ch_vm.
+If either pointer
+is 0, the corresponding information is omitted.
+.PP
+After the call, each area contains information in the form
+.PP
+.EX
+.ta \w'struct 'u +\w'unsigned 'u +\w'vm_utime;  'u
+struct vtimes {
+	int	vm_utime;	/* user time */
+	int	vm_stime;	/* system time */
+			/* rss = resident storage size in 512-byte pages */
+	unsigned	vm_idsrss;	/* rss time integral, data+stack */
+	unsigned	vm_ixrss;	/* rss time integral, text */
+	int	vm_maxrss;	/* maximum rss */
+	int	vm_majflt;	/* major page faults */
+	int	vm_minflt;	/* minor page faults */
+	int	vm_nswap;	/* number of swaps */
+	int	vm_inblk;	/* block reads */
+	int	vm_oublk;	/* block writes */
+};
+.EE
+.PP
+Times are expressed in clock ticks of 1/60 (or 1/50) second.
+The time integrals are computed by cumulating the number
+of 512-byte pages in use at each clock tick.
+.PP
+A major page fault involves a disk transfer; a minor
+fault gathers page-reference information.
+Block reads and writes are file system disk transfers;
+blocks found in the buffer pool are not counted.
+.SH SEE ALSO
+.IR time (2),
+.IR exit (2)

@@ -1,0 +1,90 @@
+.TH TBL 4
+.CT 2 tbl_man
+.SH NAME
+tbl \- kernel table file system
+.SH DESCRIPTION
+.I Tbl
+is a file-system mount point that provides access to kernel data tables.
+The name of each entry in the
+.F /tbl
+directory is the name of a directory
+containing files that describe a kernel data table.
+These files have the following names and contents:
+.PP
+.RS
+.TF count
+.TP
+.B base
+system base address of the table
+.TP
+.B count
+number of elements in the table
+.TP
+.B data
+table contents
+.TP
+.B size
+size of a table element
+.RE
+.PD
+.PP
+The standard system-call interface is used to access
+.IR tbl .
+.IR Open (2)
+and
+.IR close (2)
+behave as usual.
+Data may be transferred
+from or to any locations in the ``data'' file through
+.I lseek,
+.I read,
+and
+.IR write (2).
+.PP
+The following header files are useful in analyzing
+.I tbl
+``data'' files:
+.PP
+.RS
+.TF <sys/param.h>
+.TP
+.B <sys/file.h>
+``file'' structure
+.TP
+.B <sys/inode.h>
+``inode'' structure
+.TP
+.B <sys/lnode.h>
+``lnode'' structure
+.TP
+.B <sys/param.h>
+size parameters
+.TP
+.B <sys/proc.h>
+``proc'' structure
+.TP
+.B <sys/stream.h>
+``stream'', ``block'', and ``queue'' structures
+.TP
+.B <sys/text.h>
+``text'' structure
+.TP
+.B <sys/types.h>
+special system types
+.PD
+.RE
+.SH FILES
+.F /tbl/*/base
+.br
+.F /tbl/*/count
+.br
+.F /tbl/*/data
+.br
+.F /tbl/*/size
+.SH SEE ALSO
+.IR fmount (2),
+.IR tblmount (8),
+.SH BUGS
+The
+.I super-user
+may write on any file, despite the permissions.

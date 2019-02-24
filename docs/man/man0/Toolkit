@@ -1,0 +1,119 @@
+makelinks full-path-name [other-path]
+goes through all the files in the [other]
+directory ([full] by default) for a manual section and
+creates files containg an appropriate link
+creates links within [full]
+for everything mentioned under a .SH NAME
+that doesn't already have a file.
+(Two directories are used for making links in the man cache)
+
+cachelinks does makelinks throughout the manual cache
+
+breaklinks
+removes all cache links whose names are not in the 
+manual source directories.  for cleaning up trash.
+A more delicate equivalent is rm `spoolref`
+
+cache goes thru the cache of formatted pages and updates all files whose
+source postdates the cached version
+
+secindex directory-name
+produces a list of all NAMES mentioned in the
+directory with the file in which each occurs
+output on standard output
+
+secindexes does all the man sections,
+putting the results in man0/man?.index
+
+checkrefs
+goes through all the manual pages looking for cross-references
+and checks them against the names of all manual sections
+troubles may be seen in files, "nonref, needblank,
+badref"
+other incidental files created are "ref, def, xref, misref"
+
+checkSH
+produces files /usr/man/man0.n containing all
+.SH lines in the nth directory, /usr/man/man1, man2, ...
+use sort -c +0 -1 +2n repeatedly to find files in which subheads are
+out of order
+
+
+checkfilref >badfil
+looks thru all files mentioned in the manual
+and puts a list of those that don't occur on the system,
+with the name of the manual section in which they are mentioned,
+in badfil
+
+makind
+produces ptx input
+in file  permindex for troffing thus
+	troff ptxmac # no further file args
+
+makcont
+produces table of contents info in file contents
+for troffing with contmac
+(Obsoleted by topic index)
+
+libcontents library
+produces for the named library a list of externally
+define symbols; results in library basename.list
+
+checklib
+compares the section indexes for sections 2 and 3 (see secindex)
+with the external symbols in various libraries
+and puts a comm listing of differences in man23.comm
+
+maketopic
+produces a topic index of the manual in file topindex
+it creates a directory tjunk for workspace
+each manual page should have a .CT command before the .SH NAME
+maketopic extracts the page name, .CT arguments and name line
+the order of the index is the same as /usr/man/man0/categories
+to typeset use troff topmacs
+
+numbertopind
+joins page numbers from "pagenumbers" to "topindex" and
+puts result in ntopindex to typeset with troff topmacs
+
+cktopic
+checks that all manual pages contain a .CT line
+
+spoolref >dead
+reads the indexes made by secindexes and puts on "dead" a
+list of obsolete files in the spool directory.
+these files have no source, or broken links, or mistaken links
+
+pagecount -f
+Under option -f, typesets (discarding output) all of man[1-9]
+and produces file "pagesizes" that tells number of physical
+pages for each man page.
+Regardless of options, it uses file "pagelist", a hand-prepared
+file listing file names of all pages together with "pagesizes"
+to produce "pagenumbers" that tells where pages begin.
+All three files have lines of the form
+	man1/cat.1 optional-size optional-pagenumber
+The size from "pagesizes" takes precedence over that from "pagelist",
+but pagelist may list files (such as front matter) that are missing
+from pagesizes.  Lines in "pagelist" and "pagenumbers" having the form
+	odd
+force the next physical page to have an odd number.
+
+preprocess man?/page.?
+returns a pipeline that tells how to preprocess the given
+man page for troff.  use it with "eval"
+
+troffit [-a] man?/page.? ...
+runs troff on the specified pages, getting the page number
+from the file pagenumbers, and putting on stderr entries
+suitable for the file pagesizes.
+
+numberpermind
+takes the file "permindex" made by "makind" plus
+the file "pagenumbers" made by "pagecount" and produces
+"npermindex", which has page numbers attached, suitable
+for typesetting by "troff nptxmac #no further args"
+
+cachindex
+goes thru all the NAME lines and puts them in /usr/spool/man/index
+for the benefit of man -k.  it should be run occasionally by cron

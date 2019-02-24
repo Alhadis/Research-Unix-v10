@@ -1,0 +1,23 @@
+\newwrite\indexfile
+\def\makeindex{%
+  \immediate\openout\indexfile=\jobname.idx%
+  \def\index{\bsphack\begingroup%
+             \def\protect####1{\string####1\space}%
+             \wrindex\indexfile}\typeout%
+  {Writing index file \jobname.idx }}
+\def\wrindex#1#2{\let\pageno\relax%
+   \xdef\gtempa{\write#1{%\string
+      #2<tab>\number\count0}}\endgroup\gtempa\esphack}
+\def\index{\begingroup \xindex}
+\def\xindex#1{\endgroup}
+\newdimen\savsk
+\newcount\savsf
+\newdimen\zro
+\zro=0pt
+\def\bsphack{\savsk\lastskip 
+    \ifhmode\savsf\spacefactor\fi}
+
+\def\esphack{\relax\ifhmode\spacefactor\savsf
+     {}\ifdim \savsk >\zro \ignorespaces 
+  \fi \fi}
+\makeindex

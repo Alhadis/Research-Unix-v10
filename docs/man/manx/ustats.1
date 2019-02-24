@@ -1,0 +1,80 @@
+.TH USTATS 1 SHARE
+.SH NAME
+ustats \- show bar graphs of share scheduler user usage rates
+.SH SYNOPSIS
+.B ustats
+[-Kn] [-cn] [-g] [-sn] [-r] [-L] [-o[N|P|S|O]]
+.SH DESCRIPTION
+.I Ustats
+prints bar graphs of user usage rates.
+.P
+Invoked without arguments,
+.I ustats
+will print the graphs and exit.
+The flags affect operation as follows:-
+.RS 2
+.TP "\w'flagXX'u"
+.ul
+flag
+.ul
+meaning
+.TP
+.BI -K n
+Set the 
+.I half-life
+for decaying the displayed rate to
+.B n
+seconds [default 4].
+.TP
+.BI -c n
+Continuous operation, where
+.BR n ,
+if present, limits the number of cycles.
+.TP
+.BI -g
+Don't include scheduling groups.
+.TP
+.BI -s n
+Delay time between updates becomes
+.B n
+seconds [default 4].
+.TP
+.BI -r
+Don't include \fIroot\fP's usage.
+.TP
+.BI -L
+The bar graphs are normalised between the minimum and maximum usages found.
+Quite often, one particular user
+(eg: \fIidle\fP)
+will dominate the usage,
+so this flag turns on the use of a logarithmic scale for normalisation.
+.TP
+.BI -o f
+The normal ordering of users is in kernel \fIlnode\fP table order.
+This allows a continuous display to show the least change as users
+log in and log out.
+There are alternate orders specifiable by the value of \fBf\fP:
+.RS "\w'flagXXXX'u"
+.PD 0
+.TP 4
+.B N
+sort by user name
+.TP
+.B P
+sort by user priority
+.TP
+.B S
+sort by usage
+.TP
+.B O
+default (\fIlnode\fP) ordering.
+.PD
+.RE
+.SH EXAMPLES
+.RS 4
+\fBustats \-Lc | dis\fP
+.SH SEE ALSO
+dis(1),
+rates(1),
+shstats(1),
+share(5).

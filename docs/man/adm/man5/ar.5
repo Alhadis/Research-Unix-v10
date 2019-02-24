@@ -1,0 +1,86 @@
+.TH AR 5
+.CT 1 lib_obj
+.SH NAME
+ar \- archive (library) file format
+.SH SYNOPSIS
+.B #include <ar.h>
+.SH DESCRIPTION
+The archive command
+.IR ar (1)
+is used to combine several files into
+one.
+Archives are used mainly as libraries to be searched
+by the link-editor
+.I ld.
+.PP
+A file produced by
+.I ar
+has a magic string at the start,
+followed by the constituent files, each preceded by a file header.
+The magic number and header layout as described in the
+include file are:
+.PP
+.EX
+.ta \w'#define 'u +\w'SAR_HDR 'u
+.ec %
+#define	ARMAG	"!<arch>\n"
+#define	SARMAG	8
+
+#define	ARFMAG	"`\n"
+
+struct ar_hdr {
+	char	ar_name[16];
+	char	ar_date[12];
+	char	ar_uid[6];
+	char	ar_gid[6];
+	char	ar_mode[8];
+	char	ar_size[10];
+	char	ar_fmag[2];
+};
+#define	SAR_HDR	60
+.ec \
+.EE
+.LP
+The name is a blank-padded string.
+The
+.L ar_fmag
+field contains
+.L ARFMAG
+to help verify the presence of a header.
+The other fields are left-adjusted, blank-padded numbers.
+They are decimal except for
+.LR ar_mode ,
+which is octal.
+The date is the modification date of the file
+at the time of its insertion into the archive.
+The length of the header is
+.LR SAR_HDR .
+Because
+.L struct ar_hdr
+may be padded on some machines,
+.L SAR_HDR
+should be used in preference to
+.L sizeof(struct ar_hdr)
+when reading and writing file headers.
+.PP
+Each file begins on an even (0 mod 2) boundary;
+a newline is inserted between files if necessary.
+Nevertheless 
+.B ar_size
+reflects the
+actual size of the file exclusive of padding.
+.PP
+There is no provision for empty areas in an archive
+file.
+.PP
+If an archive contains only printable files, the archive itself
+is printable.
+.SH "SEE ALSO"
+.IR ar (1), 
+.IR ld (1), 
+.IR nm (1)
+.SH BUGS
+File names lose trailing blanks.
+.br
+Most software that deals with archives takes 
+an embedded blank as a name terminator.

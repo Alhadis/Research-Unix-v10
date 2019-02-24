@@ -1,0 +1,144 @@
+.TH CBT 1 
+.CT 1 files
+.SH NAME
+cbt \- btree utilities
+.SH SYNOPSIS
+.B cbt creat
+.I name ...
+.br
+.B cbt report
+.I name ...
+.br
+.B cbt cat
+[
+.B -R
+]
+.I name ...
+.br
+.B cbt squash
+[
+.BI -o dest
+]
+.I name
+.br
+.B cbt build
+[
+.B -R
+]
+.I name
+.br
+.B cbt add
+[
+.B -R
+]
+.I name
+.br
+.B cbt delete
+[
+.B -R
+]
+.I name
+.br
+.B cbt look
+[
+.B -R
+]
+.I name
+.SH DESCRIPTION
+A B-tree
+.I name
+corresponds to a pair of
+files named
+.IB name .T
+and
+.IB name .F .
+.IB Name .T
+contains an access tree,
+and
+.IB name .F
+contains the data.
+.PP
+The
+.L creat
+version of the command creates empty B-trees.
+.PP
+The
+.L report
+version of the command scans each B-tree and reports how many records it
+contains.
+.PP
+The
+.L cat
+version of the command scans the
+B-tree in key-sort order, writing on its standard output.
+With no option,
+.L cat 
+writes each key followed by a tab,
+followed by the record, followed by a new-line.
+If option
+.B -R
+(raw) is present,
+each key-record pair has the format
+.PP
+.EX
+.nf
+struct {
+	short keylen;
+	char key[keylen];
+	short reclen;
+	char rec[reclen];
+};
+.EE
+.LP 
+Keys and records are not null-terminated and
+consecutive key-record pairs are not separated by new-lines.
+Keys may be no longer than 255 bytes.
+.PP
+The
+.L squash
+version of the command compresses the access tree to minimal size.
+Option
+.B -o
+names the squashed database
+.IR dest ,
+leaving the original database unaltered.
+.PP
+The
+.L build
+version of the command reads a sorted list of keys
+and records from the standard input and fills the file
+with them.
+Input is in the form produced by the corresponding
+.L cat 
+option.
+.PP
+The
+.L add
+.RB ( delete,
+.LR look )
+version of the command
+inserts (removes, looks up) records.
+Input (and output of
+.LR look )
+is in the form produced by the corresponding
+.L cat 
+option.
+The records may be unsorted.
+In newline-separated input, only the keys need be present.
+.SH EXAMPLES
+.TP
+.L
+sort '-t\fR<tab>\fP' +0 -1 inputfile | cbt build btreefile
+<tab> denotes a tab character
+.SH FILES
+.TF /usr/lib/btree/*
+.TP
+.F /usr/lib/btree/*
+.TP
+.F \fIname\fP.[TF]
+.TP
+.F TS*[TF]
+temporaries for
+.B squash
+.SH SEE ALSO
+.IR cbt (3)

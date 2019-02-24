@@ -1,0 +1,16 @@
+awk '
+/^\.UL /	{
+	if($0 ~ /"/){
+		n=split($0,a,"\"")
+		term = a[2]
+	}
+	else{ term = $2
+		if(NF == 2){
+			getline
+			term = term " " $1
+		}
+	}
+	print term
+}' $1 >`basename $1`.ul
+
+

@@ -1,0 +1,95 @@
+.TH ARFF 8
+.SH NAME
+arff \- read RT11 files
+.SH SYNOPSIS
+.B arff
+[ key ] [ name ... ]
+.SH DESCRIPTION
+.I Arff
+saves and restores files
+from an RT11 volume,
+such as the VAX console floppy or tape.
+Its actions are controlled by the
+.I key
+argument.
+The
+.I key
+is a string of characters containing
+at most one function letter and possibly
+one or more function modifiers.
+Other arguments to the command are file
+names specifying which files are to be dumped or restored.
+.PP
+RT11 filenames must be chosen from
+the character set
+.BR a-z0-9. .
+Unix filenames are trimmed to the last pathname element;
+upper-case letters are folded to lower-case.
+.PP
+The 
+.I key
+must include one of the following letters:
+.TP
+.B  r
+The named files
+are replaced where found in the RT11 volume, or added taking up
+the minimal possible portion of the first empty spot.
+.TP
+.B  x
+The named files are extracted from the RT11 volume.
+.TP
+.B  d
+The named files are deleted from the volume.
+The resulting empty spots are coalesced where possible.
+.TP
+.B  t
+A table of contents for the RT11 volume is printed.
+If filenames are given,
+they are echoed if found.
+.PP
+The following modifiers may be added to the
+.IR key :
+.TP
+.B  v
+Normally
+.I arff
+does its work silently.
+The
+.B v
+(verbose)
+option causes it to type the name of each file it treats
+preceded by the function letter.
+With the
+.B t
+function,
+.B v
+gives more information about the
+file than just the name.
+.TP
+.B f
+causes 
+.I arff
+to use the next argument as the name of the archive instead
+of
+.IR /dev/floppy . 
+.TP
+.B m
+causes
+.I arff
+not to use the mapping algorithm employed in interleaving sectors
+around a floppy disk.  In conjunction with the 
+.B f
+option it may be
+used for extracting files from
+non-floppy sources,
+such as the VAX-11/750 console cassette.
+.SH FILES
+/dev/floppy
+.SH AUTHORS
+Keith Sklower, Richard Tuck
+.SH BUGS
+Floppy errors are handled ungracefully.
+.br
+The program is too floppy-dependent.
+Mapping belongs in the device driver,
+or at least shouldn't be the default.

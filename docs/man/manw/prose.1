@@ -1,0 +1,228 @@
+.id NOTICE-NOT TO BE DISCLOSED OUTSIDE BELL SYS EXCEPT UNDER WRITTEN AGRMT
+.id Writer's Workbench version 2.2, February 24, 1981
+.TH PROSE 1
+.SH NAME
+prose \- describe style characteristics of text
+.SH SYNOPSIS
+.B prose
+[
+.B \-flags
+][
+.B \-ver
+]
+[
+.B \-tm
+|
+.B \-c
+|
+.B \-t
+|
+.B \-x
+standards-file
+][
+.B \-mm
+|
+.B \-ms
+] [
+.B \-li
+|
+.B \+li
+][
+.B \-s
+][
+.B \-f
+style-file | file ...]
+.SH DESCRIPTION
+.I Prose
+describes the writing style of a document
+as determined by 
+.IR style "(1),
+but the output is in prose form.
+The output describes readability, word and sentence lengths,
+sentence structure and variation.
+.PP
+The program checks that a document's scores on certain 
+.I style
+variables fall within the average range for documents of a specified type.
+Whenever the score for a variable is outside the average range,
+a warning message is printed with information
+about the variable,
+and commands that can be run to get further information.
+.PP
+.I Prose
+creates a file called
+.I styl.tmp
+that contains the table produced by
+.IR style .
+.PP
+.I Prose
+compares a document with standards
+for one of several document types,
+according to the following flags:
+.RS 5
+.TP 5
+.B \-tm
+Compare input text to good Bell Laboratories TM's.  (This is the default.)
+.TP
+.B \-c
+Evaluate input text for craft suitability.
+.TP
+.B \-t
+Compare input text with good training documents.
+.TP
+.BI \-x " standards-file"
+Compare input text with standards contained in user-specified
+.IR standards-file .
+See
+.IR mkstand (1)
+to set up the 
+.IR standards-file .
+.RE
+.PP
+Because 
+.I prose
+runs
+.IR deroff (1)
+before looking at the text,
+formatting header files should be included as part of the input.
+.PP
+Options affecting 
+.IR deroff (1)
+are:
+.RS 5
+.TP
+.B \-mm
+eliminate
+.IR mm (1)
+macros, and associated text that is not part of sentences
+(e.g. headings),
+from the analysis.
+This is the default.
+.TP
+.B \-ms
+eliminate
+.IR ms (1)
+macros, and associated text that is not part of sentences,
+from the analysis.
+The
+.B \-ms
+flag overrides the default,
+.BR \-mm .
+.TP
+.B \-li
+eliminate list items,
+as defined by 
+.I mm
+macros, from the analysis.
+This is the default.
+.TP
+.B \+li
+Include list items in the input text,
+in the analysis.
+This flag should be used if the text contains lists of sentences,
+but not if the text contains many lists of non-sentences.
+.RE
+.PP
+Other options are:
+.RS 5
+.TP
+.B \-s
+Produce a short (10 line) summary version of
+.IR prose .
+.TP
+.BI \-f " style-file"
+If a file containing the
+.I style
+table exists as output from the 
+.I style
+program,
+or from a previous 
+.I prose
+run,
+it may be specified so that 
+.I prose
+need not run
+.I style
+again.
+.I Styl.tmp
+can be used as the
+.IR style-file .
+The input text file should not be used with the
+.B \-f
+flag.
+.RE
+.PP
+Two options give information about the program:
+.RS 5
+.TP 7
+.B \-flags
+print the command synopsis line (see above)
+showing command flags and options,
+then exit.
+.TP
+.B \-ver
+print the Writer's Workbench version number of the command, then exit.
+.RE
+.PP
+.I Prose
+is one of the programs run under the 
+.IR wwb (1)
+command.
+.SH EXAMPLES
+The command:
+.PP
+.RS 5
+.B "prose \-t \+li filename"
+.RE
+.PP
+will describe how the style characteristics of
+.I filename
+compare with standards for training documents.
+Lists will be included in the analysis.
+The
+.IR style (1)
+table will be left in the file
+.IR styl.tmp .
+.br
+Then the command:
+.PP
+.RS 5
+.B "prose \-x standards-file \-f styl.tmp"
+.RE
+.PP
+will use the style statistics already gathered for
+.IR filename ,
+and describe how they compare with the user-defined
+standards contained in 
+.IR standards-file .
+.SH FILES
+.TP 21
+styl.tmp
+contains 
+.I style 
+table
+.TP
+wwb/lib/prosedoc
+contains all standards used for comparison,
+and stored
+.I prose 
+output text files
+.SH SEE ALSO
+style(1), wwb(1),
+deroff(1),
+match(1),
+wwbstand(1),
+mkstand(1),
+worduse(1).
+.SH SUPPORT
+.IR "COMPONENT NAME:  " "Writer's Workbench"
+.br
+.IR "APPROVAL AUTHORITY:  " "Div 452"
+.br
+.IR "STATUS:  " Standard
+.br
+.IR "SUPPLIER:  " "Dept 45271"
+.br
+.IR "USER INTERFACE:  " "Stacey Keenan, Dept 45271, PY x3733"
+.br
+.IR "SUPPORT LEVEL: " "Class B - unqualified support other than Div 452"

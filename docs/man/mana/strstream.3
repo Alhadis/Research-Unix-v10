@@ -1,0 +1,110 @@
+.  \"ident	"%W%"
+.  \"Copyright (c) 1984 AT&T
+.  \"All Rights Reserved
+.  \"THIS IS UNPUBLISHED PROPRIETARY SOURCE CODE OF AT&T
+.  \"The copyright notice above does not evidence any
+.  \"actual or intended publication of such source code.
+.TH STRSTREAM 3I+ "C++ Stream Library" " "
+.SH NAME
+strstream \- iostream specialized to arrays
+.SH SYNOPSIS
+.ta 1i 2i
+.ft B
+.nf
+
+#include <strstream.h>
+
+class ios {
+public:
+	enum	open_mode { in, out, ate, app } ;
+	// \fIand lots of other stuff ... \fP
+	} ;
+
+class istrstream : public istream {
+public:
+		istrstream(char*) ;
+		istrstream(char*, int) ;
+	strstreambuf*	rdbuf() ;
+} ;
+
+class ostrstream : public ostream {
+public:
+		ostrstream();
+		ostrstream(char*, int, open_mode = 0) ;
+	int	pcount() ;
+	char*	str();
+	strstreambuf*	rdbuf() ;
+};
+
+.fi
+.ft R
+.SH DESCRIPTION
+\f(CWstrstream\fR specializes \f(CWiostream\fR
+for "incore" operations, that is, storing and fetching
+from arrays of bytes.  The \f(CWstreambuf\fR associated with a
+\f(CWstrstream\fR is a \f(CWstrstreambuf\fR.
+.PP
+Assume
+.br
+\(em \fBiss\fR is a \f(CWistrstream\fR.
+.br
+\(em \fBoss\fR is a \f(CWostrstream\fR.
+.br
+\(em \fBcp\fR is a \f(CWchar*\fR.
+.br
+\(em \fBmode\fR is an \f(CWopen_mode\fR.
+.br
+\(em \fBi\fR and \fBlen\fR are \f(CWint\fR.
+.br
+\(em \fBssb\fR is a \f(CWstrstreambuf*\fR.
+.br
+\(em \fBa\fR is a \f(CWvoid* (*)(long)\fR.
+.br
+\(em \fBf\fR is a \f(CWvoid (*)(void*)\fR.
+.PP
+The constructors:
+.TP
+\fBistrsteam(cp)\fR
+Characters will be fetched from the (null terminated) string
+\fBcp\R.  The terminating null character will not be part of
+the sequence.  Seeks are allowed within that space.
+.TP
+\fBistrstream(cp,len)
+Characters will be fetched from the array beginning at \fBcp\fR
+and extending for \fBlen\fR bytes.  
+Seeks are allowed anywhere
+within that array.
+.TP
+\fBostrstream()\fR
+Space will be dynamically allocated to hold stored characters.
+.TP
+\fBostrstream(cp,n,mode)\fR
+Characters will be stored into the array starting at \fBcp\fR
+and continuing for \fBn\fR bytes.  If \f(CWios::ate\fR or
+\f(CWios::append\fR is set in \fBmode\fR, \fBcp\fR is assumed
+to be a null terminated string and storing will begin at the
+null character.  Otherwise storing will begin at \fBcp\fR.
+Seeks are allowed anywhere in the array.
+Members:
+.TP
+\fBcp=oss.str()\fR
+Returns a pointer to the array being used.
+If \fBoss\fR was constructed with an explicit array, 
+\fBcp\fR is just a pointer to the array.  Otherwise,
+\fBcp\fR points
+to a dynamically allocated area.
+Until \fBstr\fR is called, deleting the dynamically allocated area is
+the responsibility of \fBss\fR.
+After \fBstr\fR returns, the array becomes the responsibility
+of the user program.
+Once \fBstr\fR has been called the effect of storing
+more characters into \fBss\fR is undefined.
+.TP
+\fBi=ss.pcount()\fR
+The number of bytes that have been stored into the buffer.
+This is mainly of use when binary data has been
+stored and \fBss.str()\fR does not point to
+a null terminated string.
+.SH SEE ALSO
+strstreambuf(3C++),
+iostream(3C++)

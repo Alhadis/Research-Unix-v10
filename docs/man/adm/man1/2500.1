@@ -1,0 +1,120 @@
+.TH 2500 1
+.CT 1 graphics comm_dev
+.SH NAME
+2500 \- BVH2500 videotape recorder
+.SH SYNOPSIS
+.B 2500
+[
+.B -lq
+]
+.SH DESCRIPTION
+.I 2500
+is an interpreter of commands to control
+a SONY BVH2500 1-inch video recorder, whose
+inputs and outputs have already been set up.
+The options are
+.TP
+.B -l
+Create a log file; useful in pursuit of bugs.
+.TP
+.B -q
+Suppress the initial status report.
+.PP
+Most of the commands require an intimate knowledge of the equipment.
+The simpler commands are described below;
+see the
+.B help
+command for a complete list.
+Times are given as
+.B "[[hrs.]min.]sec.fr"
+where there are 30 frames per second.
+The commands are
+.TF viewxxxxxx
+.TP 10n
+.BI cue \ t
+Move the tape to time
+.IR t .
+.TP
+.B help
+Produce a list of all commands.
+.TP
+.BI loop "\ t0 t1 fps"
+Play from
+.I t0
+through
+.I t1
+and back again at
+.I fps
+frames per second.
+.TP
+.B play
+Start playing the tape from the current frame.
+.TP
+.BI snap \ n
+When in still record mode, record the current input onto the next
+.I n
+frames.
+A missing
+.I n
+is taken to be 1.
+.TP
+.B status
+Print some status information.
+The command
+.B status status
+prints all available status information.
+.TP
+.BI still \ t
+Go into still record mode and cue to time
+.IR t .
+The command returns before the tape transport is done;
+usually it must be followed by
+.LR wait .
+.TP
+.B still mode on|off
+Turn still mode on or off.
+.TP
+.B stop
+Stop the tape transport.
+.TP
+.BI view " t0 t1"
+Play from
+.I t0
+through
+.I t1.
+.B wait
+Wait for the previous tape transport command to finish.
+.TP
+.B !
+Interpret the rest of the line as a 
+.IR sh (1)
+command.
+.TP
+.B #
+Comment.  Ignore the rest of the line.
+.PD
+.PP
+.SH EXAMPLES
+Assuming you have already set up the video switch to feed the BVH2500,
+the following script will record (or rerecord) a movie starting at 2 minutes.
+.EX
+still 2.0.0
+wait
+!generate an image
+snap 1
+# repeat the last two lines as necessary
+still mode off
+stop
+.EE
+.br
+.SH BUGS
+The BVH2500 will misbehave if the pause between
+.BR snap s
+(in still record mode) is too long,
+or if you record for many hours on end.
+The latter problem can be avoided by using scripts that run
+for 2 or 3 hours and sleeping for 10 minutes between scripts
+with the tape transport off.
+.br
+Commands in the help list are (incorrectly) capitalized.
+

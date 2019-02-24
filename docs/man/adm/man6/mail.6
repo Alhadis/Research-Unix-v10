@@ -1,0 +1,126 @@
+.TH MAIL 6
+.CT 1 comm_users
+.SH NAME
+mail \- mail addresses
+.SH DESCRIPTION
+.IR Mail (1)
+uses the programs of
+.IR upas (8)
+to interpret mail addresses.
+.SS Network addresses
+A general network mail address has the form
+.IB machine ! ... ! name,
+with one or more machines mentioned.
+A machine in the middle of the list gets the mail marked
+`from' the preceding part of list and forwards it to the next
+to handle the rest of the list.
+.PP
+Rules for converting addresses among the
+conventions of different networks are given by rewrite rules; see
+.IR upas (8).
+A rough description of the rewrite rules for
+the local research network follows.
+.PP
+A simple name, containing no punctuation,
+is translated according to `Local addresses' below
+to produce more addresses, which get rewritten in turn.
+.PP
+The conventional network address
+.BI local! name
+is delivered to the mailbox
+.B /usr/spool/mail/ name
+if it exists or if
+.I name
+is registered as a login name in the password file
+.IR passwd (5).
+Otherwise the mail is undeliverable.
+.PP
+Mail to another machine is forwarded.
+.PP
+Addresses in other forms are rewritten recursively.
+.SS Local addresses
+`Alias files' specify local name translation.
+Each line of an alias file begins with
+.B #
+(comment) or with a name.
+The rest of a name line gives the translation.
+The translation may contain multiple addresses and may be continued
+to another line by appending a backslash.
+Items are separated by white space.
+.PP
+In translating a name, the sender's personal alias file
+.FR $HOME/lib/names 
+is checked first.
+Then the system alias files, listed one per line in
+.FR /usr/lib/upas/namefiles  ,
+are checked in order.
+If the name is not found, the translation is taken to be
+.BI local! name.
+.PP
+On research network machines,
+the first system alias file is
+.BR /usr/lib/upas/names.local ;
+it is never touched from afar.
+Alias files for various organizations, e.g
+.BR /usr/lib/upas/names.1127 ,
+are maintained, often by users themselves, at selected sites and
+sent
+around the network when changed
+by
+.IR ship (8).
+The master alias file for center 1122 is kept on `alice',
+those for other centers on `bowell'.
+.SS Addresses to/from major networks
+A `from' address is automatically supplied as a return
+postmark on outgoing mail addressed `to' the several networks.
+Respondents should be able to send to these addresses.
+For non-research AT&T machines that use the research gateway,
+`from' addresses with 
+.B @
+should be replaced by
+.BR person%machine@research.att.com .
+.PP
+.TF ARPANET:
+.TP
+UUCP:
+(to)
+.B machine!person
+.br
+(from)
+.B research!person
+.TP
+CSNET:
+(to)
+.B csnet!machine-domain-name!person
+.br
+(from)
+.B person@research.att.com
+.TP
+ARPANET:
+(to)
+.B arpa!machine-domain-name!person
+.br
+(from)
+.B person@research.att.com
+.TP
+ACSNET:
+(to)
+.B acsnet!machine-domain-name!person
+.br
+(from)
+.B person@research.usa
+.TP
+BITNET:
+(to)
+.B bitnet!machine!person
+.br	
+(from)
+.B person@research.att.com
+.SH FILES
+.F /usr/lib/upas/namefiles
+.br
+.F /usr/lib/upas/names.*
+.SH "SEE ALSO"
+.IR uucp (1), 
+.IR mail (1), 
+.IR upas (8)

@@ -1,0 +1,205 @@
+.TH STRING 3
+.CT 2 data_man
+.SH NAME
+strcat, strncat, strcmp, strncmp, strcpy, strncpy, strlen,
+strchr, strrchr, strpbrk, strspn, strcspn, strtok, strdup \(mi string operations
+.SH SYNOPSIS
+.nf
+.2C
+.B #include <libc.h>
+.PP
+.B char *strcat(s1, s2)
+.B char *s1, *s2;
+.PP
+.B char *strncat(s1, s2, n)
+.B char *s1, *s2;
+.B int n;
+.PP
+.B int strcmp(s1, s2)
+.B char *s1, *s2;
+.PP
+.B int strncmp(s1, s2, n)
+.B char *s1, *s2;
+.B int n;
+.PP
+.B char *strcpy(s1, s2)
+.B char *s1, *s2;
+.PP
+.B char *strncpy(s1, s2, n)
+.B char *s1, *s2;
+.B int n;
+.PP
+.B int strlen(s)
+.B char *s;
+.PP
+.B char *strchr(s, c)
+.B char *s;
+.B int c;
+.PP
+.B char *strrchr(s, c)
+.B char *s;
+.B int c;
+.PP
+.B char *strpbrk(s1, s2)
+.B char *s1, *s2;
+.PP
+.B int strspn(s1, s2)
+.B char *s1, *s2;
+.PP
+.B int strcspn(s1, s2)
+.B char *s1, *s2;
+.PP
+.B char *strtok(s1, s2)
+.B char *s1, *s2;
+.PP
+.B char *strdup(s)
+.B char *s;
+.sp
+.1C
+.SH DESCRIPTION
+The arguments
+.I s1, s2
+and
+.I s
+point to null-terminated strings.
+The functions
+.IR strcat ,
+.IR strncat ,
+.IR strcpy ,
+and
+.I strncpy
+all alter
+.IR s1 .
+These functions do not check for overflow of
+the array pointed to by
+.IR s1 .
+.PP
+.I Strcat
+appends a copy of string
+.I s2
+to the end of string
+.IR s1 .
+.I Strncat
+appends at most
+.I n
+characters.
+Each returns a pointer to the null-terminated result.
+.PP
+.I Strcmp
+compares its arguments and returns an integer
+less than, equal to, or greater than 0,
+according as
+.I s1
+is lexicographically less than, equal to, or
+greater than
+.IR s2 .
+.I Strncmp
+makes the same comparison but looks at at most
+.I n
+characters.
+.PP
+.I Strcpy
+copies string
+.I s2
+to
+.IR s1 ,
+stopping after the null character has been copied.
+.I Strncpy
+copies exactly
+.I n
+characters,
+truncating
+.I s2
+or adding
+null characters to
+.I s1
+if necessary.
+The result will not be null-terminated if the length
+of
+.I s2
+is
+.I n
+or more.
+Each function returns
+.IR s1 .
+.PP
+.I Strlen
+returns the number of characters in
+.IR s ,
+not including the terminating null character.
+.PP
+.I Strchr
+.RI ( strrchr )
+returns a pointer to the first (last)
+occurrence of character
+.I c
+in string
+.IR s ,
+or
+.L (char *)0
+if
+.I c
+does not occur in the string.
+The null character terminating a string is considered to
+be part of the string.
+.PP
+.I Strpbrk
+returns a pointer to the first occurrence in string
+.I s1
+of any character from string
+.IR s2 ,
+.L (char *)0
+if no character from
+.I s2
+exists in
+.IR s1 .
+.PP
+.I Strspn
+.RI ( strcspn )
+returns the length of the initial segment of string
+.I s1
+which consists entirely of characters from (not from) string
+.IR s2 .
+.PP
+.I Strtok
+considers the string
+.I s1
+to consist of a sequence of zero or more text tokens separated
+by spans of one or more characters from the separator string
+.IR s2 .
+The first call, with pointer
+.I s1
+specified, returns a pointer to the first character of the first
+token, having replaced the character after the token by 0.
+Subsequent calls,
+signified by
+.I s1
+being
+.LR "(char *)0" ,
+will scan from where the preceding call left off.
+The separator string
+.I s2
+may be different from call to call.
+When no token remains in
+.IR s1 ,
+.L (char *)0
+is returned.
+.PP
+.I Strdup
+returns a pointer to a distinct copy of the null-terminated string
+.I s
+in space obtained from
+.IR malloc (3)
+or
+.L (char *)0
+if no space can be obtained.
+.SH SEE ALSO
+.IR memory (3)
+.SH BUGS
+.I Strcmp
+and
+.I strncmp
+use native character comparison, which may
+be signed or unsigned.
+.br
+The outcome of overlapping moves varies among implementations.

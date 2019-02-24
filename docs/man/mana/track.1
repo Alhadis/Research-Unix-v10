@@ -1,0 +1,77 @@
+.TH TRACK 1
+.SH NAME
+track \- selective remote file copy
+.SH SYNOPSIS
+.B track
+[
+.B -vntfd
+]
+.I file machine
+.PP
+.B track -r
+.SH DESCRIPTION
+.I Track
+uses Datakit to copy files from another machine to the local machine.
+If the version of the named file differs from that existing on the
+named machine, the remote file is copied.
+If the named file is a
+directory, the contents of the directory are considered recursively.
+Files are copied only if they exist on both machines.
+Options:
+.TP
+.B -v
+Normally a report is given for each file copied.
+Giving the option causes more verbose reports, for example about
+files that exist locally but not remotely.
+Giving the option twice generates a report about each file considered.
+.TP
+.B -n
+Do no copying; just report what would have been copied.
+.TP
+.B -t
+Copy only if a remote file is newer than the local file.
+.TP
+.B -f
+Interpret the following file as a list of files and directories
+to be handled.
+.TP
+.BR -d " prefix "
+Normally
+.I track
+copies from remote files with the same names as the local files.
+The
+.B -d
+option takes the next argument as a prefix for remote names;
+in constructing the remote name, the argument string that specifies
+the local file
+or directory is replaced by the prefix.
+directory.
+.TP
+.B -r
+This option causes
+.I track
+to act as the remote partner;
+it is invoked in this way on the other machine, and is not intended
+for use by humans.
+.PP
+.I Track
+has no special privileges.
+Files must be readable remotely and writable locally by the invoker.
+It attempts to set the time of modification of a copied file to that
+of the remote original;
+the attempt can succeed only if the invoker of the local file owns
+it or is the super-user.
+This feature matters only when random libraries (archives) are being
+copied, because the loader uses this time to determine whether the symbol
+table is up-to-date.
+.SH EXAMPLES
+.TP
+.L track -d /bin /usr/local/bin ikeya
+Copy files from the remote directory
+.L /bin
+to the local directory. 
+.L /usr/local/bin
+.SH SEE ALSO
+.IR push (1), 
+.IR cp (1), 
+.IR newer (1)

@@ -1,0 +1,102 @@
+.TH STRING 9.3
+.CT 2 comm_term
+.SH NAME
+string, defont, strwidth, infont, outfont, getfont \- text and font operations
+.SH SYNOPSIS
+.B #include <jerq.h>
+.br
+.B #include <font.h>
+.PP
+.B Point string(ft, s, b, p, f)
+.B "Font *ft; char *s; Bitmap *b; Point p; Code f;
+.PP
+.B extern Font defont;
+.PP
+.B "int strwidth(ft, s) Font *ft; char *s;
+.PP
+.B "Font *infont(inch) int (*inch)();
+.PP
+.B "int outfont(ft, ouch) Font *ft; int (*ouch)();
+.PP
+.B void ffree(ft) Font *ft;
+.PP
+.B #include <jerqio.h>
+.PP
+.B "Font *getfont(file) char *file;
+.SH DESCRIPTION
+.I String
+draws the null-terminated string
+.I s
+using characters from font
+.I ft
+in Bitmap
+.I b
+at Point
+.IR p ,
+with Code
+.IR f .
+The return value is the location of the first character
+.I after
+.IR s ;
+passed to another call to
+.IR string ,
+the two strings will be concatenated.
+The characters are drawn such that the
+.B origin
+point of the bounding rectangle of a maximum height character
+lies at
+.IR p .
+Therefore, a character drawn on the screen at (0,0)
+will occupy the upper-leftmost character position on the screen.
+.I String
+draws characters as they are in the font.
+No special action is taken for control characters such as tabs or newlines.
+.PP
+The global
+.I defont
+is the name of the standard font (not a pointer to it).
+.PP
+.I Strwidth
+returns the width in pixels
+of the null-terminated string
+.IR s ,
+interpreted in the Font
+.IR *ft .
+The height of a character string is simply
+.BI ft ->height.
+.PP
+.I Infont
+creates a font by reading the byte-wise binary representation
+returned by successive calls to
+.IR inch .
+It returns 0
+on error.
+.I Inch
+must return successive bytes of the Unix file representation of the font,
+and \-1
+at end-of-file.
+.I Outfont
+calls the routine
+.I ouch
+to write successive bytes of the binary representation of font
+.IR ft .
+It returns
+\-1
+on error, as must
+.I ouch .
+For programs running under
+.IR jx ,
+.I getfont
+returns a pointer to a font read from the named
+.IR file ,
+essentially by calling
+.I infont
+with argument routine
+.IR getc .
+It returns 0
+on error.
+.I Ffree
+frees a font allocated by
+.I infont
+or
+.IR getfont .

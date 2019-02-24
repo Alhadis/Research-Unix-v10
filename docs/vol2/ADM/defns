@@ -1,0 +1,18 @@
+PREFER=prefer -m -s../ADM/vol2.style -p../ADM/vol2.ref
+LP='lp -ddp'
+LPFONTS='lp -dpsu'
+MLIB=/usr/lib/monk
+REF=../ADM/vol2.ref.i
+ENVIRON='count(){
+	grep -c '^p' $2 > $1.pg && touch pg
+}
+dospell(){
+	set +e
+	echo "$@:"
+	A_SPELL=$1.sp spell "$@"
+	true
+}'
+
+%.so %.ps:D: %.bm
+	/usr/bin/postscript/postdmd < $stem.bm > $stem.ps
+	awk '/^%%BoundingBox/ {printf ".IB %s %.2fi %.2fi c\n", "'"$stem"'.ps", $5/100, $4/100 }' $stem.ps > $stem.so

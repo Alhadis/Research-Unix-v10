@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	pico.out
+
+pg:	pico.out
+	count pico.ms pico.out
+
+spell:VQ:
+	dospell pico.ms
+
+lp:	pico.out
+	$LP $newprereq && touch $target
+
+pico.out:D:	pico.ms $REF
+	$PREFER pico.ms | tbl | eqn | troff -mpm > $target
+
+index:V:
+	runind pico
+	$PREFER xpico.ms | tbl | eqn | troff -mpm > /dev/null 2>pico.x
+	mkindex pico.x
+	rm xpico.ms
+
+pindex:V:
+	mkindex pico.x

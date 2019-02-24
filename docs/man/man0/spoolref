@@ -1,0 +1,39 @@
+for i in 1 2 3 4 5 6 7 8 9 a
+do
+
+ls /usr/man/man$i |
+sed 's/\(.*\)\.'$i'/\1 \1.'$i/ |
+sort -u - /usr/man/man0/man$i.index >junkx
+
+ls -i  /usr/spool/man/man$i |
+sed '
+	/\.'$i'/!d
+	s///
+' |
+join -j1 2 -o 1.2 2.2 1.1 -a1 -e XXX - junkx |
+sed '
+	/XXX/!{
+		w junky
+		d
+	}
+	s/ .*//
+	s/.*/\/usr\/spool\/man\/man'$i'\/&.'$i'/
+'
+
+sort +1 junky |
+awk '
+BEGIN { u = "/usr/spool/man/man'$i'/" }
+$2!=s2 && $3==s3 { print u s1 "." '$i'; print u $1 "." '$i' }
+$2==s2 && $3!=s3 { print u s1 "." '$i'; print u $1 "." '$i' }
+{s1 = $1; s2 = $2; s3 = $3 }
+'
+
+sort +2 junky |
+awk '
+BEGIN { u = "/usr/spool/man/man'$i'/" }
+$2!=s2 && $3==s3 { print u s1 "." '$i'; print u $1 "." '$i' }
+$2==s2 && $3!=s3 { print u s1 "." '$i'; print u $1 "." '$i' }
+{s1 = $1; s2 = $2; s3 = $3 }
+'
+
+done | sort -u

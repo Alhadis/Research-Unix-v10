@@ -1,0 +1,24 @@
+#!/usr/bin/rc
+# Usage: lookman key ...
+#	prints out the names of all manual pages containing all the given keywords
+index=/n/bowell/usr/man/index/index
+t1=/tmp/look1.$pid
+t2=/tmp/look2.$pid
+fn sigexit sigint sighup sigterm{
+	rm -f $t1 $t2
+	exit 1
+}
+*=`{echo $*|tr A-Z a-z|tr -dc 'a-z \012'}	# fold case, delete funny chars
+if(~ $#* 0){
+	echo Usage: $0 key ... >/dev/stderr
+	exit 1
+}
+look $1 $index|sed 's/.*	//'|sort -u >$t1
+shift
+for(i in $*){
+	look $i $index|sed 's/.*	//'|sort -u|comm -12 - $t1 >$t2
+	mv $t2 $t1
+}
+sort $t1
+rm -f $t1 $t2
+exit 0

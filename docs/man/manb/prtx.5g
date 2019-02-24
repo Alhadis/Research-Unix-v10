@@ -1,0 +1,262 @@
+.TH prtx 5G "WH" MARX
+.SH NAME
+prtx \- format of prtx commands
+.SH DESCRIPTION
+.P
+Commands are in ascii characters and
+are terminated by either a ";" or a newline character.
+Besides commands there are "prefixes" that modify the 
+following a command.
+.P
+Most commands and prefixes take arguments.  
+These are often numbers or
+point positions. 
+The latter being a pair of numbers.
+Numbers can be arbitrary
+arithmetic expressions involving "+", "-", "*" or "/", numeric
+constants, and parenthesis.  
+A numeric constant is a decimal number (optionally  
+including a decimal point and fraction) followed by a scale.  
+A scale is "i", for inches,
+"c" for characters, or "d" for dots.  (A dot is the smallest resolution
+on the printer.) If the scale is omitted "c" is assumed.  Constants
+used in multiplication or division should omit the scale.
+.PP
+Point positions are specified by a row position and a column position, 
+separated by white space (blanks or tabs).  
+The upper left hand corner of the
+page is 0 0.  Positions increase to the right and downward.
+If a page contains 60 characters vertically and 80 horizontally.
+the last horizontal dot is at 80c-1d and the last
+vertical dot is at 60c-1d.
+.PP
+The commands are:
+.TP 10
+# comment
+This command has no effect.  Note that it is terminated by a ";"
+just like any other command.
+.TP 10
+line  point1 point2 ... 
+Line Command: 
+Straight lines are drawn starting at 
+.I point1 
+going to 
+.I point2 
+and then to further points.
+At least two points must be given but there is no maximum.
+Points may be separated by a "," for readability.
+.TP 10
+interp point1 point2 ...
+Interpolate command:  
+A curved line is drawn determined by the points. 
+A point may be surrounded by curly braces ( '{' and '}' )
+in which case it is a "guide" point.
+The curve is a second degree spline that 
+satisfies the following constraints:
+.RS 10 
+.IP
+It passes through all normal points.
+.IP
+If two guide points are adjacent in the list it passes through
+the point midway between them and is tangent to the line connecting
+them.
+.IP 
+If a normal point is adjacent in the list to a guide point the
+curve as it passes through the normal point is tangent to
+the line connecting it to the guide. 
+.IP 
+If a normal point is not adjacent on the list to a guide point
+the curve, as it passes through the normal point, has the same tangent
+as the circle that goes through that point and two neighboring points
+on the list. This will be the preceding and the following
+points for a point in the middle of the list. 
+.P
+Unfortunately these rules can result in cusps.  They seem to
+work best in the cases where there are three normal points
+(an approximation to a circular segment) or in 
+the case where guide points are used to connect two normal
+points.
+.RE
+.TP 10
+ellipse center radius
+Ellipse Command: An ellipse is drawn centered at
+.I center,
+with its shape determined by 
+.I radius.
+The ellipse's axes are parallel to the picture's.
+.I radius
+is two expressions.  The first determines the "vertical radius"
+(i.e. half the length  of the ellipse's vertical axis) and the
+second determines the "horizontal radius".  If they are equal
+(as distances, not as number of dots or characters) the ellipse
+is a circle.
+
+
+.TP 10
+text point text
+Text Command:
+Characters specified by 
+.I text 
+are placed on the output starting at 
+.I point.
+(The position is the upper left hand corner of the first character.)
+.I  text 
+begins at the first non blank character following the point
+and continues to the end of the line. Embedded ";" are allowed,
+and "C" type escapes are processed.  
+An escaped newline (i.e. one immediately preceded by a backslash)
+is treated as text and does not end the command.
+A leading ":" is stripped off.
+This is necessary if the first character desired is a space or 
+arithmetic operator. 
+.TP 10
+stext point point text
+Slanted text command: 
+Text is placed in the output as with the simple text command except
+the base line (the line running across the top of the characters)
+is the line through the two points.
+The text starts at the first point and may proceed any 
+distance towards or beyond the second point.  
+The second point provides a direction only, the characters are 
+not stretched or compressed.
+.TP 10
+mtext point terminator
+Multi line text command:
+Lines following the one containing the command upto (but not including)
+the first line that begins with the terminator character (default '.') 
+are put in the output, with the first line positioned at \fIpoint\fR
+and the following lines positioned vertically below the first.
+.TP 10
+smtext point [point] [ terminator ] [text ]
+General form of the text command: 
+The modifiers "s", "m", and "N" may be combined.  
+If both "s" and "m" are present "s" must come first.
+The second point is required present if "s" is present and "terminator"
+is required if "m" is present. Otherwise they must be omitted.
+If "m" is omitted then text must be present.
+.TP 10
+$X [ point ]
+Macro Command: Invoke macro 
+.I X. 
+The the body of macro
+.I X
+is executed with an offset of
+.I point. 
+That is, positions in the body of the macro are taken as relative
+to 
+.I point. 
+If 
+.I point
+is omitted it is take to be the origin.
+The color and solidity in effect at the point invocation are
+used in drawing unless they are explicitly overridden by a prefix
+within the macro body.
+An invoke command is legal within a macro body but care should be
+taken to avoid a macro invoking itself.
+.PP
+Prefixes modify the following command, which is separated
+from the prefix by white space only. 
+However, commands can be grouped with braces 
+(i.e the characters '{' and '}').
+If the opening brace is in the same line as the prefix, 
+commands my be on different lines, and the prefix applies to
+all commands within the braces ;
+Braces can be nested.
+More than one prefix can modify a single command
+The following prefixes are defined:
+.TP 10
+at point
+Translation Prefixes:
+Locations in the prefixed command are 
+taken as relative to the argument of 
+.I at.
+.TP 10
+expand factor
+Expand Prefix:
+The prefix command is expanded about the origin by 
+.I factor, 
+which is an unscaled numeric expression.  
+That is, all positions and shapes are multiplied by 
+.I factor.
+.TP 10
+rotate angle
+Rotation Prefix:  
+Locations in the prefixed command are rotated about the origin by 
+.I angle
+degrees.  
+Text will still be horizontal, unless created with an \fIstext\fR 
+command.
+.TP 10
+size N
+Character Size Prefix: 
+Characters in the prefixed command have their size multiplied
+by N.  N must be and integer.
+.TP 10
+style solidity
+Line Style Prefix:
+The line drawing commands (line, ellipse, interp) will normally
+draw solid lines but this can be changed by a \fIstyle\fR prefix.
+Solidity is one of the following literals: solid, longdashed, dashed, 
+dotdashed, dotted, invisible. 
+Invisible lines are not drawn at all, so this style is useful in
+taking up space in connection with the stack and shelf prefixes.
+.TP 10
+color colorname
+Color prefix:
+Every thing drawn by the following command will be in the named color.
+Legal colors are: yellow, orange, red, green, blue, violet.
+If the output device does not have colors this prefix is ignored.
+.TP 10
+boxit space 
+Boxit Prefix:
+Space consists of two numeric expressions, a row and a column spacing.
+Boxit draws the prefixed command and an enclosing box.  The box is
+drawn to leave the specified spaces at the top and bottom (row space),
+and sides (column space) around the prefixed command.
+.TP 10 ;
+define X 
+Define macro:
+.I X
+is any alphabetic character (lower and upper case are considered
+identical) and the macro is defined as equivalent to the following
+command.
+The prefixed command, which must be a block 
+(i.e. surrounded by braces),
+becomes the body of the macro
+and is not executed until the macro is invoked.
+Once defined a macro character may not be redefined.
+More elaborate macros can be obtained using a general 
+macro processor such as 
+.I m4
+and the general arithmetic expressions provided by
+.I prtx.
+.TP 10 
+stack
+Stack commands:
+The prefixed command must be a block.  Each command of the 
+block is interpreted as if the origin had been moved to below
+the earlier commands.  The effect is what would be achieved
+if each command were prefixed by "at max 0", where max is the
+maximum row contained in previous commands.  A row is contained
+in a command if the command puts a dot in the row.  Text
+commands also contain some blank space below the characters.
+(In some circumstances, e.g. slanted text, 
+\fIprtx\fR cannot easily compute the contained rows and
+makes a guess.
+But, arbitrary lines, and horizontal text work 
+properly.)
+.TP 10
+shelf
+Lay commands left to right.  This is like the
+stack prefix except cammands are moved to the right rather than down.
+.SH HISTORY
+The current version of prtx also accepts an old form of the
+command language.  It is compatibility with this old form
+that makes the macro prefix require the prefixed command to
+be a block.  In the future this restriction will disappear.
+.SH FUTURE PLANS
+.SH SEE ALSO
+.I prtx(1)
+.SH AUTHOR
+Jerry Schwarz (harpo!jerry)
+

@@ -1,0 +1,183 @@
+.TH GRE 1
+.CT 1 files
+.SH NAME
+gre, grep, egrep, fgrep \(mi search a file for a pattern
+.SH SYNOPSIS
+.B gre
+[
+.I option ...
+]
+.I pattern
+[
+.I file ...
+]
+.PP
+.B grep
+[
+.I option ...
+]
+.I pattern
+[
+.I file ...
+]
+.PP
+.B egrep
+[
+.I option ...
+]
+.I pattern
+[
+.I file ...
+]
+.PP
+.B fgrep
+[
+.I option ...
+]
+.I strings
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Gre\^
+searches the input
+.I files\^
+(standard input default)
+for lines (with newlines excluded) that match the
+.I pattern,
+a regular expression as defined in
+.IR re (3).
+A file name of
+.B -
+is interpreted as standard input.
+Normally, each line matching the pattern is `selected',
+and each selected line is copied to the standard output.
+The options are
+.TP
+.B -1
+Print only the first selected line of each file argument.
+.PD 0
+.TP
+.B -b
+Mark each printed line with its byte position in its file.
+This is sometimes useful in locating patterns in non-text files.
+.TP
+.B -c
+Print only a count of matching lines.
+.TP
+.BI -e " pattern"
+Same as a simple
+.I pattern
+argument,
+but useful when
+.I pattern
+begins with a
+.BR - .
+.TP
+.B -E
+Simulate
+.IR egrep.
+.TP
+.BI -f " file"
+Read the pattern from
+.IR file ;
+there is no
+.I pattern
+argument
+.TP
+.B -F
+Simulate 
+.IR fgrep.
+.TP
+.B -G
+Simulate 
+.IR grep.
+.TP
+.B -h
+Do not print filename tags (headers) with output lines.
+.TP
+.B -i
+Ignore alphabetic case distinctions.
+.TP
+.B -l
+Print the names of files with selected lines; don't print the lines.
+.TP
+.B -L
+Print the names of files with no selected lines;
+the converse of
+.BR -l .
+.TP
+.B -n
+Mark each printed line with its line number counted in its file.
+.TP
+.B -s
+Produce no output, but return status.
+.TP
+.B -v
+Reverse: print lines that do not match the pattern.
+.TP
+.B -x
+Exact match: The pattern is
+.BI ^( pattern )$ .
+.PD
+.PP
+Output lines are tagged by filename when there is more than one
+input file.
+(To force this tagging, include
+.B /dev/null
+as a filename argument.)
+If the output line exceeds some internal limit,
+a warning is given and a small block of text surrounding the match is printed.
+.PP
+Care should be taken when
+using the shell metacharacters
+.B $*[^|()\e
+and newline
+in
+.IR pattern ;
+it is safest to enclose the
+entire expression
+in single quotes
+.BR \&\|\(fm \|.\|.\|.\| \(fm .
+.PP
+.I Gre
+supplants three classic programs, which are still available:
+.PP
+.I Grep
+handles only
+.IR ed (1)-like
+regular expressions.
+It uses
+.L \e(\|\e)
+instead of
+.LR (\|) .
+.PP
+.I Egrep
+handles the same patterns as
+.I gre
+except for back-referencing with
+.BR \e1 ,
+.BR \e2 ,
+\&...
+.PP
+.I Fgrep
+handles no operators except newline (alternation).
+.SH SEE ALSO
+.IR re (3),
+.IR awk (1),
+.IR sed (1),
+.IR sam (9.1),
+.IR strings (1)
+.SH DIAGNOSTICS
+Exit status is 0 if any lines are selected,
+1 if none, 2 for syntax errors, inaccessible files
+(even if matches were found).
+Warnings will be given for input lines that exceed
+a (generous) internal limit.
+.SH BUGS
+.I Grep, egrep,
+and 
+.I fgrep
+do not support some options and print block numbers
+rather than byte numbers for option
+.BR -b .

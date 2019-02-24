@@ -1,0 +1,32 @@
+< ../ADM/defns
+< ../index/defns
+LP=$LPFONTS
+
+all:V:	yacc.out
+
+pg:	yacc.out
+	count yacc.ms yacc.out
+
+spell:VQ:
+	dospell yacc.ms
+
+lp:	yacc.out
+	$LP $newprereq && touch $target
+
+B = /n/coma/usr/ravi/ref/All
+X = xref.script
+
+$X:D:	yacc.ms
+	xtags $prereq > $X
+
+yacc.out:D:	yacc.ms $X $REF
+	sed -f $X yacc.ms | $PREFER | pic | tbl | eqn | troff -mpm > $target
+
+index:V:
+	runind yacc
+	sed -f $X xyacc.ms | $PREFER | pic | tbl | eqn | troff -mpm > /dev/null 2>yacc.x
+	mkindex yacc.x
+	rm xyacc.ms
+
+pindex:V:
+	mkindex yacc.x

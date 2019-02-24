@@ -1,0 +1,86 @@
+.TH CRON 8
+.CT 1 sa_auto
+.SH NAME
+cron \- clock daemon
+.SH SYNOPSIS
+.B /etc/cron
+.SH DESCRIPTION
+.I Cron
+executes commands at specified dates and times
+according to the instructions in the file
+.FR /etc/crontab .
+It should be run once from
+.IR rc (8).
+.PP
+.I Crontab
+entries are lines of seven fields separated by blanks or tabs:
+.IP
+.I
+login minute hour day month weekday command
+.PP
+.I Login
+is the login name under
+whose userid and groupid
+the command should be executed.
+The next five fields are integer patterns for
+.PD0
+.RS
+.TP \w'day\ of\ month\ \ 'u
+minute
+0-59
+.TP
+hour
+0-23
+.TP
+day of month
+1-31
+.TP
+month of year
+1-12
+.TP
+day of week
+0-6; 0=Sunday
+.PD
+.RE
+.PP
+Each pattern may
+contain a number in the range above;
+two numbers separated by
+a hyphen
+meaning an inclusive range;
+a list of numbers separated by
+commas meaning any of the numbers;
+or an asterisk meaning all legal values.
+.PP
+The last field is a string
+to be executed by the shell,
+after replacing
+.L %
+with newline.
+.PP
+It is wise to spread the times of activities to avoid
+bogging the system down at favorite hours.
+.PP
+.I Cron
+examines
+.I crontab
+every minute.
+.SH EXAMPLES
+.EX
+daemon 17 3  *     *  *   /usr/bin/calendar - # reminders at 0317
+adm    15 4  1,15  *  *   ac -p | mail adm # bimonthly accounts
+root 0  12 22-28 11 4   /etc/wall Time for Thanksgiving dinner
+.EE
+.SH FILES
+.F /etc/crontab
+.SH SEE ALSO
+.IR at (1)
+.SH BUGS
+The behavior of 
+.L %
+in
+.I crontab
+entries is nonstandard.
+Strings following
+.L %
+should be delivered to the command as standard input.

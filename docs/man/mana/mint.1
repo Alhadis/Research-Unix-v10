@@ -1,0 +1,420 @@
+.TH MINT 1  "02 June 1987" "University of Waterloo"
+.ds ]W "Symbolic Comp. Group
+.SH NAME
+mint \- produce usage report from a maple program
+.SH SYNOPSIS
+.B mint
+[
+.B \-i
+info_level
+]
+[
+.B \-l
+]
+[
+.B \-d
+library_database
+]
+[
+.B \-a
+database_file
+]
+[
+.B \-q
+]
+[ file ]
+.SH DESCRIPTION
+\fIMint\fP produces a report about possible errors in a Maple source file
+and also reports about how variables are used in the file.
+If \fIfile\fP is not given, then the standard input file is used to
+read Maple source statements.
+Unlike \fImaple\fP, \fImint\fP is not terminated when it reads a
+quit statement.
+It is terminated when it reaches the end of file.
+When started, \fImint\fP normally produces a mint leaf logo.
+This can be suppressed by the use of the \fB\-q\fP (quiet) option.
+
+The amount of information to be produced by \fImint\fP is specified by the
+\fIinfo_level\fP argument.
+The values allowed for this argument are:
+.nf
+
+        0 \- Display no information.
+        1 \- Display only severe errors
+        2 \- Display severe and serious errors
+        3 \- Display warnings as well as severe and serious errors
+        4 \- \kxGive a full report on variable usage as well as
+             \h'|\nxu'displaying errors and warnings
+
+.fi
+A report for each procedure in the file is displayed
+separately followed by a global report for statements not contained
+within any procedure.
+If the severity of errors found within a procedure is less than
+what \fIinfo_level\fP specifies, then no report is produced for
+that procedure.
+In all cases, the most severe error found in the file will be used
+to set the exit status for \fImint\fP.
+Thus, by using an \fIinfo_level\fP of 0, \fImint\fP can be used to
+determine the severity of errors in a file without actually producing
+any output at all.
+If no value is given for \fIinfo_level\fP on the command line, a default
+value of 2 (severe and serious errors) is used.
+
+The types of errors and warnings found are classified as severe,
+serious, and warning.  A severe error is an undisputable error.
+A serious error
+is almost certainly an error.  However, persons defining procedures
+for addition to the Maple library may choose to ignore these ``errors''.
+Warnings are possible errors.
+They point to constructs that may be correct in some contexts, but
+probable errors in other contexts.
+The types of errors and warnings produced are:
+.in +0.8i
+.ti -0.8i
+
+\fBSEVERE\fP
+
+.ti -0.4i
+Syntax errors
+.br
+A caret symbol will point to the token
+that is being read when the error occurred.
+
+.ti -0.4i
+Duplicated parameter
+.br
+A name appears more than once in a parameter list for a
+procedure.
+
+.ti -0.4i
+Duplicated local
+.br
+A name is declared more than once in the list of local
+variables for a procedure.
+
+.ti -0.4i
+Local variable and parameter conflict
+.br
+A name is used both as a parameter and a local
+variable within a procedure.  In further analysis,
+the name is treated as a parameter.
+
+.ti -0.4i
+Local variable and system-defined name conflict
+.br
+The name of a local variable is also used by Maple as a
+system-defined name.
+
+.ti -0.4i
+Parameter and system-defined name conflict
+.br
+The name of a parameter is also used by Maple as a
+system-defined name.
+
+.ti -0.4i
+Duplicated loop name
+.br
+A loop nested within another loop uses as its loop
+control variable the same name that the outer loop uses.
+
+.ti -0.4i
+Break or next statement outside of a loop
+.br
+A break or a next statement occurs outside of any loop.
+(Break or next may still be used as names within an
+expression outside of a loop.)
+
+.ti -0.4i
+RETURN or ERROR function call outside of a procedure
+.br
+A function call to RETURN or ERROR occurs outside of
+a procedure body.  (RETURN or ERROR may still be used
+as names if they are not invoked as functions.)
+
+.ti -0.4i
+Unreachable code
+.br
+There are statements which follow directly after a goto type
+of statement.  These statements are unreachable and will never
+be executed.  A goto statement is a next statement, a break
+statement, a quit, stop, or done statement, a RETURN() call,
+an ERROR() call.
+An if statement all branches of which end in a goto statement
+is also considered a goto statement.
+
+.ti -0.8i
+\fBSERIOUS\fP
+
+.ti -0.4i
+Overly long name
+.br
+A name whose length is too long is used.  The length of
+the name is truncated to the maximum allowed.
+
+.ti -0.4i
+Unused local variable
+.br
+A local variable is declared for a procedure but never
+used within the procedure body.
+
+.ti -0.4i
+Local variable assigned a value but not used otherwise
+.br
+A local variable is assigned a value within a procedure but
+is not otherwise used.
+
+.ti -0.4i
+Local variable never assigned a value but used as a value
+.br
+A local variable was never assigned a value in a procedure but
+within the procedure its value is used in an expression.
+Such an expression would contain a pointer to a non-existent
+local variable if the expression were returned or assigned to
+a global variable.
+
+.ti -0.4i
+System-defined name is overwritten
+.br
+A name which is treated as a system-defined name by Maple
+is assigned a value.
+The class of system-defined names includes names which are
+special names for the Maple kernel, e.g., true and Digits,
+names of built-in functions, e.g., anames and lprint,
+names of functions which are automatically readlib-defined, e.g.,
+cat or help.
+Also included are names that are special to routines for evalf,
+diff, expand, etc.
+Examples of these are Pi and sinh.
+These special names generally should not be assigned a value in order
+for some library routines to work properly.
+Included in the report is an indication of which parts of Maple use
+the system-defined names.
+
+.ti -0.4i
+Dubious global name in a procedure
+.br
+A global name is used within a procedure.  A global name is
+a name which is not a parameter, a local name, a system-defined name, or
+a catenated name.
+A quoted name used as an argument to the routines lprint, print, and
+ERROR is probably used just for output and is not considered a name.
+Global names used as procedure
+names in a function call are not considered errors.
+Also excluded are names of files in the Maple library, e.g.,
+`convert/ratpoly`.
+All remaining names are considered as global names.
+By convention, global names used in a package of routines should
+begin with the `_` (underscore) character.
+Those that do not are considered dubious and are reported here.
+
+.ti -0.4i
+Library file name overwritten
+.br
+The name of a library file, e.g., `convert/ratpoly`, is assigned
+a value.  It is usual for the name of a library file to also be
+the name of a library function.  Hence, the library function
+`convert/ratpoly` is no longer accessible.
+(The \fB\-l\fP (library file) option will downgrade these messages
+from a serious error to a report.)
+
+.ti -0.4i
+Unused parameter in a procedure
+.br
+A name specified in the parameter list of a procedure is
+never used in the procedure.  This is considered a serious
+error if `args' is  never used in the procedure either.
+If args is used in the procedure, then it's possible that
+the parameter may be accessed through a construct using `arg'
+and this error is downgraded to a warning.
+
+.ti -0.4i
+Wrong argument count in a procedure call
+.br
+The number of arguments passed in a procedure call doesn't match the
+number of formal arguments in the definition of a procedure of the
+same name recorded in the library database file.
+A library database file (cf. \fBDATABASE FILES\fP) contains information
+about the minimum number of arguments expected for a procedure, the
+maximum number of arguments, whether `nargs' is used in the procedure
+body, and the name of the file in which the procedure is defined.
+If the number of actual arguments passed is either less than the
+minimum arguments expected or more than the maximum number expected
+\fIand\fP `nargs' is not used in the procedure body, then a warning is
+generated.
+This warning is suppressed if one of the arguments passed is `args'.
+It is a common practice for a procedure to take its argument list,
+contained in the expression sequence `args', and pass that on to
+other procedures.
+What appears to \fImint\fP as one argument is in reality a sequence
+of arguments.
+.ti -0.8i
+
+\fBWARNING\fP
+
+.ti -0.4i
+Equation used as a statement
+.br
+This may be intentional.  On the other hand, it's common
+for many Fortran and C programmers to mistype '=' for
+the assignment operator which is ':=' in Maple.
+
+.ti -0.4i
+Unused parameter in a procedure
+.br
+See similar entry under serious errors.
+
+.ti -0.4i
+Global name used
+.br
+A global name which may or may not start with '_' is used within
+this procedure.
+
+.ti -0.4i
+Catenated name used
+.br
+A name is formed through the catenation operator.
+
+.in -0.8i
+\fBOTHER REPORTS\fP
+.sp
+If \fIinfo_level\fP is 4, then a usage report is given for each procedure
+as well as global statements within the file.
+Each usage report shows how parameters, local variables, global variables,
+system-defined names and catenated names are used.
+As well can easily be done, the following information about how a
+variable is used may be provided:
+.nf
+
+    1.  Used as a value
+    2.  Used as a table or list element
+    3.  Used as a call-by-value parameter
+    4.  Used as a call-by-name parameter (a quoted parameter)
+    5.  Called as a function
+    6.  Assigned a procedure
+    7.  Assigned a list
+    8.  Assigned a set
+    9.  Assigned a range
+    10. Assigned a value as a table or list element
+    11. \kxAssigned a function value
+        \h'|\nxu'(assigned a value to remember as a function value)
+
+.fi
+
+In addition, a list of all the error messages generated is given.
+
+.SH COMMAND OPTIONS
+The \fB\-i\fP (info level) and \fB\-q\fP (quiet) options are explained
+above.
+The \fB\-l\fP (library file) option will suppress the catenated name
+warning and the global name warning if only one of each is used
+outside of any procedure.
+Typically, a Maple library source file will contain one of each for
+use in loading the library file.
+This option will also suppress error messages about library file names
+being overwritten since one of the purposes of a library file is to
+assign a procedure to a library file name.
+Moreover, warnings about the assignment of values to the system-defined
+names Digits and printlevel are suppressed since this often happens
+in a library file.
+
+.SH INITIALIZATION FILE
+If there is a file named .mintrc in your home directory, \fImint\fP
+will read this file for command line options.
+This file may contain several lines containing command line options or
+arguments as you would type them on a command line.
+Since \fImint\fP reads this file and then scans the actual command line,
+arguments on the actual command line can override arguments in the
+initialization file.
+A good use of the initialization file may be to enter the name of the
+Maple library procedure database file when using the \fB\-d\fP option,
+obviating the need to type this each time \fImint\fP is used.
+
+.SH PROCEDURE DATABASE FILES
+A procedure database file contains information about the definition of
+procedures which is useful in ensuring that these procedures are
+used correctly.
+Each line in a database file contains the following:
+
+.nf
+        <name> <min\ args> <max\ args> <nargs\ used> <file\ name>
+.fi
+
+where <name> is a legal Maple name without any embedded blanks,
+<min\ args> is the minimum number of arguments expected for
+<name>, <max\ args> is the maximum number of arguments, <nargs\ used>
+is 1 if `nargs' is used in the procedure body for <name> and
+0 otherwise, <file\ name> is the name of the file in which <name>
+is defined.
+The entries on each line are in free format but must be separated
+from one another by at least one space character.
+The values for <min\ args> and <max\ args> should be numbers in
+the range 0 to 999.
+If <max\ args> is 999 for an entry, that denotes that the procedure
+has no upper limit on the number of arguments.
+There may be multiple entries for a particular procedure.
+Later entries supercede earlier ones.
+
+A procedure database file for the entire Maple library is generated
+or updated periodically.
+This file is
+/usr/maple/data/mint.db and contains close to 1200 entries and
+it takes \fImint\fP about 7 seconds to read this file.
+
+A private database file can be generated through the use of
+the \fB\-a\fP command line option for \fImint\fP.
+A file name must follow \fB\-a\fP on the command line and is taken
+to be a procedure database file.
+As \fImint\fP scans procedure definitions in the input file, it
+will append procedure database entries into the database file.
+For information gathered automatically by \fImint\fP about a
+procedure, <min\ args> and <max\ args> will both be the number of
+formal arguments used in the procedure definition.
+You can edit the database file to adjust these values.
+Remember that use of `nargs' in a procedure body sets the <nargs seen>
+field to 1 in the database entry and that this will turn off
+argument count checking for that procedure.
+
+.SH EXAMPLES
+
+.ft CW
+.nf
+mint -d /usr/maple/data/mint.db -a my.db -i 4  rat_poisson
+mint -d /usr/maple/data/mint.db -d my.db       rat_trap
+mint -i 1 -q                                   warfarin
+.fi
+.ft P
+
+The first example gives a full report (info_level = 4) for the
+Maple source file rat_poisson.
+It reads the Maple library database file and uses this to check that
+procedures defined in the Maple library are called with the correct
+number of arguments.
+Information about procedures defined in rat_poisson is \fIappended\fP
+to my.db.
+
+In the second example, both the Maple library database file and
+the private database file my.db are used to check number of arguments
+used in procedure calls in the file rat_trap.
+Entries in my.db supercede entries in the library database file
+if the name of a library procedure has been redefined in my.db.
+
+In the third example, no argument count checking is done.
+Since the info_level is set to 1, only severe errors are
+reported.
+Since the \fB\-q\fP  (quiet) option is used, the printing
+of the \fImint\fP leaf logo is suppressed in the output.
+
+.SH FILES USED
+\&.mintrc               \- Mint initialization file
+/usr/maple/data/mint.db \- \kxMaple library procedure database
+\h'|\nxu'(The location of the database may be different for each site)
+.SH SEE ALSO
+maple
+
+.SH STATUS
+\fIMint\fP will return an exit status of 1, 2, or 3 if the
+worst error it detects is a warning, serious error, or severe
+error, respectively.  An exit status of 0 is returned if no
+errors or warnings are found.
+

@@ -1,0 +1,111 @@
+.TH AT 1
+.CT 1 time_man
+.SH NAME
+at \(mi execute commands at a later time
+.SH SYNOPSIS
+.B at
+[
+.B -r
+]
+.I time
+[
+.I day
+]
+[
+.I file
+]
+.PP
+.B at -l
+.SH DESCRIPTION
+.I At
+squirrels away a copy of the named
+.I file
+(standard input default)
+to be used as input to
+.IR sh (1)
+at a specified later time.
+A
+.I cd
+command to the current directory is inserted
+at the beginning,
+followed by assignments to all environment variables.
+When the script is run, it uses the userid and groupid
+of the creator of the copy.
+.PP
+The
+.I time
+is 1 to 4 digits, with an optional following
+.LR A ,
+.LR P ,
+.L N
+or 
+.L M
+for
+AM, PM, noon or midnight.
+One and two digit numbers are taken to be hours, three and four digits
+to be hours and minutes.
+If no letters follow the digits, a 24 hour clock time is understood.
+.PP
+The optional
+.I day
+is either a month name followed by a day number,
+or a day of the week; if the word
+.L week
+follows, invocation is moved seven days further off.
+Names of months and days may be recognizably truncated.
+A year number, spelled out in full, may follow the month.
+.PP
+The options are
+.TP
+.B -r
+Remove the specified activity.
+.TP
+.B -l
+List all activities scheduled for this user.
+.PP
+.I At
+programs are executed by periodic execution
+of
+.F /usr/lib/atrun
+from
+.IR cron (8).
+The granularity of
+.I at
+depends upon how often
+.I atrun
+is executed.
+.PP
+The standard output and standard error files are lost unless redirected.
+.SH EXAMPLES
+.EX
+at 0800 dec 24
+echo ho ho ho | mail claus
+.EE
+.TP
+.L
+at -r `at -l`
+Remove a scheduled activity.
+.SH FILES
+.TF /usr/spool/at/yy.ddd.hhmm
+.TP
+.F /usr/lib/atrun
+.TP
+.BI  /usr/spool/at/ yy . ddd . hhmm\fP.*
+activity for year, day, hour
+.TP
+.F /usr/spool/at/lasttimedone
+last
+.I hhmm
+.TP
+.F /usr/spool/at/past
+activities in progress
+.SH "SEE ALSO"
+.IR calendar (1),
+.IR pwd (1),
+.IR sleep (1),
+.IR cron (8)
+.SH BUGS
+Due to the granularity of the execution of
+.I atrun,
+there may be bugs in scheduling things almost
+exactly 24 hours into the future.

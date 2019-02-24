@@ -1,0 +1,154 @@
+.TH INIT 8
+.CT 1 sa_auto secur
+.SH NAME
+init \- process control initialization
+.SH SYNOPSIS
+.B /etc/init
+.SH DESCRIPTION
+.I Init
+is invoked by the operating system as the last step in the boot procedure.
+It is always process 1.
+.PP
+When started normally,
+.I init
+calls
+.IR rc (8)
+with parameter
+.BR autoboot .
+If this succeeds,
+.I init
+begins multi-user operation.
+If
+.I rc
+fails,
+.I init
+commences single user operation by giving
+the super-user a shell on the console.
+It is possible to pass parameters
+from the boot program to
+.I init
+so that single user operation is commenced immediately.
+When the single user shell terminates,
+.I init
+runs
+.IR rc
+without the parameter,
+and begins multi-user operation.
+.PP
+.I Rc
+performs housekeeping
+such as checking and mounting file systems
+and starting daemons;
+see
+.IR rc (8).
+.PP
+In multi-user operation,
+.IR init 's
+role is to create a process for each
+directly connected terminal port on which a user may log in.
+To begin such operations, it reads the
+.IR ttys (5)
+file and forks to create a process
+for each terminal specified in the file.
+Each of these processes opens the appropriate terminal
+for reading and writing
+on file descriptors 0, 1, 2, and 3 (the standard input and
+output, the diagnostic output and
+.FR /dev/tty ).
+Opening the terminal will usually involve a delay,
+since the
+.I open 
+is not completed until someone
+dials and carrier is established on the channel.
+Then
+.IR getty (8)
+is called with argument as specified by the second character of
+the
+.I ttys
+file line.
+.I Getty
+reads the user's name and invokes
+.IR login (8)
+to log in the user and execute the shell.
+.PP
+Ultimately the shell will terminate
+because of an end-of-file or as a result of hanging up.
+The main path of
+.IR init ,
+which has been waiting
+for such an event,
+wakes up and removes the appropriate entry from the
+file
+.IR utmp (5),
+which records current users, and
+makes an entry in
+.IR wtmp ,
+which maintains a history
+of logins and logouts.
+Then the appropriate terminal is reopened and
+.I getty
+is
+invoked again.
+.PP
+.I Init
+catches signal
+.B SIGHUP
+and interprets it to mean that
+the
+.I ttys
+file
+should be read again.
+The shell process on each line that has become inactive 
+according to
+.I ttys
+is terminated;
+a new process is created for each line added;
+lines unchanged in the file are undisturbed.
+Thus it is possible to drop or add terminal lines without
+rebooting the system by changing the
+.I ttys
+file and sending a
+.I hangup
+signal to the
+.I init
+process: use
+.LR "kill -1 1" .
+.PP
+.I Init
+will terminate multi-user operations,
+kill all outstanding processes,
+and resume single-user mode
+if sent signal
+.BR SIGTERM :
+use
+.LR "kill 1" .
+.I Init
+will wait at most 30 seconds for outstanding processes to die,
+to avoid waiting forever.
+.PP
+If, at bootstrap time, the
+.I init
+program cannot be executed,
+the system will loop in user mode at a low address.
+.SH FILES
+.nf
+.F /dev/console
+.F /dev/tty
+.F /etc/utmp
+.F /usr/adm/wtmp
+.F /etc/ttys
+.F /etc/rc
+.fi
+.SH "SEE ALSO"
+.IR login (8), 
+.IR kill (1), 
+.IR sh (1), 
+.IR ttys (5), 
+.IR getty (8), 
+.IR rc (8), 
+.IR reboot (8)
+.SH BUGS
+.IR Init 's
+multi-user functions should be integrated
+with the world of
+.IR svcmgr (8).

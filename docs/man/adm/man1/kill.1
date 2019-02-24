@@ -1,0 +1,81 @@
+.TH KILL 1
+.CT 1 proc_man sa_mortals
+.SH NAME
+kill \(mi terminate a process with extreme prejudice
+.SH SYNOPSIS
+.B kill
+[
+.BI - sig
+]
+.I processid ...
+.br
+.B kill
+.B -l
+.SH DESCRIPTION
+.I Kill
+sends the
+.L SIGTERM
+signal to the specified processes.
+If a signal name or number preceded by 
+.L -
+is given
+as first argument, that signal is sent instead of
+terminate; see
+.IR  signal (2).
+The signal names are listed by
+.LR "kill -l" ,
+and are as given in
+.BR <signal.h> .
+.PP
+The terminate signal
+will kill processes that do not catch the signal.
+The
+.B SIGKILL
+signal is a sure kill, since it cannot be caught.
+By convention, if process number 0 is specified, all members
+in the process group (usually processes of
+the current login or current
+.IR mux (9.1)
+layer) are signaled.
+Killed processes must belong
+to the current user unless
+that is super-user.
+.PP
+To shut the system down and bring it up single user
+the super-user may send the initialization process a terminate
+signal by
+.LR "kill 1" ;
+see
+.IR init (8).
+To force
+.I init
+to close and open terminals
+according to what is currently in
+.F /etc/ttys
+use
+.BR "kill -SIGHUP 1" .
+.PP
+The process number of an asynchronous process
+started with 
+.L &
+is reported by the shell and by
+.IR ps (1).
+.SH EXAMPLES
+.TP
+.L
+kill 7151
+Kill process 7151 gently;
+the process can catch the signal.
+.TP
+.L
+kill -SIGKILL 7151
+Kill peremptorily; this signal cannot be caught.
+.TP
+.L
+kill 0
+Kill all the background processes in this process group.
+.SH "SEE ALSO"
+.IR ps (1), 
+.IR signal (2), 
+.IR signal (2), 
+.IR init (8)

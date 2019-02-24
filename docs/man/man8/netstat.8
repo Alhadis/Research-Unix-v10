@@ -1,0 +1,100 @@
+.TH NETSTAT 8
+.CT 1 sa_nonmortals
+.SH NAME
+netstat, dkstat \- show network status for internet and datakit networks
+.SH SYNOPSIS
+.B netstat
+[
+.B \-acCirRst
+]
+[
+.I system
+]
+[
+.I core
+]
+.PP
+.B dkstat
+[
+.I interval
+[
+.I count
+]
+]
+.SH DESCRIPTION
+.I Netstat 
+displays internet
+(TCP/IP and UDP/IP)
+traffic and configuration
+data.
+Without options,
+it lists all TCP and UDP connection assignments.
+A single option
+changes the listing:
+.TP
+.B -a
+known mappings between internet names and
+Ethernet addresses.
+.TP
+.B -c
+all TCP and UDP connection assignments
+(the default).
+.TP
+.B -C
+detailed state of active TCP connections.
+.TP
+.B -i
+active IP interfaces.
+.TP
+.B -n
+display numeric internet addresses rather than host and
+network names.
+.TP
+.B -s
+protocol statistics.
+.TP
+.B -r
+routing tables.
+.TP
+.B -R
+routing tables,
+including deleted entries
+(for debugging).
+.TP
+.BI -t buf
+running trace of
+packets passing through
+.IR buf :
+.L il
+for the Interlan Ethernet controller,
+.L qe
+for the DEQNA,
+.L tcp
+(the default)
+for all packets passing through TCP.
+.PP
+The arguments 
+.I system
+and
+.I core
+are substitutes for the defaults
+.F /unix
+and
+.FR /dev/kmem .
+.PP
+.I Dkstat
+reports the number of bytes received and sent over
+the Datakit network, together with error reports if any occurred.
+The first report is cumulative since a reboot.
+Further reports may be requested every
+.I interval
+seconds; these reports are incremental.
+.PP
+The optional
+.I count
+argument restricts the number of reports.
+.SH DIAGNOSTICS
+.BR "nlist /unix failed" :
+.I netstat
+could not find pertinent system information,
+perhaps because this system isn't set up for TCP/IP.

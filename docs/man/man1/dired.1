@@ -1,0 +1,148 @@
+.TH DIRED 1
+.CT 1 dirs
+.SH NAME
+dired \- directory editor
+.SH SYNOPSIS
+.B dired
+[
+.I option ...
+]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Dired 
+displays a directory listing like
+.L ls -l
+(see
+.IR ls (1))
+and allows you to prowl around the listed entries,
+deleting, editing, and displaying them.
+It requires a cursor-addressed terminal identified
+in environment variable
+.BR TERM ;
+see
+.IR term (9.1)
+to simulate such terminals in
+.IR mux (9.1).
+.PP
+With no
+.I file
+argument, the current directory is listed.
+With only one
+.I file
+argument, the argument is interpreted as a directory and it is listed.
+With multiple arguments, the arguments are interpreted as filenames.
+The options are:
+.TP
+.BR - [ sr ][ nsrw ]
+Sort the file list by
+name (default), size, access time, or modification time.
+Ordering for
+.B s
+is increasing if by name, decreasing otherwise.
+Ordering is opposite for
+.BR r .
+.TP
+.BI -w n
+If 
+.I n
+is
+.BR f,
+use the full screen; if
+.BR h ,
+use half the screen (default); if a number, use
+.I n
+lines for the directory listing, reserving the rest
+of the screen for quick
+file display.
+.PP
+The fields of a
+.I dired
+listing are: mode, link count, owner, size, write date and name.
+A cursor shows the current entry.
+.PP
+Commands consist of single characters; arguments are
+prompted for at the bottom of the screen.
+To get a complete list, use the help command.
+Fuller descriptions of less obvious commands are given below.
+.TP
+.B !
+Prompt for a shell command.
+The command is executed with
+.L %
+characters in the command are replaced by the pathname of the current
+entry, and 
+.L #
+characters by the basename.
+.TP
+.B .
+Repeat the previous
+.B !
+shell command, using the current entry to replace
+.L %
+or
+.LR # .
+.TP
+.B d
+Mark the current entry for deletion.
+Deletion of a directory is recursive.
+.TP
+.B e
+If the current entry is a file,
+edit it with the editor 
+.I e,
+or an editor named by the environment variable 
+.BR EDITOR .
+If it is a directory,
+invoke
+.IR dired
+recursively for that directory.
+.TP
+.B h
+.br
+.ns
+.TP
+.B ?
+Display a help file.
+.TP
+.B m
+Display the current file with the pager
+.IR p (1),
+or another pager named by the environment variable 
+.BR PAGER .
+.TP
+.B q
+Quit this directory level of
+.I dired.
+List the files marked for deletion and request
+confirmation before deleting them.
+.TP
+.B t
+Type.
+Display the current file.
+In two-window mode pause after each screenfull until you type
+a carriage return.
+The display may be interrupted.
+.SH FILES
+.TF /usr/lib/dired
+.TP
+.F /usr/lib/dired
+help file 
+.SH SEE ALSO
+.IR ls (1)
+.SH DIAGNOSTICS
+While
+.I dired
+is preparing a listing it reports `Reading',
+and types a dot
+for each 10 files.
+.SH BUGS
+Long lines and diagnostics can foul up the
+display.
+.br
+Needs a command to search for a given file.
+.br
+The off-line print command
+.L p
+is broken.

@@ -1,0 +1,295 @@
+.TH CIN 1
+.CT 1 prog_c
+.SH NAME
+cin \- C interpreter
+.SH SYNOPSIS
+.B cin
+[
+.I option ...
+]
+[
+.I file ...
+]
+[
+.B --
+.I arg ...
+]
+.SH DESCRIPTION
+.I Cin
+interprets a C program made of the named
+.I files.
+A single minus
+.RB ( - )
+names the standard input.
+Other
+.I files
+are as in
+.IR cc (1).
+Arguments
+.I arg
+are passed to the interpreted program as
+.B cin_argv[1]
+\&... 
+.PP
+Options
+.BI -D name = def ,
+.BI -D name ,
+.BI -U name ,
+.BI -I name ,
+.BI -l x ,
+and
+.BI -u name
+are as in
+.IR cc .
+Options
+.B -O
+and
+.B -f
+are ignored.
+Other options are:
+.TP \w'\f5-0\fIname\ \ 'u
+.BI -0 name
+Pass
+.I name
+to the interpreted program as
+.BR cin_argv[0] .
+.TP
+.BI -V name : n
+Function
+.I name
+has a variable number of arguments.
+Check types of the first
+.I n
+arguments.
+.TP
+.B -c
+Parse files but do not execute the program.
+.TP
+.B -d
+Enable internal debugging output.
+.TP
+.B -i
+Enter interactive mode; see below.
+.TP
+.BI -o name
+Create
+object code in file
+.I name
+before starting execution.
+.TP
+.B -r
+Prohibit multiply-declared global variables.
+.TP
+.B -s
+Do not catch signals.
+.TP
+.B -t
+Print file name and line number of each C statement executed.
+.TP
+.B -v
+Print the user and system times associated with loading files and executing
+the program, as in
+.IR time (1).
+.PP
+Under option
+.BR -i ,
+.I cin
+evaluates C statements immediately using local and global variables.
+Non-void values are printed.
+Function, variable, and C pre-processor declarations are stored
+in the current `view'.
+A function definition must include its return type.
+Declarations and statements may appear in any order and
+variables may be redeclared.
+The functions and variables listed below are predefined;
+the types of their arguments follow these conventions:
+.IP
+.BI "char *" name ", *" string ,
+.BI * file ;
+.br
+.BI "int " line ;
+.br
+.BI "long (*" func ")(), (*" func_mod ")(),
+.BI (* func_ref )();
+.PP
+.HP
+.BI "void cin_bind(" name , " func" );\ 
+Set an alias of
+.I name
+for the function
+.IR func .
+.HP
+.BI "int cin_break(" name , " line" );\ 
+Set a breakpoint in function
+.I name
+at line number
+.I line
+in the current view.
+Return 0 if breakpoint cannot be set.
+.HP
+.BI "int cin_dump(" name );\ 
+Create an
+.F a.out
+and place it in the file
+.IR name .
+Return 0 if
+.I name
+cannot be created.
+.HP
+.BI "int cin_eval(" string );\ 
+Execute the
+C statement
+.I string
+as if it were present in the program where the
+.B cin_eval
+is executed.
+Return 0 if
+.I string
+could not be parsed.
+.HP
+.BI "int cin_load(" file );\ 
+Load
+.I file
+into a new view,
+using the standard file-naming conventions for
+.IR cc (1).
+Return 0 if
+.I file
+can not be loaded.
+.HP
+.BI "int cin_log(" file );\ 
+Record the interactive mode session in
+.IR file .
+Return 0 if
+.I file
+cannot be created.
+.HP
+.BI "void cin_mstats(" string );\ 
+Print
+.IR cin 's
+memory usage with a banner of
+.IR string .
+.HP
+.B void cin_return();\ 
+Return from a breakpoint.
+.HP
+.BI "int cin_spy(" name , " func_mod" , " func_ref\f5\^);\ 
+Call the function
+.I func_mod
+whenever the variable
+.I name
+is modified.
+Call the function
+.I func_ref
+whenever the variable
+.I name
+is referenced.
+Either
+.I func_mod
+or
+.I func_ref
+can be
+.BR "(long (*)())0" .
+Return 0 if there are no spies active.
+.HP
+.BI "void cin_system();\ 
+Enter interactive mode.
+.HP
+.BI "int cin_unbreak(" name , " line" );\ 
+Remove a breakpoint in function
+.I name
+at line number
+.I line
+in the current view.
+Return 0 if the breakpoint was not set.
+.HP
+.BI "int cin_view(" name );\ 
+Change the current view to
+.IR name .
+Return 0 if the name
+is not found.
+.HP
+.B void cin_views();\ 
+List the available views.
+The current view
+is starred
+.RB ( * ).
+.HP
+.BI "void cin_whatis(" name );\ 
+Print the type of the named variable.
+.HP
+.B void cin_where();\ 
+Print a trace of subroutine calls.
+.HP
+.B void cin_quit();\ 
+Exit
+.IR cin .
+.HP
+.B extern int cin_argc;\ 
+The number of elements passed to the interpreted program.
+.HP
+.B extern char **cin_argv;\ 
+An array of arguments passed to the interpreted program.
+.HP
+.B extern char *cin_libpath;\ 
+A colon-separated list of libraries to search for undefined routines
+(by default the libraries specified on the command line plus
+.BR -lc ).
+.HP
+.B extern char *cin_prompt;\ 
+The interactive mode prompt (by default the string
+.LR cin> ).
+.PD
+.SH EXAMPLES
+.TP
+`Hello world' in interactive mode.
+.EX
+cin> printf("Hello world\en");
+Hello world
+(int)12
+.EE
+.TP
+Setting breakpoints and tracing subroutine calls.
+.EX
+cin> int f(x) { return x <= 1 ? 1 : x * f(x-1); }
+cin> cin_break("f", 1);
+breakpoint in function f at line 1
+(int)1
+cin> f(2);
+breakpoint in function 'f' at line 1 of file 'interactive mode'
+cin> cin_return();
+breakpoint in function 'f' at line 1 of file 'interactive mode'
+cin> (void)cin_where();
+cin_system()   [interactive mode:4]
+f(x = 1)   [interactive mode:1]
+f(x = 2)   [interactive mode:1]
+cin_system()   [interactive mode:3]
+cin> x;
+(int)1
+cin> cin_return();
+(int)2
+.EE
+.SH FILES
+.TF $HOME/.cinit
+.TP
+.F /tmp/int*
+temporary
+.TP
+.F $HOME/.cinit
+interpreter startup file
+.HP
+other files as in;\ 
+.IR cc (1)
+.SH "SEE ALSO"
+.IR cc (1),
+.IR lint (1)
+.br
+T. J. Kowalski, H. H. Goguen, and J. J. Puttress,
+`The C Interpreter:
+A Tutorial for Cin Version 0.18',
+this manual, Volume 2
+.br
+B. W. Kernighan and D. M. Ritchie,
+.I The C Programming Language,
+Prentice-Hall,
+1978

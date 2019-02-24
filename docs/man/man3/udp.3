@@ -1,0 +1,83 @@
+.TH UDP 3X
+.CT 2 comm_mach
+.SH NAME
+udp_connect, udp_listen, udp_datagram \(mi udp networking functions
+.SH SYNOPSIS
+.nf
+.B #include <sys/inet/udp_user.h>
+.PP
+.B int udp_connect(sport, dhost, dport)
+.B in_addr dhost;
+.B udp_port sport, dport;
+.PP
+.B int udp_listen(sport, reply)
+.B udp_port sport;
+.B struct udpreply *reply;
+.PP
+.B int udp_datagram(sport)
+.B udp_port sport;
+.PP
+.SH DESCRIPTION
+These routines are loaded by the
+.B -lin
+option of
+.IR ld (1).
+.PP
+UDP (universal datagram protocol) is a protocol layered
+upon IP (internet protocol).
+It provides datagram service between end points called sockets.
+A socket address is composed of the internet address
+of its host and the port number to which
+the socket is bound.
+.PP
+.I Udp_connect
+returns the file descriptor of a UDP socket bound to port
+.I sport.
+Each
+.IR read (2)
+from this file descriptor will only accept datagrams from the UDP
+socket at host
+.I dhost,
+port
+.IR dport ;
+a
+.IR write
+on this file descriptor will be sent to that socket.
+.PP
+.I Udp_listen
+returns the file descriptor of a UDP socket bound to port
+.I sport
+and waits for a datagram to be sent to that port.
+Once a message has been received from another socket,
+all writes
+will go to that socket and
+reads will only accept data from that socket.
+.PP
+.I Udp_datagram
+returns the file descriptor of a UDP socket bound to port
+.I sport.
+Messages written to the file descriptor must start with a
+.B struct udpaddr
+which contains the destination of the message.
+.IP
+.EX
+.ta \w'struct 'u +\w'updaddr 'u
+struct	udpaddr	{
+	in_addr	host;
+	int	port;
+};
+.EE
+.PP
+Messages read from the file descriptor also start with a
+.B struct udpaddr
+and contain the address of the source socket.
+.SH FILES
+.TP 12
+.F /dev/udp*
+the socket devices
+.SH SEE ALSO
+.IR internet (3), 
+.IR tcp (3)
+.SH DIAGNOSTICS
+All these routines
+returns \-1 on failure.

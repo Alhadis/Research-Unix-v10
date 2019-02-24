@@ -1,0 +1,26 @@
+trap 'rm /tmp/$$*' 0 2 3 13 15
+sort /usr/man/adm/pagenumbers >/tmp/$$1
+a= e=0
+post="/usr/bin/postscript/dpost -C/usr/lib/postscript/fatcourier.ps"
+case $1 in
+-a)	a=$1 post=cat shift ;;
+esac
+echo %!PS
+for i
+do
+	look '-xt ' $i /tmp/$$1 >/tmp/$$2
+	cd /usr/man
+	echo /saveobj save def
+	eval `/usr/man/adm/preprocess $i` |
+		troff $a -rp`sed 's/.* //' /tmp/$$2` \
+		/usr/man/adm/tmac.v10 - 2>/tmp/$$3 |
+		$post  
+	echo clear saveobj restore
+	reccp $i /usr/man/adm/`dirname $i`
+	diff -b /tmp/$$[23] >/dev/null || (
+		echo $i: page count discrepancy, before and after:
+		cat /tmp/$$[23]
+		e=1
+	) 1>&2
+done
+exit $e

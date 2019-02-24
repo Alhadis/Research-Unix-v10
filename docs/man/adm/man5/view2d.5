@@ -1,0 +1,65 @@
+.TH VIEW2D 5
+.CT 1 graphics
+.SH NAME
+view2d \- movie of a function f(x, y, t)
+.SH DESCRIPTION
+Files of this format are produced by functions in
+.IR view2d (3),
+and displayed by commands in
+.IR view2d (1).
+A movie file consists of one or more frames,
+each consisting of a header and a sequence
+of 16-bit signed integer values for each
+pixel, scanned left to right and bottom to top.
+(Left-to-right is the inner loop.)
+.PP
+The header consists of the 32-bit magic number 0135246,
+then eight 16-bit integers:
+.TP
+.I VER
+The version number.
+.TP
+.I NX, NY
+The number of pixels in the frame.
+These may not vary from frame to frame.
+.TP
+.I u, v
+relate pixel values
+.I p
+in the file to user function values
+.I f
+by
+.IP
+.I p
+=
+.I u
+\+
+.if t .I f\^\(mu2\u\-v\d.
+.if n .IR f/ 2 **v.
+.TP
+.I FIXUV
+normally 0;  1 if
+.I u, v, PMIN, PMAX
+of first frame
+give a bound on the data in the entire file.
+.TP
+.I PMIN, PMAX
+limits of the data; only used when
+.IR FIXUV =1.
+.LP
+and finally a 16-byte
+.SM ASCII
+representation of a floating point value:
+.TP
+.I TIME
+is a frame index, typically set to simulated time or
+to an iteration counter.
+This need not be uniformly spaced from frame to frame,
+but should be nondecreasing.
+.PP
+The range of displayable pixel values is [\-32765,32765].
+Values below this range are deemed out of bounds
+and not plotted; values above are reserved.
+.SH "SEE ALSO"
+.IR view2d (1), 
+.IR view2d (3)

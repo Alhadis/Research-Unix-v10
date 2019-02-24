@@ -1,0 +1,256 @@
+.TH EXEC 2
+.CT 2 proc_man
+.SH NAME
+execl, execv, execle, execve, execlp, execvp, exect \(mi execute a file
+.SH SYNOPSIS
+.nf
+.B int "execl(name, arg0, arg1, ..., argn, (char *)0)"
+.B char *name, *arg0, *arg1, ..., *argn;
+.PP
+.B int execv(name, argv)
+.B char *name, *argv[];
+.PP
+.B "int execle(name, arg0, arg1, ..., argn, (char *)0, envp)"
+.B "char *name, *arg0, *arg1, ..., *argn, *envp[];"
+.PP
+.B int execve(name, argv, envp)
+.B char *name, *argv[], *envp[];
+.PP
+.B int "execlp(name, arg0, arg1, ..., argn, (char *)0)"
+.B char *name, *arg0, *arg1, ..., *argn;
+.PP
+.B int execvp(name, argv)
+.B char *name, *argv[];
+.PP
+.B int exect(name, argv, envp)
+.B char *name, *argv[], *envp[];
+.fi
+.SH DESCRIPTION
+.I Exec
+in all its forms
+overlays the calling process with the named file, then
+transfers to the
+entry point of the image of the file.
+There can be no return from a successful
+.IR exec ;
+the calling image is lost.
+.PP
+Files remain open across
+.I exec
+unless explicit arrangement has been made;
+see
+.IR ioctl (2).
+Signals that are caught (see
+.IR signal (2))
+are reset
+to their default values.
+Other signal settings
+are unchanged.
+.PP
+Each user has a
+.I real
+userid and groupid and an
+.I effective
+userid and groupid.
+The real userid (groupid)
+identifies the person using the system;
+the effective userid (groupid)
+determines access privileges.
+.I Exec
+changes the effective userid and groupid to
+the owner of the executed file if the file has the set-userid
+or set-groupid modes.
+The real userid is not affected.
+.PP
+.I Name
+points to the name of the file
+to be executed.
+It must be a regular file
+(type
+.BR S_IFREG ,
+see
+.IR stat (2))
+and its permissions must allow execution.
+.I Arg0, arg1, ...
+or the pointers in
+.I argv
+address null-terminated argument strings
+to be made available when the new image starts.
+.I Argv
+must end with a 0 pointer.
+Conventionally argument 0
+is the name of the program.
+.PP
+In
+.IR execle ,
+.IR execve ,
+and
+.IR exect ,
+the
+.I envp
+array contains pointers to
+a set of null-terminated strings
+composing the environment of the process.
+.I Envp
+must end with a 0 pointer.
+The other calls
+copy the present environment
+from the global cell
+.IR environ ;
+see
+.IR environ (5).
+.PP
+The
+.I execl
+and
+.I execv
+forms
+differ only in argument syntax;
+one is more convenient when the number of arguments is known in advance,
+the other when arguments are assembled on the fly.
+.PP
+If the first two bytes of the file
+are the characters
+.LR #! ,
+subsequent text up to a newline is examined.
+The first word,
+up to a blank or tab,
+names an interpreter program;
+anything left over is a single supplemental argument.
+The original
+.IR name ,
+preceded by the supplemental argument if any,
+is inserted in the argument list
+between
+.I arg0
+and
+.I arg1
+(or between the first pair of
+.I argv
+pointers).
+The interpreter is executed with the modified argument list.
+.PP
+If the file doesn't start with
+.LR #! ,
+a standard header for
+a binary image
+is expected;
+see
+.IR a.out (5).
+If the file doesn't begin with a valid header either,
+.B ENOEXEC
+is returned.
+The shell
+.IR sh (1)
+takes this to mean that the file
+contains shell commands.
+.PP
+When a C program is executed,
+it is called as follows:
+.IP
+.EX
+main(argc, argv, envp)
+int argc;
+char **argv, **envp;
+.EE
+.PP
+.I Argv
+is the array of argument pointers passed to
+.IR exec ;
+.I argc
+is the number of arguments.
+.I Argv
+is directly usable in a subsequent
+.I execv
+because
+.BR argv[argc]==0 .
+.I Envp
+is the environment array;
+the same value has already been stored in
+.IR environ .
+.PP
+.I Execlp
+and
+.I execvp
+take the same arguments as
+.I execl
+and
+.IR execv ,
+but search the directories listed in the
+.B PATH
+environment variable
+for an executable file called
+.IR name ,
+mimicking the shell's path search.
+.PP
+.I Exect
+is the same as
+.IR execve ,
+except that it arranges for the process to stop
+just before the first instruction of the new image;
+see
+.IR proc (4).
+.SH FILES
+.TF /bin/sh
+.TP
+.F /bin/sh
+shell, invoked if command file found
+by
+.I execlp
+or
+.I execvp
+.SH EXAMPLES
+This file,
+if created with execute permissions
+and run by
+.IR exec ,
+calls
+.IR awk (1)
+to count the lines in all the files named in its arguments:
+.EX
+#!/usr/bin/awk -f
+END	{ print NR }
+.EE
+.SH "SEE ALSO"
+.IR sh (1),
+.IR fork (2), 
+.IR ioctl (2),
+.IR signal (2),
+.IR proc (4),
+.IR environ (5)
+.SH DIAGNOSTICS
+.BR E2BIG ,
+.BR EACCES ,
+.BR EFAULT ,
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOEXEC ,
+.BR ENOMEM ,
+.BR ENOTDIR ,
+.BR ENXIO ,
+.BR ETXTBSY
+.SH BUGS
+If
+.I execvp
+is called to execute a file that turns out to be a shell
+command file,
+and the shell cannot be executed,
+some of the values in
+.I argv
+may be modified before return.
+.br
+Neither the shell's path search
+nor that of
+.I execlp
+and
+.I execvp
+extends to the interpreter named after
+.LR #! .
+The interpreter file
+may not itself begin with
+.LR #! .
+The text after
+.LR #!
+may be no more than 30 characters long,
+including the newline.

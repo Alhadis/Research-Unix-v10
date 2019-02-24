@@ -1,0 +1,108 @@
+.TH BUTTON 9.2
+.CT 2 comm_term
+.SH NAME
+button123, mouse, cursallow, cursinhibit, cursset, cursswitch, getrect123 \- mouse control
+.SH SYNOPSIS
+.B #include <jerq.h>
+.PP
+.B extern struct Mouse {
+.br
+.B "    Point xy;
+.br
+.B "    short buttons;
+.br
+.B } mouse;
+.PP
+.B int button(n)
+.B int n;
+.br
+.B int button1(), button2(), button3();
+.br
+.B int button12(), button23(), button123();
+.PP
+.B void cursinhibit();
+.br
+.B void cursallow();
+.PP
+.B void cursset(p);
+.B Point p;
+.PP
+.B Texture *cursswitch(t);
+.B Texture *t;
+.PP
+.B Rectangle getrect(n)
+.B int n;
+.br
+.B Rectangle getrect1(), getrect2(), getrect3();
+.br
+.B Rectangle getrect12(), getrect23(), getrect123();
+.SH DESCRIPTION
+When the mouse is requested
+(see
+.IR request (9.2)),
+the mouse state is updated asynchronously in the structure
+.BR mouse .
+The coordinates of the mouse are held in
+.BR mouse.xy ,
+and the state of the buttons in
+.BR mouse.buttons .
+Each process's
+.B mouse
+structure is independent of the others, so that
+(except for
+.IR cursset )
+actions such as
+changing the tracking cursor do not affect the mouse in
+other processes.
+.PP
+The macro
+.I button
+and its counterparts return the state of the associated mouse button:
+non-zero if the button is depressed, 0 otherwise.
+The buttons are numbered 1 to 3 from left to right.
+.I Button12
+and the other multi-button functions return the
+OR
+of their states: true if either button 1 or
+button 2 is depressed.
+.PP
+.I Cursinhibit
+turns off interrupt-time cursor tracking
+(the drawing of the cursor on the screen),
+although the mouse coordinates are still kept current
+and available.
+.I Cursallow
+enables interrupt-time cursor tracking.
+.I Cursallow
+and
+.I cursinhibit
+stack: to enable cursor tracking after two calls to
+.IR cursinhibit ,
+two calls to
+.I cursallow
+are required.
+.PP
+.I Cursset
+moves the mouse cursor to the Point
+.I p.
+.PP
+.I Cursswitch
+changes the mouse cursor (a 16\(mu16 pixel image) to that specified by the
+Texture
+.BI * t.
+If the argument is
+.BR (Texture*)0 ,
+the cursor is restored to the default arrow.
+.I Cursswitch
+returns the previous value of the cursor: the argument of the previous
+call to
+.I cursswitch.
+.PP
+.I Getrect
+prompts the user with a box cursor and waits for a
+rectangle to be swept out with the named button,
+identified as with the
+.I button
+primitives.
+It returns the screen coordinates of the box swept.
+The box may be partly or wholly outside the process's layer.

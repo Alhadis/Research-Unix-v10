@@ -1,0 +1,96 @@
+.TH RCP 1
+.CT 1 comm_mach
+.SH NAME
+rcp \- remote file copy
+.SH SYNOPSIS
+.B rcp
+[
+.B -p
+]
+.I filename1 filename2
+.PP
+.B rcp
+[
+.B -p
+] [
+.B -r
+]
+.I filename ... directory
+.SH DESCRIPTION
+.I Rcp
+copies files across TCP/IP connections.
+Each
+.I filename
+or
+.I directory
+argument is either a remote file name of the form:
+.IP
+.IB hostname : path
+.LP
+or a local file name (containing no
+.L :
+unless preceded by
+.LR / ).
+.PP
+If a
+.I filename
+is not a full path name, it is interpreted relative to
+your home directory on machine
+.IR hostname .
+A
+.I path
+on a remote host may be quoted to cause
+metacharacters to be interpreted remotely.
+.PP
+Your current local user name
+must exist on
+.I hostname
+and allow remote command execution by
+.IR rsh ;
+see
+.IR con (1).
+.PP
+.I Rcp
+handles third party copies, where neither source nor target files
+are on the current machine.
+Hostnames may also take the form
+.IP
+.IB username @ hostname : filename
+.PP
+to use
+.I username
+rather than your current local user name as the user name on
+the remote host.
+In this usage, 
+.I hostname
+may be a full internet domain name.
+.PP
+The options are
+.TP
+.B \-p
+Attempt to give each copy the same modification times, access times,
+and modes as the original file.
+.TP
+.B \-r
+Copy each subtree rooted at
+.IR filename ;
+in this case the destination must be a directory.
+.SH FILES
+.TF .profile
+.TP
+.F .cshrc
+.TP
+.F .login
+.TP
+.F .profile
+.PD
+.SH SEE ALSO
+.IR con (1),
+.IR cu (1),
+.IR push (1),
+.IR uucp (1)
+.SH BUGS
+There is no check against copying a file onto itself.
+.br
+Certain cases where a file name is given when a directory
+is required are not diagnosed.

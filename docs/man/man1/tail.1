@@ -1,0 +1,95 @@
+.TH TAIL 1
+.if t .ds pm \*(+-
+.if n .ds pm +-
+.CT 1 files
+.SH NAME
+tail, readslow, head \- print the last part of a file
+.SH SYNOPSIS
+.B tail
+[
+.I otion ...
+.BR \*(pm \fInumber\fP[ lbc ][ rf ]
+]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Tail
+copies the named file to the standard output beginning
+at a designated place, normally 10 lines from the end.
+If no file is named, the standard input is used.
+The options are
+.TP
+.BR \*(pm \fInumber\fP[ lbc ][ rf ]
+Copying begins at position
+.BI + number
+measured from the beginning, or
+.BI - number
+from the end of the input.
+.I Number
+is counted in lines, 1K blocks or characters,
+according to the appended flag
+.LR l 
+(default),
+.LR b ,
+or
+.LR c .
+Further flags
+.L r
+and
+.L f
+have the effect of options 
+.B -r
+and
+.B -l .
+.TP 
+.B -r
+Print lines from the end of the file in reverse order.
+Default line count is unbounded.
+.TP 
+.B -f
+Follow.
+After printing to the end, keep watch and
+print further data as it appears.
+.TP
+.BI "-c \*(pm" number
+.br
+.ns
+.TP
+.BI "-n \*(pm" number
+.I Number
+may be signed, with sign
+.B -
+assumed by default.
+The effect is the same as
+.BI \*(pm number c 
+or
+.BI \*(pm number l
+[sic] respectively.
+.SH EXAMPLES
+.TP
+.B tail file
+Print the last 10 lines of a file.
+.TP
+.B tail +0f file
+Print a file, and continue to watch
+data accumulate as it grows.
+A similar function is sometimes called
+.I readslow.
+.TP
+.B sed 10q file
+Print the first 10 lines of a file.
+A similar function is sometimes called
+.I head.
+.SH "SEE ALSO"
+.IR dd (1)
+.SH BUGS
+Tails relative to the end of the file
+are treasured up in a buffer, and thus
+are limited in length, even under option 
+.BR -r .
+.br
+According to custom, option
+.BI + number
+counts lines from 1, and counts
+blocks and characters from 0.

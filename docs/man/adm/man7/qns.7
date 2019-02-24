@@ -1,0 +1,189 @@
+.TH QNS 7
+.CT 1 sa_auto
+.SH NAME
+qns \- query name server
+.SH SYNOPSIS
+.B qns
+[
+.B -n
+.I server
+] [
+.I request
+]
+.SH DESCRIPTION
+.I Qns
+retrieves information from
+a database of naming information.
+It is used by
+.I rsh
+and
+.I rlogin
+(see
+.IR dcon (1))
+to translate names to internet addresses and by
+.IR mail (1)
+to route electronic mail.
+.PP
+Entries in the database
+consist of one or more
+.IB value , type
+pairs or simple
+.I values.
+A simple
+.I value
+declares the name of some entity.
+An entry may contain no name
+or several, and
+different entries containing the same name
+need not refer to the same entity.
+.PP
+These types are used:
+.PP
+.TF origin
+.TP
+.B dk
+.I Value
+is a Datakit address.
+.TP
+.B in
+.I Value
+is a numeric IP address.
+.TP
+.B dom
+.I Value
+is an internet domain name.
+.TP
+.B tel
+.I Value
+is a telephone number,
+possibly prefixed by a
+.I uucp
+.B Dialcodes
+name.
+.TP
+.B org
+.I Value
+is an organization name.
+.TP
+.B svc
+.I Value
+names a service.
+.TP
+.B origin
+.I Value 
+must be
+.BR local ,
+for sorting by `distance';
+see below.
+.PD
+.PP
+The following entries describe an entity
+.B research
+with a Datakit address,
+an IP address and domain name,
+belonging to organization
+.BR att ,
+and offering the
+.B uucp
+service:
+.IP
+.EX
+192.11.4.55,in research research.astro.nj.att.com.,dom att,org 
+research nj/astro/research,dk uucp,svc att,org 
+.EE
+.PP
+.I Qns
+prints database entries that match
+.I requests.
+If a
+.IR request
+is supplied on the command line,
+.I qns
+prints the answer and exits;
+otherwise it reads and answers requests from the standard input
+until end-of-file.
+The possible requests are:
+.TP
+.BI set " key" ...
+Print every entry
+matching
+all
+.IR keys .
+.TP
+.BI value " tlist key" ...
+Examine entries matching
+the
+.IR keys
+until a pair with type
+.I tlist
+is found;
+print the matching value
+and stop.
+.I Tlist
+may be a single type,
+or several separated by
+.LR | .
+.TP
+.B reset
+Cause the name server
+to reinitialize its database.
+.TP
+.B help
+Print a list of requests.
+.TP
+.B quit
+Exit
+.IR qns .
+.PD
+.PP
+A 
+.I key
+is a
+.IB value , type
+pair;
+an entry matches if it contains that pair.
+If
+.BI , type
+is omitted,
+any pair with the specified
+.I value
+will do.
+A
+.B *
+at the end of a
+.I value
+stands for an arbitrary suffix.
+.PP
+When a database search
+returns several entries with 
+.B dk
+or
+.B dom
+types, and the database contains an entry with the conventional pair
+.BR local,origin ,
+the entries are sorted by increasing `distance'
+from the
+.B dk
+or
+.B dom
+pairs in the
+.B local,origin
+entry.
+Datakit names in the same exchange are nearer
+than names in different exchanges in the same area,
+which are nearer than names in different areas.
+Domain names matching to four levels of domain hierarchy
+are nearer than names matching to only three levels,
+and so on.
+.PP
+.I Qns
+expects to reach the name server
+.IR ns (8);
+option
+.B -n
+points it at service
+.I server
+instead.
+.SH SEE ALSO
+.IR ipc (3),
+.IR ns (8)

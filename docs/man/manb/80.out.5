@@ -1,0 +1,161 @@
+.th "80.out" 5 "March 1,1977"
+.sh NAME
+80.out \*- assembler and link editor output
+.sh DESCRIPTION
+.it "80.out"
+is the output file of the assembler
+.it "as80"
+and the link editor
+.it "ld80".
+Both programs make
+.it "80.out"
+executable if there were no
+errors and no unresolved external references.
+.s3
+.it 80.out
+has five sections:
+header, text, data, relocation information and a symbol table (in that order).
+The last two sections may be empty if the program was loaded with
+the ``\*-b'', ``\*-d'' or ``\*-t'' option of
+.it ld80.
+.s1
+(Constants beginning with `0' are octal values.)
+.s3
+.it HEADER
+.s3
+The header always contains 040 bytes:
+.lp +10 8
+Address	Contents
+.lp +10 8
+(octal)
+.s1
+.lp +10 8
+0-1	Magic number (0413)
+.lp +10 8
+2-3	Size of text segment
+.lp +10 8
+4-5	Size of data segment
+.lp +10 8
+6-7	Size of bss segment
+.lp +10 8
+10-11	Size of symbol table
+.lp +10 8
+12-13	Load origin of text segment
+.lp +10 8
+14-15	Load origin of data segment
+.lp +10 8
+16-20	Load origin of bss segment
+.lp +10 8
+20-21	Size of relocation table
+.lp +10 8
+22-23	A word of flags
+.lp +10 8
+24-37	Padding
+.s3
+.i0
+The size of each segment is in bytes.
+The size of the header is not included in any of the other sizes.
+.s3
+The flag values are:
+.lp +20 7
+Bit	Meaning
+.lp +20 7
+0	If set, no relocation information is present.
+.i0
+.s3
+The start of the text segment in the file is 040,
+the start of the data is (040 + text size),
+the start of the relocation is (040 + text + data size),
+and the start of the symbol table is (040 + text size + data size + relocation size).
+.s3
+.it "RELOCATION INFORMATION"
+.s3
+The relocation information (if present)
+occupies one or two bytes for each byte or word of text or data.
+The bits of the relocation word (or byte) are:
+.s3
+.lp +10 8
+Bit	Meaning
+.s3
+.lp +10 8
+6-15	Symbol number in symbol table for external references.
+The firat symbol is numbered 0.
+.lp +10 8
+5	High-byte flag: If set, the next byte of text or data is to be treated as the high
+order byte of a 16-bit quantity for relocation purposes.
+.lp +10 8
+4	Two-byte flag: If set, the next two bytes of text or data are to be
+treated as a 16-bit quantity for relocation purposes.
+.lp +10 8
+3	External flag: If set, bits 15-6 contain a symbol number, otherwise, only one byte
+of relocation information is present.
+.lp +10 8
+0-2	Segment information:
+.lp +20 5
+0	absolute
+.lp +20 5
+1	text
+.lp +20 5
+2	data
+.lp +20 5
+3	bss
+.i0
+.s3
+.sh "SEE ALSO"
+"as80" (I), "ld80" (I), "nm80" (I)
+.s3
+.it "SYMBOL TABLE"
+.s1
+The symbol table entries consist of six words:
+.s3
+.lp +10 8
+Word 	Meaning
+.s1
+.lp 1-4	The first four words contain the left justified, null-padded ASCII symbol name.
+.lp +10 8
+The fifth word is a flag indicating the type of the symbol.
+The following values are possible:
+.lp +20 5
+00	undefined
+.lp +20 5
+01	absolute
+.lp +20 5
+02	text
+.lp +20 5
+03	data
+.lp +20 5
+04	bss
+.lp +20 5
+05	file name symbol (produced by ld80)
+.lp +20 5
+010	undefined external
+.lp +20 5
+011	absolute external
+.lp +20 5
+012	text segment external
+.lp +20 5
+013	data segment external
+.lp +20 5
+014	bss segment external
+.lp +10 8
+6	The sixth word is the value of the symbol.
+.i0
+.s3
+The sixth word of a symbol table entry contains the value of the symbol.
+.s3
+.s3
+The value of a word in the text or data portions which is not
+a reference to an undefined external symbol
+is exactly that value which will appear in core
+when the file is executed.
+If a word in the text or data portion
+involves a reference to an undefined external symbol,
+as indicated by the relocation bits
+for that word,
+then the value of the word as stored in the file
+is an offset from the associated external symbol.
+When the file is processed by the
+link editor and the external symbol becomes
+defined, the value of the symbol will
+be added into the word in the file.
+.s3

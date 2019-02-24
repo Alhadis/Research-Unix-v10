@@ -1,0 +1,79 @@
+.TH FGETS 3S
+.CT 2 file_io
+.SH NAME
+fgets, puts, fputs, gets \(mi string input/out on streams
+.SH SYNOPSIS
+.nf
+.B #include <stdio.h>
+.PP
+.B char *fgets(s, n, stream)
+.B char *s;
+.B FILE *stream;
+.PP
+.B int puts(s)
+.B char *s;
+.PP
+.B int fputs(s, stream)
+.B char *s;
+.B FILE *stream;
+.fi
+.SH DESCRIPTION
+.I Fgets
+reads
+.IR n \-1
+characters, or up to a newline
+character, whichever comes first,
+from the
+.I stream
+into the string
+.IR s .
+The last character read into
+.I s
+is followed by a null character.
+.I Fgets
+returns its first argument.
+.PP
+.I Puts
+copies the null-terminated string
+.I s
+to the standard output stream
+.I stdout
+and appends a
+newline character.
+.PP
+.I Fputs
+copies the null-terminated string
+.I s
+to the named output
+.IR stream .
+.PP
+Neither routine copies the terminal null character.
+Both return the result of calling
+.IR putc 
+with the last character written; see
+.IR getc (3).
+.SH "SEE ALSO"
+.IR getc (3)
+.IR stdio (3)
+.SH DIAGNOSTICS
+.IR Fgets
+returns a null pointer 
+upon end of file or error.
+.I Puts
+and
+.I fputs
+return the constant
+.CW EOF
+on write error.
+.SH BUGS
+For safety reasons the 
+.SM ANSI
+standard function
+.BR "char *gets(s)" ,
+which reads from standard input up to a newline and 
+discards the newline, is not supported.
+.br
+.I Puts
+appends a newline,
+.I fputs
+does not, all in the name of backward compatibility.

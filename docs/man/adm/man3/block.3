@@ -1,0 +1,175 @@
+.TH BLOCK 3+
+.CT 2 datatype
+.SH NAME
+block \- adjustable arrays
+.SH SYNOPSIS
+.nf
+.B "#include <Block.h>"
+.PP
+.ds T \fIT\fP
+.ft L
+Blockdeclare(\*T)
+Blockimplement(\*T)
+.PP
+.ft L
+struct Block(\*T) {
+	Block(\*T)(unsigned = 0);
+	Block(\*T)(const Block(\*T&);
+	~Block(\*T);
+	Block(\*T)& operator= (const Block(\*T)&);
+	\*T& operator[] (int);
+	operator \*T* ();
+	unsigned size();
+	unsigned size(unsigned);
+	\*T* end();
+	void swap(const Block(\*T)&);
+}
+.ft R
+.fi
+.SH DESCRIPTION
+A
+.BI Block( T )
+is an array of zero or more
+.IR elements 
+of type
+.I T,
+where 
+.I T
+is a type name.
+.I T
+must have assignment
+.RB ( operator= )
+and initialization
+.RB ( \*T(\*T&) )
+operations.
+.PP
+The macro call
+.BI Blockdeclare( T )
+declares the class
+.BI Block( T ) .
+It must appear once in every source file that uses type
+.BI Block( T ) .
+The macro call
+.BI Blockimplement( T )
+defines the functions that implement the block class.
+It must appear exactly once in the entire program.
+.PP
+New elements 
+are initialized to the value of an otherwise
+uninitialized static object of type
+.I T.
+.SS Constructors
+.nr xx \w'\fLBlock(\fIT\fL)(\fIb\fL)'
+.TP \n(xxu
+.BI Block( T )
+An empty block.
+.TP
+.BI Block( T )( n )
+A block of
+.I n
+elements.
+.TP
+.BI Block( T )( b )
+A new block
+whose elements are copies of the elements of
+.BR b .
+.SS Operations
+Assignment copies elements and size.
+.TP \n(xxu
+.IB b [ k ]
+A reference to element
+.L k
+of block
+.IR b ;
+undefined if
+.I k
+is out of bounds.
+.TP
+.BI ( T *) b
+A pointer to the first element of block
+.I b.
+.SS Other functions
+.TP \n(xxu
+.IB b .size()
+Return the number of elements in
+.I b.
+.TP
+.IB b .size( n )
+Set the size of 
+.I b
+to
+.LR n .
+If the new size is greater than the old.
+Otherwise, 
+.I n
+old elements are kept.
+Return the new size.
+.TP
+.IB b .reserve( n )
+The size of
+.I b
+is increased, if necessary, to some value greater than 
+.I n.
+If
+.I b
+already has room,
+.I b
+is not changed.
+Return zero if memory could not be allocated
+and non-zero otherwise.
+.TP
+.IB b .end()
+Returns
+a pointer to just past the last element in
+.LR b .
+Equivalent to 
+.BR (T*)b+b.size() .
+.TP
+.IB a .swap( b )
+The memory associated with blocks
+.I a
+and
+.I b
+is exchanged.
+.SS Performance
+Most operations
+are implemented by the obvious uses of the
+.L new
+and
+.L delete
+operators.
+.I Reserve
+checks the size inline.
+If it isn't big enough, the size is increased by multiplying by 3/2
+(and adding one) enough times to increase it beyond
+.I n .
+.SH EXAMPLES
+.EX
+Blockdeclare(long)
+unsigned n = 0;
+Block(long) b;
+long x;
+while (cin >> x) {
+	b.reserve(n);
+	b[n++] = x;
+}
+.EE
+.SH SEE ALSO
+.IR malloc (3),
+.IR map (3)
+.SH DIAGNOSTICS
+The only error detected is running out of memory;
+this is indicated in all cases by setting the size of the
+block for which allocation failed to zero.
+.SH BUGS
+Elements are copied during reallocation by using
+.L T::operator=
+instead of
+.LR T(T&) .
+.br
+Because the `type parameter'
+.I T
+is implemented by the C preprocessor, white space is
+forbidden inside the parentheses of
+.BI Block( T ) .
+

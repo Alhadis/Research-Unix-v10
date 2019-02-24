@@ -1,0 +1,353 @@
+.TH FIZZ 10.1 UCDS
+.SH NAME
+fizz, artwork, check, clip, cvt, draw, drills, kollmorgen, mw, place, signal, saf \- physical layout programs
+.SH SYNOPSIS
+.B fizz artwork
+[
+.I option
+]
+.I file ...
+.PP
+.B fizz check
+[
+.B -uw
+] [
+.BI -c chip
+]
+.I file ...
+.PP
+.B fizz clip
+[
+.BI -f clipfile
+] [
+.I file ...
+]
+.PP
+.B fizz cvt
+[
+.I file ...
+]
+.PP
+.B fizz draw
+[
+.I option
+] [
+.I file ...
+]
+.PP
+.B fizz drills
+.BI -d diams
+.I file ...
+.PP
+.B fizz kollmorgen
+[
+.BI -hnb
+]
+.I file ...
+.PP
+.B fizz mw
+[
+.I file ...
+]
+.PP
+.B fizz place
+[
+.I file ...
+]
+.PP
+.B fizz saf
+[
+.BI -sdru
+]
+.I file ...
+.PP
+.B fizz signal
+[
+.I option
+] [
+.I file ...
+]
+.SH DESCRIPTION
+The
+.I fizz
+suite of programs handle all the physical aspects of creating a
+wire-wrap, buried micro-via or microwire board.
+All the programs take
+.IR fizz (10.5)
+input;
+.IR cdl (10.5)
+can be converted with
+.IR "fizz cvt" .
+.PP
+All of the programs can take multiple files;
+most of the programs require that the files form a board description.
+Normally, this is arranged amongst four files (with recommended suffix):
+the board and special signal layout
+.RB ( .brd ),
+the chip, chip type and net descriptions (from
+.IR cdmglob (10.1))
+.RB ( .wx ),
+the package descriptions
+.RB ( .pkg ),
+and the chip positions
+.RB ( .pos ).
+In general, if the file arguments are missing, standard input is used.
+.PP
+.I Fizz artwork
+prints various artwork information for the board definition in
+.IR files .
+The options are
+.PP
+.PD 0
+.TP
+.B -a
+prints XY mask clump includes for all placed chips with artwork
+fields in their package definitions.
+.TP
+.B -r
+prints bounding rectangle information for the microwire router.
+.TP
+.B -s
+generate silk screen information for chip layout.
+.PP
+.I Fizz check
+checks the syntax and consistency of the given
+.IR files .
+The
+.B -u
+option causes the names of any unplaced chips to be printed.
+.B -w
+checks readiness for wrapping.
+Specifically, it checks that no net is too large;
+no chip pin coincides with an inappropriate special signal pin,
+and no chip pin appears on more than one signal.
+Option
+.BI -c chip
+prints out detailed information about the named chip.
+.PP
+Clips are simply pins on a wirewrap board.
+Almost always they are directly connected to a signal plane.
+Clips do not exist in the rest of the
+.I fizz
+system; they are simply special signal pins.
+.PP
+.I Fizz clip
+takes a board description (in
+.IR files )
+and a clip description file
+.RI ( clipfile )
+and checks that all of and only the clips specified are present.
+Standard input is used if there are no file arguments.
+The output reports missing clips in a format suitable as part of a board description.
+The clipfile consists of directives (one per line) of the forms
+.ti 17n
+.RB [ ssig | pin ]
+.I numbers
+.RB [ chip | type ]
+.I identifiers
+.br
+.ti 17n
+.B tt
+.RB [ chip | type ]
+.I identifiers
+.PP
+Clips are put on either specific chips with the given names
+.RB ( chip )
+or chips of specified chip types
+.RB ( type ).
+The clips are put on either the specified pins
+.RB ( pin )
+or pins belonging to the specified special signals
+.RB ( ssig ).
+The identifier
+.B ALL
+refers to all chips or types.
+Lines starting with a
+.B %
+are ignored.
+The
+.B tt
+directive means pins whose entry in the
+.B tt
+field of the type (or the chip's type) is one of
+.BR GVWXYZ .
+For example,
+.TP
+.B
+ssig 0,1 type 74F374 74F245
+Clips on power and ground for all chips of type
+.B 74F374
+and
+.BR 74F245 .
+.TP
+.B
+pin 3-6,9 chip widget
+Clips on pins 3,4,5,6,9 on chip
+.BR widget .
+.PP
+.I Numbers
+are specified as a
+comma-separated list, possibly including
+.BI \& lo - hi
+ranges.
+.PP
+A missing
+.I clipfile
+argument is taken as
+.ti 17n
+.B
+tt type ALL
+.PP
+.I Fizz cvt
+converts \s-2CDL\s0 format input and outputs it in
+.IR fizz (10.5)
+format.
+If no
+.I files
+are specified, standard input is read.
+Typically,
+.I fizz cvt
+is used to process the output of
+.IR cdmglob (10.1).
+.PP
+.I Fizz draw
+generates a
+.IR plot (10.5)
+description of the board layout of
+.IR files .
+Standard input is used if there are no file arguments.
+The options are
+.PP
+.PD 0
+.TP
+.B -p
+Show pins (as circles).
+.TP
+.B -t
+Show chip types rather than chip names.
+.TP
+.B -k
+Show package names rather than chip names.
+.TP
+.B -v
+Show special signal pins as \f2(n+3)\fP-gons
+where \f2n\fP is the signal number.
+.TP
+.B -P
+Draw package descriptions in
+.IR pic (1)
+format.
+Each drawing shows the package name,
+the bounding rectangle,
+a cross at the origin, and numbered pin locations.
+.PP
+.I Fizz drills
+takes a board description (in
+.IR files )
+and a set of drill diameters
+.RI ( diams )
+and produces a wraplist
+(like that produced by
+.I "fizz wrap" (10.1))
+with an entry for every pin
+whose diameter is in that set.
+.PP
+.I Fizz kollmorgen
+generates the input files needed for Kollmorgen's router.  Output is to the standard
+output.  The options are
+.PP
+.PD 0
+.TP
+.B -n
+Produce nets
+.TP
+.B -b
+Produce border (keepouts are also generated).  Wiring area shouldn't be too
+unusual.
+.TP
+.B -h
+Produce holes.  Holes may be wired ornot depending on the declaration.
+.PP
+.I Fizz mw
+generates the input for the microwire router for the board described by the given
+.I files
+on standard output.
+Standard input is used if no file arguments are given.
+.PP
+.I Fizz place
+supports interactive chip placement on a board (described by
+.IR files ).
+It requires a Teletype 5620 terminal running
+.IR mux (9).
+The user interface is mouse-driven.
+The main menu items are
+.PD 0
+.TP 15n
+.B select
+a submenu allowing selecting chips or signals by name.
+Signals are displayed in the way they would be wired by
+.I fizz wrap
+(no
+.B -3
+support).
+.TP
+.B view
+a submenu supporting zooming, panning, grid overlay and resolution.
+.TP
+.B insert
+insert unplaced chips.
+.TP
+.B place
+a submenu supporting manual placement, machine placement
+and machine improvement of placement.
+.TP
+.B "read files"
+reset the world and read the given (blank separated) filenames.
+.TP
+.B "write file"
+write out the chip positions.
+The filename conventionally should have a
+.B .pos
+suffix.
+.TP
+.B exit
+finito.
+.PP
+Chips can be selected by button 1 or by the button 3 submenu.
+Selected chips can be edited by the button 2 menu.
+.PP
+.I Fizz saf
+outputs the packaging data suitable for giving to the automatic placement
+machine at Lisle.
+.PP
+.I Fizz signal
+gives information about signals in the board description in
+.IR files .
+Standard input is used if no file arguments are given.
+By default,
+all signals are shown as sequences of
+.IR chip . pin ,
+one signal per line.
+Note that the lines for the ground and power signals are likely be very long.
+The options are
+.PP
+.PD 0
+.TP
+.B -w
+Wrap (route) signals before printing.
+.TP
+.BI -s name
+Show the signal
+.I name
+as both
+.IR chip . pin
+and board coordinates (one point per line).
+Unplaced chips have negative coordinates.
+.SH FILES
+.SH SEE ALSO
+.IR cdl (10.5),
+.IR mw (10.1),
+.IR signal (10.1),
+.IR wrap (10.1),
+.IR fizz (10.5),
+.IR saf(10.5)

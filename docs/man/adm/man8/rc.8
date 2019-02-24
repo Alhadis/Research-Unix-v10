@@ -1,0 +1,77 @@
+.TH RC 8
+.CT 1 sa_auto
+.SH NAME
+rc \- boot script
+.SH SYNOPSIS
+.B /etc/rc
+.SH DESCRIPTION
+.I Rc
+is the command script
+invoked by
+.IR init (8)
+to control reboots.
+During an automatic reboot,
+.I rc
+is invoked with the argument
+.BR autoboot ;
+typically this invokes
+.L /etc/fsck -p
+to repair minor filesystem inconsistencies.
+If
+.I rc
+exits with a successful status,
+.I init
+proceeds to multi-user mode.
+.PP
+When the system enters multi-user mode,
+either during an auto-reboot
+or after the single-user shell terminates,
+.I rc
+is invoked without arguments.
+This usually causes it to
+mount filesystems,
+start daemons,
+clear
+.FR /tmp ,
+and perform other housekeeping.
+.PP
+If any call to
+.I rc
+returns a nonzero status,
+.I init
+reverts to single-user mode.
+.SH EXAMPLES
+A typical
+.I rc
+script:
+.PP
+.EX
+date
+case $1 in
+autoboot)
+	echo Autoboot:
+	/etc/fsck -p || {echo "error in reboot"; exit 1}
+esac
+/etc/ldpcs /etc/pcs750.bin
+>/etc/mtab
+/etc/mount -a
+/etc/savecore /tmp/dump /dev/ra11
+/etc/swapon -a
+trap "" 1 2 3
+/etc/update
+/etc/cron &
+rm -f /tmp/*
+/usr/lib/asd/rmlocks
+date >> /usr/adm/lastboot
+/etc/accton /tmp/acct > /tmp/acct
+/usr/ipc/mgrs/svcmgr
+/etc/kdiload
+/usr/ipc/mgrs/dkhup; sleep 10
+/usr/ipc/mgrs/dkmgr
+/usr/netb/setup.go
+/usr/net/face.go
+wwv -s
+.EE
+.SH SEE ALSO
+.IR init (8), 
+.IR reboot (8)

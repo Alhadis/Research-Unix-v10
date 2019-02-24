@@ -1,0 +1,52 @@
+.TH BRK 2
+.CT 2 mem_man
+.SH NAME
+brk, sbrk \(mi change core allocation
+.SH SYNOPSIS
+.nf
+.B int brk(addr)
+.B char *addr;
+.PP
+.B char *sbrk(incr)
+.fi
+.SH DESCRIPTION
+.I Brk
+sets the system's idea of the lowest location not used by the program
+(called the break)
+to
+.I addr
+rounded up to the next multiple of 1024 bytes.
+Locations not less than
+.I addr
+and below the stack pointer
+may cause a memory violation if accessed.
+.PP
+In the alternate function
+.I sbrk,
+.I incr
+more bytes are added to the
+program's data space and a pointer to the
+start of the new area is returned.
+Rounding occurs as with
+.I brk,
+but a nominal break is remembered, so rounding does not accumulate.
+.PP
+When a program begins execution via
+.I exec
+the break is set at the
+highest location defined by the program
+and data storage areas.
+Ordinarily, therefore, only programs with growing
+data areas need to use
+.IR brk .
+.PP
+The error return from
+.I sbrk
+is
+.BR "(char *)-1" .
+.SH "SEE ALSO"
+.IR exec (2),
+.IR end (3),
+.IR malloc (3)
+.SH DIAGNOSTICS
+.B ENOMEM

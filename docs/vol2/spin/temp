@@ -1,0 +1,1713 @@
+.nr dP 2
+.nr dV 3p
+.de IH	\" makes a bold italic sub heading
+.sp .8
+.LP
+.ne 2
+.BI "\\$1"
+..
+.ds P \\s-2PROMELA\\s0
+.ds S \\s-2SPIN\\s0
+.TL
+Spin Manual
+.AU "MH 2C-521" 6335
+Gerard J. Holzmann
+.AI
+.MH
+.AB
+\*S is a tool for analyzing the logical consistency of
+concurrent systems, specifically of data communication protocols.
+The system is specified in a guarded command language called \*P.
+It allows for the dynamic creation and deletion of
+concurrent processes and messages queues, that is it can model
+dynamically growing and shrinking systems.
+The message queues can be used for
+both synchronous message passing (i.e. rendez-vous) and
+asynchronous (i.e. buffered) message passing, and allows
+for an arbitrary number of message parameters.
+The language further contains nondeterministic case selection,
+loops, gotos, global and local variables, and assert statements
+for specifying system invariants.
+.LP
+Given a model system specified in \*P, \*S
+can either perform random simulations of the system's execution
+or it can generate a C program that performs a fast exhaustive
+validation of the complete system state space.
+The validator can check, for instance, if arbitrary user specified
+system invariants may be violated during a protocol's execution.
+By default \*S checks the system for the absence of deadlocks,
+unspecified receptions, and unexecutable code.
+.LP
+The first part of this memo gives a tutorial introduction to \*P.
+The second part discusses the usage of \*S
+for simulation and exhaustive validation of \*P models.
+A reference manual for \*P is included as an appendix.
+.AE
+.2C
+.NH
+Part One \(em \*P Tutorial
+.NH 2
+Introduction
+.LP
+\*P programs consist of \f2processes\f1,
+message queues, and \f2variables\f1.
+Processes and queues are global objects.
+Variables can be either global or local to a process.
+The processes specify behavior, the queues and the global variables
+specify the environment in which the processes execute.
+.IH Executability
+.LP
+In \*P there is no difference between conditions and
+statements, even isolated boolean conditions can be used as statements.
+The execution of every statement is conditional on its
+.I executability .
+Statements are either executable or blocked.
+The executability is the basic means of synchronization.
+A process can wait for an event to happen by waiting
+for a statement to become executable.
+For instance, instead of writing a busy wait loop:
+.P1 0
+while (a != b) skip	/* wait for a == b */
+.P2
+we can achieve the same effect in \*P with the statement
+.P1 0
+(a == b) \fR.
+.P2
+A condition like this can only be executed (passed) when it holds.
+If the condition does not hold, execution blocks until it does.
+.LP
+Variables are used to store either global information about the
+system as a whole, or information local to one specific process,
+depending on where the declaration for the variable is placed.
+The declaration
+.P1 0
+int state;
+.P2
+defines a variable named
+.CW state
+that can store an integer value.
+The scope of the variable is global if it is declared outside all
+process declarations, and local if it is declared within a process
+declaration.
+.IH "Data Types"
+.LP
+Table 1 summarizes the basic data types and sizes.
+.KF
+.SP
+.ft H
+.ps -1
+.vs -2
+.TS
+center;
+l l l
+l n r.
+=
+Name	Size (bits)	Usage
+_
+bit	1	unsigned
+bool	1	unsigned
+byte	8	unsigned
+short	16	signed
+int	32	signed
+_
+.TE
+.ps +1
+.vs +2
+.ft
+.SP .5
+.ce
+\f(HBTable 1 \- Basic Data Types
+.SP
+.KE
+The names
+.CW bit
+and
+.CW bool
+are synonyms for a single bit of information.
+A
+.CW byte
+is an unsigned quantity that can store a value between
+.CW 0
+and
+.CW 255 .
+.CW short s
+and
+.CW int s
+are signed quantities that
+differ only in the range of values they can hold.
+.IH Arrays
+.LP
+Variables can be declared as arrays.
+For instance,
+.P1 0
+byte state[N]
+.P2
+declares an array of
+.CW N
+bytes that can be accessed in statements such as
+.P1 0
+state[0] = state[3] + 5 * state[3*2/n]
+.P2
+where
+.CW n
+is a constant or a variable declared elsewhere.
+The index to an array can be any expression that
+determines a unique integer value.
+The effect of an index value outside the range
+.CW "0 .. N-1"
+is undefined; most likely it will cause a runtime error.
+.LP
+So far we have seen the format of a variable declaration
+and two basic types of statements: boolean conditions and
+assignments.
+Declarations and assignments are always \f2executable\f1.
+Conditions are only executable when they hold.
+But there's more.
+.IH "Process Types"
+.LP
+The state of a variable or of a channel can only be changed or
+inspected by processes.
+The behavior of a process is defined in a
+.CW proctype
+declaration.
+The following, for instance, declares a process with one local variable
+.CW state .
+.P1 0
+proctype A()
+{	byte state;
+
+	state = 3
+}
+.P2
+The process type is named
+.CW A .
+The body of the declaration is enclosed in curly braces.
+The declaration body consists of a list of zero or more
+declarations of local variables and/or statements.
+The declaration above contains one local variable declaration
+and a single statement: an assignment of the
+value 3 to variable
+.CW state .
+.LP
+The semicolon is a statement \f2separator\f1 (not a statement terminator,
+hence there is no semicolon after the last statement).
+\*P accepts two different statement separators:
+an arrow
+.CW `->' and the semicolon
+.CW `;' .
+The two statement separators are completely equivalent.
+The arrow is sometimes used as an informal way to indicate a causal
+relation between two statements.
+Consider the following example.
+.P1 0
+byte state = 2;
+
+proctype A()
+{	(state == 1) -> state = 3
+}
+.P3
+proctype B()
+{	state = state \- 1
+}
+.P2
+In this example we declared two types of processes,
+.CW A
+and
+.CW B .
+Variable
+.CW state
+is now a global, initialized to the value two.
+Process type
+.CW A
+contains two statements, separated by an arrow.
+In the example, process declaration
+.CW B
+contains a single statement that decrements
+the value of the state variable by one.
+Since the assignment is always executable,
+processes of type B can always complete without delay.
+Processes of type
+.CW A ,
+however, are delayed at the condition until
+the variable
+.CW state
+contains the proper value.
+.IH "Process Instantiation"
+.LP
+A
+.CW proctype
+definition only declares process behavior, it
+does not execute it.
+Initially, in the \*P model, just one process will be executed:
+a process of type
+.CW init ,
+that must be declared explicitly in every \*P specification.
+The smallest possible \*P specification, therefore, is:
+.P1 0
+init { }
+.P2
+More interestingly, however,
+the initial process can initialize global variables,
+create message queues, and instantiate processes.
+An
+.CW init
+declaration for the above system, for instance, could look as follows.
+.P1 0
+init
+{	run A(); run B()
+}
+.P2
+.LP
+.CW run
+is used as a unary operator that takes the name of a
+process type (e.g.
+.CW A ).
+It is executable, and returns a value
+.CW 1 ,
+only if a process of
+the type specified can indeed be instantiated.
+It is unexecutable, or returns the value
+.CW 0 ,
+if this cannot be done, for instance if too many processes are
+already running.
+The run statement can also pass parameter values to the new process.
+The declarations are then written, for instance, as follows:
+.P1 0
+proctype A(byte state; short foo)
+{
+	(state == 1) -> state = foo
+}
+.P3
+init
+{
+	run A(1, 3)
+}
+.P2
+.CW run
+statements can be used in any process to spawn new processes,
+not just in the initial process.
+An executing process only disappears when it reaches the end of the
+body of its process type declaration.
+.LP
+With the
+.CW run
+statement we can create any number of copies of the process types
+.CW A
+and
+.CW B .
+If, however, more than one concurrent process is allowed to both read and
+write the value of a global variable a well-known set of problems
+can result [e.g. Dijkstra '65].
+Consider, for instance, the following system of
+two processes, sharing access to the global variable
+.CW state .
+.P1 0
+byte state = 1;
+
+proctype A()
+{	(state == 1) -> state = state + 1
+}
+.P3
+proctype B()
+{	(state == 1) -> state = state \- 1
+}
+.P3
+init
+{	run A(); run B()
+}
+.P2
+If one of the two processes completes before its competitor has
+started, the other process will block forever on the initial condition.
+If both pass the condition simultaneously, both will complete, but
+the resulting value of
+.CW state
+is unpredictable.
+It can be any of the values
+.CW 0 ,
+.CW 1 ,
+or
+.CW 2 .
+.LP
+Many solutions to this problem have been considered, ranging from
+an abolishment of global variables to the provision of special
+machine instructions that can guarantee an indivisible test and
+set sequence on a shared variable.
+The example below was one of the first solutions published.
+It is due to the Dutch mathematician Dekker.
+It grants two processes mutually exclusion access to an arbitrary
+.I
+critical section
+.R
+in their code, by manipulation three additional global variables.
+The first four lines in the \*P specification
+below are C-style macro definitions.
+The first two macros define
+.CW true
+to be a constant value equal to
+.CW 1
+and
+.CW false
+to be a constant
+.CW 0 .
+Similarly,
+.CW Aturn
+and
+.CW Bturn
+are defined as constants.
+.P1 0
+#define true	1
+#define false	0
+#define Aturn	false
+#define Bturn	true
+
+bool x, y, t;
+.P3
+
+proctype A()
+{	x = true;
+	t = Bturn;
+	(y == false || t == Aturn);
+	/* critical section */
+	x = false
+}
+.P3
+proctype B()
+{	y = true;
+	t = Aturn;
+	(x == false || t == Bturn);
+	/* critical section */
+	y = false
+}
+.P3
+init
+{	run A(); run B()
+}
+.P2
+The algorithm can be executed repeatedly and is independent of
+the relative speeds of the two processes.
+.LP
+In \*P there is also another way to avoid the \f2test and set\f1
+problem:
+.CW atomic
+sequences.
+By prefixing a sequence of statements enclosed in curly
+braces with the keyword
+.CW atomic
+the user can indicate that the sequence is to be executed
+as one indivisible unit, non-interleaved with any other
+processes.
+It causes a run-time error if any statement, other than
+the first statement, blocks in anatomic sequence.
+This is how we can use atomic sequences to protect the
+concurrent access to the global variable
+.CW state
+in the earlier example.
+.P1 0
+byte state = 1;
+
+proctype A()
+{	atomic {
+		(state == 1) -> state = state + 1
+	}
+}
+.P3
+proctype B()
+{	atomic {
+		(state == 1) -> state = state \- 1
+	}
+}
+.P3
+init
+{	run A(); run B()
+}
+.P2
+In this case the final value of
+.CW state
+is guaranteed to be zero, though during the execution of
+.CW A
+and
+.CW B
+the intermediate value can be either
+.CW 0
+or
+.CW 2 .
+.NH 2
+Message Passing
+.LP
+Message queues are used to model the transfer of data
+from one process to another.
+The only way to create them is with the
+.CW chan
+operator.
+For instance,
+.P1 0
+qname = chan [16] of { short }
+.P2
+creates a channel that can store up to 16 messages of type
+.CW short .
+The
+.CW chan
+statement returns a value that
+must be used to address the channel created.
+The value can be stored in a variable, e.g. variable
+.CW qname
+in the example above.
+Since the identity of a channel is just a value,
+channel identifiers can be passed from one process to another via
+queues or as parameters in process instantiations.
+If the messages to be passed by the channel have more than
+one field, the declaration may look as follows:
+.P1 0
+qname = chan [16] of { byte, int, byte }
+.P2
+This time each message in the channel stores up to
+sixteen messages, each consisting of two 8-bit values
+and one 32-bit value.
+.LP
+Just like the value of a variable can be inspected and
+set with specific instructions,
+the contents of a channel can be inspected and changed.
+The statement
+.P1 0
+qname!expr
+.P2
+sends the value of expression
+.CW expr
+to the channel we
+just created, that is: it appends the value to the tail of the channel.
+.P1 0
+qname?msg
+.P2
+receives the message, it retrieves it from the head of the channel,
+and stores it in a variable
+.CW msg .
+The queues pass messages in first-in-first-out order.
+In the above cases only a single value
+is passed through the channel.
+If more than one value is to be transferred per message,
+they are specified in a comma separated list
+.P1 0
+qname!expr1,expr2,expr3
+qname?var1,var2,var3
+.P2
+.LP
+By convention, the first message field is often
+used to specify the message type (i.e. a constant).
+An alternative, and equivalent, notation for the
+send and receive operations is therefore to specify the
+message type, followed by a list of message fields
+enclosed in braces.
+In general:
+.P1 0
+qname!expr1(expr2,expr3)
+qname?var1(var2,var3)
+.P2
+.LP
+The send operation is executable only when the channel addressed is not full.
+The receive operation, similarly, is only executable
+when the channel is non empty.
+Optionally, some of the arguments of the receive operation
+can be constants:
+.P1 0
+qname?cons1,var2,cons2
+.P2
+in this case, a further condition on the executability of the
+receive operation is that the value of all message fields that are
+specified as constants match the value of the corresponding fields
+in the message that is at the head of the channel.
+Again, nothing bad will happen if a statement happens to be non-executable.
+The process trying to execute it will be delayed until the
+statement, or, more likely, an alternative statement, becomes executable.
+.LP
+A predefined function
+.CW len(qname)
+returns the number of messages
+in the channel specified by the value of variable
+.CW qname .
+Note that if
+.CW len
+is used as a statement, rather than on
+the right hand side of an assignment, it will be unexecutable if
+the channel is empty: it returns a zero result, which by definition
+means that the statement is temporarily unexecutable.
+Composite conditions such as
+.P1 0
+(qname?var == 0)
+.P2
+are invalid in \*P.
+.LP
+Note carefully that in a sequence of two statements such as
+.P1 0
+(len(qname) > 0) -> qname?msgtype
+.P2
+the second statement is not necessarily executable
+after the first one has been executed.
+There may be a race condition:
+another process can steal away the
+message just after a first one determined its presence.
+\*P does not, and indeed can not, prevent the user from writing these
+specifications.
+On the contrary, these are precisely the type of problems we are
+interested in, and the problems we would like to be able to model.
+.NH 2
+Rendez-Vous Communication
+.LP
+So far we have talked about asynchronous communication between processes
+via message queues, created in statements such as
+.P1 0
+qname = chan [N] of { byte }
+.P2
+where
+.CW N
+is a constant that defines the buffer size, and
+.CW N>0 .
+A logical extension is to allow for the declaration
+.P1 0
+port = chan [0] of { byte }
+.P2
+to define a rendez-vous port that can pass single byte messages.
+The channel size is zero, that is, the channel
+.CW port
+can pass, but can not store messages.
+Message interactions via such rendez-vous ports are
+by definition synchronous.
+Consider the following example.
+.P1 0
+#define msgtype 33
+
+byte name;
+
+proctype A()
+{	name!msgtype(124);
+	name!msgtype(121)
+}
+.P3
+proctype B()
+{	byte state;
+	name?msgtype(state)
+}
+.P3
+init
+{	name = chan [0] of { byte, byte };
+	run A(); run B()
+}
+.P2
+The channel created here is a rendez-vous port.
+The two processes will synchronously execute their first statement:
+a handshake on message
+.CW msgtype
+and a transfer of the value 124 to local variable
+.CW state .
+The second statement in process
+.CW A
+will be unexecutable,
+because there is no matching receive operation in process
+.CW B .
+.LP
+If the channel
+.CW name
+is defined  with a non-zero buffer capacity,
+the behavior is different.
+If the buffer size is at least 2, the process of type
+.CW A
+can complete its execution, before its peer even starts.
+If the buffer size is 1, the sequence of events is as follows.
+The process of type
+.CW A
+can complete its first send action, but it blocks on the
+second, because the channel is now filled to capacity.
+The process of type
+.CW B
+can then retrieve the first message and complete.
+At this point
+.CW A
+becomes executable again and completes,
+leaving its last message as a residual in the channel.
+.LP
+Rendez-vous communication is binary: only two processes,
+a sender and a receiver, can be synchronized in a
+rendez-vous handshake.
+We will see an example of a way to exploit this to
+build a semaphore below.
+But first, let us introduce a few more control flow structures
+that may be useful.
+.SH
+Control Flow
+.LP
+Between the lines, we have already introduced two ways of
+defining control flow: concatenation of statements
+within a process, and parallel execution of processes, and
+atomic sequences.
+There are three other control flow constructs in \*P to be discussed.
+They are case selection,
+repetition, and
+unconditional jumps.
+.IH "Case Selection"
+.LP
+The simplest construct is the selection structure.
+Using the relative values of two variables
+.CW a
+and
+.CW b
+to choose between two options, for instance, we can write:
+.P1 0
+if
+:: (a != b) -> option1
+:: (a == b) -> option2
+fi
+.P2
+The selection structure contains two execution sequences,
+each preceded by a double colon.
+Only one sequence from the list will be executed.
+A sequence can be selected only if its first statement is executable.
+The first statement is therefore called a \f2guard\f1.
+.LP
+In the above example the guards are mutually exclusive, but they
+need not be.
+If more than one guard is executable, one of the corresponding sequences
+is selected nondeterministically.
+If all guards are unexecutable the process will block until at least
+one of them can be selected.
+There is no restriction on the type of statements that can be used
+as a guard.
+The following example, for instance, uses input statements.
+.P1 0
+#define a 1
+#define b 2
+
+byte ch;
+
+proctype A()
+{	ch!a
+}
+.P3
+proctype B()
+{	ch!b
+}
+.P3
+proctype C()
+{	if
+	:: ch?a
+	:: ch?b
+	fi
+}
+.P3
+init
+{	ch = chan [1] of { byte };
+	run A(); run B(); run C()
+}
+.P2
+The example defines three processes and one channel.
+The first option in the selection structure of the process
+of type
+.CW C
+is executable if the channel contains
+a message
+.CW a , where
+.CW a
+is a constant with value
+.CW 1 ,
+defined in a macro definition at the start of the program.
+The second option is executable if it contains a message
+.CW b ,
+where, similarly,
+.CW b
+is a constant.
+Which message will be available depends on the unknown
+relative speeds of the processes.
+.LP
+A process of the following type will either increment or decrement the value
+of variable
+.CW count
+once.
+.P1 0
+byte count;
+
+proctype counter()
+{
+	if
+	:: count = count + 1
+	:: count = count \- 1
+	fi
+}
+.P2
+.IH "Repetition"
+.LP
+A logical extension of the selection structure is
+the repetition structure.
+We can modify the above program as follows, to obtain
+a cyclic program that randomly changes the value of
+the variable up or down.
+.P1 0
+byte count;
+
+proctype counter()
+{
+	do
+	:: count = count + 1
+	:: count = count \- 1
+	:: (count == 0) -> break
+	od
+}
+.P2
+.LP
+Only one option can be selected for execution at a time.
+After the option completes, the execution of the structure
+is repeated.
+The normal way to terminate the repetition structure is
+with a
+.CW break
+statement.
+In the example, the loop can be
+broken when the count reaches zero.
+Note, however, that it need
+not terminate since the other two options always remain executable.
+To force termination we could modify the program as follows.
+.P1 0
+proctype counter()
+{
+	do
+	:: (count != 0) ->
+		if
+		:: count = count + 1
+		:: count = count \- 1
+		fi
+	:: (count == 0) -> break
+	od
+}
+.P2
+.IH "Unconditional Jumps"
+.LP
+Another way to break the loop is with an unconditional jump:
+the infamous
+.CW goto
+statement.
+This is illustrated in the following implementation of Euclid's algorithm for
+finding the greatest common divisor of two non-zero, positive numbers:
+.P1 0
+proctype Euclid(int x, y)
+{
+	do
+	:: (x >  y) -> x = x \- y
+	:: (x <  y) -> y = y \- x
+	:: (x == y) -> goto done
+	od;
+done:
+	skip
+}
+.P2
+The
+.CW goto
+in this example jumps to a label named
+.CW done .
+A label can only appear before a statement.
+Above we want to jump to the end of the program.
+In this case a dummy statement
+.CW skip
+is useful: it is a place holder that
+is always executable and has no effect.
+The
+.CW goto
+is also always executable.
+.LP
+The following example specifies a filter that receives
+messages from a channel
+.CW in
+and divides them over two queues
+.CW large
+and
+.CW small
+depending on the values attached.
+The constant
+.CW N
+is defined to be
+.CW 128
+and
+.CW size
+is defined to be
+.CW 16
+in the two macro definitions.
+.P1 0
+#define N    128
+#define size  16
+.P3
+
+byte in, large, small;
+.P3
+
+proctype split()
+{	short cargo;
+
+	do
+	:: in?cargo ->
+		if
+		:: (cargo >= N) -> large!cargo
+		:: (cargo <  N) -> small!cargo
+		fi
+	od
+}
+init
+{	in    = chan [size] of { short };
+	large = chan [size] of { short };
+	small = chan [size] of { short };
+	run split()
+}
+.P2
+A process type that merges the two streams back into one, most
+likely in a different order, and writes it back
+into the channel
+.CW in
+could be specified as follows.
+.P1 0
+proctype merge()
+{	short cargo;
+
+	do
+	::	if
+		:: large?cargo
+		:: small?cargo
+		fi;
+		in!cargo
+	od
+}
+.P2
+If we now modify the
+.CW init
+process as follows, the
+split and merge processes could busily perform their
+duties forever on.
+.P1 0
+init
+{	in    = chan [size] of { short };
+	large = chan [size] of { short };
+	small = chan [size] of { short };
+	in!345; in!12; in!6777; in!32; in!0;
+	run split();
+	run merge()
+}
+.P2
+.LP
+As a final example, consider the following implementation of
+a Dijkstra semaphore, using binary rendez-vous communication.
+.P1 0
+#define p	0
+#define v	1
+
+byte sema;
+
+proctype dijkstra()
+{	byte count = 1;
+
+	do
+	:: (count == 1) -> sema!p; count = 0
+	:: (count == 0) -> sema?v; count = 1
+	od	
+}
+.P3
+proctype user()
+{	do
+	::	sema?p;
+		/* critical section */
+		sema!v;
+		/* non-critical section */
+	od
+}
+init
+{	sema = chan [0] of { bit };
+	run dijkstra();
+	run user(); run user(); run user()
+}
+.P2
+The semaphore guarantees that only one of the user processes
+can enter its critical section at a time.
+It does not necessarily prevent the monopolization of
+the access to the critical section by one of the processes.
+.IH "Modeling Procedures and Recursion"
+.LP
+Procedures can be modeled as processes, even recursive ones.
+The return value can be passed back to the calling process
+via a global variable, or via a message.
+The following program illustrates this.
+.P1 0
+proctype fact(int n; byte p)
+{	byte child;
+	int result;
+
+	if
+	:: (n <= 1) \-> p!1
+	:: (n >= 2) \->
+		child = chan [1] of { int };
+		run fact(n-1, child);
+		child?result;
+		p!n*result
+	fi
+}
+.P3
+init
+{	byte child;
+	int result;
+
+	child = chan [1] of { int };
+	run fact(7, child);
+	child?result
+}
+.P2
+The process
+.CW fact(n, p)
+recursively calculates the factorial of
+.CW n ,
+communicating the result via a message to its parent process
+.CW p .
+.IH "Modeling Timeouts"
+.LP
+We have already discussed two types of statement
+with a predefined meaning in \*P:
+.CW skip ,
+and
+.CW break .
+Another predefined statement is
+.CW timeout .
+The
+.CW timeout
+models a special condition that allows a process to
+abort the waiting for a condition that may never become true, e.g.
+an input from an empty channel.
+The timeout keyword is a modeling feature in \*P that provides an
+escape from a hang state.
+The timeout condition becomes true only when no other
+statements within the distributed system is executable.
+Note that we deliberately abstract from absolute timing
+considerations, which is crucial in validation work,
+and we do not specify how the timeout should be implemented.
+A simple example is the following process that will send
+a reset message to a channel named \f2guard\f1 whenever the
+system comes to a standstill.
+.P1 0
+proctype watchdog()
+{
+	do
+	:: timeout -> guard!reset
+	od
+}
+.P2
+.IH "Assertions"
+.LP
+An other language construct in \*P that needs little explanation is the
+.CW assert
+statement.
+Statements of the form
+.P1 0
+assert(any_boolean_condition)
+.P2
+are always executable.
+If the boolean condition specified holds the statement has no effect.
+If, however, the condition does not hold, the statement will cause
+a runtime error, print the assertion that was violated,
+and abort the running process.
+This statement can of course prove its value especially
+in validation and simulation runs of \*P models that we
+can undertake with \*S.
+.IH "Message Type Definitions"
+.LP
+We have seen how variables are declared and how constants
+can be defined using C-style macros.
+As a mild form of syntactic sugar, \*P also allows for
+message type definitions that look as follows:
+.P1 0
+mtype = {
+	ack, nak, err,
+	next, accept
+}
+.P2
+This is a preferred way of specifying the message types since
+it abstracts from the specific values to be used, and it makes
+the names of the constants available to an implementation,
+which can improve error reporting.
+.IH "Pseudo Statements"
+.LP
+We have now discussed all the basic types of statements defined in \*P:
+assignments, conditions, send and receive,
+.CW assert ,
+.CW timeout ,
+.CW goto ,
+.CW break
+and
+.CW skip .
+Note that
+.CW chan ,
+.CW len ,
+.CW del
+and
+.CW run
+are not really statements but unary operators that can be used in
+conditions and assignments.
+.LP
+The
+.CW skip
+statement was mentioned in passing as a statement that can be
+a useful filler to satisfy syntax requirements, but that really
+has no effect.
+It is formally not part of the language but a \f2pseudo-statement\f1,
+merely a synonym of another statement with the same effect: a
+simple condition of a constant value
+.CW (1) .
+In the same spirit two other pseudo-statements are predefined.
+They are called
+.CW block
+and
+.CW halt .
+The first is a stop statement that is never executable: the
+opposite of
+.CW skip .
+It is modeled as another condition
+.CW (0) .
+The
+.CW halt
+statement aborts the execution of the system of processes
+whenever it is executed.
+It is equivalent to an assertion that will always fail:
+.CW assert(0) .
+.SH
+Example
+.LP
+Here is a simple example of a (flawed) protocol, modeled in \*P.
+.P1 0
+mtype = {
+	ack, nak, err, next, accept
+}
+
+proctype transfer(byte in, out, chin, chout)
+{	byte o, i;
+
+	in?next(o);
+	do
+	:: chin?nak(i) -> out!accept(i); chout!ack(o)
+	:: chin?ack(i) -> out!accept(i); in?next(o);
+			  chout!ack(o)
+	:: chin?err(i) -> chout!nak(o)
+	od
+}
+.P3
+init
+{	byte AtoB, BtoA, Ain, Aout, Bin, Bout;
+
+	atomic {
+		AtoB = chan [1] of { byte, byte };
+		BtoA = chan [1] of { byte, byte };
+		Ain  = chan [2] of { byte };
+		Bin  = chan [2] of { byte };
+		Aout = chan [2] of { byte };
+		Bout = chan [2] of { byte };
+		run transfer(Ain, Aout, AtoB, BtoA);
+		run transfer(Bin, Bout, BtoA, AtoB)
+	};
+	AtoB!err(0)
+}
+.P2
+The queues
+.CW Ain
+and
+.CW Bin
+are to be filled with
+token messages of type
+.CW next
+and arbitrary values (e.g.
+ASCII character values) by unspecified background processes:
+the users of the transfer service.
+Similarly, these user processes
+can read received data from the queues
+.CW Aout
+and
+.CW Bout .
+The queues and processes are initialized in a single
+atomic statement, and started with the dummy
+.CW err
+message.
+.NH
+Part Two \(em \*S Tutorial
+.NH 2
+Introduction
+.LP
+Given a model system specified in \*P, \*S
+can either perform random simulations of the system's execution
+or it can generate a C program that performs a fast exhaustive
+validation of the system state space.
+The validator can check, for instance, if user specified system
+invariants may be violated during a protocol's execution.
+.LP
+If \*S is invoked without any options it performs a random simulation.
+With option
+.B \-nN
+the seed for the simulation is set explicitly to the integer value
+.BR N .
+.LP
+A group of options
+.B [\-pglrs]
+can be used to set the desired level of information that the user wants
+about the simulation run.
+Every line of output normally contains a reference to the source
+line in the specification that caused it.
+.IP \f3\-p\f1
+Shows the state changes of the \*P
+processes at every time step.
+.IP \f3\-g\f1
+Shows the current value of global variables at every time step.
+.IP \f3\-l\f1
+Shows the current value of local variables, after the
+process that owns them has changed state.
+It is best used in combination with option
+.B \f3\-p\f1 .
+.IP \f3\-r\f1
+Shows all message receive events.
+It shows the process performing the receive, its name and number,
+the source line number, the message parameter number (there is
+one line for each parameter), the message type and the message
+channel number and name.
+.IP \f3\-s\f1
+Shows all message send events.
+.LP
+There are two remaining options to \*S.
+.IP \f3\-a\f1
+Generates a protocol specific analyzer.
+The output is written into a set C files, named pan.[cbhmt], that
+can be compiled to produce the analyzer (cc -o run pan.c), and then
+executed.
+To guarantee an exhaustive exploration of the state space, the
+program can be compiled simply as
+.IT "cc -o run pan.c" .
+For larger systems this may, however, exhaust the available memory
+on the machine used.
+Large to very large systems can still be analyzed by defining the
+more memory efficient bit state space, as follows:
+.IT "cc -o run pan.c -DBITSTATE" .
+An indication of the coverage of such a search can be derived from the
+.I "hash factor"
+(see below).
+The generated executable analyzer, named
+.I run
+above, has its own set of options that can be seen by typing
+.I "run -?"
+(see also below in Section 2.3 \(im Using the Analyzer).
+.IP \f3\-t\f1
+is a trail-hunting option.
+If the analyzer finds a violation of an assertion, a deadlock or
+an unspecified reception, it writes an error trail into a file
+named
+.IT pan.trail .
+The trail can be inspected in detail by invoking \*S with the
+.IP
+.B \-t
+option.
+In combination with the options
+.B pglrs
+different views of the error sequence are then easily obtained.
+.NH 2
+Using the Simulator
+.LP
+Consider the following example protocol, that we will store in a
+file named \f2lynch\f1.
+.KS
+.1C
+.P1 0
+   1  #define MIN	9	/* first data message to send */
+   2  #define MAX	12	/* last  data message to send */
+   3  #define FILL	99	/* filler message */
+   4  
+   5  mtype = { ack, nak, err }
+   6  
+.P3
+   7  proctype transfer(byte chin, chout)
+   8  {	byte o, i, last_i=MIN;
+   9  
+  10  	o = MIN+1;
+  11  	do
+  12  	:: chin?nak(i) ->
+  13  		assert(i == last_i+1);
+  14  		chout!ack(o)
+  15  	:: chin?ack(i) ->
+  16  		if
+  17  		:: (o <  MAX) -> o = o+1	/* next */
+  18  		:: (o >= MAX) -> o = FILL	/* done */
+  19  		fi;
+  20  		chout!ack(o)
+  21  	:: chin?err(i) ->
+  22  		chout!nak(o)
+  23  	od
+  24  }
+  25  
+.P3
+  26  proctype channel(byte in, out)
+  27  {	byte md, mt;
+  28  	do
+  29  	:: in?mt,md ->
+  30  		if
+  31  		:: out!mt,md
+  32  		:: out!err,0
+  33  		fi
+  34  	od
+  35  }
+  36  
+.P3
+  37  init
+  38  {	byte AtoB, BtoA, Ain, Aout, Bin, Bout, BtoC, CtoA;
+  39  
+  40  	atomic {
+  41  		AtoB = chan [1] of { byte, byte };
+  42  		BtoC = chan [1] of { byte, byte };
+  43  		CtoA = chan [1] of { byte, byte };
+  44  		run transfer(AtoB, BtoC);
+  45  		run channel(BtoC, CtoA);
+  46  		run transfer(CtoA, AtoB)
+  47  	};
+  48  	AtoB!err,0	/* start */
+  49  }
+.P2
+.KE
+In this model we have enhanced the original
+protocol with some code that can make the simulation
+and validation runs more interesting.
+There are two transfer processes, whose job it is to transfer
+data elements.
+The protocol uses three message types: \f2ack\f1, \f2nak\f1, and
+a special type \f2err\f1 that is used to model message distortions
+on the communication channel between the two transfer processes.
+The behavior of the channel is modeled explicitly with a channel
+process.
+There is also an assert statement that claims an invariant
+relation between two local variables in the transfer processes.
+.LP
+Running \*S without options gives us a random simulation that
+will only provide output when execution terminates, or if
+a \f2printf\f1 statement is encountered.
+In this case:
+.KS
+.1C
+.P1 0
+$ spin lynch
+spin: "../spin.examples/lynch" line 13: assertion violated
+#processes blocked: 3
+proc  3 (transfer)	line 11 (state 15)
+proc  2 (channel)	line 28 (state 6)
+proc  1 (transfer)	line 13 (state 3)
+4 processes created
+$ 
+.P2
+There are no \f2printf\f1's in the specification, but execution
+halts on an assertion violation.
+Curious to find out more we repeat the run with more verbose
+output, e.g. printing all receive events:
+.P1 0
+$ spin -r lynch
+proc  1 (transfer)	line  21, Recv[0]  err	<-	0=chin[0]
+proc  1 (transfer)	line  21, Recv[1]  0	<-	0=chin[0]
+proc  2 (channel)	line  29, Recv[0]  nak	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[1]  10	<-	1=in[0]
+proc  3 (transfer)	line  21, Recv[0]  err	<-	2=chin[0]
+proc  3 (transfer)	line  21, Recv[1]  0	<-	2=chin[0]
+.P3
+\&...
+proc  1 (transfer)	line  15, Recv[0]  ack	<-	0=chin[0]
+proc  1 (transfer)	line  15, Recv[1]  12	<-	0=chin[0]
+proc  2 (channel)	line  29, Recv[0]  ack	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[1]  12	<-	1=in[0]
+proc  3 (transfer)	line  21, Recv[0]  err	<-	2=chin[0]
+proc  3 (transfer)	line  21, Recv[1]  0	<-	2=chin[0]
+.P3
+proc  1 (transfer)	line  12, Recv[0]  nak	<-	0=chin[0]
+proc  1 (transfer)	line  12, Recv[1]  12	<-	0=chin[0]
+spin: "../spin.examples/lynch" line 13: assertion violated
+#processes blocked: 3
+proc  3 (transfer)	line 11 (state 15)
+proc  2 (channel)	line 28 (state 6)
+proc  1 (transfer)	line 13 (state 3)
+4 processes created
+$ 
+.P2
+.KE
+Most output will be self-explanatory.
+Note that every message received contains two message parameters.
+Each receive event therefore produces two lines of output.
+The one detailing the reception of the first message parameter
+(the message type) is marked \f2Recv[0]\f1.
+The reception of the second parameter is marked \f2Recv[1]\f1 etc.
+.LP
+The above simulation run ends in the same assertion violation.
+Since the simulation resolves nondeterministic choices in a
+random manner, this need not always be the case.
+To force a reproducible run, the option \f3\-nN\f1 can me used.
+For instance:
+.P1 0
+$ spin -r -n100 lynch
+.P2
+will seed the random number generator with the integer value 100
+and is guaranteed to produce the same output each time it is executed.
+.LP
+The other options can add still more output to the simulation run,
+but the amount of text can quickly become overwhelming.
+An easy solution is to filter the output through \f2grep\f1.
+For instance, if we are only interested in the behavior of the
+channel process in the above example, we say:
+.KS
+.1C
+.P1 0
+$ spin -n100 -r lynch | grep "proc  2"
+proc  2 (channel)	line  29, Recv[0]  nak	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[1]  10	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[0]  ack	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[1]  11	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[0]  ack	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[1]  12	<-	1=in[0]
+proc  2 (channel)	line 28 (state 6)
+$ 
+.P2
+.KE
+and if we only care about the message types, not the data transferred:
+.KS
+.1C
+.P1 0
+$ spin -n100 -r lynch | grep "Recv\e[0\e]" | grep "proc  2"
+proc  2 (channel)	line  29, Recv[0]  nak	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[0]  ack	<-	1=in[0]
+proc  2 (channel)	line  29, Recv[0]  ack	<-	1=in[0]
+$ 
+.P2
+.KE
+and so on.
+.NH 2
+Using the Analyzer
+.LP
+The simulation runs can be useful in quick debugging of
+new designs, but by simulation aline we can not prove
+that the system is really error free.
+A true validation of even very large models can be performed
+with the \f3\-a\f1 and \f3-t\f1 options of \*S.
+.LP
+An exhaustive state space searching program for a protocol
+model is generated as follows.
+.P1 0
+$ spin -a lynch
+$ 
+.P2
+This command produces five files, named \f2pan.[bchmt]\f1, in the
+current directory.
+.P1 0
+$ spin -a lynch
+$ wc pan.[bchmt]
+     92     326    2041 pan.b
+    854    2502   17524 pan.c
+    147     576    3475 pan.h
+    307    1230    7493 pan.m
+    177     548    3997 pan.t
+   1577    5182   34530 total
+$ 
+.P2
+The details are none too interesting: \f2pan.c\f1 contains
+most of the C code for the exhaustive analysis of the protocol.
+File \f2pan.t\f1 contains a transition matrix that encodes
+the protocol control flow; \f2pan.b\f1 and \f2pan.m\f1 contain
+C code for the actual forward and backward transitions and
+\f2pan.h\f1 is a general header file.
+The program can be compiled in two different ways: with a full
+state space or with a bit state space.
+.IH "Full State Space"
+.LP
+The safest method, that works for small to medium size models
+(size up to 100,000 composite system states), is to use the
+default compilation of the program:
+.P1 0
+$ cc -o run pan.c
+$ 
+.P2
+The executable program \f2run\f1 can now be executed to perform
+the validation.
+The validation is truly exhaustive: it tests all possible
+event sequences in all possible orders.
+It should, of course, find the same assertion violation.
+.KS
+.1C
+.P1 0
+$ run
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+pan: aborted
+pan: wrote pan.trail
+search interrupted
+vector 64 byte, depth reached 56, error states: 0
+      61 states, stored
+       5 states, linked
+       1 states, matched	   total:       67
+hash factor: 4228.129032
+hash badness: 0
+(size 2^18 states, stackframes: 0/5)
+$ 
+.KE
+.P2
+The first line of the output announces the assertion violation
+and attempts to give a first indication of the invariant that
+was violated.
+The violation was found after 61 states had been generated.
+The hash factor gives an indication of how much room we had
+left in the state space; the hash "badness" gives the number
+of hash collisions that happened during access to the state space.
+The most relevant piece of output in this case, however, is on the
+third line which tells us that a trail file was created that can
+be used in combination with the simulator to recreate the error
+sequence.
+We can now say, for instance
+.P1 0
+$ spin -t -r lynch | grep "proc  2"
+.P2
+to determine the cause of the error.
+Note carefully that the validator is guaranteed to find the
+assertion violation if it is feasible, the simulator is not.
+.IH Options
+.LP
+The executable analyzer that is generated comes with a modest
+number of options that can be check as follows
+.P1 0
+$ run -?
+-c  continue on errors
+-mN max depth N (default 10k)
+-wN hash table of 2^N entries (default 18)
+$ 
+.P2
+The first option forces the state space search to continue,
+even if errors are found.
+It will not produce an error trail, but it does give us an
+indication of unexecutable code.
+An overview of unexecutable (unreachable) code is given with every
+complete run: either the default run if it did not find any
+errors, or the run with option \f3\-c\f1.
+In this case the output is:
+.P1 0
+$ run -c
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+.P3
+vector 64 byte, depth reached 60, error states: 5
+     165 states, stored
+       5 states, linked
+      26 states, matched	   total:      196
+hash factor: 1579.180723
+hash badness: 1
+(size 2^18 states, stackframes: 0/6)
+
+.P3
+unreached code :init: (proc 0):
+	reached all 9 states
+unreached code channel (proc 1):
+	 line 35 (state 9),
+	reached: 8 of 9 states
+unreached code transfer (proc 2):
+	 line 24 (state 18),
+	reached: 17 of 18 states
+$ 
+.P2
+There were five assertion violations, and some 165 unique
+system states were generated.
+Each state description (the \f2vector size\f1) took up 64 bytes
+of memory; the longest non-cyclic execution sequence was 60.
+There is one unreachable state both in the channel process and in
+the transfer process.
+In both cases the unreachable state is the control flow point
+just after the do-loop in each process.
+Note that both loops are indeed meant to be non-terminating.
+.LP
+The executable analyzer has two other options.
+By default the search depth is restricted to a rather
+arbitrary 10,000 steps.
+If the depth limit is reached, the search is truncated, making
+the validation less than exhaustive.
+To make certain that the search is exhaustive, make sure that the
+"depth reached" notice is within the maximum search depth, and
+if not, repeat the analysis with an explicit \f3\-m\f1 argument.
+.LP
+The \f3\-m\f1 option can of course also be used to truncate
+the search explicitly, in an effort to find the shortest possible
+execution sequence that violates a given assertion.
+Such a truncated search, however, is not guaranteed to find every
+possible violation, even within the search depth.
+.LP
+The last option \f3\-wN\f1 can only affect the run time, not
+the scope, of an analysis with a full state space.
+This "hash table width" should normally be set equal to, or preferably higher, than
+the expected number of unique system states that will be generated
+by the analyzer.
+If it is set to low the number of hash collisions will increase
+and slow down the search.
+By default the hash table width is set to work well up to 262,144
+(the range of an 18 bit number) system states, which should
+suffice for almost all applications of a full state space analysis.
+It can be doubled or halved, respectively by incrementing or
+decrementing the default argument to \f3\-wf1.
+.IH "Bit State Space Analyses"
+.LP
+It can easily be calculated what the memory requirements of an analysis
+with a full state space are [Holzmann '90].
+If, as in the example we have used, the protocol requires 64 bytes
+of memory to encode one system state, and we have a total of 2 Megabytes
+of memory available for the search, we can store up to 32,768 states.
+The analysis fails if there are more reachable states in the
+system state space.
+The coverage of the search goes down accordingly, i.e. if there are
+twice as many states in the full state space than we can store,
+the effective coverage of the search is only 50% etc.
+.LP
+We can do substantially better in those cases by using the bit state
+space storage method [Holzmann '90].
+The bit state space can be included by compiling the analyzer as follows:
+.P1 0
+$ cc -o run pan.c -DBITSTATE
+$ 
+.P2
+The analyzer should of course find the same assertion violation again:
+.P1 0
+$ run
+assertion violated (((P2 *)this)->i == (((P2 *)this)->last_i + 1))
+pan: aborted
+pan: wrote pan.trail
+search interrupted
+vector 64 byte, depth reached 56, error states: 0
+      61 states, stored
+       5 states, linked
+       1 states, matched	   total:       67
+hash factor: 67650.064516
+(size 2^22 states, stackframes: 0/5)
+$ 
+.P2
+In fact, for small to medium size problems there is very little
+difference between the full state space method and the bit state
+space method (with the exception that the latter uses substantially
+less memory).
+The big difference comes for larger problems.
+The last two lines in the output are useful in estimating
+the \f2coverage\f1 of a large run.
+The maximum number of states that the bit state space can
+accommodate is written on the last line (here 2^22 bytes or about 32 million
+bits = states).
+The line above it gives the \f2hash factor\f1: roughly
+equal to the maximum number of states divided by the actual
+number of states.
+A large hash factor (larger than 100) means, with high reliability,
+a coverage of 99% or 100%.
+As the hash factor approaches 1 the coverage approaches 0%.
+The object of a bit state validation is to achieve a hash factor
+larger than 100 by allocating the maximum amount of memory
+for the bit state space.
+For the best result obtainable: use the
+\f3\-w\f1 option to size the state space to precisely the amount
+of real (not virtual) core memory available on your machine.
+By default a state space of 4 Mbyte is allocated (2^22 bytes).
+If your machine has 128 Mbytes available, you can use \f3\-w27\f1 to
+analyze systems with up to a billion reachable states.
+.NH
+Summary
+.LP
+In the first part of this memo
+we have introduced a notation for modeling concurrent
+systems, including but not limited to asynchronous
+data communication protocols, in a language named \*P.
+The language has several unusual features.
+All communication between processes takes
+place via either messages or shared variables.
+Both synchronous and asynchronous communication
+are modeled as two special cases of a general message
+passing mechanism.
+Every statement in \*P can potentially model delay: it is
+either executable or not, in most cases depending on the state
+of the environment of the running process.
+Process interaction and process coordination is thus at
+the very basis of the language.
+.LP
+It is probably good to keep in mind that \*P is a modeling language,
+not a programming language.
+There are no abstract data types, or more than a few basic types of variable.
+A validation model is an abstraction of a protocol implementation.
+The abstraction maintains the essentials of the process interactions,
+so that it can be studied in isolation.
+It suppresses implementation and programming detail.
+.LP
+The syntax of \*P expressions, declarations, and assignments
+is loosely based on the language
+.CW C
+[Kernighan&Ritchie '78].
+The language was influenced significantly by the ``guarded command languages''
+of E.W. Dijkstra and C.A.R. Hoare  [Dijkstra '75, Hoare '78].
+There are, however, important differences.
+Dijkstra's language had no primitives for process interaction.
+Hoare's language was based exclusively on synchronous
+communication.
+Also in Hoare's language, the type
+of statements that could appear in the guards of an option was
+restricted.
+The semantics of the selection and cycling statements
+in \*P is also rather different from other guarded
+command languages: the statements are not aborted when all guards
+are false but they block: thus providing the required synchronization.
+.LP
+\*P is an extension of a smaller language named Argos.
+Argos was developed in 1983 and over the years has been used quite
+extensively for the validation of communication protocols [e.g. Holzmann '87].
+.NH
+References
+.LP
+.B
+Dijkstra, E.W.
+.R
+[1965],
+"Solution of a problem in concurrent programming control,"
+.IT "Comm. ACM" ,
+Vol. 8, No. 9, p. 569.
+.LP
+.B
+Dijkstra, E.W.
+.R
+[1975],
+"Guarded commands, nondeterminacy and formal derivation of programs,"
+.IT "Comm. ACM" ,
+Vol. 18, No. 8, pp. 453-457.
+.LP
+.B
+Hoare, C.A.R.
+.R
+[1978],
+"Communicating sequential processes,"
+.IT "Comm. ACM" ,
+Vol. 21, No. 8, pp. 666-677.
+.LP
+.B
+Holzmann, G.J.
+.R
+[1987],
+"Automated protocol validation in `Argos,' assertion proving and scatter
+searching,"
+.IT "IEEE Trans. on Software Engineering" ,
+Vol. 13, No. 6, June 1987, pp. 683-697.
+.LP
+.B
+Holzmann, G.J.
+.R
+[1990],
+"Algorithms for Automated Protocol Validation,"
+.IT "AT&T Technical Journal" ,
+Special Issue on Protocol Testing, Specification, Verification.
+Jan/Feb. 1990.
+.LP
+.B
+Kernighan, B.W., and Ritchie, D.M.
+.R
+[1978],
+.IT "The C Programming Language" ,
+Prentice Hall, Inc., Englewood Cliffs, New Jersey, USA.
+2nd Edition 1988, ISBN 0-13-110362-8.
+.FC
+.SH
+Appendix: \*P Reference Manual
+.LP
+This appendix describes the language \*P proper.
+As much as possible, the presentation follows the example
+from the
+.CW C
+reference manuals

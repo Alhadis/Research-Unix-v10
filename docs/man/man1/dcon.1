@@ -1,0 +1,170 @@
+.TH DCON 1
+.CT 1 comm_mach
+.SH NAME
+dcon, ndcon, rlogin, nrx, rsh, scriptcon \- remote login and execution
+.SH SYNOPSIS
+.B dcon
+[
+.I option ...
+]
+.I machine
+.PP
+.B ndcon
+.I machine
+.PP
+.B rlogin
+.I machine
+.PP
+.B nrx
+.I machine
+[
+.I command-word ...
+]
+.PP
+.B rsh
+[
+.I option ...
+]
+.I machine
+[
+.I command-word ...
+]
+.PP
+.B scriptcon
+.I machine script
+.SH DESCRIPTION
+Do not read this page unless you are familiar with
+.IR con (1).
+.PP
+.I Dcon,
+.I ndcon,
+and
+.I rlogin
+are analogs (or special cases) of
+.IR con (1)
+for specific kinds of network connection.
+They support the same local escape convention with the quit signal.
+.PP
+Similarly,
+.I nrx
+and
+.I rsh
+are analogs of
+.IR rx.
+.PP
+Network addresses are as in
+.IR con (1).
+The default networks for the various commands are
+.TP "\w'dcon, ndcon, nrx  'u
+.I dcon, ndcon, nrx
+.B dk
+.TP
+.I rlogin, rsh
+.B tcp
+.PP
+.I Dcon
+connects to the remote machine, and attempts
+automatically to log in under
+the login id of the invoking user.
+Option
+.BR -l 
+turns off automatic login; the remote machine will ask
+for a login id and password.
+.PP
+.I Ndcon
+behaves like
+.I dcon
+but provides a more transparent 
+transport protocol.
+In particular terminal line disciplines are preserved
+and it is possible to download into a
+.IR mux (9.1)
+window across an
+.I ndcon
+connection.
+.PP
+.I Rlogin
+is like
+.IR dcon ,
+but uses the connection protocol
+found on Berkeley systems.
+.PP
+.I Rx
+(see
+.IR con (1))
+executes one shell command on the remote machine
+as if logged in there,
+with local standard input and output.
+It uses a connection protocol specific to Research machines.
+.PP
+.I Nrx
+is to 
+.I rx
+as
+.I ndcon
+is to
+.IR dcon :
+it runs a command
+remotely with line discipline preserved.
+.PP
+.I Rsh
+is to
+.I rx
+as
+.I rlogin
+is to
+.IR dcon :
+it runs a command remotely using the Berkeley execution protocol.
+.PP
+.I Scriptcon
+provides a connection like
+.BR "dcon \-l" ,
+except that the login and other initial protocol are
+controlled by a
+.I script
+file.
+The first line of the file gives a string (e.g.\&
+.LR login: )
+expected from the
+remote machine; the second gives the local response, and
+so on in alternation.
+Unrecognized data from the remote machine are ignored.
+Warning: a script that contains a password
+may compromise the security of the remote system, hence
+.I scriptcon
+should be used only for restricted logins.
+.PP
+.I Con
+tries to connect using the protocol of
+.IR ndcon ;
+if that fails,
+it tries that of
+.IR dcon ,
+then that of
+.IR rlogin .
+.I Rx
+attempts its own style of connection;
+if that fails,
+it tries that of
+.IR rsh .
+.SH "SEE ALSO"
+.IR con (1),
+.IR dkmgr (8),
+.IR svcmgr (8),
+.IR tcpmgr (8),
+.IR ipc (3)
+.br
+D. L. Presotto,
+`Interprocess Communication in the Eighth Edition
+.SM UNIX
+System',
+this manual, Volume\ 2
+.SH BUGS
+If a program run by
+.I nrx
+won't let go, for example by ignoring
+signals, there is no way of getting out short of hanging up.
+.br
+There is no error correction or retry in a
+.I scriptcon
+script.

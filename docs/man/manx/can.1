@@ -1,0 +1,238 @@
+.TH CAN 1 
+.CT 1 writing_output comm_dev
+.SH NAME
+can, bcan, dcan, tcan, xcan \- interface to Canon laser-printer spooler
+.SH SYNOPSIS
+.B can
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B bcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B dcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B tcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.PP
+.B xcan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+These commands print 
+.I files
+(standard input by default) on Canon laser printers.
+Four commands, all special cases of the generic
+.I xcan,
+handle particular kinds of data files:
+.TP
+.I can
+ASCII text
+.TP
+.I bcan
+bitmap images created by 
+.IR blitblt (9.1)
+.TP
+.I dcan
+output from
+.IR troff (1)
+.TP
+.I tcan
+output for a Tektronix 4014 terminal, as produced by
+.IR plot (1)
+.PP
+The destination printer is determined in the following ways,
+listed in order of decreasing precedence.
+.IP
+option
+.B -d
+.I dest
+.br
+environment variable
+.L CANDEST
+.br
+printer named in file
+.F /etc/candest
+.LP
+Printers at the mother site are:
+.RS
+.TP
+.B 3
+3rd floor, end of 9S corridor (seki)
+.PD0
+.TP
+.B 4
+4th floor, stair 8 (swift)
+.TP
+.B 8
+3rd floor, stair 8 (tukey)
+.TP
+.B 9
+4th floor, stair 9 (wild)
+.TP
+.B j
+jones room (jones)
+.TP
+.B u
+unix room (panther)
+.TP
+.BI / name
+printer attached to machine with Datakit destination 
+.I name
+.RE
+.PD
+.PP
+Options:
+.PP
+.TP
+.BI -d " dest"
+Select the destination printer.
+.TP
+.BI -f " font"
+Set the font (default
+.LR CW.11 )
+for
+.IR can ;
+see 
+.IR font (7).
+.TP
+.B -L
+(landscape) Rotate
+.I bcan 
+pages 90 degrees.
+.TP
+.BI -l " n"
+Set number of lines per page for
+.I can
+(default 66).
+.TP
+.BI -m " n"
+Set 
+.I bcan
+magnification
+(default 2).
+.TP
+.B -n
+Spool only, input has already been formatted by a remote
+.IR xcan .
+.TP
+.BI -o " list"
+Print only pages whose page numbers appear in
+the comma-separated
+.I list
+of numbers and ranges.
+A range
+.IB n - m
+means pages
+.I n
+through
+.IR m ;
+a range
+.BI - b
+means from the beginning to page
+.IR n ;
+a range
+.IB n -
+means from page
+.I n
+to the end. 
+.B -o
+implies
+.BR -r .
+.TP
+.B -r
+print
+pages in reverse order
+(default for 
+.IR can " and " dcan ).
+.TP
+.B -sb
+.RI "make " xcan " expect " bcan " input;"
+.BR -sb " implies defaults of " -x176 " and " -y96 .
+.TP
+.B -sc
+.RI "make " xcan " expect " can " input;"
+.BR -sc " does not imply " -r .
+.TP
+.B -sd
+.RI "make " xcan " expect " dcan " input;"
+.BR -sd " does not imply " -r .
+.TP
+.B -st
+.RI "make " xcan " expect " tcan " input."
+.TP
+.BI -t " n"
+.I tcan 
+scale factor is
+.RI ( n /100)/( n %100).
+The default is 813, i.e., 13 tekpoints become 8 dots on the laser printer.
+.TP
+.BI -u " user"
+set the name which appears on the banner page;
+default is login name.
+.TP
+.BI -x " n"
+set the horizontal
+offset of the print image, measured in dots (default 48).
+There are 240 dots to the inch.
+.TP
+.BI -y " n"
+set the vertical
+offset of the print image (default 0),
+except in
+.I tcan,
+where this option specifies
+.I n
+extra tekpoints vertically.
+.SH FILES
+.TF /usr/spool/jpd
+.TP
+.F /etc/candest
+default destination
+.PD0
+.TP
+.F /usr/lib/font/devi10
+font directory
+.TP
+.F /usr/spool/jpd
+spool directory
+.SH SEE ALSO
+.IR pr (1), 
+.IR lpr (1), 
+.IR blitblt (9.1), 
+.IR plot (1), 
+.IR font (7)
+.SH BUGS
+The `landscape' option is supported only by
+.IR bcan ;
+.BR -o " and " -r
+are supported only by
+.I can
+and
+.I dcan.
+.br
+There ought to be a way to determine the service class from the input data.

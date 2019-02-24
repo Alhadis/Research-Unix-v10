@@ -1,0 +1,83 @@
+.TH GETPWENT 3
+.CT 2 secur
+.SH NAME
+getpwent, getpwuid, getpwnam, setpwent, endpwent, pwdecode \(mi get password file entry
+.SH SYNOPSIS
+.nf
+.B #include <pwd.h>
+.PP
+.B struct passwd *getpwent()
+.PP
+.B struct passwd *getpwuid(uid)
+.B int uid;
+.PP
+.B struct passwd *getpwnam(name)
+.B char *name;
+.PP
+.B int setpwent()
+.PP
+.B int endpwent()
+.PP
+.B struct passwd *pwdecode(p)
+.B char *p;
+.fi
+.SH DESCRIPTION
+.I Getpwent,
+.I getpwuid
+and
+.I getpwnam
+each return a pointer to a structure
+containing the broken-out
+fields of a line in
+.FR /etc/passwd .
+.EX
+.ta \w'struct 'u +\w'passwd 'u +\w'*pw_comment; 'u
+struct	passwd	{
+	\fLchar	*pw_name;\fR	login name
+	\fLchar	*pw_passwd;\fP	encrypted password
+	\fLint	pw_uid;\fP	numeric userid
+	\fLint	pw_gid;\fP	numeric groupid
+	\fLint	pw_quota;\fP	unused
+	\fLchar	*pw_comment;\fP	unused
+	\fLchar	*pw_gecos;\fP	field for local use
+	\fLchar	*pw_dir;\fP	login directory
+	\fLchar	*pw_shell;\fP	program to use as Shell
+\fL};\fP
+.EE
+.PP
+.I Getpwent
+reads the next
+line (opening the file if necessary);
+.I setpwent
+rewinds the file;
+.I endpwent
+closes it.
+.PP
+.I Getpwuid
+and
+.I getpwnam
+search from the beginning until a matching
+.I uid
+or
+.I name
+is found
+(or until end-of-file is encountered).
+.PP
+.I Pwdecode
+breaks out a null-terminated character string
+.I p
+containing a password file entry.
+The input string is modified by the call and
+the output structure contains pointers into it.
+.SH FILES
+.TP
+.F /etc/passwd
+.SH "SEE ALSO"
+.IR getlogin (3), 
+.IR getgrent (3), 
+.IR passwd (5)
+.SH DIAGNOSTICS
+These routines return 0 for end of file or error.
+.SH BUGS
+The return values point to static data
+whose content is overwritten by each call.

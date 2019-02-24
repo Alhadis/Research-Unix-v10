@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	sed.out
+
+pg:	sed.out
+	count sed.ms sed.out
+
+spell:VQ:
+	dospell sed.ms
+
+lp:	sed.out
+	$LP $newprereq && touch $target
+
+sed.out:D:	sed.ms $REF
+	$PREFER sed.ms | tbl | troff -mpm > $target
+
+index:V:
+	runind sed
+	$PREFER xsed.ms | tbl | troff -mpm > /dev/null 2>sed.x
+	mkindex sed.x
+	rm xsed.ms
+
+pindex:V:
+	mkindex sed.x

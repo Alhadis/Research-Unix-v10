@@ -1,0 +1,1119 @@
+.nr Hs 5
+.TL M10200 40125-100
+A Look at The Version 9 Network File System
+.AU sar SF XT9112200 x6084 5-121 attunix!sar
+Stephen Rago
+.AI
+.MH
+.AB
+The protocol used for the network file system in Research
+.UX
+has evolved since its original design and implementation.
+I describe the current version of the protocol (NETB),
+including the semnatics for both the server and client.
+.AE
+.2C
+.NH 1 
+Introduction
+.PP
+In Version 8 of the
+.UX
+operating system, Peter Weinberger*
+...FS
+...nf
+..*
+...ps 6
+...ft H
+...tr x.
+...tr -
+...cs H 5
+...vs 8u
+..-------------------xxxxxx-x---------------------
+..-----------------xxxxxxxxxxxxx------------------
+..----------------xxxxxxx-xxxxxxxx----------------
+..---------------xx-xxxxxxx-xxxxxxxx--------------
+..---------------xxxx-xxxxxxxxx-x-xxx-------------
+..--------------x---------xxxxxxxxxxxxx-----------
+..--------------x----------xxxxxxxxxxxxxxxx-------
+..---------------------------xxxxx-xxxxxx---------
+..------------xx-------------xxxxxxxxxxxxxxx------
+..---------------------------x-x-xxxxxxxxxxx------
+..----------xx---------------xxxxxxxxxxxxxxxxx----
+..---------xxx----------------xxxxxxxxxxx-x-xx----
+..--------xx-------------------xxxxxxxxxxxxxxxx---
+..--------xxx------------------xxxxxxxxxxxxxx-x---
+..-------xxxx-------------------xxxxxxxxxxxxxxx---
+..------xxxx---------------------xxxxxxxxxxxxxx---
+..------xxxxx--------------------xxxxxxxxxxxxxx---
+..-----xxxxx----x-x---------------xxxxxxxxxxxx----
+..----xxxxxxxxx-x-xxxxx-----xxxxxxx-xxxxxxxxxxx---
+..----xxxxxxx------xxxxx---xx--xxxxxxxxxxxxxxxx---
+..---xxxxxxxxx---xxxx-xxxxxxxxx--x-xxxxxxxxxxxx---
+..---xxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx---
+..---xxxxxxxxx-x-xx-x--x--xxxxxxxxxxxxxxxxxxxxx---
+..---xxxxxxx-x------x--x---xxxxxxxxxxxxxxxxxxx----
+..----xxxxxxx-----x--------x---x-xxxxxxxxxxxxx----
+..---xxxxxx-x---------x----xxx------xxxxxxxxxx----
+..------xx--x--------------xx-----xx-xxxxxxxx-----
+..----x-xxx----------x------xx-------xxxxxx-------
+..-------xx------x-xx--------xxxxxxxxx-xxxx-------
+..--------x----x-x-x-------x-xx-x--x-xxxxx--------
+..--------------------x-xxxxxxx-xxxxxxxxxx--------
+..-------xx----------xxxxxxxx-x---xxx-xxx---------
+..------xxx------------xxxxxxx--x-x-xxxxx---------
+..-------xx-----x-------xxxx-x-x-xxxx-xxxxxx------
+..--------x----------------xxx-x-x-xxxxxxxx-------
+..-------xxx-----xxx-x-x-xxx-xxx-x-x--xxxxx-------
+..--------xx-----x-x-x-xxxxxxxxxxxxxxxxxxxx-------
+..---------x----------------xxx--x-xxxxxxx--------
+..---------xx--------------xx-x-xxxx--xxx---------
+..-------------x-----xxxxxxxx-x-xx-xx-------------
+..---------------------xxxxxxxxxxxxxxxx-----------
+..--------------x------------x-x-xx-x-------------
+..-------------------------x-x-xxxxx--------------
+..--------------x-----------xxxxxx-x--------------
+..----------------x--------x--x-xxxx--------------
+..--------------x-x-xxx-xxxxxxxxx-x---------------
+..----------------x---xxxxxxxxx-xxxx--------------
+..---------------x-xxxx-x-x-xxxxxxxx--------------
+...tr --
+...tr xx
+...fi
+...vs
+...ps
+...ft
+...FE
+wrote a network file system that enabled files to be shared between machines
+connected by a network.  When I asked someone if there was a paper describing
+it, they said, "yeah, but it's only an abstract."  I thought they were speaking
+figuratively.  They were speaking literally!|reference(weinberger neta).
+Hence, as I began studying the
+Version 9 network file system in preparation for porting it to System V Release 4.0,
+it was suggested that I also document what it does.
+This paper describes the inner workings of Weinberger's network file system.
+.PP
+The UNIX Version 8 network file system, known as NETA, provided remote file access
+for the Computing Science Research Center.  It has evolved over the years and
+in its current form, runs on UNIX Version 9 and is now called NETB.
+.NH 1 
+Architecture
+.PP
+The client side is implemented in the kernel as a file system switch.  The server
+side is implemented as a user-level process.  There is one server process
+per client machine.
+.PP
+The server's name is 'zarf'.
+A zarf is an ornamental metal holder for a hot coffee cup.
+.PP
+By convention, each machine
+mounts other machines' file systems on mount points under \fI/n\fP.
+.NH 1 
+Client Startup
+.PP
+The client side of the network file system is comprised of a command/daemon to set up
+the connections and a file system switch to translate file system operations into
+network messages.
+.PP
+In the daemon mode, the command is started without any arguments.  It reads the
+file \fI/usr/netb/friends\fP to decide which systems to mount.  
+Every 60 seconds the daemon checks the remotely mounted file systems to see if they are
+still mounted.  It also checks to see if the friends file has changed.  If any file
+system isn't mounted, then an attempt is made to mount it.
+The format of the friends file is:
+.DS
+\f(CW
+address  call_arg  mount_point  protocol  unique_id  debug_flag  username
+\fP
+.DE
+The \f(CWaddress\fP is the network address of the server machine.
+The \f(CWmount_point\fP is the location in the local file system where the remote file
+system is to be mounted.
+The \f(CWprotocol\fP indicates how the connection is to be placed.  Protocol 'd' uses
+default network 'dk' (datakit\(rg), expecting the service to be named 'fsb' and ignoring the
+\f(CWcall_arg\fP.  Protocol 't' uses TCP, starting the service given by the
+\f(CWcall_arg\fP using the rsh protocol.
+The \f(CWunique_id\fP is an integer between 0 and 255 that distinguishes the connections
+and must be unique among all active remote file systems.
+The \f(CWdebug_flag\fP determines how much information gets written to the log files.
+The \f(CWusername\fP is an optional field that provides the name of the calling process
+making the mount.  The default user name is 'daemon'.
+.PP
+In command mode, the remote file system is mounted, but no daemon is created.
+The arguments to the command are the same as the parameters in the friends file.
+.NH 1 
+Server Startup
+.PP
+The server expects to be started by the remote execution facility.
+As such, file descriptor zero is attached to the network connection.
+First, the server tries to identify the client.  The method it uses depends
+on the environment in which it is running.
+On 4BSD systems, it does this by calling \fBgetpeername(2)\fP.  On Version 9 (and System V)
+systems, it does this
+by checking the environment variables 'CSOURCE' and 'DKSOURCE'.\*F
+.FS
+CSOURCE is set by the remote execution facility when a service is invoked.
+DKSOURCE is set by an older version of the remote execution facility.
+.FE
+The server then changes directory to \fI/usr/netb\fP.  If this fails, the server
+changes directory to \fI/tmp\fP.
+A log file, \fIzarf.log\fP is created.
+.PP
+The first network message read by the server is 16 bytes long.
+The format is:
+.TS
+center,box;
+a | a .
+byte	use
+=	=
+0	maximum client message size
+_	_
+1	client device number
+_	_
+2	protocol type
+_	_
+3	debug flag
+_	_
+4-15	unused
+.TE
+The maximum message size is currently set to 5K bytes.  The size is expressed in
+units of 1KB.
+The device number is the major device number
+of the client.
+It is the same as the unique id obtained from the friends file.
+The server creates device numbers using this major number.  The minor number
+is created on the fly and is unique among all device numbers the server has seen since
+it started.
+.PP
+The protocol type is expressed as an ASCII character.
+The currently supported protocols are 't' and 'd'.  't' stands for
+TCP byte streams and 'd' stands for datakit messages.
+The debug flag determines the detail of the messages that get written to the log file.
+.PP
+The server responds to the first message with a one-byte response
+containing the value 1.
+.PP
+The second network message read is \fImax_message_size\fP bytes long.
+It contains the user ids from the client machine,
+obtained from the client's password file.  The entries are in ASCII, with the last entry
+followed by a NULL.
+The format of the each entry in the message is:
+.DS
+	\f(CWuser_name user_id\\\\n\fP
+.DE
+The server responds to this message with a one-byte response containing the value 2.
+.PP
+The user id message is parsed and a table is built mapping client user ids to server
+user ids.  Client and server hash lists map user ids to indices into the mapping table
+to speed lookup operations.
+.PP
+The third network message read is also \fImax_message_size\fP bytes long.
+It contains the group ids from the client machine,
+obtained from the client's group file.  The entries are in ASCII, with the last entry
+followed by a NULL.
+The format of the each entry in the message is:
+.DS
+	\f(CWgroup_name group_id\\\\n\fP
+.DE
+The server responds to this message with a one-byte response containing the value 3.
+.PP
+The group id message is parsed and a table is built mapping client group ids to server
+group ids.  Client and server hash lists map group ids to indices into the mapping table
+to speed lookup operations.
+.PP
+The server then opens its root and creates an internal file entry mapping
+its root to the client's mount point.  The rest of the time is spent in a loop
+servicing client requests.
+.NH 1 
+File System Operations
+.PP
+The file system operations in Version 9 are:
+.BL
+.LI
+mount - mount and unmount the file system
+.LI
+put - release an inode
+.LI
+get - get an inode
+.LI
+free - free the disk space associated with the inode
+.LI
+updat - update the times on the inode
+.LI
+read - read from the inode's file
+.LI
+write - write to the inode's file
+.LI
+stat - return the statistics on the inode's file
+.LI
+trunc - truncate the inode's file
+.LI
+nami - parse a pathname
+.LI
+ioctl - file system-specific ioctls and device ioctls
+.LI
+open - open a device
+.LI
+dirread - read a directory
+.LE
+.PP
+In the network file system, file system operations
+consist of request/response messages.  The client sends a message
+to the server and blocks until the response comes back.
+For historical reasons the messages follow VAX-style byte ordering.
+All network message structures are multiples of 8 bytes.
+Messages sent from the client to the server are of the following format:
+.TS
+center,box;
+a .
+message header
+(struct sendb)
+_
+optional
+operation-specific
+header
+_
+optional
+user data
+.TE
+.PP
+Throughout the rest of this paper, C structure definitions are used to describe
+network messages.  The structure definitions follow the following
+conventions: elements of type \f(CWchar\fP are one byte long,  elements of type
+\f(CWshort\fP are two bytes long, and elements of type \f(CWlong\fP are four bytes long.
+Within a structure, it is assumed all elements are aligned on an address that is an
+integral multiple of their size.  Assume structures themselves are aligned on
+an address that is an integral multiple of four bytes.
+These assumptions remove the ambiguity of structure padding.
+.PP
+The request message header is defined by a \fBstruct sendb\fP:
+.DS
+	\f(CWstruct sendb {
+		char	version;
+		char	cmd;
+		char	flags;
+		char	rsva;
+		long	trannum;
+		long	len;
+		long	tag;
+		short	uid;
+		short	gid;
+		long	rsvb;
+	}\fP
+.DE
+.PP
+\f(CWversion\fP indicates what version of the protocol is in use.
+\f(CWcmd\fP indicates the operation requested.
+\f(CWrsva\fP and \f(CWrsvb\fP are used for padding the structure out to
+a multiple of 8 bytes.
+\f(CWtrannum\fP is the transaction number for the message.
+\f(CWlen\fP is the length of the message in bytes, including the headers and data.
+\f(CWtag\fP is used to identify the file to which the operation pertains.
+The tags are composed of the device number where the inode exists shifted left 16 bits,
+ORed with the inode number.
+\f(CWuid\fP and \f(CWgid\fP are the user and group ids of the client generating the operation,
+respectively.
+.PP
+Messages sent from the server to the client are of the following format:
+.TS
+center,box;
+a .
+message header
+(struct recvb)
+_
+optional
+operation-specific
+header
+_
+optional
+user data
+.TE
+.PP
+The response message header is defined by a \fBstruct recvb\fP:
+.DS
+	\f(CWstruct recvb {
+		long	trannum;
+		short	errno;
+		char	flags;
+		char	rsvd;
+		long	len;
+		long	fsize;
+	}\fP
+.DE
+The server copies \f(CWtrannum\fP from the request message so the client can
+match up responses with requests.
+\f(CWerrno\fP is the error number if the operation failed, or 0 on success.
+The \f(CWflags\fP field is used to indicate special conditions for certain operations.
+\f(CWrsvd\fP is unused
+and exists to pad the structure out to a multiple of 8 bytes.  \f(CWlen\fP is the
+length of the message, including the headers and data.  \f(CWfsize\fP is the file
+size and is only set by the read, write, and dirread file system operations.
+.PP
+The following sections describe some details of the file system operations
+for the network file system, including the content of messages exchanged between the client
+and the server.  There is no \fBnbopen()\fP entry point.
+Instead, a stub (\fBnullopen()\fP) is used, which is provided by the system.
+\fBzarf\fP does not fully support device access.
+.NH 2 
+nbmount
+.PP
+When mounting the file system, the \fIflag\fP argument to \fBfmount(2)\fP contains the
+device number for the remote file system.
+The file descriptor passed to \fBfmount\fP is the client's end of the network
+connection to the server.
+The client side creates an inode for the root of the file system with this information.
+.PP
+When unmounting the file system, all active inodes on that file system
+are converted to inodes in the error file system (errfs).  This will cause all further
+operations on them to fail, until the inodes are freed.
+.NH 2 
+nbget
+.PP
+\fBnbget()\fP is called on behalf of \fBnami()\fP to fill in the information
+in the inode.  For the root inode, it can be called from \fBnbmount()\fP, so it
+constructs the information by hand.  However, for all other inodes, it fills
+in the information with the cached data obtained from the previous nami message.
+The nami cache is one entry long.
+.NH 2 
+nbput
+.PP
+If the inode is marked ICHG, \fBnbupdat()\fP is called.  Then a NBPUT message is sent
+to the server.  The format of the message is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBPUT request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBPUT
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb) (24 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+.TE
+.PP
+For this operation, the server will search through its list of open files, matching on
+\f(CWtag\fP.
+If the file is found and it is not the root, then the server closes the file and invalidates
+its entry in the list.  The response sent back to the client is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBPUT response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0
+rsvd	unused
+len	sizeof(struct recvb) (16 bytes)
+fsize	0
+.TE
+.NH 2 
+nbfree
+.PP
+\fBnbfree\fP is just a stub that doesn't do anything.  Since the server removes
+the disk space associated with a file during the nami NI_DEL and NI_RMDIR
+operations, there is no need to do anything in \fBnbfree\fP.
+.bp
+.NH 2 
+nbupdat
+.PP
+This operation invalidates the nami cache.
+The message sent to the server contains an operation-specific header in the form of
+a \fBsnbup\fP structure:
+.DS
+	\f(CWstruct snbup {
+		unsigned short	mode;
+		short			rdvdd;
+		long			rsvd;
+		long			ta;
+		long			tm;
+	}\fP
+.DE
+The \f(CWmode\fP is the mode of the file from the inode.  \f(CWrdvdd\fP is currently unused.
+\f(CWrsvd\fP is reserved space to pad the structure out to a multiple of 8 bytes.  \f(CWta\fP
+is the access time and \f(CWtm\fP is the modify time.
+If the inode is not marked IACC, \f(CWta\fP is set to 0.
+If the inode is not marked IUPD, \f(CWtm\fP is set to 0.
+The message sent to the server looks like:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBUPD request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBUPD
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct sndup) (40 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+sndup	value
+_	_
+mode	mode of inode
+rdvdd	unused
+rsvd	unused
+ta	access time or 0
+tm	modify time or 0
+.TE
+.PP
+If the times are zero in the client request message, the server obtains the times
+from the cached \fBstat(2)\fP information for the file.  Otherwise the times are used from
+the message.  The access and modify times are updated via \fButime(2)\fP.  If the modes
+are to be changed, and the client process owns the file, they are updated with either
+\fBfchmod(2)\fP or \fBchmod(2)\fP.
+The server responds to the client with the following message:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBUPD response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0
+rsvd	unused
+len	sizeof(struct recvb) (16 bytes)
+fsize	0
+.TE
+.bp
+.NH 2 
+nbread
+.PP
+This operation invalidates the nami cache.
+The client sends multiple messages to the server, reading at most \fImax_message_size\fP-16
+bytes at a time (currently 5104 bytes).
+.PP
+The message sent to the server includes an operation-specific \fBsnbread\fP structure:
+.DS
+	\f(CWstruct snbread {
+		long	len;
+		long	offset;
+	}\fP
+.DE
+\f(CWlen\fP is the number of bytes to be read and \f(CWoffset\fP is the offset in
+the file at which the read should start.  The message sent to the server is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBREAD request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBREAD
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct snbread) (32 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+snbread	value
+_	_
+len	number of bytes to read
+offset	byte offset where to start reading
+.TE
+.PP
+The server reads the data and sends it back to the client.  When all of
+the data is read, or \fBread(2)\fP returns less than the amount asked for, the \f(CWflags\fP
+field is set to NBEND.
+The message sent from the server to the client is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBREAD response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0 or NBEND
+rsvd	unused
+len	sizeof(struct recvb)+number of bytes read
+fsize	file size
+_	_
+data	read from file
+.TE
+.bp
+.NH 2 
+nbwrite
+.PP
+This operation invalidates the nami cache.
+The client sends multiple messages to the server, writing at most \fImax_message_size\fP-32
+bytes at a time (currently 5088 bytes).
+The message sent to the server includes an operation-specific \fBsnbwrite\fP structure:
+.DS
+	\f(CWstruct snbwrite {
+		long	len;
+		long	offset;
+	}\fP
+.DE
+\f(CWlen\fP is the number of bytes to be written and \f(CWoffset\fP is the offset in
+the file at which the write should start.  The message sent to the server is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBWRT request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBWRT
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct snbwrite)+
+	number of bytes to write
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+snbwrite	value
+_	_
+len	number of bytes to write
+offset	byte offset where to start writing
+_	_
+data	to be written
+.TE
+The client marks the inode (IUPD|ICHG).  After the write, the server seeks to
+the end of the file and updates the size of the file.  The message sent back to the client is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBWRT response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0
+rsvd	unused
+len	sizeof(struct recvb) (16 bytes)
+fsize	file size
+.TE
+The client updates the size of the file in the inode with \f(CWfsize\fP.
+.bp
+.NH 2 
+nbstat
+.PP
+The client maintains a one-entry cache from nami processing to avoid
+sending a stat message to the server immediately after a nami operation.
+If the client cache entry is valid, the \fBstat(2)\fP is satisfied from the
+cached data.  Otherwise a message is sent to the server.  The operation-specific
+part of the message contains a \fBsnbstat\fP structure:
+.DS
+	\f(CWstruct snbstat {
+		time_t	ta;
+		long		rsvd;
+	}\fP
+.DE
+\f(CWta\fP is the current time on the client and is used for synchronization.
+\f(CWrsvd\fP is reserved space used to pad the structure out to a multiple of
+8 bytes.  The message sent from the client to the server is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBSTAT request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBSTAT
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct snbstat) (32 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+snbstat	value
+_	_
+ta	current time on client
+rsvd	unused
+.TE
+.PP
+After each of the first three stat messages, and
+after every third stat message thereafter, the server recalculates the time drift between the
+client machine and the server machine.  The server uses \fBfstat(2)\fP to obtain the
+information about the given file.
+The response message sent to the client has an operation-specific header
+that contains a \fBrnbstat\fP structure:
+.DS
+	\f(CWstruct rnbstat {
+		long	ino;
+		short	dev;
+		short	mode;
+		short	nlink;
+		short	uid, gid;
+		short	rdev;
+		long	size;
+		long	ta;
+		long	tm;
+		long	tc;
+	};\fP
+.DE
+The response message is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBSTAT response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0
+rsvd	unused
+len	sizeof(struct recvb)+sizeof(struct rnbstat) (48 bytes)
+fsize	0
+_	_
+rnbstat	value
+_	_
+ino	inode number
+dev	device number
+mode	mode of file
+nlink	number of links to file
+uid	owner of file
+gid	group of file
+rdev	unused
+size	size of file
+ta	access time
+tm	modify time
+tc	change time
+.TE
+.NH 2 
+nbtrunc
+.PP
+\fBnbtrunc()\fP invalidates the nami cache.
+The message sent to the server is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBTRNC request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBTRNC
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb) (24 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+.TE
+.PP
+The client must own the file to be allowed to truncate it.  The server uses
+\fBcreat(2)\fP to truncate the file.  Since \fBcreat(2)\fP also opens the file
+for writing, the server immediately closes it.  The message sent back to the
+client is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBTRNC response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	nami flags
+rsvd	unused
+len	sizeof(struct recvb) (16 bytes)
+fsize	0
+.TE
+.bp
+.NH 2 
+nbnami
+.PP
+The file system-specific nami performs a number of operations.
+It can parse a pathname, link a file, unlink a file,
+make a directory, remove a directory, and create a file. 
+The message sent to the server contains an operation-specific header in the form
+of a \fBsnbnami\fP structure:
+.DS
+	\f(CWstruct snbnami {
+		short	mode;
+		short	dev;
+		long	ino;
+	}\fP
+.DE
+The message sent to the server is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBNAMI request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBNAMI
+flags	nami operation
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct snbnami)+
+	number of bytes in the pathname
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+snbnami	value
+_	_
+mode	mode of inode for
+	NI_CREAT, NI_NXCREAT, NI_MKDIR
+dev	unused
+ino	inode number (tag) for NI_LINK
+_	_
+data	full pathname
+.TE
+The \f(CWflags\fP field determines what the server should do.
+While parsing the pathname, if it goes out of the remote file system, the server
+sets the \f(CWflags\fP field in the response message to NBROOT and sends the message
+back to the client so the
+client can continue with pathname evaluation.  Each nami operation is described in the
+following sections.
+.PP
+The response message sent back to the client contains a \fBrnbnami\fP structure:
+.DS
+	\f(CWstruct rnbnami {
+		long	tag;
+		long	ino;
+		short	dev;
+		short	mode;
+		long	used;
+		short	nlink;
+		short	uid, gid;
+		short	rdev;
+		long	size;
+		long	ta;
+		long	tm;
+		long	tc;
+	};\fP
+.DE
+The message is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBNAMI response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0 or NBROOT
+rsvd	unused
+len	sizeof(struct recvb)+sizeof(struct rnbnami) (56 bytes)
+fsize	0
+_	_
+rnbnami	value
+_	_
+tag	tag
+ino	inode number
+dev	device number
+mode	mode of file
+used	if NBROOT, number of bytes parsed in pathname
+nlink	number of links to file
+uid	owner of file
+gid	group of file
+rdev	unused
+size	size of file
+ta	access time
+tm	modify time
+tc	change time
+.TE
+.PP
+If the pathname evaluates to a file on the server's file system, then the server
+will perform different tasks based on the value of \f(CWflags\fP in the request message.
+.NH 3 
+NI_SEARCH
+.PP
+The server opens the file and sends the response message to the client.
+.NH 3 
+NI_DEL
+.PP
+If the client process has write permission in the directory containing the file, and if
+the file is a regular file, then the server attempts to \fBunlink(2)\fP it.
+If the file is a directory, the server tries to remove it with \fBrmdir(2)\fP instead.  Other
+file types cannot be deleted.
+.NH 3 
+NI_CREAT
+.PP
+The server creates (and truncates) the file with \fBcreat(2)\fP.  For
+new file creation, the server does not allow special files or symbolic links
+to be created.
+.NH 3 
+NI_NXCREAT
+.PP
+This does the same thing as NI_CREAT, but if the file already exists, it
+fails with EEXIST.
+.NH 3 
+NI_LINK
+.PP
+If the file already exists, the server fails the operation with EEXIST.
+Otherwise, the server uses \fBlink(2)\fP to link the filename to the file
+represented by the client inode given by \f(CWino\fP.
+.NH 3 
+NI_MKDIR
+.PP
+If the file (directory) already exists, the server fails the operation with EEXIST.
+If the server has write permissions in the parent directory, then a new directory
+is created with \fBmkdir(2)\fP.
+.NH 3 
+NI_RMDIR
+.PP
+This does the same thing as NI_DEL, but only deals with removing directories.
+.bp
+.NH 2 
+nbdirread
+.PP
+This operation is used to read a directory and present the contents in a canonical form.
+The form is a NULL-terminated character string containing the i-number in decimal, a
+tab, and the filename.
+.PP
+The client sends one message to the server, reading at most \fImax_message_size\fP-24
+bytes at a time (5096 bytes).
+The message sent to the server contains an operation-specific header in the form
+of a \fBsnbread\fP structure (see \(sc 5.6).
+The message is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBDIR request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBDIR
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct snbread) (32 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+snbread	value
+_	_
+len	number of bytes to read
+offset	byte offset where to start reading
+.TE
+.PP
+The server reads the directory and responds back with a message containing the directory
+contents and an operation-specific header in the form of a \fBrnbdir\fP structure:
+.DS
+	\f(CWstruct rnbdir {
+		long	used;
+		long	rsvd;
+	};\fP
+.DE
+The response message is as follows:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBDIR response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0
+rsvd	unused
+len	sizeof(struct recvb)+sizeof(struct rnbdir) (24 bytes)
+fsize	file size
+_	_
+rnbdir	value
+_	_
+used	bytes read
+rsvd	unused
+_	_
+data	directory entries
+.TE
+.PP
+On success, \f(CWused\fP contains the number of bytes read.  It is added to \f(CWu.u_offset\fP
+to get the new offset in the directory.
+.bp
+.NH 2 
+nbioctl
+.PP
+The client side supports three \fBioctl(2)\fP commands private to
+the file system switch.  NBIOCON turns debugging on, NBIOCOFF turns
+debugging off, and NBIOCBSZ changes the network message size.
+All other commands are sent to the server.  It is assumed that all
+\fBioctls\fP contain a 64-byte buffer of data needed for the operation.
+Data are copied in from the buffer to send to the server and any resulting data
+are copied out to the buffer if the operation succeeds.
+The message sent to the server contains an operation-specific header in the form
+of a \fBsnbioc\fP structure:
+.DS
+	\f(CWstruct snbioc {
+		long	cmd;
+		short	flag;
+		short	rsvd;
+	}\fP
+.DE
+The message sent to the server is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBIOCTL request
+=
+sendb	value
+_	_	
+version	2
+cmd	NBIOCTL
+flags	0
+rsva	unused
+trannum	transaction number
+len	sizeof(struct sendb)+sizeof(struct snbioc)+
+	64 bytes of user data (96 bytes)
+tag	tag of inode
+uid	uid of client
+gid	gid of client
+rsvb	unused
+_	_
+snbioc	value
+_	_
+cmd	ioctl command
+flag	file table flags
+rsvd	unused
+_	_
+data	from user ioctl buffer
+.TE
+The response message sent from the server to the client is:
+.TS
+center,box;
+c s
+aw(0.75i) | aw(3.25i) .
+NBIOCTL response
+=
+recvb	value
+_	_	
+trannum	transaction number
+errno	error number or 0
+flags	0
+rsvd	unused
+len	sizeof(struct recvb)+64 bytes of user data (80 bytes)
+fsize	0
+_	_
+data	for user ioctl buffer
+.TE
+.PP
+Currently, \fBzarf\fP does not support \fBioctl(2)\fP and returns ENOTTY for
+this operation.
+.bp
+.NH 1 
+Permissions
+.PP
+The server determines permissions by matching passwd and group files.
+Exceptions to the default permissions can be found in \fI/usr/netb/except.local\fP and
+\fI/usr/netb/except\fP.  The format of these files are comment lines begin with '#',
+blank lines are ignored, and lines may contain one of four valid directives.  The
+first directive specifies the client to which the following lines apply.  This directive
+starts with the keyword 'client' and has the following format:
+.DS
+	\f(CWclient CLIENT_NAME\fP
+.DE
+where \f(CWCLIENT_NAME\fP is the name of the client machine, or '*' for all clients that
+do not have an explicit entry.  The client name is separated from the keyword
+by spaces or tabs.
+.PP
+The second directive specifies how to map a given user.  The directive starts with the
+keyword 'uid' and has the following format:
+.DS
+	\f(CWuid CLIENT_USER_NAME=SERVER_USER_NAME\fP
+.DE
+where \f(CWCLIENT_USER_NAME\fP is the name of a user on the client machine and
+\f(CWSERVER_USER_NAME\fP is the name of a user on the server machine to which the client
+is mapped.  \f(CWSERVER_USER_NAME\fP
+may be left out signifying the client is not to be mapped (i.e. disallowed access.)
+.PP
+The third directive specifies how to map a given group.  The directive starts with the
+keyword 'gid' and has the following format:
+.DS
+	\f(CWgid CLIENT_GROUP_NAME=SERVER_GROUP_NAME\fP
+.DE
+where \f(CWCLIENT_GROUP_NAME\fP is the name of a group on the client machine and
+\f(CWSERVER_GROUP_NAME\fP
+is the name of a group on the server machine to which the client is mapped.
+\f(CWSERVER_GROUP_NAME\fP
+may be left out signifying the client is not to be mapped (i.e. disallowed access.)
+.PP
+The last directive conveys specific parameters to the server.  This directive starts with the
+keyword 'param' and has the following format:
+.DS
+	\f(CWparam NAME=VALUE\fP
+.DE
+The following parameters are supported:
+.BL
+.LI
+\f(CWotherok\fP - this may take on a value of either 0 or 1.  A value of 1 gives read
+permissions to client ids that are not mapped and a value of 0 denies access.  In either
+case, client ids that are not mapped are denied write access.
+.LI
+\f(CWroot\fP - the value for this parameter is the pathname of the root from
+which the server will execute.
+.LE
+.NH 1 
+Acknowledgements
+.PP
+Peter Weinberger originally wrote the network file system.  More recently, Norman
+Wilson has fixed bugs and rewritten \fBzarf\fP and \fBsetup\fP.  He greatly improved the
+portability of \fBzarf\fP.  Thanks to Dennis Ritchie and Norman
+Wilson for reviewing this paper.
+.NH 1 
+REFERENCES
+.LP
+.LI
+.I
+UNIX Time-Sharing System Programmer's Manual.
+.R
+Research Version, Ninth Edition, Volume 1.
+Murray Hill: AT&T Bell Laboratories.  September, 1986.
+.LI
+Weinberger, P. J.
+"The version 8 network file system (abstract),"
+.I
+USENIX Conference Proceedings.
+.R
+Summer 1986.
+.LE

@@ -1,0 +1,130 @@
+.TH SELECT 2
+.CT 2 file_io comm_proc
+.SH NAME
+select \(mi synchronous input/output multiplexing
+.SH SYNOPSIS
+.nf
+.B #include <sys/types.h>
+.PP
+.B int select(nfds, readfds, writefds, milli);
+.B fd_set *readfds, *writefds;
+.fi
+.SH DESCRIPTION
+.I Select
+examines a set of file descriptors
+to see if they will block if read or written.
+.I Readfds
+points to an object of type
+.BR fd_set ,
+which contains a set of descriptors to be checked for reading;
+.I writefds
+similarly for writing.
+Only descriptors
+0 through
+.IR nfds \-1
+are considered.
+The number of ready descriptors is returned,
+and the
+.B fd_set
+pointed to by
+.I readfds
+.RI ( writefds )
+is overwritten with a set of descriptors
+ready to be read
+(written).
+The call waits until at least one descriptor is ready,
+or until
+.I milli
+milliseconds have passed.
+.PP
+Either
+.I readfds
+or
+.I writefds
+may be 0
+if no descriptors are interesting.
+.PP
+The
+.BR fd_set
+type looks like
+.RS
+.EX
+typedef struct {
+	unsigned int fds_bits[FDWORDS];
+} fd_set;
+.EE
+.RE
+.B FDWORDS
+is sufficient to contain as many file descriptors as the system will allow
+(currently 128).
+If there are
+.I B
+bits in an
+.BR "unsigned int" ,
+file descriptor
+.I n
+is represented by
+.BI "1<<((" n % B )-1)
+in word
+.BI fds_bits[ n / B ]\c
+\&.
+.PP
+These macros should be used
+to manipulate the contents
+of an
+.BR fd_set :
+.TF FD_ISSET(n,\0s)
+.TP
+.PD 0
+.B FD_ZERO(s)
+clear all bits
+in set
+.I s
+.TP
+.B "FD_SET(n, s)
+set bit for file descriptor
+.I n
+in set
+.I s
+.TP
+.B "FD_CLR(n, s)
+clear bit for file descriptor
+.I n
+in s
+.TP
+.B "FD_ISSET(n, s)
+return a value of 1
+if bit for file descriptor
+.I n
+is set in
+.IR s ,
+0 otherwise
+.PD
+.SH EXAMPLES
+.EX
+int p[2];
+fd_set wfs;
+pipe(p);
+do {
+	FD_SET(p[1], wfs);
+	write(p[1], ".", 1);
+	i++;
+} while(select(p[1]+1, (fd_set*)0, wfs, 0) == 1);
+printf("Pipe capacity = %d\en", i);
+.EE
+.SH "SEE ALSO"
+.IR read (2)
+.SH DIAGNOSTICS
+.BR EBADF ,
+.BR EFAULT ,
+.BR EINTR
+.SH BUGS
+.I Milli
+is rounded up to the nearest second.
+.br
+.I Select
+is intended for use with streams;
+file descriptors referring to ordinary files
+or to non-stream special files
+always appear ready.
+This is a lie for some special files.

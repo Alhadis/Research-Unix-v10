@@ -1,0 +1,13 @@
+awk '  # merge two sort animations
+BEGIN {	# file name   label                status of last getline
+    f1 = "is.s";      l1 = "view insert";  s1 = 1
+    f2 = "qs.s";      l2 = "view quick";   s2 = 1
+    sep = "click comp"
+    while (s1 && s2) {
+        print l1; while ((s1 = getline <f1) > 0 && $0 != sep) print
+        print l2; while ((s2 = getline <f2) > 0 && $0 != sep) print
+        print sep
+    }
+    if (s1 > 0) { print l1; while (getline <f1) print }
+    if (s2 > 0) { print l2; while (getline <f2) print }
+}' >race.s

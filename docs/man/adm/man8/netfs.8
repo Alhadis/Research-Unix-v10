@@ -1,0 +1,315 @@
+.TH NETFS 8
+.CT 1 sa_nonmortals
+.SH NAME
+netfs \- network file system
+.SH SYNOPSIS
+.nf
+.B /usr/netb/setup.go
+.fi
+.SH DESCRIPTION
+The network file system is conventionally a set of directories
+contained in
+.FR /n ,
+and a set of files and programs in
+.FR /usr/netb .
+Connections in the network file system are asymmetric:
+files on a `server' system are made accessible on a `client' system,
+usually in directory
+.BI /n/ server-name.
+.SS Client
+The client runs
+.FR /usr/netb/setup 
+to maintain connections;
+it is started by invoking
+.F /usr/netb/setup.go
+from
+.IR rc (8).
+.I Setup
+uses
+.F /usr/netb/friends
+to control the connections to servers.
+Each line in
+.I friends
+contains six fields:
+.RS
+network address
+.br
+network call argument
+.br
+mount point
+.br
+protocol id
+.br
+unique identifier
+.br
+debugging flag
+.br
+network calling username
+.RE
+.PP
+The network address and argument give the location of the server.
+They are interpreted differently according to the protocol id,
+which should be one of
+.TP
+.B d
+Call the server on the named network address,
+with default network
+.L dk
+and default service name
+.LR fsb .
+The network call argument is ignored.
+The server machine should respond by calling
+.IR zarf ,
+described below;
+see
+.IR svcmgr (8).
+.TP
+.B t
+Call the named network address,
+with default network
+.LR tcp ,
+and invoke the program named in the
+network call argument
+using the protocol of
+.IR rsh ;
+.IR con (1).
+.PP
+.I Setup
+calls
+.IR setlogname 
+(see
+.IR getuid (2))
+to make the network call appear to have been placed
+by the calling username.
+The username may be omitted;
+.LR daemon
+is the default.
+.PP
+The mount point is the directory
+on which the remote file system is to appear.
+The unique identifier is a integer in the range 0-255;
+it is used internally to distinguish connections,
+and must be unique among all active remote file systems
+(including those not maintained by
+.IR setup ,
+e.g.
+.IR faced (9.5)).
+The debugging flag is usually 0;
+nonzero numbers
+increase the chatter in various logfiles.
+.PP
+.I Setup
+reads the
+.I friends
+file when it starts,
+and checks for changes once a minute.
+Each remote file system is probed once a minute;
+if there is no response to several consecutive probes,
+the connection is torn down and restarted.
+Failed connections are retried every minute.
+.SS Server
+The server program is
+.FR /usr/netb/zarf .
+A separate
+.I zarf
+process exists for each client.
+.PP
+When a connection is started,
+the client sends the server a list of valid user and group names
+and the corresponding numerical IDs
+on the client system.
+The userid and groupid of user and group names that exist
+on both machines are mapped so that
+client and server see IDs
+under the same names.
+Unmapped IDs on the server appear as \-1 on the client.
+Client processes with unmapped IDs are denied access.
+.PP
+.I Zarf
+is subject to access control on the server.
+It will have access only to files that its own userid 
+and groupid admit.
+Unless run as super-user, it will create files with its own,
+not mapped, userid.
+.PP
+.I Zarf
+reads configuration information
+from
+.F /usr/netb/except.local
+and
+.FR /usr/netb/except .
+The
+files are read only once,
+when
+.I zarf
+starts,
+.B except.local
+first.
+Usually
+.B except
+is the same on all machines in some administrative cluster,
+.B except.local
+contains things specific to a particular server system.
+.PP
+The files contain sections
+beginning with the line
+.B client
+.I origin.
+.I Origin
+is the name of the calling client,
+as provided by the network;
+.L *
+matches any client.
+The first matching section is used.
+.PP
+Within each section,
+lines have of one of the following forms.
+Lines beginning with
+.L #
+are ignored.
+.TP
+.BI "uid " cname = sname
+Regardless of the contents of password files,
+map client user name
+.I cname
+to server user name
+.IR sname .
+If
+.I cname
+is not announced as valid by the client,
+the line is ignored.
+If
+.I sname
+is not a valid name on the server,
+any previous mapping for
+.I cname
+is discarded.
+.TP
+.BI "gid " cname = sname
+Map client group name
+.I cname
+to server group name
+.IR sname ,
+as above.
+.TP
+.BI "param otherok=" val
+If
+.I val
+is
+.LR 1 ,
+client processes with unmapped userids
+are granted world access
+to existing files on the server.
+Unmapped userids
+may never create files
+(who would own them?).
+If
+.I val
+is anything else,
+no access is permitted
+to
+unmapped client userids.
+.TP
+.BI "param root=" pathname
+Use
+.I pathname
+rather than
+.B /
+as the root of the filename hierarchy
+made visible on the client.
+.SH EXAMPLES
+A
+.I friends
+file
+for a connection to
+.B alice
+over Datakit,
+.B shamash
+over TCP/IP,
+and
+.B bebop
+over TCP/IP
+without administrative help:
+.RS
+.EX
+.ta \w'tcp!shamash!400 'u +\w'/usr/pjw/netb/zarf 'u +\w'/n/alice 'u +.3i +.3i +.3i
+alice	-	/n/alice	d	0	0
+tcp!shamash!400	-	/n/sun	d	1	0
+bebop	/usr/pjw/netb/zarf	/n/bebop	t	2	0	pjw
+.EE
+.RE
+.PP
+Some
+.I except
+file rules:
+.RS
+.EX
+client dk!nj/astro/research
+param otherok=1
+client *
+uid root=
+gid mail=other
+param otherok=0
+param root=/usr/spool
+.EE
+.RE
+.PP
+If the
+.I research
+machine calls as a client,
+the whole file system tree is visible,
+all userids including the super-user
+are permitted normal access,
+and user names unknown to the server
+are permitted world access.
+If any other machine calls,
+only the contents of
+.B /usr/spool
+are visible,
+.I root
+and unknown users
+are explicitly denied access,
+and
+processes in group
+.I mail
+on the client
+are treated as if in group
+.I other
+on the server.
+.SH FILES
+.PD 0
+.TF /usr/netb/except.local
+.TP
+.F /n/*
+.TP
+.F /usr/netb/friends
+client connection info
+.TP
+.F /usr/netb/except.local
+.TP
+.F /usr/netb/except
+.TP
+.F /usr/netb/setupl
+log file for
+.I setup
+.TP
+.F /usr/netb/zarf.log
+log file for zarf
+server control info
+.SH SEE ALSO
+S. A. Rago, `A Look at the Version 9 Network File System',
+this manual, Volume\ 2
+.SH BUGS
+The scheme works only in a modest-sized, friendly community, as it
+requires a process per client, trust of clients' security, and common
+login names.
+.br
+File modification times are adjusted for clock-time differences
+between machines.
+Thus, when viewed across the network,
+identical files installed on different machines by
+.IR asd (8)
+may appear to have different modification times, and
+symbol tables of random libraries
+.RI ( ar (1))
+may appear to be out of date.

@@ -1,0 +1,35 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	admin.out
+
+pg:	admin.out
+	count admin.ms admin.out
+
+spell:VQ:
+	dospell admin.ms
+
+lp:	admin.out
+	$LP $newprereq && touch $target
+
+history.out:D:	history.ms $REF
+	$PREFER history.ms | grap | pic | tbl | eqn | troff -mpm > $target
+
+admin.out:D:	admin.ms
+	pic admin.ms | tbl | troff -mpm > $target
+
+index:V:	admin.ind
+history.ind:V:
+	runind history
+	$PREFER xhistory.ms | grap | pic | tbl | eqn | troff -mpm > /dev/null 2>history.x
+	mkindex history.x
+	rm xhistory.ms
+admin.ind:V:
+	runind admin
+	pic xadmin.ms | tbl | troff -mpm > /dev/null 2>admin.x
+	mkindex admin.x
+	rm xadmin.ms
+
+pindex:V:
+	mkindex admin.x
+

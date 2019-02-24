@@ -1,0 +1,418 @@
+.TH PSTAT 8
+.CT 1 sa_mortals
+.SH NAME
+pstat \- print system facts
+.SH SYNOPSIS
+.B /etc/pstat
+[
+.B \-afipstuxT
+]
+[
+.I suboptions
+]
+[
+.I file
+]
+[
+.I namelist
+]
+.SH DESCRIPTION
+.I Pstat
+interprets the contents of certain system tables.
+If
+.I file
+is given, the tables are sought there, otherwise
+in
+.FR /dev/kmem .
+The required namelist is taken from
+.IR namelist ,
+default
+.FR /unix .
+Options are
+.TP 
+.B -a
+Under
+.BR -p ,
+describe all process slots rather than just active ones.
+.TP
+.B -i
+Print the inode table with the these headings:
+.RS
+.PD 0
+.TF SIGNAL
+.TP
+.B LOC
+The core location of this table entry.
+.TP
+.B FLAGS
+Miscellaneous state variables encoded thus:
+.RS
+.TP
+.B L
+locked
+.TP
+.B U
+modified time
+.RI ( filsys (5))
+must be corrected
+.TP
+.B A
+access time must be corrected
+.TP
+.B O
+file was opened
+.TP
+.B W
+wanted by another process 
+.RB ( L
+flag is on)
+.TP
+.B T
+contains an active text
+.RE
+.TP
+.B CNT
+Number of active references to this inode.
+.TP
+.B FS
+File system type, see
+.IR fmount (2).
+.TP
+.B DEVICE
+Device number of file system in which
+this inode resides.
+.TP
+.B INO
+I-number within the file system.
+.TP
+.B MODE
+Mode, see
+.IR stat (2).
+.TP
+.B NLN
+Number of links to this inode.
+.TP
+.B UID
+Userid of owner.
+.TP
+.B SPTR
+Core location of corresponding stream header,
+0 if this is not a stream.
+.TP
+.B SIZ/DEV
+Number of bytes in an ordinary file, or
+device number of a special file.
+.TP
+.B MROOT
+Core location of root inode
+of file system mounted here,
+0 if none.
+.PD
+.RE
+.TP 0
+.B -x
+Print the text table with these headings:
+.PD 0
+.RS
+.TF SIGNAL
+.TP
+.B LOC
+The core location of this table entry.
+.TP
+.B FLAGS
+Miscellaneous state variables encoded thus:
+.RS
+.TP
+.B P
+resulted from demand-page-from-inode exec format, see
+.IR exec (2)
+.TP
+.B T
+traced through
+.IR proc (4)
+.TP
+.B W
+text not yet written to swap device
+.TP
+.B L
+loading in progress
+.TP
+.B K
+locked
+.TP
+.B w
+wanted 
+.RB ( L
+flag is on)
+.RE
+.TP
+.B DADDR
+Disk address in swap, in multiples of 512 bytes.
+.TP
+.B CADDR
+Head of a linked list of loaded processes using this text segment.
+.TP
+.B RSS
+Size of physical memory occupied
+by text segment,
+in multiples of 512 bytes.
+.TP
+.B SIZE
+Size of text segment, in multiples of 512 bytes.
+.TP
+.B IPTR
+Core location of corresponding inode.
+.TP
+.B CNT
+Number of processes using this text segment.
+.TP
+.B CCNT
+Number of processes in core using this text segment.
+.PD
+.RE
+.TP 0
+.B -p
+Print process table for active processes with these headings:
+.RS
+.TP
+.B LOC
+The core location of this table entry.
+.PD 0
+.TF SIGNAL
+.TP
+.B S
+Run state encoded thus:
+.RS
+.TP
+.B 0
+no process
+.TP
+.B 1
+waiting for some event
+.TP
+.B 3
+runnable
+.TP
+.B 4
+being created
+.TP
+.B 5
+being terminated
+.TP
+.B 6
+stopped under trace
+.RE
+.TP
+.B F
+Miscellaneous state variables, or-ed together (hexadecimal):
+.RS
+.TF SIGNAL
+.TP
+.B 0000001
+loaded in memory
+.TP
+.B 0000002
+special system process (swapper or pager)
+.TP
+.B 0000004
+being swapped out
+.TP
+.B 0000008
+obscure swapout flag
+.TP
+.B 0000010
+traced
+.TP
+.B 0000020
+used in tracing
+.TP
+.B 0000040
+locked in core
+.TP
+.B 0000080
+waiting for pagein
+.TP
+.B 0000100
+prevented from swapping during
+.IR fork (2)
+.TP
+.B 0000200
+gathering pages for raw i/o
+.TP
+.B 0000400
+exiting
+.TP
+.B 0008000
+associated text is demand paged from file
+.TP
+.B 0030000
+anomalous paging behaviour expected,
+see
+.IR vlimit
+in
+.IR deprecated (2)
+.TP
+.B 0040000
+in a sleep which will time out
+.TP
+.B 0400000
+in
+.IR select (2)
+.TP
+.B 0800000
+traced via
+.IR proc (4)
+.TP
+.B 1000000
+i/o via
+.IR proc
+in progress
+.TP
+.B 2000000
+stop on exec
+.TP
+.B 4000000
+wanted by
+.I proc
+after pagein
+.RE
+.TF SIGNAL
+.TP
+.B ADDR
+The core location of the page table entry for the first page of the `u-area.'
+.TP
+.B PRI
+Scheduling priority;
+smaller numbers run first.
+.TP
+.B SIG
+Signals received; signals 1-32 coded in bits 0-31.
+.TP
+.B UID
+Real userid.
+.TP
+.B SLP
+Time blocked in seconds;
+times over 127 coded as 127.
+.TP
+.B TIM
+Time resident in seconds;
+times over 127 coded as 127.
+.TP
+.B CPU
+Weighted integral of CPU time, for scheduler.
+.TP
+.B NI
+Nice level,
+see
+.IR nice (2).
+.TP
+.B PGRP
+Process group number.
+.TP
+.B PID
+Process ID number.
+.TP
+.B PPID
+Process ID of parent process.
+.TP
+.B RSS
+Number of physical page frames allocated
+to this process.
+.TP
+.B SRSS
+RSS at last swap, 0 if never swapped.
+.TP
+.B SIZE
+Virtual size of process image (data+stack) in multiples of 512 bytes.
+.TP
+.B WCHAN
+Event address if waiting.
+.TP
+.B LINK
+Pointer to next entry in list of runnable processes.
+.TP
+.B TEXTP
+If text is pure, pointer to location of text table entry.
+.TP
+.B CLKT
+Countdown for
+.IR alarm (2)
+measured in seconds.
+.PD
+.RE
+.TP 0
+.B -u
+Print information about a user process;
+the next argument is its address as given
+by
+.L ADDR
+under
+.B -p
+above.
+The process must be in main memory, or the file used can
+be a core image
+.RI ( core (5))
+and the address 0.
+.TP
+.B -f
+Print the open file table with these headings:
+.PD0
+.RS
+.TF SIGNAL
+.TP
+.B LOC
+The core location of this table entry.
+.PD 0
+.TP
+.B FLG
+Miscellaneous state variables encoded thus:
+.RS
+.TP
+.B R
+open for reading
+.TP
+.B W
+open for writing
+.RE
+.TP
+.B CNT
+Number of processes that know this open file.
+.TP
+.B INO
+The core location of the inode table entry for this file.
+.TP
+.B OFFS
+The file offset, see
+.IR lseek (2).
+.PD
+.RE
+.TP 0
+.B -s
+Print information about swap space usage:
+the number of 1024 byte pages used
+and free,
+and the number of pages belonging
+to text images.
+.TP
+.B -T
+Print the number of used and free slots in several system tables;
+useful to see if they are nearly full.
+.SH FILES
+.TF /dev/kmem
+.TP
+.F /unix
+namelist
+.TP
+.F /dev/kmem
+default source of tables
+.SH SEE ALSO
+.IR ps (1),
+.IR stat (2), 
+.IR filsys (5)
+.br
+M. J. Bach,
+.IR "The Design of the UNIX Operating System" ,
+Prentice-Hall, 1986
+.SH BUGS
+This program is never up to date.

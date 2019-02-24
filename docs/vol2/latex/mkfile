@@ -1,0 +1,29 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	latex.dvi
+
+pg:	latex.dvi
+	sed -n '/^Output w/s/.*(\([0-9]*\).*/\1/p' latex.log > latex.tex.pg && touch pg
+
+spell:VQ:
+	dospell latex.tex
+
+lp:	latex.linops
+	$LP $newprereq && touch $target
+
+latex.dvi:D:	latex.tex
+	latex -t latex
+
+latex.linops:	latex.dvi
+	TEXFONTS=/usr/lib/tex/fonts:/usr/howard/linofonts \
+		dvips -Tlino $newprereq > $target
+
+index:V:
+	runind latex
+	latex -t xlatex
+	sed -e '/.*<tab>..*<tab>/s/\(.*\)<tab>\(.*\)<tab>\(.*\)/\3	\1	\2/' -e '/.*<tab>.*/s/\(.*\)<tab>\(.*\)/\2	\1/' xlatex.idx >latex.x
+	mkindex latex.x
+
+pindex:V:
+	mkindex latex.x

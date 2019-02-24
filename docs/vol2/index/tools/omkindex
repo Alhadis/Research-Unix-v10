@@ -1,0 +1,26 @@
+T=/usr/vol2/index/tools
+if test $# -eq 0
+then
+	echo mkindex directory file or mkindex file
+	exit
+fi
+if test $# -eq 1
+then
+j=`basename $1 .x`
+sed -n "/^\.XX.*$j/p" ../contents/contents.ms|awk '{print $2 >"name"}'
+else
+j=`basename $2 .x`
+sed -n "/^\.XX.*$1\/$j/p" ../contents/contents.ms|awk '{print $2 >"name"}'
+fi
+FILE=$j.x
+S=`cat name`
+echo $S
+sed -e '/^0	/d' -e 's/ #.*//' -e 's/:/!/g' -e '/^[A-Za-z.]/d' -e '/Examp/d' $FILE| awk '
+BEGIN	{FS="	" }
+NF==2	{ print str ", " $2 ": " $1
+	print $2 ", " str ": " $1
+	}
+NF==3	{
+	if($NF == "s" )print str ", " $2 ": " $1
+	else print $2 ", " str ": " $1
+}' str=$S | sort -u -t":" +0 -1 +1n |awk -f $T/combind.awk|sed -e 's/~/\$/g' -e 's/!/:/g'>$j.ind

@@ -1,0 +1,30 @@
+#    Extract tag and label definitions.
+grep -h "^\.@" $* >xref.tmp
+
+#    Create commands for replacing tags, and check for redeclarations.
+awk '
+ $1==".@defpre"	{ defpre = $2;
+		  for (x in value) value[x] = 0;
+		}
+ $1==".@pre"	{ pre[$2] = $3; value[$2] = 0;
+		}
+ $1==".@label"	{ check($2, $1);
+		} 
+ $1==".@tag"	{ check($3, $1);
+		  if ($2 in pre) temp = pre[$2]; else temp = defpre;
+		  if (NF >= 4) number = $4; else number = ++value[$2];
+		  p[substr($3,1,3)] = p[substr($3,1,3)]\
+			sprintf("s/%s/%s%d/g\n",$3, temp, number);
+		}
+ END		{ for (x in p) print "/" x "/{\n" p[x] "}";
+		  printf "/^\\.@tag/d\n"
+		}
+ func check(name,cmd) {
+    if (seen[name])
+        system( "echo "name" redeclared in "cmd" 1>&2" );
+    else seen[name] = 1;
+ }
+' xref.tmp
+
+
+rm xref.tmp

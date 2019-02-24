@@ -1,0 +1,127 @@
+.TH TEL 7
+.CT 1 inst_info
+.SH NAME
+tel, telno, dq \- phone books
+.SH SYNOPSIS
+.B tel
+.I key
+.PP
+.B telno
+.I key ...
+.PP
+.B dq
+.SH DESCRIPTION
+.I Tel
+looks up
+.I key
+in a private telephone book,
+.FR $HOME/lib/tel ,
+if it exists,
+and in a local book
+.FR /usr/lib/tel .
+.PP
+.I Tel
+is simply a script for
+.IR grep 
+(see
+.IR gre (1)),
+so lookup may be by any part of a name or number.
+Customarily the local telephone book contains names, userids,
+home numbers, and office numbers of users.
+It also contains a directory of area codes and miscellaneous
+people of some general interest.
+.PP
+.I Telno
+and
+.I dq
+retrieve information from a central, current database
+of AT&T personnel.
+The former is a simple one-line interface to the latter.
+.PP
+For
+.I telno,
+a
+.I key
+is typically a name.
+Other fields in the database may be matched by using tabs 
+within the key (the key
+must be quoted to protect spaces and tabs from the shell).
+The fields are, in order:
+.IP
+.nf
+name (last; last,first; first last; or payroll account no.)
+organization (e.g. att or bl)
+area code and exchange
+extension
+location
+room
+department
+electronic mail address
+.fi
+.LP
+Only a prefix of a first name need by given.
+In some positions
+.L *
+(or
+.BR ... )
+and
+.L ?
+may be used as a wild cards as in 
+.IR sh (1).
+Case is unimportant.
+.PP
+.I Dq
+provides interactive access to the central database.
+Under
+.IR mux (9.1)
+it is best run
+in a terminal-simulator layer, either
+.L "term 5620
+or
+.LR "term 2621" ;
+see
+.IR term (9.1).
+It displays a form with the same fields as
+.I telno.
+Fill in one or more fields, using tabs to move (circularly) between them,
+backspace to erase, and space
+to delete a field.
+Upon carriage return a group of answers is displayed.
+Type
+.L ?
+instead of a name to get more instructions.
+.SH EXAMPLES
+In these examples,
+.L \et
+represents a literal tab.
+.TP
+.L
+telno emlin
+Anyone named Emlin.
+.TP
+.L
+telno '\et\et\et3744'
+Anyone whose phone extension is 3744.
+.TP
+.L
+telno 'e*\et\et\et\et\et\et\etresearch!*'
+Anyone whose last name begins with E and
+who gets electronic mail on machine
+.LR research .
+.SH FILES
+.FR $HOME/lib/tel
+.br
+.F /usr/lib/tel
+.SH SEE ALSO
+.I bellcat
+in
+.IR library (7),
+.IR pq (7)
+.SH BUGS
+The algorithm used by
+.I dq
+(and hence
+.IR telno )
+to match each field is distinct and unknown to us.
+.br
+Not all entries have electronic mail addresses.

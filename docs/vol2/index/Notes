@@ -1,0 +1,58 @@
+paper	dist.words	headings
+f77.ms	.B 	good & many	done
+lex.ms	.I	marginal	done
+yacc.ms	.I	not useful getital	done
+spin.ms	.CW	most .IH
+sam.ms	.CW	ok commands with ngetcw	done - must edit sam.ind to get rid of dbl ref cmds
+pico.ms	.CW	ok cmds with ngetcw	done
+ipc.ms	.I	ok getital	done
+upas.ms	.I/.CW	only ok	done
+security.ms	.CW	ok	done
+anim.ms	.CW/.UL/.I	good withmore	too many terms
+cip.ms
+history.ms		DEFERED	uucp
+admin.ms		DEFERED	uucp
+ms/ms	none	ok .BI		SCHEME FAILS - DOESN'T use mpm
+eqn/guide	IT CW	good	- must edit guide.ind - merge sub/sup up/down etc - out CW to s/guide/eqn
+ideal/user			must edit s/user/ideal/ & resort
+tbl			contains .tr~ - disaster - fixed
+sed		ok	must edit cmd dbl reference
+setup		ok	edit setup.ind for make reference
+pic
+grap	UL/IT/UC	useless
+ped		sed 's/	hd /	/' ped.x before making index
+mpx		mkindex proto.x mpx
+netb		ok embedded \f...\f
+
+no caps in terms files - diction can locate - maybe write sed script
+since it has line number of match
+.Tm words puts out pg# +words on stdout
+
+to get terms:
+	gettop file
+	gethd file
+	getital/getcw/getul >file.dist
+	getdist BI >>file dist
+	maybe sed -f tools/fontch.sed (gets \\f.*\\f) constructs)
+	sort file.top file.hd file.dist|uniq >file.terms
+
+terms of form
+	words or words \t[sg] where s=specific - just entry under `name'
+		g=general - just entry in general, not under name
+		no \t entry in both places
+
+to get index:
+runind	tr A-Z a-z <file.terms|sort|uniq|awk -f tools/dups.awk >file.lterms
+	diction -n -f file.lterms -l -o file.hits file.ms >/dev/null
+	doinsert base >base.ms
+
+	prefer ... base.ms 2>file.x
+	mkindex file.x
+
+solutions - awk prog to make sure not inserting term in .TS or .PS
+tr $ to ~ in hits & back again in mkindex
+
+remaining editing - index has lost caps, font changes and plurals
+
+bugs - .Tm before title is lost
+	.Tm containing troff \stuff is converted - shouldn't be

@@ -1,0 +1,130 @@
+.TH BLITBLT 9.1
+.CT 1 comm_other
+.SH NAME
+blitblt, menudrop \- save or print a screen image
+.SH SYNOPSIS
+.B blitblt
+[
+.B -p
+.I command
+]
+.PP
+.B menudrop
+.SH DESCRIPTION
+.I Blitblt
+copies a selected area of a
+.IR mux (9.1)
+screen into a file
+or to a program.
+It is menu-driven off button 3 to select a
+rectangular area and to treat it by flipping the
+border from wide to narrow and back, inverting video,
+saving the selcted area in a file, or sending 
+it to a program, usually for printing.
+Details of certain menu items:
+.nr xx \w'\f5sweep rectangle\f1'u+2n/1n
+.TP \n(xx
+.TP
+.B choose layer
+.br
+.ns
+.TP
+.B layer rectangle
+One gets the bits of a layer, obscured or not; the other
+gets screen bits including superposed layers.
+.TP
+.B run/halt
+Restart or stop the terminal
+process in the selected layer.
+.TP
+.B write file
+Write the selected area into a file or pipe in
+.IR bitfile (9.5)
+format.
+The filename is typed 
+at the bottom of the
+.I blitblt
+layer.
+A bare newline repeats the previous name.
+If the first character is
+.LR | ,
+the remainder of
+the line is taken as a shell command to pipe into.
+(A likely command is
+.BR |lp 
+for hard copy.)
+.TP
+.BI | " command"
+Pipe the selected area to the
+.I command
+specified by the
+.B -p
+option.
+.PP
+.I Menudrop
+may be used with
+.IR blitblt
+to make images containing `menus'
+as fraudulent overlaid layers.
+The program is menu-driven off button 3:
+.nr xx \w'\f5drop menu\f1'u+2n/1n
+.TP \n(xx
+.B drop menu
+A
+.RI non- mux
+menu selected in another window will be drawn 
+and will remain on screen after
+the button selecting the menu has been released.
+Subsequent menu selections
+will delete the previous menu layer and create a new one.
+Once such a menu-bearing layer is present, the
+.I menudrop
+menu changes to allow cursor placement, highlighting of menu items, 
+lifting of the displayed menu, etc.
+The functionality of the program using the menu is not affected.
+.TP
+.B mux menus
+The next click of button 1 or 2 will drop the corresponding (non-functional)
+.I mux
+menu at the mouse position.
+.TP
+.B exit
+.I Menudrop
+will exit in a clean manner.
+.SH EXAMPLES
+.TP
+.L blitlblt -p lp
+.br
+.ns
+.TP
+.L
+blitblt -p "lp -p bpost"
+Arrange for piping output to a laser printer: a good
+way, and a surefire way.
+.SH SEE ALSO
+.IR mbits (6),
+.IR bitfile (9.5)
+.SH BUGS
+Animated layers result in broken images.
+Use the
+.B halt
+function.
+.br
+If a pipe request fails, the
+.I blitblt
+layer becomes unusable.
+.br
+The default 
+.I command
+for
+.L "write file"
+is obsolete.
+.br
+Deleting a
+.I menudrop
+layer, rather than exiting through the menu, can crash the terminal.
+.br
+Programs that use private menu packages are unaffected by
+.IR menudrop ;
+using a debugger to stop a program in midmenu may
+get the same effect.

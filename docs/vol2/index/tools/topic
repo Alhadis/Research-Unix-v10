@@ -1,0 +1,28 @@
+# NOTICE-NOT TO BE DISCLOSED OUTSIDE BELL SYS EXCEPT UNDER WRITTEN AGRMT
+L=/usr/lib/style
+M=/usr/vol2/index/tools
+N=/usr/vol2/index/tools
+mflag=-ms
+mlflag=-ml
+number=40
+for i in $*
+	do case $i in
+		-mm) mflag=-mm;shift;continue;;
+		-ms) mflag=-ms;shift;continue;;
+		-ml|-li) mlflag=-ml;shift;continue;;
+		+li) mlflag=;shift;continue;;
+		-ver) echo $0 version 2.0: 2.0;exit;;
+		-flags) echo $0 \[-flags\] \[-ver\] \[file ...\];exit;;
+		-*) echo unknown topic flag $i;exit;;
+		*) if test ! \( -r $i -o -r $i.tex \)
+		   then echo Can\'t find the file $i\; try specifying a more complete pathname.; exit
+		   fi
+	esac
+done
+if test -s $1.tex
+then
+awk -f $N/doinp.awk $1.tex|awk -f $M/top2.awk |$N/detex|$L/style1|$L/style2|$M/adj_noun -T|sed -f $M/top.sed|sort|uniq -c|sed "/^   1/d"|sort -nr
+else
+awk -f $M/top2.awk $*|$M/deroff -i $mflag $mlflag|$L/style1|$L/style2|$M/adj_noun -T|sed -f $M/top.sed|sort|uniq -c|sed "/^   1/d"|sort -nr
+#|sed -n "1,${number}p" 
+fi

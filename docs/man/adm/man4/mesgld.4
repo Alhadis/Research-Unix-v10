@@ -1,0 +1,168 @@
+.TH MESGLD 4
+.CT 2 comm_mach
+.SH NAME
+mesg_ld, rmesg_ld \- message line discipline modules
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/stream.h>
+.SH DESCRIPTION
+.I Mesg_ld
+and
+.I rmesg_ld
+turn internal stream messages
+into ordinary data and vice versa.
+They supply a way to splice a stream connection together
+through a process or across a network connection.
+The messages represent ordinary data
+and various control operations.
+.PP
+After
+.IR mesg_ld
+has been pushed on a stream,
+.IR read (2)
+on the stream returns encoded messages;
+.I write
+is expected to supply messages in the same coding.
+An encoded message consists of a header
+followed by zero or more bytes of associated data.
+The header,
+as defined in
+.BR <sys/stream.h> ,
+is of the form
+.IP
+.EX
+struct mesg {
+	char	type;
+	unsigned char	magic;
+	unsigned char	losize, hisize;
+};
+#define	MSGMAGIC	0345
+#define	MSGHLEN	4	/* true length of struct mesg in bytes */
+.EE
+.LP
+The header is
+.B MSGHLEN
+bytes long;
+beware that this is not always the same as
+.LR "sizeof(struct mesg)" .
+The
+.B magic
+field contains the constant
+.BR MSGMAGIC ,
+to help prevent interpreting bad data as a message header.
+There are
+.B "losize+(hisize<<8)"
+bytes of associated data.
+.PP
+Messages may be written in pieces,
+or several messages may be written at once.
+At most one message will be read at a time.
+If an impossible message is written,
+the stream may be shut down.
+.PP
+.IR Rmesg_ld
+is exactly the opposite of
+.IR mesg_ld .
+It is intended for use with devices
+that generate data containing encoded messages.
+Here is a list of message types,
+defined in
+.BR <sys/stream.h> :
+.TF M_HANGUP
+.TP
+.B M_DATA
+(0)
+Ordinary data.
+.TP
+.B M_BREAK
+(01)
+A line break on an RS232-style asynchronous connection.
+No associated data.
+.TP
+.B M_HANGUP
+(02)
+When received, indicates that the other side has gone away.
+Thereafter the stream is useless.
+No associated data.
+.TP
+.B M_DELIM
+(03)
+A delimiter that introduces a record boundary in the data.
+No associated data.
+.TP
+.B M_IOCTL
+(06)
+An
+.IR ioctl (2)
+request.
+The associated data is a four-byte integer
+containing the
+function code,
+least significant byte first,
+followed by some amount of associated data.
+An
+.B M_IOCACK
+or
+.BR M_IOCNAK 
+reply is expected.
+.TP
+.B M_DELAY
+(07)
+A real-time delay.
+One byte of data, giving the number of clock ticks of
+delay time.
+.TP
+.B M_CTL
+(010)
+Device-specific control message.
+.TP
+.B M_SIGNAL
+(0101)
+Generate signal number given in the one-byte message.
+.TP
+.B M_FLUSH
+(0102)
+Flush input and output queue if possible.
+.TP
+.B M_STOP
+(0103)
+Stop transmission immediately.
+.TP
+.B M_START
+(0104)
+Restart transmission after
+.BR M_STOP .
+.TP
+.B M_IOCACK
+(0105)
+Successful reply to
+.BR M_IOCTL .
+Associated data is to be written back to the caller.
+.TP
+.B M_IOCNAK
+(0106)
+Failed reply to
+.BR M_IOCTL .
+A single-byte message,
+if present,
+will be returned in
+.CW errno
+by the failing
+.IR ioctl .
+.TP
+.B M_PRICTL
+(0107)
+High-priority
+device-specific control message.
+.PD
+.PP
+.SH SEE ALSO
+.IR stream (4)
+.SH BUGS
+The format of arguments to
+.B M_IOCTL
+is machine dependent.
+.br
+The amount of associated data
+is limited, but large (>4K).

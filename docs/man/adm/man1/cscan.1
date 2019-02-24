@@ -1,0 +1,77 @@
+.TH CSCAN 1 coma,pipe
+.CT 1 misc
+.SH NAME
+cscan \- scan documents on canon scanner
+.SH SYNOPSIS
+.B cscan
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Cscan
+acquires black-and-white images using the
+Canon 9030 Laser Copier flatbed document scanner
+located in the Graphics Lab.
+Each
+.I file
+receives one image; multiple
+.IR file s
+are scanned as fast as possible
+(every 12s, after a startup delay).
+If no
+.I file
+is specified, one image is written to the standard output.
+.PP
+Each image is compressed using the CCITT FAX Group 4 standard
+and supplied with a header as described in
+.IR picfile (5).
+The default page format is 3456 by 4400 pixels (\fIi.e.\fR letter-size 8.64"\(mu11.0"
+at 400 pixels/inch digitizing resolution).
+.PP
+The options are:
+.TP
+.BI -f x,y
+Format is
+.I x
+by
+.I y
+pixels.
+.I X
+is truncated to a multiple of 32.
+.TP
+.B -fL
+Double-letter format
+.BR -f 4416,6800
+or 11"\(mu17" at 400 pixels/inch
+(the largest possible).
+.TP
+.BI -s s
+Sleep between scans for an extra
+.I s
+seconds.
+.TP
+.BI -v
+Verbose: announce each
+.I file
+as it arrives.
+.SH SEE ALSO
+.IR bcp (1),
+.IR ocr (1),
+.IR picfile (5)
+.SH BUGS
+Although only 10s are required to acquire and compress each image,
+it can take 40s for the first file to appear,
+due largely to networking latencies involving
+.IR rcp (1).
+.br
+.I Cscan
+is unkillable:
+scanning continues and the files keep coming.
+.br
+The automatic document feeder is not supported.
+.br
+The resolution recorded in the header is always 400 pixels/inch,
+even though it is possible manually to zoom to other resolutions.

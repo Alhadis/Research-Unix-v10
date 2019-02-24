@@ -1,0 +1,53 @@
+< ../ADM/defns
+<../index/defns
+
+all:V:	ms.out refcard.out
+
+pg:	ms.out
+	count ms ms.out
+	echo `cat ms.pg` +4 | hoc | sort -o ms.pg && touch pg
+
+spell:VQ:
+	dospell ms
+
+lp:	ms.out refcard.out
+	$LP $newprereq && touch $target
+
+ms.out:	ms $REF
+	$PREFER ms | tbl | troff > $target
+
+refcard.out:	refcard $REF
+	$PREFER refcard | tbl | eqn | troff > $target
+
+oindex:V:
+	cat ms $IND/dummy.mac refcard >xms
+	runind xms
+	$PREFER xxms|tbl|troff $IND/tm.mac - >/dev/null 2>ms.x
+	mkindex ms ms.x
+	rm xxms xms
+
+pindex:V:
+	mkindex ms ms.x
+index:V:
+	runind ms
+	$PREFER xms|tbl|troff $IND/tm.mac - >/dev/null 2>ms.x
+	runind refcard
+	$PREFER xrefcard|tbl|eqn|troff $IND/tm.mac - >/dev/null 2>refcard.x
+	tail ms.x >next
+	awk '
+	BEGIN	{
+		while((getline<"next") > 0)
+			if($1 ~ /[0-9]/)page = $1
+		lastpage=0
+		print "page " page|"cat 1>&2"
+	}
+	$1 ~ /[0-9]/	{
+		rpage = $1 + page
+		sub($1, rpage)
+		print
+		next
+		}
+	/.*/	{print}
+	' refcard.x >>ms.x
+	mkindex ms ms.x
+	rm xms xrefcard

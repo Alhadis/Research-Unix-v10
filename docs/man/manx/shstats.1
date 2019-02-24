@@ -1,0 +1,72 @@
+.TH SHSTATS 1 SHARE
+.SH NAME
+shstats \- show histogram of share scheduler user priorities
+.SH SYNOPSIS
+.B shstats
+[-#] [-cn] [-sn] [-un]
+.SH DESCRIPTION
+.I Shstats
+prints a table of system scheduling parameters,
+the share variables for a selected user (default: the invoker),
+and a histogram of users vs. normalised usage.
+In the histogram, the current user selected
+is represented by the character `\fB~\fP',
+and other users by a unique character
+in the \fIascii\fP range `\fB!\fP' to `\fB}\fP'.
+.P
+Invoked without arguments,
+.I shstats
+will print the table and exit.
+The flags affect operation as follows:-
+.RS 2
+.TP 10
+.ul
+flag
+.ul
+meaning
+.TP
+.BI -#
+All users except the invoker will be represented by the character \fB#\fP.
+.TP
+.BI -c n
+Continuous operation, where
+.BR n ,
+if present, limits the number of cycles.
+.TP
+.BI -s n
+Delay time between updates becomes
+.B n
+seconds [default 4].
+.TP
+.BI -u n
+Change the selected user to the one whose 
+.I uid
+matches
+.IR n .
+.P
+In continuous non-\fIhash\fP mode,
+.I shstats
+will read the
+.I "standard input"
+while waiting for the next display update
+for the invoker to type the identifier for a user to select.
+This can be either a single character
+to select the user represented by that character in the histogram,
+or a login name, or a uid.
+.SH EXAMPLES
+.RS 4
+\fBshstats \-#c | dis\fP
+.SH SEE ALSO
+dis(1),
+rates(1),
+ustats(1),
+share(5).
+.SH BUGS
+Reading from the
+.I "standard input"
+when output is piped through
+.I dis
+doesn't seem to work,
+perhaps because of some weirdness in the way
+.I curses
+drives the screen.

@@ -1,0 +1,274 @@
+.TH MM 1
+.SH NAME
+mm \- print out documents formatted with the \s-1MM\s+1 macros
+.SH SYNOPSIS
+.B mm
+[ options ] [ files ]
+.SH DESCRIPTION
+.I Mm\^
+can be used to type out documents using
+.IR nroff (1)
+and the
+.SM MM
+text-formatting macro package.
+It has options to specify
+preprocessing by
+.IR tbl (1)
+and/or
+.IR neqn (1)
+and postprocessing by various terminal-oriented output filters.
+The proper pipelines and the
+required arguments and flags for
+.IR nroff (1)
+and
+.SM MM
+are generated, depending on the options selected.
+.PP
+.I Options\^
+for
+.I mm\^
+are given below.
+Any other arguments or flags (e.g.,
+.BR \-rC3 )
+are passed
+to
+.IR nroff (1)
+or to
+.SM MM\*S,
+as appropriate.
+Such options can occur in any order,
+but they must appear before the
+.I files\^
+arguments.
+If no arguments are given,
+.I mm\^
+prints a list of its options.
+.PP
+.PD 0
+.TP 9
+.BI \-T term
+Specifies the type of output terminal;
+for a list of recognized values for
+.IR term ,
+type
+.BR "help term2" .
+If this option is
+.I not\^
+used,
+.I mm\^
+will use the value of the shell variable
+.SM
+.B $TERM
+from the environment (see
+.IR profile (5)
+and
+.IR environ (7))
+as the value of
+.IR term ,
+if
+.SM
+.B $TERM
+is set;
+otherwise,
+.I mm\^
+will use
+.B 450
+as the value of
+.IR term .
+If several terminal types are specified,
+the last one takes precedence.
+.TP
+.B \-12
+Indicates that the document is to be produced in 12-pitch.
+May be used when
+.SM
+.B $TERM
+is set to one of
+.BR 300 ,
+.BR 300s ,
+.BR 450 ,
+and
+.BR 1620 .
+(The pitch switch on the
+.SM DASI
+300 and 300s terminals must be manually
+set to
+.B 12
+if this option is used.)
+.TP
+.B \-c
+Causes
+.I mm\^
+to invoke
+.IR col (1);
+note that
+.IR col (1)
+is invoked automatically by
+.I mm\^
+unless
+.I term\^
+is one of
+.BR 300 ,
+.BR 300s ,
+.BR 450 ,
+.BR 37 ,
+.BR 4000A ,
+.BR 382 ,
+.BR 4014 ,
+.BR tek ,
+.BR 1620 ,
+and
+.BR X .
+.TP
+.B \-e
+Causes
+.I mm\^
+to invoke
+.IR neqn (1);
+also causes
+.I neqn
+to read the
+.B /usr/pub/eqnchar
+file (see
+.IR eqnchar (7)).
+.TP
+.B \-t
+Causes
+.I mm\^
+to invoke
+.IR tbl (1).
+.TP
+.B \-E
+Invokes the
+.B \-e
+option of
+.IR nroff (1).
+.TP
+.B \-y
+Causes
+.I mm\^
+to use the non-compacted version of the macros (see
+.IR mm (7)).
+.PD
+.PP
+As an example (assuming that the shell variable
+.SM
+.B $TERM
+is set in the environment to
+.BR 450 ),
+the two command lines below are equivalent:
+.RS
+.PP
+mm \|\-t \|\-rC3 \|\-12 \|ghh\(**
+.br
+tbl \|ghh\(** \|\(bv \|nroff \|\-cm \|\-T450\-12 \|\-h \|\-rC3
+.RE
+.PP
+.I Mm\^
+reads the standard input
+when
+.B \-
+is specified
+instead of any file names.
+(Mentioning other files together with
+.B \-
+leads to disaster.)\ 
+This option allows
+.I mm\^
+to be used as a filter, e.g.:
+.RS
+.PP
+cat \|dws \|\(bv \|mm \|\-
+.RE
+.SH HINTS
+.PD 0
+.TP
+1.
+.I Mm\^
+invokes
+.IR nroff (1)
+with the
+.B \-h
+flag.
+With this flag,
+.IR nroff (1)
+assumes that the terminal has tabs set
+every 8 character positions.
+.TP
+2.
+Use the
+.BI \-o list\^
+option of
+.IR nroff (1)
+to specify ranges of pages to be output.
+Note, however, that
+.IR mm ,
+if invoked with
+one or more of the
+.BR \-e ,
+.BR \-t ,
+and
+.B \-
+options,
+.I together\^
+with the
+.BI \-o list\^
+option of
+.IR nroff (1)
+may cause a harmless ``broken pipe'' diagnostic
+if the last page of the document is not specified in
+.IR list .
+.TP
+3.
+If you use the
+.B \-s
+option of
+.IR nroff (1)
+(to stop between pages of output),
+use line-feed (rather than return or new-line)
+to restart the output.
+The
+.B \-s
+option of
+.IR nroff (1)
+does not work with the
+.B \-c
+option of
+.IR mm ,
+or if
+.I mm\^
+automatically invokes
+.IR col (1)
+(see
+.B \-c
+option above).
+.TP
+4.
+If you lie to
+.I mm\^
+about the kind of terminal its output will be printed on,
+you'll get (often subtle) garbage;
+however, if you are redirecting output into a file, use the
+.B \-T37
+option, and then use the appropriate terminal filter when you actually print that file.
+.PD
+.br
+.ne 4
+.SH SEE ALSO
+.tr ~
+.PD 0
+col(1), env(1), eqn(1), greek(1), mmt(1), nroff(1), tbl(1),
+profile(5), mm(7), term(7).
+.PP
+.I "\s-1MM\s+1\-Memorandum Macros\^"
+by D.~W. Smith and J.~R. Mashey.
+.PP
+.I "Typing Documents with \s-1MM\s+1\|"
+by D.~W. Smith and E.~M. Piskorik.
+.PD
+.SH DIAGNOSTICS
+.tr ~~
+``mm: \|no input file''\| if
+none of the arguments is a readable file and
+.I mm\^
+is not used as a filter.

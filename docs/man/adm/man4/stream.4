@@ -1,0 +1,265 @@
+.TH STREAM 4
+.CT 2 comm_proc
+.SH NAME
+stream \- communication channels
+.SH SYNOPSIS
+.B #include <sys/filio.h>
+.br
+.B #include <sys/ttyio.h>
+.SH DESCRIPTION
+A stream is a connection between two processes, or between a process
+and a device.
+It is referred to by a file descriptor, and ordinary read and write
+calls apply.
+When a write
+call is given on a stream whose other end has disappeared,
+for example because the process at other end of a pipe has terminated,
+or a device has hung up, signal 
+.B SIGPIPE
+is generated; if the signal is ignored,
+the write call returns error
+.BR EPIPE .
+The first 64
+attempts to read such a disconnected stream
+return 0;
+subsequent attempts generate
+.B SIGPIPE
+signals.
+.PP
+Pipes are streams;
+so are most communication devices
+like terminals and networks.
+.PP
+Line disciplines may be inserted into a stream
+to do various sorts of processing.
+Line disciplines within a stream
+are identified by their position;
+level 0 is nearest the process.
+Line disciplines on
+one end of a pipe cannot be seen from the other.
+Line discipline types are integers;
+a list is given below.
+.PP
+These
+.I ioctl
+calls,
+defined in
+.BR <sys/filio.h> ,
+manipulate line disciplines:
+.nr pW \w'\f3FIOPUSHLD  'u
+.TP \n(pWu
+.B FIOPUSHLD
+The third argument points to an integer naming a line discipline;
+insert that line discipline
+at level 0.
+.PD
+.TP
+.B FIOINSLD
+The third argument points to a structure:
+.RS
+.LP
+.EX
+struct insld {
+	short	ld;
+	short	level;
+};
+.EE
+.LP
+Insert the line discipline named by
+.B ld
+in the stream
+at
+depth
+.BR level .
+If there are fewer than
+.B level
+line disciplines in the stream,
+an error is returned.
+.RE
+.TP
+.B FIOPOPLD
+The third argument points to an integer;
+remove the line discipline at that level in the stream.
+A null pointer
+(the usual case)
+means level 0.
+.TP
+.B FIOLOOKLD
+The third argument
+points to an integer;
+return the type of the line discipline at that level,
+both in the same integer
+and as the return value from
+.IR ioctl .
+A null pointer means level 0.
+.PP
+These
+.I ioctl
+calls,
+also in
+.BR <sys/filio.h> ,
+perform other operations on streams:
+.TP \n(pWu
+.B FIOSNDFD
+The third argument points to an integer
+naming an open file descriptor.
+Send a reference to that file
+to the other end of the stream.
+This works only on pipes.
+The reference is unaffected by intervening line disciplines;
+in particular it cannot be intercepted or forged by
+.IR mesgld (4).
+.B FIOSNDFD
+returns immediately;
+it does not wait for the reference to be received.
+.TP
+.B FIORCVFD
+The third argument points to a structure:
+.RS
+.LP
+.EX
+struct passfd {
+	int	fd;
+	short	uid;
+	short	gid;
+	short	nice;
+	char	logname[8];
+};
+.EE
+.PP
+Receive a file reference sent by
+.BR FIOSNDFD ;
+fill in the structure with a file descriptor
+.B fd
+for the passed file,
+and the userid
+.BR uid ,
+groupid
+.BR gid ,
+login name
+.BR logname ,
+and scheduling priority
+.BR nice
+of the sending process.
+The file reference must be the next message in the stream;
+if data precedes it,
+.B EIO
+is returned.
+If the stream is empty,
+.B FIORCVFD
+blocks until data or a file reference arrives.
+.RE
+.TP
+.B FIONREAD
+The third argument
+points to an integer;
+fill it in with the number of characters
+that may be read from this stream without blocking.
+.PP
+These
+.I ioctl
+calls also work on streams,
+but are defined in
+.BR <sys/ttyio.h>
+for historic reasons:
+.TP \n(pWu
+.B TIOCSPGRP
+The third argument points to a short integer.
+If the pointer is null
+(the usual case),
+make a new process group for the current process,
+and associate the group with this stream.
+If the pointer is not null,
+it points to a process group id;
+associate that group with this stream.
+When the lowest level of a stream
+receives a signal message
+(like
+.B SIGINT
+or
+.B SIGQUIT
+from
+.IR ttyld (4)),
+the signal is sent to processes in the associated process group.
+If the stream is shut down prematurely,
+the process group is sent
+.BR SIGHUP .
+.TP
+.B TIOCGPGRP
+The third argument points to a short integer;
+fill it in with the process group id associated with this stream.
+0 means no group.
+.TP
+.B TIOCEXCL
+Mark this stream
+so that future opens are forbidden
+except to the super-user
+or to processes in the associated process group.
+.TP
+.B TIOCNXCL
+Remove the mark left by
+.BR TIOCEXCL .
+.TP
+.B TIOCSBRK
+Send a break on a serial line.
+.TP
+.B TIOCFLUSH
+Throw away queued data anywhere in the stream.
+.LP
+Here is a list of line discipline types.
+The names refer to global integers
+defined in the C library.
+.TP \n(pWu
+.PD 0
+.B tty_ld
+Regular terminal processing,
+.IR ttyld (4).
+.TP
+.B ntty_ld
+Restricted Berkeley `new tty' terminal processing;
+see the Berkeley Users Manual.
+.TP
+.B cdkp_ld
+Character-mode Datakit universal receiver protocol,
+.IR dk (4).
+.TP
+.B dkp_ld
+Block-mode Datakit universal receiver protocol,
+.IR dk (4).
+.TP
+.B rdk_ld
+.TP
+.B uxp_ld
+Datakit protocols used in call setup,
+.IR dk (4).
+.TP
+.B buf_ld
+Buffering mechanism,
+.IR bufld (4).
+.TP
+.B mesg_ld
+.TP 
+.B rmesg_ld
+Turn stream controls into ordinary data and vice versa,
+.IR mesgld (4).
+.TP
+.B conn_ld
+Make unique connections to a server,
+.IR connld (4).
+.TP
+.B ip_ld
+.TP
+.B tcp_ld
+.TP
+.B udp_ld
+Internet protocols,
+.IR internet (3).
+.SH SEE ALSO
+.IR ioctl (2),
+.IR signal (2),
+.IR mesgld (4),
+.IR ipc (3)
+.br
+D. M. Ritchie,
+`A Stream I/O System',
+this manual, Volume 2

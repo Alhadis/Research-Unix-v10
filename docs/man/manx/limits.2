@@ -1,0 +1,145 @@
+.TH LIMITS 2 SHARE-deprecated
+.SH NAME
+limits \- return or set limits structure
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/lnode.h>
+.br
+.B #include <sys/retlim.h>
+.br
+.B #include <sys/share.h>
+.P
+.B limits(address, function)
+.br
+.B struct lnode *address;
+.br
+.B int function;
+.SH DESCRIPTION
+This system call manipulates a kernel limits structure
+according to the value of
+.IR function .
+Except where indicated below,
+.I address
+points to an
+.I lnode
+or an array of
+.IR lnodes .
+.LP
+.RS 2
+.nf
+.ta \w'\s-1L_DEADGROUP\s0XX'u +\w'ValueXX'u
+Function	Value	Meaning
+\s-1L_MYLIM\s0	0	Get user's own limits structure.
+\s-1L_OTHLIM\s0	1	Get limits associated with uid in lnode.
+\s-1L_ALLLIM\s0	2	All active limits structures are returned.
+\s-1L_SETLIM\s0	3*	Connect to a new limits structure.
+\s-1L_DEADLIM\s0	4	Wait for dead limits belonging to child.
+\s-1L_CHNGLIM\s0	5*	Changes limits fields in existing limits.
+\s-1L_DEADGROUP\s0	6*	Pick up a dead limits structure.
+\s-1L_GETCOSTS\s0	7	Get contents of system ``shconsts'' table.
+\s-1L_SETCOSTS\s0	8*	Set contents of system ``shconsts'' table.
+\s-1L_MYKN\s0	9	Get user's own ``kern_lnode'' structure.
+\s-1L_OTHKN\s0	10	Get structure associated with uid.
+\s-1L_ALLKN\s0	11	All active structures are returned.
+.fi
+.RE
+.P
+The starred functions in the list are super\-user only.
+.P
+For 
+.SM L_MYKN,
+.SM L_OTHKN,
+and
+.SM L_ALLKN
+.I address
+should point to a ``struct kern_lnode''
+defined in
+.IR <sys/lnode.h> .
+For
+.SM L_SETCOSTS
+and
+.SM L_GETCOSTS
+.I address
+should point to a ``struct shconsts''
+defined in
+.IR <sys/share.h> .
+For
+.SM L_DEADLIM
+.I address
+should point to a ``struct retlim'' defined in
+.IR <sys/retlim.h> .
+.P
+.SM L_OTHLIM
+and
+.SM L_CHNGLIM
+require that the lnode pointed to by
+.I address
+contains the correct uid.
+.SM L_OTHKN
+requires that the kern_lnode pointed to by
+.I address
+contains the correct uid.
+.SM L_MYLIM,
+.SM L_MYKN,
+.SM L_OTHLIM,
+and
+.SM L_OTHKN
+all return the number of processes currently attached to the node.
+.SM L_ALLLIM
+and
+.SM L_ALLKN
+both return the number of active nodes returned.
+.P
+.SM L_SETLIM
+initialises a new limits structure with the passed lnode,
+and attaches the calling process to it.
+All children of that process will inherit the new structure.
+.P
+.SM L_DEADGROUP
+looks for a dead limits structure,
+removes it from the list of active limits,
+and returns the lnode.
+.P
+.SM L_DEADLIM
+performs a
+.IR wait (2)
+system call,
+then returns a structure containing both the limits and process zombie structures.
+The value returned is the number of processes still attached to the node.
+.P
+.SM L_SETCOST
+and 
+.SM L_GETCOST
+deal with the constants structure for the scheduling algorithm.
+.P
+Any other function is illegal, and will return an error of EINVAL.
+Unless otherwise specified the
+call returns the number of limits structures returned.
+.SH DIAGNOSTICS
+.B ESRCH
+can be returned in
+.I errno
+by functions
+.SM L_DEADGROUP,
+.SM L_OTHKN,
+.SM L_OTHLIM
+and
+.SM L_CHNGLIM
+to indicate that
+the desired limits structure does not exist.
+.B ESRCH
+can also be returned by
+.SM L_SETLIM
+to indicate that this lnode's group has not been set-up.
+.P
+.B ETOOMANYU
+is returned in errno for 
+.SM L_SETLIM
+if there is no space left in the kernel limits table.
+.P
+Any error causes a \-1 to be returned.
+.SH "SEE ALSO"
+setlimits(3),
+lnode(5),
+share(5).

@@ -1,0 +1,124 @@
+.NH
+Signal Bundles and Macros.
+.LP
+Consider this buffer between two 8-bit busses:
+.PS <fig1.pic
+It illustrates several
+.I jraw
+conventions.  The
+.I chip
+is indicated by a box; its
+.I name
+is
+.CW buffer ;
+its
+.I type
+is
+.CW 74F244 .
+These are simply unattached text strings that appear stacked inside the
+box.
+.I "Pin names"
+(e.g.,
+.CW D0 )
+are strings that appear on the inside edge of the box.
+.I Nets
+are lines that end on a pin.
+.I "Net names"
+are strings that are placed on nets.  A trailing
+.CW "-"
+conventionally indicates an active-low signal.
+.LP
+Even this trivial example involves repeated patterns.
+A much more succint equivalent is:
+.PS <fig2.pic
+The
+.I generator
+.CW "x<0:7>"
+expands into the ordered list
+.CW x0 ,
+.CW x1 ,...
+.CW x7 .
+The
+.I pattern
+.CW "D?\&"
+matches two-character pin names that begin with
+.CW D .
+(The space of possible names comes from the
+.CW .pins
+file entry for the chip type.)
+The names that match the pattern are
+.I "sorted alphabetically"
+and put into correspondance with the nets.
+.LP
+If connected sets of nets and pins do not have the same cardinality,
+the smaller set is reused until the larger is exhausted.  Thus in the
+example, the
+.CW drive-
+net gets connected to both
+.CW OE0-
+and
+.CW OE1- ,
+as desired.
+.LP
+Frequently one has a group of chips that will be used or replicated as
+a unit.  In such a case it makes sense to define a
+.I macro
+that may be instantiated as required.  A macro lives in its own file.
+Here is an example,
+.CW opm.j :
+.PS <opm.pic
+The dotted box (produced by selecting
+.CW macro
+in
+.I jraw ")"
+identifies the circuit as a macro.  Strings outside of this box
+(conventionally in upper case) are ``pin names'' visible to the
+outside world.  Most names inside the box will be made local to
+each instantiation.  Net names beginning with
+.CW "/"
+are ``globals,'' i.e., they represent the same signal throughout
+the design.
+.CW "/VCC"
+and
+.CW "/GND"
+are the most common global signals.
+.LP
+Now we use generators to make several instances of
+.CW opm.j :
+.PS <opmcall.pic
+Sixteen copies of the
+.CW opm
+circuit are made.  The pattern
+.CW "D?\&"
+is at a lower, i.e., ``faster running,'' level than
+.CW "opm<00:15>" ,
+with the effect that all the
+.CW D0 "'s"
+are connected to
+.CW "bd0" ,
+all the
+.CW D1 "'s"
+are connected to
+.CW "bd1" ,
+etc; similarly, all the
+.CW A0 "'s"
+are connected to
+.CW ba0 .
+On the other hand, all the
+.CW "CS-" "'s"
+are separate:
+.CW "opm00/CS-"
+(the instance of
+.CW CS-
+in
+.CW opm00 )
+is connected to
+.CW "ops00-" ,
+.CW "opm01/CS-"
+is connected to
+.CW "ops01-" ,
+etc.  The manual entries for
+.I cdm
+and
+.I cdmglob
+should be consulted for all the details.

@@ -1,0 +1,178 @@
+.TH AR 1 
+.CT 1 lib_obj
+.SH NAME
+ar, ranlib \- archive and library maintainer
+.SH SYNOPSIS
+.B ar
+.I key
+[
+.I posname
+]
+.I afile
+[
+.I file ...
+]
+.PP
+.B ranlib
+.I archive ...
+.SH DESCRIPTION
+.I Ar
+maintains groups of files
+combined into a single archive file,
+.I afile.
+If it is not to be modified, the archive may
+be read from standard input, indicated by the name
+.BR .
+The main use of
+a
+.I ar
+is to create and update library files for the loader
+.IR ld (1).
+It can be used, though, for any similar purpose.
+.PP
+.I Key
+is one character from the set
+.B drqtpmx,
+optionally concatenated with
+one or more of
+.B vuaibcl.
+The
+.I files
+are constituents of the archive
+.I afile.
+The meanings of the
+.I key
+characters are:
+.TP
+.B d
+Delete 
+.I files 
+from the archive file.
+.TP
+.B r
+Replace
+.I files 
+in the archive file.
+Optional modifiers are
+.RS
+.PD0
+.TP
+.B u
+Only replace files with
+modified dates later than that of
+the archive.
+.TP
+.B a
+Place new files after
+.I posname
+in the archive rather than at the end.
+.TP
+.BR b " or " i
+Place new files before
+.I posname
+in the archive.
+.RE
+.PD
+.TP
+.B q
+Quick.  Append
+.I files 
+to the end of the archive without checking for duplicates.
+Avoids quadratic behavior in
+.LR "for i in *.o; do ar r lib.a $i; done" .
+.TP
+.B t
+List a table of contents of the archive.
+If names are given, only those files are listed.
+.TP
+.B p
+Print the named files in the archive.
+.TP
+.B m
+Move the named files to the end or elsewhere,
+specified as with 
+.LR r .
+.TP
+.B x
+Extract the named files.
+If no names are given, all files in the archive are
+extracted.
+In neither case does
+.B x
+alter the archive file.
+.TP
+.B v
+Verbose.
+Give a file-by-file
+description of the making of a
+new archive file from the old archive and the constituent files.
+With
+.BR p ,
+precede each file with a name.
+With
+.B t,
+give a long listing of all information about the files,
+somewhat like a listing by
+.IR ls (1),
+showing
+.br
+.ns
+.IP
+.B
+	mode uid/gid size date name
+.TP
+.B c
+Create.
+Normally
+.I ar
+will create a new archive when
+.I afile
+does not exist, and give a warning.
+Option 
+.B c
+discards any old contents and suppresses the warning.
+.TP
+.B l
+Local.
+Normally
+.I ar
+places its temporary files in the directory
+.FR /tmp .
+This option causes them to be placed in the local directory.
+.PP
+.I Ranlib
+makes a table-of-contents file
+.F _\^_.SYMDEF
+for each library
+.I archive.
+With this table the loader
+.IR ld (1)
+will extract files as if it were repeatedly invoked
+until no more subroutines can be found.
+.SH EXAMPLES
+.TP
+.L
+ar cr lib.a *.o; ranlib lib.a
+Replace the contents of library
+.L lib.a
+with the object files in the current directory.
+.TP
+.L
+pcat old.a.z | ar t -
+List the contents of an archived and compressed collection of old 
+files; see
+.IR pack (1).
+.SH FILES
+.F /tmp/v*
+temporaries
+.SH "SEE ALSO"
+.IR ld (1), 
+.IR ar (5)
+.SH BUGS
+If the same file is mentioned twice in an argument list,
+it may be put in the archive twice.
+.br
+.IR Ld (1)
+warnings that a library is newer
+than its table of contents
+happen when a library is copied.

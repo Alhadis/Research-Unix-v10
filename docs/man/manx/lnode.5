@@ -1,0 +1,166 @@
+.TH LNODE 5 SHARE
+.SH NAME
+lnode \- kernel user shares structure
+.SH SYNOPSIS
+.B "#include <sys/lnode.h>"
+.SH DESCRIPTION
+The kernel
+.I lnode
+structure is used to maintain per-user shares while a user has processes running.
+.I Lnodes
+are installed by
+.IR login (8)
+via the 
+.IR limits (2)
+system call when a new user logs into the system.
+.I Dead
+lnodes are removed by 
+.IR sharer (8)
+when the last process for a user exits.
+The layout as given in the include file is:
+.PP
+.nf
+.ift .ta 1.1i 1.9i
+.ifn .ta 24n 35n
+/*
+ * Structure for active shares
+ */
+
+typedef short	uid_t;
+
+.ift .ta .3i 1.1i 1.9i
+.ifn .ta 2n +10n +13n
+struct lnode
+{
+	uid_t	l_uid;	/* real uid for owner of this node */
+	u_short	l_flags;	/* (see below) */
+	u_short	l_shares;	/* allocated shares */
+	uid_t	l_group;	/* uid for this node's scheduling group */
+	float	l_usage;	/* decaying accumulated costs */
+	float	l_charge;	/* long term accumulated costs */
+};
+
+/*
+ * Meaning of bits in l_flags
+ */
+
+.ift .ta .6i 1.8i 2.4i
+.ifn .ta +8n +11n +6n
+#define	\s-1ACTIVELNODE\s0	001	/* this lnode is on active list */
+#define	\s-1LASTREF\s0	002	/* set for L_DEADLIM if last reference to this lnode */
+#define	\s-1DEADGROUP\s0	004	/* group account is dead */
+#define	\s-1CHNGDLIMITS\s0	020	/* this lnode's limits have changed */
+#define	\s-1NOTSHARED\s0	040	/* this lnode does not get a share of the m/c */
+.DT
+.fi
+.PP
+.I Lnodes
+are grouped together in a tree.
+At any level in the tree,
+the share of resources allocated to an individual lnode is that 
+proportion of the group's resources
+represented by the ratio of the lnode's shares
+to the total shares of all the lnodes in the group.
+The 
+.I l_group
+field represents the 
+.I uid
+of the group leader's lnode.
+The top of the tree is represented by
+.IR root 's
+lnode, which is initialised at system boot time.
+.PP
+The
+.SM LASTREF
+bit in
+.I l_flags
+is set for the 
+.SM L_DEADLIM
+request to the
+.IR limits (2)
+system call if the last process referencing the 
+.I lnode 
+has exited.
+The
+.SM DEADGROUP
+bit is set if this
+.I lnode
+was the last one referencing it's group.
+Dead groups are collected via the
+.SM L_DEADGROUP
+request to the
+.IR limits (2)
+system call.
+.PP
+The
+.I l_charge
+field is the long term accumulated charge for consumption of resources.
+For group leaders, it represents the charge for the whole group.
+The 
+.I l_usage
+field is a number representing recent usage of resources,
+and is used by the scheduler to determine current share of resources.
+.SS kern_lnode
+Each user's
+.I lnode
+is embedded in a larger structure to hold temporary values for use
+by the scheduler, known as a
+.IR kern_lnode .
+The layout as given in the include file is:
+.PP
+.nf
+.ift .ta 1.9i
+.ifn .ta 28n
+/*
+ * Kernel user share structure
+ */
+
+typedef struct kern_lnode *	KL_p;
+
+.ift .ta .3i 1.1i 1.9i
+.ifn .ta 2n +13n +13n
+struct kern_lnode
+{
+	KL_p	kl_next;	/* next in active list */
+	KL_p	kl_prev;	/* prev in active list */
+	KL_p	kl_parent;	/* group parent */
+	KL_p	kl_gnext;	/* next in parent's group */
+	KL_p	kl_ghead;	/* start of this group */
+	struct lnode	kl;	/* user parameters (as above) */
+	float	kl_gshares;	/* total shares for this group */
+	float	kl_eshare;	/* effective share for this group */
+	float	kl_norms;	/* share**2 for this lnode */
+	float	kl_usage;	/* kl.l_usage / kl_norms */
+	float	kl_rate;	/* active process rate for this lnode */
+	float	kl_temp;	/* temporary for scheduler */
+	float	kl_spare;	/* <spare> */
+	u_long	kl_cost;	/* cost accumulating in current period */
+	u_long	kl_muse;	/* memory pages used */
+	u_short	kl_refcount;	/* processes attached to this lnode */
+	u_short	kl_children;	/* lnodes attached to this lnode */
+};
+.DT
+.fi
+.PP
+Every process has a pointer to its owner's
+.I kern_lnode
+called
+.I p_lnode.
+Every time a process incurs a clock tick,
+the value
+.I p_lnode\->kl_usage
+multipied by
+.I p_lnode\->kl_rate
+is added to its scheduling priority in
+.IR p_sharepri .
+.I p_sharepri
+is decayed by the clock by an amount depending on the process's
+.I p_nice
+value \(em the ``nicer'' the process, the slower the decay.
+This value is copied into the low-level scheduler's priority in
+.I p_pri
+whenever the process is run in user space.
+.SH "SEE ALSO"
+limits(2),
+share(5),
+sharer(8).

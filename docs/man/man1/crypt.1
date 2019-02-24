@@ -1,0 +1,84 @@
+.TH CRYPT 1
+.CT 1 misc files secur
+.SH NAME
+crypt, encrypt, decrypt \- encode/decode
+.SH SYNOPSIS
+.B /usr/games/crypt
+[
+.I password
+]
+.PP
+.B /usr/games/encrypt
+[
+.B -p
+] [
+.I password
+]
+.PP
+.B /usr/games/decrypt
+[
+.B -p
+] [
+.I password
+]
+.SH DESCRIPTION
+These commands read from the standard input and write
+on the standard output.
+The
+.I password
+is an enciphering key.
+If no password
+is given,
+one is demanded from the terminal;
+echoing is turned off while it is being typed in.
+.I Crypt
+uses a relatively simple, fast method (rotor machine) for both
+enciphering and deciphering.
+.I Encrypt
+and
+.I decrypt
+use a more robust, slower method (DES).
+Files enciphered by
+.I crypt
+are not intelligible to
+.I encrypt/decrypt,
+and vice versa.
+.PP
+It is prudent to supply the key from the terminal,
+not from the command line, and to pick a reasonably obscure and long key
+(6 letters for
+.I crypt
+and much longer for
+.IR encrypt ).
+.PP
+Under option
+.B -p
+.I encrypt
+enciphers into printing characters, which can be sent by
+.IR mail (1).
+.I Decrypt 
+can distinguish ciphertext from clear:
+it will work on a full mail message, headers and all.
+.SH FILES
+.F /dev/tty
+for typed key
+.SH "SEE ALSO"
+.IR ed (1),
+.IR makekey (8)
+.br
+J. A. Reeds and P. J. Weinberger,
+`File Security and the Unix Crypt Command,'
+.I AT&T Bell Laboratories Technical Journal,
+.B 63
+(1984) 1673-1684
+.SH BUGS
+.I Crypt
+is breakable by knowledgeable cryptanalysts.
+Its only practical use is for mildly private
+data transmission.
+.I Encrypt/decrypt
+gives strong protection for transmission over untrusted
+channels between trusted machines.
+.br
+It is unwise to count on encryption of any sort for
+safe storage of documents.

@@ -1,0 +1,155 @@
+.TH CBT 3X
+.CT 2 data_man
+.SH NAME
+bopen, bclose, bseek, bfirst, bkey, breclen, bread,
+bdelete, bwrite \(mi compressed B-tree subroutines
+.SH SYNOPSIS
+.nf
+.PP
+.B #include <cbt.h>
+.PP
+.B "bfile *bopen(name, typ) char *name;"
+.PP
+.B "void bclose(b) bfile *b;"
+.PP
+.B "bseek(b, key) bfile *b; mbuf key;"
+.PP
+.B "bfirst(b) bfile *b;"
+.PP
+.B "mbuf bkey(b) bfile *b;"
+.PP
+.B "breclen(b) bfile *b;"
+.PP
+.B "bread(b, key, val) bfile *b; mbuf *key, *val;"
+.PP
+.B "bdelete(b, key) bfile *b; mbuf key;"
+.PP
+.B "bwrite(b, key, val) bfile *b; mbuf key, val;"
+.fi
+.SH DESCRIPTION
+These functions manipulate
+files of key/value records.
+Such files are created by
+.BR "cbt creat" ;
+see
+.IR cbt (1).
+To load the functions use the
+.IR ld (1)
+option
+.BR \-lcbt .
+.PP
+The records occur sorted
+(increasing lexicographical order) by their keys,
+which must be distinct.
+Both keys and values are arrays of characters accessed through
+the structure
+.EX
+.ta 8n +15n
+.nf
+\fLtypedef struct {
+	\fLchar *mdata;\fR	address of data bytes
+	\fLshort mlen;\fP	number of data bytes
+\fL} mbuf;\fR
+.fi
+.EE
+.PP
+.I "Bopen"
+attempts to open a named B-tree,
+and if successful establishes a read pointer
+pointing to the beginning of the file and
+returns a pointer to be used
+in calling the other routines.
+.I Typ
+is 0 for read-only or 2 for read-write.
+.I Bopen
+returns a descriptor that identifies the file to the other functions.
+.PP
+.I "Bclose"
+closes a B-tree.
+.PP
+.I "Bseek"
+positions the read pointer of the file
+to the record whose key is
+the first not less than
+.IR key .
+The routine returns 1 if
+.I key
+is in the file,
+.B EOF
+if
+.I key
+is greater
+than any key in the file,
+and 0 otherwise.
+.PP
+.I "Bfirst"
+sets the read pointer to the beginning of the file.
+It has the same error return as
+.BR bseek .
+.PP
+.I "Bkey"
+returns the current key.
+The element
+.I mdata
+of the returned structure
+is 0
+on errors,
+otherwise it points to a static buffer.
+.PP
+.I "Breclen"
+returns the length of the value part of the current record.
+.PP
+.I "Bread"
+reads the value at the read pointer into the space
+pointed to by
+.B val->mdata,
+places its length in
+.LR val->mlen ,
+and advances the read pointer
+to the record with the next greater key.
+If
+.I key
+is not 0
+the key of the record is read into the
+space pointed to by
+.B key->mdata
+and its length is placed in
+.BR key->mlen .
+.I Bread
+returns 0
+if successful.
+.PP
+.I "Bdelete"
+removes the record with the given key,
+returning 1 if the record was found,
+\-1
+if there was an error, and 0
+otherwise,
+The read pointer is left undefined.
+.PP
+.I "Bwrite"
+writes the given value with the given key.
+An existing record with that key will be replaced.
+The read pointer is left undefined.
+.SH FILES
+.F \fIname\fP.T
+.br
+.F \fIname\fP.F
+.SH SEE ALSO
+.IR cbt (1), 
+.IR dbm (3)
+.SH DIAGNOSTICS
+Routines which return pointers return 0
+on errors,
+routines which return integers return \-1.
+.SH BUGS
+The length of any key is limited to 255.
+.br
+The
+.B mbuf
+arguments are passed inconsistently to the routines,
+sometimes by value and sometimes by reference.
+.br
+.I Cbt
+files are not directly portable between big-endian and
+little-endian machines.

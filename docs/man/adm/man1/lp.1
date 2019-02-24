@@ -1,0 +1,172 @@
+.TH LP 1 
+.CT 1 writing_output comm_dev
+.SH NAME
+lp \- printer output
+.SH SYNOPSIS
+.B lp
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Lp
+is a generalized output printing service.
+It can be used to queue files for printing,
+check a queue, or kill jobs in a queue.
+The options are:
+.TF -p\ \fIproc\fP
+.TP
+.BI -d " dest"
+Select the destination printer.
+If
+.I dest
+is
+.LR ? ,
+list the currently available printers.
+In the absence of
+.LR -d ,
+the destination is taken from the environment variable
+.BR LPDEST  ,
+or finally from the file
+.FR /usr/spool/lp/defdevice .
+Destination
+.L stdout
+is the standard output.
+.TP
+.BI -p " proc"
+The given preprocessor is invoked.
+The default preprocessor is
+.LR generic ,
+which tries to do the right thing for regular text, 
+.IR troff (1)
+output, or 
+.IR bitfile (9.5)
+bitmaps.
+If no preprocessing is desired
+(e.g. an ImPress file from
+.L dviimp
+is to be printed)
+.L noproc
+may be specified.
+.TP
+.B -q
+Print the queue for the given destination.
+For some devices, include printer status.
+.TP
+.B -k
+Kill the job(s) given as subsequent arguments instead of file names
+for the given destination.
+.PD
+.PP
+The remaining options may be used to affect the output at a given device.
+These options may not be applicable to all devices.
+.TF -p\ \fIproc\fP
+.TP
+.BI -c " n"
+Print
+.I n
+copies.
+.TP
+.BI -f " font"
+Set the font (default
+.LR CW.11 ).
+.TP
+.BI -H
+Suppress printing of header page.
+.TP
+.BI -i " n"
+Select paper input tray
+.I n.
+.TP
+.BI -l " n"
+Set the number of lines per page to
+.I n.
+.TP
+.B -L
+Print pages in landscape mode (i.e. turned 90 degrees).
+.TP
+.BI -m " n"
+Set magnification to
+.I n.
+.TP
+.BI -n " n"
+Print
+.I n
+logical pages per physical page.
+.TP
+.BI -o " list"
+Print only pages whose page numbers appear in
+the comma-separated
+.I list
+of numbers and ranges.
+A range
+.IB n - m
+means pages
+.I n
+through
+.IR m ;
+a range
+.BI - n
+means from the beginning to page
+.IR n ;
+a range
+.IB n -
+means from page
+.I n
+to the end. 
+.TP
+.B -r
+Reverse the order of page printing (currently not functional).
+.TP
+.BI -x " n"
+Set the horizontal
+offset of the print image, measured in inches.
+.TP
+.BI -y " n"
+Set the vertical
+offset of the print image, measured in inches.
+.SH EXAMPLES
+.TP 0
+.L
+eqn paper | troff -ms | lp
+Typeset and print a paper that contains equations.
+.TP
+.L
+pr -l100 file | lp -l100 -fCW.8
+Print a file in a small font at 100 lines per page.
+.TP
+.L
+lp -dstdout -H <bitfile >postfile
+Convert a bitmap to postscript form.
+Use
+.IR mpictures (6)
+macros to insert the output into a
+.I troff
+document.
+.SH FILES
+.TF /usr/spool/lp/defdevice
+.TP
+.F /usr/spool/lp/defdevice
+default printer name
+.TP
+.F /usr/spool/lp/devices
+printer list with interface specification
+.TP
+.F /usr/spool/lp/process 
+directory of preprocessors
+.TP
+.F /usr/spool/lp/prob/*
+where printer jobs go when things go awry
+.SH SEE ALSO
+.IR pr (1), 
+.IR blitblt (9.1), 
+.IR plot (1), 
+.IR font (6),
+.IR postio (8),
+.IR postscript (8)
+.SH BUGS
+Not all options work with all output devices.
+.br
+Any user can kill any job.

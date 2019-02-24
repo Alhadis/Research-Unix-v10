@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	lex.out
+
+pg:	lex.out
+	count lex.ms lex.out
+
+spell:VQ:
+	dospell lex.ms
+
+lp:	lex.out
+	$LP $newprereq && touch $target
+
+lex.out:D:	lex.ms $REF
+	$PREFER lex.ms | tbl | troff -mpm > $target
+
+index:V:
+	runind lex
+	$PREFER xlex.ms | tbl | troff -mpm > /dev/null 2>lex.x
+	mkindex lex.x
+	rm xlex.ms
+
+pindex:V:
+	mkindex lex.x

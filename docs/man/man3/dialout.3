@@ -1,0 +1,86 @@
+.TH DIALOUT 3
+.CT 2 comm_mach
+.SH NAME
+dialout \(mi place call on ACU
+.SH SYNOPSIS
+.B int dialout(telno, class)
+.br
+.B char *telno, *class;
+.SH DESCRIPTION
+.I Dialout
+places a data call via an automatic calling unit directly
+attached to the calling computer.
+To use an ACU on Datakit see the example in
+.IR ipc (3).
+.PP
+.I Dialout
+searches for an ACU of the appropriate service class
+and places a data call on the associated line, using the given telephone
+number.
+If successful, it returns an open file descriptor for the line.
+The file is in raw mode, and has exclusive-use and hangup-on-close modes set.
+It returns \-1
+if all ACUs of the given class are busy,
+\-3
+if carrier
+could not be set, and
+\-9
+if the service class is unidentifiable.
+.PP
+The routine consults a data file
+.F /etc/aculist
+that consists of lines containing six blank- or tab-separated fields.
+.TP "\w'service class  'u"
+service class
+Each line with a service class matching the one specified is tried
+in turn until an unoccupied one is found.
+Service classes specify a switching office and a baud rate.
+.IP
+Defined service classes at the `research' site are
+.B 300
+and
+.BR 1200 ,
+for 300- and 1200-baud calls on 665- phone lines, with synonyms
+.B D300
+and
+.BR D1200 .
+Internal calls on these lines require 5 digits.
+Service classes
+.B C300
+and
+.B C1200
+use 582- phone lines.
+Internal calls on these lines require 4 digits and reach only other
+582- lines.
+.TP
+file
+The file name of the associated special file for the telephone line.
+.TP
+acu
+The file name of the associated ACU.
+If specified as
+.BR none ,
+no ACU is used and the telephone number is ignored.
+This is for hardwired connections.
+.TP
+speed
+The bit rate of the interface, chosen from the numbers given in
+.IR ttyld (4).
+.TP
+prefix
+A string to be prefixed to the number.
+This is handy for shared ACUs in which the first digit specifies a line.
+The prefix
+.L -
+is taken to be an empty prefix.
+.TP
+postfix
+A string to be postfixed to the number to be dialed.
+Some ACUs require an `end of number' code; it should be specified here.
+.SH FILES
+.TP
+.F /etc/aculist
+.SH SEE ALSO
+.IR ttyld (4),
+.IR cu (1),
+.IR ipc (3)

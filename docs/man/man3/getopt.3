@@ -1,0 +1,94 @@
+.TH GETOPT 3
+.CT 2 data_man
+.SH NAME
+getopt \(mi get option letter from argv
+.SH SYNOPSIS
+.nf
+.B int getopt (argc, argv, optstring)
+.B int argc;
+.B char **argv;
+.B char *optstring;
+.PP
+.B extern char *optarg;
+.B extern int optind;
+.B extern int opterr;
+.fi
+.SH DESCRIPTION
+.I Getopt
+returns the next option letter in
+.I argv
+that matches a letter in
+.IR optstring .
+.I Optstring
+is a string of recognized option letters;
+if a letter is followed by a colon, the option
+is expected to have an argument, which may or
+may not be separated from it by white space.
+.I Optarg
+is set to point to the start of the option argument, if any.
+.PP
+.I Optind,
+initially 1, holds the index in
+.I argv
+of the next argument to be processed.
+When
+.I opterr
+is nonzero (the default state), errors cause
+diagnostic messages.
+.PP
+Option letters appear in nonempty clusters preceded by 
+.BR - .
+The special option
+.L --
+may be used to mark the end of the options.
+.SH EXAMPLES
+This fragment processes arguments
+for a command that can take option
+.B a
+and option
+.BR f ,
+which requires an argument.
+.PP
+.EX
+.ta \w'12345678'u +\w'12345678'u
+main (argc, argv) char **argv;
+{
+	int c, errflg = 0;
+	extern int optind;
+	extern char *optarg, *ifile;
+	while((c = getopt(argc, argv, "af:")) != -1)
+		switch (c){
+		case 'a':  aflg=1; break;
+		case 'f':  ifile = optarg; break;
+		case '?':  errflg=1; break;
+		}
+	if(errflg){
+		fprintf(stderr, "usage: . . . ");
+		exit(2);
+	}
+	for( ; optind < argc; optind++){
+		if(access(argv[optind], 4)){
+			...
+		}
+	}
+	...
+}
+.EE
+.SH SEE ALSO
+.IR getflags (3)
+.SH DIAGNOSTICS
+When all options have been processed,
+\-1 is returned;
+.I optind
+refers to the first non-option argument.
+.br
+When 
+.I getopt
+encounters an option letter not included in
+.I optstring
+or finds an option argument missing, it prints a diagnostic on
+.B stderr
+under control of
+.I opterr
+and returns a question mark
+.LR ? .

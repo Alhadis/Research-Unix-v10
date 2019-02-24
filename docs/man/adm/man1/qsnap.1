@@ -1,0 +1,117 @@
+.TH QSNAP 1 "pipe"
+.CT 1 filmprinter graphics
+.SH NAME
+qsnap \(mi high resolution digital film printer
+.SH SYNOPSIS
+.B qsnap
+[
+.BI -bfmrxRXY
+]
+[
+.I N ...
+]
+.I file
+.SH DESCRIPTION
+.I Qsnap
+produces images on a QCR digital film printer.
+The input
+.I file
+should be in the form of
+.IR picfile (5),
+3-channel for color or 1-channel for black and white.
+.LP
+Option letters appear in one string.
+Certain options require a numeric argument, 
+.I N,
+which follows the string as a separate argument.
+.TP
+.B b N
+Set the brightness of the image to
+.I N,
+.RI 0\(<= N \(<=8;
+0 is brightest.
+The default brightness value is 2 in
+high resolution mode (4K\(mu4K pixels), and 0 in
+low resolution mode (2K\(mu2K pixels) as set by option
+.BR R .
+.TP
+.B f N
+Correct the exposure for a given type of film.
+Valid film types are: 7, 8, and 0 to 5 inclusive.
+.br
+0 = (default) Polaroid Type 52 (4\(mu5 inch).
+.br
+1 = linear correction table.
+.br
+2 = Polaroid Type 559 color pack film (4\(mu5 inch), 2K mode.
+.br
+3 = Ektachrome 100 color film (35mm), 2K mode.
+.br
+4 = Ektachrome 100 color film (35mm), 4K mode.
+.br
+5 = Polaroid Type 559 color pack film (4\(mu5 inch), 4K mode.
+.br
+7 = Polaroid Type 809 color film (8\(mu10 inch), 4K mode.
+.br
+8 = Tmax-100 black&white film (35mm), 2K or 4K mode.
+.TP
+.B m N
+Set the enlargement factor.
+The image is enlarged with a simple box filter.
+Default values are
+.IR N =3
+for 2K resolution and
+.IR N =6
+for 4K.
+.TP
+.B r
+Expose the red channel of a color image only (for multiple
+red overlays).
+.TP
+.B x N
+Expose the image N times.
+(Useful if the maximum brightness value is not bright enough.)
+.TP
+.B R N
+Set the resolution, where
+.I N
+is either 2 or 4, to select low (2K\(mu2K) or high (4K\(mu4K) resolution,
+respectively.
+The default it to leave the resolution unchanged.
+.TP
+.B X N
+Offset the image along the x-coordinate by N pixels.
+The 35mm camera in 4K mode may require an X- and/or a Y-offset.
+The offset in each direction is multiplied by the enlargement factor.
+.TP
+.B Y N
+Offset the image along the y-coordinate by N pixels.
+.LP
+The imaging resolution for 35mm film is 114 pixels/mm (2895 dots/inch)
+in high resolution mode, and 57 pixels/mm in low resolution mode.
+The maximum size image that fits a 35mm negative is 3840x3072 pixels.
+It takes about 2 minutes to render such an image in black and white,
+or 6 minutes in color.
+Since the color film is usually less sensitive to red, it is good
+practice to expose the red channel of a color image twice, using
+option
+.BR r .
+Kodak Ektachrome color film, 100 ASA, or
+Kodak Tmax-100 black and white film are recommended.
+For 100 ASA film, imaging at brightness level 2 produces
+the best results.
+.LP
+With the 4\(mu5 inch module, the imaging resolution is 34 pixels/mm
+(864 dots/inch) in high resolution mode, 17 pixels/mm in low resolution.
+Polaroid Type 559 color film or Polaroid Type 52
+black and white film is recommended.
+.LP
+With the 8\(mu10 inch module, the imaging resolution is 17 pixels/mm.
+This module can only be used in high resolution mode.
+Polaroid Type 809 color film is recommended.
+.SH "SEE ALSO"
+.IR pico (1),
+.IR bcp (1),
+.IR cscan (1),
+.IR imscan (1),
+.IR picfile (5)

@@ -1,0 +1,159 @@
+.TH XD 1
+.CT 1 files
+.SH NAME
+xd, od \(mi hex, octal, decimal, or ASCII dump
+.SH SYNOPSIS
+.B xd
+[
+.I option ...
+]
+[
+.BI - "format ...
+] [
+.I file ...
+]
+.PP
+.B od
+[
+.B -bcdox
+]
+[
+.I file
+]
+[
+.BI + offset
+]
+.SH DESCRIPTION
+.I Xd
+concatenates and dumps the
+.I files
+(standard input by default)
+in one or more formats.
+Groups of 16 bytes are printed in each of the named formats, one
+format per line.
+Each line of output is prefixed by its address (byte offset)
+in the input file.
+The first line of output for each group is zero-padded; subsequent are blank-padded.
+.PP
+Formats other than
+.B -c
+are specified by pairs of characters telling size and style,
+.L 4x
+by default.
+The sizes are
+.TP \w'2\ or\ w\ \ \ 'u
+.BR 1 " or " b
+1-byte units.
+.PD0
+.TP
+.BR 2 " or " w
+2-byte units.
+.TP
+.BR 4 " or " l
+4-byte units.
+.PD
+.PP
+The styles are
+.TP \w'2\ or\ w\ \ \ 'u
+.B o
+Octal.
+.PD0
+.TP
+.B x
+Hexadecimal.
+.TP
+.B d
+Decimal.
+.PD
+.PP
+Other options are
+.TP
+.B -c
+Format as
+.B 1x
+but print
+.SM ASCII
+representations or C escape sequences where possible.
+.TP
+.BI -a style
+Print file addresses in the given style (and size 4).
+.TP
+.B -s
+Reverse (swab) the order of bytes in each group of 4 before printing.
+.TP
+.B -r
+Print repeating groups of identical 16-byte sequences as the first group
+followed by an asterisk.
+.PP
+.I Od
+dumps a
+.I file
+or the standard input in
+one or more formats as
+selected by the first argument, octal by default.
+.PP
+The format characters mean
+.TP
+.B  b
+Bytes in octal.
+.PD0
+.TP
+.B  c
+Bytes in 
+.SM ASCII
+with C escapes and 3-digit octal for other characters.
+.TP
+.B d
+16-bit words in decimal.
+.TP
+.B  o
+16-bit words in octal.
+.TP
+.B  x
+16-bit words in hex.
+.PP
+The
+.I offset
+argument tells where in the file
+to begin dumping.
+The offset, normally interpreted
+in octal, is interpreted in hexadecimal if it
+begins with
+.L x
+or
+.LR 0x ,
+and in decimal if it ends with 
+.L .
+or
+.LR .b .
+If it ends in
+.LR b ,
+it is multiplied by 512.
+The preceding
+.BR + 
+may be omitted if
+.I file
+is present.
+.SH "SEE ALSO"
+.IR adb (1),
+.IR strings (1),
+.IR vis (1)
+.SH BUGS
+The various output formats don't line up properly in the output of
+.I xd.
+.br
+A spurious zero byte reported by
+.I od
+at the end 
+of odd-length files is betrayed by the correctly
+printed final address.
+.br
+The
+.I offset
+is ineffectual if 
+.IR lseek (2)
+won't work on the
+.I file.
+.br
+On some raw devices offsets must be a multiple
+of the natural block size.

@@ -1,0 +1,332 @@
+.TH FILSYS 5
+.CT 2 sa
+.SH NAME
+filsys, flblk, ino \- format of a disk file system 
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/fblk.h>
+.br
+.B #include <sys/filsys.h>
+.br
+.B #include <sys/ino.h>
+.SH DESCRIPTION
+Every
+file system is divided into a certain number
+of blocks of 1K or 4K bytes, as determined by
+the predicate
+.L BITFS()
+applied to the minor device number
+where the file system is mounted.
+Block 0 is unused and is available to contain
+a bootstrap program, pack label, or other information.
+.PP
+Block 1 is the
+`super-block'.
+Its layout is defined in
+.LR <sys/filsys.h> :
+.PP
+.EX
+.ta \w'#define 'u +\w's_cylsize 'u +\w'123 'u +\w'daddr_t 'u
+struct filsys {
+	unsigned short s_isize;
+	daddr_t	s_fsize;
+	short  	s_ninode;
+	ino_t  	s_inode[NICINOD];
+	char   	s_flock;
+	char   	s_ilock;
+	char   	s_fmod;
+	char   	s_ronly;
+	time_t 	s_time;
+	daddr_t	s_tfree;
+	ino_t  	s_tinode;
+	short	s_dinfo[2];
+#define	s_m	s_dinfo[0]
+#define	s_n	s_dinfo[1]
+#define	s_cylsize	s_dinfo[0]
+#define	s_aspace	s_dinfo[1]
+	char   	s_fsmnt[14];
+	ino_t	s_lasti;
+	ino_t	s_nbehind;
+	union {
+		struct {
+			short  	S_nfree;
+			daddr_t	S_free[NICFREE];
+		} R;
+		struct {
+			char	S_valid;
+#define	BITMAP	961
+			long	S_bfree[BITMAP];
+		} B;
+		struct {
+			char	S_valid;
+			char	S_flag;  /* 1 means bitmap not in S_bfree */
+			long	S_bsize; /* size of bitmap blocks */
+			struct buf *	S_blk[BITMAP-1];
+		} N;
+	} U;
+};
+#define	s_nfree	U.R.S_nfree
+#define	s_free	U.R.S_free
+#define	s_valid	U.B.S_valid
+#define	s_bfree	U.B.S_bfree
+.EE
+.TF s_isize
+.TP
+.B s_isize
+The address of the first block after the i-list,
+which starts in block 2.
+Thus the i-list is
+.LR s_isize-2
+blocks long.
+.PD
+.TP
+.B s_fsize
+The address of the first block not in the file system.
+.TP
+.B s_inode
+Array of free inode numbers.
+.TP
+.B  s_ninode
+The number of free i-numbers in the
+.L s_inode
+array.
+Inodes are placed in the list in LIFO order.
+If the list underflows, it is replenished by
+searching the i-list
+to obtain the numbers of free inodes.
+When the list is full,
+freed inodes are not recorded in
+.LR s_inode .
+.TP
+.B s_lasti
+Where the last search for free inodes ended.
+.TP
+.B s_nbehind
+Number of free inodes before
+.L s_lasti
+that are not listed in
+.LR s_inode .
+The system will search forward for free inodes from
+.L s_lasti
+for more inodes unless
+.L s_nbehind
+is sufficiently large, in which case it will search the
+i-list from the beginning.
+.TP
+.B s_flock
+.br
+.ns
+.TP
+.B s_ilock
+Flags maintained in the core
+copy of the super-block while the file system
+while it is mounted.
+The values on disk are immaterial.
+.TP
+.B s_fmod
+Flag to indicate that the super-block has
+changed and should be copied to
+the disk during the next periodic update of file
+system information.
+The value on disk is immaterial.
+.TP
+.B s_ronly
+Flag for read-only file system.
+The value on disk is immaterial.
+.TP
+.B  s_time
+Time of the last change to the super block.
+.TP
+.B s_dinfo
+Disk interleave information:
+.BR s_cylsize =
+blocks per cylinder,
+.BR s_aspace =
+blocks to skip; see
+.IR fsck (8).
+.TP
+.B s_fsmnt
+Unused.
+.TP
+.B s_tfree
+.br
+.ns
+.TP
+.B s_tinode
+Numbers of free blocks and free inodes.
+Maintained for the benefit of
+.IR df
+(see
+.IR du (1)),
+these values are otherwise irrelevant.
+.PD
+.PP
+Different data are used to manage free space in 1K and 4K file systems.
+These fields are for 1K file systems:
+.TF s_isize
+.TP
+.B s_free
+An array of free block numbers.
+.LR s_free[0]
+is the block address of the next
+in a chain of blocks constituting the free list.
+The layout of these blocks is defined in 
+.LR <sys/fblk.h> :
+.PD
+.LP
+.EX
+struct fblk {
+	int	df_nfree;
+	daddr_t	df_free[NICFREE];
+}
+.EE
+.ns
+.IP
+where 
+.L df_nfree
+and
+.L df_free
+are exactly like
+.L s_nfree
+and
+.L s_free.
+.TP
+.B s_nfree
+Blocks given in
+.L s_free[1]
+through
+.L s_free[s_nfree-1]
+are available for allocation.
+Blocks are allocated in LIFO fashion from this list.
+If freeing would cause
+the array to overflow,
+it is cleared by copying into the newly freed block,
+which is pushed onto the free chain.
+If allocation would cause underflow, 
+the array is replenished from the next block on the chain.
+.PP
+These are for 4K file systems:
+.TF s_isize
+.TP
+.B s_bfree
+a bit array specifying the free blocks of a 4K file system.
+The bit
+.LR (s_bfree[i/w]>>(i%w))&1 ,
+where
+.I w
+is the bit size of a long,
+is nonzero if the
+.IR i th
+data block is free.  If the file system is too large for the bitmap
+to fit here, then it is stored at the end of the file system, and
+locked into memory when the file system is mounted.  The
+.B N
+variant of the union is used by the kernel in this case.
+.PD
+.TP
+.B s_valid
+The bitmap of a mounted file system is maintained only in main memory;
+the bitmap on the medium is marked invalid by setting
+.L s_valid
+to zero.
+Unmounting
+updates the medium copy and sets
+.L s_valid
+to 1.
+A file system with invalid bitmap may be mounted
+read-only; its bitmap can be corrected by
+.IR chuck (8).
+.PP
+I-numbers begin at 1, and the storage for inodes
+begins in block 2.
+Inodes are 64 bytes long.
+Inode 2 is reserved for the root directory of the file
+system, but no other i-number has a built-in
+meaning.
+Each inode represents one file.
+.PP
+The layout of an inode is defined in
+.LR <sys/ino.h> :
+.PP
+.EX
+.ta \w'struct 'u +\w'unsigned 'u
+struct	dinode {
+	unsigned short di_mode;
+	short	di_nlink;
+	short	di_uid;
+	short	di_gid;
+	off_t	di_size;
+	char	di_addr[40];
+	time_t	di_atime;
+	time_t	di_mtime;
+	time_t	di_ctime;
+};
+.EE
+.TF di_nlink
+.TP
+.B di_mode
+The kind of file; it
+is encoded as
+.L st_mode field of
+.IR stat (2),
+and is 0 for a free inode.
+.PD
+.TP
+.B di_nlink
+The number of directory entries
+(links) that refer to this inode
+.TP
+.B di_uid
+Owner's userid.
+.TP
+.B di_gid
+Owner's groupid.
+.TP
+.B di_size
+Number of bytes in the file.
+.TP
+.B di_atime
+Time of last access; see
+.IR times (2).
+.TP
+.B di_mtime
+Time of last modification.
+.TP
+.B di_ctime
+Time of last change to inode or contents.
+.TP
+.B di_addr
+For special files the first two bytes of
+.L di_addr
+contain the device code; see
+.IR intro (4)
+and
+.IR types (5).
+.PD
+.IP
+For plain files and directories
+.L di_addr
+contains block numbers packed into 3 bytes each.
+The first 10 numbers specify device blocks directly.
+The last 3 are singly, doubly, and triply
+indirect and point to blocks of block pointers of type
+.L daddr_t
+(see
+.IR types (5)).
+A zero pointer indicates a `hole'
+where no data has been written.
+Holes read as if they contained all zeros.
+.PP
+A symbolic link is, aside from mode,
+a plain file whose sole content is the name of the file linked to.
+.SH "SEE ALSO"
+.IR chuck (8), 
+.IR fsck (8),
+.IR icheck (8),
+.IR dir (5), 
+.IR mount (8), 
+.IR stat (2), 
+.IR types (5),
+.IR l3tol (3)
+

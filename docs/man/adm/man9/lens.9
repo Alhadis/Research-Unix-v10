@@ -1,0 +1,108 @@
+.de m
+.if t \{\
+.nr M \w'\|\|\\$1'
+.nr N \w'\s24\|\|\\$1'
+\h'-\w' \(br\|\\$1'u'\(br\|\\$1\|\(br\
+\\h'-\\nMu'\l'\\nMu\(rn'\\h'-\\nMu'\l'\\nMu\(ul'\
+\s24\v'1m'\(br\|\\$1\|\(br\
+\\h'-\\nNu'\l'\\nNu\(rn'\\h'-\\nNu'\l'\\nNu\(ul'\
+\v'-1m'\s0 \}
+.if n \\$1
+..
+.TH LENS 9.1
+.CT 1 games comm_term
+.SH NAME
+lens \- bitmap  magnifier
+.m magnifier
+.SH SYNOPSIS
+.B lens
+.SH DESCRIPTION
+.I Lens
+is an interactive screen bitmap magnifier.
+When it
+starts, it displays an enlarged image of a magnifying glass in
+its layer, which becomes a setting sun when
+.I lens
+wants to confirm a command to exit.
+.PP
+The first item in the button 2 menu,
+which rotates among
+.BR go ,
+.BR peek ,
+and
+.BR stop ,
+determines the activity of the magnifier.
+Clicking button 1 serves as an abbreviation for selecting
+.B go
+or
+.BR peek .
+When the magnifier is going,
+a crawling-bordered rectangle is drawn
+around the source, and the
+.I lens
+window contains the magnified image.
+The mouse controls
+the position of the source rectangle.
+.PP
+During peeking, the rectangle last selected while
+going is re-examined periodically, and the contents
+are magnified, whether or not the
+.I lens
+window is currently selected.
+.PP
+When stopped, the
+.I lens
+window is inactive.
+.PP
+The button 2 menu also allows changing the magnification factor.
+The magnification factors are chosen from the
+Fibonacci numbers, and menu items for the next size smaller and larger
+are presented as, e.g.,
+.L 3x
+or
+.LR 8x .
+The current magnification factor is not displayed in the menu, only
+the next factors larger and smaller.
+The initial magnification factor is two.
+.PP
+Button 2 may also be used to select the intervals at which peeking
+updates occur.
+These intervals are selected, in ticks, from among the powers of two, where
+a tick is one-sixtieth of a second.
+These choices are presented as, e.g.,
+.L "32 ticks"
+or
+.LR "128 ticks" .
+The initial interval between peeks is 64 ticks, approximately one second.
+.PP
+The image window may be controlled by the button 2 menu item which
+toggles between
+.B inset
+and
+.BR "full size" .
+In inset mode, the image is displayed inside the image window of the
+magnified lens icon.
+In full size mode, the image is displayed in the entire
+.I lens
+window.
+.PP
+The final button 2 menu entry is
+.I exit.
+A setting sun is displayed, and button 3 must be clicked to confirm.
+.SH BUGS
+While going, the display is only refreshed when the mouse is moved.
+.br
+While peeking, it is assumed that the
+.I lens
+window contains an accurate magnification of what was on the screen
+at the time of the last magnification.
+If
+.I lens
+is used to examine its own image, strange things may occur.
+.br
+Due to the bitmap reshaping techniques employed by the magnification
+algorithms, high magnification factors will not work with large image
+windows.
+Precisely, if the product of the vertical magnification factor and
+the width of the destination rectangle overflows a signed
+short integer, predictable but undesirable results will occur.

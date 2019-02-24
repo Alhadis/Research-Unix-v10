@@ -1,0 +1,124 @@
+.TH CRAY 1 
+.CT 1 comm_mach
+.SH NAME
+cray \- run job remotely on cray-xmp
+.SH SYNOPSIS
+.B cray
+[
+.I options
+]
+[
+.I jcl
+[
+[
+.B +
+]
+.I file
+]
+...
+]
+.PP
+.B c1sts
+.SH DESCRIPTION
+.I Cray 
+submits the named files to the MHCC Cray.
+A plus sign stands for a Cray end-of-file,
+which separates jcl, source code, and data files.
+A file
+.I jcl
+that doesn't exist in the current directory
+is searched for in the directory specified
+by the shell environment variable CRAYJCL.
+.TP 1i
+.BI -o ofile
+Send the job output to
+.I ofile.
+.TP 1i
+.BI -p pages
+If the jcl file doesn't begin with a job line,
+.I cray
+supplies one.
+In that case,
+the option
+.BI -p n
+specifies the maximum number of pages 
+(actually, 45-line blocks)
+that can be output;
+the default is 100.
+.TP 1i
+.BI -s n
+Run the job at service grade
+.I n.
+(The default is
+.LR -s2 ;
+fastest is
+.LR -s1 ;
+long runs should be at
+.Lr -s4 .)
+.TP 1i
+.BI -t seconds
+If the jcl file doesn't begin with a job line,
+specifies the maximum running time;
+the default is 15.
+.PP
+.I C1sts
+gives a status report on the cray.
+.SH EXAMPLES
+Run a Fortran program and subroutine, reading from param
+on unit 5 and writing on unit 6,
+.TP
+.L
+cray -o output ft + main.f sub.f + param
+Run a Fortran program and subroutine, reading from param
+on unit 5 and writing on unit 6,
+.SH BUGS
+Because of a problem with the standard input, the
+.B -o
+option is required for remote execution via Datakit.
+.SH "THE FIRST TIME"
+An incredible amount of busywork is required the first
+time you use this command.
+Get an account on mhuxa by filing an application
+at the computer center accounting office,
+and if possible get password aging turned off.
+Set up your
+.F .profile
+on your home machine
+and in the comp center so that remote execution in either
+direction gets a silent login.
+(Otherwise, you may get a `Bad magic number'
+message when trying to execute a push.)
+(Try copying the mhuxa file
+.FR /a2/c1127/ehg/.profile .)
+Set up mail forwarding from mhuxa to your
+home machine.
+(See 
+.FR /usr/mail/ehg .)
+Now, from your home machine, execute
+.IP
+.L dkcc mhcc/mhuxa who
+.LP
+to be sure everything is set up properly.
+The first time you try this, you will be asked to
+login;  this legalizes remote execution from your
+home machine onto the comp center machine.
+For the reverse direction,
+your user id should be added to
+.F /etc/procuid.local
+on your home machine.
+Export
+.L CRAYJCL=/n/swift/usr/lsrc/cmd/cray/Jcl
+from your
+.F .profile
+on your home machine.
+By editing a copy of
+.F /usr/bin/crmail
+in your bin,
+you can arrange for special action to be taken when
+your output arrives; the default is mail notification.
+Now you should be ready to run; try
+.IP
+.L cray -s1 -o tmp audit
+.LP
+If you don't get some job output back from the cray within a few minutes,
+something is wrong.

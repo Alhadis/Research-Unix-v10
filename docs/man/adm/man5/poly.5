@@ -1,0 +1,141 @@
+.EQ
+delim $$
+.EN
+.TH POLY 5 bowell
+.CT 1 inst_info
+.SH NAME
+poly \- polyhedron database
+.SH DESCRIPTION
+The directory
+.B /usr/lib/polyhedra
+contains an index file and many polyhedron description files,
+each describing a solid polyhedron and its (not necessarily unique) planar net.
+Each line of the index file consists of a polyhedron's number followed
+by a horizontal tab and the polyhedron's name.
+The polyhedron's number is also the name of its description file.
+The routines of
+.IR poly (3)
+read such description files.
+.PP
+Each description file consists of a number of fields.
+Each field begins with a line consisting of
+.L :
+and the field name.
+The field continues until the next header line or end of file.
+Some fields contain
+.IR values ,
+which consist of a floating point number
+optionally followed by an algebraic expression enclosed in
+.LR [] ,
+or
+.IR angles ,
+which are a
+.I value
+in radians and optionally two more values (sin and cos) separated by
+.LR @ .
+The fields include,
+but are not limited to,
+.TF vertices
+.TP
+.B number
+The polyhedron's number.
+.PD
+.TP
+.B name
+The polyhedron's name, less than 128 characters long and not capitalized.
+.TP
+.B symbol
+The
+.if n Schlaefli
+.if t Schlaefli
+symbol, a tab, and the Johnson symbol for the polyhedron,
+given in
+.IR eqn (1)
+style with delimiters
+.LR @@ .
+.TP
+.B dual
+The name of the dual polyhedron optionally followed by a horizontal tab
+and the number of the dual.
+.TP
+.B vertices
+The first line is the number of vertices, which follow, one per line.
+Each vertex has a coordinate (three
+.I values
+separated by spaces),
+a number
+.IR n ,
+and
+.I n
+face,edge pairs that surround the vertex.
+.TP
+.B faces
+The first line contains the number of faces and the maximum number of
+vertices in any face.
+The remaining lines are the faces, each with a vertex count
+.IR n ,
+followed by
+.RI 2 n
+vertex numbers (planar, solid),
+.RI 2 n
+edge numbers (planar, solid),
+and
+.I n
+angles.
+The vertices of each face are listed in the same order for both the
+planar and solid forms:
+counter-clockwise as viewed from above the planar net
+(i.e. from
+.IR z >0)
+which generally corresponds to outside the solid polyhedron.
+.TP
+.B edges
+The first line contains the number of edges.
+Each edge is one line:
+.IR "face1 vertex1 face2 vertex2 length angle" .
+The length is a
+.IR value .
+.TP
+.B summary
+The three lines summarise the different kinds of faces,
+vertices and edges respectively.
+Each line consists of a total and a list of
+.I "count example symbolic"
+triples; where
+.I example
+is an index into the appropriate list and
+.I symbolic
+is given in
+.IR eqn (1)
+style with delimiters
+.LR @@ .
+.TP
+.B EOF
+The end of the polyhedron's description.
+(Another polyhedron description may follow in this file.)
+.PP
+An expression in a
+.I value
+gives the exact value in the syntax of
+.IR bc (1)
+using these functions:
+$a(x) ~=~ {tan sup -1 {( x )}}$,
+$b(x) ~=~ { ( x ) } sup { 1/3 }$,
+$c(x) ~=~ {cos ( {x} ) }$,
+$d(x) ~=~ {tan {( x )}}$,
+$p ~=~ {pi}$,
+$q(x) ~=~ {{x} sup 2}$,
+$r(x) ~=~ {cos sup -1 {( x )}}$,
+$s(x) ~=~ {sin ( {x} )}$,
+$t ~=~ phi ~=~ (1 + sqrt 2 )/2$.
+The code may include assignments but does not include white space.
+.SH FILES
+.ta 31n
+.F "/usr/lib/polyhedra/index	"
+index file
+.br
+.F "/usr/lib/polyhedra/[0-9]*	"
+description files
+.SH "SEE ALSO"
+.IR poly (3),
+.IR poly (7)

@@ -1,0 +1,52 @@
+.TH DIR 5
+.CT 1 dirs
+.SH NAME
+dir \- format of directories
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/dir.h>
+.SH DESCRIPTION
+A directory
+behaves exactly like an ordinary file, save that no
+user may write into a directory.
+The fact that a file is a directory is indicated by
+a bit in the flag word of its inode entry;
+see
+.IR filsys (5).
+The structure of a directory entry as given in the
+include file is:
+.IP
+.EX
+.ta \w'ifndef  'u +\w'DIRSIZ  'u
+#define	DIRSIZ	14
+struct	direct
+{
+	ino_t	d_ino;
+	char	d_name[DIRSIZ];
+};
+.EE
+.PP
+By convention, the first two entries in each directory
+are
+.L .
+for the directory itself and
+.L ..
+for the parent
+directory.
+In the ultimate root directory
+.L ..
+is the same as
+.LR . .
+.PP
+It is inadvisable to read directories using this structure.
+The routines in
+.IR directory (3)
+and
+.IR dirread (2)
+are more efficient and portable.
+.SH "SEE ALSO"
+.IR filsys (5), 
+.IR directory (3),
+.IR dirread (2)
+

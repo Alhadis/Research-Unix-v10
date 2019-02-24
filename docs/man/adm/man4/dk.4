@@ -1,0 +1,231 @@
+.TH DK 4
+.CT 2 comm_mach
+.SH NAME
+dk, dkp_ld, unixp_ld, cmc_ld \- Datakit interface and protocols
+.SH SYNOPSIS
+.B #include <sys/dkio.h>
+.SH DESCRIPTION
+These device drivers
+and line disciplines
+are used to connect to a Datakit network.
+Normally the programs in
+.IR dkmgr (8)
+do all the work.
+.PP
+Several combinations
+of hardware and software
+may be used to connect a system to Datakit:
+.IP
+The
+.I dk
+driver
+works with a
+DR11-C
+or
+DRV11-J
+connected through an adapter box
+to a Datakit CPM-422.
+The host computer does all the protocol work.
+.IP
+The
+.I kdi
+driver works with a
+KMC11-B
+and one of several line units
+(KDI, DUBHI, KMS11-P)
+connected to one of several Datakit or ISN interface boards.
+The KMC11 runs microcode that handles the URP protocol.
+.IP
+The experimental
+.I kmcdk
+driver works with a KMC11-B
+and a line unit,
+as above,
+but the KMC11 runs different microcode
+implementing a simple DMA engine,
+and the host does all the protocol work.
+This is slower,
+but rather more robust,
+than the
+.I kdi
+setup.
+.IP
+The experimental
+.I cure
+driver works with a custom-built microprocessor board
+connected to a Datakit, ISN, or Hyperkit
+fiber interface.
+The host does all the protocol work.
+.PP
+Each minor device number
+represents a Datakit channel;
+the device number is the channel number.
+The
+.I kdi
+driver allows only 96 channels per KMC11-line unit pair;
+devices 96-191 are channels 0-95 on a second pair,
+if present,
+and devices 192-255 are channels 0-63 on a third.
+For the other drivers,
+there may be only one hardware interface,
+which may have up to 256 channels.
+.PP
+.PP
+Usually there is one interface,
+with files in directory
+.FR /dev/dk .
+See
+.IR dkmgr (8)
+for more about naming conventions.
+.PP
+.I Dkp_ld
+is a stream line discipline
+implementing the URP protocol.
+The
+.I kdi
+driver makes its own URP arrangements;
+other interfaces need the line discipline.
+A separate copy of
+.I dkp_ld
+must be pushed on each active channel.
+.PP
+.I Cmc_ld
+and
+.I unixp_ld
+are line disciplines set up calls handle and controller handshake messages.
+.I Cmc_ld
+runs a Research-only call setup protocol;
+.I unixp_ld
+runs the standard one.
+One copy of the appropriate line discipline
+must be pushed on the common signaling channel
+to deal with occasional controller keep-alive
+and maintenance messages.
+Other copies of the line discipline
+come and go as calls are placed.
+.PP
+These
+.I ioctl
+calls are provided by the device drivers:
+.nr pI \w'\f5DIOCSTREAM \fP'u
+.PD 0
+.TP \n(pIu
+.B DIOCNXCL
+Allow this channel to be opened many times.
+By default,
+if a channel is open,
+it may not be opened again.
+The default is restored
+whenever the channel is completely closed.
+.TP
+.B KIOCSHUT
+Reset the
+.I kdi
+driver,
+hanging up all channels.
+.PD
+.PP
+These
+.I ioctl
+calls are provided by the URP processors,
+.I dkp_ld
+and
+.IR kdi :
+.TP \n(pIu
+.PD 0
+.B DIOCSTREAM
+Don't generate a stream delimiter
+when this channel receives a
+BOT
+trailer.
+.TP
+.B DIOCRECORD
+Insert a stream delimiter after
+receiving
+BOT;
+the default.
+.TP
+.B DIOCSCTL
+The third argument points to a byte;
+send that as a Datakit control envelope.
+.TP
+.B DIOCRCTL
+The third argument points to a byte;
+copy the most recently received non-URP control envelope there.
+Zero means no control
+has been received since the last call.
+.TP
+.B DIOCXWIN
+Set transmit window size.
+The third argument points to an array of two long integers.
+The first number is the maximum size of each URP block;
+the second is the number of blocks that may be outstanding.
+Blocks may be no more than 4096 bytes,
+and the protocol allows no more than eight blocks in a window.
+A
+.B KIOCINIT
+call should follow immediately,
+or things may go awry.
+.TP
+.B KIOCISURP
+Return success if
+some URP processor
+is active on this channel.
+.TP
+.B KIOCINIT
+Initialize URP.
+.PD
+.PP
+These
+.I ioctl
+calls are provided by the call setup line disciplines:
+.TP \n(pIu
+.PD 0
+.B DIOCLHN
+This is the common signalling channel.
+.TP
+.B DIOCHUP
+Tell the controller to initialize,
+hanging up all channels.
+.TP
+.B DIOCSTOP
+Temporarily hold back received data,
+so it won't be lost in call setup messages.
+.TP
+.B DIOCSTART
+Release data held by
+.BR DIOCSTOP .
+.TP
+.B DIOCCHAN
+The third argument points to an integer;
+fill it in with the number
+of a free channel for calling out.
+This is a hint, not a promise;
+the channel may already be taken by the time it is opened.
+The caller should be prepared to try again.
+.SH FILES
+.F /dev/dk
+.SH SEE ALSO
+.IR dkmgr (8),
+.IR kmc (8)
+.br
+A. G. Fraser and W. T. Marshall, `Data Transport in a
+Byte Stream Network', 
+.I IEEE J-SAC,
+(September, 1989)
+.br
+.I Datakit VSC Internal Interface Specification,
+select code 700-283,
+AT&T Customer Information Center, Indianapolis
+.SH BUGS
+.I Dkp_ld
+and
+.I kdi
+insist on using exactly three blocks in a window,
+no matter what they are told in
+.BR DIOCXWIN .
+.br
+The
+.I kdi
+driver has only two block sizes,
+28 and 252 bytes.

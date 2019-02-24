@@ -1,0 +1,100 @@
+.TH MARS 6 
+.SH NAME
+mars \- memory array redcode simulator
+.SH SYNOPSIS
+.B mars 
+[
+.B -dfhmp
+]
+[
+.BI -cqs value
+]
+.I file ...
+.SH DESCRIPTION
+.I Mars
+is a simulator for the
+`Redcode'
+machine from Kee Dewdney,s
+`Computer Recreations,'
+.I Scientific American ,
+May, 1984, coded by Michael Mauldin, CMU.
+The easiest way to create an object file is to use the
+.IR redcode (6)
+command to a assemble the object file from a redcode
+source file.
+.PP
+An object file contains three header lines: the name of the
+program, its length, and its starting location.
+Here is a sample redcode object file, for
+the Dwarf program:
+.IP
+.EX
+name dwarf
+length 4
+start 1
+00000007999
+20000517999
+10000027998
+41799800000
+.EE
+.PP
+The instruction format is an 11 digit decimal string, packed thus:
+.EX
+struct {
+	char[1] opcode;
+	char[1] mode1; char[4] arg1;
+	char[1] mode2; char[4] arg2;
+}
+.EE
+.PP
+Options allow for tracing execution, for graphically displaying the
+progress of each program, and for analyzing and dumping memory before
+and after execution.  For example
+.IP
+.L
+mars -s1234 -f -c20000 dwarf.obj gemini.obj imp.obj
+.LP
+specifies that imp, dwarf, and gemini are to be run together, with a
+fullscreen display for 20000 cycles using a random number seed of 1234.
+.TP
+.BI -c N
+the maximum number of cycles for this run.
+The default is 10000.
+.TP
+.B -d
+(debug)
+execution to be traced in excruciating detail.
+.TP
+.B -f
+(fullscreen)
+execution will be displayed graphically on any
+terminal supported by
+.IR curses (3).
+.TP
+.B -h
+(holes)
+description of memory usage will be printed after
+execution terminates.
+.TP
+.B -m
+memory will be dumped before and after execution terminates.
+.TP
+.B -p
+similar to
+.BR -m ,
+except only memory near each program counter is dumped.
+.TP
+.BI -q N
+.I
+quit as soon as there are fewer than
+.I N
+programs still alive.
+Default is 
+.BR q1 .
+.TP
+.BI -s N
+seed for random number generator;
+.IR N =0
+seeds from the clock.
+.SH SEE ALSO
+.IR redcode (6)

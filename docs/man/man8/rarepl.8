@@ -1,0 +1,115 @@
+.TH RAREPL 8
+.CT 1 sa_nonmortals
+.SH NAME
+rarepl, rarct \- replace bad blocks on MSCP disks
+.SH SYNOPSIS
+.B /etc/rarct
+[
+.B -c
+]
+[
+.B -h
+]
+.I special ...
+.PP
+.B /etc/rarepl
+.I special
+.I lbn ...
+.SH DESCRIPTION
+.I Rarct
+prints status information
+about MSCP disk drives
+like the RA60 and RA81.
+Normally the replacement table (RCT)
+is listed,
+as lines of the form
+.IP
+.IB rbn : \0flags : \0lbn
+.PP
+where
+.I rbn
+is the replacement block number,
+.I lbn
+is the logical block number
+replaced by
+.IR rbn ,
+and
+.I flags
+are constructed from the following bits:
+.TP
+.PD 0
+.B 01
+alternate (not primary) replacement block
+.TP
+.B 02
+normal, allocated replacement block
+.TP
+.B 04
+this replacement block is bad
+.TP
+.B 010
+this replacement block does not exist
+.PD
+.PP
+Entries whose
+.I flags
+are zero,
+indicating a good,
+unused replacement block,
+are not listed.
+.PP
+The options suppress the RCT listing and perform other functions:
+.TP
+.B -h
+Print some header data
+from the first block of the RCT.
+The system does not use this information.
+.TP
+.B -c
+Print geometry information for the drive.
+.PP
+.I Rarepl
+causes logical block
+.I lbn
+on device
+.I dev
+to be marked as bad
+and replaced.
+The nearest available replacement block
+is used.
+The contents of
+.I lbn
+are copied into the replacement block if possible;
+if
+.I lbn
+is unreadable,
+the replacement block
+is initialized with zeros.
+.PP
+Both programs
+work only
+on the raw devices.
+.I Rarepl
+should be used only
+on a device
+which covers the entire drive
+(usually partition 7).
+.SH SEE ALSO
+.IR ra (4),
+.IR smash (8)
+.SH BUGS
+There are various controller- and drive-dependent anomalies.
+Some controllers,
+like the RQDX3,
+report an RCT
+but don't allow forwarding.
+On many controllers,
+the RCT exists
+only so programs in the host can look at it;
+the controller ignores its contents.
+There is no way to read the controller's `real' forwarding data,
+only a way to set it for a particular block.
+Hence if the RCT is corrupted,
+the disk may still be used,
+but must be reformatted
+before additional bad blocks are remapped.

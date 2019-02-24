@@ -1,0 +1,228 @@
+.TH PROC 4
+.CT 2 proc_man
+.SH NAME
+proc \- process file system
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.B #include <sys/proc.h>
+.br
+.B #include <sys/pioctl.h>
+.SH DESCRIPTION
+.I Proc
+is a file system that contains memory images of each
+running process in the system.
+The name of each entry in the
+.F /proc
+directory is the process
+id of the subject process, expressed in decimal with
+optional leading zeros.
+Each process file is owned by the userid of the subject process.
+The file mode includes read and write permission for
+the owner if that userid has read
+access to the associated text file; all other permission bits
+are zero.
+The file size is
+the sum of the sizes of virtual memory segments
+in the subject process.
+.PP
+The subject process is unaffected, except that setuid bits
+will be ignored if it does an
+.IR exec (2).
+(Setuid bits are also ignored if the
+.IR exec "ing"
+process has traced signals, or stops on
+.IR exec ;
+see the description of
+.B PIOCSMASK
+and
+.B PIOCSEXEC
+below.)
+.PP
+Data may be transferred
+from or to any locations in the subject's address space through
+.IR lseek (2),
+.IR read (2),
+and
+.IR write .
+The
+.I text segment
+begins at address 0; the
+.I data segment
+starts above the text.
+The
+.I user area
+extends downward below address 0x80000000, and is
+.B UPAGES*NBPG
+bytes long (see the header files listed below);
+the
+.I stack segment
+grows downward below the user area.
+The text, data, and stack sizes
+may be determined from the process's
+.L proc
+structure (see
+.B PIOCGETPR
+below).
+It is an error to access addresses between data and stack.
+No read or write may span a segment boundary;
+in the user area only the locations of saved user registers
+are writable.
+.PP
+.IR Ioctl (2)
+calls control the subject process.
+The third argument usually points to an integer.
+The 
+.I ioctl
+codes are:
+.TF PIOCSMASK
+.TP
+.B PIOCSTOP
+Send signal
+.B SIGSTOP
+to the process, and wait for it to
+enter the stopped state.
+.TP
+.B PIOCWSTOP
+Wait for the process to stop.
+.TP
+.B PIOCRUN
+Make the process runnable again after a stop.
+.TP
+.B PIOCSMASK
+Define
+a set of signals to be traced.
+The process will stop when it receives any signal whose number,
+as given in
+.IR signal (2),
+corresponds to a 1-bit in the given integer,
+with the least significant bit counted as 1.
+The traced state and mask bits are inherited by the child of a
+.IR fork (2).
+When the process file is closed, the mask becomes zero, but
+the traced state persists.
+.TP
+.B PIOCSEXEC
+Cause the process to stop after
+.IR exec (2).
+This condition is inherited across
+.IR fork (2)
+and persists when the process file is closed.
+.TP
+.B PIOCREXEC
+Reverse the effect of
+.BR PIOCSEXEC .
+.TP
+.B PIOCCSIG
+Clear the subject's currently pending signal (if any).
+.TP
+.B PIOCKILL
+Set the subject's currently pending signal to a given number.
+.TP
+.B PIOCOPENT
+Return a read-only file descriptor
+for the subject process's text file.
+(Thus a debugger can find the
+symbol table without knowing the name of the text file.)
+.TP
+.B PIOCNICE
+Increment the
+priority of the subject process by a given amount
+as if by
+.IR nice (2).
+.TP
+.B PIOCGETPR
+Copy the subject's
+.B proc
+structure (see
+.BR <sys/proc.h> )
+from the kernel process table into an area pointed to
+the third argument.
+(This information, which resides in system space, is not accessible
+via a normal read.)
+.PD
+.PP
+Any system call is guaranteed to be atomic with respect to the 
+subject process,
+but nothing prevents more than one
+process from opening and controlling the same subject.
+.PP
+The following header files are useful in analyzing
+.I proc
+files:
+.PP
+.TF <sys/param.h>
+.TP
+.B <signal.h>
+list of signal numbers
+.TP
+.B <sys/param.h>
+size parameters
+.TP
+.B <sys/types.h>
+special system types
+.TP
+.B <sys/user.h>
+user structure
+.TP
+.B <sys/proc.h>
+proc structure
+.TP
+.B <sys/reg.h>
+locations of saved user registers
+.TP
+.B <sys/pioctl.h>
+ioctl codes for
+.I proc
+files
+.PD
+.SH FILES
+.F /proc/*
+.SH SEE ALSO
+.IR adb (1),
+.IR ps (1), 
+.IR hang (1),
+.IR fmount (2),
+.IR signal (2),
+.IR mount (8),
+.IR pi (9.1)
+.SH DIAGNOSTICS
+These errors can occur in addition to the
+errors normally associated with the file system; see
+.IR intro (2):
+.TF ENOENT
+.TP
+.B ENOENT
+The subject process has exited.
+.TP
+.B EIO
+The subject process has attempted I/O at an illegal address.
+.TP
+.B EBUSY
+The subject is in the midst of changing virtual memory
+attributes, or has pages locked for physical I/O.
+.TP
+.B ENOSPC
+A write has been attempted on a shared text segment and there
+is no room on the swap space to make a copy.
+.TP
+.B EPERM
+A non-super-user has attempted to better
+the subject's priority with
+.BR PIOCNICE .
+.SH BUGS
+A process must be swapped in for reading and writing (but not
+.IR ioctl );
+this may cause
+a noticeable delay.
+.br
+The spectrum of states which result in 
+.B EBUSY
+is too conservative.
+.br
+A process loaded from a text file with magic number 0407 does not have as
+a read-only text segment; in this (presumably rare) case
+.B PIOCOPENT
+does not work, and the process is accessible even if the
+text file is read-only.
+.br
+The interface involves too many VAX-specific magic numbers.

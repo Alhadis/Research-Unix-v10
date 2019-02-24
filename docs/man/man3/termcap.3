@@ -1,0 +1,175 @@
+.TH TERMCAP 3X
+.CT 2 comm_term
+.SH NAME
+tgetent, tgetnum, tgetflag, tgetstr, tgoto, tputs \(mi device-independent terminal screen control
+.SH SYNOPSIS
+.2C
+.nf
+.B char PC;
+.B char *BC;
+.B char *UP;
+.B short ospeed;
+.PP
+.B tgetent(bp, name)
+.B char bp[1024], *name;
+.PP
+.B tgetnum(id)
+.B char *id;
+.PP
+.B tgetflag(id)
+.B char *id;
+.PP
+.B char *
+.B tgetstr(id, area)
+.B char *id, **area;
+.PP
+.B char *
+.B tgoto(cm, destcol, destline)
+.B char *cm;
+.PP
+.B tputs(cp, affcnt, outc)
+.B char *cp;
+.B int (*outc)();
+.fi
+.1C
+.SH DESCRIPTION
+These functions are loaded by option
+.B -ltermcap
+of
+.IR ld (1).
+They extract and use capabilities from the terminal capability data
+base
+.IR termcap (5).
+These are low level routines;
+see
+.IR curses (3)
+for a higher level package.
+.PP
+.I Tgetent
+extracts the entry for terminal
+.I name
+into the buffer at
+.I bp.
+.I Bp
+should be a character buffer of size
+1024 and must be retained through all subsequent calls
+to
+.I tgetnum,
+.I tgetflag,
+and
+.I tgetstr.
+.I Tgetent
+returns \-1
+if it cannot open the
+.I termcap
+file,
+0
+if the terminal name given does not have an entry,
+and 1
+if all goes well.
+It will look in the environment for a
+.L TERMCAP
+variable.
+If found, and the value does not begin with a slash,
+and the terminal type
+.I name
+is the same as the value of the environment variable
+.LR TERM ,
+the
+.L TERMCAP
+string is used instead of reading the termcap file.
+If it does begin with a slash, the string is used as a path name rather than
+.FR /etc/termcap .
+.PP
+.I Tgetnum
+gets the numeric value of capability
+.I id,
+returning \-1
+if is not given for the terminal.
+.I Tgetflag
+returns 1
+if the specified capability is present in
+the terminal's entry,
+0
+if it is not.
+.I Tgetstr
+gets the string value of capability
+.I id,
+placing it in the buffer at
+.I *area,
+advancing the
+.I area
+pointer.
+It decodes the abbreviations for this field described in
+.IR termcap (5),
+except for cursor addressing and padding information.
+.PP
+.I Tgoto
+returns a cursor addressing string decoded from
+.B cm
+to go to column
+.I destcol
+in line
+.I destline.
+It uses the external variables
+.B UP
+(from the
+.L up
+capability)
+and
+.B BC
+(if
+.L bc
+is given rather than
+.LR bs )
+if necessary to avoid placing
+.LR en ,
+.LR ^D ,
+or
+.L ^@
+in the returned string.
+(Programs which call
+.I tgoto
+should be sure to turn off the
+.B XTABS
+bit(s),
+since
+.I tgoto
+may now output a tab.
+Note that programs using termcap should in general turn off
+.B XTABS
+anyway since some terminals use \fL^I\fP for other functions,
+such as nondestructive space.)
+If a
+.B %
+sequence is given which is not understood, then
+.I tgoto
+returns
+.LR `OOPS' .
+.PP
+.I Tputs
+decodes the leading padding information of the string
+.I cp;
+.I affcnt
+gives the number of lines affected by the operation, or 1 if this is
+not applicable;
+.I outc
+is a routine which is called with each character in turn.
+The external variable
+.I ospeed
+should contain the output speed of the terminal as in
+.IR tty (4).
+The external variable
+.B PC
+should contain a pad character to be used (from the
+.L pc
+capability)
+if a null
+.RB ( ^@ )
+is inappropriate.
+.SH FILES
+.F /etc/termcap
+.SH SEE ALSO
+.IR vi (1), 
+.IR curses (3), 
+.IR termcap (5)

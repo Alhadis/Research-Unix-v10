@@ -1,0 +1,191 @@
+.TH BLITMAP 9.7 seki
+.CT 1 inst_info graphics
+.SH NAME
+blitmap \- road maps and path finding
+.SH SYNOPSIS
+.B blitmap
+[
+.I option ...
+]
+.SH DESCRIPTION
+.I Blitmap
+displays road maps.
+It relies on the mouse to select regions, functions, and to give
+formats for typed commands.
+The metropolitan N.Y.-N.J. area is the default map.
+.IR Blitmap's
+screen consists of two frames,
+a large frame for plotting maps and printing messages to the user, and
+a one-line command frame at the bottom.
+.I Blitmap
+recognizes two commands from the keyboard,
+to designate a region and to scale or plot a route
+from one point to another.
+The commands, which may be typed at any time, follow.
+Here
+.I option 
+is as in the command line.
+.HP
+[ 
+.I option ...
+]
+.B radius
+.I address
+[
+.BI , " town or zip
+]
+Plot an area with the given radius in miles around the
+.I address.
+.TP
+.B path
+[
+.I option ...
+]
+.B from
+.I address
+.B to
+.I address
+[
+.BI , " town or zip
+]
+Trace a route on a map and print traveling
+directions from point to point.
+.PP
+.I Address
+may be a number and street or an intersection such as,
+.L main and 10th
+or
+.LR "600 Mountain av,new providence" .
+.LP
+Button 3 Menu
+.TF Zoom-out
+.TP
+.B Regions
+Select which region to plot.
+Available regions are San Francisco, New York City and North Jersey,
+Washington, Los Angeles and Ann Arbor.
+.TP
+.B Zoom-in
+Using button 3 and the box icon, enclose the area desired and
+.I blitmap
+will plot a map of that area
+centered at the center of the drawn rectangle.
+.TP
+.B Zoom-out
+Enclose an area with a rectangle and the map shown will be reduced to the
+rectangle size and the rest of the map filled in.  The center will be at the center
+of the drawn rectangle.
+.TP
+.B Center
+With button 3 point to new center.  The radius will remain the same.
+.TP
+.B Prev. map
+.I Blitmap
+plots the previous frame.
+.TP
+.B To draw map
+.TP
+.B To find path
+Tell about the keyboard commands
+.TP
+.B Quit
+Confirm with button 3.
+.PD
+.PP
+Button 2 controls map editing functions.
+No editing is actually done, but
+by using
+the
+.B -f
+option, a file
+of changes will be written, which may be added to the actual database.
+.PP
+The options specify the algorithm of the path search and plotting choices:
+.TP
+.B -2
+Two ended search (default).
+.PD 0
+.TP
+.B -1
+One way search.
+.TP
+.B -b
+Breadth search.
+.TP
+.B -C
+Cyclists \- ignore costs for turns.
+.TP
+.B -F
+Stop at first route connect with breadth search.
+.TP
+.B -H
+Hierarchical search.
+(Give priority to major roads.)
+.TP
+.B -G
+In breadth search, ignore ones whose cost + dist >4/3 total airline distance.
+.TP
+.B -J
+Use precomputed routes.
+(Available from 600 mountain av,New Providence.)
+.TP
+.B -V
+Verbose directions (all intersections given).
+.TP
+.B -W
+Walkers \- no cost for turns and ignore one-way streets.
+.TP
+.B -A
+Print every possible label.
+.TP
+.B -B
+Print business names.
+.TP
+.BI -MI x
+Forces a detailed street plot for maps whose radius is greater than 10,000 ft.
+.TP
+.B \-b
+Don't print boundaries.
+.TP
+.BI -i x
+Plot only streets with importance
+.RI > x ;
+.IR x =0
+is default.
+.TP
+.B -j
+Do sketch map only.
+.TP
+.B -l
+Don't print labels.
+.TP
+.B -r
+Don't print railroads.
+.TP
+.B -s
+Don't print streets.
+.TP
+.B -w
+Don't print waterways.
+.PD
+.SH FILES
+.TF /n/seki/usr/rje/BLIT/term/term
+.TP
+.F /n/seki/usr/rje/BLIT/term/term
+terminal support program
+.TP
+.F /n/seki/m?/map/*
+map files
+.SH BUGS
+Since the data bases have not been checked and many streets are not connected,
+some paths may be circuitous.
+There are no connecting roads
+from N.J into N.Y or from Middlesex county into Union.
+The routing programs
+will churn, trying to find a through street and will not give up.
+.br
+There are
+no one-way tags on the streets.
+.br
+.I Blitmap
+does not know if it has been reshaped.

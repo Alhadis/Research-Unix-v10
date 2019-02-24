@@ -1,0 +1,42 @@
+< ../ADM/defns
+< ../index/defns
+
+FEELSO=binps.so jim.so RUN1.so srctext.so srcfiles.so index.so compile.so\
+	setbpt.so gtgtgt.so bpt.so callstack.so jimc.so run.so step1stmt.so\
+	fexec.so openframe.so startchar.so asciion.so a97.so assign.so typeof.so\
+	left.so op.so star.so right.so rr.so thelast.so 
+OBJSO=fig1.so fig2.so fig3.so
+
+
+all:V:	feel.out
+
+pg:	feel.out
+	count feel.ms feel.out
+
+spell:VQ:
+	dospell feel.ms
+
+lp:	feel.out
+	$LP $newprereq && touch $target
+
+obj.out:D:	obj.ms $REF $OBJSO
+	cat ../ADM/bm.mac obj.ms | $PREFER | pic | troff -mpm | ../ADM/bm.sh > $target
+
+feel.out:D:	feel.ms $REF $FEELSO
+	cat ../ADM/bm.mac feel.ms | $PREFER | troff -mpm | ../ADM/bm.sh > $target
+
+index:V: feel
+obj:V:
+	runind obj
+	$PREFER xobj.ms | pic | troff -T202 -mpm -mbits > /dev/null 2>obj.x
+	mkindex obj.x
+	rm xobj.ms
+feel:V:
+	runind feel
+	cat ../ADM/bm.mac xfeel.ms | $PREFER | troff -mpm  > /dev/null 2>feel.x
+	mkindex feel.x
+	rm xfeel.ms
+
+
+pindex:V:
+	mkindex feel.x

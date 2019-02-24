@@ -1,0 +1,17 @@
+%
+\def\makeindex{\if@filesw \newwrite\@indexfile
+  \immediate\openout\@indexfile=\jobname.idx
+  \def\index{\@bsphack\begingroup
+             \def\protect####1{\string####1\space}\@sanitize
+             \@wrindex\@indexfile}\typeout
+  {Writing index file \jobname.idx }\fi}
+
+\def\@wrindex#1#2{\let\thepage\relax
+   \xdef\@gtempa{\write#1{\string
+      \indexentry{#2}{\thepage}}}\endgroup\@gtempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\@esphack}
+
+\def\index{\@bsphack\begingroup \@sanitize\@index}
+
+\def\@index#1{\endgroup\@esphack}
+

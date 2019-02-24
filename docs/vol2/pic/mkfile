@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	pic.out
+
+pg:	pic.out
+	count pic.ms pic.out
+
+spell:VQ:
+	dospell pic.ms
+
+lp:	pic.out
+	$LP $newprereq && touch $target
+
+pic.out:D:	pic.ms $REF
+	$PREFER pic.ms | pic | eqn | troff -mpm > $target
+
+index:V:
+	runind pic
+	$PREFER xpic.ms | pic | eqn | troff -mpm > /dev/null 2>pic.x
+	mkindex pic pic.x
+	rm xpic.ms
+pindex:V:
+	mkindex pic pic.x
+

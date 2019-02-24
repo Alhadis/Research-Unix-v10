@@ -1,0 +1,47 @@
+PAGESIZES=/usr/man/man0/pagesizes
+case $1 in
+-f)
+cd /usr/man
+>$PAGESIZES
+for i in man[1-9]
+do
+for j in $i/*
+do
+`preprocess $j` |
+     troff -a -rp1 /usr/man/man0/tmac.v10 - \
+2>&1 1>/dev/null | 
+     sed "s%-%$j%" >>$PAGESIZES
+done
+done
+esac
+
+cd /usr/man/man0
+
+# pagesizes: pagename (e.g. man1/cat.1) pagelength (actual # of pages)
+#	obtained directly from troff
+# pagelist: pagename [pagelength] (estimated # of pages)
+#	in printed order, hand-maintained
+
+sort $PAGESIZES -o $PAGESIZES
+
+grep -n . pagelist|	# supply sequence numbers
+sed '
+s/ *$//
+/ /!s/$/ 1/
+/:/s// /
+' |sort +1|
+join -j1 2 -a1 -o 1.1 1.2 2.2 1.3 - $PAGESIZES|
+sort -n >junkq
+
+# junkq: seqno pagename estimate actual (lengths)
+
+echo pages NOT FOUND and assumed lengths:
+awk 'NF<4 {print $2, $3}' junkq
+
+awk '
+BEGIN { pagen=1}
+$2~/^odd$/ { pagen = int(pagen/2)*2+1; print "odd"; next }
+{ print $2, $3, pagen ; pagen += $3 }
+' junkq >pagenumbers
+
+# pagenumbers: pagename  pagelength pagenumber

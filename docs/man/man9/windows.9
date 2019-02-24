@@ -1,0 +1,90 @@
+.TH WINDOWS 9.1
+.CT 1 comm_term
+.SH NAME
+windows, jps, reshape \- create and initialize windows
+.SH SYNOPSIS
+.B windows
+[
+.I ox oy cx cy command ...
+]
+.PP
+.B jps
+.PP
+.B reshape
+[
+.B -r
+]
+.I x y
+.SH DESCRIPTION
+For each set of arguments,
+.I windows
+makes a
+.IR mux (9.1)
+layer with rectangle
+.RI "Rect(" "ox, oy, cx, cy" ")"
+(see
+.IR types (9.5)),
+then executes the
+.I command
+therein.
+The
+.I command
+may be null ("").
+Any number of layers may be specified;  each
+.I command
+and its arguments must be given
+as a single argument to
+.I windows.
+.PP
+In windows that are not expected to be reused and do not need a
+shell, it is good practice to invoke the
+.I command
+with
+.BR exec ;
+see
+.IR sh (1).
+.PP
+.I Jps
+prints the rectangle coordinates of each window and the arguments (if
+any) with which it was down-loaded,
+to help set up the
+.IR windows
+command.
+.PP
+.I Reshape
+adjusts its layer so that the display
+rectangle inside the border is
+.I x
+by
+.I y
+pixels.
+Under option
+.B -r
+it adjusts the width/height ratio to
+.I x/y,
+with the new shape as large as will fit inside the old.
+.SH SEE ALSO
+.IR mux (9.1), 
+.IR ruler (9.1)
+.SH DIAGNOSTICS
+.I Windows
+may adjust rectangles to a minimum size or to stay within
+the usual layer bounds (8 pixels inside the screen edge).
+.br
+Layer creation can fail if there
+are no process slots or memory left in the terminal.
+.br
+.I Reshape
+clips a layer that is too big
+and does nothing if the layer is too small
+or if there is not enough memory.
+.SH BUGS
+.I Jps
+reports what has been downloaded to the 5620; usually this
+is not the same as the command that must be used in
+.I windows
+to cause the download.
+.br
+.I Reshape
+destroys the contents of the
+layer; it should work elsewhere.

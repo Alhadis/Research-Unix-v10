@@ -1,0 +1,143 @@
+.TH VMSTAT 8
+.CT 1 sa_mortals
+.SH NAME
+vmstat \- report virtual memory statistics
+.SH SYNOPSIS
+.B vmstat
+[
+.B -st
+]
+[
+.I interval
+[
+.I count
+]
+]
+.SH DESCRIPTION
+.I Vmstat
+reports statistics about certain system activity.
+.ig x
+Option
+.B -f
+reports on
+.I forks
+since system startup and the number of pages of virtual memory involved.
+.x
+Option
+.B -s
+prints totals for miscellaneous events
+since the last boot.
+Option
+.B -t
+reports on paging events.
+.PP
+In the absence of other options, the optional
+.I interval
+argument causes
+.I vmstat
+to report once each
+.I interval
+seconds, repeated
+.I count
+times or forever.
+.PP
+The default format fields are:
+.TF faults
+.TP
+.B procs
+information about numbers of processes in various states:
+.RS
+.PD 0
+.TP
+.B r
+in run queue
+.TP
+.B b
+blocked for resources (I/O, paging, etc.)
+.TP
+.B w
+runnable or short sleeper (< 20 secs) but swapped
+.RE
+.PD
+.TP
+.B memory
+use of virtual and real memory:
+.RS
+.PD 0
+.TP
+.B avm
+number of
+pages belonging to processes that have run
+in the last 20 seconds
+.TP
+.B fre
+size of memory free list
+.RE
+.PD
+.TP
+.B page
+paging activity,
+averaged each five seconds, in units per second:
+.RS
+.PD 0
+.TP
+.B re
+page reclaims (simulating reference bits)
+.TP
+.B at
+text pages recovered from memory
+.TP
+.B pi
+page-in events
+.TP
+.B po
+page-out events
+.TP
+.B fr
+pages freed per second
+.TP
+.B de
+anticipated short term memory shortfall
+.TP
+.B sr
+scan rate: pageout daemon rpm
+.RE
+.PD
+.TP
+.B faults
+trap rates, averaged each five seconds, in units per second:
+.RS
+.PD 0
+.TP
+.B sy
+system calls
+.TP
+.B cs
+process context switches
+.RE
+.PD
+.TP
+.B cpu
+percentage use of CPU time:
+.RS
+.PD 0
+.TP
+.B us
+user time, both normal and low priority
+.TP
+.B sy
+system time
+.TP
+.B id
+cpu idle time
+.TP
+.B st
+stream queue processing time
+.RE
+.PD
+.SH FILES
+.F /dev/kmem
+.br
+.F /unix
+.SH BUGS
+This program is never up to date.

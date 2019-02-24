@@ -1,0 +1,350 @@
+.TH TERMCAP 5
+.CT 2 comm_term
+.SH NAME
+termcap \- terminal capability file
+.SH DESCRIPTION
+.I Termcap
+describes terminals as used, for example, by
+.IR vi (1)
+and
+.IR curses (3)
+or in the
+.B TERMCAP
+environment variable.
+A
+.I termcap
+entry is a line containing fields separated by
+.LR : .
+Lines may be broken;
+.L \e
+at the end of a line signifies continuation.
+Empty fields are ignored.
+.PP
+The first field for each entry gives names
+for a terminal separated by
+.LR | .
+The first name is conventionally two characters long
+for the benefit of older systems; the
+second name is the customary abbreviation; and
+the last name fully identifies
+the terminal.
+.PP
+There are three types of capability: Boolean for the presence of
+a feature, numeric for sizes and time delays, and
+strings for performing operations.
+Some string fields may be preceded by a number, which
+specifies padding, a time delay required with the operation.
+These capabilities are marked
+`P' or `P*' below.
+Padding is measured in milliseconds;
+P* signifies that the padding is proportional to the
+number of lines (or characters) affected,
+for example,
+.L 3.5*
+specifies 3.5 milliseconds per unit.
+.de fq
+\f5\\$1\fR	\\$2	\\$3	\\$4
+..
+.ft B
+.ta \w'Name 'u +\w'Type 'u	+\w'Pad 'u
+.nf
+.PP
+Name	Type	Pad	Description
+.ftR
+.fq ae str  P  "End alternate character set
+.fq al str  P* "Add new blank line
+.fq am bool "" "Automatic margin
+.fq as str  P  "Start alternate character set
+.fq bc str  "" "Backspace char if not \f5^H\fP
+.fq bs bool "" "Terminal can backspace
+.fq bt str  P  "Back tab
+.fq bw bool "" "Backspace wraps from column 0 to last column
+.fq CC str  "" "Command character in prototype if terminal settable
+.fq cd str  P* "Clear to end of display
+.fq ce str  P  "Clear to end of line
+.fq ch str  P  "Like \f5cm\fP but horizontal motion only
+.fq cl str  P* "Clear screen
+.fq cm str  P  "Cursor motion
+.fq co num  "" "Number of columns
+.fq cr str  P* "Carriage return, default \f5^M\fR
+.fq cs str  P  "Change scrolling region (vt100), like cm
+.fq cv str  P  "Like ch, but vertical only
+.fq da bool "" "Display may be retained above
+.fq dB num  "" "Backspace delay
+.fq db bool "" "Display may be retained below
+.fq dC num  "" "Carriage return delay
+.fq dc str  P* "Delete character
+.fq dF num  "" "Form feed delay
+.fq dl str  P* "Delete line
+.fq dm str  "" "Enter delete mode
+.fq dN num  "" "Newline delay
+.fq do str  "" "Down one line
+.fq dT num  "" "tab delay
+.fq ed str  "" "End delete mode
+.fq ei str  "" "End insert mode; give \f5:ei=:\fR if \f5ic\fR
+.fq eo str  "" "Can erase overstrikes with blank
+.fq ff str  P* "Hard copy page eject, default \f5^L\fR
+.fq hc bool "" "Hardcopy terminal
+.fq hd str  "" "Half line down
+.fq ho str  "" "Home cursor if no \f5cm\fR
+.fq hu str  "" "Half line up
+.fq hz str  "" "Hazeltine, can't print \f5~\fR
+.fq ic str  P  "Insert character
+.fq if str  "" "Name of file containing initialization\f5is\fR
+.fq im bool "" "Enter insert mode; give \f5:im=:\fR if \f5ic\fR
+.fq in bool "" "Insert mode distinguishes nulls on display
+.fq ip str  P* "Insert pad after character insert
+.fq is str  "" "Terminal initialization string
+.fq k0\fR-\fPk9 str  "" "Other function key codes
+.fq kb str  "" "Backspace key code
+.fq kd str  "" "Down arrow key code
+.fq ke str  "" "Leave keypad transmit mode
+.fq kh str  "" "Home key code
+.fq kl str  "" "Left arrow key code
+.fq kn num  "" "Number of function keys
+.fq ko str  "" "Termcap entries for other non-function keys
+.fq kr str  "" "Right arrow key code
+.fq ks str  "" "Enter keypad transmit mode
+.fq ku str  "" "Up arrow key code
+.fq l0\fR-\fP9 str "" "Labels on other function keys
+.fq li num  "" "Number of lines on screen or page
+.fq ll str  "" "Last line, first column, if no \f5cm\fR
+.fq ma str  "" "Arrow key map
+.fq mi bool "" "Safe to move in insert mode
+.fq ml str  "" "Memory lock above cursor
+.fq ms bool "" "Safe to move in standout or underline mode
+.fq mu str  "" "Turn off memory lock
+.fq nc bool "" "No correctly working CR (DM2500, H2000)
+.fq nd str  "" "Nondestructive space (cursor right)
+.fq nl str  P* "Newline character, default \f5\en\fR
+.fq ns bool "" "Nonscrolling CRT
+.fq os bool "" "Terminal overstrikes
+.fq pc str  "" "Pad character, default NUL
+.fq pt bool "" "Has hardware tabs (possibly set by \f5is\fR)
+.fq se str  "" "Leave standout mode
+.fq sf str  P  "Scroll forward
+.fq sg num  "" "Number of blanks left by \f5so\fR, \f5se\fR
+.fq so str  "" "Enter standout mode
+.fq sr str  P  "Scroll reverse (backward)
+.fq ta str  P  "Tab, if not \f5^I\fR or if padded
+.fq tc str  "" "Entry of similar terminal, must be last
+.fq te str  "" "String to end programs that use \f5cm\fR
+.fq ti str  "" "String to begin programs that use \f5cm\fR
+.fq uc str  "" "Underscore one char and move past it
+.fq ue str  ""  "Leave underscore mode
+.fq ug num  "" "Number of blanks left by \f5us\fR, \f5ue\fR
+.fq ul bool "" "Terminal underlines but doesn't overstrike
+.fq up str  "" "Cursor up one line
+.fq us str  "" "Enter underscore mode
+.fq vb str  "" "Visible bell, (may not move cursor)
+.fq ve str  "" "Leave open/visual mode
+.fq vs str  "" "Enter open/visual mode
+.fq xb bool "" "Beehive (\f5f1\fR=escape, \f5f2\fR=\f5^C\fR)
+.fq xn bool "" "Newline ignored after wrap (Concept)
+.fq xr bool "" "Return acts like \f5ce \er \en\fR (Delta Data)
+.fq xs bool "" "Standout not erased by writing over (HP264?)
+.fq xt bool "" "Tabs are destructive, magic \f5so\fR (Teleray 1061)
+.fi
+.PP
+The following example is one of the
+more elaborate 
+.I termcap
+entries.
+(Do not believe it; see the file for current facts.)
+.HP
+.EX
+co|c100|concept 100:is=\eEU\eEf\eE7\eE5\eE8\eEl\eENH\eEK\eE\e200\eEo&\e200\eEo\e47\eE:\e
+:al=3*\eE^R:am:bs:cd=16*\eE^C:ce=16\eE^S:cl=2*^L:cm=\eEa%+ %+ :co#80:\e
+:dc=16\eE^A:dl=3*\eE^B:ei=\eE\e200:eo:im=\eE^P:in:ip=16*:li#24:mi:\e
+:nd=\eE=:se=\eEd\eE:so=\eED\eEE:ta=8\et:ul:up=\eE;vb=\eEk\eEk:xn:
+.EE
+.PP
+Among the Boolean capabilities shown for the Concept are
+automatic margins
+.LR am :
+automatic return and linefeed at the end of a line.
+Numeric capabilities are indicated by
+.LR # ;
+.L co#80
+means the Concept has 80 columns.
+String capabilities are indicated by
+.LR = ;
+to clear to end of line
+.RL ( ce )
+on the Concept, issue <escape> <control-C> and pad
+with 16 milliseconds delay.
+.PP
+In strings the
+.SM ASCII ESC
+character is represented by
+.LR \eE 
+and control characters are represented by 
+.BI ^ c,
+where character 
+.I c
+has
+.SM ASCII
+code 0100 greater than the desired control character.
+Newline, return, tab, backspace, form feed,
+.B \e
+and
+.B ^
+are represented by
+.BR "\en \er \et \eb \ef \e\e \e^" .
+Backslash
+.L \e
+followed by 3 digits specifies a byte in octal.
+A null character is encoded
+.LR \e200 :
+the routines that use
+.I termcap
+information mask out the high bit of all bytes.
+.PP
+Local cursor motions are undefined if they run off the
+left or top of the screen; the
+.I curses
+routines refrain from issuing such motions.
+It is assumed that the screen will scroll up upon running
+off the bottom; this assumption is negated by
+.LR ns .
+Capability
+.L am
+(automatic margin) describes the handling of the right margin.
+.PP
+Cursor addressing is described by capability
+.LR cm ,
+which contains 
+.IR printf (3)-like
+format codes for line and column positions.
+The leftmost column is column 0.
+.IP
+.nf
+.fq %d "as in \fIprintf\fR
+.fq %2 "like \f5%2d\fR
+.fq %3 "like \f5%3d\fR
+.fq %. "like \f5%c\fR
+.fq %+\fIx\fR "adds \fIx\fR before converting
+.fq %>\fIxy\fR "if value exceeds \fIx\fR, add \fIy\fR, no output
+.fq %r "reverse order of line and column, no output
+.fq %i "increment line/column (1-origin)
+.fq %% "single \f5%\fR
+.fq %n "exclusive or row and column with 0140 (DM2500)
+.fq %B "BCD: 16\(**(\fIx/10) + (\fIx\fR%10), no output
+.fq %D "Reverse coding: \fIx\fR\-2\(**(\fIx\fR%16), no output
+.fi
+.PP
+For example, to go to line 3 column 12, a HP2645 terminal
+must get
+.B \eE&a12c03Y
+padded for 6 milliseconds:
+.L :cm=6\eE&%r%2c%2Y: .
+.PP
+Capability
+.L al
+adds an empty line before the line where the cursor is
+and leaves the cursor on the new line.
+This will always be done with the cursor at column 0.
+Capability
+.L dl
+deletes the line where the cursor is and is also done
+with the cursor at column 0.
+Capabilities
+.L da
+and
+.L db
+warn that off-screen lines may appear at the top or bottom of
+the screen upon scrolling or deleting lines.
+The
+.I curses
+routines do not use this feature, but do guard against
+its effects.
+.PP
+Insert-character operations usually affect only
+the current line and shift
+characters off the end of the line rigidly.
+Some terminals, such as the Concept 100, distinguish
+typed from untyped blanks on the screen, shifting upon insertion
+only up to an untyped blank, i.e. a space caused by cursor motion;
+these terminals have capability
+.L in
+(insert null).
+.PP
+Some terminals have an insertion mode; others require a special
+sequence to open up a blank position on the current line.
+Insertion mode is entered and left by
+.L im
+and
+.LR ie ,
+which should be null strings if there is no insertion mode.
+String
+.L ic
+is sent just before each character to be inserted, and
+padding
+.L ip
+is sent after.
+Capability
+.L mi
+says it is possible to move around without leaving insertion
+mode.
+Delete mode works similarly: enter with
+.LR dm ,
+leave with
+.LR de ,
+and issue
+.L dc
+before each character.
+.PP
+Highlighting, or `standout' mode is entered by
+.L so
+and left by
+.LR se .
+Underline mode is entered by
+.L us
+and left by
+.LR ue .
+Terminals that underline characters individually have capability
+.LR uc .
+The visual bell capability
+.L vb
+flashes the screen without moving the cursor.
+.PP
+A terminal with a keypad that transmits cursor motions
+may be described by capabilities
+.L
+kl kr ku kd kh
+that give the codes for left, right, up, down, and home.
+Up to ten function keys may be described by
+.L k0
+through
+.LR k9 .
+Special labels for the function keys may be given as
+.L l0
+through
+.LR l9 .
+.PP
+The initialization string
+.L is
+is expected to set tabs if that is necessary.
+That string may come from a file
+.RL ( if );
+if both are present 
+.L is
+is done first.
+.PP
+The entry for a terminal may be continued by jumping
+to another entry given by
+.LR tc .
+Duplicate capabilities are resolved in favor of the first.
+.SH FILES
+.F /etc/termcap
+.SH SEE ALSO
+.IR curses (3),
+.IR termcap (3),
+.IR vi (1),
+.IR ul (1)
+.SH BUGS
+.I Termcap
+entries, including 
+.L tc
+continuations, are limited to 1024 characters.
+.br

@@ -1,0 +1,202 @@
+.id NOTICE-NOT TO BE DISCLOSED OUTSIDE BELL SYS EXCEPT UNDER WRITTEN AGRMT
+.id Writer's Workbench version 2.1, January 1981
+.TH MKSTAND 1
+.SH NAME
+mkstand \- compile style standards for prose program
+.SH SYNOPSIS
+.B mkstand
+[
+.B \-flags
+][
+.B \-ver
+][
+.B \-mm
+|
+.B \-ms
+][
+.B \-li
+|
+.B \+li
+][
+.B \-o
+outfile ] file1 file2 ...
+.SH DESCRIPTION
+.I Mkstand
+enables users to compile their own set of
+.IR style (1)
+standards for use by
+.IR prose (1).
+.I Prose
+describes stylistic features of a text
+and compares them to specified standards.
+If a user or group, for example a writing group,
+has many documents of a certain type
+that they consider good,
+those documents can be used as the basis for their own standards.
+.I Mkstand
+creates the standards,
+which reflect the stylistic features
+of the input documents.
+Then the user can use
+.I prose
+to evaluate documents according to those standards.
+.PP
+.I Mkstand
+runs
+.I style
+on a set of documents and computes the means
+and standard deviations of certain
+.I style 
+statistics.
+Then it puts these into 
+.I outfile
+.RI ( stand.out
+is the default) in a format that
+.I prose
+can read.
+Then if
+.I prose
+is run with the  command:
+.PP
+.RS 5
+.BI "prose \-x " "outfile textfile" 
+.RE
+.PP
+it compares
+.I textfile
+with the standards in
+.IR outfile .
+The command:
+.PP
+.RS 5
+.BI "wwbstand \-x " "outfile"
+.RE
+.PP
+will display the standards in a comprehensible form.
+.PP
+.I Mkstand
+tries to produce valid standards by enforcing these requirements:
+.RS 5
+.TP
+1.
+Input files must be at least 90 sentences or 1900 words long.
+.TP
+2.
+If an input file has 
+.I style
+scores that are more than 2 standard deviations from the mean,
+scores for that file are excluded from the computation of the standards.
+.RE
+.PP
+Although
+.I mkstand
+will compile standards for any number of documents (up to 75),
+standards will be most reliable if at least 20 documents are used.
+.PP
+Because
+.I mkstand
+runs
+.IR deroff (1)
+on input files before computing scores,
+formatting header files should be included as part of the input.
+.PP
+Four options affect
+.IR deroff :
+.RS 5
+.TP
+.B \-mm
+eliminate
+.IR mm (1)
+macros, and associated text that is not part of sentences
+(e.g. headings),
+from the analysis.
+This is the default.
+.TP
+.B \-ms
+eliminate
+.IR ms (1)
+macros, and associated text that is not part of sentences,
+from the analysis.
+The
+.B \-ms
+flag overrides the default,
+.BR \-mm .
+.TP
+.B \-li
+eliminate list items,
+as defined by 
+.I mm
+macros, from the analysis.
+This is the default.
+.TP
+.B \+li
+Include list items in the input text,
+in the analysis.
+This flag should be used if the texts contain lists of sentences,
+but not if the texts contain many lists of non-sentences.
+.RE
+.PP
+Other options are:
+.RS 5
+.TP 11
+.BI \-o " outfile"
+put standards in
+.I outfile
+instead of the default
+.IR stand.out .
+.RE
+.PP
+Two options give information about the program:
+.RS 5
+.TP 7
+.B \-flags
+print the command synopsis line (see above)
+showing command flags and options,
+then exit.
+.TP
+.B \-ver
+print the Writer's Workbench version number of the command, then exit.
+.RE
+.PP
+.I Mkstand
+saves the
+.I style
+scores it used in computing the standards in a file named
+.IR styl.scores .
+Users should examine the scores in this file
+for any scores that seem unusual or invalid.
+If any are found,
+.I mkstand
+should be rerun without the unusual document.
+.SH FILES
+.TP 21
+/tmp/$$stat.out
+temporary file containing 
+.I style
+tables of input files
+.TP
+stand.out
+default output file containing standards
+.TP
+styl.scores
+output file containing
+.I style
+scores used in compiling standards
+.SH SEE ALSO
+prose(1),
+style(1),
+deroff(1),
+wwbstand(1),
+wwb(1).
+.SH SUPPORT
+.IR "COMPONENT NAME:  " "Writer's Workbench"
+.br
+.IR "APPROVAL AUTHORITY:  " "Div 452"
+.br
+.IR "STATUS:  " Standard
+.br
+.IR "SUPPLIER:  " "Dept 45271"
+.br
+.IR "USER INTERFACE:  " "Stacey Keenan, Dept 45271, PY x3733"
+.br
+.IR "SUPPORT LEVEL: " "Class B - unqualified support other than Div 452"

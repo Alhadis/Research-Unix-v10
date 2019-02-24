@@ -1,0 +1,57 @@
+.TH MKNOD 2
+.CT 2 sa
+.SH NAME
+mknod \(mi make a directory or a special file
+.SH SYNOPSIS
+.nf
+.B int mknod(name, mode, addr)
+.B char *name;
+.nf
+.SH DESCRIPTION
+.I Mknod
+creates a new file
+whose name is the null-terminated string pointed
+to by
+.IR name .
+The mode of the new file
+(including directory and special file bits)
+is initialized from
+.IR mode .
+(The protection part of the mode
+is modified by the process's mode mask; see
+.IR stat (2)
+and
+.IR umask (2)).
+The first block pointer of the inode
+is initialized from
+.IR addr .
+For ordinary files and directories
+.I addr
+is normally zero.
+For a special file,
+.I addr
+is the device number;
+see
+.IR mknod (8)
+and the writeups in section 4.
+.PP
+.I Mknod
+may be invoked only by the super-user.
+.SH "SEE ALSO"
+.IR open (2)
+for
+.IR creat ,
+.IR mkdir (2), 
+.IR stat (2),
+.IR umask (2),
+.IR filsys (5),
+.IR mknod (8)
+.SH DIAGNOSTICS
+.BR EEXIST ,
+.BR EFAULT ,
+.BR EIO ,
+.BR ELOOP ,
+.BR ENOENT ,
+.BR ENOTDIR ,
+.BR EPERM ,
+.BR EROFS

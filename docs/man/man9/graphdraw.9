@@ -1,0 +1,310 @@
+.TH GRAPHDRAW 9.1
+.CT 1 editor graphics
+.SH NAME
+graphdraw graphpic \- edit (combinatoric) graphs, convert to pic files
+.SH SYNOPSIS
+.B graphdraw
+[
+.I file
+]
+.PP
+.B graphpic
+[
+.I option ...
+]
+.I file
+.SH DESCRIPTION
+.I Graphdraw
+interactively edits and displays undirected graphs, and can also be used
+to display real-time animation of algorithms.
+If a
+.I file
+is mentioned, the graph stored in that file is edited.
+.PP
+Click button 1 in command line (at bottom of window) to type in commands:
+.TP \w'\f5!\fI\ program\ file\ \ \fR'u
+.BI r " file"
+Read file and display graph.
+.PD0
+.TP
+.BI w " file"
+Write current graph to file.
+.TP
+.BI cd " directory"
+Change directory.
+.TP
+.BI ! " program file"
+Execute animation
+.I program
+with
+.I file
+as input.
+.TP
+.B q
+Quit.
+.PD
+.PP
+Button 3 gets a menu of actions, which are
+usually accomplished by pointing with button 1.
+The parenthesized equivalents in the following list are explained
+under `Algorithm animation'.
+.TP 0
+.B create vertex
+Vertex is placed where button 1 is clicked.
+.RB ( vc
+.IR "x y" )
+.PD 0
+.TP
+.B delete
+Delete selected vertex and associated edges.
+.RB ( vd
+.IR i )
+.TP
+.B move
+Selected vertex moves with mouse until button 1 is released.
+.RB ( vm
+.IR i )
+.TP
+.B copy
+Copy of selected vertex and associated edges moves with mouse.
+.RB ( vc
+.IR "i x y" )
+.TP
+.B create/delete edge
+Point to first endpoint and click button 1.
+Point to second endpoint and click button 1.
+Continue selecting second endpoints with button 1.
+To unselect first endpoint, click button 2.
+.RB ( ec
+.IB "i j " /
+.B ed
+.IR "i j" )
+.TP
+.B restart
+Click button 1 to clear screen and discard current graph.
+.RB ( pr )
+.TP
+.B standard window
+Restart and reshape window to standard size,
+in which the drawing area is square and as large as possible.
+.TP
+.B small/large/no grid
+Impose/remove visible grid to which all new coordinates will be rounded.
+.TP
+.B exit
+Click button 1 to confirm.
+.TP
+.B labels menu
+.RS
+.TP
+.B label vertex
+Select vertex with button 1.
+Current label appears on command line.
+To accept it, click button 1.
+Otherwise, type in new label and hit return.
+.RB ( vl 
+.IR "i w" )
+.TP
+.B number vertices
+Vertex labels are set to the consecutive integers 1,2,...;
+this is the default.
+.RB ( vn )
+.TP
+.B label edge
+Default is
+.LR 1 .
+.RB ( el
+.IR "i j w" )
+.HP
+.B show/hide vertex labels
+.RB ( vs , 
+.BR vh )
+.HP
+.B show/hide edge labels
+.RB ( es ,
+.BR eh )
+.TP
+.B turn Euclidean edge labels on/off
+Distances are measured in pixels.
+.RB ( ee )
+.TP
+.B show/hide sum of edges
+.RE
+.TP
+.B graphics menu
+.RS
+.TP
+.B light/heavy/empty/full/invisible vertex
+Select style from menu with button 3; select vertices to change with button 1.
+The default is 
+.LR light .
+.RB ( vg
+.IR "i c" )
+.HP
+.B light/heavy edge
+.RB ( eg
+.IR "i j c" )
+.RE
+.TP
+.B macros menu
+Arrange for sets of vertices to act together.
+Actions on any vertex in the set apply to the whole set.
+Copying duplicates edges internal to the set.
+Creating an edge between vertexes in two different sets
+creates edges from every vertex in one set to every
+vertex in the other (bipartite subgraph).
+.RS
+.TF unselect\ set
+.TP
+.B select set
+Sweep a rectangle around the set with button 1.
+Dissociate conflicting sets.
+.TP
+.B unselect set
+Dissociate set containing selected vertex.
+.TP
+.B shrink/expand set
+Selected set is shrunk/expanded about its center.
+.TP
+.B reshape set
+Selected set is redrawn in swept rectangle.
+.TP
+.B complete/disconnect subgraph
+Create/delete edges between every pair of vertices in a set.
+.RE
+.PP
+.I Graphpic
+is a filter which, when applied to a file in graphdraw format, outputs
+.I pic
+code for the graph.
+The options are:
+.TP
+.B -v
+Print vertex labels.
+.TP
+.B -e
+Print edge labels.
+.TP
+.B -i
+Optimize for imagen printer (default is d202).
+.PD
+.SS File format
+Graphs are stored as adjacency lists.
+.PP
+First line:
+.I n m t,
+where
+.I n
+is the number of vertices,
+.I m
+is the number of edges, and
+.I t
+is an optional graph type.
+The only legal type is the default type
+.B u
+(undirected).
+.PP
+For each vertex, an initial line:
+.I d w x y c,
+where
+.I d
+is the degree of the vertex,
+.I w
+is its label,
+.I x
+and
+.I y
+are its coordinates in the window, and
+.I c
+is an optional graphics code,
+.BR L =light
+(default),
+.BR H =heavy
+(circled dot),
+.BR F =full
+(large bullet),
+.BR E =empty
+(empty circle),
+.B I =invisible.
+Window coordinates will be scaled to fit when graph is read in.
+.PP
+After the initial line follow
+.I d
+lines for the vertex's edges:
+.I i w c,
+where
+.I i
+is the index (1 to
+.IR n)
+of the other endpoint,
+.I w
+is the edge label, and
+.I c
+is an optional graphics code, 
+.B L
+or
+.BR H .
+.PD
+.SS Algorithm animation
+The typed command
+.BI ! "program file"
+causes the standard output of
+.I program
+to be captured by the host and
+interpreted as commands to
+.I graphdraw.
+The resulting movie
+can be killed or temporarily halted from the the terminal
+by clicking button 2 and choosing the desired option from the resulting menu.
+.PP
+Animation codes (defined parenthetically with menu items above)
+appear one per line.
+Their arguments are:
+.I i,
+index of a vertex (normally the 
+.IR i th
+to be created);
+.I x, y,
+integer coordinates in the range 0 to
+.BR maxcoord ;
+.I w
+a label; or
+.I c,
+a graphic code.
+.PP
+Other animation codes are
+.PD0
+.TP \w'\f5pm\fI\ message\ \ \fR'u
+.BI pw " n"
+Change the value of
+.B maxcoord to
+.I n.
+Default is 10,000.
+.TP
+.BI vl " i w"
+Give vertex
+.I i
+the label
+.I w.
+.TP
+.BI pd " t"
+Delay program for
+.I t
+clicks of the 60Hz clock.
+.TP
+.B ps
+Halt program until user clicks button 2 to continue.
+.TP
+.BI pm " message"
+Print
+.I message
+on command line.
+.PD
+.SH SEE ALSO
+.IR dag (1),
+.IR pic (1)
+.SH BUGS
+It is impossible to move or reshape a
+.I graphdraw
+layer, except via 
+.LR "standard window" .

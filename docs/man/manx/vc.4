@@ -1,0 +1,64 @@
+.TH VC 4
+.CT 2 graphics
+.SH NAME
+vc \- versatec model 122 interface
+.SH SYNOPSIS
+.B #include <sys/vcio.h>
+.SH DESCRIPTION
+The files
+.I vc[0-9] refer to the Versatec model 122 interface.  Any plotter obeying
+the Versatec "green sheet" interface standard can be used with this interface.
+.PP
+Upon opening the device, a RESET_ALL command is executed by the driver.
+The driver will only accept a
+.I write
+or an
+.IR ioctl (2)
+; reads will fail and seeks are ignored.
+.PP
+.IR ioctl (2)
+calls perform special operations.  There are two basic calls: VGETSTATE
+and VSETSTATE.  VSETSTATE can be used to send special commands to the plotter
+by setting bits in the control status register (CSR).
+VGETSTATE returns the CSR of the interface.  The functions are specified in
+vcio.h.  The bits are as follows:
+.TP
+.B VC_SPP
+is "Simultaneous Print/Plot"
+.TP
+.B VC_PP
+is print/plot mode.  Data bytes sent in print mode are printed using the ROM
+in the plotter.  Bytes written in plot mode are plotted.  It is possible to
+use print mode to send commands to the plotter.  See the manual for details.
+.TP
+.B VC_SWPBT
+swaps the bytes in the interface.  Useful for the VAX.
+.PP 
+The remote operations are sent one at a time.
+.TF VC_RLTER
+is short for
+.I "Remote Line Terminate".
+It sends a line terminator to the Versatec.
+.TP
+.B VC_CLEAR
+clears the buffer.
+.TP
+.B VC_RESET
+will reset the controller and the plotter.
+.TP
+.B VC_RFFED
+is short for
+.I "Remote Form Feed"
+and will advance the paper.
+.TP
+.B VC_REOTR
+is short for
+.I "Remote End of Transmission"
+which is equivalent to sending an EOF.
+.TP
+.B VC_RESET_ALL
+is the ultimate reset.
+.PD
+.SH FILES
+.F /dev/vc?
+.SH BUGS

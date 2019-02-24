@@ -1,0 +1,43 @@
+.TH SMASH 8
+.CT 1 sa_nonmortals
+.SH NAME
+smash \- rewrite bad disk sectors
+.SH SYNOPSIS
+.B /etc/smash
+.I device sector
+.SH DESCRIPTION
+.I Smash
+attempts to read the named (decimal, 512-byte)
+.I sector
+from the named
+.IR device ,
+and prints the error status from the read
+and the data read,
+in octal,
+regardless of the error status.
+It then prompts
+.LR write? ,
+to which there are three answers:
+.TP
+.B y
+Write the data back to the sector.
+.TP
+.B c
+Write zeros to the sector.
+.TP
+anything else
+Quit.
+.PP
+After the sector is written,
+it is read again
+and the cycle repeats.
+.PP
+Writing the sector,
+even if its contents could be correctly read,
+will recompute the error correcting code.
+This may make soft ECC errors vanish,
+and will recover what can be recovered
+(sometimes not much)
+from hard ECC errors.
+.SH SEE ALSO
+.IR rarepl (8)

@@ -1,0 +1,275 @@
+.TH UPAS 8
+.CT 1 sa_auto sa_mortals
+.SH NAME 
+upas, rmail, translate \- mail delivery system
+.SH SYNOPSIS
+.B rmail
+.I person ...
+.PP
+.B /usr/lib/upas/translate
+.I name
+.PP
+.B /usr/lib/upas/auth
+.I sender
+.I receiver
+.SH DESCRIPTION
+Users send mail by
+.IR mail (1).
+Remote machines use
+.I rmail.
+Both call on
+.I upas
+programs.
+.PP
+Mail addresses are interpreted
+according to rewrite rules as
+described below.
+When the addresses for a
+.I mail
+or
+.I rmail 
+command have been interpreted, they are bundled by
+network and passed to network-specific handlers,
+such as
+.IR route.inet .
+.PP
+.I Translate
+looks up a mail
+.I name
+in an alias list (see
+.IR mail (6))
+and places the result on standard output.
+.PP
+.I Auth
+is called by
+.I upas
+to authorize mail delivery for each
+.I sender, receiver
+pair.
+The mail is accepted if
+the previous hop was a trusted gateway machine in
+.FR /usr/lib/upas/gateways ,
+or all the machines in the source or destination path are in 
+.FR /usr/lib/upas/attlist .
+.SS Rewrite rules
+Each line of the file 
+.F /usr/lib/upas/rewrite
+is a rule.
+Blank lines and lines beginning with
+.B #
+are ignored.
+.PP
+Each rewriting rule consists of (up to) 4 strings:
+.TP
+.I pattern
+A regular expression in the style of
+.IR regexp (3).
+The
+.I pattern
+is applied to mail destination addresses.
+The pattern match is case-insensitive
+and must match the entire address.
+.TP
+.I type
+The type of rule; see below.
+.TP
+.I arg1
+An
+.IR ed (1)
+style replacement string, with
+.BI \e n
+standing for the text matched by the
+.IR n th
+parenthesized subpattern.
+.TP
+.I arg2
+Another
+.IR ed (1)
+style replacement string.
+.PP
+In each of these fields the substring
+.L \es
+is replaced by the login id of the
+sender and the substring
+.L \el
+is replaced by the name of the local machine.
+.PP
+When delivering a message,
+.I mail
+starts with the first rule and continues down the list until a pattern
+matches the destination address.
+It then performs one of the following actions depending on rule type:
+.PD 0
+.TP
+.B >>
+Append the mail to the file indicated by expanding
+.IR arg1 ,
+provided that file appears to be a valid mailbox.
+.TP
+.B |
+Pipe the mail through the command formed from concatenating the
+expanded
+.I arg1
+and
+.I arg2.
+.TP
+.B alias
+Replace the address by the address(es) specified
+by expanding
+.I arg1
+and recur.
+.TP
+.B translate
+Replace the address by the address(es) output by the
+command formed by expanding
+.I arg1
+and recur.
+.TP
+.B auth
+Call the program in expanded
+.I arg1
+and authorize(reject) the mail if it returns a zero(non-zero) return code.
+.PD
+.PP
+.I Mail
+expands the addresses recursively until each address has matched a
+.L >>
+or
+.L |
+rule or until the recursion depth indicates a rewriting loop
+(currently 32).
+.PP
+An 
+.L auth
+operator is only applied once per address.
+If no 
+.L auth 
+rule is encountered, the mail is accepted.
+.PP
+If several addresses match
+.L |
+rules and result in the same
+expanded
+.IR arg1 ,
+the message is delivered to all those addresses
+by a single command,
+composed by concatenating the common
+expanded
+.I arg1
+and each expanded
+.IR arg2 .
+This is meant to make less work of
+a message to several recipients on the same machine.
+For example, the rule
+.IP
+.L
+([^!]+)!(.+)   |   "uux - -a \\s \\1!rmail"   \\2
+.LP
+causes
+.L mail r70!pjw r70!ken
+to generate the single delivery command
+.LR "uux -a rob r70!rmail pjw ken" .
+.SH EXAMPLES
+A sample rewrite file:
+.PP
+.EX
+.ta \w'([^!]+)[%@]([^!@%]+) 'u +\w'alias  'u
+# local mail
+[^!@%]+	translate  "exec translate '&'"
+local!([^!@%]+)	>>	/usr/spool/mail/\e1
+\el!(.+)	alias	\e1	
+.EE
+.PP
+.EX
+# convert %@ format to ! format
+(_822_)!((.+)!)?([^!]+)[%@]([^!%@]+)  \e
+	alias	\e1!\e2\e5!\e4
+([^!]+)[%@]([^!@%]+)	alias	_822_!\e2!\e1
+_822_!(.+)	alias	\e1	
+.EE
+.PP
+.EX
+# special domains
+[^!]+wisc\e.edu!.+	alias	xunet!&	
+.EE
+.PP
+.EX
+# network gateways
+(csnet|bitnet)!(.+)	alias	inet!&
+acsnet!.+
+.EE
+.PP
+.EX
+# real networks
+inet!([^!]+)!(.+)	|	"/usr/lib/upas/route.inet '\es' '\e1'" "'\e2'"
+([^!]+)!(.+)	|	"/usr/lib/upas/route '\es' '\e1'" "'\e2'"
+.EE
+.PP
+.EX# anything else goes to research
+.*	alias	research!&
+.EE
+.SH FILES
+.TF /n/bowell/usr/lib/upas/mkfile
+.TP
+.F /usr/lib/upas/namefiles
+list of files to search
+.TP
+.F $HOME/lib/names
+private aliases
+.TP
+.F /usr/lib/upas/rewrite
+rewriting rules
+.TP
+.F /usr/lib/upas/attlist
+known AT&T machines
+.TP
+.F /usr/lib/upas/gateways
+machines that check mail authorization reliably
+.TP
+.F /usr/lib/upas/translate
+alias lookup
+.TP
+.F /usr/lib/upas/route.*
+mail interfaces to specific networks
+.TP
+.F /usr/lib/upas/route
+interface to local (i.e. AT&T) Datakit network
+.TP
+.F /bin/mail
+shell file that calls the mailer
+.TP
+.F /usr/lib/upas/send
+actually delivery program
+.TP
+.F /bin/rmail
+linked to /usr/lib/upas/send
+.TP
+.F /usr/spool/mail/*
+mailboxes
+.TP
+.F /usr/spool/mail/mail.log*
+delivery logs
+.TP
+.F /n/bowell/usr/lib/upas/mkfile
+updates various mail and uucp files
+.TP
+.F /etc/passwd
+authentication
+.TP
+.F /tmp/ma*
+temp file
+.TP
+.F /tmp/ml*
+lock file
+.TP
+.F $HOME/dead.letter
+unmailable text
+.SH "SEE ALSO"
+.IR uucp (1), 
+.IR mail (1), 
+.IR mail (6),
+.IR smtp (8)
+.br
+D. L. Presotto and W. R. Cheswick,
+`Upas\(ema simpler approach to network mail',
+this manual, Volume\ 2

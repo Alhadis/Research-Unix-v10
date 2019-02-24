@@ -1,0 +1,116 @@
+.TH DIST 1
+.SH NAME
+dist \(em distribute files to a remote machine
+.SH SYNOPSIS
+.ft CW
+dist [-nv] [-d \fIhosts\fP] [-[Ff] \fIhostfile\fP] [-D \fIold\fP=\fInew\fP] [-[Xx] \fIcommand\fP] \fIfile ...\fP
+.sp
+dist -q [-v] [\fIsystems ...\fP]
+.sp
+dist -r [-v] [-D \fIold=new\fP] [-R \fIrootdir\fP] \fIsystem\fP [\fIjob ...\fP]
+.SH DESCRIPTION
+.I Dist
+distributes files to other systems, where they are installed
+under the same names.
+.I Dist
+operates by packing the files with
+.IR mkdist (1),
+and queueing the resulting package in a spool directory to be
+picked up by the remote systems.
+.PP
+.I Dist
+has several forms of use.  In the first (default) form,
+.I dist
+packages the named files and queues them for remote systems.
+By default, the list of remote systems is taken from
+.BR /usr/lib/dist/destinations/default .
+The
+.B -d
+option allows a list of destination systems to be specified as
+a single argument (containing system names separated by spaces).
+Similarly, the
+.B -f
+option allows a list of systems to be taken from a file.
+The
+.B -F
+option is like
+.BR -f ,
+except it looks in a standard place for the file.
+Multiple
+.BR -d ,
+.BR -f ,
+and
+.BR -F
+options may be combined.  If any destinations are specified via
+the command line, the default destinations file is not read.
+The
+.BR -D ,
+.BR -X ,
+and
+.B -x
+options are passed to
+.IR mkdist .
+By default, after packaging and queueing the files for distribution,
+.I dist
+notifies each remote system that the package is available, and the
+remote system then dials back and immediately downloads the package.  The
+.B -n
+option suppresses this notification.
+.PP
+In the second form, when the
+.B -q
+option is given,
+.I dist
+displays the queue contents on each remote system named in the
+command line.  If no remote systems are named,
+.I dist
+displays the local queue.
+.PP
+The third form, with the
+.B -r
+option, makes a network call to the named system
+and attempts to download and install the named jobs.
+If no jobs are named, it attempts to download all jobs
+on the remote system.  The
+.B -D
+and
+.B -R
+options are passed to
+.IR insdist (1).  The
+.B -r
+form is rarely used, since the default behavior is for
+remote systems to automatically dial back when a package
+is announced.
+.PP
+In all three forms of the command, the
+.B -v
+option enables verbose output.
+.SH FILES
+.TF /usr/lib/dist/destinations/default
+.TP
+.F /usr/lib/dist/*
+Supporting programs.
+.TP
+.F /usr/lib/dist/destinations/default
+List of default destination systems.
+.TP
+.F /usr/lib/dist/destinations/*
+Destination files for the
+.B -F
+option.
+.TP
+.F /usr/spool/dist
+Spool directory.
+.TP
+.F /usr/spool/dist/Q.*
+Spool subdirectories.
+.TP
+.F /usr/spool/dist/log
+Log file.
+.SH "SEE ALSO"
+.IR mkdist (1)
+.SH BUGS
+.B -v
+should provide more verbose output.
+.br
+Logging needs improvement.

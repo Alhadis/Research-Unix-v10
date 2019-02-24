@@ -1,0 +1,102 @@
+.TH ENVIRON 5
+.CT 2 proc_man
+.SH NAME
+environ \- user environment
+.SH SYNOPSIS
+.B extern char **environ;
+.SH DESCRIPTION
+An array of strings called the `environment' is
+made available by
+.IR exec (2)
+when a process begins.
+By convention these strings have either the form
+.IB name = value ,
+defining a variable, or
+.IB name (){ value } ,
+defining a function; see
+.IR sh (1).
+The following variables are used by various commands:
+.TF TERMCAP
+.TP
+.B PATH
+The sequence of directory prefixes that
+.I sh,
+.IR time (1),
+.IR nice (1),
+etc.,
+apply in searching for a file known by an incomplete path name.
+The prefixes are separated by 
+.LR : .
+.IR Login (8)
+sets
+.LR PATH=:/bin:/usr/bin .
+.PD
+.TP
+.B HOME
+A user's login directory, set by
+.IR login (8)
+from the password file
+.IR passwd (5).
+.TP
+.B TERM
+The kind of terminal for which output is to be prepared.
+This information is used by commands, such as
+.I nroff
+or
+.IR plot (1),
+which may exploit special terminal capabilities.
+Some customary values of
+.B TERM
+are
+.BR 2621 
+(HP),
+.BR 4014 
+(Tektronix),
+.BR 5620 
+(Teletype), and
+.BR 630 
+(Teletype).
+See
+.FR /etc/termcap ,
+described in
+.IR termcap (5),
+for a longer list.
+.TP
+.B SHELL
+The name of the login shell.
+.PP
+The environment may be queried by
+.IR getenv (3)
+or by the
+.L set
+or
+.L whatis
+commands of
+.IR sh (1).
+Names may be placed in the environment by the
+.L export
+command and by 
+.IB name = value
+arguments of
+.IR sh (1).
+Names may also be placed in the environment at the point of an
+.IR exec (2).
+It is unwise to conflict with
+certain
+.IR sh (1)
+variables that are frequently exported by
+.F .profile
+files:
+.BR MAIL ,
+.BR PS1 ,
+.BR PS2 ,
+.BR IFS .
+.SH SEE ALSO
+.IR sh (1),
+.IR printenv (1),
+.IR exec (2),
+.IR getenv (3),
+.IR term (6)
+.SH BUGS
+Function definitions in the environment break some old programs,
+including old shells.

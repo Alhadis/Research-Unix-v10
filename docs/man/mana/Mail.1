@@ -1,0 +1,187 @@
+.TH Mail 1
+.SH NAME
+Mail \- send and receive mail
+.SH SYNOPSIS
+.B Mail
+[
+.I option
+]
+...
+[
+.I person
+]
+...
+.SH DESCRIPTION
+.I Mail 
+with 
+.I persons
+named reads a letter from the standard input and sends it to them.
+.PP
+.I Mail
+otherwise presents your mail.
+It responds to commands, each typed on a line by itself,
+possibly with arguments.
+A command need not be typed in its
+entirety \- the first command that matches the typed prefix is used.
+A missing message list is interpreted as a singleton:
+whichever of the current message,
+the nearest message ahead, or the nearest message back
+satisfies the command's requirements.
+.PP
+The following table describes the commands:
+.PP
+.ta \w'\f5alternates\fP 'u +\w'Arguments 'u
+.de fq
+\f5\\$1\\fP	\f5\\$2\\fP	\\f5\\$3\\fP
+..
+.nf
+.fq !	"Single command escape to shell"
+.fq -	"Back up to previous message"
+.fq Reply	"Compose a reply to a message"
+.fq alias	"Define an alias as a set of user names"
+.fq alternates	"List other names you are known by"
+.fq chdir	"Change working directory, default home"
+.fq copy	"Copy a message to a file or folder, or pipe it to a command"
+.fq delete	"Delete a list of messages"
+.fq dt	"Delete message, type next"
+.fq endif	"End of \f5if\fR conditional statement"
+.fq edit	"Edit a list of messages"
+.fq else	"Part of \f5if\fR conditional"
+.fq exit	"Leave mail without changing anything"
+.fq file	"Interrogate/change current mail file"
+.fq folder	"Same as file"
+.fq folders	"List your folder directory"
+.fq from	"List headers of a list of messages"
+.fq headers	"List current window of messages"
+.fq help	"Print brief summary of Mail commands"
+.fq hold	"Same as preserve"
+.fq if	"Conditional execution of Mail commands"
+.fq ignore	"Do not print listed headers"
+.fq mail	"Send mail to specified names"
+.fq mbox	"Arrange to save a list of messages in mbox"
+.fq next	"Go to next message and type it"
+.fq preserve	"Arrange to leave list of messages in mbox"
+.fq quit	"Leave Mail; update mbox as appropriate"
+.fq reply	"Reply to author of message only"
+.fq save	"Append messages, with headers, to a file, or pipe it to a command"
+.fq set	"Set binary or valued options"
+.fq shell	"Invoke an interactive shell"
+.fq top	"Print first so many (5 by default) lines of list of messages"
+.fq type	"Print messages"
+.fq undelete	"Undelete list of messages"
+.fq unset	"Undo the operation of a set"
+.fq visual	"Invoke visual editor on a list of messages"
+.fq write	"Append messages, without headers, to a file, or pipe it to a command"
+.fq z	"Scroll to next/previous screenful of headers"
+.fi
+.PP
+The following table describes the options for
+.BR set .
+Each option is
+shown as being either a binary or valued option.
+.PP
+.nf
+.fq EDITOR	valued	"Pathname of editor for \f5~e\fP and \f5edit\fP"
+.fq SHELL	valued	"Pathname of shell for \f5shell\fP, \f5~!\fP and \f5!\fP"
+.fq VISUAL	valued	"Pathname of screen editor for \f5~v\fP, \f5visual\fP"
+.fq append	binary	"Always append messages to end of \fImbox\fP"
+.fq ask	binary	"Prompt user for Subject: field when sending"
+.fq askcc	binary	"Prompt user for additional Cc's at end of message"
+.fq autoprint	binary	"Print next message after \f5delete\fP"
+.fq crt	valued	"Minimum number of lines before using \fImore\fP"
+.fq dot	binary	"Accept . alone on line to terminate message input"
+.fq escape	valued	"Escape character to be used instead of ~"
+.fq folder	valued	"Directory to store folders in"
+.fq hold	binary	"Hold messages in \fImbox\fP by default"
+.fq ignore	binary	"Ignore \s-2RUBOUT\s0 while sending mail"
+.fq ignoreeof	binary	"Don't terminate letters/command input with ^D"
+.fq keep	binary	"Don't unlink \fImbox\fP when empty"
+.fq keepsave	binary	"Don't delete \f5save\fPd messages by default"
+.fq metoo	binary	"Include sending user in aliases"
+.fq nosave	binary	"Don't save partial letter in \fIdead.letter\fP"
+.fq quiet	binary	"Suppress printing of \fIMail\fP version"
+.fq record	valued	"File to save all outgoing mail in"
+.fq screen	valued	"Size of window of message headers for \f5z\fP, etc."
+.fq sendmail	valued	"Choose alternate mail delivery system"
+.fq toplines	valued	"Number of lines to print in \f5top\fP"
+.fi
+.PP
+The following table summarizes tilde escapes available
+while entering a letter.
+.PP
+Escape	Arguments	Description
+.nf
+.de fz
+\f5\\$1\fP	\fI\\$2\\fP	\\$3
+..
+.fz ~!	command	"Execute shell command"
+.fz ~c	name ...	"Add names to Cc: field"
+.fz ~d		"Read \f5dead.letter\fP into message"
+.fz ~e		"Invoke text editor on partial message"
+.fz ~f	messages	"Read named messages"
+.fz ~h		"Edit the header fields"
+.fz ~m	messages	"Read named messages, right shift by tab"
+.fz ~p		"Print message entered so far"
+.fz ~q		"Abort entry of letter; like \s-2RUBOUT\s0"
+.fz ~r	filename	"Read file into message"
+.fz ~s	string	"Set Subject: field to \fIstring\fP"
+.fz ~t	name ...	"Add names to \f%To:\fP field"
+.fz ~v		"Invoke screen editor on message"
+.fz ~w	filename	"Write message on file"
+.fz ~\^|	command	"Pipe message through \fIcommand\fP"
+.fz ~~	string	"Quote a \f5~\fP in front of \fIstring\fP"
+.fi
+.PP
+The following table shows the command line flags.
+.PP
+.ta \w'\f5-h number\fP 'u
+.B
+.nf
+.fz -N		"Suppress the initial printing of headers"
+.fz -T	file	"Article-id's of read/deleted messages to \fIfile\fP"
+.fz -d		"Turn on debugging"
+.fz -f	file	"Show messages in \fIfile\fP or \fI$HOME/mbox\fP"
+.fz -h	number	"Pass on hop count for mail forwarding"
+.fz -i	"Ignore tty interrupt signals"
+.fz -n	"Inhibit reading of /usr/lib/Mail.rc"
+.fz -r	name	"Pass on \fIname\fP for mail forwarding"
+.fz -s	string	"Use \fIstring\fP as subject in outgoing mail"
+.fz -u	name	"Read \fIname's\fP mail instead of your own"
+.fi
+.PP
+Notes:
+.B -T ,
+.B -d ,
+.B -h ,
+and
+.B -r
+are not intended for human consumption.
+.SH FILES
+.TF /usr/lib/Mail.help*
+.TP
+.F /usr/spool/mail/*
+post office
+.TP
+.F $HOME/mbox
+your old mail
+.TP
+.F $HOME/.mailrc
+file giving initial mail commands
+.TP
+.F /tmp/R#
+temporary for editor escape
+.TP
+.F /usr/lib/Mail.help*
+help files
+.TP
+.F /usr/lib/Mail.rc
+system initialization file
+.TP
+.F /bin/mail
+to do actual mailing
+.fi
+.SH "SEE ALSO"
+.IR mail (1)
+.br
+`The Mail Reference Manual,'
+.I Berkeley BSD 4.1 UNIX User's Manual

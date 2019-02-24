@@ -1,0 +1,1110 @@
+.so tmac.s
+.so ../ADM/mac
+.XX ms 7 "Typing Documents on the UNIX System" \" do not move
+.nr zz \n(%#u-1u
+.nr PN \n(%#u
+.de PT
+.lt \\n(LLu
+.pc %
+.nr PN \\n%u+\\n(zzu
+.if \\n%-1 .if o \\*(%o
+.if \\n%-1 .if e \\*(%e
+.lt \\n(.lu
+..
+.de BT
+.nr PN \\n%u+\\n(zzu
+.nr PX \\n(.s
+.nr PF \\n(.f
+.ft 1
+.ps \\n(PS
+'lt \\n(LTu
+.po \\n(POu
+.if o \\*(%O
+.if e \\*(%E
+.ft \\n(PF
+.ps \\n(PX
+..
+....TM 76-1274-16 39199 39199-11
+....ND October 8, 1976
+.....typesetting
+.nr CW 2.85i
+.nr GW .3i
+.DT August 1989
+.TL
+Typing Documents on the UNIX System:
+.br
+Using the \&\f(CB\-ms\fP and \&\f(CB\-mcs\fP Macros with Troff\(dg
+.AU MH 6067 2C-516 research!llc
+L. L. Cherry 
+.AU MH 2C-572 6377
+M. E. Lesk
+.AI
+.MH
+.AB
+This document describes a set of easy-to-use macros
+for preparing documents on
+.US .
+The macros provide facilities for paragraphs, sections headings (optionally
+with automatic numbering), page titles, footnotes,
+equations,
+tables, two-column format, and
+several formats of cover pages for papers.
+.PP
+This memo includes, as an appendix,
+the text of ``A Guide to Preparing
+Documents with
+.CW \-ms
+and
+.CW \-mcs ,''
+which contains additional examples
+of features of
+.CW \-ms.
+.AE
+.FS
+\(dg This manual is a substantial revision by Lorinda Cherry of |reference(1979 msmacros).
+.FE
+.PP
+.BI
+Introduction.
+.R
+This memorandum describes a package of commands to produce
+papers
+using the
+.bd I
+.I
+troff
+.R
+formatting program.
+As with other
+formatting
+programs,
+text is prepared interspersed with formatting commands.
+However, this package,
+which itself is written in
+.I troff
+commands,
+provides higher-level commands
+than those provided with the basic
+.I troff
+program.
+A separate set of macros,
+.CW \-mcs ,
+produces
+an official AT&T style internal document cover sheet.
+The
+.CW \-mcs
+macros automatically invoke the
+.CW \-ms
+macros.
+Although the basic
+.CW \-ms
+macros work with
+.I nroff ,
+the
+.CW \-mcs
+macros do not.
+Macro names were selected in
+.CW \-mcs
+to avoid collisions with
+the original
+.CW \-ms
+macros and thereby maintain backward compatibility.
+This document reflects the new macros.
+The commands available in this package are listed in
+Appendix A; the cover sheet commands and their order are in Appendix B.
+.PP
+.BI
+Text.
+.R
+Type normally, except that instead of indenting for paragraphs,
+place a line reading ``.PP'' before each paragraph.
+This will produce indenting and extra space.
+.LP
+Alternatively, the command .LP that was used here will produce
+a left-aligned (block) paragraph.
+The paragraph spacing and indent can be changed: see below under ``Registers.''
+.PP
+.BI
+Beginning.
+.R
+The input should start as follows:
+.DS L
+	[optional overall format .RP or .TR \- see below]
+	.TI
+	Title of document (one or more lines)
+	.AH "G. R. Emlin" MH 3744 2C-501 research!gre
+	.AI
+	Author's institution(s)
+	.SA
+	Abstract; to be placed on the cover sheet of a paper.
+	Line length is 5/6 of normal; use .ll here to change.
+	.SE  (abstract end)
+	.SC 10
+	.NH
+	Heading (one or more lines)
+	.PP
+	text ...
+.DE
+To omit some of the standard headings
+(e.g. no abstract, or no author's institution) just
+omit the corresponding fields and command lines.
+The word
+.SM
+ABSTRACT
+.NL
+can be suppressed by writing ``.SA no'' for ``.SA'' or changed to something
+else by supplying the replacement as an argument to .SA.
+Several interspersed .AH and .AI lines can be used for multiple authors.
+The headings are not compulsory: beginning
+with a .PP command is perfectly OK and will just
+start printing an ordinary paragraph.
+.I Warning:
+You can't just begin a document with a line of text.
+Some
+.CW \-ms
+command must
+precede any text input.  When in doubt, use .LP
+to get proper initialization, although any of
+the commands .PP, .LP, .TI, .SH, .NH is good enough.
+.PP
+.BI
+Cover Sheets and First Pages.
+.R
+The first line
+of a document may signal the general format of the first page.
+In particular, if it is ".RP" a released paper type cover sheet with title and
+abstract is prepared.
+If it is ".TR", a Computing Science Technical Report format is produced.
+If neither .RP nor .TR are present, the .SC triggers an official AT&T
+style cover sheet and first page.
+The default format, produced if there is no .SC command,
+has no cover sheet but puts the title, author information and abstract
+on the first page, and
+is useful for scanning drafts.
+.PP
+In general
+.CW \-ms
+and
+.CW \-mcs
+are arranged so that only one form
+of a document need be stored, containing all
+information;  the first command gives the format,
+and unnecessary items for that format are ignored.
+The full set of commands to produce an official cover sheet is listed
+in order in Appendix B.
+If you would rather let a program generate the
+.CW \-mcs
+commands for you, you can use
+.I docgen .
+|reference(latest volume1)
+.I Docgen
+is an interactive program that ask questions and packages the answers
+into the necessary commands to produce a cover sheet.
+.PP
+Warning: don't put extraneous material
+between the .TI and .SE commands.  Processing
+of the titling items is
+special, and other data placed in them may not behave
+as you expect.
+Don't forget that some
+.CW \-ms
+command must precede any input text.
+.PP
+.BI
+Page headings.
+.R
+The
+.CW \-ms
+macros, by default, will print a page heading containing
+a page number (if greater than 1).
+The default page footer is empty.
+You can make minor adjustments to the page headings/footings
+by redefining the
+strings
+LH, CH, and RH
+which are the left, center and right portions of the page headings,
+respectively; and the
+strings
+LF, CF, and RF,
+which are the left, center and right portions of the page footer.
+For more complex formats, the user can redefine
+the macros PT and BT, which are invoked respectively at the top
+and bottom of each page.
+The margins (taken from registers HM and FM for the top and bottom
+margin respectively) are normally 1 inch; the page header/footer are
+in the middle of that space.
+If you redefine these macros, you should be careful
+not to change parameters such as point size or font
+without resetting them to default values.
+.PP
+.2C
+.BI
+Multi-column formats.
+.R
+If you place the command ``.2C'' in your document, the document will
+be printed in double column format beginning
+at that point.
+The command ``.1C'' will go
+back to one-column format and also skip to a new page.
+The ``.2C'' command is actually a special case of the command
+.DS L
+	.MC [column width [gutter width]]
+.DE
+which makes multiple columns with the specified column
+and gutter width; as many columns as will fit across the page
+are used.
+Thus triple, quadruple, ... column pages can be printed.
+Whenever the number of columns is changed (except going from
+full width to some larger number of columns)
+a new page is started.
+.PP
+.BI
+Headings.
+.R
+There are two commands to produce headings.
+If you type
+.DS L
+	.NH
+	type section heading here
+	may be several lines
+.DE
+you will get automatically numbered section headings (1, 2, 3, ...),
+in boldface.
+For example,
+.DS L
+    .NH
+    Care and Feeding of Department Heads
+.DE
+produces
+.NH
+Care and Feeding of Department Heads
+.PP
+Alternatively,
+.DS L
+	.SH
+	Care and Feeding of Directors
+.DE
+will print the heading with no number added:
+.SH
+Care and Feeding of Directors
+.PP
+Every section heading, of either type, should be followed
+by a paragraph beginning with .PP or .LP, indicating
+the end of the heading
+or another heading command.
+Headings may contain more than one line
+of text.
+.PP
+The .NH command also supports more complex numbering schemes.
+If a numerical argument is given, it is taken to be a
+``level'' number and an appropriate sub-section
+number is generated.
+Larger level numbers indicate deeper
+sub-sections, as in this example:
+.DS L
+	.NH
+	Erie-Lackawanna
+	.NH 2
+	Morris and Essex Division
+	.NH 3
+	Gladstone Branch
+	.NH 3
+	Montclair Branch
+	.NH 2
+	Boonton Line
+.DE
+generates:
+.br
+.ne 2i
+.NH
+Erie-Lackawanna
+.NH 2
+Morris and Essex Division
+.NH 3
+Gladstone Branch
+.NH 3
+Montclair Branch
+.sp
+.B
+2.2. Boonton Line
+.R
+.PP
+An explicit ``.NH 0'' will reset the numbering of level 1
+to one, as here:
+.DS L
+	.NH 0
+	Penn Central
+.DE
+.ft 3
+.if n .ul 1
+.sp 1
+1.  Penn Central
+.PP
+.BI
+Indented paragraphs.
+.R
+(Paragraphs with hanging numbers, e.g., references.)
+The sequence
+.DS L
+	.IP [1]
+	Text for first paragraph, typed
+	normally for as long as you would
+	like on as many lines as needed.
+	.IP [2]
+	Text for second paragraph, ...
+.DE
+produces
+.IP [1]
+Text for first paragraph, typed normally for as long
+as you would like on as many lines as
+needed.
+.IP [2]
+Text for second paragraph, ...
+.LP
+A series of indented paragraphs may be followed by an ordinary paragraph
+beginning with .PP or .LP,
+depending on whether you wish indenting or not.
+The command .LP was used here.
+.PP
+More sophisticated uses of .IP are also possible.
+If the label is omitted, for example, a plain block indent
+is produced.
+.DS L
+	.IP
+	This material will
+	just be turned into a
+	block indent suitable for quotations or
+	such matter.
+	.LP
+.DE
+will produce
+.IP
+This material
+will just be turned
+into a block indent
+suitable for
+quotations or such matter.
+.LP
+If a non-standard amount of indenting is required,
+it may be specified after the label
+and will remain in effect until the next .PP or .LP.
+The default dimension of the indent is character positions.
+Thus, the general form of the .IP command
+contains two additional fields: the label and the indenting
+length.  For example,
+.DS L
+	.IP first: 9
+	Notice the longer label, requiring larger
+	indenting for these paragraphs.
+	.IP second:
+	And so forth.
+	.LP
+.DE
+produces this:
+.IP first: 9
+Notice the longer label, requiring larger
+indenting for these paragraphs.
+.IP second:
+And so forth.
+.LP
+It is also possible to produce multiple nested indents;
+the command .RS indicates that the next .IP starts from the
+current indentation level.
+Each .RE will eat up one level of indenting
+so you should balance .RS and .RE commands.
+The .RS command should be thought of as ``move right'' and
+the .RE command as ``move left''.
+As an example
+.DS L
+	.IP 1.
+	Bell Laboratories
+	.RS
+	.IP 1.1
+	Murray Hill
+	.IP 1.2
+	Holmdel
+	.RS
+	.IP 1.2.1
+	Red Hill
+	.RE
+	.IP 1.3
+	Whippany
+	.RE
+	.LP
+.DE
+will result in
+.IP 1.
+Bell Laboratories
+.RS
+.IP 1.1
+Murray Hill
+.IP 1.2
+Holmdel
+.RS
+.IP 1.2.1
+Red Hill
+.RE
+.IP 1.3
+Whippany
+.RE
+.LP
+All of these variations on .LP leave the right
+margin untouched.  Sometimes, for purposes
+such as setting off a quotation, a paragraph indented
+on both right and left is required.
+.QP
+A single paragraph
+like this is obtained
+by preceding it with .QP.
+More complicated material (several paragraphs) should be
+bracketed with .QS and .QE.
+.LP
+.BI
+Emphasis.
+.R
+To get
+italics
+say
+.DS L
+	.I
+	as much text as you want
+	can be typed here
+	.R
+.DE
+.bd I
+.br
+as was done for
+.I
+these three words.
+.R
+The .R command restores the normal (usually Roman) font.
+If only one word is to be italicized, it
+may be just given on the line with the .I command,
+.br
+.bd I 3
+.DS
+	.I word
+.DE
+and in this case no .R is needed to restore
+the previous font.
+A second argument to the .I command is put in the normal font
+after to the first argument; a third argument is put in normal font
+before the first.
+These are usually used to get punctuation to follow or precede the italicized word.
+.B
+Boldface
+.R
+can be produced by
+.DS L
+	.B
+	Text to be set in boldface
+	goes here
+	.R
+.DE
+Bold text will be underlined on the terminal or line printer.
+Arguments to .B behave as those for .I described above.
+.BI
+Bold italic
+.R
+is produced with the .BI macro and
+.CW
+constant width
+.R
+font with the .CW macro.
+The third argument is most useful with .CW.
+To say
+.CW A ) (
+you would type
+.DS L
+	.CW A ) (
+.DE
+.PP
+The entire font family can be changed with the .FP macro.
+So to set the whole document in Palatino you would say
+.DS L
+	.FP palatino
+.DE
+Other available font families are: century, helvetica, and times.
+Changing the font family does not effect the fonts used for the cover sheet
+except in the abstract.
+.PP
+A few size changes
+can be specified with
+the commands .LG (make larger), .SM (make smaller), and .NL
+(return to normal size).
+The size change
+is two points; the commands may be repeated for
+.SM
+increased
+.SM
+effect
+.NL
+(here one .NL canceled two .SM commands).
+.PP
+If actual
+.UL underlining
+as opposed to italicizing is required,
+the command
+.DS
+	.UL word
+.DE
+will underline a word.  There is no way to underline
+multiple words.
+.PP
+.BI
+Footnotes.
+.R
+Material placed between lines with the commands .FS
+(footnote) and .FE (footnote end) will
+be collected, remembered, and finally placed
+at the bottom of the current page*.
+By default, footnotes are 11/12th the
+length of normal text,
+but this can be changed using the FL register (see below).
+Footnotes are not automatically numbered.
+.FS
+* Like this.
+.FE
+.PP
+.BI
+Displays and Tables.
+.R
+To prepare displays of lines, such as tables, in which
+the lines should not be re-arranged,
+enclose them in the commands .DS and .DE
+.DS L
+	.DS
+	table lines, like the
+	examples here, are placed
+	between .DS and .DE
+	.DE
+.DE
+By default, lines between .DS and .DE are indented and left-adjusted.
+\&.DS I is equivalent to plain .DS.
+You can also center lines, or retain the left margin.
+Lines bracketed by .DS C and .DE commands are
+centered individually (and not re-arranged); lines bracketed
+by .DS L and .DE are left-adjusted, not indented, and
+not re-arranged; lines bracketed by .DS B and .DE are first left-adjusted
+then centered as a block.
+Thus,
+.DS C
+these lines were preceded
+by .DS C and followed by
+a .DE command;
+.DE
+whereas
+.DS L
+these lines were preceded
+by .DS L and followed by
+a .DE command.
+.DE
+and
+.DS B
+these lines were preceded
+by .DS B and followed by
+a .DE command
+.DE
+Normally a display is kept together, on one page.
+If you wish to have a long display which
+may be split across page
+boundaries,
+use .CD, .LD, or .ID in place of
+the commands .DS C, .DS L, or .DS I respectively.
+An extra argument to the .DS I or .ID command is taken
+as an amount to indent.
+Note: it is tempting to assume that .DS R will right adjust
+lines, but it doesn't work.
+.PP
+.BI
+Programs.
+.R
+Programs can be displayed using the .P1 and .P2 macros like this:
+.P1 3n
+#include <stdio.h>
+main(){
+     printf("hello, world\en");
+}
+.P2
+The amount of indentation may be specified as an argument to .P1
+or with number register P1.
+.PP
+.BI
+Equations.
+.R
+If you have to do Greek or mathematics, see
+.I eqn |reference(latest eqn)
+for equation setting.
+To aid
+.I eqn
+users,
+.CW \-ms
+provides definitions of .EQ and .EN
+which normally center the equation and set it off slightly.
+An argument on .EQ is taken to be an equation
+number and placed in the right margin near the equation.
+In addition, there are three special arguments to EQ:
+the letters C, I, and L indicate centered (default),
+indented, and left adjusted equations, respectively. 
+If there is both a format argument
+and an equation number,
+give the format argument first, as in
+.bd I
+.DS
+	.EQ L (1.3a)
+.DE
+for a left-adjusted equation numbered (1.3a).
+.PP
+.BI
+Tables and Pictures.
+.R
+Similarly,
+the macros .TS and .TE
+are defined
+to separate tables (see |reference(latest tbl)) from text with a little space.
+A very long table with a heading may be broken
+across pages by beginning it with .TS H
+instead of .TS,
+and placing the line .TH in the table data
+after the heading.  If the table
+has no heading repeated from page to page,
+just use the ordinary .TS and .TE macros.
+Pictures produced with
+.I
+pic
+.R
+are surrounded by the macros .PS and .PE (see |reference(latest pic))
+and
+.I
+grap
+.R
+graphs are surrounded by .G1 and .G2 (see |reference(latest grap)).
+.PP
+.BI
+Boxing words or lines.
+.R
+To draw rectangular boxes around words the command
+.DS L
+	.BX word
+.DE
+will print
+.BX word
+as shown.
+.sp .05
+.B1
+Longer pieces of text may be boxed
+by enclosing them with .B1 and .B2:
+.DS L
+	.B1
+	text...
+	.B2
+.DE
+as has been done here.
+.B2
+.PP
+.BI
+Keeping blocks together.
+.R
+If you wish to keep a table or other block of lines
+together on a page, there are ``keep - release'' commands.
+If a block of lines preceded by .KS and followed by .KE does
+not fit on the remainder of the current page, it will begin
+on a new page.
+Lines bracketed by .DS and .DE commands are automatically
+kept together this way.
+There is also a ``keep floating'' command: if the
+block to be kept together is preceded by .KF instead of .KS
+and does not fit
+on the current page, it will be moved down through the text
+until the top of the next page.  Thus, no large blank space
+will be introduced in the document.  
+.PP
+.BI
+Troff commands.
+.R
+Among the useful commands from the basic formatting programs
+are the following:
+.DS L
+	.bp - begin new page.
+	.br - ``break'', stop running text
+	          from line to line.
+	.sp n - insert n blank lines.
+	.na - don't adjust right margins.
+.DE
+.PP
+.BI
+Date.
+.R
+To specify a date other than today, say, for example,
+.DS L
+	.DT May 8, 1945
+.DE
+In the official cover sheet style, this date is placed on the first page.
+In ".RP" or ".TR" formats
+it is placed on the cover sheet and nowhere else.
+To suppress the date, use .DT with no arguments.
+Place this line before the title.
+.PP
+.BI
+Signature line.
+.R
+You can obtain a signature line by placing
+the command .SG in the document.
+The authors' names will
+be output in place of the .SG line and
+a typing identification line with author location, department and
+initials will be placed on the left side of the page.
+If .SG has an argument, it is used as the typing identification line.
+The .SG command is ignored
+in released paper format.
+.PP
+.BI
+Registers You Can Change.
+.R
+Certain of the registers used by
+.CW \-ms
+can
+be altered to change default
+settings.
+They should be changed with .nr commands,
+as with
+.DS
+	.nr PS 9
+.DE
+.bd I
+to make the default point size 9 point.
+If the effect is needed immediately, the
+normal
+.I
+troff
+.R
+command, .ps 9, should be used
+in addition to changing the number register.
+.br
+.ps 9
+.vs 10p
+.TS
+c0 c1 c1 c
+c c1 c1 c
+a l1 l1 l.
+Register	Defines	Takes	Default
+		effect
+PS	point size	next para.	10
+VS	line spacing	next para.	12 pts
+LL	line length	next para.	6\(fm\(fm
+LT	title length	next para.	6\(fm\(fm
+PD	para. spacing	next para.	0.3 VS
+PI	para. indent	next para.	5 ens
+FL	footnote length	next FS	11/12 LL
+CW	column width	next 2C	7/15 LL
+GW	intercolumn gap	next 2C	1/15 LL
+PO	page offset	next page	1\(fm\(fm
+HM	top margin	next page	1\(fm\(fm
+FM	bottom margin	next page	1\(fm\(fm
+.TE
+.ps \n(PS
+.vs \n(VS
+You may also alter
+the strings
+LH, CH, and RH which are the left, center, and right headings
+respectively; and similarly LF, CF, and RF which are strings in the
+page footer.
+The page number on
+output
+is taken from register PN, to permit
+changing its output style.
+For more complicated headers and footers
+the macros PT and BT can be redefined, as
+explained earlier.
+.bd I 3
+.PP
+.BI
+Accents.
+.R
+To simplify typing certain foreign words,
+strings representing common accent marks are defined.
+They precede the letter over which the mark
+is to appear.
+Here are the strings:
+.TS
+center;
+c c6 c c.
+Input	Output	Input	Output
+\e*\(fme	\*'e	\e*~a	\*~a
+\e*\(gae	\*`e	\e*ve	\h'0.15m'\v'-0.6m'\s6\zv\s0\v'0.6m'\h'-0.15m'e
+\e*:u	\*:u	\e*,c	\*,c
+\e*^e	\o'^e'
+.TE
+.PP
+.BI
+Usage.
+.R
+After your document is prepared and stored on a file,
+you can print it on a laser printer with the
+command
+.P1
+troff -mcs file | lp
+.P2
+The
+.CW \-mcs
+macros will automatically read in the
+.CW \-ms
+macros.
+In each case, if your document is stored in several files,
+just list all the filenames
+where we have used ``file''.
+If you used
+.I docgen
+to produce the cover sheet file, your file
+will begin with commands to include the macros, so you need only type
+.P1
+troff file | lp
+.P2
+If equations, tables, or pictures are used,
+.I eqn
+and/or
+.I tbl
+and/or
+.I pic
+must be invoked as preprocessors, so you might say
+.P1 0
+tbl file | eqn | troff \-mcs | lp
+.P2
+If other preprocessors are used with
+.I eqn ,
+.I eqn
+should be the \fBlast\fR preprocessor in the pipeline.
+In case of doubt,
+.I doctype (1)
+will tell you how to run off a paper.
+.PP
+Whenever you print a paper with an official cover sheet, a time-stamped
+electronic version of the cover sheet is sent to ITDS.
+When ITDS receives the official paper copy of your document, the electronic version
+with the same time-stamp is retrieved and included in the next Mercury
+Bulletin.
+All other electronic versions are deleted. 
+.br
+.bd I 3
+.PP
+.BI
+References and further study.
+.R
+To learn more about
+.I troff
+see
+|reference(latest troff tutorial) for a general introduction, and |reference(latest troff reference)
+for the full details (experts only).
+Information on related UNIX commands
+is in |reference(latest volume1).
+|reference(page makeup) describes page makeup macros based on
+.CW \-ms.
+.PP
+.bd I 3
+.BI
+Acknowledgment.
+.R
+Many thanks are due to Brian Kernighan for
+his help in the design and implementation of this package,
+and for his assistance in preparing this manual.
+.bd I
+.SH
+.ce
+References
+.LP
+|reference_placement
+.1C
+.sp
+.rs
+.SH
+.ce
+Appendix A
+.ce
+List of \f(CW\-ms\fP Commands
+.ft R
+.TS
+expand;
+l l7 l l.
+1C	Return to single column format.	MC	Start multiple column format.
+2C	Start double column format.	NH	Specify numbered heading.
+AH	Specify author. (old name AU)	NL	Return to normal type size.
+AI	Specify author's institution.	P1	Begin program display.
+AT	Attachments.	P2	End program display.
+B	Begin boldface.	PP	Begin paragraph.
+B1	Begin box.	PT	Page top header.
+B2	End box.	QE	End quotation.
+BT	Page bottom header.	QP	Left and right indented paragraph.
+BX	Box word.	QS	Begin quotation.
+CT	Copy to.	R	Return to regular font (usually Roman).
+CW	Begin constant width.	RE	End one level of relative indenting.
+DE	End display.	RP	Use released paper format.
+DS	Start display (also CD, LD, ID).	RS	Relative indent increased one level.
+DT	Change or cancel date. (old name ND)	SA	Begin abstract. (old name AB)
+EN	End equation.	SC	Trigger cover sheet and first page.
+EQ	Begin equation.	SE	End abstract. (old name AE)
+FE	End footnote.	SG	Insert signature line.
+FP	Change font family.	SH	Specify section heading.
+FS	Begin footnote.	SM	Change to smaller type size.
+I	Begin italics.	TE	End table.
+IP	Begin indented paragraph.	TI	Specify title. (old name TL)
+KE	Release keep.	TR	Computer Science Technical Report format.
+KF	Begin floating keep.	TS	Begin table.
+KS	Start keep.	UL	Underline one word.
+LG	Increase type size.	US	``the UNIX Operating System''
+LP	Left aligned block paragraph.	UX	UNIX\(rg on first use UNIX after
+LT	Letter format.
+.TE
+.sp
+.ce
+.ft B
+Register Names
+.ft R
+.PP
+The following register names are used by
+.CW \-ms
+internally.
+Independent use of these names in one's own macros may
+produce incorrect output.
+.TS
+expand;
+c s s  s s s  s s s  s s
+l l l  l l l  l l l  l l.
+Number registers used in \f(CW\-ms\fP
+#T	BQ	FM	HT	IK	KM	MK	NS	PO	T#	TZ
+\&.T	BW	FP	HY	IM	KN	ML	NX	PQ	T.	VS
+1T	CS	FT	I0	IP	KR	MM	OI	PS	TB	WF
+:	CW	GA	I1	IQ	KV	MN	OJ	PV	TC	XP
+AJ	DV	GW	I2	IR	L1	MO	P1	PX	TD	XT
+AV	DW	H1	I3	IS	LE	NA	PD	QI	TK	XV
+BC	EF	H2	I4	IT	LL	NC	PE	QP	TN	XX
+BD	EI	H3	I5	IU	LT	ND	PF	RO	TQ	YE
+BE	EP	H4	IA	IX	MC	NF	PI	SJ	TV	YY
+BH	FC	H5	IB	JQ	MF	NQ	PN	ST	TY	ZN
+BI	FL	HM	IF	KI	MG
+.TE
+.TS
+ expand;
+c s s  s s s  s s s  s s
+l l l  l l l  l l l  l l.
+Number registers used in \f(CW\-mcs\fP
+a	b	d	fc	k	m	np	qq	t	u!	wp
+a1	b1	dn	g	l	m2	o	r	tc	ud	x
+a2	b2	dv	h	la	m3	p	ra	tp	v	y
+aa	c	e	i	lp	n	q	s	u	w	z
+ar
+.TE
+.bp
+.TS
+expand;
+c s s  s s s  s s s  s s
+l l l  l l l  l l l  l l.
+String registers used in \f(CW\-ms\fP
+,	A6	BX	DF	EQ	HO	KD	ME	PT	RQ	TH
+\(fm	A7	C	DS	EZ	I	KE	MF	PY	RS	TL
+\(ga	A8	C1	DW	FA	I1	KF	MH	QE	RT	TM
+[	A9	C2	DY	FE	I2	KJ	MN	QF	S0	TQ
+]	AB	CA	E1	FF	I3	KK	MO	QP	S1	TR
+^	AE	CB	E2	FG	I4	KL	MR	QS	S2	TS
+~	AI	CC	E3	FJ	I5	KP	ND	R	S3	TT
+:	AT	CD	E4	FK	I6	KQ	NH	R1	SG	TX
+p1	AU	CF	E5	FL	I7	KS	NL	R2	SH	UL
+sd	AX	CH	E6	FN	I8	LB	NP	R3	SM	US
+v	B	CM	E7	FO	I9	LD	OD	R4	SN	UX
+1C	B1	CS	E8	FP	ID	LF	OK	R5	SY	WB
+2C	B2	CT	E9	FQ	IE	LG	P1	RC	TA	WH
+A1	BB	CW	EE	FS	IH	LH	P2	RE	TC	WT
+A2	BD	D	EL	FV	IM	LP	PE	RF	TD	XD
+A3	BG	DA	EM	FX	IP	LT	PP	RH	TE	XF
+A4	BI	DD	EN	FY	IZ	MC	PS	RP	TF	XK
+A5	BT	DE
+.TE
+.sp
+.TS
+expand;
+c s s  s s s  s s s  s s
+l l l  l l l  l l l  l l.
+String registers used in \f(CW\-mcs\fP
+1L	A5	CV	DT	G9	N2	S1	TY	ZI	f	r)
+2L	A6	CX	ED	GS	N3	SA	WW	ZN	k)	s(
+3L	A7	CZ	EJ	HC	N4	SC	X1	ZO	m!	s)
+4L	A8	D1	ET	HD	N5	SE	X2	ZP	m(	t(
+5L	A9	D2	F1	HX	NN	SR	X3	ZS	n!	t)
+6L	AA	D3	F2	IZ	NU	SS	X4	ZT	n(	v)
+7L	AH	D4	F3	KW	OC	ST	X5	ZW	o!	ve
+8L	AP	D5	F4	MC	OV	T1	XE	ZZ	o(	w)
+9L	AZ	D6	F5	MG	PR	TF	XX	a)	o)	x!
+A1	CE	D7	FB	MQ	QF	TI	ZA	b)	p(	x(
+A2	CI	D8	FC	MT	RL	TK	ZB	d!	p)	x)
+A3	CO	D9	FE	MY	RP	TO	ZC	d)	q)	y!
+A4	CP	DL	FT	N1	RT	TR	ZD	e(	r(	z!
+.TE
+.bp
+.ft B
+..........
+.ce 2
+Appendix B
+Cover Sheet Macros in Order
+.ft R
+.sp
+.ta 1i 2i 3i
+.nf
+\&.DT month day, year
+\&.TI
+Title can be several
+lines
+\&.AH "author name" location_code department extension room email_addr non_btl_company
+\&.AI
+Author's institution
+\&.AP responsible_AT&T_person
+\&.SA
+Abstract goes here
+\&.SE
+\&.KW "key word1" "key word2" ... "key word9"
+\&.TY document_type software_related?
+	document_type=[TM | IM], software_related=[y | n]
+\&.NU department yymmdd sequence filing_case project_work_number
+	default project_work_number is that of center 1127
+\&.ED earlier_document_number
+\&.MY m1 m2 m3 m4 m5 m6 m7 m8
+	Mercury Categories, positional arguments mi=[y | n]
+.in +1i
+.TS
+cc
+ll.
+position	Mercury category
+1	Chemistry and Materials
+2	Communications
+3	Computing
+4	Electronics
+5	Life Science
+6	Mathematics and Statistics
+7	Physics
+8	Manufacturing
+.TE
+.in -1i
+\&.PR proprietary_marking
+	proprietary_marking=[BP | BR | 0] ATT-BL Proprietary, Restricted, unmarked
+\&.GS
+	Government Security
+\&.RL release_to_all_att?
+	release_to_all_att?=[y |n]
+\&.CO y
+list of people for complete copies \- the argument to .CO requests the default 1127 list
+\&.CE
+\&.CV y
+list of people for cover sheet only \- the argument to .CV requests the default 1127 list
+\&.CE
+\&.SC pages
+	.SC causes the cover sheet to be output and puts the headings on the first page
+.sp 2
+The following macros are mandatory: .TI, .AH, .SA, .SE, .TY, .NU, .MY, .SC.
+.sp
+\&.RP before .TI produces released paper format; .TR produces CSTR format.
+.sp
+.fi
+The
+.I
+docgen
+.R
+program will ask you questions and create a cover sheet file for you with
+the macros in the proper order.

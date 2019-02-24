@@ -1,0 +1,126 @@
+.TH PQ 7
+.SH NAME
+pq \- telephonet directory assistance
+.SH SYNOPSIS
+.B pq
+[
+.I option ...
+]
+.I query
+.SH DESCRIPTION
+.I Pq
+queries `Post' directory assistance computers
+for information from the AT&T phone book.  A normal
+query is a name, in the form
+.IB first.middle.middle2.last,suffix,
+where only
+.I last
+is required.
+Earlier names may be truncated, even to a null string,
+and extra punctuation may be dropped.
+Other fields can be specified, in the form
+.IB attribute = value,
+with fields separated by
+.BR / .
+The attributes are
+.TP
+.B pn
+.TP
+.B name
+personal (full) name; for prefix match on last name, append 
+.B *
+or
+.BR ... ;
+for phonetic search, append or prepend 
+.B ?
+.HP
+.BR first ,
+.BR middle ,
+.BR middle2 ,
+.BR last ,
+.B suffix
+.br
+parts of name, prefix-matched except for suffix
+.HP
+.BR pid ,
+.B ssn
+.br
+personnel identification number,
+social security number
+.TP
+.B org
+organization code
+.TP
+.B tl
+title: abbreviated or prefix-matched; e.g. 
+.BR tl=dh,
+.B tl=dep.he
+.TP
+.B tel
+phone number: (908)582-6050, punctuation optional, parts may be omitted from left
+.HP
+.BR area ,
+.BR exch ,
+.B ext
+.br
+parts of phone number
+.TP
+.B loc
+location code; for prefix match, append
+.B *
+.HP
+.BR room ,
+.BR street ,
+.BR city ,
+.BR state ,
+.B zip
+.br
+parts of address, prefix-matched except for state
+.TP
+.B ema
+email address; for prefix match, append *
+.TP
+.B multi
+which of multiple addresses for one employee; e.g. 
+.B multi=2
+.PD
+.PP
+The options are
+.TP
+.B -l
+The query is a location code.
+.TP
+.BI -o " format
+Provide output in the specfied
+.I format, 
+a string like that of
+.IR printf (3),
+with format codes being attribute names.
+.SH EXAMPLES
+.PD 0
+.TP
+.B pq penzias
+.TP
+.B pq a.a.penzias
+.TP
+.B pq ema=research!aap
+Three ways to find a person.
+.TP
+.B pq loc=mh/room=2b519
+Find members of an office.
+.TP
+.B pq \-l mt
+Find information about a location.
+.TP
+.B
+pq \-o "%24pn %10org %6loc %6room %12tel %ema" a.a.penzias
+The default output format.
+.PD
+.SH FILES
+.TP 30
+$POST/lib/dispatch
+directory configuration file
+.SH SEE ALSO
+tel (7)
+
+

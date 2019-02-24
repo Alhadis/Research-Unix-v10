@@ -1,0 +1,39 @@
+< ../ADM/defns
+< ../index/defns
+LP=$LPFONTS
+
+all:V:	tut.out man.out
+
+pg:	tut.out man.out
+	count tut.ms tut.out; count man.ms man.out
+
+spell:VQ:
+	dospell tut.ms; dospell man.ms
+
+lp:	tut.out man.out
+	$LP $newprereq && touch $target
+
+man.out:	man.ms $REF
+	$PREFER man.ms | tbl | eqn | troff $ARG -mpm >$target
+
+tut.out:D:	tut.ms prf.awk $REF
+	($PREFER tut.ms; prf.awk ZD) | tbl | troff -mpm > $target
+
+index:V:	man.ind tut.ind
+
+man.ind:V:
+	runind man
+	tbl xman.ms | eqn | troff $ARG -mpm >/dev/null 2>man.x
+	mkindex troff man.x
+	rm xman.ms
+
+tut.ind:V:
+	runind tut
+	($PREFER xtut.ms; prf.awk ZD) | tbl | troff -mpm > /dev/null 2>tut.x
+	mkindex troff tut.x
+	rm xtut.ms
+
+
+pindex:V:
+	mkindex troff man.x
+	mkindex troff tut.x

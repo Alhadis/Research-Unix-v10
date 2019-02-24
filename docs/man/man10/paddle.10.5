@@ -1,0 +1,63 @@
+.TH PADDLE 10.5 UCDS
+.de Cs
+.sp
+.ne 3
+.nf
+.ft L
+..
+.de Ce
+.fi
+.ft R
+..
+.SH NAME
+paddle \- pal description language
+.SH DESCRIPTION
+.I paddle
+is a description language for detailing the fuse format of
+programmable devices.
+.I paddle
+is used by
+.IR xpal (10)
+to create the fuse map that
+.IR urom (1)
+and friends want.
+.I paddle
+permits multiple fuse arrays provided they are given unique names.
+Each definition begins by defining the name of the part along
+with possible synonyms.  This is followed by (1) an array declaration
+(2) a fuse block definition (3) a type declaration (the .tt line)
+and lastly, a (4) pins declaration.  The array declaration permits
+declaration of input and output pins to the array.  The use of the
+.I complement
+keyword create 2 input lines for a given pin.  The general form
+of a pin declaration is pin:#terms=fuse, where #terms is the
+.I maximum
+number of terms for the pin and fuse is the optional fuse number.
+Here is part of the declaration of a 20L10:
+.Cs
+20L10=NS20L10=AM20L10 {
+    array and/or {
+	inputs {
+	    complement+ external {
+		2,	1,
+		.
+		.
+		.
+		11,	13
+	    }
+	}
+	outputs	{
+	    external {
+		123:1,
+		23:3,
+		.
+		.
+		.
+		}
+	    }
+	}
+type	"iiiiiiiiiiig i3455555555v"
+}
+.Ce
+.SH SEE ALSO
+.IR xpal (10.1)

@@ -1,0 +1,106 @@
+.TH FSTAB 5
+.CT 2 sa
+.SH NAME
+fstab, mtab \- information about file systems
+.SH SYNOPSIS
+.B #include <fstab.h>
+.SH DESCRIPTION
+The file
+.F /etc/fstab
+describes the normal configuration of file systems.
+It guides the default operation of
+.I mount,
+.I umount,
+.I swapon,
+and
+.IR fsck (8).
+The order of records in
+.F /etc/fstab
+is important.
+.PP
+Each line of the file describes one file system.
+Fields separated by colons specify
+.IP
+pathname of block device or other mounted object
+.br
+pathname of mount point
+.br
+file system type number
+.br
+integer mount flags
+.br
+pass number for checking; see
+.IR fsck (8)
+.PP
+File system type numbers
+and flags are listed in
+.IR fmount (2).
+.PP
+Two special non-numeric file system types
+signify things that aren't file systems:
+.L xx
+causes the line to be ignored,
+.L sw
+signifies a swap device.
+.PP
+Use
+.IR getfsent (3)
+to read data from
+.LR /etc/fstab .
+.PP
+The file
+.F /etc/mtab
+lists file systems currently mounted.
+Each entry is a structure of the form
+.PP
+.nf
+.ft L
+.ta 8n +27n
+#define FSNMLG 32
+
+struct mtab {
+	char file[FSNMLG];\fR	mount point\fP
+	char spec[FSNMLG-1];\fR	mounted object\fP
+	char type;\fR	file system type\fP
+};
+.ft R
+.fi
+.SH EXAMPLES
+A simple
+.I fstab.
+.IP
+.EX
+/dev/ra00:/:0:0:1
+/dev/ra02:/usr:0:0:2
+/dev/ra05:/tmp:0:0:3
+/dev/ra10:/ra10:0:1:1
+/dev/ra11::sw:0:0
+/dev/ra15:/ra15:0:1:3
+/dev/null:/proc:2:0:0
+.EE
+.SH FILES
+.F /etc/fstab
+.br
+.F /etc/mtab
+.SH SEE ALSO
+.IR fmount (2),
+.IR getfsent (3),
+.IR mount (8)
+.SH BUGS
+Swap areas are not file systems,
+and should not be described in
+.IR fstab .
+.br
+For compatibility with old programs and habits,
+two deprecated magic file system types survive:
+.L rw
+means `type 0, flag 0'
+(a disk file system, mounted for reading and writing);
+.L ro
+means `type 0, flag 1'
+(a disk file system, mounted read-only).
+.br
+Only file systems mounted with
+.IR mount (8)
+are listed in
+.IR mtab .

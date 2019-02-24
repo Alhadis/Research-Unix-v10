@@ -1,0 +1,397 @@
+.TH PI 9.1
+.CT 1 debug_tune
+.SH NAME
+pi, 3pi \- process inspector
+.SH SYNOPSIS
+.B pi
+[
+.B -t
+.I corefile objectfile
+]
+.PP
+.B 3pi
+[
+.B -p
+.I person
+]
+.SH DESCRIPTION
+.I Pi
+is a C debugger that
+is bound dynamically to multiple subject processes or core dumps.
+It works better for programs compiled
+.I cc
+.IR \-g .
+.I Pi
+uses the
+.IR Pads (9.5)
+multi-window user interface.
+There are three types of windows:
+debugger control windows,
+which access the global state of the debugger;
+process control windows (exactly one per process),
+which start and stop processes and connect to process-specific functions;
+and process inspection windows,
+which include viewers for source text and memory, formatted various ways.
+.PP
+The most important debugger control window is the
+.I pi
+window itself.
+Each line within the
+.I pi
+window refers to a specific process.
+These lines may be introduced to the window by running
+.IR ps (1)
+from the button 3 menu;
+by typing a file name, either a
+.IR proc (4)
+name, or the name of a core image followed by the name of the binary that created
+the core;
+or by typing a command, prefixed by an exclamation 
+.LR ! ,
+to be executed as a child of
+.IR pi .
+There are several ways to access a process (using the button 2 menu),
+each of which generates a process control window:
+.TF hang\ &\ take\ over
+.TP
+.B open process
+Attach to a running process, often one started with
+.IR hang (1).
+.PD0
+.TP
+.B open core
+Attach to a core image.
+.TP
+.B open child
+Attach to a process forked by a process being debugged by the current
+.IR pi.
+.TP
+.B take over
+Rebind an existing process window hierarchy (pointed to with the mouse)
+to the named process,
+which must be an instance of the identical program.
+.TP
+.B hang & open proc 
+Execute a command afresh, beginning it in the
+stopped state, and redirecting IO to
+.FR /dev/null .
+.TP
+.B hang & take over
+Same, also binding to an existing process window.
+.PD
+.PP
+The process window indicates the process's state,
+shows the call stack traceback
+and connects to windows that access source text,
+local variables within a stack frame,
+raw memory, and so on.
+These windows are cross-connected, so, for example,
+an instruction in a process's assembly language window can
+be inspected in hexadecimal in the raw memory window.
+Closing the process control window closes all the windows under it.
+.PP
+The following menu functions are provided by
+the various window types in
+.IR pi .
+Initially there are these windows available:
+.TP 0.5i
+.B Help
+Reminder of user interface mechanics.
+.TP
+.B Pi
+Overall control of processes, core dumps and programs.
+A process is identified by its pathname or command line.
+Process symbols are found in the executable file from which the process was loaded,
+but may be overridden.
+Symbols for core dumps must be supplied explicitly, after the core filename.
+\fBSynopsis\fP:
+Identify and open process or core dump;
+run a program as
+.I Pi's
+child;
+take over a process with the debugging environment of a different one.
+.TP
+.B Pwd/cd
+change the working directory of the debugger.
+.SS Process Window
+Selecting and opening a process from the Pi window creates a new
+window with overall control of that process.
+It shows the process state, and a traceback if the process is halted or dead.
+States are:
+.TF EVENT\ PENDING
+.TP 
+.SM
+.B ACTIVE
+running normally
+.TP
+.SM
+.B HALTED
+halted asynchronously by a debugger
+.TP
+.SM
+.B BREAKPOINT
+halted on reaching breakpoint
+.TP
+.SM
+.B STMT STEPPED
+halted after executing C source statement(s)
+.TP
+.SM
+.B INSTR STEPPED
+halted after executing machine instruction(s)
+.TP
+.SM
+.B EVENT PENDING
+halted about to receive a signal being traced
+.TP
+.SM
+.B ERROR STATE
+the process has probably exited
+.PD
+.LP
+The menu operations on the process are:
+.TF EVENT\ PENDING
+.TP
+.B go
+let the process run
+.PD 0
+.TP
+.B stop
+stop the process
+.TP
+.B kill
+send
+.B SIGKILL
+to the process; see
+.IR signal (2)
+.TP
+.B src text
+open source text window(s)
+.TP
+.B Signals
+open window for sending and trapping signals
+.TP
+.B Globals
+open window for evaluating expression in global scope
+.TP
+.B RawMemory
+open window for editing uninterpreted memory
+.TP
+.B Assembler
+open window for disassembler
+.PD
+.LP
+Each line of the call stack traceback describes one function.
+Each function in the traceback can open an expression evaluator window
+or display its current source line.
+.SS Globals and Stack Frame Windows
+.PP
+These windows evaluate expressions with respect to global scope,
+and scope in a function, respectively.
+A stack frame window is opened from a line in the call stack traceback or
+from a line of source text.
+A stack frame can find its active source line in a source window or the stack
+frame window of its caller.
+.LP
+C expressions can be entered by the keyboard or mouse.
+The unary operators
+.I fabs
+and
+.I sizeof
+are supported; the only assignment operator is 
+.LR = .
+Functions from the user program may be called.
+New expressions can be derived from old ones by the keyboard or mouse.
+In menus and the keyboard,
+.B $
+means the expression in the current line.
+The VAX registers are called
+.B $r0 
+to
+.BR $r15 ;
+the address of a register is
+the location at which it was saved.
+The format in which values are displayed can be changed.
+The raw memory editor may be entered using an expression's value as address.
+.PP
+An expression may be made a
+.IR spy .
+The value of a spy expression is evaluated and displayed
+each time the debugger looks at the process.
+If the value of a spy changes the process is halted
+at the next instruction, statement or breakpoint.
+.LP
+The comma operator is useful in conditional breakpoints because the values
+of its subexpressions are displayed.
+E.g. x, y, x==y traces the values of x and y when the condition fails;
+x, y, 0 just traces.
+.LP
+To cross scope boundaries, the environment (a function identifier)
+in which an expression is to be evaluated may be specified as:
+{ expr } function.
+From the source directory window, file static variables can be promoted
+to appear in the menu of global variables.
+.SS Source Text Windows
+The source file directory window lists all the source files, if there are
+two or more.
+A textual prefix, entered from the keyboard, points to a source directory,
+without changing the working directory.
+Each source file is in a separate window, opened when needed.
+The source file's pathname as given to
+.I cc
+can be overridden from the keyboard.
+If things go wrong, use
+.B reopen
+to open the file afresh.
+\fBSynopsis\fP:
+set/clear (conditional) breakpoint;
+single-step source statements;
+step into (rather than over) a function;
+go the process;
+show the statement for the current PC;
+open a stack frame window for a source line's function;
+evaluate expression;
+disassemble first instruction of source statement;
+context search for string.
+.SS Breakpoints Window
+Lists all the active source and assembler breakpoints and related errors.
+\fBSynopsis\fP:
+show source or assembler for a breakpoint;
+clear breakpoint;
+clear all breakpoints.
+.SS Signals Window
+Lists all signal types, showing which ones are traced.
+\fBSynopsis\fP:
+Change which signals are traced;
+send a signal to the subject process;
+clear pending signal;
+stop process on
+.I exec.
+.SS Raw Memory Window
+In this window
+memory is a viewed as a sequence of 1-, 2-, 4- or 8-byte cells.
+\fBSynopsis\fP:
+set cell address;
+change cell size;
+change display format;
+display cells above and below;
+indirect to cell;
+change cell value;
+spy on memory cell;
+disassemble instruction at cell.
+.SS (Dis)assembler Window
+In this window memory is viewed as a sequence of instructions.
+\fBSynopsis\fP:
+set instruction address;
+display more instructions;
+change display format;
+display instruction as cell in raw memory window;
+set/clear breakpoint on instruction;
+open stack frame window for instruction's function;
+display instruction at current PC;
+single step instruction(s);
+step over a function call instead of into the function.
+.SS Exec and Fork
+If a process controlled by
+.I pi
+does an
+.IR exec ()
+and an exec break is set in the Signals window,
+the process is suspended as if started by
+.IR hang (1).
+To debug the process after the
+.IR exec ,
+close the original process window and re-open it.
+When re-opened it will get the new symbol tables.
+.PP
+To debug a child process: (i) set a breakpoint in code that will be executed
+in the child after the fork; (ii) execute the fork
+.I at full speed
+(the child inherits the parent's breakpoints, which aren't there if the
+parent is stepped);
+(iii)
+.I before altering any breakpoints,
+get a fresh
+.I ps
+in the Pi window and apply
+.B open child
+to the child.
+The child should be stopped on the inherited breakpoint, but it and all other
+breakpoints should have been cleared.
+.SS Kernel
+The state of kernel variables associated with a process may be examined
+by giving their name or virtual address.
+The
+.B UNIX
+environment variable specifies the file from which the system was
+loaded; the default is
+.IR /unix .
+Kernel dumps may be examined by opening the
+`kernel pi' window.
+.SS Just A Traceback
+With the
+.B -t
+option
+.I pi
+writes a traceback on its standard output and quits.
+.SS 3pi
+.I 3pi
+is a variant of
+.I pi
+for debugging 5620 programs running under
+.IR mux (9.1).
+It creates two terminal processes: one for its access to terminal memory
+and graphics and a second for its
+.IR Pads (9.5)
+interface.
+.SS Remote Debugging
+With the
+.B -p
+option
+.I 3pi
+loads its first process, but not
+.IR Pads .
+Instead, it mails a
+.I 3pi
+command to
+.IR person ,
+to be executed on any host in the local network.
+That
+.I 3pi
+command loads
+.I Pads
+on
+.IR person 's
+terminal, and connects to the originator's terminal.
+If separate hosts are involved and the versions of critical files differ,
+be careful with pathnames.
+.SS 3pi Graphics
+Points, rectangles, textures and bitmaps can be displayed graphically.
+.SS 3pi - pi
+Most differences come from obvious differences in the hardware and
+software architectures.
+Also, in
+.I 3pi
+function calls are executed by a debugger process on its own call stack.
+.SH SEE ALSO
+T. A. Cargill,
+`The Feel of Pi',
+this manual, Volume 2
+.br
+.IR hang (1), 
+.IR proc (4), 
+.IR adb (1),
+.IR cin (1),
+.IR nm (1),
+.IR pads (9.5)
+.SH BUGS
+In switch statements there is no boundary between the last case
+and the branch code; the program
+.I appears
+to jump to the last case (but is really in the branch)
+and then to the real case.
+.br
+A changed spy only stops the process at a breakpoint or while stepping.
+An expression can be cast only by menu.
+.br
+Functions may only be called when the process is stopped and not in a system call.

@@ -1,0 +1,861 @@
+\documentstyle[vol2,twoside]{attart}
+% \XX{263}{LaTeX User Guide}{latex}
+\XX{263}{Latex User Guide}{latex}
+
+\batchmode
+\textwidth 6.5in
+% don't lower X by .7em.  use .5em like \TeX
+\def\TeX{Tex}
+% \def\LaTeX{{\rm L\kern-.36em\raise.3ex\hbox{\sc a}\kern-.15em
+%     T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}}
+\def\LaTeX{Latex}
+% \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+%     T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}}
+\def\BibTeX{Bibtex}
+\def\UNIX{UNIX}
+\hyphenchar\tentt=-1 % don't hyphen the literal terms
+\def\@biblabel#1{#1.\hfill}
+
+% change format of \index output
+\makeatletter
+\def\@wrindex#1#2{\let\thepage\relax
+   \xdef\@gtempa{\write#1{%\string
+      #2<tab>\thepage}}\endgroup\@gtempa
+   \if@nobreak \ifvmode\nobreak\fi\fi\@esphack}
+\makeatother
+\makeindex
+
+\pagestyle{headings}
+% title is set by \XX second argument
+\author{Howard Trickey}
+
+\abstracttext{\LaTeX\ is a standard set of macros for \TeX.
+The most important feature of \LaTeX\ is that the user is
+not responsible for details of spacing, font selection,
+and page layout---instead, various {\em styles\/} are provided
+and the user can print the same document in any desired style.
+\BibTeX\ is a program which performs a similar
+style-based formatting service for bibliographic references.
+
+The basic description of \LaTeX{}
+leaves certain things to be described by a {\em Local Guide}.
+This paper serves as the {\em Local Guide\/} for our \UNIX\regmark\ system.
+It describes the commands needed to run \LaTeX\ and \BibTeX,
+as well as locally available document and bibliography styles.
+}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+You should read the \LaTeX\ book\cite{latex} to learn how to
+prepare \LaTeX\ documents.
+This paper describes the \UNIX\ commands related to \LaTeX,
+and additional available document and bibliography styles.
+
+\LaTeX\ is invoked as
+\begin{eg}
+	latex paper
+\end{eg}
+where \verb|paper.tex| is the filename of your document
+(it must end in \verb|.tex|).
+If all goes well, \LaTeX\ will process all of the file
+and produce \verb|paper.dvi|, an output file which can be
+printed by
+\begin{eg}
+	lp paper.dvi
+\end{eg}
+or viewed on a graphics terminal by
+\begin{eg}
+	dvit paper.dvi > paper.t
+	proof paper.t
+\end{eg}
+(Use the {\em dvit\/} flag \verb|-Tgnot| or \verb|-Tjerq|, depending
+on where {\em proof\/} is run.)
+You might want to try
+\begin{eg}
+	latex sample
+	lp sample.dvi
+\end{eg}
+\LaTeX\ searches the standard \TeX\ macro directory%
+\footnote{Usually \verb|/usr/lib/tex/macros|.}
+if it can't find a file in your current directory,
+and Lamport has supplied a \verb|sample.tex| there.
+
+If there are errors in the document, \LaTeX\ will print a message
+on the terminal and expect you to interact with it as described
+in Section~2.3 of the \LaTeX\ book.  The simplest thing to do
+is type \verb|x| to exit.
+
+There are longer documents describing many of the things summarized
+in this paper.  They are kept in the ``documentation directory'',
+which is {\tt doc} in the standard \TeX\ macro directory (but only
+on some machines).
+
+\section{Document Styles}
+
+A \verb|\documentstyle| command at the beginning of a \LaTeX\ document
+specifies the formatting style to be used.
+A document command like {\tt \verb|\|section$\{$Document Styles$\}$} has to be
+turned into a sequence of spacing and font changing commands, and
+a {\em style designer\/} has encoded these choices into {\em style files}.%
+\footnote{Style files have a \verb|.sty| extension and can be found
+in the \TeX\ macro directory.}
+The \LaTeX\ book describes the standard styles {\tt article},
+{\tt letter}, {\tt report}, and {\tt slides}.
+This section describes some other available document styles.
+
+Ideally, you should be able to change only the argument to
+\verb|documentstyle| to get a new style.
+That is mostly true, but there are usually minor differences---to
+supply information that is only relevant to certain styles (such as
+a Technical Memorandum Number), and to accommodate occasional
+laziness on the part of style file writers (they will ask you to
+list the authors and their affiliations in a certain way).
+
+\subsection{The {\tt tm} Style}
+\label{tmstylesec}
+
+AT\&T Bell Laboratories technical memoranda can be prepared using
+the {\tt tm} style.
+It looks like the {\tt article} style, but makes a title page
+and cover sheet in the AT\&T technical memo style.
+Your input file should look like:
+\begin{eg}
+\documentstyle{tm}
+\title{A Sample Document}
+\author{Howard Trickey}
+\initials{HWT}
+\eaddress{research!howard}
+\department{11273}
+\location{MH}{2C460}{6831}
+\documentno{890814}{01}{TM}
+\date{\today}
+\chargecase{311403-0101}
+\filecase{39199-11}
+\keywords{typesetting; TeX}
+\mercurycode{CMP}
+\memotype{TECHNICAL MEMORANDUM}
+\abstract{...}
+\begin{document}
+\makehead
+\makeabstract
+\section{Introduction}
+...
+\makesignature
+
+\noindent ATTs.\\
+Figures\\
+References
+
+\medskip
+\copyto{All Supervision Center 1127\\
+H. Green}
+\coverto{All Members of Department 1127\\
+J. Smith}
+
+\begin{thebibliography}{99}
+...
+\end{thebibliography}
+\coversheet
+\end{document}
+\end{eg}
+The \verb|\author|, \verb|\initials|, \verb|\department|, and
+\verb|\location|%
+\footnote{The third argument to {\tt $\backslash$location} is the phone extension.
+All three arguments can be blank for outside authors.}
+are all required.  If there are other authors,
+supply information for them after the first, starting each
+with \verb|\author|.
+For each author, one can add any of:
+\begin{eg}
+\locationextra{...}
+\company{Some Other Co.}
+\maddress{12 Main St.\\
+    Anyville, CA 97999}
+\end{eg}
+The other commands in the above example are self-explanatory.
+The items \verb|\chargecase|, \verb|\filecase|, and \verb|\mercurycode|
+can be repeated.
+
+A number of other commands can be used with the {\tt tm} style:
+
+\begin{itemize}
+\item[] \hbox{\verb|\copytocov{|{\em name}\verb|\\|...\verb|}|}
+	like \verb|\copyto| but listing just on the cover sheet,
+	not the point of invocation too.
+\item[] \hbox{\verb|\markdraft|}
+	put {\em DRAFT\/} at the bottom of pages.
+\item[] \hbox{\verb|\markprivate|}
+	put {\bf PRIVATE} at the bottom of pages.
+	Also, there are \verb|\markproprietary|
+	and \verb|\markrestricted| commands.
+\item[] \hbox{\verb|\classified{|{\em classification level}\verb|}|}
+	government assigned title (Secret, Top Secret, etc.)
+\item[] \hbox{\verb|\itdsrestrict|}
+	tell ITDS to obtain approval prior to releasing to
+	AT\&T employees.
+\item[] \hbox{\verb|\UNIX|}
+	UNIX\regmark, with a footnote at the first usage.
+\item[] \hbox{\verb|\tm|,\verb|\regmark|}
+	trademark `\tm' and registered trademark `\regmark'.
+\item[] \hbox{\verb|\markedfootnote{|{\em symbol}\verb|}{|{\em text}\verb|}|}
+	footnotes using the given symbol as footnote mark.
+\item[] \hbox{\verb|\appendices|}
+	use to begin having sections being labeled by A, B, C, etc.
+\end{itemize}
+
+Consult \verb|tm.tex| in the documentation directory for more
+information and an example of the {\tt tm} style.
+
+\subsection{The {\tt rp} Style}
+
+The {\tt rp} style takes input in the same format as the {\tt tm}
+style, though many of the commands are unnecessary, and produces
+a ``released paper'' style.
+You have to provide a city using
+\begin{eg}
+\cityaddr{Murray Hill, NJ 07974}
+\end{eg}
+
+\subsection{The {\tt attart} Style}
+
+This is an approximation to the {\tt troff\/} \verb|-ms| style.
+The headings are smaller and the margins narrower than those of the
+\verb|article| style.
+You should use one of the following style file options:
+\begin{itemize}
+\item[{\tt tm}\hfill] Technical Memo (without coversheet).
+\item[{\tt rp}\hfill] Released Paper (separate title page).
+\item[{\tt vol2}\hfill] ``Volume 2'': the two-column style you are reading now.
+\end{itemize}
+
+The input file should look like input for the \verb|article|
+style (as for example, in Figure C.3 of the \LaTeX\ book),
+except that there should be
+\begin{eg}
+\abstracttext{...abstract...}
+\end{eg}
+before the \verb|\maketitle| command.
+As with the \verb|article| style, multiple authors
+should be given in a single \verb|\author| command,
+separated by \verb|\and|'s.  Author affiliation is put
+either after each author (using \verb|\\| to get line breaks),
+or with the footnoting \verb|\thanks|.
+
+The {\tt tm} option isn't as good as the {\tt tm} style of
+section~\ref{tmstylesec}, but you might prefer the formatting.
+To use it, the following has to be provided in the preamble:
+\begin{eg}
+\wpnumber{311403-0101}
+\filenumber{39199-11}
+\tmnumber{11273-851009-11TM}
+\end{eg}
+and the signature block should be created via
+\begin{eg}
+\sigblock{MH-11273/HWT}{10}{11}
+\end{eg}
+(The second argument is the number of references, the third is
+the number of figures.)
+
+\subsection{The {\tt siam} Style}
+
+The {\tt siam} style looks like the one used by the
+{\em Society for Industrial and Applied Mathematics (SIAM)\/)}
+in its publications.
+It is a compact style, with indented run-in section headings
+and small type sizes.
+
+Prepare your document as for the \verb|article| style.
+After the \verb|\maketitle|, the paper should continue:
+\begin{eg}
+\begin{abstract}...\end{abstract}
+\begin{keywords}...\end{keywords}
+\begin{AMSMOS}...\end{AMSMOS}
+\end{eg}
+followed by the paper body.
+Other things to note:
+\begin{itemize}
+\item  Give author affiliations via \verb|\thanks| footnotes in \verb|\author|.
+\item  Place table \verb|\caption|'s above the table material.
+Place figure \verb|\caption|'s below the figures.
+\end{itemize}
+
+The documentation directory contains an example, \verb|siam.tex|.
+A larger example---a \LaTeX\ introduction and hints for
+mathematics typing---is \verb|p.tex| in the numerical analysis
+\TeX\ directory.\footnote{\verb|/usr/num/tex| on many machines.}
+
+\subsection{The {\tt acmtrans} Style}
+
+The {\tt acmtrans} style can be used to produce documents
+for the ACM transactions.  Sans serif fonts are used for
+the title and section headings.
+
+Input files are like those for \verb|article|, with minor changes.
+The \verb|\author| command has to have its information in
+a special form
+\begin{eg}
+\author{JAMES E. ARCHER, JR.
+       \\ Rational Machines
+    \and RICHARD CONWAY and
+         FRED B. SCHNEIDER\\
+         Cornell University}
+\end{eg}
+with names in all uppercase, and authors with the same
+affiliation separated by ``\verb|and|'' instead of ``\verb|\and|''.
+The following material has to come before \verb|\maketitle|:
+\begin{eg}
+\begin{abstract}...\end{abstract}
+\category{I.7.2}%
+    {Text Processing}%
+    {Document Preparation}%
+    [Languages \and
+     Photocomposition]
+\terms{Documentation, Languages}
+\keywords{...}
+\end{eg}
+The optional argument of \verb|\category| contains subject descriptors,
+with \verb|\and| separating multiple descriptors.
+
+In the document body
+\begin{itemize}
+\item
+Use a \verb|longenum| and \verb|longitem| environments instead
+of \verb|enumerate| and \verb|itemize| when
+the items are more than two or three lines long.
+\item
+To itemize with a \verb|describe| list, with a mandatory argument giving the
+longest item, to itemize with user-supplied labels.
+\item
+Environments for things with proofs, such as theorems and lemmas,
+should be defined with the \verb|newtheorem| command.
+A \verb|proof| environment can follow these.
+Use \verb|newdef| (like \verb|newtheorem|, with no optional arguments)
+for things like definitions and examples.  You can suppress automatic
+number of both kinds by supplying an optional argument to replace
+the number.
+\item
+Computer programs can be formatted with the \verb|program| environment,
+which is like \verb|tabbing|, but with a smaller font size.
+Start flush left, and indent by 1 em at a time.
+\item
+Figures go in a \verb|figure| or \verb|narrowfig| environment,
+depending on their width.
+Tables go in an \verb|acmtable| environment.
+Figures and Tables without captions should have \verb|\nocaption|
+instead of \verb|\caption|.
+\end{itemize}
+
+The documentation directory contains \verb|acmtr.tex|, an example
+a bit more information about this style.
+
+\subsection{The {\tt cup} Style}
+
+The {\tt cup} style is an attempt at the Cambridge University Press
+house style.
+Only an 11 point version is available at this time.
+In addition to the usual \verb|\author| and \verb|\title|,
+you should supply your affiliation as
+\begin{eg}
+\affiliation{AT\hskip-.6pt\&T
+             Bell Laboratories}
+\end{eg}
+
+
+\subsection{The {\tt attletter} Style}
+
+The {\tt attletter} style is like the standard {\tt letter} style,
+except that it puts an AT\&T letterhead at the top.
+Personal information for the letterhead can be given as:
+\begin{eg}
+\signature{Howard Trickey}
+\streetaddr{600 Mountain Avenue}
+\usaaddr{USA}
+\location{Room 2C460}
+\telephone{(201) 582-6831}
+\arpanet{howard%
+     {\egtrm @}research.att.com}
+\uucp{research!howard}
+\end{eg}
+Only \verb|\signature| is required.
+The street address defaults to the one shown;
+there are no other defaults.
+If you prefer to feed preprinted letterhead paper into
+the printer, use the \verb|\address| command to define
+the information to appear below the preprinted logo.
+
+You can get a ``{\tt Ref:}'' line before the opening by putting
+this in the preamble:
+\begin{eg}
+\ref{...}
+\end{eg}
+
+\subsection{Document Style Options}
+
+Section C.4.1 in the \LaTeX\ book describes the style options
+\verb|11pt|, \verb|12pt|, \verb|twoside|, \verb|twocolumn|,
+\verb|titlepage|, \verb|openbib|, 
+\verb|leqno|, and \verb|fleqn|.
+Here are some others.
+They work with any style, unless otherwise noted.
+
+\begin{itemize}
+\item[] \hbox{\tt alltt}
+Defines an {\tt alltt} environment which is like {\tt verbatim}
+except that `\verb|\|', `\verb|\{|', and `\verb|\}|' have their usual meanings.
+\item[] \hbox{\tt amssymbols}
+Loads AMS math symbol fonts and associated symbol definitions.
+The file {\tt amstable.tex} in the documentation directory
+lists the symbols.
+\item[] \hbox{\tt apalike}
+For use with the \verb|apalike| bibliography style (see below).
+\item[] \hbox{\tt cyrillic}
+Loads AMS Cyrillic fonts, accessible via \verb|\cyr|.
+The file {\tt cyrmemo.tex} in the documentation directory
+has transliteration information.
+\item[] \hbox{\tt decalign}
+Adds `d' for `decimal alignment' as a legal field specifier
+in a \verb|tabular| environment.
+The column entries should all be of the form $x.y$ where $x$
+and $y$ are non-empty.
+\item[] \hbox{\tt Draft}
+Show overfull boxes with marginal marks, and put the symbolic
+names of {\em labels\/} in the margin.
+\item[] \hbox{\tt fixup}
+Fixes some \LaTeX\ spacing bugs, most importantly in \verb|eqnarray|.
+Should come after \verb|fleqn| if that option is used.
+\item[] \hbox{\tt fullpage}
+Narrow the margins so that most of the page is used.
+With 10 point fonts this makes documents harder to read.
+\item[] \hbox{\tt nofloats}
+Causes floating things (figures, tables) to be thrown
+away, while still processing the contents so that figure numbers, etc., get
+incremented.  This is useful for papers to be submitted to journals, which
+often require figures and tables to be typeset separately.
+\item[] \hbox{\tt numinsec}
+Used with \verb|siam|.
+Make equations, figures, and tables have numbers
+the form {\it x.y} where {\it x} is the section number.
+\item[] \hbox{\tt proc}
+Used with \verb|article| to make two-column output for ACM and
+IEEE conference proceedings.
+A \verb|\copyrightspace| command should be placed after any \verb|\footnote|'s
+in the first column, to make room for the copyright notice.
+\item[] \hbox{\tt rmthm}
+Redefines the {\tt theorem} and similar environments
+so that the text is in roman type instead of the italic that the
+standard design styles use.
+\item[] \hbox{\tt showidx}
+Used with \verb|report| or \verb|book|.
+Print marginal notes showing index entries.
+(Issues a \verb|\flushbottom|.)
+\item[] \hbox{\tt showlabels}
+Change \verb|\label|, \verb|\ref|, and \verb|\pageref| to show
+symbolic labels with the values.
+\item[] \hbox{\tt verbfile}
+Defines \verb|\verbatimfile|, a command with one argument---the name
+of a file to include in a verbatim environment.
+Also \verb|\verbatimlisting|, which prints line numbers too.
+\end{itemize}
+
+A few more style options will be discussed in subsequent sections.
+ 
+\section{Bibliographies}
+
+The preferred way to make bibliographies is to use \BibTeX.
+At the place where you want the bibliography to appear, put:
+\begin{eg}
+\bibliography{mybib}
+\bibliographystyle{plain}
+\end{eg}
+Where \verb|mybib.bib| is a bibliography database file and
+\verb|plain.bst| is a bibliography style file.
+Both should be in one of the directories \LaTeX\ searches for inputs.%
+\footnote{Normally the current directory, followed by the standard
+macro directory.  You can set the \verb|TEXINPUTS|
+shell environment variable to a colon-separated list of directories
+to search.}
+Then, after \LaTeX\ has run once (to write citation keys into
+an \verb|aux| file), run
+\begin{eg}
+bibtex mypaper
+\end{eg}
+where \verb|mypaper.tex| is the name of your \LaTeX\ source file.
+\LaTeX\ will have to be run twice more before the citations in the
+text are finally correct, but then they will continue to be correct
+until a change in the works cited or the bibliography database
+necessitates rerunning \BibTeX.
+
+You should prepare the database file as described in Appendix B.1
+of the \LaTeX\ book, and use one of these bibliography styles:
+\begin{itemize}
+\item[] \hbox{\tt abbrv}
+A version of \verb|plain| using more abbreviations.
+\item[] \hbox{\tt acm}
+The style used in ACM Transactions.
+\item[] \hbox{\tt alpha}
+A version of \verb|plain| using alphabetic cite keys
+(like ``[Knuth84]'').
+\item[] \hbox{\tt apalike}
+Something like the APA style,
+using ``(Jones, 1986)'' in the text and no label in the reference list.
+Not recommended, but required by some journals.
+You must use the \verb|apalike| document style option with this.
+\item[] \hbox{\tt atttm}
+Similar to {\tt unsrt}, but closer to the style
+recommended in {\it The Bell Labs Style Guide}.
+\item[] \hbox{\tt ieeetr}
+IEEE Transactions style: numeric labels, unsorted reference list,
+and quotes around article titles.
+\item[] \hbox{\tt plain}
+The standard, recommended style: numeric labels, reference list
+sorted by author, year, title.
+\item[] \hbox{\tt siam}
+SIAM publication style: like \verb|plain|, but formatted differently
+(e.g., names in small caps).
+\item[] \hbox{\tt siamu}
+Like \verb|siam|, but unsorted reference list.
+\item[] \hbox{\tt unsrt}
+Like \verb|plain|, but unsorted reference list.
+\end{itemize}
+You can use the \verb|openbib| document style option with any of
+these to get an ``open'' style of bibliography, where there are
+several line breaks within entries.
+
+\BibTeX\ has undergone a major revision since the \LaTeX\ book
+was written, so some of the information in its Appendix~B.1
+is out of date, and there are more features available now.
+The new features:
+\begin{itemize}
+\item
+A \verb|\nocite{*}| command will cause a listing of all the entries
+in a database file.
+\item
+A `\verb|#|' character can be used to concatenate strings
+in field values.
+\item
+An entry can assign a cite-key to a field named \verb|crossref|
+to cross-reference the other entry (probably a proceedings or
+book containing the entry in question).
+This allows fields to be inherited, and/or may cause the cross-referenced
+work to appear as a separate bibliography entry (to avoid duplicating
+information).
+Put all cross-referenced entries at the end of a \verb|bib| file.
+\item
+A \verb|@PREAMBLE{"defs"}| in a database file causes
+\verb|defs| to be written before the reference list,
+allowing the definition of macros that may be used in titles, etc.
+\item
+If a name field ends with ``{\tt and others}'', the standard styles
+will append ``et al.''
+\end{itemize}
+
+In addition to the usual three-letter abbreviations for the months, the
+following abbreviations are defined by the bibliography styles:
+\begin{list}{}{\leftmargin 0pt
+	\labelwidth.7in \leftmargin .8in \itemsep .1in
+	\def\makelabel#1{#1\hfill}%
+}\it
+\item[\tt acmcs] ACM Computing Surveys
+\item[\tt acta] Acta Informatica
+\item[\tt cacm] Communications of the ACM
+\item[\tt ibmjrd] IBM Journal of Research and Development
+\item[\tt ibmsj] IBM Systems Journal
+\item[\tt ieeese] IEEE Transactions on Software Engineering
+\item[\tt ieeetc] IEEE Transactions on Computers
+\item[\tt ieeetcad]
+ IEEE Transactions on Computer-Aided Design of Integrated Circuits
+\item[\tt ipl] Information Processing Letters
+\item[\tt jacm] Journal of the ACM
+\item[\tt jcss] Journal of Computer and System Sciences
+\item[\tt scp] Science of Computer Programming
+\item[\tt sicomp] SIAM Journal on Computing
+\item[\tt tocs] ACM Transactions on Computer Systems
+\item[\tt tods] ACM Transactions on Database Systems
+\item[\tt tog] ACM Transactions on Graphics
+\item[\tt toms] ACM Transactions on Mathematical Software
+\item[\tt toois] ACM Transactions on Office Information Systems
+\item[\tt toplas] ACM Transactions on Programming Languages and Systems
+\item[\tt tcs] Theoretical Computer Science
+\end{list}
+
+There is a document called \verb|btxdoc.tex| in the documentation
+directory that has a slightly corrected version of the \LaTeX\ book's
+\BibTeX\ documentation, along with some helpful hints for building
+databases.
+There is also \verb|btxhak.tex|, which explains the \BibTeX\ style file
+language, in case you need to design a different style.
+
+\section{Output Devices and Fonts}
+
+\LaTeX\ output is in ``\TeX\ dvi'' format;
+it has to be converted by a {\em device driver\/} into the
+format required by the destination printer or previewing program.
+Normally, {\em lp\/} invokes the correct device driver automatically,
+but there are occasions when you need to be aware of this step.
+Our local device drivers are {\em dvips}, which converts to PostScript,
+and {\em dvit}, which converts to the format used by device-independent
+troff.
+Our printers are now PostScript printers;
+{\em dvit\/} is useful for generating input for {\em proof}.
+
+There is a \TeX\ font directory%
+\footnote{Usually \verb|/usr/lib/tex/fonts|, but the
+shell environment variable \verb|TEXFONTS| can be set to change or add to it.}
+that contains information about fonts that can be used in \LaTeX.
+All fonts need a {\em tfm file}, containing character dimensions and
+certain other information, so you can see what fonts are available
+by doing
+\begin{eg}
+ls *.tfm
+\end{eg}
+in the font directory.
+
+The {\em dvips\/} device driver can handle two types of fonts:
+built-in and bitmap.
+Built-in fonts, like {\tt Times-Roman}, are known to the PostScript printer
+and can be used at any magnification (unmagnified usually corresponds
+to 10 point size).
+PostScript names are often too long for our UNIX
+file system, so \LaTeX\ has to use abbreviations.
+The \verb|psconfig| file in the miscellaneous \TeX\ directory%
+\footnote{Usually \verb|/usr/lib/tex|.}
+lists the built-in PostScript fonts and their abbreviations.
+By convention, they all begin with capital letters and contain hyphens.
+If use use the \verb|-t| or \verb|-p| flag to {\em latex},
+you get a version that uses the built-in Times Roman and Palatino families,
+respectively, instead of Knuth's Computer Modern fonts.
+
+Bitmap fonts, like {\tt cmr10}, are those for which the PostScript file
+needs bitmaps for each character used (once per size at which it is used).
+The bitmaps are kept in {\em pk files\/} in the \TeX\ font directory.
+The name of a pk file is \mbox{{\em font}.{\em v\/}{\tt pk}}, where
+\[
+v={\rm round}(\hbox{\it dots per inch}\times\hbox{\it mag factor})
+\]
+The Laserwriters have a 300 dot per inch resolution, \verb|cmr10.300|pk
+is the 10 point bitmap file for Computer Modern Roman 10pt,
+and \verb|cmr10.432pk| is a 14.4 point version.%
+\footnote{Standard \TeX\ font magnifications are $\sqrt{1.2}$, $1.2$, $1.2^2$,
+$1.2^3$, $\ldots$}
+The computer center's high resolution phototypesetter has a 1270 dot per
+inch resolution.
+The bitmaps for those fonts are so large that they may not exist on
+your machine.
+You should probably run
+\begin{eg}
+dvips -Tlino paper.dvi > paper.t
+\end{eg}
+before sending something to the phototypesetter, to see if {\em dvips\/}
+complains about missing bitmap fonts.
+We can make fonts at that resolution if we have Metafont source
+programs for them;  unfortunately, there are no Metafont
+source programs for the Cyrillic and AMS symbol fonts.
+
+\section{Graphics}
+
+There are a number of possibilities for getting graphics into
+\LaTeX\ documents.
+Most of them require special capabilities from
+the device driver.
+Unfortunately, there is no universal standard for such capabilities,
+so if you need to create source documents that will be portable to
+other sites you should probably stick to the commands of the
+\verb|picture| environment, described in
+Section~5.5 of the \LaTeX\ book.
+No special capabilities are needed since that environment
+uses ordinary characters to draw graphics,
+but there is the corresponding disadvantage that you are
+restricted to certain line angles and circle diameters.
+
+Our local device drivers incorporate the ability to respond to the so-called
+``{\em tpic\/} specials'', a semi-standard set of commands that can
+be put in the output file using the \TeX\ \verb|\special| command.
+The following subsections describe several ways of doing graphics
+using the {\em tpic\/} specials.
+
+\subsection{{\tt picture} Environment Extensions}
+
+The \verb|picext| document style option defines more commands that can
+be used in a \verb|picture| environment, and redefines some commands
+to be more general:
+\begin{itemize}
+\item[] \hbox{\verb|\circle{r}|}
+	like \LaTeX's \verb|\circle|, but works for any radius.
+\item[] \hbox{\verb|\ellipse{a}{b}|}
+	draw an ellipse with horizontal radius $a$ and vertical radius $b$.
+\item[] \hbox{\verb|\ray(dx,dy)|}
+	like \LaTeX's \verb|\line|, but works for any angle.
+\item[] \hbox{\verb|\pline(x1,y1)(x2,y2)...(xn,yn)|}
+	draw line segments from $(x1,y1)$ to $(x2,y2)$, etc.
+\item[] \hbox{\verb|\pvector(x1,y1)(x2,y2)|}
+	like a two-point \verb|\pline|, but also draw an arrowhead at $(x2,y2)$.
+\item[] \hbox{\verb|\pspline(x1,y1)(x2,y2)...(xn,yn)|}
+	draw a quadratic B-spline with the given control points
+	(the endpoints are doubled, so the spline goes through them).
+\item[] \hbox{\verb|\arc{r}{sa}{ea}|}
+	draw a circular arc with the circle's center at the current
+	point, radius $r$, and going from angle
+	$sa$ counterclockwise to angle $se$ (in radians).
+\end{itemize}
+
+The \verb|bezier| document style option allows quadratic Bezier
+splines to be drawn.
+Let $P_{i}$ be the point
+with coordinates $(x_{i},y_{i})$, for $i=1$, 2, and 3.  The command
+\begin{itemize} \tt
+\item[]
+\verb|\bezier{|$n$\verb|}(|$x_{1}$,$y_{1}$)($x_{2}$,$y_{2}$)($x_{3}$,$y_{3}$)
+\end{itemize}
+draws $n$ points on the quadratic Bezier spline determined by the three
+points $P_{1}$, $P_{2}$, and $P_{3}$.  The locus of points on this
+spline is a parabolic arc from $P_{1}$ to $P_{3}$ having the line
+$P_{1}P_{2}$ tangent to it at $P_{1}$ and the line $P_{2}P_{3}$ tangent
+to it at $P_{3}$.  Note that $P_{2}$ is {\em not\/} on this arc unless
+$P_{1}$, $P_{2}$, and $P_{3}$ are collinear.
+This command does the splines using little dots, so it is slow and
+takes a lot of memory.
+
+\subsection{Tpic and Ideal}
+
+The troff filters {\em pic\/} and {\em ideal\/} have
+been adapted to work with \LaTeX.
+The \LaTeX\ version of {\em pic\/} is called {\em tpic},
+and the \LaTeX\ version of {\em ideal\/} is invoked by
+using a \verb|-tex| flag.
+They work best if you put each figure in a separate file
+(including the surrounding \verb|.PS|/\verb|.PE| or \verb|.IS|/\verb|.IE|).
+Then use the filter to create a \verb|.tex| file, e.g.:
+\begin{eg}
+tpic fig.p > fig.tex
+\end{eg}
+and put something like the following in the \LaTeX\ document:
+\begin{eg}
+\input{fig}
+\begin{center}
+\mbox{\box\graph}
+\end{center}
+\end{eg}
+As you can see, the filters arrange for your picture to be in
+a box called \verb|\graph|.
+Any text strings in the figure will be formatted by \LaTeX,
+using \LaTeX\ fonts.
+
+\subsection{PostScript}
+
+PostScript printers can do a lot more than the {\em tpic\/} specials allow---you
+can shade regions, rotate text, and other interesting things.
+The {\em dvips\/} driver allows the inclusion of a arbitrary
+PostScript file with a \LaTeX\ command like
+\begin{eg}
+\vspace{3in}
+\special{psfile=myfig.ps}
+\end{eg}
+Any drawing commands in the \verb|myfig.ps| will draw on the output
+page, with the default PostScript coordinate system with an origin
+at the point where the \verb|\special| is issued.
+You can transform the coordinate system by supplying a list of
+comma-separated ${\it key}={\it value}$ items after the \verb|psfile|
+assignment.
+Allowed keys are: \verb|hoffset|, \verb|voffset|, \verb|hscale|,
+\verb|vscale|, and \verb|rotate|.
+If supplied, these values are supplied to PostScript {\em translate},
+{\em scale}, and {\em rotate} commands, in that order.
+Note that you have to know how much vertical space to leave for the figure.
+
+A fancier mechanism for including PostScript figures is the
+{\em Psfig\/} package.  To use it, include
+\begin{eg}
+\input{psfig}
+\end{eg}
+at the beginning of your document.
+Figures to be included should conform to the PostScript
+{\em bounding box convention}, which means there should be
+a line like
+\[
+\hbox{\verb|%% BoundingBox:| \em llx lly urx ury}
+\]
+where the four arguments are the coordinates of the lower left
+and upper right coordinates of a rectangle containing the
+whole figure, relative to the default PostScript transformation matrix.
+You include figures in the \LaTeX\ document by
+\begin{eg}
+\psfig{figure=myfig.ps}
+\end{eg}
+which will put the top of the figure at the current position
+on the page, and move the current position to just below the figure.
+Adding the following after the filename
+\begin{eg}
+,hsize=2in,vsize=3in
+\end{eg}
+causes the picture to be scaled to fit those dimensions.
+Another option to the \verb|\psfig| macro is \verb|prolog=|{\em file},
+causing a prolog of PostScript definitions to be included before
+the figure.
+
+Unfortunately, there is no easy way to access the \TeX\ bitmap fonts
+in an included PostScript figure.
+
+\subsection{Other Packages}
+
+There are a number of other packages in use in the \LaTeX\ community.
+They aren't being used here, but could be supported if there is
+a demand.
+
+\begin{itemize}
+\item[] \hbox{\tt EPIC, EEPIC}
+Similar to {\tt picext} in extending the \LaTeX\ picture environment.
+EPIC requires no special capabilities from the device driver,
+while EEPIC uses tpic specials.
+See \verb|picman.tex| in the documentation directory.
+\item[] \hbox{\tt PiC\TeX}
+Allows diagrams to be drawn using lots of tiny dots---slow and
+memory consuming.
+\item[] \hbox{\tt Fig}
+Fig is a graphics format.
+It can be produced by a graphics editor that runs under X11 or SunView;
+it can also be generated from pic code.
+Programs in the {\em transfig\/} package translate
+the Fig language into PostScript, PIC\TeX, (E)EPIC,
+\LaTeX\ \verb|picture| commands, or {\em pic\/}.
+\end{itemize}
+
+\section{Acknowledgments}
+
+The {\tt tm} document style comes from Terry Anderson,
+and the {\tt acmtrams} document style is by Leslie Lamport.
+John Hobby wrote the {\tt fixup} style option,
+Charles Karney wrote the {\tt acmsymbols} and {\tt cyrillic}
+style options,
+and Leslie Lamport wrote the {\tt alltt}, {\tt proc}, and {\tt showidx}
+style options.
+The rest of the document styles and options described here
+were written by me;
+Eric Grosse and Bill Coughran helped refine the {\tt siam}
+and {\tt attletter} styles.
+The bibliography styles were written by me, and then
+rewritten by Oren Patashnik.
+The Psfig package comes from Trevor Darell.
+Sunil Podar and Conrad Kwok did EPIC and EEPIC,
+and the Fig software was developed by various people,
+including Supoj Sutanthavibul, Micah Beck, and Ken Yap.
+
+\begin{thebibliography}{9}
+\bibitem[1]{latex} Lamport, L. {\em \LaTeX: A Document Preparation System}.
+	Addison-Wesley, Reading, MA, 1985.
+\end{thebibliography}
+
+\newpage
+\null
+\vspace{3in}
+\Large divider
+\vspace{1in}
+\Large Programming
+
+\newpage
+\null
+
+\end{document}

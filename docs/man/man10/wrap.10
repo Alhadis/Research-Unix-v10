@@ -1,0 +1,248 @@
+.TH WRAP 10.1 UCDS
+.SH NAME
+wrap \- generate control information for wiring a circuit board
+.SH SYNOPSIS
+.B wrap
+[
+.I options
+] [
+.I file
+] ...]
+.br
+.B fizz wrap
+[
+.I option
+]
+.I files
+.SH DESCRIPTION
+.I Fizz wrap
+generates a wraplist for the given files.
+Standard input is used if no file arguments are given.
+To actually perform the wrap on the semi-automatic wiring machine, use
+.BR "wrap -s" .
+The analogy of
+.IR diff (1)
+for wraplists is
+.IR rework (10).
+The options are
+.PP
+.PD 0
+.TP
+.B -3
+3 wraps per pin may be used.
+In this case, a minimal spanning tree of degree three is used for routing.
+.TP
+.B -n
+pins not connected to any other
+are wrapped in the net
+.BR noconnect .
+.TP
+.B -o
+option turns off complaints about signals with only one end.
+.TP
+.B -v
+produce various statistics.
+.TP
+.B -c
+produce output in units of 0.01in.
+.TP
+.B -x
+produce XY mask output.
+.TP
+.B -b
+tune XY mask output for buried micro-via technology rather than (the default)
+four plane multiwire technology.
+.TP
+.BI -r root
+put the artwork wiring in
+.IB root .xym
+and the hole and net descriptions in
+.IB root .hn\fP\f1.
+If
+.B -r
+is not used,
+.I fizz wrap
+sets
+.I root
+to the common prefix of
+.IR files .
+If there is no common prefix,
+.I root
+is set to
+.BR a .
+.sp
+.PP
+Ordinary
+.I wrap
+is a left over from the pre-fizz era.
+If the input
+.I file
+name ends in
+.B .wr
+it is a wiring
+.I object
+file produced by an earlier use
+.IR "fizz wrap" .
+Otherwise the
+.I files
+describe the circuit in Circuit Description Language
+.RI ( cdl (10.5)).
+The form of output from
+.I wrap
+depends upon the type of wiring machine to be used
+and is indicated by flag as follows.
+.TP
+.B -a
+Automatic wire-wrap:
+The output file is a series of 80 character lines, one per wire,
+which are formatted as required by a commercial wiring service
+that uses Gardner-Denver automatic wire-wrapping machines.
+.PP
+.TP
+.B -d
+Set preferred direction for wire routing.
+A two-character string follows the
+.BR -d .
+The first character gives the first routing preference and the
+second character the second routing preference.
+The following code is used.
+.TP
+.B 0
+route from left to right (increasing X).
+.TP
+.B 1
+route from bottom to top (increasing Y).
+.TP
+.B 2
+route from right to left (decreasing X).
+.TP
+.B 3
+route from top to bottom (decreasing Y).
+.TP
+.B -h
+Wire by hand.
+A wire list is produced on the standard output.
+The connections to be made for each signal are listed
+in two columns: one for first-level wraps and
+the other for second-level wraps.
+The sequence of output is such that the board can be wired
+in the sequence in which the connections are listed
+without fear of placing a second-level wrap before a
+first-level wrap on the same pin.
+The wire length is given for each connection and it is
+based upon a Manhattan route but excludes any allowance
+for stripping.
+Capital letters between the `from' and `to'
+pins indicate the route to be followed.
+.TP
+.B -l
+Listing.
+The listing produced when no specific wiring machine is specified
+contains for each signal a list of the pins in the sequence
+in which the appear in the wired net.
+The first two pins in the sequence will be connected by a level 1 wire
+and wiring levels alternate thereafter.
+If a machine is specified
+the listing is intended as a reference for the
+machine operator and describes the wires in the sequence
+in which they are to be installed.
+.TP
+.B -q
+Quick-connect wiring machine.
+The output file is that required by the Quick-Connect wiring machine
+designed by C. A. Von Roesgen.
+It can be transmitted directly to the wiring machine.
+.TP
+.BI -r d
+Set board rotation.
+The digit
+.I d
+specifies how the board must be rotated from the
+position implied by the Circuit Design Language definition of the board.
+The rotation is the number of right-angles by which it is to be rotated
+anti-clockwise, plus four if the board is first to be flipped over
+(X and Y coordinates interchanged).
+The initial rotation is given in the board definition.
+.TP
+.B -s
+On-line semi-automatic wire-wrap machine.
+The on-line Standard Logic wire-wrap machine must be in series with
+the terminal from which
+.B "wrap -s"
+is used.
+The operator will first be required to calibrate the machine
+by moving the pointer to specified pin positions.
+Then the machine will point at successive pins which must be wired.
+The typed commands to which the program responds are as follows.
+.RS
+.TP
+.B udlr
+Move the pointer a small distance up, down, left or right.
+If preceded by a number scale the distance moved accordingly.
+.br
+.ns
+.TP
+.BI s\| n
+Skip to wire number
+.I n.
+.br
+.ns
+.TP
+.B c
+Check the calibration by moving the pointer to the reference pin.
+.br
+.ns
+.TP
+.SM
+.B C
+Check positions of all four corner pins of the board.
+.br
+.ns
+.TP
+.B v
+Change to and from verbose mode.
+.br
+.ns
+.TP
+.B q
+Quit after moving the pointer back to the reference pin.
+.br
+.ns
+.TP
+.B ?
+Print details about the wire currently being installed.
+.RE
+.TP
+.B -v
+Set verbose mode.
+The interpretation of this option depends upon the type of output
+requested.
+It is required to obtain details of all ground and voltage nets
+when
+.B -l
+is used.
+.TP
+.B -y
+Off-line semi-automatic wiring machine.
+The output file
+contains the control characters necessary
+for driving a Gardner-Denver 14YN semi-automatic
+wire-wrap machine equipped with automatic wire
+stripper.
+The data should be fed directly to a paper-tape punch.
+.SH FILES
+.F ./wrwir_out
+.br
+.F ./wrsort_out
+temporary files in the working directory
+.br
+.F /usr/ucds/lib
+library directory
+.SH SEE ALSO
+.IR rework (10.1)
+.SH BUGS
+The output from
+.I "fizz wrap"
+is in 0.001in, the input to
+.I wrap
+is in 0.01in.

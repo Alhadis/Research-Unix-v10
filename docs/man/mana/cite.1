@@ -1,0 +1,98 @@
+.TH CITE 1
+.CT 1 writing_troff
+.SH NAME
+cite \- process citations in a document
+.SH SYNOPSIS
+.B cite
+[
+.B -s
+]
+[
+.B -u
+]
+[
+.I files
+]
+.SH DESCRIPTION
+.I Cite
+is a
+.IR troff (1)
+preprocessor for forward and backward references.
+It copies the
+.I files
+or the standard input to standard output,
+observing lines of the forms
+.IP
+\f5\&.CD "\fIkey\f5" "\fIdefinition\f5"
+.br
+\&.CU "\fIkey\f5"\fItext
+.EE
+.LP
+Each
+.B .CD
+line is remembered.
+A later
+.B .CU
+with the same
+.I key
+will be replaced by the
+.I definition
+for that key; the
+.I text
+will be copied verbatim.
+If no definition is yet available for a
+.B .CU
+reference, the key will be replaced by
+.BR ZZ .
+.PP
+At the location of each
+.B .CD
+command,
+.I cite
+causes 
+.I troff
+to send the line (with macro substitutions)
+to the standard error file.
+The resulting  definitions may be included at the beginning of another
+.I cite-troff
+run, effectively eliminating forward references.
+Unfortunately, the definition file 
+may contain obsolete definitions (included
+from a previous run) plus other
+.I troff
+messages.
+These should be deleted using option
+.BR -s .
+.PP
+The options are
+.TP
+.B -s
+Place only the latest definitions
+on the standard output; shunt
+.RI non -cite
+data to standard error.
+.TP
+.B -u
+Place on standard error a list of undefined or unused citations.
+.SH EXAMPLES
+.EX
+cite file.defs file | troff -ms 2>temp.defs >/dev/null 
+cite -s temp.defs >file.defs
+cite file.defs file | troff -ms 2>temp.defs | lp
+.EE
+.br
+.ns
+.IP
+Run
+.I cite-troff
+to collect updated definitions in
+.BR temp.defs .
+.br
+Eliminate old definitions, putting updates back in
+.BR file.defs .
+.br
+Run
+.IR cite-troff
+again, using latest definitions.
+.SH SEE ALSO
+.IR troff (1)

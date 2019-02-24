@@ -1,0 +1,156 @@
+.TH VIEW2D 1
+.CT 1 graphics
+.SH NAME
+view2d, regrid, vdata \- movie of a function f(x, y, t)
+.SH SYNOPSIS
+.B view2d
+[
+.I option ...
+]
+.I file
+.LP
+.B regrid
+[
+.I option ...
+]
+.I file
+.LP
+.B vdata
+[
+.I option ...
+]
+.I file
+.SH DESCRIPTION
+.I View2d
+displays a sequence of functional surfaces on a Teletype 5620 or 
+frame buffer.
+On the 5620, the surface is ruled with a square mesh
+and projected isometrically;
+on a frame buffer, the surface is viewed from above,
+with height indicated by color.
+The options are
+.ta \w'\f5-t\fITS[,TE]  'u
+.TP
+.B -T5
+Output on the 5620;
+.TP
+.B -Tc
+Output on frame buffer (default);
+.B -Tc
+is assumed when
+.L TERM
+is not 5620.
+.TP
+.B -Tp
+Produce input for
+.IR plot (1)
+to produce contour plots.
+.TP
+.BI -c n
+Use
+.I n
+colors
+.RI ( n =32
+by default)
+or contours (6 by default).
+.TP
+.BI -p s
+Run movie for
+.I s
+seconds
+.RI ( s =5
+by default).
+.PP
+There are two supported ways to generate input for
+.IR view2d .
+.I Vdata
+takes
+.SM ASCII
+input and allows scattered data;
+.IR view2d (3)
+can be called from a program that
+already has data on a grid.
+.PP
+.I Regrid
+changes the grid sizes in
+.I view2d
+binary files,
+with options:
+.TP
+.B -b
+Add a bar at the bottom of the image to indicate time.
+.TP
+.BI -n NX , NY
+Output grid is
+.IR NX\(muNY ;
+.BI , NY
+may be omitted.
+.TP
+.BI -f NF
+Output will have
+.I NF
+frames.
+.TP
+.B -r
+The plane of closest fit to the first frame
+is subtracted from all the frames.
+.TP
+.BI -m fmin , fmax
+Clip the data to the range
+.I fmin,fmax.
+.PP
+One option applies to both
+.I view2d
+and
+.IR regrid :
+.TP
+.BI -t TS , TE
+Display frames from
+.I TS
+(default first frame time)
+to
+.I TE
+(may be omitted, default last frame time).
+.PP
+.I Vdata
+takes input in the following format and converts to input for
+.IR view2d .
+The first line of each frame has
+the number of data points in the frame (an integer)
+and the time (a floating point value).
+The rest of the lines in the frame consist of blank-separated
+.I x y z
+triples.
+The order of points is irrelevant.
+The options are:
+.TP
+.BI -n NX , NY
+Output grid is
+.IR NX\(muNY ;
+.BI , NY
+may be omitted.
+.TP
+.B -c
+Use piecewise constant rather than linear interpolation.
+.TP
+.B -s
+Scatterplot the data on a black background.
+.TP
+.B -i
+The data is already on a square grid,
+in the order
+.I x
+and
+.I y
+ascending with
+.I x
+varying fastest.
+.SH FILES
+.F /usr/lib/view2d/*
+.SH "SEE ALSO"
+.IR view2d (3), 
+.IR view2d (5), 
+.IR plot (1)
+.br
+.F /n/bowell/usr/lib/view2d/howto
+for more options and how to run equipment.

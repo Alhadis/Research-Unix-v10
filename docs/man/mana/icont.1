@@ -1,0 +1,150 @@
+.TH ICONT 1 alice
+.SH NAME
+icont, iconc \- Icon language translator and compiler
+.SH SYNOPSIS
+.B icont
+[ option ... ] file ... [
+.B \-x
+arg ... ]
+.PP
+.B iconc
+[ option ... ] file ...
+.SH DESCRIPTION
+.I Icont
+translates Version 5 of the Icon programming language
+to an intermediate form, and link edits intermediate files
+to interpretable files.
+.I Iconc
+does the same, but finally compiles to machine code.
+Unless the
+.B \-o
+option is specified, the name of the linked file is
+formed by deleting the suffix of the first input file named on the
+command line.
+Option
+.B \-x
+invokes the interpreter and passes the
+.I args
+to the Icon program.
+.PP
+Files whose names end in `.icn' are assumed to be Icon source programs;
+files whose names end in `.u1' or `.u2' are assumed to be intermediate
+files from a previous translation
+(only one should be named \(em the other is assumed).
+Unnamed .u1 and .u2 files are deleted.
+The argument
+.B \-
+signifies the use of standard input as a source file.
+.PP
+The following options are recognized by
+.IR icont .
+.TP
+.B \-c
+Suppress linking and loading; preserve intermediate files.
+.TP
+.B \-m
+Preprocess each `.icn' source file
+with the
+.IR m4 (1)
+macro processor before translation.
+.TP
+.BI \-o " output"
+Name the interpretable file
+.IR output .
+.TP
+.B \-s
+Suppress informative messages.
+.TP
+.B \-t
+Arrange for
+.I trace
+to have an initial value of \-1
+instead of 0 when the program is executed.
+.TP
+.B \-u
+Issue warning messages for undeclared identifiers.
+.PP
+To run either and interpreatable or an executable file,
+simply execute it as a command.
+The following environment variables \- all numeric \- affect execution:
+.TP
+.I TRACE
+Initialize the value of
+.I trace,
+overriding the translation option
+.BR \-t .
+.TP
+.I NBUFS
+The number of i/o buffers to use for files, normally 3.
+.I input
+and
+.I output
+are buffered unless they are terminals.
+.I errout
+is never buffered.
+.TP
+.I STRSIZE
+The initial size of the string space, in bytes,
+normally 51200.
+.TP
+.I HEAPSIZE
+The initial size of the heap, in bytes, normally 51200.
+.TP
+.I NSTACKS
+The number of stacks initially available for co-expressions,
+normally 4.
+.TP
+.I STKSIZE
+The size of each co-expression stack, in words, normally, 2000.
+.TP
+.I PROFILE
+Turn on execution profiling of the runtime system.
+The value of this variable specifies the sampling resolution, in words.
+If the value is zero, profiling is not done.
+The profiling results are left in a file `mon.out' for
+interpretation by 
+.IR prof (1).
+.SH FILES
+.ta \w'v5v/int/bin/utran     'u
+v5v/int/bin/utran	icon translator
+.br
+v5v/int/bin/ulink	icon linker
+.br
+v5v/cmp/bin/libi.a      icon runtime library
+.br
+v5v/int/bin/iconx	icon interpreter
+.br
+mon.out	results of profiling
+.br
+*.u1, *.u2	intermediate files
+.SH SEE ALSO
+.I "Reference Manual for the Icon Programming Language, Version"
+.IR 5 ,
+Technical Report TR 81\-4a,
+Department of Computer Science,
+The University of Arizona,
+Tucson, Arizona,
+December 1981.
+.br
+.I Co-Expressions in Icon,
+Technical Report TR 82\-4,
+Department of Computer Science,
+The University of Arizona.
+.br
+iconc(1), m4(1), prof(1), exec(2), monitor(3)
+.SH BUGS
+If the
+.B \-m
+option is used,
+line numbers reported in error messages or tracing messages
+are from the file after, not before, preprocessing.
+.br
+Integer overflow on multiplication is not detected.
+.br
+An interpretable
+file produced on one system will not work on another system unless
+the Icon interpreter is in the same place on both systems.
+.br
+Because of the way that co-expressions are implemented,
+there is a possibility that programs
+in which they are used may malfunction mysteriously.

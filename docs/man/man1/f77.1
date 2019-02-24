@@ -1,0 +1,212 @@
+.TH F77 1
+.CT 1 prog_other
+.SH NAME
+f77 \(mi Fortran 77 compiler
+.SH SYNOPSIS
+.B f77
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I F77
+is a Fortran 77 compiler.
+It accepts several types of arguments:
+.PP
+Arguments whose names end with 
+.L .f
+are taken to be
+Fortran 77 source programs;
+they are compiled, and
+each object program is left on the file in the current directory
+whose name is that of the source with 
+.L .o
+substituted
+for 
+.LR .f .
+.PP
+Arguments whose names end with 
+.L .r
+or
+.L .e
+are taken to be Ratfor or EFL
+source programs, respectively; these are first transformed by the
+appropriate preprocessor, then compiled by
+.I f77.
+.PP
+In the same way,
+arguments whose names end with 
+.L .c
+or
+.L .s
+are taken to be C or assembly source programs
+and are compiled or assembled, producing a 
+.L .o
+file.
+.PP
+The following options have the same meaning as in
+.IR cc (1).
+See
+.IR ld (1)
+for load-time options.
+.TP
+.B -c
+Suppress loading and produce 
+.L .o
+files for each source 
+file.
+.TP
+.B -g
+Have the compiler produce additional symbol table information for
+.IR sdb (A)
+or
+.IR pi (9.1).
+.TP
+.BR -w
+Suppress all warning messages.
+If the option is 
+.LR -w66 ,
+only Fortran 66 compatibility warnings are suppressed.
+.TP
+.B -p
+Prepare object files for profiling, see
+.IR  prof (1).
+.TP
+.B -O
+Invoke an
+object-code optimizer.
+.TP
+.B -S
+Compile the named programs, and leave the
+assembler-language output on corresponding files suffixed 
+.LR .s .
+(No 
+.L .o
+is created.).
+.TP
+.BI -o " output"
+Name the final output file
+.I output
+instead of 
+.LR a.out .
+.PP
+The following options are peculiar to
+.IR f77 .
+.TP
+.BR -onetrip
+Compile DO loops that are performed at least once if reached.
+(Fortran 77 DO loops are not performed at all if the upper limit is smaller than the lower limit.)
+.TP
+.BR -u
+Make the default type of a variable `undefined' rather than using the default Fortran rules.
+.TP
+.BR -C
+Compile code to check that subscripts are within declared array bounds.
+.TP
+.B -I2
+Render
+.SM INTEGER
+and
+.SM LOGICAL
+as short,
+.SM INTEGER\*S\(**4
+as long.
+Allow only
+.SM INTEGER\*S\(**4
+(and no
+.SM LOGICAL\*S)
+variables in
+.SM INQUIRE\*Ss.
+.TP
+.B -U
+Honor the case of variable and external names.
+Fortran keywords must be in lower case.
+.TP
+.BR -F
+Apply EFL and Ratfor preprocessors to relevant files,
+put the results in the files
+with the suffix changed to 
+.LR .f ,
+but do not compile.
+.TP
+.BR -m
+Apply the M4 preprocessor to each 
+.L .r
+or
+.L .e
+file before transforming
+it with the Ratfor or EFL preprocessor.
+.TP
+.BI -E x
+Use the string
+.I x
+as an EFL option in processing 
+.L .e
+files.
+.TP
+.BI -R x
+Use the string 
+.I x
+as a Ratfor option in processing 
+.L .r
+files.
+.PP
+Other arguments
+are taken
+to be either loader option arguments, or F77-compatible
+object programs, typically produced by an earlier
+run,
+or perhaps libraries of F77-compatible routines.
+These programs, together with the results of any
+compilations specified, are loaded (in the order
+given) to produce an executable program with name
+.LR a.out .
+.SH FILES
+.TF /usr/lib/libF77.a
+.TP
+.IB file .[fresc]
+input file
+.TP
+.B *.o
+object file
+.TP
+.F a.out
+loaded output
+.TP
+.F ./fort*
+temporary
+.TP
+.F /usr/lib/f77pass1
+compiler
+.TP
+.F /lib/f1
+pass 2
+.TP
+.F /lib/c2
+optional optimizer
+.TP
+.F /usr/lib/libF77.a
+intrinsic function library
+.TP
+.F /usr/lib/libI77.a
+Fortran I/O library
+.TP
+.F /lib/libc.a
+C library, see section 3
+.SH "SEE ALSO"
+.IR prof (1), 
+.IR cc (1), 
+.IR ld (1), 
+.IR efl (A), 
+.IR ratfor (A)
+.br
+S. I. Feldman and
+P. J. Weinberger,
+`A Portable Fortran 77 Compiler', 
+this manual, Volume 2
+.SH DIAGNOSTICS
+The diagnostics produced by
+.I f77
+itself are intended to be
+self-explanatory.
+Occasional messages may be produced by the loader.

@@ -1,0 +1,206 @@
+.TH LS 1
+.CT 1 files dirs
+.SH NAME
+ls, lc \(mi list contents of directory
+.SH SYNOPSIS
+.B ls
+[
+.B -acdfilrstuFLR
+]
+.I name ...
+.PP
+.B lc
+[
+.I options
+]
+.I name ...
+.SH DESCRIPTION
+For each directory argument,
+.I ls
+lists the contents of the directory;
+for each file argument,
+.I ls
+repeats its name and any other information requested.
+The output is sorted alphabetically by default.
+When no argument is given, the current directory is listed.
+When several arguments are given,
+the arguments are first sorted,
+but file arguments appear
+before directories and their contents.
+.PP
+.I Lc
+is the same as
+.I ls,
+but prints the list in multiple columns.
+.PP
+There are an unbelievable number of options:
+.TP
+.B  -l
+List in long format, giving mode (see below), number of links, owner,
+group,
+size in bytes, and time of last modification
+for each file.
+Symbolic links are identified by a link count marked 
+.LR L ;
+the link count is that of the ultimate file.
+If the file is a special file the size field will instead contain
+the major and minor device numbers.
+.TP
+.B  -d
+If argument is a directory, list its name, not
+its contents.
+.TP
+.B  -t
+Sort by time modified (latest first) instead of
+by name, as is normal.
+.TP
+.B -L
+Under
+.B -l
+for each symbolic link
+give the immediate, not the ultimate, link count
+and append the name pointed to.
+.TP
+.B  -a
+List all entries; usually
+.F .
+and
+.F ..
+are suppressed.
+.TP
+.B  -c
+Under
+.B -t
+sort by time of inode change;
+under
+.B -l
+print time of inode change.
+.TP
+.B  -f
+Force each argument to be interpreted as a directory
+and list the name found in each slot.
+This option turns off
+.BR -l ", " -t ", " -s ,
+and
+.BR -r ,
+and
+turns on
+.BR -a ;
+the order is the order in which entries
+appear in the directory.
+.TP
+.B  -F
+Mark directories with a trailing 
+.L /
+and executable
+files with a trailing 
+.L *
+.TP
+.B  -i
+Print i-number in first column
+of the report for each file listed.
+.TP
+.B  -r
+Reverse the order of sort to get reverse alphabetic
+or oldest first as appropriate.
+.TP
+.B  -R
+recursively list subdirectories encountered.
+.TP
+.B  -s
+Give size in Kbytes for each entry.
+.TP
+.B  -u
+Under
+.B -t
+sort by time of last access;
+under
+.B -l
+print time of last access.
+.PP
+The mode printed under the
+.B -l
+option contains 11 characters
+which are interpreted
+as follows:
+the first character is
+.TP
+.B  d
+if the entry is a directory;
+.PD 0
+.TP
+.B  b
+if the entry is a block-type special file;
+.TP
+.B  c
+if the entry is a character-type special file;
+.TP
+.B l
+if the entry is a symbolic link and option
+.B -L
+is in effect;
+.TP
+.B  -
+if the entry is a plain file.
+.PD
+.PP
+The next 9 characters are interpreted
+as three sets of three bits each.
+The first set refers to owner permissions;
+the next to permissions to others in the same user-group;
+and the last to all others.
+Within each set the three characters indicate
+permission respectively to read, to write, or to
+execute the file as a program.
+For a directory, `execute' permission is interpreted
+to mean permission to search the directory
+for a specified file.
+The permissions are indicated as follows:
+.TP 3
+.B  r
+if the file is readable;
+.PD 0
+.TP 3
+.B  w
+if the file is writable;
+.TP 3
+.B  x
+if the file is executable;
+.TP 3
+.B  -
+if the indicated permission is not granted.
+.PD
+.PP
+The group-execute permission character is given
+as
+.B s
+if the file has set-group-ID mode;
+likewise the user-execute permission character is given
+as
+.B s
+if the file has set-user-ID mode.
+.PP
+The last character of the mode (normally a blank)
+indicates the type of concurrency control:
+.TP
+.B  e
+if the file is set for exclusive access (1 writer or
+.I n
+readers);
+.PD 0
+.TP
+.B  y
+if the file is set for synchronized access (1 writer and
+.I n
+readers);
+.PD
+.SH FILES
+.FR /etc/passwd
+.br
+.FR /etc/group
+.SH SEE ALSO
+.IR stat (2)
+.SH BUGS
+Option
+.B -s
+counts unwritten holes as if they were real data.

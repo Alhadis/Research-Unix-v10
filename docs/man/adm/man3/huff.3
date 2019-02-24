@@ -1,0 +1,89 @@
+.TH HUFF 3
+.CT 2 data_man
+.SH NAME
+huff \(mi huffman codebook/tree generator
+.SH SYNOPSIS
+.nf
+.B #include <huff.h>
+.PP
+.B NODE *huff(inrout)
+.B int (*inrout)();
+.fi
+.SH DESCRIPTION
+.I Huff
+generates a binary Huffman codebook.
+It obtains a list of messages one at a time from an input routine,
+.I inrout,
+declared as
+.IP
+.EX
+int inrout(str, p)
+char ** str;
+float *p;
+.EE
+.LP
+.I Inrout
+makes
+.I *str
+point to a null-terminated string identifying a message,
+and places in
+.I *p
+the (arbitrarily normalized) frequency of the message.
+.I Inrout
+returns non-zero when data is returned and zero when there
+is no more data.
+.PP
+.I Huff
+returns a pointer to a root of type 
+.BR NODE :
+.IP
+.EX
+typedef struct node {
+	char *datump;
+	struct node *to;
+	struct node *from;
+	struct node *ldad;
+	struct node *rdad;
+	struct node *kid;
+	float prob;
+} NODE;
+.EE
+.LP
+The root heads a linked list and the Huffman tree.
+The doubly linked list,
+connected via
+.B from
+and
+.BR to ,
+is ordered as the codebook was generated.
+The tree is connected
+via
+.BR kid ,
+.BR ldad ,
+and 
+.BR rdad ,
+with null pointers at the various ends.
+The
+.B kid
+field points towards the root,
+.B ldad
+and
+.B rdad
+point away:
+.B node->ldad->kid==node
+and
+.BR node->rdad->kid==node .
+the
+.B datump
+field is null or points to a message identifier.
+.PP
+The codeword for a message may be read off from the
+path from the root to the node containing the message identifier,
+counting
+.I ldad
+branches as 0 and
+.I rdad
+branches as 1.
+.SH "BUGS"
+A code with only one message dumps core.
+

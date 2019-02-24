@@ -1,0 +1,162 @@
+.TH MT 4
+.CT 2 comm_mach
+.SH NAME
+mt \- magtape interface
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/mtio.h>
+.SH DESCRIPTION
+The 
+.I rmt
+files refer to magnetic tape drives.
+Filenames beginning with
+.L rmt
+are rewound when closed;
+those beginning with
+.L nrmt
+are not.
+When a file open for writing is closed, two file marks are written.
+If the tape is not to be rewound,
+it is positioned with the head between the two
+file marks.
+.PP
+Conventionally 
+.B rmt0
+is 800,
+.B rmt1
+is 1600,
+and
+.B rmt2
+is 6250 bpi.
+.PP
+Each
+.IR read (2)
+or
+.IR write
+call reads or writes the next record on the tape.
+.I Read
+returns at most a single record;
+the return value is the record size.
+If the next record is larger than the read buffer,
+an error is returned.
+A file mark causes
+.I read
+to return 0;
+the next
+.I read
+will return the next record.
+Seeks are ignored.
+.PP
+An
+.IR ioctl (2)
+call performs special operations:
+.TF MTIOCEEOT
+.TP
+.B MTIOCTOP
+perform a suboperation encoded as below in the
+.B mt_op
+field of a structure whose address is passed
+as the third argument of
+.I ioctl.
+.IP
+.EX
+.ta \w'struct 'u +\w'daddr_t 'u +\w'mt_count;  'u
+struct	mtop {
+	short	mt_op;		/* operation */
+	daddr_t	mt_count;	/* repeat count */
+};
+.EE
+.PD0
+.RS
+.TF MTOFFL
+.TP
+.B MTWEOF
+write an end-of-file record
+.TP
+.B MTFSF
+forward space file
+.TP
+.B MTBSF
+backward space file
+.TP
+.B MTFSR
+forward space record
+.TP
+.B MTBSR
+backward space record
+.TP
+.B MTREW
+rewind
+.TP
+.B MTOFFL
+rewind and put the drive offline
+.RE
+.PD
+.PP
+The files described above provide a `raw' interface.
+There is also a `block' interface which attempts to treat the tape
+like an ordinary file as much as possible.
+Block tapes are accessed through files with names beginning with
+.L mt
+or
+.LR nmt .
+Such a tape contains a single file,
+consisting of a series of 1024-byte records
+followed by a file mark.
+Seeks have their usual meaning,
+and it is possible to read and write a byte at a time,
+though writing in very small units may create enormous record gaps.
+The file always ends at the most recently written byte.
+.PP
+Conventions for minor device numbers
+vary among different hardware drivers:
+.IP ""
+For the TU78,
+the drive unit number
+is encoded in the two low-order bits.
+Adding 4 prevents the tape from rewinding at close time.
+Adding 8 selects 6250 bpi for writing;
+the default is 1600.
+The tape drive senses density automatically when reading.
+.IP
+The TE16 is like the TU78,
+except that the default density is 800 bpi,
+and adding 8 to the device number selects 1600.
+.IP
+For TMSCP tape drives such as the TU81 and the TK50,
+the unit number is encoded in the three low-order bits.
+Adding 128 prevents the tape from rewinding on close.
+Density is selected by octal bits 070;
+the eight possible values represent
+eight different device-dependent tape formats.
+For 9-track tape drives,
+add 0 for 800 bpi,
+8 for 1600,
+16 for 6250.
+For TK50 cartridge drives,
+add 24 (old-style block format).
+For TK70 drives,
+add 8.
+The tape drives sense density automatically on reading,
+but if a drive
+doesn't support a particular density,
+the hardware may complain when the device is opened.
+.SH FILES
+.F /dev/mt?
+.br
+.F /dev/rmt?
+.br
+.F /dev/nmt?
+.br
+.F /dev/nrmt?
+.SH "SEE ALSO"
+.IR tape (1)
+.SH BUGS
+If any non-data error is encountered,
+the tape drivers generally refuse to do anything
+more until closed.
+.br
+The naming convention behaves poorly with multiple tape drives.
+.br
+Block tape has probably outlived its usefulness.

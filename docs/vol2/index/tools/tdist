@@ -1,0 +1,49 @@
+awk '
+/{\\(em|sl)[ a-zA-Z]*/	{
+	save=$0
+	sub(/{\\(em|sl)/,"XX",$0)
+	i=index($0,"XX")
+	string = substr(save,i)
+	save=string
+	left=gsub(/{\\(em|sl)/,"{",save)
+	right=gsub(/}/,"}",save)
+	if(right == 0){
+		getline
+		string = string " " $0
+		right=gsub(/}/,"}",string)
+		save=string
+		left = gsub(/{\\(em|sl)/,"{", save)
+	}
+	if(left == 1){
+		findterm(string)
+		next
+	}
+	else {
+		for(j=1;j<=left;j++){
+			findterm(string)
+			sub(/{\\(em|sl)/,"YY",string)
+			save=string
+			sub(/{\\(em|sl)/,"XX",save)
+			i=index(save,"XX")
+			string = substr(string,i)
+		}
+	}
+	}
+function findterm(string){
+	num = split(string,a," ")
+	term = a[1]
+	for(i=2;i<=num;i++){
+		term = term " " a[i]
+		if(term ~ /}/){
+			if(i > 2 || term ~ /[,\.]/)break
+			if(length(a[i+1]) > 3 && a[i+1] !~ /\(/){
+				term = term " " a[i+1]
+				break
+			}
+			else break
+		}
+	}
+	sub(/[\.,:;]/, "", term)
+	print term
+}' $1.tex
+

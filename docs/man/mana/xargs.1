@@ -1,0 +1,163 @@
+.TH XARGS 1
+.SH NAME
+xargs \- construct argument lists and execute command
+.SH SYNOPSIS
+.B xargs
+[
+.I option
+]
+[
+.I command
+[
+.I initial-arguments
+]
+]
+.SH DESCRIPTION
+.I Xargs\^
+combines the fixed
+.I initial-arguments\^
+with arguments read from standard input to execute the specified
+.I command\^
+one or more times.
+.IR Command
+.RF ( /bin/echo
+by default)
+is located according to environment variable
+.LR PATH .
+.PP
+Arguments read from standard input are delimited by
+white space (blanks, tabs, or new-lines).
+However, single or double quotes may be used to
+surround arguments that contain blanks or tabs, and
+backslash
+.L \e
+may be used to quote single characters outside of quotes.
+.PP
+Normally the
+.I initial-arguments\^
+are followed by arguments read from standard input until an internal buffer is full, whereupon
+.I command\^
+is executed with the accumulated arguments.
+This process is repeated
+until there are no more arguments.
+Options modify this rule:
+.TP
+.BI \-l n\^
+.I Command\^
+is executed upon reading each
+.I n\^
+(default 1)
+nonempty lines from standard input.
+Newlines preceded by blank or tab are not counted.
+Option
+.B \-x
+is implied.
+.TP
+.BI \-i s\^
+Insert mode:
+.I command\^
+is executed for each line from standard input,
+taking the entire line as a single arg, inserting it in
+.I initial-arguments\^
+for each occurrence of
+.IR s ,
+.B {\|}
+by default.
+Blanks and tabs at the beginning of each line are thrown away.
+Constructed arguments may not exceed 255 characters.
+Option
+.B \-x
+is implied.
+.TP
+.BI \-n n\^
+Execute
+.I command\^
+using as many standard input arguments as possible, up to
+.I n\^
+arguments maximum.
+.TP
+.B \-t
+Trace mode: The
+.I command\^
+and each constructed argument list are echoed to file descriptor 2
+just prior to their execution.
+.TP
+.B \-p
+Prompt about whether to execute
+.I command.
+Trace mode
+.RB ( \-t )
+is turned on to print the command instance to be executed,
+followed by
+.BR ?.\|.\|. .
+The command will be executed if and only if the
+reply begins with 
+.LR y .
+.TP
+.B \-x
+Terminate if any argument list would be greater than
+.I size\^
+characters.
+.TP
+.BI \-s size\^
+The maximum total size of each argument list is
+.I size\^
+characters, 470 by default.
+.TP
+.BI \-e eofstr\^
+.I Eofstr\^
+(
+.L _
+by default)
+is the logical end-of-file string.
+Normally
+.I xargs\^
+reads standard input up to a logical or an actual end-of-file.
+Option
+.B \-e
+with no
+.I eofstr
+turns off logical end-of-file testing.
+.PP
+.I Xargs\^
+will terminate if it receives a return code of
+.B \-1
+from,
+or cannot execute,
+.IR command .
+.SH EXAMPLES
+.TP
+.L
+ls $1 \|| xargs \-i \-t mv $1/{\|} $2/{\|}
+Move all files from directory
+.L $1
+to directory
+.LR $2 ,
+and echo each move
+command just before doing it.
+.TP
+.L
+(logname; date; echo $0 $*) | xargs >>log
+Combine the output of the parenthesized commands onto one line,
+which is then echoed to the end of file
+.LR log .
+.TP
+.L
+ls | xargs \-p \-l ar r arch
+Ask which files in the current directory are to be archived
+and archive them one at a time.
+.TP
+.L
+ls | xargs \-p \-l | xargs ar r arch
+Same, but archive many at a time.
+.TP
+.L
+echo $** | xargs \-n2 diff
+Execute
+.IR diff (1)
+with successive
+pairs of arguments originally typed as shell arguments.
+.SH "SEE ALSO"
+.IR sh (1), 
+.IR apply (1)
+.\"	@(#)xargs.1	6.2 of 9/2/83

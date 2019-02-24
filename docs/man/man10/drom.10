@@ -1,0 +1,149 @@
+.TH DROM 10.1 UCDS
+.SH NAME
+drom, urom \- read and write proms or pals through DATA I/O promwriters
+.SH SYNOPSIS
+.B drom
+[
+.I option
+] ...
+.PP
+.B urom
+[
+.I option
+] ...
+.SH DESCRIPTION
+.I Drom
+serves as an interface to the RS-232 interface of the DATA I/O
+model 19 or 29 promwriter.
+.I Urom
+serves as an interface to the DATA I/O
+unisite programmer.
+Options are used to specify the prom type, and whether the prom
+is to be read or written. The
+.B f,
+.B J,
+and
+.B C
+options are only supported by
+.B
+urom.
+.TP
+.B -w
+Specifies that the prom is to be written; default is read.
+.TP
+.BI -s n
+Specifies a starting address (default 0) in the prom in decimal.
+.TP
+.BI -t string
+.br
+.ns
+.TP
+.I string
+Specifies the device type of the prom, a compiled in table
+is used to get the device code.
+.TP
+.BI -c n
+Specifies the code from the DATA I/O manual.
+Some plug in Paks, e.g. UniPak and LogicPak, require a code
+in which case either
+.B -t
+or
+.B -c
+must be specified, others require no code in which case neither
+should be used.
+Failure to follow these rules results in
+.LR "error code 8081000" .
+.TP
+.BI -n
+Causes the the program to echo the code that it is sending to
+the DATAI/O, and causes the DATAI/O the echo the size and initial state
+specified by the code.
+No reading or writing is done.
+.TP
+.BI -b
+Causes a blank check to be run, the illegal bit
+test is run unless it is an electrically alterable rom.
+No blank check is done if the rom is being read.
+.TP
+.BI -X
+.br
+.ns
+.TP
+.BI -x
+Specifies hexadecimal data with upper case or lower case respectively.
+.TP
+.BI -C
+Specifies charactor data, for logic devices with JEDEC format.
+.TP
+.BI -D
+.br
+.ns
+.TP
+.BI -d
+Specifies decimal data, octal is default.
+.TP
+.BI -fn
+Use format n. 50, the default, is for hex, octal, or decimal format files.
+91 is for JEDEC files.
+.TP
+.BI -J
+JEDEC format (same as -f91 -C option)
+.TP
+.BI -i
+Causes the data to be (ones) complemented on input and output.
+.TP
+.BI -v
+Normally
+.I drom
+does it work silently, this is the verbose flag.
+.PP
+To read an Intel 2716 prom using the UniPak one could say
+.IP
+.B
+drom -t2716
+.PP
+or to write a National PAL16L8 using the LogicPak
+one could say
+.IP
+.B
+drom -w -t NS16L8 < filename
+.PP
+or to write it using the Pal Programming Pack
+.IP
+.B
+drom -w -i NS16L8 < filename
+.PP
+The input for logic devices on the UNISITE must be in JEDEC
+format. In this case use
+.IP
+.B
+drom -w -t NS16L8 -f 91 -C < filename
+.PP
+or
+.IP
+.B
+drom -w -t NS16L8 -J < filename
+.PP
+When a prom is read, the addressed locations are copied,
+one per line, onto the standard output.
+When a prom is written, the standard input is assumed to be
+of the same form, and is copied onto the prom.
+Various promwriter errors, such as the prom having a pattern
+that conflicts with the data (illegal bit test)
+when being written, are reflected back to the user.
+Transmissions over the RS-232 line are checksummed,
+and when writing the prom is verified.
+.PP
+The speed of the prom writer should be set to 9600,
+position 14.
+The Model 29 promwriter must be initialized by pushing its buttons,
+SELECT F1 START START.
+.SH FILES
+.F /dev/prom
+.br
+.F promwriter
+.br
+.F /usr/ucds/lib/drom.codes
+.SH SEE ALSO
+.IR xpal (1),
+.IR pal (1)

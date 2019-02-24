@@ -1,0 +1,48 @@
+.TH CLRI 8
+.CT 1 sa_nonmortals
+.SH NAME
+clri \- clear inode
+.SH SYNOPSIS
+.B /etc/clri
+.I special i-number ...
+.SH DESCRIPTION
+.I Clri
+writes zeros on the inodes
+with the decimal
+.I i-numbers
+on the
+file system in file
+.IR special .
+After
+.I clri,
+any blocks
+in the affected file
+will show up as `missing' in
+.IR icheck (8).
+.PP
+The inode becomes allocatable.
+.PP
+The primary purpose of this program
+is to remove a file which
+for some reason appears in no
+directory.
+If it is used to clear an inode
+which does appear in a directory, care should be taken to track down
+the entry and remove it.
+Otherwise, when the inode is reallocated to some new file,
+the old entry will still point to that file.
+At that point removing the old entry will destroy the new file.
+The new entry will again point to an unallocated inode,
+so the cycle is likely to be repeated.
+.PP
+.I Clri
+is a last resort; normally
+.IR fsck (8)
+can do the necessary repairs.
+.SH "SEE ALSO"
+.IR fsck (8), 
+.IR icheck (8)
+.SH BUGS
+If the file is open,
+.I clri
+is likely to be ineffective.

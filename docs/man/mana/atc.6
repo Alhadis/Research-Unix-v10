@@ -1,0 +1,375 @@
+.TH ATC 6
+.CT 1 games
+.SH NAME
+atc \- air traffic controller
+.SH SYNOPSIS
+.B /usr/games/atc
+.SH DESCRIPTION
+.I Atc
+presents air traffic on a cursor-controlled screen.
+As the controller, you must shepherd it safely through the air space.
+At the beginning of the game
+.I atc
+displays the takeoff/landing direction for each airport and
+prompts for the game duration with:
+.LR "< >" .
+Enter a number from 16 simulated minutes (hard) to 99 (easier)
+.PP
+Options are
+.TP "\w'-m=file  'u"
+.BI \-u= file
+Take airspace description from
+.I file.
+.PD0
+.TP
+.BI \-a= name
+use the named airspace; default is
+.LR Apple1 .
+.TP
+.BI \-s= seed
+for a 32-bit random number generator
+.TP
+.BI \-t= time
+Preset the game duration.
+.TP
+.BI \-p= file
+save the play of the game in the named file
+.TP
+.BI \-m= file
+play a `movie' of the saved game
+.PD
+.PP
+In the display of the airspace
+.ig
+.ne24
+.IP
+.ta +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC +1vC
+.EX
+\&.	0	.	.	.	.	.	.	1	.	.	.	.	.	.	.	.	.	.	.	.	.	.
+\&.	.	,	.	.	.	.	.	,	.	.	.	.	.	.	.	.	.	.	.	.	.	.
+\&.	.	.	,	.	.	.	.	,	.	.	.	.	.	.	.	.	.	.	.	.	.	2
+\&.	.	.	.	,	.	.	.	,	.	.	.	.	.	.	.	.	.	.	.	.	,	.
+\&.	.	.	.	.	,	.	.	,	.	.	.	.	.	.	.	.	.	.	.	,	.	.
+\&.	.	.	.	.	.	,	.	,	.	.	.	.	.	.	.	.	.	.	,	.	.	.
+\&.	.	.	.	.	.	.	,	,	.	.	.	.	.	.	.	.	.	,	.	.	.	.
+\&6	,	,	,	,	,	,	,	*	,	,	,	,	,	,	,	,	,	,	,	,	,	3
+\&.	.	.	.	.	.	.	.	,	,	.	.	.	.	.	.	,	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	.	,	.	.	.	.	,	.	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	.	.	,	.	.	%	.	.	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	.	.	.	,	,	.	.	.	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	.	.	.	,	,	.	.	.	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	.	.	,	.	.	,	.	.	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	.	,	.	.	.	.	,	.	.	.	.	.	.	.
+\&.	.	.	.	.	.	.	.	,	,	.	.	.	.	.	.	,	.	.	.	.	.	.
+\&4	,	,	,	,	,	,	,	*	,	,	,	,	,	#	,	,	,	,	,	,	,	5
+\&.	.	.	.	.	.	.	,	,	.	.	.	.	.	.	.	.	.	,	.	.	.	.
+\&.	.	.	.	.	.	,	.	,	.	.	.	.	.	.	.	.	.	.	,	.	.	.
+\&.	.	.	.	.	,	.	.	,	.	.	.	.	.	.	.	.	.	.	.	,	.	.
+\&.	.	.	.	,	.	.	.	,	.	.	.	.	.	.	.	.	.	.	.	.	,	.
+\&.	.	.	,	.	.	.	.	,	.	.	.	.	.	.	.	.	.	.	.	.	.	9
+\&.	.	7	.	.	.	.	.	8	.	.	.	.	.	.	.	.	.	.	.	.	.	.
+.EE
+.DT
+.tc
+.LP
+..
+.B % and
+.B #
+denote airports;
+.B *
+and
+.B !
+denote navigational aids (navaids); and
+commas denote airways that link numbered entry/exit `fixes',
+airports, and navaids.
+Dots are separated by one mile, horizontally, vertically, and diagonally.
+An airplane appears as a letter followed by its height in thousands of feet.
+.PP
+There are two kinds of planes: jets flying 1 mile per tick (15 seconds)
+and props flying 1/2 mile per tick.
+.PP
+You must prevent various misfortunes.
+Running out of fuel is serious.
+So is a close encounter \- less than 3 miles horizontal separation
+at a given altitude.
+A plane
+changing altitude is considered to be at both its old and new
+altitudes.
+A `boundary error',
+leaving the airspace at the wrong place, not on an airway, or
+at the wrong height, is also serious, but not as likely to be fatal.
+.PP
+The right side of the screen shows flight plans.
+A typical
+flight strip looks like:
+.br
+.B "       Fj 7\->3  4  NE     +"
+.br
+The first letter is the aircraft name,
+the next letter is 
+.L j
+for jet or 
+.L p
+for prop.
+The next field gives the plane's intentions: this one is
+entering at (or is now at) fix 7 and leaving at fix 3.
+The origin character tells where
+the plane is (or will be when it enters), the destination is a fix
+it wishes to go to.
+(It will, however, continue on a straight path unless instructed
+otherwise.)
+Next is the altitude, in this case 4000 feet.
+The bearing is a compass direction:
+.LR N ,
+.LR NE ,
+etc.
+The final character is the amount of fuel left, 
+.L +
+for more than 10 minutes, otherwise
+the number of minutes of fuel remaining.
+Jets begin with 15 minutes of fuel, props 21.
+.PP
+At the top of the flight plans are listed planes that will
+appear in the next minute, preceded by how many ticks (0-4)
+they are away.
+Planes may be
+cleared for takeoff as soon as they are listed.
+.PP
+Commands are terminated by newline.
+Backspace may be used to correct errors.
+The following kinds of commands can be issued.
+.IP $ \n()Mu
+End the game (game normally ends after 26 planes)
+.PD0
+.TP "\w'ALNW 'u"
+.B W
+Print flight plan for airplane
+.B W
+.TP
+.B XA3
+.B X
+will change altitude to 3000 feet
+.TP
+QA0
+.B Q
+will land (go to 0 feet altitude)
+.Tp
+.B HRE
+.B H
+will turn right until it is heading east
+.TP
+.B ALNW
+.B A
+will turn left until it is heading northwest
+.TP
+.B CTS
+.B C
+will turn south through the smallest angle
+.TP
+.B T*7
+.B T
+will take exit bearing for fix 7 at next navaid
+.TP
+.B P*%
+.B P
+will take landing bearing for
+.B %
+at next navaid
+.TP
+.B DH
+.B D
+will circle (hold) at next navaid
+.TP
+.B MR0
+Abort pending hold, clearance, or turn for plane
+.B M
+.TP
+.B J?
+Cancel delayed commands for
+.B J
+.TP
+space
+Speed up the game by advancing 15 seconds
+.PD
+.PP
+.I Climbing/descending.
+Planes climb or descend 1000 feet per mile.
+Climbing from 0 is a takeoff; descending to 0 is a landing.
+The takeoff/landing direction for each airport is given.
+A landing airplane must reach altitude 0 headed in the right
+direction 1 mile before the runway.
+No further commands may be given after a descent to 0,
+as control then
+rests with the tower.
+If a plane lands
+from the wrong direction, it will climb to 1000 feet
+and issue a `go around' error.
+While changing altitude, a flight strip reads like
+.br
+.B "        Dp :\->2  7v3  S     9"
+.br
+which means at 7000 feet descending to 3000.
+.PP
+.I Turning.
+Planes turn 45 degrees per mile.
+Turns may be left
+.L L
+right
+.L R
+or to a specified direction
+.LR T .
+Thus
+.L ULNE
+tells plane
+.B U
+to turn to his left until it is heading
+northeast.
+Changes of direction are indicated in the flight strip:
+.br
+.B "        Nj :\->5  5  S r W   +"
+.br
+indicates that jet
+.B N
+is heading south, and will turn 90 degrees to the
+right.
+To cancel the remaining part of this turn, give the command
+N)
+.LR NR0 .
+.ig
+The Ann Arbor keypad used for +/- PAGE, cursor motion, etc., may be used to
+supply the new bearing.  The usual N/S/E/W correspondence is used:
+                          ----------------
+                          |-PAG|HOME|+PAG|
+                          | NW | N  | NE |
+                          |----+----+----|
+                          |-SCH| UP |+SCH|
+                          |  W |STRT|  E |
+                          |----+----+----|
+                          |LEFT|DOWN|RGHT|
+                          | SW |  S | SE |
+                          ----------------
+..
+.PP
+.I Navaids.
+A plane may be directed to turn at a navaid or hold (circle) there,
+Thus command `AH' holds plane A at the next navaid.
+The flight strip for a plane that is to hold looks like
+.br
+.B "        Ap :\->2  5  S *    7"
+.br
+During the hold, the 
+.B *
+will become 
+.LR h .
+Every incoming plane that will be landing holds at a
+navaid unless the controller gives it other instructions.
+.PP
+The command 
+.B *
+clears a plane to turn sharply to any known fix
+at the next navaid.
+The flight strip for
+a plane cleared through a navaid (to fix 5, for example) looks like:
+.br
+.B "	Hj .->2  5  S *5    +"
+.br
+A holding aircraft given a clearance will continue around to the
+navaid, then immediately assume the specified bearing.
+Turns cancel clearances.
+.ig
+8. Designing new airspaces
+     The system airspaces are stored in /usr/rand/jim/atc/airspaces on the
+VAX, and /mnt/jim/atc/airspaces on the PDP-11/45.  Users may define their
+own airspaces and use them (Section 2), or have them included at the end of
+the system airspace file.
+The coordinate system for an MxN screen is:
+                     ---------------------
+                     |0,0             M,0|
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |0,N             M,N|
+                     ---------------------
+The different objects on the screen are defined as follows:
+Apple1
+        size: 15x24
+        airway: 1=(0,13) SE 8=(10,23)
+        airway: 0=(4,0) S 9=(4,23)
+        airway: 2=(14,15) NW 7=(0,1)
+        airway: 3=(0,9) NE 6=(9,0)
+        airway: 4=(14,7) SW 5=(0,21)
+        airport: %=(4,11) S
+        airport: #=(10,11) NE
+        navaid: *=(4,5)
+        navaid: *=(4,17)
+The size field is restricted only by the size of the Ann Arbor screen.  The
+direction on an airway is the entry direction from the first fix; the
+designer must ensure that each airway connects two entry/exit fixes, and
+that each entry/exit fix is on an airway.  If more than 20 entry/exit
+fixes, 5 airports, or 5 navaids are desired, the program must be recompiled
+after the change to EMAX, AMAX, or NMAX respectively in the source file
+"ahdr.h".
+9. Things to come
+     Several additions are planned to the ATC simulation in the near
+future.  The most important is definition of the "Clearance Directive
+List," a list of absolute locations on the screen and actions to take at
+the location.  The user will use this feature to establish plans for
+airplanes without having to monitor for completion of each part.
+     Another major modification will enable ATC to be run by another
+program, using a data transfer protocol designed to minimize the
+communication requirements.
+     These features will be documented as they are implemented.
+..
+.PP
+.I Delayed commands.
+Commands of the form
+.br
+.BI "	@" location , command [, "command ...\fP]"
+.br
+stack up activities.
+A location may be any fix or
+a point offset from a fix, e.g.
+.br
+.B "	@#sw3s2,ARE"
+.br
+which means at the point which can be reached by going three
+miles SW from airport
+.BR # ,
+then two miles S, plane
+.B A
+should begin
+a right turn until heading E.
+The information command shows all delayed commands pending for that plane.
+Note that delayed commands allow one to specify actions more
+than one navaid ahead.
+.ig
+Flow control:
+	When a game is started, ATC looks for the file <airspace>.flow
+	in the directory /usr/rand/jim/atc to establish a traffic pattern.
+        For example, if the airspace is Apple3, it uses the file
+	/usr/rand/jim/atc/Apple3.flow .
+	The flow file contains one line for each legal path through the
+	airspace.  Each line is left-adjusted, and consists of an origin,
+	the symbol "->" (for "goes to"), the destination, a space, and
+	the relative frequency of this path.  The expected frequency for
+	this path is its relative frequency divided by the sum of the
+	relative frequencies for all the paths.  Some examples are:
+		1->5 5
+		1->8 10
+		2-># 10
+		2->% 5
+		2->6 5
+		%->% 5
+		#->% 10
+	Blank lines are ignored (for spacing).
+	Any path with no relative frequency is assumed to have frequency 0.
+Things to come:
+	(1) There will be a capability for canned procedures.
+..

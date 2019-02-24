@@ -1,0 +1,25 @@
+< ../ADM/defns
+< ../index/defns
+
+all:V:	upas.out
+
+pg:	upas.out
+	count upas.ms upas.out
+
+spell:VQ:
+	dospell upas.ms
+
+lp:	upas.out
+	$LP $newprereq && touch $target
+
+upas.out:D:	upas.ms over.cip $REF
+	$PREFER upas.ms | pic | troff -mpm > $target
+
+index:V:
+	runind upas
+	$PREFER xupas.ms | pic | troff -mpm > /dev/null 2>upas.x
+	mkindex upas.x
+	rm xupas.ms
+
+pindex:V:
+	mkindex upas.x

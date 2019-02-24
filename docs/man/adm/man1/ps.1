@@ -1,0 +1,145 @@
+.TH PS 1
+.CT 1 proc_man sa_mortals
+.SH NAME
+ps \(mi process status
+.SH SYNOPSIS
+.B ps
+[
+.BI afhnlrux\fR[\fPFt name\fR][\fP num \fR]
+...
+]
+.SH DESCRIPTION
+.I Ps
+prints information about processes.
+Normally, only the user's
+non-shell processes are reported.
+.PP
+All output formats include, for each process, the process id, its
+control terminal, status, cpu time, and command.
+The status is given
+by a sequence of letters:
+.ta \w'W'u+1m \n(LLu/2u +\w'W'u+1m
+.PP
+\f5R\f1	Running.	\f5T\f1	Stopped.
+.br
+\f5P\f1	Waiting for a page.	\f5S\f1	Sleeping (< 20 seconds).
+.br
+\f5I\f1	Idle (> 20 seconds).	\f5N\f1	Process is `nice'; see \f2nice\f1(1).
+.br
+\f5W\f1	Swapped out.
+.PP
+.LR R ,
+.LR T ,
+.LR P ,
+.LR S ,
+and
+.L I
+are mutually exclusive.
+.PP
+Options are given in blank-separated clusters:
+.nr xx \w'\f2number'u+1m/1n
+.TP \n(xx
+.B a
+Give information about all users (ordinarily
+only one's own processes are displayed).
+.PD 0
+.TP
+.BI F file
+Display all processes having the
+.IR file 
+open;
+this option must be the last in a cluster.
+.TP
+.B f
+Display file descriptors (with prepended process id).
+.TP
+.B ff
+Display file descriptors (omitting process id).
+.TP
+.B h
+Print column headers.
+.TP
+.B l
+(long) Print the process size in kilobytes,
+resident set size, parent process id, and wait channel.
+.TP
+.B n
+Print unsorted
+(output is normally sorted by process id).
+.TP
+.B r
+Print processes which match the current real or effective user id
+(normally only processes matching the current effective user id
+are printed).
+.TP
+.BI t s
+Print processes whose control stream is
+.I s,
+where
+.I s
+is either
+.L .
+(for user's tty), or one of the forms printed by
+.I ps,
+e.g.
+.L 03
+for
+.FR /dev/tty03 ,
+.L conso
+for console,
+.L dk12
+for
+.FR /dev/dk/dk12 ,
+.L t?
+for processes with no tty, etc.
+This option must be the last in a cluster.
+.TP
+.B u
+Include a name of the
+effective userid and cpu share in percent; sort by usage.
+.TP
+.B x
+Include shell and
+.IR init (8)
+processes.
+(A stopped shell is reported without
+.BR x .)
+.TP
+.I num
+Print the designated process;
+must be the last option in a cluster.
+.PD
+.PP
+Multiple
+.BR F ", " t ", and"
+.I n
+options are allowed; the union of all selections is printed.
+.SH FILES
+.TF /usr/net/friends+1m
+.TP
+.F /proc
+process images
+.TP
+.F /dev/drum
+swap device
+.TP
+.F /dev/kmem
+kernel memory
+.TP
+.F /dev
+searched to find tty names
+.TP
+.F /dev/dk
+searched to find dk names
+.TP
+.F /etc/fstab
+searched to find local file system names
+.SH "SEE ALSO"
+.IR kill (1), 
+.IR nice (2), 
+.IR proc (4), 
+.IR load (1)
+.SH BUGS
+Things can change while
+.I ps
+is running.

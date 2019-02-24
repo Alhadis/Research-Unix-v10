@@ -1,0 +1,59 @@
+All the smoothers we shall describe can easily be {\em robustified} by replacing the averaging or least-squares operation by a more robust procedure.
+known as   {\em Hanning}, {em splitting} and {\em twicing}, in various combinations.
+called {\em regression smoothers}.
+Many of the smoothers that we discuss are {\em linear} (section~3.4.2), and this facilitates
+an approximate assessment of their {\em degrees of freedom} (section~3.5).
+Thus the weight in the fit at $x_0$ which is associated with the point $x_j$ is $S_{0j}$, and this sequence of weights is known as the {\em equivalent kernel} at $x_0$. 
+The {\em loess} smooth on the other hand has a strictly local neighbourhood yet the weights die down smoothly to zero.
+itself; hence the name {\sl smoother}.
+An important property of a smoother is its {\sl nonparametric} nature; that is,
+We call the estimate produced by a smoother a {\sl smooth}.
+setting, usually referred to as {\sl scatterplot
+The  simplest smoother occurs in the case of a {\sl categorical}
+While the reader might not normally think of this as {\sl smoothing}, this simple
+ {\sl local averaging}, that is,
+The averaging is done in {\sl neighbourhoods} around the target value.
+question of which {\sl brand} of smoother to use, because  smoothers
+adjustable {\sl smoothing parameter}.
+Thus there is a {\sl fundamental tradeoff between bias and variance},
+In a sense the regression line is an {\sl infinitely smooth} function, and
+are {\sl close} to $x_i$?
+This is called a {\sl symmetric nearest neighbourhood} and
+the {\sl running mean}
+of which side they are on; this is called a {\sl nearest neighbourhood}.
+also called a {\sl moving average}, and is popular for evenly-spaced time-series data.
+in practice it does not work very well.  It tends to be  so wiggly that it hardly deserves the name {\sl smoother.} 
+The {\sl running
+the use of a {\sl weighted} least-squares fit in each
+^{Cleveland's (1979)} implementation of a locally-weighted running-lines smoother, {\sl loess},   
+A kernel smoother uses an explicitly defined set of local weights, defined by the {\sl kernel}, to
+function only of its {\sl metric} distance from $x_0$, while the weights used by the nearest-neighbour    smoothers are typically a function of both {\sl metric} and {\sl rank} distance. 
+Their {\sl equivalent kernels} are one way to compare
+All the smoothers studied in this chapter  are {\sl linear} in $Y$, which means that the fit at a point $x_0$ can be written as $\gsmooth(x_0)=\sum_{j=1}^n S_{0j}y_j$, and the $S_{0j}$ depend on all the $x_i$ and on the smoothing parameter $\lambda$.
+We do this using the {\sl equivalent degrees of freedom}, which we describe in the next chapter. 
+Regression splines offer a compromise by representing the fit as a {\sl piecewise}
+of {\sl knots} or breakpoints, $\xi_1,\ldots,\xi_K$. 
+A variant of polynomial splines are the natural splines; although they are defined for  all piecewise polynomials of odd degree, we  discuss the natural {\sl cubic} splines. 
+A very simple approach (referred to as cardinal splines) requires a single parameter, the {\sl number} of interior knots. 
+In summary, regression splines are attractive because of their computational neatness, {\sl when the knots are given}.
+that minimizer is  a {\sl natural cubic spline} with knots at the unique values of $x_i$
+This would result in $n+2$ parameters, although the  constraints on each end bring it down to $n$.  We'll see however that the coefficients are estimated in a constrained way as well, and this can bring the {\sl effective} dimension down dramatically.
+Since the columns of $\bB$ are the evaluated  $B$-splines, in order from left to right and evaluated at the {\sl sorted} values of $X$, and the cubic $B$-splines have local support, $\bB$ is lower 4-banded. 
+Let $\bN$ be an $n\times n$ nonsingular {\sl natural-spline} basis matrix for representing the solution (Exercise~2.5). 
+to use {\sl local averaging}.
+One might say, then,  that a cubic  smoothing spline is  approximately a {\sl kernel} 
+Here we describe in more detail  the locally-weighted smoother of ^{Cleveland (1979)}, currently called {\sl loess} in the S statistical-computing language. 
+\item{(iii)}Weights $w_i$ are assigned to each point in $\NN(x_0)$, using the  {\sl tri-cube} weight function:
+as a percentage or {\sl span} of the data points, is the smoothing parameter. 
+Nearest neighbourhoods work satisfactorily with {\sl loess} at the endpoints, however,
+The first two smoothers require a definition of {\sl nearest neighbours}
+{\sl Nearest} is determined by a distance measure and for this 
+dimensions: the so-called {\sl thin-plate spline} is one such
+Another generalization is known as multivariate {\sl tensor product} splines. 
+In addition, the emphasis in the book is not on smoothers {\sl per~se}, but 
+\exercise {\sl Updating formula for running-line smooth.}
+\exercise {\sl Basis for natural splines.} Suppose $B$ is an $n\times (K+4)$ matrix containing the evaluations of the cubic  $B$-spline basis functions with $K$ interior knots evaluated at the $n$ values
+\exercise {\sl Derivation of smoothing splines; ^{Reinsch (1967)}.} Consider the following optimization problem: minimize 
+\exercise {\sl Semi-parametric regression; ^^{Green, P.J.}^^{Jennison, C. }^^{Seheult, A.} Green, Jennison, and Seheult (1985).} Suppose we have a set of $n$ observations of $p$ predictors arranged in
+Construct an  appropriate penalized residual sum of squares, and show that the minimizers must satisfy the following pair of {\sl estimating} equations:
+\exercise {\sl Efficient kernel smoothing; ^{Silverman (1982)}, ^{H\"ardle (1986)}}

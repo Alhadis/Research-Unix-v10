@@ -1,0 +1,12 @@
+T=/n/pipe/usr/vol2/index/tools
+J=`basename $1 .tex`
+O=x$J.tex
+FILE=$1
+echo file=$FILE
+tr A-Z a-z <$J.terms|sed 's/\([a-z][a-z/]*\)\.\([a-z][a-z]*\)/\1zz1\2/g'|sort|uniq|awk -f $T/dups.awk >$J.lt
+awk -f $T/doinp.awk $FILE|sed 's/\([a-z][a-z]*\)\.\([a-z][a-z]*\)/\1zz1\2/g' >foo
+diction -f $J.lt -o $J.hits foo >/dev/null
+sed -e 's/zz1/\./g' -e 's/	/<tab>/g' -e 's/{\\sl//' -e 's/{\\em//' -e 's/}//g' -e 's/^ //' $J.hits|tr $ ~ >$J.nh
+mv $J.nh $J.hits
+tdoinsert $J $FILE >$O
+rm $J.lt

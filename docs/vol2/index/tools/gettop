@@ -1,0 +1,34 @@
+M=/usr/vol2/index/tools
+j=`basename $1`
+if test -s ../$1/$j.ms
+then
+echo ms $j
+$M/topic ../$1/$j.ms|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+else
+if test -s ../$1/$j.tex
+then
+echo tex $j
+$M/topic ../$1/$j.tex|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+else
+if test -s ../$1/$j.m
+then
+echo monk $j
+$M/topic ../$1/$j.dm|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+else
+if test -s $1
+then
+echo found $1
+j=`basename $1 .ms`
+$M/topic $1|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+else
+if test ../$1/$2.m
+then
+j=$2
+$M/topic ../$1/$j.dm|sed 's/^.....//'|sort|awk -f $M/dups.awk >$j.top
+else
+echo no file $1
+fi
+fi
+fi
+fi
+fi

@@ -1,0 +1,261 @@
+.TH IP 4
+.CT 2 comm_mach
+.SH NAME
+ip, ip_ld \- DARPA internet protocol
+.SH SYNOPSIS
+.B #include <sys/inio.h>
+.br
+.B #include <sys/inet/in.h>
+.br
+.B #include <sys/inet/ip_var.h>
+.SH DESCRIPTION
+.PP
+The
+.I ip_ld
+line discipline and the
+.F /dev/ip*
+files together implement the DARPA IP datagram protocol.
+They are used by
+the programs described in
+.IR ipconfig (8)
+and
+.IR route (8).
+.PP
+Each Ethernet device,
+Datakit channel,
+or other stream
+that is to send and receive IP packets
+must be registered as an
+`IP interface'
+by pushing
+.I ip_ld
+and setting local and remote addresses
+with
+.I ioctl
+calls.
+Thereafter,
+data received from the network
+are assumed to be IP packets,
+and are intercepted by the line discipline.
+Packets destined for the local address of an active IP interface
+are routed for reading on one of the
+.I ip
+device files.
+Other packets are routed to the IP interface
+with a matching remote address
+and retransmitted.
+.PP
+Data written on
+.I ip
+devices
+are taken to be IP packets,
+are handed to the IP interface
+with a matching address,
+and are sent.
+Packets destined for unreachable places
+are quietly dropped.
+.PP
+A packet consists of a single stream record,
+followed by a delimiter:
+at most one packet is returned by a
+.I read
+call;
+an entire packet must be presented in a single
+.IR write .
+A packet includes the IP header.
+Numbers in the header are in host byte order.
+.PP
+Different
+.I ip
+devices handle different protocols atop IP.
+The minor device is the protocol number in the IP header;
+e.g. 6 for TCP or 17 for UDP.
+While an
+.I ip
+device is open,
+it may not be opened again.
+IP packets are often processed by pushing a line discipline
+such as
+.IR tcp_ld
+on an
+.I ip
+device,
+rather than by explicit
+.I read
+and
+.I write
+calls;
+see
+.IR tcp (4).
+.PP
+The following
+.IR ioctl (2)
+calls, defined in
+.BR <sys/inio.h> ,
+apply to an IP interface.
+.B IPIOLOCAL
+and either
+.B IPIOHOST
+or
+.B IPIONET
+must be called on each interface
+before packets will be routed correctly.
+Type
+.BR in_addr ,
+defined in
+.BR <sys/inet/in.h> ,
+is a 32-bit integer
+representing an IP address
+in host byte order.
+.nr Pw \w'\f5IPIORESOLVE 'u
+.TP \n(Pwu
+.B IPIOLOCAL
+The third argument points to an
+.BR in_addr :
+the local IP address for this interface.
+.TP
+.B IPIOHOST
+The third argument points to an
+.BR in_addr :
+the remote IP address of the single host
+reachable through this interface.
+.TP
+.B IPIONET
+The third argument
+points to an
+.BR in_addr :
+the remote IP address of the network of many hosts
+reachable through this interface.
+IP addresses are matched to the network address
+by applying an internal bit-mask:
+any IP address for which
+.BI ( address & mask )== net-address
+is part of the network.
+The default mask depends on
+the IP address class;
+see the IP protocol standard for details.
+.TP
+.B IPIOMASK
+The third argument points to an
+.B in_addr
+containing a new network mask for this interface.
+.TP
+.B IPIOMTU
+The third argument points to an integer number of bytes.
+IP packets larger than this size (1500 by default)
+will be split into smaller ones
+before being sent through this interface.
+.TP
+.B IPIOARP
+The network device for this interface
+is an Ethernet.
+Discard the Ethernet header from each incoming packet.
+When sending a packet,
+prefix an Ethernet header
+containing protocol type
+.B 0x8
+and a destination address
+obtained by looking up the IP destination address
+in a table.
+If the IP address is not in the table,
+discard the packet,
+and make an
+.B in_addr
+containing the offending address
+available for reading
+on this file descriptor
+(the one on which
+.I ip_ld
+was pushed).
+.TP
+.B IPIORESOLVE
+The third argument points to a structure:
+.EX
+struct {
+	in_addr inaddr;
+	unsigned char enaddr[6];
+};
+.EE
+Add an entry to the table consulted after
+.BR IPIOARP ,
+mapping IP address
+.B inaddr
+to Ethernet address
+.BR enaddr .
+.LP
+The following
+.I ioctl
+calls, define in
+.BR <sys/inio.h> ,
+apply to the entire IP subsystem;
+they may be used on any file with
+.I ip_ld
+pushed.
+.TP \n(Pwu
+.B IPIOROUTE
+The third argument points to a structure:
+.EX
+struct route {
+	in_addr dst;
+	in_addr gate;
+};
+.EE
+Arrange that henceforth,
+any IP packet destined for address
+.B dst
+will be routed as if destined for
+.BR gate .
+.TP
+.B IPIOGETIFS
+The third argument points to a union as follows.
+The structure is defined in
+.BR <sys/inet/ip_var.h> .
+.EX
+union {
+	int index;
+	struct ipif {
+		struct queue *queue;
+		int flags;
+		int mtu;
+		in_addr thishost;
+		in_addr that;
+		in_addr mask;
+		in_addr broadcast;
+		int ipackets, ierrors;
+		int opackets, oerrors;
+		int arp;
+		int dev;
+	} ipif;
+};
+.EE
+Before the call,
+.B index
+should contain an integer
+naming an entry in the system's table
+of active interfaces.
+Interfaces are numbered in a continuous sequence starting at 0.
+Out-of-range numbers return an error.
+After the call,
+.B ipif
+is filled in with various numbers
+about that interface.
+.SH FILES
+.B /dev/ip*
+.SH SEE ALSO
+.IR ioctl (2),
+.IR internet (3),
+.IR ipconfig (8),
+.IR route (8)
+.br
+DARPA standards RFC 791, RFC 1122
+.SH BUGS
+The ARP mechanism should be generalized
+to deal with networks other than Ethernet.
+There is only one ARP table for the entire system;
+there should be one for each interface.
+.br
+The structures used by
+.B IPIOROUTE
+and
+.B IPIORESOLVE
+should appear in a header file somewhere.

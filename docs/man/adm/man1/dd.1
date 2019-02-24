@@ -1,0 +1,242 @@
+.TH DD 1
+.CT 1 files comm_dev
+.SH NAME
+dd, dblbuf \- convert and copy a file
+.SH SYNOPSIS
+.B dd
+[
+.I option=value
+]
+...
+.PP
+.B dblbuf
+[
+.B -b
+.I blocksize
+]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Dd\^
+copies the specified input file
+to the specified output with
+possible conversions.
+The standard input and output are used by default.
+The input and output block size may be
+specified to take advantage of raw physical I/O.
+The options are
+.TP \w'\f5count=\ \fIn'u
+.BI if= file\^
+Set the input file (standard input by default).
+.TP
+.BI of= file\^
+Set the output file (standard output by default).
+.TP
+.BI ibs= n\^
+Set input block size to
+.I n\^
+bytes (default 512).
+.TP
+.BI obs= n\^
+Set output block size (default 512).
+.TP
+.BI bs= n\^
+Set both input and output block size,
+superseding
+.I ibs\^
+and
+.IR obs .
+If no conversion is specified,
+preserve the input block size instead of packing short blocks
+into the output buffer.
+This is particularly efficient since no in-core copy need be done.
+.TP
+.BI cbs= n\^
+Set conversion buffer size.
+.TP
+.BI skip= n\^
+Skip
+.I n
+input records before copying.
+.TP
+.BI iseek= n\^
+Seek
+.I n
+records forward on input file
+before copying.
+.TP
+.BI files= n\^
+Copy and concatenate
+.I n 
+input files (makes sense only
+where input is a magnetic tape or similar device).
+.TP
+.BI oseek= n\^
+Aeek
+.I n\^
+records from beginning of output file before copying.
+.TP
+.BI count= n\^
+Copy only
+.I n
+input records.
+.HP
+\f5conv=ascii\ \ \ \ \fRConvert \s-2EBCDIC\s0 to \s-2ASCII\s0.
+.PD0
+.RS "\w'\f5conv=\fP'u"
+.TP "\w'\f5unblock\ \ \fP'u"
+.B ebcdic
+Convert
+.SM ASCII
+to
+.SM EBCDIC.
+.TP
+.B ibm
+Like
+.B ebcdic
+but with a slightly different character map.
+.TP
+.B block
+Convert variable length
+.SM ASCII
+records to fixed length.
+.TP
+.B unblock
+Convert fixed length
+.SM ASCII
+records to variable length.
+.TP
+.B lcase
+Map alphabetics to lower case.
+.TP
+.B ucase
+Map alphabetics to upper case.
+.TP
+.B swab
+Swap every pair of bytes.
+.TP
+.B noerror
+Do not stop processing on an error.
+.TP
+.B sync
+Pad every input record to
+.I  ibs\^
+bytes.
+.RE
+.PD
+.PP
+.fi
+Where sizes are specified,
+a number of bytes is expected.
+A number may end with
+.LR k ,
+.LR b ,
+or
+.L w
+to specify multiplication by
+1024, 512, or 2 respectively;
+a pair of numbers may be separated by
+.L x
+to indicate a product.
+Multiple conversions may be specified in the style:
+.LR conv=ebcdic,ucase .
+.PP
+.L Cbs\^
+is used only if
+.LR ascii\^ ,
+.LR unblock\^ ,
+.LR ebcdic\^ ,
+.LR ibm\^ ,
+or
+.L block\^
+conversion is specified.
+In the first two cases,
+.I n
+characters are copied into the conversion buffer, any specified
+character mapping is done,
+trailing blanks are trimmed and new-line is added
+before sending the line to the output.
+In the latter three cases, characters are read into the
+conversion buffer and blanks are added to make up an
+output record of size
+.I n.
+If
+.L cbs\^
+is unspecified or zero, the
+.LR ascii\^ ,
+.LR ebcdic\^ ,
+and
+.L ibm\^
+options convert the character set without changing the block
+structure of the input file; the
+.L unblock\^
+and
+.L block\^
+options become a simple file copy.
+.PP
+.I Dblbuf
+copies the named
+.IR file ,
+or the standard input if no file
+is specified, to the standard output.
+Output is written in blocks matching the
+input up to the given blocksize, or 32768
+bytes if not specified.
+.PP
+.I Dblbuf
+uses multiple processes
+to run faster, which is particularly useful in dealing with
+a device such as a streaming tape drive.
+.SH EXAMPLES
+.TP
+.L
+dd  if=/dev/rmt0  of=x  ibs=800  cbs=80  conv=ascii,lcase
+Read an
+.SM EBCDIC
+tape blocked ten 80-byte
+.SM EBCDIC
+card images per record into an
+.SM ASCII
+file.
+Note the use of raw magtape to handle arbitrary record sizes.
+.TP
+.L
+tar cf /dev/stdout /usr | dblbuf >/dev/rmt1
+Copy the
+.F /usr
+directory to tape on
+.FR /dev/rmt1 .
+.SH "SEE ALSO"
+.IR cp (1), 
+.IR tar (1), 
+.IR cpio (1)
+.SH DIAGNOSTICS
+.I Dd
+reports the number of full + partial input and output
+blocks handled.
+.SH BUGS
+The
+.SM ASCII/EBCDIC
+conversion tables for
+.I dd
+were taken
+from the 256-character standard in
+.SM CACM
+Nov, 1968.
+The
+.L ibm\^
+conversion, while less blessed as a standard,
+corresponds better to certain
+.SM IBM
+print train conventions.
+There is no universal solution.
+.br
+Options
+.B if
+and
+.B of
+are verbose equivalents of
+.B <
+and
+.BR > .

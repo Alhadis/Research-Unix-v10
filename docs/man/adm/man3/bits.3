@@ -1,0 +1,198 @@
+.TH BITS 3+
+.CT 2 datatype
+.SH NAME
+bits \- variable length bit strings
+.SH SYNOPSIS
+.nf
+.B "#include <Bits.h>"
+.PP
+.B "typedef unsigned long Bits_chunk;"
+.PP
+.B "struct Bits {"
+.B "	Bits() { }"
+.B "	Bits(Bits_chunk, unsigned = 1);"
+.B "	Bits(const Bits&)"
+.B "	~Bits();
+.BR "	Bits& operator= (const Bits&);	// " also " = &= |= ^=
+.BR "	Bits& operator<<= (int);		// " also " >>=
+.B "	int operator[] (unsigned);"
+.B "	operator Bits_chunk();"
+.B "	unsigned size();"
+.B "	unsigned size(unsigned);"
+.B "	Bits& compl();"
+.B "	Bits& concat(const Bits&);"
+.B "	Bits& set(unsigned, unsigned long = 1);"
+.B "	Bits& reset(unsigned);"
+.B "	Bits& compl(unsigned);"
+.B "	unsigned count();"
+.B "	unsigned signif();"
+.B "	unsigned trim();"
+.B "};"
+.PP
+.B "Bits operator~ (const Bits&);
+.BR "Bits operator& (const Bits&, const Bits&); // " also " | ^
+.BR "Bits operator<< (const Bits&, int);		 // " also " >>
+.BR "int operator< (const Bits&, const Bits&);	 // " also " > <= >= == !=
+.fi
+.SH DESCRIPTION
+A
+.B Bits
+object contains a variable-length bit string.
+The bits of a
+.B Bits
+object
+.I b
+are numbered from 0 through
+.IB b .size()\fR\-1,\fP
+with the rightmost bit numbered 0.
+.PP
+.B Bits_chunk
+is the largest unsigned integral type
+acceptable for conversion to and from
+.BR Bits ,
+.BR "unsigned long" 
+in this implementation.
+.SS Constructors
+.TP \w'\fIa\fL.concat(\fIb\fL)\ 'u
+.B Bits()
+An empty bit string.
+.TP
+.BI Bits( n )
+The bits are copied from the binary representation of
+.I n
+with the ones-digit of
+.I n
+becoming bit 0.
+Leading zero-bits are removed,
+except that
+.B Bits(0)
+is a one-bit string.
+.TP
+.BI Bits( n , m )
+The same, but padded with leading zeros to size
+.I m
+if necessary.
+.SS Operators
+Bit strings have
+value semantics;
+assigning a
+.B Bits
+object or passing it to or returning it from a function
+creates a copy of its value.
+The meanings of operators are mostly predictable from C.
+.PP
+Under binary and comparison operators,
+the shorter operand
+is considered to be padded on the left with zeros to the
+length of the longer.
+If, after padding, two strings of different length compare equal,
+the shorter is deemed the smaller.
+.PP
+Negative shift amounts
+reverse the sense of shift operators.
+.PP
+Under conversion (or assignment) to a
+.BR Bits_chunk ,
+a
+.B Bits
+is interpreted as an unsigned integer.
+If it has a value small enough to fit,
+that value is assigned.
+Otherwise, a non-zero value is
+assigned.
+Thus a
+.B Bits
+is considered `true' in an
+.B if
+test if it contains any one-bit, `false' otherwise.
+.TP \w'\fIa\fL.concat(\fIb\fL)\ 'u
+.IB a [ s ]
+Bit number
+.I s
+of
+.IR a ;
+0 if
+.I s
+is out of bounds.
+.SS Other functions
+.TP \w'\fIa\fL.concat(\fIb\fL)\ 'u
+.IB a .size( s )
+Set the size of
+.I a
+to
+.I s
+by truncating or padding with zeros on the left as necessary.
+Return the new size.
+.TP
+.IB a .compl()
+Complement the bits of
+.I a.
+Return
+.I a.
+.TP
+.IB a .set( s )
+.PD 0
+.TP
+.IB a .reset( s )
+.TP
+.IB a .compl ( s )
+Set, reset, or complement bit
+.I s
+of
+.I a.
+No effect if
+.IB a .size()<= s.
+Return
+.I a.
+.PD
+.TP
+.IB a .set( s , n )
+If
+.I n
+is 0, reset bit
+.I s
+of
+.I a,
+otherwise set bit
+.I s.
+Equivalent to
+.BR "n? a.set(s): a.reset(s)" .
+.TP
+.IB a .count()
+Return the number of one-bits in
+.I a.
+.TP
+.IB a .signif()
+Return the number of significant bits in
+.BR a :
+one more than the
+number of the leftmost one-bit, or
+zero if there is no one-bit.
+.TP
+.IB a .trim()
+Discard high-order zero-bits.
+Equivalent to
+.BR a.size(a.signif()) .
+.TP
+.IB a .concat( b )
+Concatenate the value of
+.I b
+to the right (low-order) end of
+.I a.
+Return
+.I a.
+.TP
+.BI concat( a , b )
+Return a newly created concatenated object.
+.SH DIAGNOSTICS
+An operation that runs out of memory sets
+the length of the affected
+.B Bits
+to zero.
+.SH BUGS
+Too bad C++ can't support
+.BR "a[s] = n" .
+.br
+Things would be more consistent if
+.B Bits(0).size()
+were zero.

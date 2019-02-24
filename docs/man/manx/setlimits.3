@@ -1,0 +1,58 @@
+.TH SETLIMITS 3 SHARE
+.SH NAME
+setlimits \- set limits structure
+.SH SYNOPSIS
+.B #include <sys/types.h>
+.br
+.B #include <sys/lnode.h>
+.P
+.B setlimits(limits)
+.br
+.B struct lnode *limits;
+.SH DESCRIPTION
+This library routine sets an in\-core limits structure.
+If necessary, it also sets any group limits structures.
+.I Limits
+points to an
+.IR lnode .
+.PP
+The
+.I lnode
+pointed to by the argument
+.I limits
+is first examined to see if its scheduling group is
+.IR root .
+If not,
+the
+.I lnode
+for the group is obtained (via
+.IR getshares (3))
+and passed to a recursive call to 
+.IR setlimits .
+Finally the original 
+.I lnode
+is set with the 
+.SM L_SETLIM
+call to the 
+.IR limits (2)
+system call.
+.PP
+If the details for any group encountered cannot be found in the
+.I limits
+data-base, then the group is set to 
+.IR root .
+.PP
+Note that the 
+.I /etc/shares
+file may be left open by this routine.
+.SH DIAGNOSTICS
+As for the 
+.IR limits (2)
+system call.
+.P
+Any error cause a -1 to be returned.
+.SH "SEE ALSO"
+limits(2),
+closeshares(3),
+getshares(3),
+setupshares(3).

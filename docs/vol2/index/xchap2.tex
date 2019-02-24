@@ -1,0 +1,1332 @@
+\ifnum\pageno=1 \input macros.tex \pageno=200\immediate\openout\inx=chap2.index\makecontents\draft{\date (Rob)} \fi
+%\proofmodefalse
+\def\gsmooth{{s}}
+\def\vgsmooth{{\vec s}}
+\def\symNN{N^S}
+\def\NN{N}
+\def\pepscat{1.1}
+\def\pepadd{1.2}
+\def\X{\bf X}
+\input try.tex
+\chapter  2 {Smoothing}
+\index{smoothing}%
+\index{what is a smoother?}%
+\medskip
+\Section{What is a smoother?}
+A smoother is a tool for summarizing the dependence of a  response
+measurement $Y$ on one or more predictor measurements $X_1,\ldots,
+X_p$.
+\index{ smoother}%
+It produces an estimate of this dependence that is less variable than $Y$
+itself; hence the name {\sl smoother}.
+\index{ nonparametric nature}%
+\index{rigid form}%
+An important property of a smoother is its {\sl nonparametric} nature; that is,
+it doesn't assume a rigid
+form for the dependence.
+\index{parametric regression}%
+For this reason, a smoother is
+often referred to as a
+tool for nonparametric regression.
+\index{running mean}%
+\index{moving average}%
+The running mean (or moving average) is a simple example of a smoother, 
+while a regression line is not thought of as a smoother because of its rigid
+ parametric form. 
+\figname{\spansizes}
+\pageinsert
+\vbox to \vsize{
+\centerline{\psfig{file=figures/spansizes.p,width=4in}}
+\figurecaption{\spansizes}{Bias-variance tradeoff.  A sample of size 80
+was generated from $Y=sin(X)+\varepsilon$ with $X\sim N(0,1)$ and
+\index{smoothing}%
+\index{smoothing}%
+$\varepsilon\sim N(0,1/9)$. The top two panels represent one realization
+ of the model with a smooth included;  panel (a) uses a small neighbourhood 
+and thus
+does little smoothing, while (b) uses a large neighbourhood and does a
+lot of smoothing.  In terms of approximate degrees of freedom 
+(a concept introduced in Chapter~3), the smoother in (a) uses
+$\df =15$, whereas for (b) $\df=4$.  
+The $\sin$ function is included in both panels.  
+The lower two panels show the bias-variance behaviour of this smoother.
+\index{fitted smooth}%
+ The light shaded regions show
+twice the pointwise standard errors of the fitted smooth values, and
+thus reflect the variance of the smooths under repeated sampling of
+80 pairs from the model.  The darker shaded region shows the bias,
+which is the difference between the generating curve and the average
+value of the smooth curves under repeated sampling.  In panel (c),
+the bias is virtually nonexistent, while the standard-error bands are
+quite wide.  In  panel (d), there is a considerable cost in bias
+\index{ smooth}%
+for a moderate decrease in variance.}*
+\vfill
+}
+\endinsert
+\par\figname{\allsmooths}
+We call the estimate produced by a smoother a {\sl smooth}.
+\index{smoothing}%
+\index{single predictor}%
+\index{scatterplot smoothing}%
+The most important example of smoothing involves a single predictor
+setting, usually referred to as {\sl scatterplot
+smoothing}.
+
+Smoothers have two main uses.
+The first use is for description.
+\index{scatterplot smoother}%
+For example, a scatterplot smoother can be used to enhance the 
+ visual appearance of the scatterplot of $Y$ vs $X$,
+to help our eyes  pick out the trend in the plot.
+Figure~\pepscat\ in Chapter~1 shows a plot
+of \name{log(C-peptide)} versus \name{age} for the diabetes data.
+\index{scatterplot smoother}%
+It seems that \name{log(C-peptide)} has a strong dependence on \name{age} and a scatterplot smoother
+will be helpful in describing this relationship.
+\index{scatterplot smooth}%
+Figure~\allsmooths\ shows a number of scatterplot smooths of these data; each  described in turn in this chapter.
+\index{building block}%
+The second use of a smoother is as an estimator of the dependence of $\ev(Y)$ on
+the predictors, and thus as a building block for the estimation of additive
+models, discussed in the remainder of the book.
+ 
+ 
+In this chapter we give a brief overview of some useful smoothers.
+\index{scatterplot smoother}%
+Most of our discussion concerns scatterplot smoothers; at the end of the 
+chapter we give a brief description of multiple-predictor smoothers.
+\index{ categorical}%
+ 
+The  simplest smoother occurs in the case of a {\sl categorical}
+predictor,
+for example, \name{sex} (male, female) or \name{colour} (red, blue, green etc.)
+To smooth $Y$ we can simply average the values of $Y$ in each category.
+\index{scatterplot smooth}%
+This  satisfies our requirements for a scatterplot smooth: it  captures the
+ trend of $Y$ on $X$ and is  smoother than the $Y$-values themselves.
+\index{ smoothing}%
+\index{smoothing}%
+While the reader might not normally think of this as {\sl smoothing}, this simple
+averaging process is the conceptual basis for 
+smoothing in the most general setting, that of an ordered (noncategorical)
+predictor.
+The problem here is often the lack of replicates at each 
+predictor value.
+\index{ local averaging}%
+\index{target value}%
+Most smoothers attempt to mimic category averaging through
+ {\sl local averaging}, that is,
+averaging the
+$Y$-values of observations having predictor  values close to a target
+value.
+\index{ neighbourhoods around}%
+\index{target value}%
+The averaging is done in {\sl neighbourhoods} around the target value.
+\index{scatterplot smoothing}%
+There are  two main  decisions to be made in scatterplot
+smoothing:\smallskip
+{\parindent 20pt
+\item{(i)}how to average the
+response values in each  neighbourhood, and
+\item{(ii)} how big to take the neighbourhoods.
+
+}\smallskip
+\pageinsert
+\vbox to \vsize{
+\centerline{\psfig{file=figures/allsmooths.p,width=\hsize}}
+\figurecaption{\allsmooths}{A variety of smooths applied to the scatterplot of \name{log(C-peptide)}
+\index{smoothing parameter}%
+versus \name{age}.  In each case the  smoothing parameter was chosen so
+that degrees of freedom in the fit is about five. The linear fit of
+course has only two degrees of freedom.  The parametric bin and quartic
+\index{three interior knots}%
+\index{smoothing parameter}%
+polynomial fits have five parameters. The (cubic) regression spline has one interior knot at the median and hence five parameters. The natural cubic regression  spline has three interior knots and two endpoint constraints, which also results in five parameters.  For the other smooths, the smoothing parameter $\lambda$ was chosen such that 
+\index{ brand}%
+$\df\approx 5$, where \df\ is a measure of the approximate degrees of freedom (a concept introduced in Chapter~3).}*
+\vfill
+}
+\endinsert
+\par
+The question of how to average within a neighbourhood is really the
+question of which {\sl brand} of smoother to use, because  smoothers
+differ mainly  in their method  of averaging.
+In this chapter  we describe a number of different smoothers and
+compare them informally.
+Formal recommendations  on how to choose among smoothers are
+difficult to make because 
+ few systematic  comparisons  have been made so far in the
+literature.
+
+The question of how big to make the neighbourhoods is discussed in
+the next chapter.
+The issue underlying this question is very important, however, so we briefly
+discuss it here.
+\index{ smoothing parameter}%
+The size of the neighbourhood is typically expressed in terms of an
+adjustable {\sl smoothing parameter}.
+Intuitively, large neighbourhoods will produce an estimate with low
+variance but potentially high bias, and conversely for small
+neighbourhoods (Fig.~\spansizes).
+\index{ fundamental tradeoff between bias and variance}%
+\index{smoothing parameter}%
+Thus there is a {\sl fundamental tradeoff between bias and variance},
+governed by the smoothing parameter.
+This issue is exactly analogous to the question of how many predictors to put
+in a regression equation.
+\index{smoothing parameter}%
+In the 
+next
+ chapter  we discuss this important issue and the practical
+question of how to choose the smoothing parameter, based on the data,
+to  trade bias against variance in an optimal way.
+\index{fitted smooth}%
+ We also discuss some other important topics, such as
+linear and nonlinear smoothers, the
+incorporation of  observation weights into --- and inference
+for --- the
+fitted smooth.
+
+\index{ robustified}%
+All the smoothers we shall describe can easily be {\em robustified} by replacing the averaging or least-squares operation by a more robust procedure.
+Details can be found in Chapters~3 and  9.
+
+\index{bibliographic notes}%
+ 
+Bibliographic notes  on smoothers are given at  the end
+of the next chapter.
+
+\index{scatterplot smoothing: definition}%
+\index{scatterplot smoothing}%
+\Sectionskip
+\Section{Scatterplot smoothing: definition}
+\Mark{SCATTERPLOT SMOOTHING}
+Suppose we have response measurements $\vec y=(y_1,\ldots,y_n)^T$ at design
+points $\vec x=(x_1,\ldots,
+ x_n)^T$.  We assume that each of $\vec y$ and $\vec x$ represent  
+measurements of variables $Y$ and $X$. 
+In most cases it is useful to think of
+$Y$, and sometimes $X$, as having been generated by some random mechanism, but this is not
+necessary for the discussion here.
+In particular we don't need to assume
+ that the pairs $(x_i,y_i)$ are  a random sample from some joint distribution.
+ For 
+example, the $X$-values might be preset dose levels of a drug. 
+
+
+
+Since  $Y$ and $X$ are noncategorical we don't expect to find
+many replicates at any given value of $X$. 
+For convenience we assume 
+that the data are sorted by $X$ 
+and for the present discussion  that there are no tied $X$-values, so that
+$x_1 < \cdots < x_n$.
+A trivial remedy when there are ties is to use weighted smoothers, which we 
+\index{scatterplot smooth}%
+discuss in  Chapter~3. 
+
+ 
+We  denote a scatterplot smooth of $\vec y$ against $\vec x$  by $\gsmooth=\smooth(\vec y\given \vec x)$, where $\gsmooth=\gsmooth(x)$ is a function of $X$.
+Usually the recipe that defines $\gsmooth(x_0)$, which is the function $\smooth(\vec y\given \vec x)$ evaluated at $x_0$, will be defined for all $x_0$, but at other times is defined only at $x_1,\ldots,x_n$, the sample values of $X$.
+In this latter case some kind of interpolation is necessary in order to 
+obtain estimates at other $X$-values.
+
+\index{parametric regression}%
+\Sectionskip
+\Section{Parametric Regression}
+A regression line, estimated for example by least-squares,
+ provides an estimate of the dependence of $\ev(Y)$ on $X$.
+\index{rigid form}%
+It does so, however,
+ by assuming a rigid form for this dependence,
+and thus it
+ may or may not be appropriate for a given set of data.
+If the dependence is linear or close to it, the regression line provides a
+concise and useful summary.
+For the data in Fig.~\allsmooths, however,   the regression line is clearly inappropriate and  creates a misleading impression.
+
+\index{ infinitely smooth}%
+\index{scatterplot smoother}%
+In a sense the regression line is an {\sl infinitely smooth} function, and
+not surprisingly many of the scatterplot smoothers that we 
+discuss approach  the linear regression line as one extreme. 
+The other extreme
+is usually some function that interpolates the data.
+
+
+Other nonlocal parametric fits, such as polynomial regression estimates, share
+the same pros and cons as the regression line.
+They are useful
+if they are appropriate for the data at hand but potentially misleading otherwise.
+\index{parametric fitting}%
+\index{scatterplot smoothing}%
+Although parametric fitting certainly isn't the solution to the scatterplot
+smoothing problem,
+we will still make use of it for
+ comparative purposes and for  possible summaries of 
+\index{regression splines}%
+\index{parametric fitting}%
+smooths estimated by other methods. 
+Regression splines are a less rigid 
+\index{bin smoother}%
+\index{bin smoother}%
+form of parametric fitting which are closer in spirit to a smoother; we discuss them later in this chapter. 
+\Sectionskip
+\Section{Bin smoothers}
+A bin smoother  mimics a categorical smoother by 
+partitioning the predictor values into a number of disjoint and exhaustive regions,
+then averaging the response in each region.
+\index{data points}%
+Formally, we choose cutpoints 
+$c_0 < \cdots < c_K$
+where $c_0=-\infinity$ and $c_K=\infinity$,
+ and define 
+$$R_i=\{j;c_i\leq x_j < c_{i+1}\};\qquad i=1,\ldots, K$$
+the indices of
+the data points in each region.
+Then $\gsmooth=\smooth(\vec y\given \vec x)$ is given by  $\gsmooth(x_0)=\ave_{j\in R_i} (y_j)$ if
+$x_0 \in R_i$.
+Typically one chooses  five regions, for example, and picks the cutoff points 
+so that 
+there is approximately an equal number of points in each region.
+The bin smooth shown in Fig.~\allsmooths\ was constructed in this way and illustrates
+the limitation of the method.
+The estimate is not very smooth because it jumps at each cut point.
+Unless we have a prior reason to believe such  discontinuities exist, this 
+estimate is not very appealing.
+One way to make it more smooth is through the use of 
+overlapping  regions, as we'll see in the next section.
+\index{running-mean  and running-lines smoothers}%
+\index{target value}%
+\Sectionskip
+\Section{Running-mean  and running-lines smoothers}
+Assume that our target value  $x_0$ equals one of the $x_j$s, say $x_i$.  If we had replicates at $x_i$,
+we could simply  use the average of  the $Y$-values at $x_i$ as our estimate
+$\gsmooth(x_i)$. 
+Now
+\index{ close}%
+we are assuming that we don't have replicates, so instead we can average $Y$-values corresponding to $X$-values close to $x_i$. 
+How do we pick points that
+are {\sl close} to $x_i$?
+ A simple way is to choose $x_i$ itself, as well as the $k$ points  to the left  and $k$ points to the
+right of $x_i$ that are closest in $X$-value to $x_i$.
+\index{ symmetric nearest neighbourhood}%
+This is called a {\sl symmetric nearest neighbourhood} and
+the indices of these points 
+ will be denoted by
+\index{ running mean}%
+$\symNN(x_i)$.   Then we could define
+the {\sl running mean}
+$$\gsmooth(x_i)=\ave_{j\in 
+\symNN(x_i)} (y_j).\eqn{\runm}$$
+  If it is not possible to take $k$ points to the left or right of
+$x_i$, we take as many as we can.
+\index{symmetric nearest neighbourhood}%
+A formal definition of a symmetric nearest neighbourhood is
+$$\symNN(x_i)= \{ \max(i-k  ,1),\ldots,i-1,i,i+1,\ldots,\min(i+ k
+,n)\}.\eqn{\neigh}$$
+
+\index{symmetric nearest neighbours}%
+\index{target point}%
+It is not obvious how to define the  symmetric nearest neighbours at target points $x_0$ other  than the $x_i$ in the sample. 
+We could simply interpolate linearly 
+between the fit of the two values of $X$ in the sample adjacent to $x_0$.
+\index{ nearest neighbourhood}%
+Alternatively we could ignore symmetry and take the $r$ closest points to $x_0$, regardless
+of which side they are on; this is called a {\sl nearest neighbourhood}.
+This handles arbitrary $x_0$ in a simple and clean way.
+The pros and cons of these two  types of neighbourhoods are discussed later.
+\figname{\rlsmooth}
+\midinsert
+\vbox{
+\centerline{\psfig{file=figures/rlsmooth.p,width=3in}}
+\index{symmetric nearest neighbourhood}%
+\vskip .05in
+\index{target point}%
+\index{target point}%
+\index{running mean}%
+\index{running mean}%
+\figurecaption{\rlsmooth}{The running-line fit computes linear fits locally in the symmetric nearest neighbourhoods. The fitted value is the point on the line at the target point of the neighbourhood. Typically in the interior the target point is close to the neighbourhood mean, so the running-line behaves like a running mean. On the boundaries the neighbourhoods become asymmetric and the slope corrects the first-order bias of the running mean.
+\index{ moving average}%
+}*
+}
+\endinsert
+\par
+This simple smoother
+is
+also called a {\sl moving average}, and is popular for evenly-spaced time-series data.
+Although it is valuable for theoretical calculation because of its simplicity,
+in practice it does not work very well.  It tends to be  so wiggly that it hardly deserves the name {\sl smoother.} 
+Apart from looking unpleasant, it tends to   flatten
+out  trends near the endpoints and hence can be severely biased.   
+\index{running mean}%
+For example,  Fig.~\allsmooths\  shows a running mean smooth with $2k+1=11$ 
+or 25\% of the 43 observations.
+
+
+\index{running mean}%
+\index{least-squares line}%
+A simple generalization of the running mean alleviates the bias problem: we compute
+\index{data points}%
+a least-squares line instead of a mean in each neighbourhood. 
+The {\sl running
+lines  smoother} is defined by
+$$\gsmooth(x_0)=\hat\alpha(x_0) +\hat
+\beta(x_0) x_0\eqn{\runl}$$
+ where $\hat\alpha(x_0)$ and $ \hat \beta(x_0) $ are the least-squares
+estimates for the data points in $\symNN(x_0)$. 
+Figure~\rlsmooth\ shows the local line computed in two different
+neighbourhoods, one in the interior, the other near the boundary.  As we
+would expect, the fit in the interior is dominated largely by the mean and the slope
+plays a small role, whereas near the boundary the slope is important for
+picking up the trend in the asymmetric neighbourhood.
+\index{running-lines smooth}%
+A running-lines smooth with a neighbourhood size of $2k+1=13$ or 30\% for the diabetes data, is shown in Fig.~\allsmooths.
+It seems to capture the trend in the data quite nicely
+but is still somewhat jagged.
+
+
+\index{running-lines smooth}%
+The parameter  $k$ controls the appearance of the running-lines smooth.
+Large values of $k$  tend to produce smoother curves while small values 
+ tend to produce more jagged curves.
+It is more convenient to  think not in terms of $k$ but instead in terms of
+$w=(2k+1)/n$, the proportion of points in each neighbourhood, called the {\it
+span}.
+We  denote by $[\symNN(x_i)]$ the number of points in $\symNN(x_i)$.
+\index{running-lines smooth}%
+\index{least-squares line}%
+ In the extreme case, if $w= 2$, so that each neighbourhood contains all of
+the data (note that $w=1$ won't work because of endpoint effects), the running-lines smooth is the least-squares line.
+On the other hand, if $w=1/n$, each neighbourhood consists only of one data point
+and hence the smoother interpolates the data.
+In the next chapter  we  discuss the quantitative effects of varying the span and a
+data-based criterion for choosing it.
+
+
+\index{running-lines smoother}%
+The running-lines smoother can be computed in O(n) operations (Exercise~2.2),
+and there is a simple, effective method for span selection.
+\index{building block}%
+These can be important advantages when it is used as a building block in the
+iterative  algorithms discussed  later in this book.
+\index{smoothing}%
+On the other hand, it tends to produce curves that are quite jagged so that
+\index{running-lines smooth}%
+\index{weighted least-squares}%
+a second stage of smoothing might  be necessary. 
+
+
+
+One way to improve the appearance of the running-lines smooth  is through
+the use of a {\sl weighted} least-squares fit in each
+\index{running-lines smoother}%
+neighbourhood. 
+The running-lines smoother can produce jagged output because points in 
+a given neighbourhood are given equal (nonzero) weight while points
+outside of the neighbourhood are given zero weight.
+Thus as the neighbourhoods move from left to right, there are discrete
+changes in the weight given to the leftmost and rightmost points.
+We can alleviate this problem by
+giving the highest weight to $x_i$, and weights smoothly decreasing as
+we move further away from $x_i$.
+\index{locally-weighted running-lines}%
+\index{loess}%
+^{Cleveland's (1979)} implementation of a locally-weighted running-lines smoother, {\sl loess},   
+is popular and (essentially) works in this way.
+A full description of  locally-weighted running-line smoothers is given later in this Chapter; Fig.~\allsmooths\ shows one applied to the diabetes data.
+\index{unweighted running-lines smoother}%
+It is  smoother than the unweighted running-lines smoother.
+\index{running-lines smoother}%
+The cost of using smooth weights is a computational one, as the
+shortcuts  available for  the unweighted  running-lines
+\index{running-lines smoother}%
+smoother (Exercise~2.2) do not work for locally
+weighted running-lines smoothers.
+\index{unweighted running-lines smoother}%
+\index{running-lines smoother}%
+Henceforth we will refer to the unweighted running-lines smoother
+ simply as the running-lines smoother.
+\index{kernel smoother}%
+\index{kernel smoother}%
+\index{kernel}%
+\index{target value}%
+\Sectionskip
+\Section{Kernel smoothers}
+A kernel smoother uses an explicitly defined set of local weights, defined by the {\sl kernel}, to
+produce the estimate at each target value.
+\index{kernel smoother}%
+\index{target point}%
+Usually a kernel smoother uses weights that decrease in a smooth fashion
+as one moves away from the target point.
+\index{kernel smoother}%
+\figname{\kernelsm}
+\topinsert
+\vbox{
+\centerline{\psfig{file=figures/kernelsm.p,width=3in}}
+\medskip
+\figurecaption{\kernelsm}{The Gaussian kernel smoother uses the Gaussian density function to assign weights to neighbouring points. 
+The points within the shaded  neighbourhood are those that receive weights that are effectively nonzero for the computation of $\ev(Y\given x_0)$.}*
+}
+\endinsert
+\par
+The weight given to the $j$th point in producing the estimate at $x_0$
+is defined by
+$$S_{0j}={c_0\over \lambda}
+d\left(\big\vert {{x_0-x_j}\over{\lambda}} \big\vert\right)\eqn{\kernel}$$
+where $d(t)$ is an even function defined for $\abs{t}>0$.
+The parameter $\lambda$ is the window width,
+and the constant 
+$c_0$ is usually  chosen so that the weights  sum to unity, although
+there are slight variations on this.
+\index{standard gaussian density}%
+A  natural candidate for $d$ is the standard Gaussian density: 
+this gives the so-called  { Gaussian kernel} smoother. 
+Other popular kernels, with some theoretical justification (^{Eubank, 1988}),  are the Epanechnikov kernel
+$$d(t)=\cases{ {3\over 4} (1-t^2),&  for $\abs{t}\leq 1$;\cr 0& otherwise\cr}$$
+which minimizes (asymptotic) mean squared error, and the minimum
+variance kernel 
+$$d(t)=\cases{ {3\over 8} (3-5t^2),& for $\abs{t}\leq 1$;\cr 0& otherwise\cr}$$
+which minimizes the asymptotic variance of the estimate.
+\index{ metric distance}%
+\index{metric}%
+\index{rank distance}%
+  Note that the weight given to an observation is a
+\index{kernel smoother}%
+function only of its {\sl metric} distance from $x_0$, while the weights used by the nearest-neighbour    smoothers are typically a function of both {\sl metric} and {\sl rank} distance. 
+
+Kernel smoothers also exhibit biased endpoint behaviour. 
+Special kernels have been developed  to overcome this bias; a simple approach is to use  kernel weights in a locally-weighted straight-line fit.
+
+\index{kernel smooth}%
+A Gaussian-kernel smooth for the diabetes data is shown in 
+\index{fitted smooth}%
+Fig.~\allsmooths, where once again
+the parameter $\lambda$ was chosen so that the approximate  degrees of freedom  of the
+fitted smooth was five, the same as that of the other smooths in
+Fig.~\allsmooths.
+
+\index{computational issues}%
+\index{kernel smooth}%
+\index{weight function}%
+\sectionskip
+\section{Computational issues}
+One can visualize the action of the kernel smooth as sliding the weight function along the $x$-axis in short steps, each time computing the weighted mean of $y$. 
+The smooth is thus similar to a convolution  between the kernel and an empirical step function defined on the data. 
+This is indeed the case, although the practical details obscure the resemblance. 
+For example, the kernel is usually truncated at the ends of the data, unless the data itself is periodic.
+\index{kernel smooth}%
+Typically the kernel smooth is computed as 
+$$\gsmooth(x_0)={\sum_{i=1}^n 
+d({x_0-x_i \over \lambda})y_i\over \sum_{i=1}^n d({x_0-x_i \over \lambda})},
+\eqn{\NadWat}$$
+and so both the numerator and denominator are convolutions.
+If the $x$-values are evenly spaced (and preferably a power of two in number), great savings can be made by using the FFT (fast Fourier transform) in performing the calculations.
+\index{spaced data}%
+\index{fine grid}%
+Although evenly spaced data are rarely the case in general regression contexts,   reasonable approximations can often reduce the data to a fine grid, where the FFT can be put to work. 
+The details are laid out in Exercise~2.9.
+
+\index{running medians and enhancements}%
+\index{smoothing}%
+\index{running mean}%
+\Sectionskip\Section{Running medians and enhancements}
+A somewhat different approach to smoothing is based  on   
+improvements to the simple
+running mean smoother.
+\index{running mean}%
+First,
+the running mean is replaced by a running median to make the  smoother
+   resistant to outliers in the data.
+\index{ hanning}%
+\index{twicing}%
+Then the appearance of the estimate is enhanced by applying compound operations
+known as   {\em Hanning}, {em splitting} and {\em twicing}, in various combinations.
+\index{spaced data}%
+\index{time series}%
+\index{smoothing}%
+We will not discuss these smoothers here because they are mainly
+useful for evenly spaced data (sequences), especially time series, and they don't
+typically provide an   adequate amount of  smoothing 
+for our purposes.
+\index{interested reader}%
+\index{bibliographic notes}%
+The interested reader can pursue the references given in the Bibliographic notes.
+\index{spaced data}%
+\index{regression smoothers}%
+We focus on smoothers for unevenly spaced data (scatterplots), sometimes
+called {\em regression smoothers}.
+In our view,
+another disadvantage of the enhanced running median smoothers is that they are
+highly nonlinear functions of the response, and thus it is difficult to assess
+the amount of fitting that they do.
+This is an important consideration for the inferential stage of a data analysis.
+\index{ linear}%
+\index{ degrees of freedom}%
+Many of the smoothers that we discuss are {\em linear} (section~3.4.2), and this facilitates
+an approximate assessment of their {\em degrees of freedom} (section~3.5).
+
+\index{time series}%
+We return to the time series setting for our discussion of   the Fourier analysis
+of smoothers in section~3.7, and a seasonal decomposition procedure in
+section~8.5.
+\index{equivalent kernel}%
+\figname{\hatplot}
+\pageinsert
+\vbox to \vsize{
+\centerline{\psfig{file=figures/hatplot.p,width=\hsize}}
+\medskip
+\index{target point}%
+\index{equivalent kernel}%
+\figurecaption{\hatplot}{The equivalent kernels for a variety of smoothers, based on the data used in Fig.~\allsmooths. The arrows indicate the target point in each case. The points are plotted at the pairs $\{x_j,\,S_{0j}\}$   }*
+\vfill
+}
+\endinsert
+\Sectionskip
+\Section{Equivalent kernels}
+The smoothers described in this chapter are defined in quite different ways, with
+\index{ equivalent kernels}%
+more different ways to come. 
+Their {\sl equivalent kernels} are one way to compare
+\index{ linear}%
+\index{smoothing parameter}%
+them on common ground. 
+All the smoothers studied in this chapter  are {\sl linear} in $Y$, which means that the fit at a point $x_0$ can be written as $\gsmooth(x_0)=\sum_{j=1}^n S_{0j}y_j$, and the $S_{0j}$ depend on all the $x_i$ and on the smoothing parameter $\lambda$.
+\index{ equivalent kernel}%
+Thus the weight in the fit at $x_0$ which is associated with the point $x_j$ is $S_{0j}$, and this sequence of weights is known as the {\em equivalent kernel} at $x_0$. 
+A plot of $S_{0j}$ against $x_j$  shows which observations have an influence on the fit at $x_0$. 
+\index{running mean}%
+Looking at Fig.~\hatplot, we see that the running mean smoother has weights
+either zero or $1/m$, where $m$ is the number of observations in the neighbourhood.
+We have used the same diabetes data as was used in Fig.~\allsmooths.
+
+\index{equivalent kernel}%
+For each smoother we have computed the equivalent kernel centered at two points: one near the boundary and one at the centre. 
+The weights at the boundary are larger and warn us that end effects may be a problem (as indeed they are). 
+
+\index{running mean}%
+For the  running-line smoother  the weights change linearly within the window (Exercise~2.3). 
+For both the running mean and line smoothers the weights drop off
+abruptly to zero outside the neighbourhood, and account for their jagged appearance.
+\index{ loess smooth}%
+The {\em loess} smooth on the other hand has a strictly local neighbourhood yet the weights die down smoothly to zero.
+
+\index{smoothing}%
+\index{smoothing parameter}%
+\index{equivalent kernel}%
+\index{ equivalent degrees of freedom}%
+We need to calibrate the smoothers so that they are doing approximately the same amount of smoothing, since the value of the smoothing parameter will clearly widen or narrow the equivalent kernels. 
+We do this using the {\sl equivalent degrees of freedom}, which we describe in the next chapter. 
+\index{smoothing}%
+\index{equivalent kernel}%
+All the smoothers in Fig.~\hatplot\ have been calibrated to do about five degrees of freedom worth of smoothing. 
+
+In the top panel we see the equivalent kernel for the  quartic polynomial fit. 
+As we might expect it spreads its influence everywhere. 
+
+We will return to Fig.~\hatplot\ as we encounter the remaining smoothers.
+
+\index{regression splines}%
+\Sectionskip
+\Section {Regression splines}
+Polynomial regression has limited appeal due to the global nature of the 
+fit, while in contrast the smoothers we have seen so far have an explicit local nature.
+\index{regression splines}%
+\index{piecewise}%
+Regression splines offer a compromise by representing the fit as a {\sl piecewise}
+\index{ knots}%
+polynomial. 
+The regions that define the pieces are separated by a sequence
+\index{piecewise polynomials}%
+of {\sl knots} or breakpoints, $\xi_1,\ldots,\xi_K$. 
+\index{bin smoother}%
+\index{piecewise cubic polynomials}%
+In addition, it is customary to enforce the piecewise polynomials to join smoothly at these knots. 
+Although many different configurations are possible (the bin smoother was one), a popular choice  
+consists of piecewise cubic polynomials constrained to be continuous and have continuous first and second derivatives at the knots. 
+Apparently our eyes are skilled at picking up second order and lower discontinuities, but not higher.
+\figname{\BS}
+\midinsert
+\vbox{
+\centerline{\psfig{file=figures/BS.p,width=\hsize}}
+\figurecaption{\BS}{Piecewise cubic fits to some simulated data. The order of continuity increases from 0 --- discontinuous as in figure (a), to 3 --- continuous second derivatives as in figure (d).
+The fitted values are connected within each region, leaving gaps at the knots to make the orders of continuity more visible.
+The vertical lines indicate the location of the two knots. 
+}*
+}
+\endinsert
+\par
+\index{interior knots}%
+To illustrate this point, Fig.~\BS\ shows four piecewise cubic fits to some simulated data, with 2
+interior knots and different orders of continuity. 
+Apart from being smoother, the fit in panel (d) required fewer parameters (6 altogether) than  the others.
+
+By allowing more knots, the family of curves becomes more flexible.
+\index{multiple regression}%
+\index{basis functions}%
+\index{piecewise cubic polynomials}%
+For any given set of knots, the smooth is computed by  multiple regression on an appropriate set of basis vectors. 
+These vectors are the basis functions representing the particular family of piecewise cubic polynomials evaluated at the observed values of the predictor $X$.
+This approach is attractive because 
+of its computational and statistical simplicity;  for example  standard
+parametric inferential  methods  can be used to test the importance 
+of any of the parameters.
+
+\index{natural splines}%
+\index{piecewise polynomials}%
+\index{cubic splines}%
+\index{boundary knots}%
+A variant of polynomial splines are the natural splines; although they are defined for  all piecewise polynomials of odd degree, we  discuss the natural {\sl cubic} splines. 
+These are cubic splines with the additional constraint that the function is linear beyond the boundary knots. 
+To enforce this condition we have to impose the two constraints in each of the boundary  regions: $f'''=f''=0$, which reduces the dimension of the space from $K+4$ to $K$ if there are $K$ knots. 
+\index{interior knots}%
+\index{boundary knots}%
+In practice it is common to supply an additional knot at each extreme of the data, and impose the linearity beyond them. 
+\index{natural splines}%
+\index{regression splines}%
+Then with $K$ interior knots (and two boundary knots), the dimension of the space of fits is $K+2$. 
+Natural splines have less flexibility at the boundaries, but this tends to be a plus since the fitted values of regular regression splines have high variance near the boundary.
+\index{interior knots}%
+\index{computational aspects}%
+Furthermore, for the same number of parameters, we get two more interior knots.  
+
+\sectionskip
+\section{Computational aspects} 
+The main difficulty when working with regression  splines is 
+\index{ number}%
+\index{interior knots}%
+ selecting the number and position of the knots. 
+A very simple approach (referred to as cardinal splines) requires a single parameter, the {\sl number} of interior knots. 
+The positions are then chosen uniformly over the range of the data. 
+\index{three interior knots}%
+A slightly more adaptive version will place the knots at appropriate quantiles of the predictor variable; e.g., three interior knots would be placed at the three quartiles.
+More adventurous schemes use data driven criteria to select the number and positions of the knots. 
+The main challenge is to come up with a sensible procedure, while avoiding a combinatorial nightmare. 
+We describe some specific proposals in Chapter~9.
+
+\index{basis functions}%
+ 
+\index{interior knots}%
+\index{boundary knots}%
+Another computational aspect concerns the choice of basis functions for representing the splines (a vector space) for a given set of knots. 
+\index{basis functions}%
+Suppose these interior knots are denoted by $\xi_1<\cdots<\xi_K$, and for notational simplicity we augment the set with two boundary knots $\xi_0$ and $\xi_{K+1}$. 
+A simple choice of basis functions for piecewise-cubic splines, known as the truncated power series basis,  derives from the parametric expression for the smooth
+$$\gsmooth(x)= \beta_0+\beta_1x+\beta_2x^2+\beta_3x^3+\sum_{j=1}^K\theta_j(x-\xi_j)_+^3.\eqn{\tpseries}$$ where the $a_+$ denotes the positive part of $a$. 
+\index{third derivative}%
+Evidently (Exercise~2.4) \tpseries\ has the required properties:\smallskip
+{\parindent 20pt
+\item{(i)} $\gsmooth$ is cubic polynomial in any subinterval $[\xi_j,\xi_{j+1})$,
+\item{(ii)} $\gsmooth$ has two continuous derivatives, and
+\item{(iii)} $\gsmooth$ has a third derivative that is a step function with jumps at $\xi_1,\ldots,\xi_K$.
+
+\index{basis functions}%
+}\smallskip
+
+We can write \tpseries\  as a linear combination of $K+4$ basis functions $P_j(x)$: $P_1(x)=1$, $P_2(x)=x$,  and so on. 
+Each of these  functions must  also satisfy the three conditions and  be linearly independent in order to qualify as a basis.
+\index{piecewise cubics}%
+Even without \tpseries\ it is clear that we require $K+4$ parameters to represent piecewise cubics; four for each of $(K+1)$ cubics, less three per interior knot due to the constraints.
+\index{matrix}%
+To actually smooth some data pairs $\{x_i,y_i\}$, we would construct a regression matrix with $K+4$ columns, each column corresponding to a function $P_j$  evaluated at the $n$ values of $x$. 
+
+
+Although \tpseries\ has algebraic appeal, it is not the recommended form for computing the regression spline. 
+Even though a  particular cubic piece is designed to accommodate one interval, it is evaluated at all points to the right of its knot and the  numbers usually get large.
+\index{basis functions}%
+\figname{\BSbasis}
+\midinsert
+\vbox{
+\centerline{\psfig{file=figures/BSbasis.p,width=\hsize}}
+\index{interior knots}%
+\figurecaption{\BSbasis}{The six $B$-spline basis functions  for representing the fits in Fig.~\BS(d). The two interior knots are indicated by the vertical broken lines. 
+The points indicate the occurrence of data, and are $\{x_i,B_j(x_i)\}$ for $j=1,\ldots,6$.
+\index{basis functions}%
+}*
+}
+\endinsert
+\par
+The $B$-spline basis functions provide a numerically superior alternative basis to the truncated power series.
+\index{matrix}%
+Their main feature is that any given basis function $B_j(x)$ is nonzero over a span of at most five distinct knots. 
+In practice this means that their evaluation rarely gets out of hand, and the resulting regression matrix is banded.
+\index{piecewise cubics}%
+ Of course the $B_j$ are themselves piecewise cubics, and we need $K+4$ of them if we want to span the space. 
+Their definition is rather simple (in terms of divided differences), but unhelpful for fully understanding their properties, so we omit it here and refer the reader to ^{de~Boor~(1978)}.
+Figure~\BSbasis\ shows the evaluated $B$-splines used to compute the fits in Fig.~\BS(d).
+
+\index{regression splines}%
+\index{when the knots are given}%
+In summary, regression splines are attractive because of their computational neatness, {\sl when the knots are given}.
+\index{regression splines}%
+Standard linear model estimation can be applied, which will be found to be very convenient in later chapters when we use regression splines in additive models.
+
+However the difficulty of choosing the number and position of the knots
+tends to be a drawback of this approach.
+\index{equivalent kernel}%
+\index{three interior knots}%
+When a small number of knots is used, the smoother can show some disturbing nonlocal behaviour. 
+Figure~\hatplot\ shows the equivalent kernels for a natural cubic regression spline with three interior knots. 
+The right-hand kernel does not look much different from that for the quartic polynomial! With more knots this global influence would be dampened, but we often don't  have that many \df\ to spare.
+
+\index{regression splines}%
+\index{smoothing parameter}%
+Another problem with regression splines is that the smoothness of the 
+estimate can not easily be  varied continuously as a function of a single  smoothing
+parameter; this is an attractive, if only approximate, property of most of the
+\index{cubic smoothing spline}%
+other smoothers that we discuss.  
+
+\Sectionskip
+\Section{Cubic smoothing splines}
+This smoother is not constructed explicitly like those described so far, but instead emerges as the solution to an  optimization
+problem.
+
+
+Consider the  following problem: among all functions 
+$f(x)$ with absolutely continuous first derivatives and integrable second derivatives, find the one that minimizes
+$$\sum_{i=1}^n\{y_i-f(x_i)\}^2 +\lambda\int_{-\infty}^\infty \{f''(t)\}^2 \, dt\eqn{\qb}$$ where
+ $\lambda$ is a fixed constant.
+\index{scatterplot smoother}%
+This criterion satisfies the requirements for a scatterplot smoother that  we
+mentioned earlier. 
+The first term measures closeness to the data while the
+second term penalizes curvature in the function. 
+Now it is one thing to state 
+a criterion like $\qb$ and quite another to find the optimizing function.
+\index{ natural cubic spline}%
+ Remarkably, it can be shown that $\qb$ has an explicit,  unique minimizer and
+that minimizer is  a {\sl natural cubic spline} with knots at the unique values of $x_i$
+(Exercise~2.6).
+\index{interior knots}%
+At face value it seems that the family is overparametrized, since there are  as many as $n-2$ interior knots. 
+\index{ effective dimension}%
+This would result in $n+2$ parameters, although the  constraints on each end bring it down to $n$.  We'll see however that the coefficients are estimated in a constrained way as well, and this can bring the {\sl effective} dimension down dramatically.
+
+
+\index{smoothing}%
+A cubic 
+\index{running-lines smooth}%
+smoothing spline fitted to the diabetes data is shown in Fig.~\allsmooths. 
+It looks
+ much like the
+running-lines smooth
+but is less jagged.
+
+
+\index{running-lines smooth}%
+The parameter $\lambda$ plays the same role as the span  in the running-lines smooth. 
+Large values of $\lambda$  produce smoother curves while
+\index{least-squares line}%
+smaller values  produce  more wiggly curves.  At the one extreme, as
+$\lambda\rightarrow \infinity$, the penalty term dominates, forcing
+$f''(x)=0$, and thus the solution is the least-squares line. 
+At the other extreme, as $\lambda\rightarrow 0$, the penalty term becomes unimportant and the
+solution tends to  an interpolating twice-differentiable function. 
+We discuss methods for choosing  $\lambda$ in Chapter~3.
+\index{computational aspects}%
+\index{natural cubic spline}%
+\index{interior knots}%
+ 
+\sectionskip
+\section{Computational aspects}
+Using the fact that the solution to $\qb$ is a natural cubic spline with $n-2$ interior knots, we can represent it in terms of a basis for this space of fits.
+\index{basis functions}%
+For computational convenience, we will use the unconstrained $B$-spline basis, and write 
+ $\gsmooth(x)=\sum_1^{n+2} \gamma_i B_i(x)$, where $\gamma_i$ are
+\index{natural splines}%
+coefficients and the $B_i$ are  the cubic $B$-spline basis functions. 
+As written here, $s$ lies in an $(n+2)$-dimensional space; however, the natural splines are a subspace.
+We can now simply replace $f$ in \qb\ by $s$ and perform the integration.
+\index{matrix}%
+\index{matrix}%
+Then defining the $n\times (n+2)$ matrix $ \bB$ and $(n+2)\times (n+2)$ matrix $\fat{\Omega}$ by
+$$
+B_{ij}=B_j(x_i)$$
+and 
+$$\fat{\Omega}_{ij}=\int_{-\infty}^\infty B_i''(x)B_j''(x) \, dx,$$
+we can rewrite the criterion $\qb$ as
+$$(\vec y-\bB\fat\gamma)^T(\vec y-\bB\fat\gamma) +\lambda\fat \gamma^T\fat{\Omega}
+\fat \gamma\eqn{\qd}$$
+\index{ sorted values}%
+Although at face value it seems that there are no boundary derivative constraints,  it turns out that the penalty term  automatically imposes them. 
+
+Setting the derivative with respect to $\gamma$ equal to zero gives 
+$$(\bB^T\bB+\lambda\fat\Omega)\hatfat\gamma=\bB^T\vec y\eqn{\eqq}$$
+\index{matrix}%
+Since the columns of $\bB$ are the evaluated  $B$-splines, in order from left to right and evaluated at the {\sl sorted} values of $X$, and the cubic $B$-splines have local support, $\bB$ is lower 4-banded. 
+Consequently  the matrix $\vec M=(\bB^T\bB+\lambda\fat{\Omega})$ is
+4-banded and hence its Cholesky decomposition $\vec M=\bL\bL^T$ can be computed easily.  
+One
+then solves $\bL\bL^T\hatfat\gamma=\bB^T\vec y$ by back-substitution to give $\hatfat\gamma$
+and hence the solution  $\hat\gsmooth$ in O(n) operations. 
+
+
+For theoretical purposes, it is convenient to  rewrite  the solution
+ vector $\vgsmooth$ ($\gsmooth$ evaluated at each of the $n$ values of $X$ in the sample)  in another form.
+\index{ natural-spline basis}%
+\index{matrix}%
+Let $\bN$ be an $n\times n$ nonsingular {\sl natural-spline} basis matrix for representing the solution (Exercise~2.5). 
+Denote by $\hatfat{\beta}$  the transformed version of $\hatfat\gamma$ corresponding to the change in basis.  Then we can write  
+$$\vgsmooth=\bN\hatfat{\beta}=\bN(\bN^T\bN+\lambda\fat{\Omega})^{-1}\bN^T\vec y=
+(\bI+\lambda \bK)^{-1}\vec y\eqn{\qf}$$
+where $\bK={\bN^{-T}}\fat{\Omega} \bN^{-1}$.
+\index{cubic smoothing spline}%
+In terms of the candidate fitted vector $\vec f$ and $\bK$, the cubic smoothing spline $\vgsmooth $ minimizes
+$$(\vec y-\vec f)^T(\vec y-\vec f) +\lambda\vec f^T\bK
+\vec f\eqn{\nqd}$$ over all vectors $\vec f$.
+It is appropriate to call the term $\vec f^T\bK\vec f$ a roughness penalty, since it can be shown to be a quadratic form in second differences.
+\index{cubic smoothing spline}%
+\index{local averaging}%
+The cubic smoothing spline, because of the implicit way it is defined, doesn't appear
+to use {\sl local averaging}.
+\index{equivalent kernel}%
+\index{target point}%
+However, the equivalent-kernel weights  in Fig.~\hatplot\ show that it does possess local behaviour quite similar to kernels or locally-weighted lines. 
+\index{equivalent kernel}%
+\index{equivalent kernel}%
+\index{smoothing splines}%
+The equivalent kernel is nowhere nonzero, but is close to zero far from the target point. 
+Other examples of equivalent kernels are given in ^{Buja, Hastie and Tibshirani (1989)}, and
+an asymptotic form for the equivalent kernel of smoothing splines is derived by ^{Silverman (1984)}.
+\index{smoothing}%
+\index{kernel}%
+One might say, then,  that a cubic  smoothing spline is  approximately a {\sl kernel} 
+\index{smoothing parameter}%
+\index{weight function}%
+smoother. 
+
+The smoothing parameter $\lambda$ controls the shape of the kernel
+or weight function.
+\index{target point}%
+As one would expect,
+when $\lambda$ is decreased
+the weights tend to concentrate more around the target point, while as
+\index{smoothing splines}%
+$\lambda$ is increased, they spread out more. 
+We discuss the properties of smoothing splines in more detail in Chapters~5 and section~9.3.6.
+
+\index{locally weighted running-line smoothers}%
+\index{loess}%
+\Sectionskip
+\Section{Locally weighted running-line smoothers}
+Here we describe in more detail  the locally-weighted smoother of ^{Cleveland (1979)}, currently called {\sl loess} in the S statistical-computing language. 
+Although any polynomial can be fitted locally, we discuss local lines.
+
+\index{nearest neighbours}%
+\index{nearest neighbours}%
+A locally-weighted straight-line smooth $\gsmooth(x_0)$ using $k$ nearest neighbours is computed in a number of steps:\smallskip
+{\parindent 20pt
+\item{(i)} The $k$ nearest neighbours of $x_0$ are identified, denoted by
+$\NN(x_0)$.
+\item{(ii)}$\Delta(x_0)=\max_{N(x_0)}\abs{x_0-x_i}$ is computed, the distance of the furthest near-neighbour from $x_0$.
+\index{ tri-cube weight}%
+\item{(iii)}Weights $w_i$ are assigned to each point in $\NN(x_0)$, using the  {\sl tri-cube} weight function:
+$$W\biggl({\abs{x_0-x_i}\over {\Delta(x_0)}}\biggr)
+ \eqn{\clev}$$
+where $$W(u)=(1-u^3)^3 \quad\for\quad 0\leq u <  1 \eqn{\tri}$$
+and zero otherwise.
+\index{weighted least-squares fit}%
+\item{(iv)} $\gsmooth(x_0)$ is the fitted value at $x_0$ from the weighted least-squares fit of $y$ to $x$ confined to $\NN(x_0)$ using the weights computed in (iii).
+
+\index{target point}%
+}\smallskip
+\figname{\loessm}
+\topinsert
+\vbox{
+\centerline{\psfig{file=figures/loessm.p,width=3in}}
+\medskip
+\index{target point}%
+\figurecaption{\loessm}{The loess smoother first computes the $\lambda$~\% nearest-neighbours to the target point, indicated here by the shaded region. 
+\index{target point}%
+A tricube kernel, centered at the target point, becomes zero exactly at the furthest neighbour. The smooth at the target point is the fitted value from the locally-weighted linear fit.}*
+}
+\endinsert
+\par
+Figure~\loessm\ depicts the situation, using the diabetes data once again. 
+Notice that the kernel is truncated at one end due to the metric asymmetry of the neighbourhood.
+
+Cleveland also discusses the use of a robust regression within each
+\index{smoothing}%
+neighbourhood, to protect against outliers. 
+This effectively works by repeatedly smoothing the data, and at each iteration down-weighting points with large residuals. 
+See Chapters~3 and  9 for more details.
+
+A  locally-weighted running-line smooth
+\index{ span}%
+\index{data points}%
+\index{smoothing parameter}%
+is shown in Fig.~\allsmooths. 
+The number of nearest-neighbours, usually expressed
+as a percentage or {\sl span} of the data points, is the smoothing parameter. 
+In Figs~\allsmooths\ and \loessm\  a span of $21/43$ was used, chosen to make  
+ the degrees of freedom approximately equal to that of the other smooths.
+
+\index{nearest neighbourhood}%
+\index{symmetric nearest neighbourhood}%
+\index{target point}%
+\index{nearest neighbourhood}%
+In principle, nearest neighbourhoods 
+are preferable to 
+symmetric nearest neighbourhoods because in a  neighbourhood with 
+a fixed number of points, the average distance of the points to the target point
+is less in the nearest neighbourhood (unless the predictors are evenly spaced).
+In general this  should result in less bias.
+\index{symmetric nearest neighbourhood}%
+\index{running-lines smoother}%
+We use symmetric nearest neighbourhoods in a running-lines smoother, however,
+because of their superior performance at the left and right endpoints.
+\index{nearest neighbourhood}%
+\index{data points}%
+\index{target point}%
+A nearest neighbourhood at the endpoint contains the same number of data
+points
+as a neighbourhood in the middle of the data,
+ so that when a least-squares fit is applied there, too much
+weight is given to points far away from the target point.
+\index{symmetric nearest neighbourhood}%
+A symmetric nearest neighbourhood, on the other hand, contains only about
+half of the number of points as a full neighbourhood, and thus  
+automatically reduces the weight given to far way points.
+\index{nearest neighbourhood}%
+\index{loess}%
+Nearest neighbourhoods work satisfactorily with {\sl loess} at the endpoints, however,
+because the tri-cube function does the job of down-weighting far away points.
+
+\index{kernel smoother}%
+The locally-weighted smoothers are popular, since they enjoy the best of both worlds. 
+They share the ability of near-neighbour smoothers to adapt their bandwidth 
+to the local density of the predictors, while they have the smoothness features
+of kernel smoothers.
+
+Although in principal it requires $O(n^2)$ operations to compute a locally-weighted smooth, the current implementations compute the fit over a grid of values of $x$, and use interpolation elsewhere.
+
+\index{smoothers for multiple predictors}%
+\index{single predictor}%
+\index{scatterplot smoother}%
+\Sectionskip
+
+\Section{Smoothers for multiple predictors}
+So far we have talked about smoothers for a single predictor, that is,
+scatterplot smoothers.
+What if we have more than one predictor, say $X_1,\ldots, X_p?$.
+Then our problem is one of fitting a $p$-dimensional surface to $Y$.
+\index{multiple regression}%
+The multiple regression of $Y$ on $X_1,\ldots, X_p$ provides a
+simple, but very limited, estimate of the surface.
+\index{running mean}%
+\index{kernel smoother}%
+On the other hand,
+it is easy conceptually  to generalize the running mean,  locally-weighted 
+running-lines, and kernel smoothers to this setting.
+\index{ nearest neighbours}%
+The first two smoothers require a definition of {\sl nearest neighbours}
+of a point in $p$-space.
+\index{ nearest}%
+\index{euclidean distance}%
+{\sl Nearest} is determined by a distance measure and for this 
+the most obvious choice is Euclidean distance.
+\index{symmetric nearest neighbours}%
+Note that the notion of symmetric nearest neighbours is no longer meaningful
+when $p > 1$.
+\index{running mean}%
+\index{target point}%
+Having defined a neighbourhood,
+the generalization of the running mean estimates
+ the surface at the target point by averaging the
+response values in the neighbourhood.
+
+\index{euclidean distance}%
+\index{matrix}%
+This
+highlights an  important detail: what shape  neighbourhood do we use?  
+Nearest-neighbourhoods defined in terms of Euclidean distance are typically
+ spherical, but one could imagine more general 
+neighbourhoods defined in terms of a covariance matrix $\Sigma$ of the predictors.
+\index{target point}%
+ Such a metric  would consider  points lying on an ellipse centered at the target
+point to be equidistant from the target.  
+This generalization is not a purely
+academic issue --- it may be important if the covariates are measured in different
+units or are correlated.  In linear
+regression, the coefficients automatically scale each covariate
+\index{smoothing}%
+correctly.  
+Various strategies are used in practice, an obvious one being to standardize the individual variables prior to smoothing.
+This might not always be the best choice, however.
+For example, if the underlying surface changes more rapidly with one variable
+than the other, one may wish to have the neighbourhoods thinner in the direction of the first variable. 
+\index{running mean}%
+This can be achieved by differential scaling of the variables. 
+\figname{\bivar}\par 
+The kernel  smoother is generalized in an analogous way
+to the running mean.
+\index{predictor space}%
+Given two $p$-vectors
+$\vec  x^0$ and $\vec  x^i$
+in predictor space, 
+the weight given to this $i$th point for the fit at  $\vec  x^0$
+is $S_{0i}=(c_0/\lambda)
+d({{\norm{\vec x^0-\vec x^i}}/\lambda})$
+where $d(t)$ is an inverse distance measure
+and $\norm{\cdot}$ is a norm, for example squared distance.
+The constant $c_0$ is usually chosen to make the weights sum to unity, so that the smoother 
+reproduces the constant function.
+The multi-predictor Gaussian kernel uses 
+$d(t)$ equal to the standard  Gaussian density.
+\index{weight function}%
+The resulting weight function is depicted in Fig.~\bivar.
+\index{weight function}%
+\index{kernel smoother}%
+\midinsert
+\vbox{
+\centerline{\psfig{file=figures/bivar.p,width=3in}}
+\figurecaption{\bivar}{ The weight function for a bivariate Gaussian kernel smoother.
+\index{predictor space}%
+}*
+}
+\endinsert
+The choice of norm  is important in this setting,  and  determines the  shape of
+the  neighbourhoods in predictor space.
+\index{matrix}%
+One might argue, for example, that the norm should incorporate 
+covariance information  by replacing the
+squared error norm with  the ``Mahalanobis'' distance
+ $$\norm{\vec x^0-\vec x^i}=(\vec x^0-\vec x^i)^T\Sigma^{-1}(\vec x^0-\vec x^i)$$
+where 
+ $\Sigma$ is  the covariance matrix of the predictors.
+
+
+Locally-weighted lines generalize equally  easily to two or more dimensions.
+The simplest generalization hardly needs any different wording than that used to describe the univariate situation. 
+Once a multivariate distance is defined,
+nearest-neighbourhoods and tri-cube weights get assigned in exactly the same way.
+One computes a local plane rather than a line.
+
+\index{smoothing}%
+\index{thin-plate spline}%
+ 
+The  cubic  smoothing spline is more difficult to generalize to two or higher 
+dimensions: the so-called {\sl thin-plate spline} is one such
+generalization. 
+It derives from generalizing the second derivative penalty for smoothness to a  two dimensional Laplacian penalty of the form 
+$$\int\int\left\{\left({\partial^2 f\over \partial x_1^2}\right)^2 +  \left({\partial^2 f\over \partial x_1\partial x_2}\right)^2+\left({\partial^2 f\over \partial x_2^2}\right)^2\right\}\, dx_1dx_2.$$ 
+The computations are  $O(n^3)$ in number compared to the $O(n)$ for univariate splines.
+\index{interested reader}%
+\index{bibliographic notes}%
+Details are not given here; the interested reader can find references in the
+bibliographic notes at the end of Chapter~3.
+
+\index{ tensor product}%
+\index{regression splines}%
+Another generalization is known as multivariate {\sl tensor product} splines. 
+\index{basis functions}%
+\index{basis functions}%
+These are also useful for generalizing univariate regression splines. 
+\index{regression splines}%
+The basic idea is to construct two-dimensional basis functions by multiplying together one-dimensional basis functions in the respective predictors. 
+\index{smoothing}%
+We discuss these in more detail for multivariate regression splines in Chapter~9. 
+\index{basis functions}%
+For the smoothing version of tensor product splines, the effective basis set has dimension $n^2$ formed by the tensor product of the univariate bases. 
+The fit will be a damped regression onto this space of basis functions.
+\index{multi-predictor smoothers}%
+See the references at the end of Chapter~3 for  details. 
+
+We are not devoting much space to multi-predictor smoothers because we don't
+feel that they are very useful for more than two or three predictors.
+Indeed, their many shortcomings (e.g.~difficulty of interpretation and computation)
+provide an impetus for studying   additive models, the central
+topic of this book.
+\index{parametric regression}%
+These comments refer to the generic multivariate smoothers as described here. 
+\index{smoothing}%
+We are not referring to some of the adaptive multivariate nonparametric regression methods, which might also be termed surface-smoothers, and which were designed to overcome some of these objectional aspects.  
+We discuss some of the problems associated with multi-predictor smoothing in detail at the
+beginning of Chapter~4.
+\index{multi-predictor smoothers}%
+Despite these criticisms,  multi-predictor smoothers  (especially the bi-predictor) are useful
+\index{scatterplot smoother}%
+\index{running-lines smoother}%
+\index{smoothing}%
+\index{locally-weighted running-lines}%
+\index{kernel smoother}%
+in certain settings, as later examples  show. 
+
+\Sectionskip
+\Section{Discussion and bibliography}
+In this chapter we have described a number of scatterplot smoothers,
+including the running-mean and  running-lines smoothers, cubic regression and smoothing 
+splines, locally-weighted running-lines and kernel smoothers. 
+We have also touched on surface smoothers.
+Our discussion has focused on smoothers with which we have  some experience, and any imbalance in our introduction simply reflects this.
+\index{ per~se}%
+\index{building block}%
+In addition, the emphasis in the book is not on smoothers {\sl per~se}, but 
+on
+smoothers as building blocks in the estimation of additive models.
+
+\index{smoothing parameter}%
+\index{locally-weighted running-lines}%
+\index{smoothing}%
+\index{kernel smoother}%
+ 
+ Some recent theoretical results suggest that for appropriately chosen
+smoothing parameters,  there are not likely to be large differences between
+locally-weighted running-lines, cubic smoothing-splines and kernel smoothers
+(^{Silverman, 1984}; ^{Muller, 1987}).
+In order to assess the finite-sample operating characteristics of these 
+and other smoothers, a comprehensive Monte Carlo study, akin to the 
+Princeton robustness study, would be very useful. 
+A recent report by ^{Breiman}
+and Peters (1988) has this flavour.
+
+For a detailed  bibliography, see the notes at the end of Chapter~3. 
+Here we list some introductory references we have found useful.
+\index{smoothing splines}%
+^^{Eubank, R.L.} Eubank (1988) covers most of the material in various levels of detail, especially smoothing splines. 
+\index{smoothing splines}%
+^^{Silverman, B.W.} Silverman's (1985) paper on smoothing splines not only gives an easy to read introduction but also touches on a variety of applications. 
+^^{Cleveland, W. S.} Cleveland (1979) introduces the locally-weighted running-line smoother for univariate problems, and 
+^^{Devlin, S.}^^{Grosse, E. H.} ^{Cleveland, Devlin and Grosse (1988)} describe the multivariate version.
+
+\Sectionskip
+\Section{Further results and exercises 2}
+\Mark{EXERCISES \ 2}%
+\beginexercises%
+\exercise For the diabetes data, compute one of each of the smooths described
+in this Chapter
+for the variable \name{base deficit}.
+Compare qualitatively the resulting estimates in terms of notable features
+and smoothness.
+
+\exercise {\sl Updating formula for running-line smooth.}
+Suppose we add a point $(x_{j+1},y_{j+1})$ to a neighbourhood
+containing $j$ points.
+If the means, variance of $X$, and covariance of $X$ and $Y$  for the first $j$ points are 
+$\bar x_j$, $\bar y_j$, $S^x_j$, and $S^{xy}_j$, show that
+$$\bar x_{j+1}=(j\bar x_j+x_{j+1})/(j+1)$$
+$$\bar y_{j+1}=(j\bar y_j+y_{j+1})/(j+1)$$
+$$(j+1)S^x_{j+1}=jS^x_j+{{j+1}\over j}(x_{j+1}-\bar x_{j+1})^2$$
+$$(j+1)S^{xy}_{j+1}=jS^{xy}_j+{{j+1}\over j}(x_{j+1}-\bar x_{j+1})(y_{j+1}-
+\bar y_{j+1}).\eqn{\upd}$$
+
+What are the equivalent equations for deleting a point?
+Together these
+can be used to update the least-squares slope and intercept, and hence the entire fit can be computed in $O(n)$ operations.
+
+\exercise Derive an expression for $S_{ij}$, the coefficient of $y_j$ in the
+expression $\gsmooth(x_i)=\sum_{j=1}^n S_{ij}y_j$ for the running-line fit at $x_i$, 
+using $\symNN(x_i)$ to denote the set of indices of the $k$ symmetric nearest-neighbours to $x_i$. 
+
+
+\exercise  Show that the truncated power series representation $$\gsmooth(x)= \beta_0+\beta_1x+\beta_2x^2+\beta_3x^3+\sum_{j=1}^k\theta_j(x-\xi_j)_+^3$$ satisfies the three conditions of a cubic spline given in the text.
+
+\index{natural splines}%
+\index{matrix containing}%
+\index{basis functions}%
+\index{interior knots}%
+\exercise {\sl Basis for natural splines.} Suppose $B$ is an $n\times (K+4)$ matrix containing the evaluations of the cubic  $B$-spline basis functions with $K$ interior knots evaluated at the $n$ values
+\index{matrix containing}%
+\index{basis functions}%
+of $X$. 
+Let $C$ be the $2\times (K+4)$ matrix containing the second derivatives
+\index{matrix}%
+\index{interior knots}%
+\index{boundary knots}%
+of the basis functions at the boundary points $x_1$ and $x_n$. 
+Show how
+\index{ derivation of smoothing splines}%
+to derive $N$ from $B$, an $n\times (K+2)$ basis matrix for the natural  cubic splines with the same interior knots and boundary knots at the extremes of the $X$.   
+
+\exercise {\sl Derivation of smoothing splines; ^{Reinsch (1967)}.} Consider the following optimization problem: minimize 
+$$\int_{-\infty}^\infty \{f''(x)\}^2 \, dx
+\quad \hbox{subject to}\quad \sum_{i=1}^n \{y_i-f(x_i)\}^2 \leq \sigma
+\eqn{\sopt}$$
+over all twice differentiable
+functions $f(x)$.
+To solve this problem, consider the Lagrangian functional
+$$F(f)=\int_{-\infty}^\infty\{f''(x)\}^2 \, dx + \rho \left[ \sum_{i=1}^n \{y_i-f(x_i)\}^2-\sigma+z^2\right]\eqn{\lageq}$$
+where $z$ is an auxiliary variable.
+\smallskip
+{\parindent 20pt
+\item{(i)} To find the minimum of $F(f)$, compute $d F\{f+\delta h(x)\}\delta$ where
+$h(x)$ is any twice differentiable function.
+(This is a standard technique in the calculus of variations).
+Integrate by parts the resulting expression (twice) and conclude that the solution
+is a piecewise cubic polynomial with knots at the $x_i$.
+\index{third derivative}%
+Show that the solution and its first two derivatives are continuous at the
+knots, but that the third derivative may be discontinuous there.
+Show also that the second derivative is zero outside of the range of the 
+$x_i$.
+
+\index{least-squares line}%
+\item{(ii)} Compute $d F(f)\rho$ and $\partial F(f)/\partial \sigma$ and conclude that either $\hat \rho=0$
+implying that the least-squares line is a solution to $\sopt$, or
+$\hat\rho\neq 0$, in which case the solution is nonlinear.
+
+\item{(iii)} Establish an equivalence between the $\sopt$ and the penalized least-squares
+problem $\qb$ given in the text.
+}
+
+\exercise Suppose each observation has associated with it a weight $w_i$.
+\index{cubic smoothing spline}%
+\smallskip
+{\parindent 20pt
+\item{(i)} Derive the appropriate cubic smoothing spline using a weighted residual sum of squares.
+\index{smoothing}%
+\item{(ii)} Suppose there are ties in the $x$-values. 
+Suggest a way to overcome this for smoothing splines.
+
+\index{ semi-parametric regression}%
+}
+
+\index{matrix}%
+\exercise {\sl Semi-parametric regression; ^^{Green, P.J.}^^{Jennison, C. }^^{Seheult, A.} Green, Jennison, and Seheult (1985).} Suppose we have a set of $n$ observations of $p$ predictors arranged in
+the $n \times p$ matrix  $\bf X$, an additional covariate $\vec z$, and a response vector $\vec y$. 
+We wish to fit the model $y_i=\vec x^i{\fat\beta} +f(z_i) +\varepsilon_i$ by penalized least-squares.
+\index{ estimating equations}%
+\index{smoothing}%
+Construct an  appropriate penalized residual sum of squares, and show that the minimizers must satisfy the following pair of {\sl estimating} equations:
+$$\eqalign{ {\fat\beta}&=(\X^T\X)^{-1}\X^T(\vec y-\vec f)\cr
+f &= \smooth(\vec y -\X{\fat\beta}\given \vec z)\cr}$$
+where $\smooth$ is an appropriate smoothing-spline operator, and $\vec f$ represents the function $f$ evaluated at the $n$ values  $z_i$.
+\index{ efficient kernel smoothing}%
+\exercise {\sl Efficient kernel smoothing; ^{Silverman (1982)}, ^{H\"ardle (1986)}}
+\index{kernel smooth}%
+Consider the ^^{Nadaraya, E.A.}^^{Watson, G.S.}Nadaraya-Watson form of the kernel smooth given by equation \NadWat:
+$$\gsmooth(x_0)={\sum_{i=1}^n\rho({x_0-x_i \over \lambda})y_i\over \sum_{i=1}^n\rho({x_0-x_i \over \lambda})}.$$
+\index{fine grid}%
+We wish to use the FFT to compute both the numerator and denominator. 
+With that end in mind we define a fine grid that covers the range of $X$.
+Describe how you would approximate the data on the grid and use the FFT to perform the computations. 
+Pay particular attention to:\smallskip
+{\parindent 20pt
+\item{(i)} what happens at the boundaries, and
+\item{(ii)} a method for overcoming discontinuities due to the approximation.
+
+}
+\exercise Extend the methods described in the previous exercise in order to compute a kernel-weighted running-line fit.
+\index{matrix}%
+\index{smoothing}%
+\exercise Suppose $\bS$ is an $n\times n$ smoother matrix for
+smoothing against the $n$ unique predictor values $\vec x=(x_1,\ldots, x_n)^T$.
+That is, if $s(x_i)=\sum_{j=1}^n S_{ij}y_j$, then $\bS$ has $ij$th entry $S_{ij}$.
+For all of the
+smoothers that we have described, $\bS\vec 1=\vec 1$, and for most $\bS\vec
+x=\vec x$.  For which is the second statement true, and what are the
+\index{smoothing splines}%
+implications of these two results?  For smoothing splines the symmetric
+statements are also true:  $\bS^T\vec 1=\vec 1$ and $\bS^T\vec x=\vec
+x$, since $\bS$ is symmetric in this case.  Is this true for any of the
+other smoothers?  What are the implications of these conditions?  How
+would you modify $\bS$ for the other smoothers in order that the first
+\index{equivalent kernel}%
+or both of these latter conditions are satisfied.  Try some examples
+and see what happens to the local support properties of the equivalent
+kernels.
+\endexercises
+\vfill\supereject
+\end

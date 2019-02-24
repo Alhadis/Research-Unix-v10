@@ -1,0 +1,61 @@
+	sed 's/,/	/' x|
+	awk '
+	BEGIN	{FS="	"
+		while((getline<"contents") > 0){
+			names[$0] = 1
+		}
+	}
+	{if($1 == term){
+		ck = substr($2,2,index($2,",")-2)
+		if(ck in names){
+			sub(/^ /, " \\fI", $2)
+			sub(/,/,"\\fP,", $2)
+		}
+		printit("  " $2)
+	}
+	else {
+		term = $1
+		if(term in names){
+			sub("	","\\fP,")
+			sub(/^/,"\\fI")
+		}
+		else {
+			sub(",","\\fP,")
+			sub("	",",\\fI")
+		}
+		printit($0)
+	}}
+	function printit(line){
+	if(length(line)<40)print line
+	else {
+		n=split(line, a, ",")
+		if(length(a[1])>=40){
+			m=split(a[1],b," ")
+			nline=b[1]
+			for(i=2;i<=m;i++){
+				nline = nline " " b[i]
+				if(length(nline)>=40){
+					print nline
+					nline = "      "
+				}
+			}
+			for(i=2; i<=n;i++){
+				if(nline == "      ")nline = nline a[i]
+				else nline = nline "," a[i]
+			}
+			print nline
+			return
+		}
+		nline=a[1]
+		for(i=2;i<=n;i++){
+			nline = nline "," a[i]
+			if(length(nline)>= 40){
+				if(i < n)print nline ","
+				else print nline
+				if(i < n)nline = "      " a[++i]
+				else nline = ""
+			}
+		}
+		if(length(nline) > 0)print nline
+	}
+	}' 

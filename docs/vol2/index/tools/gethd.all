@@ -1,0 +1,44 @@
+M=/usr/vol2/xindex/tools
+for i in /usr/vol2/*
+do
+	j=`basename $i`
+	if test -s $i/$j.ms
+	then
+	echo ms $j
+	awk -f $M/headings.awk $i/$j.ms|sed -f $M/head.sed >$j.hd
+	else
+	if test -s $i/$j.tex
+	then
+	echo tex $j
+	awk -f $M/theadings.awk $i/$j.tex|sed -f $M/head.sed >$j.hd
+	else
+	if test -s $i/$j.m
+	then
+	echo monk $j
+	awk -f $M/mheadings.awk $i/$j.m|sed -f $M/head.sed >$j.hd
+	else
+	echo $i not found
+	for j in $i/*.ms
+	do
+	k=`basename $i`
+	l=`basename $j .ms`
+	if test -s $j
+	then
+	echo running $j to $k
+	awk -f $M/headings.awk $j|sed -f $M/head.sed >$k$l.hd
+	fi
+	done
+	for j in $i/*.m
+	do
+	k=`basename $i`
+	l=`basename $j .m`
+	if test -s $j
+	then
+	echo running $j to $k
+	awk -f $M/mheadings.awk $j|sed -f $M/head.sed >$k$l.hd
+	fi
+	done
+	fi
+	fi
+	fi
+done

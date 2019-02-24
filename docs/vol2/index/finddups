@@ -1,0 +1,23 @@
+awk '
+	{
+	if(first == 0){
+		first = 1
+		lastline = $0
+		word = $1
+		next
+	}
+	if($1 == word && $2 !~ /[a-zA-Z]/&& length($2) > 1 && $0 ~ /^ /){
+		sub(/.* /,", ",$0)
+		print lastline $0
+		first = 0
+	}
+	else {
+		print lastline
+		lastline = $0
+		word = $1
+	}
+	}
+END	{
+	print lastline
+}
+'

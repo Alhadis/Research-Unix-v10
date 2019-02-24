@@ -1,0 +1,315 @@
+.TH COSPAN 1 
+.CT 1 prog_other
+.SH NAME
+cospan, psr \- coordination-specification analyzer
+and pretty-printer
+.SH SYNOPSIS
+.B cospan
+[
+.I option ...
+]
+.I file
+.PP
+.B psr
+[
+.I option ... 
+]
+.I file ...
+.SH DESCRIPTION
+.I Cospan
+analyzes the behavior of coordinating systems.
+Three types of input
+.I file
+are distinguished by suffix:
+.TP
+.B .sr
+The normal case.
+The file contains
+.SM S/R
+specifications as described in the reference, possibly including
+.IR cpp (8)
+commands, to be compiled into
+.TP
+.B .c
+C code, which is compiled and linked into
+.TP
+.B .an
+executable analysis program.
+.PP
+The options are 
+.TP
+.BI -D name = value
+.PD0
+.TP
+.BI -D name
+.TP
+.BI -U name
+.TP
+.BI -I directory
+Same as in
+.IR cc (1).
+.PD
+.TP
+.B -v
+Produce verbose syntax error messages.
+.TP
+.B -p
+Suppress file-name/line-number information
+for embedded C code.
+.TP
+.B -i
+Produce an implementation version of
+the C code.
+.TP
+.B -m
+Produce a merged version of 
+the C code.
+.TP
+.B -n
+Compile no transition checks (except deadlocks). 
+By default, the analysis gives a warning on the first stability violation
+and aborts on non-semi-deterministic resolutions.
+.TP
+.B -b
+Use C built-in (machine-dependent)
+integer division operations.
+By default, an
+.SM S/R
+integer division
+.IB i / j
+results in the greatest integer not higher then the
+mathematical quotient, and the remainder operation
+.IB i " mod " j
+yields a result in the range
+.RI 0... j \-1.
+.TP
+.BI -C opt
+Pass option
+.BI - opt
+to the C compiler.
+.TP
+.BI -h size
+Set the state hash table size to the next prime after
+.I size ;
+default is 32693.
+.TP
+.BI -H size
+Similar to 
+.BI \-h size,
+except that states which produce hash collisions are ignored.
+.TP
+.BI -t secs
+Abort analysis after
+the specified number of seconds.
+.TP
+.BI -V s
+Produce verbose analysis output messages.
+The string
+.I s,
+by default
+.LR awel ,
+specifies message types:
+.I advice, warning, error,
+or
+.I list.
+.TP
+.B -r
+Restart previously aborted analysis.
+Recovery is possible in cases of hangups, interrupts,
+software termination signals (due to a kill command),
+timer alarms, no-space conditions, and aborts due to
+.B -c
+or 
+.B -L
+requests.
+.TP
+.B -d
+Abort on deadlocks.
+By default, the analysis gives a warning on the first deadlock and reports
+the number of deadlocks in the analysis summary.
+.TP
+.B -s
+Abort on stability failures.
+.TP
+.B -l
+List analysis on standard output.
+.TP
+.BI -T
+Time each translation and execution step.
+.PD0
+.TP
+.BI -L number,number
+List analysis, reporting states
+in the given range, and abort after searching the upper bound. 
+.TP
+.BI -c number
+Check each back-edge in the
+component identified by the given
+.I number
+and abort analysis.
+.PP
+.TP
+.BI CC= name
+Use an alternate C compiler; default is 
+.BR CC=cc .
+.PD
+.PP
+The order of the arguments is arbitrary, and several options may 
+be combined to a single argument, provided that option
+values are terminated by white space.
+Options can be preset by defining the environment variable
+.BR COSPANOPT  .
+.PP
+.I Psr
+is a pretty-printer for
+.SM S/R
+specifications.
+It places
+.IR troff (1)
+or
+.I nroff
+output on the standard output.
+.PP
+The options, which may be reset between
+.I files,
+are:
+.TP
+.B -d
+Show current date in page footer.
+.TP
+.B -m
+show file modification time in footer (default).
+.TP
+.BI -n N
+Number every
+.IR N th
+line; default is 
+.BR -n0,
+no numbering. 
+.TP
+.BI -s N
+Set type size 
+to
+.I N
+points, vertical spacing to
+.IR N /60
+inch, and tab stops every 
+.IR N /20
+inch.
+.TP
+.BI -w N
+Set the page width
+to
+.IR N 
+(in
+.I troff
+notation).
+.PD0
+.TP
+.BI -f F
+Use the 
+.I troff
+font
+.I F
+and its italic, bold, and bold-italic counterparts. 
+Known fonts are
+Bembo, CW, Euro, Futura, H, Hcond, Memphis, Optima, PA, R.
+.TP
+.BI -. request
+Issue a 
+.I troff
+request before printing the next
+.IR file .
+Multiple requests may be given.
+.TP
+.BI -T name
+As in
+.I troff.
+Applies to all
+.IR files .
+If
+.I name
+is omitted, 
+.I troff
+input is written on standard output.
+.PD
+.PP
+.I Psr
+sets the escape character to 
+.SM BEL.
+The \e character is copied without
+interpretation, to allow printing of embedded C code.
+The macro 
+.B .SO
+may be used to include
+.I troff
+text that uses the standard
+escape character.
+.PP
+The strings
+.BI DT , 
+.BI L ,
+and
+.B R
+contain today's date, the left-hand, and the right-hand side
+of the page header, respectively.
+.SH EXAMPLES
+.TP
+.B COSPANOPT=-TlImyincludedir cospan myfile.sr
+equivalent to
+.BR "cospan -T -l -Imyincludedir myfile.sr" .
+.TP
+.B psr -.ll6.5i -.lt6.5i myfile.sr
+equivalent to
+.BR "psr -w6.5i myfile.sr
+.SH "FILES"
+.TF /usr/lib/tmac/tmac.psr
+.TP
+.F *.R
+recovery data
+.PD0
+.TP
+.F *.T
+error track
+.TP
+.F *.L
+list output (
+.B -L 
+option)
+.TP
+.F *.M
+merging data
+.TP
+.F /tmp/srtm??????
+temporary file
+.TP
+.F /usr/lib/sr
+S/R compiler
+.TP
+.F /usr/lib/sr_D
+S/R verbose compiler
+.TP
+.F /usr/include/crank.h
+header file
+.TP
+.F /usr/include/crunch.h
+implementation header file
+.TP
+.F /usr/libsr.a
+analysis object library
+.TP
+.F /usr/lib/pretty
+.I troff
+preprocessor
+.TP
+.F /usr/lib/tmac/tmac.psr
+.I troff
+macros
+.PD
+.SH "SEE ALSO"
+Z. Har'El and R. P. Kurshan,
+.I
+COSPAN User's Guide,
+11211-871009-21TM, AT&T Bell Laboratories.
+.IR spin (1),
+.IR d202 (1)

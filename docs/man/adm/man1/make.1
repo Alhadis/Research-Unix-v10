@@ -1,0 +1,425 @@
+.TH MAKE 1
+.CT 1 prog_c writing_troff prog_other
+.SH NAME
+make \(mi maintain collections of programs
+.SH SYNOPSIS
+.B make
+[
+.B -f
+.I makefile
+]
+[
+.I option ...
+]
+[
+.I name ...
+]
+.SH DESCRIPTION
+.I Make
+executes recipes in
+.I makefile
+to update the target
+.IR names
+(usually programs).
+If no target is specified, the targets of the first rule in
+.I makefile
+are updated.
+If no
+.B -f
+option is present,
+.L makefile
+and
+.L Makefile
+are tried in order.
+If
+.I makefile
+is 
+.LR - ,
+the standard input is taken.
+More than one
+.B -f
+option may appear.
+.PP
+.I Make
+updates a target if it depends on prerequisite files
+that have been modified since the target was last modified,
+or if the target does not exist.
+The prerequisites are updated before the target.
+.PP
+The makefile
+comprises a sequence of rules and macro definitions.
+The first line of a rule is a
+blank-separated list of targets, then a single or double colon,
+then a list of prerequisite files terminated by semicolon or newline.
+Text following a semicolon, and all following lines
+that begin with a tab, are shell commands:
+the recipe for updating the target.
+.PP
+If a name appears as target in more than one single-colon rule, it depends
+on all of the prerequisites of those rules, but only
+one recipe may be specified among the rules.
+A target in a double-colon rule is updated by the following
+recipe only if it is out of date with respect to the
+prerequisites of that rule.
+.PP
+Two special forms of name are recognized.
+A name like
+.IR a ( b )
+means the file named
+.I b
+stored in the archive named
+.I a.
+A name like
+.IR a (( b ))
+means the file stored in archive
+.I a
+and containing the entry point
+.I b.
+.PP
+Sharp and newline surround comments.
+.PP
+In this makefile
+.L pgm
+depends on two
+files
+.L a.o
+and
+.LR b.o ,
+and they in turn depend on
+.L .c
+files and a common file
+.LR ab.h :
+.PP
+.EX
+pgm: a.o b.o
+	cc a.o b.o -lplot -o pgm
+.EE
+.PP
+.EX
+a.o: ab.h a.c
+	cc -c a.c
+.EE
+.PP
+.EX
+b.o: ab.h b.c
+	cc -c b.c
+.EE
+.PP
+Makefile lines of the form
+.IP
+.IB "string1 " = " string2"
+.LP
+are macro definitions.
+Subsequent appearances of
+.BI $( string1 )
+are replaced by
+.IR string2 .
+If
+.I string1
+is a single character, the parentheses are optional;
+.B $$
+is replaced by
+.BR $ .
+Each entry in the environment (see
+.IR sh (1))
+of the
+.I make
+command is taken as a macro definition,
+as are command arguments with embedded equal signs.
+.PP
+Lines of the form
+.IB "string1 " := " string2"
+occurring in a recipe are assignments: macro definitions
+that are made in the course of executing the recipe.
+.PP
+A target containing a single 
+.B %
+introduces a pattern rule,
+which controls the making of names that do not occur
+explicitly as targets.
+The 
+.B %
+matches an arbitrary string called the stem:
+.IB A % B
+matches any string that begins with
+.I A
+and ends with
+.I B.
+A 
+.B %
+in a prerequisite name stands for the stem;
+and the special macro
+.B $%
+stands for the stem in the recipe.
+A name that has no explicit recipe is
+matched against the target of each pattern rule.
+The first pattern rule for which the prerequisites exist
+specifies
+further dependencies.
+.PP
+The following pattern rule maintains an object library where all the C source files
+share a common include file
+.LR defs.h .
+.PP
+.EX
+arch.a(%.o) : %.c defs.h
+	cc -c $%.c
+	ar r arch.a $%.o
+	rm $%.o
+.EE
+.PP
+A set of default pattern rules is built in, and effectively
+follows the user's list of rules.
+Assuming these rules,
+which tell, among other things, how to make
+.B .o
+files from
+.B .c
+files, the first example becomes:
+.PP
+.EX
+pgm: a.o b.o
+	cc a.o b.o -lplot -o pgm
+.EE
+.PP
+.EX
+a.o b.o: ab.h
+.EE
+.PP
+Here, greatly simplified, is a sample of the built-in rules:
+.PP
+.EX
+ CC = cc
+ %.o: %.c
+	$(CC) $(CFLAGS) -c $%.c
+ %.o: %.f
+	f77 $(FFLAGS) -c $%.f
+ % : %.c
+	$(CC) $(CFLAGS) -o $% $%.c
+.EE
+.PP
+The first rule
+says that a name ending in
+.B .o
+could be made
+if a matching name ending in
+.B .c
+were present.
+The second states a similar rule for files ending in
+.BR .f .
+The third says that an arbitrary name can be made
+by compiling a file with that name suffixed by
+.BR .c .
+.PP
+Macros make the builtin pattern rules flexible:
+.B CC
+names the particular C compiler,
+.B CFLAGS
+gives
+.IR cc (1)
+options,
+.B FFLAGS
+for
+.IR f77 (1),
+.B LFLAGS
+for
+.IR lex (1),
+.B YFLAGS
+for
+.IR yacc (1),
+and
+.B PFLAGS
+for
+.IR pascal (A).
+.PP
+An older, now disparaged, means of specifying default rules
+is based only on suffixes.
+Prerequisites are inferred according to selected suffixes
+listed as the `prerequisites' for the special name
+.BR .SUFFIXES ;
+multiple lists accumulate;
+an empty list clears what came before.
+.PP
+The rule to create a file with suffix
+.I s2
+that depends on a similarly named file with suffix
+.I s1
+is specified as an entry
+for the `target'
+.IR s1s2 .
+Order is significant; the first possible name for which both
+a file and a rule exist
+is inferred.
+An old style rule for making
+optimized
+.B .o
+files from
+.B .c
+files is
+.PP
+.EX
+\&.SUFFIXES: .c .o
+\&.c.o: ; cc -c -O -o $@ $*.c
+.EE
+.PP
+The following two macros are defined for use in any rule:
+.TP
+.B $($@)
+full name of target
+.PD0
+.TP
+.B $($/)
+target name beginning at the last slash, if any
+.PD
+.LP
+A number of other special macros are defined
+automatically in rules invoked by one of the implicit mechanisms:
+.TP
+.B $*
+target name with suffix deleted
+.PD0
+.TP
+.B $@
+full target name
+.TP
+.B $<
+list of prerequisites in an implicit rule
+.TP
+.B $?
+list of prerequisites that are out of date
+.TP
+.B $^
+list of all prerequisites
+.PD
+.PP
+The following are included for consistency with System V:
+.TP
+.B $(@D)
+directory part of 
+.B $@
+(up to last slash)
+.PD0
+.TP
+.B $(@F)
+file name part of 
+.B $@
+(after last slash)
+.TP
+.B $(*D)
+directory part of 
+.B $*
+(up to last slash)
+.TP
+.B $(*F)
+file name part of 
+.B $*
+(after last slash)
+.TP
+.B $(<D)
+directory part of 
+.B $<
+(up to last slash)
+.TP
+.B $(<F)
+file name part of 
+.B $<
+(after last slash)
+.PD
+.PP
+Recipe lines are executed one at a time, each by its
+own shell.
+A line is printed when it is executed unless
+the special target
+.B .SILENT
+is in the makefile,
+or the first character of the command is 
+.BR @ .
+.PP
+Commands that return nonzero status 
+cause
+.I make
+to terminate unless
+the special target
+.B .IGNORE
+is in the makefile
+or the command begins with
+<tab><hyphen>.
+.PP
+Interrupt and quit cause the target to be deleted
+unless the target depends on the special name
+.BR .PRECIOUS .
+.PP
+.I Make
+includes a rudimentary parallel processing ability.
+If the separation string is
+.B :&
+or
+.B ::& ,
+.I make
+can run the command sequences to create the prerequisites
+simultaneously.
+If two names are separated by an ampersand on the right side
+of a colon, those two may be created in parallel.
+.PP
+Other options:
+.TP
+.B -i
+Equivalent to the special entry
+.L .IGNORE: .
+.TP
+.B -k
+When a command returns nonzero status,
+abandon work on the current entry, but
+continue on branches that do not depend on the current entry.
+.TP
+.B -n
+Trace and print, but do not execute the commands
+needed to update the targets.
+.TP
+.B -t
+Touch, i.e. update the modified date of targets, without
+executing any commands.
+.TP
+.B -r
+Turn off built-in rules.
+.TP
+.B -s
+Equivalent to the special entry
+.BR .SILENT: .
+.TP
+.B -e
+Environment definitions override conflicting definitions in arguments
+or in makefiles.
+Ordinary precedence is argument over makefile
+over environment.
+.TP
+.B -o
+Assume old style default suffix list:
+.L
+\&.SUFFIXES: .out .o .c .e .r .f .y .l .s .p
+.TP
+.BI -P n
+Permit
+.I n
+command sequences to be done in parallel with 
+.BR & .
+.TP
+.B -z
+Run commands by passing them to the shell;
+normally simple commands are run directly by
+.IR exec (2).
+.SH FILES
+.F makefile
+.br
+.F Makefile
+.SH "SEE ALSO"
+.IR sh (1),
+.I touch
+in
+.IR chdate (1),
+.IR ar (1),
+.IR mk (1)
+.SH BUGS
+Comments can't appear on recipe lines.
+.br
+Archive entries are not handled reliably.

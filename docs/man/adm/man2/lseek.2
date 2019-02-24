@@ -1,0 +1,47 @@
+.TH LSEEK 2
+.CT 2 file_io
+.SH NAME
+lseek \(mi seek, move read/write pointer
+.SH SYNOPSIS
+.nf
+.B long lseek(fildes, offset, whence)
+.B long offset;
+.fi
+.SH DESCRIPTION
+.I Lseek
+sets the file pointer for the file
+associated with
+.I fildes
+as follows:
+.IP
+If
+.I whence
+is 0, the pointer is set to
+.I offset
+bytes.
+.IP
+If
+.I whence
+is 1, the pointer is set to its current location plus
+.IR offset .
+.IP
+If
+.I whence
+is 2, the pointer is set to the size of the
+file plus
+.IR offset .
+.PP
+The new file pointer value is returned.
+.PP
+Seeking far beyond the end of a file, then writing,
+creates a gap or `hole,' which occupies no
+physical space and reads as zeros.
+.SH "SEE ALSO"
+.IR open (2),
+.IR fseek (3)
+.SH DIAGNOSTICS
+.BR EBADF ,
+.BR ESPIPE
+.SH BUGS
+.I Lseek
+doesn't affect some special files.

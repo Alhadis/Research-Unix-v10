@@ -1,0 +1,202 @@
+.TH TROFF 5
+.CT 1 writing_output
+.SH NAME
+troff \- device-independent output
+.SH DESCRIPTION
+.IR Troff (1)
+produces an ASCII representation of a typeset document,
+expressed in the following syntax.
+Strings inside
+.B [
+.B ]
+are optional.
+The string
+.B \en
+represents newline.
+White space (spaces or newlines) may occur
+between commands and is sometimes necessary to terminate numbers.
+.PP
+.TP
+.BI s n
+Set point size to
+.I n.
+.PD 0
+.TP
+.BI f n
+Use font in position 
+.I n.
+Normally fonts
+are mounted starting at position 1; 0 is reserved.
+.I troff.
+.TP
+.BI c x
+Place character
+.I x
+at the current location on the page;
+.I x
+is a single ASCII character.
+.TP
+.BI C name
+Place special character.
+The
+.I name
+of the character is delimited by white space.
+.TP
+.BI H n
+Go to horizontal location
+.I n,
+expressed in basic units.
+.TP
+.BI h n
+Add 
+.I n
+to the current horizontal location (relative goto).
+.TP
+.BI V n
+Go to vertical location
+.I n,
+measured positive downward.
+.TP
+.BI v n
+Add 
+.I n
+to the current vertical location.
+.TP
+.I nnx
+A two-digit number followed by an ASCII character; equivalent to
+.BI h nn c x.
+.TP
+.BI n b\ a
+End of line.
+No action is required;
+.I troff
+will explicitly reset the location.
+Number
+.IR b 
+is the amount of space before
+the line,
+.IR a ,
+the amount of space after the line.
+.TP
+.B w
+A
+.B w
+appears between words of the input document.
+No action is
+required.
+.TP
+.BI p n
+Begin a new page with page number
+.I n.
+The vertical location on the page becomes 0.
+.TP
+.BI # \ .... \en
+Comment.
+.TP
+.BI Dl " x y" \en
+Draw a line from the current location by
+.IR x , y .
+.TP 
+.BI Dc " d" \en
+Draw a circle of diameter
+.I d
+with the leftmost edge at the current location,
+.IR x , y .
+The current location becomes
+.IR x + d  , y .
+.TP
+.BI De " dx dy" \en
+Draw an ellipse with 
+.IR x -axis
+.I dx
+and
+.IR y -axis
+.I dy.
+The leftmost edge
+of the ellipse will be at the current location.
+The current location becomes
+.IR x + dx , y .
+.TP
+.BI Da " x y u v" \en
+Draw an arc counterclockwise from the current location to
+.IR x + u,
+.IR y + v,
+with center offset
+.IR x , y
+from the current location.
+The end of the arc becomes the current location.
+.TP
+.BI D~ " x y x y ..." \en
+Draw a spline curve (wiggly line) from the
+current location, moving by
+.I x,y
+each time.
+The end of the curve becomes the current location.
+.TP
+.B x\ i[nit]\en
+Initialize the typesetting device.
+The actions required depend on the device.
+.TP
+.BI x\ T \ dest \en
+The name of the typesetter is
+.IR dest ,
+as in  option
+.BR \-T 
+of
+.IR troff (1).
+.TP
+.BI "x r[es]" " n h v" \en
+The resolution of the typesetting device is
+.IR n 
+units per inch.
+Horizontal motions must be multiples of
+.I h
+units, vertical motions 
+.I v
+units.
+.TP
+.B x p[ause]\en
+Pause.
+Cause the current page to finish but do not relinquish the
+typesetter.
+.TP
+.B x s[top]\en
+Stop.
+Cause the current page to finish and then relinquish the typesetter.
+.TP
+.B x t[railer]\en
+Generate a trailer if necessary.
+.TP
+.BI "x f[ont]" " n name" \en
+Load font
+.I name
+into position
+.IR n .
+.TP
+.BI "x H[eight] "  n \en
+Set the character height to
+.I n
+points.
+This causes the letters
+to be elongated or shortened.
+It does not affect the width
+of a letter.
+Not all typesetters can do this.
+.TP
+.BI "x S[lant] " n \en
+Set the slant to
+.I n
+degrees, if possible.
+.TP
+.BI x "..." \en
+Arbitrary;  may be used for device-specific functions.
+.SH SEE ALSO
+.IR troff (1),
+.IR d202 (1),
+.IR apsend (1),
+.IR lp (1),
+.IR proof (9.1)
+.br
+B. W. Kernighan,
+.I "A Typesetter-Independent Troff
+this manual, volume 2.

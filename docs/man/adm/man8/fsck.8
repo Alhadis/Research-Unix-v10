@@ -1,0 +1,248 @@
+.TH FSCK 8
+.CT 1 sa_nonmortals
+.SH NAME
+fsck \- file system consistency check and interactive repair
+.SH SYNOPSIS
+.B /etc/fsck
+.B -p
+[
+.I special ...
+]
+.br
+.B /etc/fsck
+[
+.B -y
+]
+[
+.B -n
+]
+[
+.BI -s X
+]
+[
+.BI -S X
+]
+[
+.B -t
+.I filename
+] [
+.I special ...
+]
+.SH DESCRIPTION
+.I Fsck
+inspects the disk filesystems
+in the named
+.I special
+files
+and repairs inconsistencies.
+If no files are named,
+every file system listed in
+.IR fstab (5)
+with type 0
+and a nonzero pass number
+is checked.
+.PP
+Under option
+.BR -p ,
+.I fsck
+runs without intervention,
+repairing minor inconsistencies
+and aborting on major ones.
+This form is usually called from
+.IR rc (8).
+If no special files are named,
+file systems in
+.I fstab
+are checked in parallel passes:
+all file systems with pass number 1
+are checked simultaneously,
+then all file systems with pass number 2,
+and so on until
+.I fstab
+is exhausted.
+.PP
+Here are the minor ailments
+repaired automatically
+under
+.BR -p :
+.RS
+unreferenced inodes;
+.br
+wrong link counts in inodes;
+.br
+missing blocks in the free list;
+.br
+blocks in the free list also in files; and
+.br
+counts wrong in the super-block.
+.RE
+.PP
+Other inconsistencies
+cause
+.I fsck
+to abandon the inconsistent file system,
+and exit with a nonzero status
+when the current pass finishes.
+.PP
+Without the
+.B -p
+option,
+.I fsck
+inspects one file system at a time,
+interactively.
+Each inconsistency causes
+.I fsck
+to print a message
+and ask permission to fix the problem.
+The operator may require arcane knowledge
+to guide
+.I fsck
+safely through repair of a badly damaged file system.
+.PP
+Here are the remaining options.
+They are allowed only if
+.B -p
+is absent.
+.TP
+.B  -y
+Assume a yes response to all questions.
+This should be used with great caution.
+.TP
+.B  -n
+Assume a no response to all questions;
+do not open the file system for writing.
+This option is assumed if the file system cannot be opened for writing.
+.TP
+.BI -s X
+Ignore the actual free list and (unconditionally) reconstruct a new
+one by rewriting the super-block of the file system.
+The file system should be unmounted while this is done; if this
+is not possible, care should be taken that the system is quiescent
+and that it is rebooted immediately afterwards.
+This precaution is necessary so that the old, bad, in-core copy
+of the superblock will not continue to be used, or written on the file system.
+If the file system has a bitmap free list (see
+.IR filsys (5)),
+the free list is always reconstructed unless the
+.B -n
+option is enabled.
+.IP
+Parameter
+.I X
+allows free-list parameters to be specified:
+.BI -s blocks-per-cylinder : blocks-to-skip\c
+\&.
+If
+.I X
+is not given,
+the values used when the file system was created
+are used; see
+.IR mkfs (8).
+If these values were not specified, 
+.I X
+is assumed to be
+.BR 400:9 .
+.TP
+.BI -S X
+Conditionally reconstruct the free list.
+This option
+is like
+.BI -s X
+except that the free list is rebuilt only
+if no discrepancies were found.
+.B -S
+implies
+.BR -n .
+.TP
+.B -t
+If
+.I fsck
+cannot obtain enough memory to keep its tables,
+it uses a scratch file.
+If the
+.B -t
+option is
+specified, the file named in the next argument
+is used as the scratch file, if needed.
+Without
+.BR -t ,
+.I fsck
+will prompt the operator for the name of the
+scratch file.
+The file chosen should not be on the
+file system being checked.
+If it did not already exist,
+it is removed when
+.I fsck
+completes.
+.PD
+.br
+.ne 6
+.PP
+Inconsistencies checked are:
+.IP
+.nf
+Blocks claimed more than once.
+Blocks designated outside the file system.
+Incorrect link counts.
+Directory size not 16-byte aligned.
+Bad inode format.
+Blocks not accounted for anywhere.
+Directory entry pointing to unallocated inode.
+Inode number out of range.
+More than 65536 inodes.
+More blocks for inodes than there are in the file system.
+Bad free block list format.
+Total free block and/or free inode count incorrect.
+.fi
+.PP
+Orphaned files and directories (allocated but unreferenced) are
+reconnected by
+placing them in the directory
+.F lost+found
+in the root of the file system being checked.
+The name assigned is the inode number,
+prefixed by
+.LR # .
+.PP
+Checking the raw device is almost always faster,
+but
+.I fsck
+distinguishes bitmapped from non-bitmapped file systems
+by examining the minor device number,
+so the block device is safer.
+.SH FILES
+.F /etc/fstab
+.SH "SEE ALSO"
+.IR fstab (5), 
+.IR filsys (5), 
+.IR mkfs (8),
+.IR reboot (8)
+.br
+T. J. Kowalski,
+`Fsck\(emthe
+.SM UNIX
+File System Check Program',
+this manual, Volume 2
+.SH BUGS
+Inode numbers for
+.B .
+and
+.B ..
+in each directory should be checked for validity.
+.PP
+Some systems save core images after a crash
+in the swap area;
+on such machines,
+checking many large file systems in parallel
+may cause swapping, overwriting the crash dump.
+It is best just to write crash dumps in a a safer place.
+If disk space for dumps and swapping is scarce,
+avoid checking more than three 120-megabyte file systems
+in parallel on a machine with four megabytes of physical memory.
+.PP
+Examining the minor device number is a botch;
+there should be an explicit flag somewhere.
+.PP
+.I Fsck
+does not have supernatural powers.

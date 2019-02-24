@@ -1,0 +1,40 @@
+.TH LORDER 1
+.CT 1 lib_obj
+.SH NAME
+lorder \(mi find ordering relation for an object library
+.SH SYNOPSIS
+.B lorder
+.I file ...
+.SH DESCRIPTION
+The input
+is one or more object or library archive (see
+.IR ar (1))
+.I files.
+The standard output
+is a list of pairs of object file names,
+meaning that the first file of the pair refers to
+external identifiers defined in the second.
+The output may be processed by
+.IR  tsort (1)
+to find an ordering of
+a library suitable for one-pass sequential access by
+.IR  ld (1).
+.SH EXAMPLES
+.TP
+.L
+ar cr libnew.a \`lorder *.o | tsort\`
+Build a new library from existing
+.B .o
+files.
+.SH FILES
+.F /tmp/*symref
+.br
+.F /tmp/*symdef
+.SH "SEE ALSO"
+.IR ar (1),
+.IR tsort (1),
+.IR ld (1)
+.SH BUGS
+The names of object files, in and out of libraries, must end with
+.BR .o ;
+nonsense results otherwise.

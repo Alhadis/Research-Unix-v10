@@ -1,0 +1,169 @@
+.TH CHMOD 1 
+.CT 1 files dirs secur
+.SH NAME
+chmod \- change mode
+.SH SYNOPSIS
+.B chmod
+.I mode file ...
+.SH DESCRIPTION
+The mode of
+each named file
+is changed
+according to
+.I mode,
+which may be absolute or symbolic.
+An absolute
+.I mode
+is an octal
+number constructed
+from the OR of the
+following modes.
+(Modes that contain a 1000 bit are incompatible with
+other modes that have any bits among 7000.)
+.TP
+4000
+set user ID on execution
+.PD0
+.TP
+3000
+set exclusive access mode (1 writer or
+.I n
+readers)
+.TP
+2000
+set group ID on execution
+.TP
+1000
+set synchronized access mode (1 writer and
+.I n
+readers)
+.TP
+0400
+read by owner
+.TP
+0200
+write by owner
+.TP
+0100
+execute (search in directory) by owner
+.TP
+0070
+read, write, execute (search) by group
+.TP
+0007
+read, write, execute (search) by others
+.PD
+.PP
+A symbolic
+.I mode
+has the form:
+.IP
+.RI [ who ]
+.I op permission
+.RI [ "op permission" " ...]"
+.PP
+The
+.I who
+part is a combination
+of the letters 
+.B u
+(for user's permissions),
+.B g
+(group)
+and
+.B o
+(other).
+The letter
+.B a
+stands for
+.B ugo.
+If
+.I who
+is omitted,
+the default is
+.BR a .
+.PP
+.I Op
+can be
+.B +
+to add
+.I permission
+to the file's mode,
+.B -
+to take away
+.I permission
+and
+.B =
+to assign
+.I permission
+absolutely
+(all other bits will
+be reset).
+.PP
+.I Permission
+is any combination of the letters
+.B r
+(read),
+.B w
+(write),
+.B x
+(execute),
+.B s
+(set owner or group id)
+.B e
+(set exclusive access mode)
+and
+.B y
+(set synchronized access mode).
+Letters
+.BR u,
+.B g
+or
+.B o
+indicate that
+.I permission
+is to be taken
+from the current
+mode.
+Omitting
+.I permission
+is only useful
+with
+.B =
+to take away
+all permissions.
+.PP
+Multiple symbolic modes separated by commas may be given.
+Operations are performed
+in the order specified.
+The letter
+.B s
+is only useful
+with
+.B u
+or
+.B g.
+.PP
+Only the owner of a file (or the super-user) may change its mode.
+.PP
+Synchronized access
+guards against inconsistent updates
+by preventing concurrent opens for writing.
+Exclusive access
+guards against inconsistent views
+by preventing concurrent opens if one is for writing.
+.SH EXAMPLES
+.TP
+.L
+chmod o-w file
+Deny write permission to others.
+.TP
+.L
+chmod +x file
+Make file executable.
+.SH "SEE ALSO"
+.IR ls (1),
+.IR chmod (2),
+.IR stat (2),
+.IR chdate (1),
+.IR chown (8)

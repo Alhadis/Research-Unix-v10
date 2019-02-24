@@ -1,0 +1,194 @@
+.TH GREP 1
+.CT 1 files
+.SH NAME
+grep, egrep, fgrep \(mi search a file for a pattern
+.SH SYNOPSIS
+.B grep
+[
+.I option ...
+]
+.I expression
+[
+.I file ...
+]
+.PP
+.B egrep
+[
+.I option ...
+]
+.I expression
+[
+.I file ...
+]
+.PP
+.B fgrep
+[
+.I option ...
+]
+.I strings
+[
+.I file ...
+]
+.SH DESCRIPTION
+Commands of the
+.I grep\^
+family search the input
+.I files\^
+(standard input default)
+for lines matching
+a pattern.
+Normally, each line found
+is copied to the standard output.
+.I Grep\^
+patterns are limited regular
+.I expressions
+in the style of
+.IR ed (1);
+it uses a compact non-deterministic algorithm.
+.I Egrep\^
+patterns are full regular
+.IR expressions ;
+it uses a fast deterministic algorithm.
+.I Fgrep\^
+patterns are fixed
+.IR strings ;
+it is fast and compact.
+The following
+.I options\^
+are recognized:
+.TP
+.BI -f " file\^"
+Read the pattern from
+.IR file ;
+there is no pattern argument
+.IR ( egrep
+and
+.IR fgrep ).
+.PD 0
+.TP
+.B -v
+Reverse: print lines that do not match.
+.TP
+.B -i
+Ignore alphabetic case distinctions.
+.TP
+.B -n
+Mark each printed line with its line number counted in its file.
+.TP
+.B -x
+Exact: print only lines matched in their entirety
+.RI ( fgrep\^
+only).
+.TP
+.B -c
+Print only a count of matching lines.
+.TP
+.B -l
+Print only the names of files with matching lines (once).
+.TP
+.B -b
+Mark each printed line with its block number counted in its file.
+This is sometimes useful in locating
+disk block numbers by context.
+A block is 1024 bytes.
+.TP
+.B -h
+Do not print filename headers with output lines.
+.TP
+.B -s
+Produce no output, but return status.
+.TP
+.BI -e " expression\^"
+Same as a simple
+.I expression\^
+argument; useful when the
+.I expression\^
+begins with a
+.BR - .
+.PD
+.PP
+Output lines are tagged by filename when there is more than one
+input file.
+Care should be taken when
+using the shell metacharacters
+.B $*[^|()\e
+in
+.IR expression ;
+it is safest to enclose the
+entire
+.I expression\^
+in single quotes
+.BR \&\|\(fm \|.\|.\|.\| \(fm .
+.PP
+.I Fgrep\^
+searches for lines that contain any of the
+.I strings,
+which appear as a single argument with
+embedded newlines.
+.PP
+.I Egrep\^
+accepts regular expressions as in
+.IR ed (1),
+with the following changes:
+.TP
+1.
+There is no backreferencing
+.RB ( \e(\e)\e1\e2 ...).
+.PD 0
+.TP
+2.
+The characters
+.LR ^ ,
+.LR $ ,
+and
+.L *
+are always metacharacters unless quoted or contained in brackets
+.BR [\^] .
+.TP
+3.
+A regular expression followed by
+.B +
+matches one or more occurrences of the
+expression.
+.TP
+4.
+A regular expression followed by
+.B ?
+matches 0 or 1 occurrence.
+.TP
+5.
+Two regular expressions separated by \(bv or
+newline match occurrences of either.
+.TP
+6.
+Parentheses
+.B (\|)
+specify grouping.
+.PD
+.PP
+The order of precedence of operators is
+.BR [\|] ,
+then
+.BR \(**\|?\|+ ,
+then concatenation, then \(bv and new-line.
+.SH SEE ALSO
+.IR ed (1),
+.IR sed (1),
+.IR sh (1).
+.SH DIAGNOSTICS
+Exit status is 0 if any matches are found,
+1 if none, 2 for syntax errors or inaccessible files
+(even if matches were found).
+.SH BUGS
+Ideally there should be only one
+.IR grep ,
+but we do not know a single algorithm that spans a wide enough
+range of space-time tradeoffs.
+.br
+Lines
+are truncated at
+.B BUFSIZ
+characters; see
+.IR setbuf (3).
+Null characters behave as end-of-line in matches.
+.\"	@(#)grep.1	6.2 of 9/2/83

@@ -1,0 +1,193 @@
+.TH DICT 7 "bowell, murray"
+.CT 1 inst_info
+.SH NAME
+dict \- look up words in English dictionaries
+.SH SYNOPSIS
+.B dict
+[
+.B \-p
+]
+[
+.I dictionary
+[
+.I word
+]
+]
+.SH DESCRIPTION
+.I Dict
+looks up words in the specified
+.I dictionary,
+.B webster
+by default.
+Words are read, one per line from the standard input, and
+entries are written on the standard output.
+Characters other than letters, digits, and space are ignored.
+A single word may be specified in the command.
+The options are
+.TP
+.B \-p
+Find all entries of which the specified
+.I word
+is a prefix.
+.TP
+.B \-r
+Print raw form, including diacriticals, font marks, etc.
+Different for each dictionary to which it applies.
+.PP
+.I Dictionary
+is one of
+.TF thesaurus
+.TP
+.B webster
+Merriam-Webster Collegiate Dictionary, Seventh Edition,
+full text.
+No option
+.BR -p .
+.PD
+.TP
+.B web7
+Same, words only.
+.TP
+.BR etym [ ology ]
+Inverted index to
+.L webster
+by root words.
+.TP
+.B web2
+Merriam-Webster New International Dictionary, Second Edition,
+unabridged, words only.
+.TP
+.B oed
+The Oxford New English Dictionary, or OED,
+full text.
+No option
+.BR -p .
+.TP
+.B oxford
+The Oxford Advanced Learner's Dictionary of Contemporary English,
+full text.
+No 
+.BR -p .
+.TP
+.B slang
+New Dictionary of American Slang (Harper).
+Field identifiers: 
+.B me
+main entry (perhaps flagged
+.BR @ ),
+.B nu
+sense number (also given as
+.BI * n *\fR),
+.B pr
+pronunciation,
+.B ps
+part of speech,
+.B vr
+variations
+.B la
+provenance,
+.B df
+definition,
+.B dx
+definition by example,
+.B ex
+example,
+.B ed
+editorial note,
+.B et
+etymology,
+.B xr
+cross reference,
+.B xx
+indirect address,
+.B sq
+sequence number in original text.
+.TP
+.B names
+The Oxford Dictionary of British surnames.
+.TP
+.B thesaurus
+Collins Thesaurus.
+.TP
+.B thesaurusa
+Same, augmented with complete backreferences among words.
+.TP
+.B places
+USGS Gazetteer of populated places in US and possessions, with standard county
+code, latitude, longitude, year of listing, altitude (feet),
+1980 population, topo sheet code.
+For full name search, use thus: 
+.BR "dict places 'new york, ny'" ;
+without state, use prefix search:
+.BR "dict -p places 'new york'" .
+.TP
+towns
+A shorter gazetteer (PICADAD) of US populated places with latitude,
+longitude, zip code, and population population class
+(0:0-1000, 1:1000-2500, 2:2500-5000,
+3:5000-10,000, 4:10,000-25,000, 5:25,000-50,000, 6:50,000-100,000,
+7:100,000-250,000, 8:250,000-500,000, 9:500,000+), and something else.
+.TP
+.B spell
+Word list of
+.IR spell (1).
+.TP
+.BR acro [ nym ]
+17000 AT&T acronyms
+.TP
+anything else
+Print list of available dictionaries.
+.PP
+The dictionaries are copyrighted and must not
+be copied without permission, except for
+.LR web2 ,
+.LR spell ,
+and
+.LR acro .
+.SH FILES
+.TF /usr/spool/town/ustowns*
+.TP
+.F /usr/dict/*
+.RB (  /n/bowell )
+.TP
+.F /usr/dict/words
+.B spell
+or
+.BR web7 ,
+depending on machine
+.TP
+.F /usr/dict/oed
+.RB ( /n/kwee )
+.TP
+.F /usr/lib/dict/*
+.TP
+.F /usr1/maps/usplaces
+.RB (  /n/bowell )
+.TP
+.F /usr/spool/town/ustowns*
+.RB (  /n/alice )
+.SH SEE ALSO
+.IR look (1),
+.IR town (7)
+.SH BUGS
+In
+.BR webster ,
+.BR web7 ,
+and
+.BR pron ,
+diacriticals are done right \-
+by overstrikes \- which means they disappear on most screen terminals.
+.br
+In 
+.BR towns ,
+all data are lower case;
+missing zip codes look like normal codes ending in `000'.
+Latitude and longitude denote the center of population of the
+containing political entity; unincorporated places are spotted
+at the county center.
+.br
+In
+.BR slang ,
+some entries contain extra trash; option
+.B -p
+helps overcome the trouble.

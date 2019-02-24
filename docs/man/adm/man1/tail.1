@@ -1,0 +1,65 @@
+.TH TAIL 1
+.CT 1 files
+.SH NAME
+tail, readslow \- deliver the last part of a file
+.SH SYNOPSIS
+.B tail
+[
+.BR +- \fInumber\fP[ lbc ][ rf ]
+]
+[
+.I file
+]
+.SH DESCRIPTION
+.I Tail
+copies the named file to the standard output beginning
+at a designated place.
+If no file is named, the standard input is used.
+.PP
+Copying begins at distance
+.BI + number
+from the beginning, or
+.BI - number
+from the end of the input.
+.I Number
+is counted in units of lines, 1K blocks or characters,
+according to the appended flag
+.BR l ,
+.BR b ,
+or
+.BR c .
+Defaults are
+.BR -10l .
+.PP
+The further flag
+.B r
+causes tail to print lines from the end of the file in reverse order;
+.B f
+(follow) causes
+.I tail,
+after printing to the end, to keep watch and
+print further data as it appears.
+.SH EXAMPLES
+.TP
+.B tail file
+Print the last 10 lines of a file.
+.TP
+.L tail +0f file
+Print a file, and continue to watch
+data accumulate as it grows.
+This function was once called
+.I readslow.
+.TP
+.L sed 10q file
+Print the first 10 lines of a file.
+Some systems call this function
+.I head.
+.SH "SEE ALSO"
+.IR dd (1)
+.SH BUGS
+Tails relative to the end of the file
+are treasured up in a buffer, and thus
+are limited in length.
+.br
+Various kinds of anomalous behavior may happen
+with character special files.

@@ -1,0 +1,11 @@
+#!/usr/bin/rc
+# creates the index used by lookman
+>index
+for(i in ../man[1-9]*/*.[1-9]*)
+	tr 'A-Z 	' 'a-z\012\012' <$i|	# lower-case & one word per line
+	gre -v '^[.'']'|			# delete troff controls
+	tr -dc 'a-z\012'|			# delete funny chars
+	sort -u|				# remove duplicates
+	comm -23 - junkwords|			# delete noise
+	sed 's@$@	'$i'@' >>index		# stick file name on end of line
+sort -o index index

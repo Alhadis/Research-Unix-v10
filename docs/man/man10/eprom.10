@@ -1,0 +1,95 @@
+.TH EPROM 10.1 UCDS
+.SH NAME
+eprom \- read and write eproms through the Promac 2A promwriter
+.SH SYNOPSIS
+.B eprom
+[
+.I option
+] ...
+.SH DESCRIPTION
+.I Eprom
+serves as an interface to the RS-232 interface of the Promac 2A
+promwriter.
+Options are used to specify the eprom type, eprom manufacturer,
+and whether the prom is to be read or written.
+With no options eprom prints out a usage message.
+.TP
+.B -w
+Specifies that the eprom is to be written; default is read.
+.TP
+.B -R
+Specifies that the eprom is to be read.
+.TP
+.B -V
+Specifies that the eprom is to be verified.
+.TP
+.B -P
+Specifies that the eprom is to be programmed from data in Promac RAM
+using block limits previously specified.
+.TP
+.B -L
+Specifies that the eprom is to be copied to Promac RAM.
+.TP
+.B -D
+Specifies that the Promac RAM is to be downloaded from the host
+(no device is used).
+.TP
+.BI -s n
+Specifies a starting address (default 0) in the eprom in decimal.
+.TP
+.BI -t string
+.br
+.ns
+.TP
+.I string
+Specifies the device type of the eprom.
+Note that if the eprom has a "silicon signature" neither the type
+nor the manufacturer need be specified.
+.TP
+.BI -m string
+.br
+.ns
+.TP
+.I string
+Specifies the manufacturer of the eprom.
+Note that if the eprom has a "silicon signature" neither the type
+nor the manufacturer need be specified.
+.TP
+.BI -d n
+Specifies the (binary encoded) debug level.
+.PP
+To read an arbitrary 27256 eprom (which has silicon signature)
+using the Promac one could say
+.IP
+.B
+eprom -r > foo
+.PP
+or to write an Intel 2716 (which does not have a silicon signature)
+one could say
+.IP
+.B
+eprom -w -m int -t 2716 < filename
+.PP
+When an eprom is read, the addressed locations are copied
+in binary onto the standard output.
+When an eprom is written, the standard input is assumed to be
+of the same form, and is copied onto the prom.
+Most promwriter errors are reflected back to the user,
+however a few appear only on the promwriter LCD.
+Transmissions over the RS-232 line are checksummed,
+and when writing the eprom is verified.
+Transmissions between unix and the promwriter are in binary.
+.PP
+The speed of the prom writer should be set to 9600.
+If the promwriter is not in remote mode, it must be initialized
+by pushing the buttons, FUNC F 9 SET (however once in remote
+mode it stays in remote mode until the RESET button is pushed,
+even through power cycling).
+.SH FILES
+.F /dev/prom
+.br
+.F promwriter
+.br
+.F /usr/ucds/lib/eproms.*
+.SH BUGS
+If it goes off into a funny state the first time you use it, try again.

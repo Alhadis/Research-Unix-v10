@@ -1,0 +1,126 @@
+.TH LIBRARY 7
+.CT 1 inst_info
+.SH NAME
+library, bellcat \- bell labs library services
+.SH SYNOPSIS
+.B library
+[
+.I option ...
+] [
+.I item ...
+]
+.PP
+.B bellcat
+[
+.B -q
+]
+[
+.I database
+]
+.SH DESCRIPTION
+.I Library
+mails orders to the Bell Labs library network for books, technical
+reports, etc.
+Its use is self-explanatory.
+.PP
+A long response may be inserted with
+.B ~e
+or
+.B ~r
+as in
+.IR Mail (A).
+Interaction may be forestalled by answering questions on the command line
+(see example) and in a personal identity file, named in
+environment variable
+.B LIBFILE
+.RB ( .lib
+by default),
+which contains one or more lines like these:
+.IP
+.B ID:
+PAN or SSN
+.br
+.B LIBNAME:
+last name
+.br
+.B LIBLOG:
+log file, readable with
+.B mail -f
+.br
+.B LIBCNTL:
+concatenated search control codes:
+.B a
+acknowledge,
+.BI m number
+max on retrieved items
+.br
+.B LIBLOCAL:
+interaction control code:
+.B x
+brief prompts
+.LP
+Most
+.B LIBFILE
+items may be entered as environment variables by the same names.
+.PP
+.I Bellcat
+places a call to on-line library databases.
+Once entered,
+.I bellcat
+is self-explanatory.
+to exit.
+Option
+.B -q
+gets a `quick search', which uses no special terminal features
+and does not offer help.
+.PP
+Some of the databases are
+.TP
+.B books
+(default)
+.PD 0
+.TP
+.B journals
+.TP
+.B released
+released papers by Bell Labs authors
+.TP
+.B tech_reports
+non-AT&T technical reports
+.TP
+.I xxx
+unknown name causes a list of databases to be printed
+.PD
+.PP
+The databases of
+.I Bellcat
+and more are available through the LINUS
+service of the library network.
+You may use the
+.I library
+command to sign up for LINUS.
+.SH EXAMPLES
+.TP
+.B library -1 123456-851234-56tm
+Order a technical memorandum, giving answer 1 for kind of query and
+specifying a document number.
+.TP
+.B library -4 -p waldstein, r k
+Consult the people file.
+.SH FILES
+.F $HOME/.lib
+.br
+.F /usr/lib/bellcat
+.SH BUGS
+Except under option
+.BR -q ,
+.I bellcat
+requires a native-mode Teletype 5620 or a (possibly simulated)
+HP2621 terminal.
+Under
+.IR mux (9.1)
+.I bellcat 
+invokes a simulator if necessary.
+This introduces an extra level of shell, which can
+can be avoided thus:
+.LR "exec bellcat" .

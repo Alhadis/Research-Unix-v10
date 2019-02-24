@@ -1,0 +1,32 @@
+awk '
+BEGIN {	n = 50
+	for (i = 1; i <= n; i++) x[i] = int(100*rand())
+	for (i = 1; i <= n; i++) draw(i)
+	qsort(1, n) # or isort()
+}
+function draw(i)  {
+    print "a" i ": line", i, -3, i, x[i]
+}
+function swap(i, j,   t) {
+    t = x[i];  x[i] = x[j];  x[j] = t
+    draw(i); draw(j)
+    print "click swap"
+}
+function less(i, j) {
+    print "click comp"
+    if (x[i] < x[j]) return 1; else return 0
+}
+function isort(   i, j) {
+    for (i = 2; i <= n; i++)
+	for (j = i; j > 1 && less(j, j-1); j--)
+	    swap(j-1, j)
+}
+function qsort(l, u,   i, m) {
+    if (l >= u) return
+    swap(m = l, l + int((u-l+1)*rand()))
+    for (i = l+1; i <= u; i++)
+	if (less(i, l)) swap(++m, i)
+    swap(l, m)
+    qsort(l, m-1)
+    qsort(m+1, u)
+}'

@@ -1,0 +1,50 @@
+.TH DUP 2
+.CT 2 file_io
+.SH NAME
+dup, dup2 \(mi duplicate an open file descriptor
+.SH SYNOPSIS
+.nf
+.B int dup(fildes)
+.B int fildes;
+.PP
+.B int dup2(fildes, fildes2)
+.B int fildes, fildes2;
+.fi
+.SH DESCRIPTION
+Given
+a file descriptor
+.I dup
+allocates another file descriptor
+synonymous
+with
+the original.
+The new file descriptor is returned.
+.PP
+In
+.IR dup2 ,
+.I fildes
+is a file descriptor referring to an open file, and
+.I fildes2
+is an integer in the range of legal file descriptors.
+.I Dup2
+causes
+.I fildes2
+to refer to the same file
+and returns 
+.I fildes2.
+If
+.I fildes2
+already referred to another open file, it is closed first.
+.SH "SEE ALSO"
+.IR open (2), 
+.IR pipe (2), 
+.IR fd (4)
+.SH DIAGNOSTICS
+.BR EBADF ,
+.BR EMFILE
+.SH BUGS
+.I Dup
+of a file descriptor greater than 63
+turns into a
+.I dup2
+with a random second argument.

@@ -1,0 +1,97 @@
+.TH ECHO 1 
+.CT 1 shell
+.SH NAME
+echo, printf \- print arguments
+.SH SYNOPSIS
+.B echo
+[
+.B -n
+]
+[
+.B -e
+]
+[
+.I arg ...
+]
+.PP
+.B printf
+[
+.I format
+[
+.I arg...
+]
+]
+.SH DESCRIPTION
+.I Echo
+writes its arguments separated by blanks and terminated by
+a newline on the standard output.
+Option
+.B -n
+suppresses the newline.
+.PP
+Option 
+.B -e
+enables the interpretation of C-style escape codes,
+.LR \eb ,
+.LR \ef ,
+.LR \en ,
+.LR \er ,
+.LR \et ,
+.LR \e\e ,
+.L and 
+.BI \e ddd,
+where
+.I d
+is an octal digit,
+plus the special code
+.LR \ec ,
+which terminates the output.
+.PP
+.I Echo
+is useful for producing diagnostics in
+shell programs and for writing constant data on pipes.
+.PP
+.I Printf
+behaves like the library function of the same name; each
+.I arg
+is printed on the standard output according to the corresponding
+\&%-introduced specification in the
+.I format
+string.  The standard C escape sequences
+.BR \en ,
+.BR \er ,
+.BR \et ,
+.BR \eb ,
+and
+.BI \e digits
+are recognized in
+.IR format .
+The
+.I arg
+will be treated as a string if the corresponding format is
+.BR s ;
+otherwise it is evaluated as a C constant, with the following extensions:
+.IP
+A leading plus or minus is allowed.
+.IP
+If the leading character is a single or double quote, the value is the
+.SM ASCII
+code of the next character.
+.IP
+Otherwise, if the leading character is not a digit, the value is its
+.SM ASCII
+code.
+.PP
+The format string is reused as often as necessary to satisfy the
+.IR arg "'s."
+Any extra format specifications are evaluated with zero or the null string.
+.SH EXAMPLES
+.TP
+.L
+echo "can't open file" $1 1>&2
+Send a message to the standard error file.
+.SH SEE ALSO
+.IR printf (3)
+.SH BUGS
+.I Printf
+has no diagnostics for illegal syntax.

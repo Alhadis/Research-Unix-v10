@@ -1,0 +1,80 @@
+.TH REDCODE 6 5/20/84
+.CM 3
+.SH NAME
+redcode \- assembler for mars game
+.SH SYNOPSIS
+.I redcode
+.I file ...
+.SH DESCRIPTION
+.I Redcode
+is an assembler for the
+assembly language given by Kee Dewdney in the
+`Computer Recreations',
+.I Scientific American,
+May, 1984.
+The command line lists of source file names ending in
+.LR .red .
+They are assembled into corresponding
+object files with names ending in
+.LR .obj .
+.PP
+A source file consists of a
+.L name
+directive giving the program's name,
+then any number of program and data statements,
+then an
+.L end
+directive that gives the starting location of the program.
+Statements have the following syntax:
+.IP
+[label] opcode arg1 [arg2] [; comment]
+.PP
+There are three addressing modes;
+all address calculations are done modulo 8000.
+.LP
+.nf
+.I
+Syntax		Meaning
+#[0-9]+		immediate
+[0-9]+		relative
+@[0-9]+		indirect, relative
+.PP
+The following opcodes are implemented, along with the corresponding
+semantics specified in pseudo-C:
+.PP
+.nf
+.I
+Instruction	Mnem	Opcode	Args	Explanation
+Move		mov	1	A B	B=A
+Add		add	2	A B	B+=A
+Subtract	sub	3	A B	B-=A
+Jump		jmp	4	A	PC=A
+Jump if zero	jmz	5	A B	PC=(B==0)?A:PC+1
+Jump if greater	jmg	6	A B	PC=(B<4000)?A:PC+1
+Dec, Jmp if 0	djz	7	A B	PC=(--B==0)?A:PC+1
+Compare		cmp	8	A B	PC=(A==B)?PC+1:PC+2
+.PP
+The following non-executable directives may be used
+to reserve and initialize data space:
+.PP
+.I
+Directive	Mnem	Arg	Explanation
+Buffer space	bss	n	Reserve n words
+Data		data	A	Initialize 1 word
+Name		name	't'	Name of program
+End		end	start	Specify starting location
+.PP
+The program was written by Paul Milazzo at Rice.
+For documentation on the object code format, see
+.IR mars (6).
+.SH EXAMPLES
+.EX
+	name	'dwarf'
+site	data	-1		; address of last 0 'bomb'
+start	add	#5	site	; move site forward
+	mov	#0	@site	; write 0 'bomb'
+	jmp	start		; loop
+	end	start
+.EE
+.SH SEE ALSO
+.IR mars (6)

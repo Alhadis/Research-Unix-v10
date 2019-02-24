@@ -1,0 +1,119 @@
+.TH MOUNT 8
+.CT 1 sa_nonmortals
+.SH NAME
+mount, umount \- mount and dismount file system
+.SH SYNOPSIS
+.B /etc/mount
+[
+.I special name
+[
+.I fstype
+[
+.I flags
+] ] ]
+.PP
+.B /etc/mount
+.B -a
+.PP
+.B /etc/mount
+[
+.I special name
+[
+.B -r
+]
+]
+.PP
+.B /etc/umount
+.I name
+.PP
+.B /etc/umount
+.B -a
+.SH DESCRIPTION
+.I Mount
+announces to the system that a removable file system
+of type
+.I fstype
+is present on the file
+.I special.
+The file
+.I name
+must exist already;
+it becomes the name of the newly mounted root.
+.I Fstype
+and
+.I flags
+are integers;
+if omitted,
+they default to 0.
+Type 0
+is an ordinary disk file system.
+Other types
+and possible flag values
+are listed in
+.IR fmount (2).
+.PP
+The shorthand
+.B "mount special file -r"
+is equivalent to
+.BR "mount special file 0 1" :
+mount an ordinary file system
+read-only.
+.PP
+If option
+.B -a
+is present,
+.I mount
+attempts to mount, in order, every file system listed in
+.IR fstab (5).
+.PP
+.I Umount
+announces to the system that the file system mounted on file 
+.I name
+is to be removed.
+.PP
+These commands
+maintain a table of mounted file systems in
+.FR /etc/mtab ;
+see
+.IR fstab (5).
+If invoked without an argument,
+.I mount
+prints the table.
+If option
+.B -a
+is present,
+.I umount
+attempts to remove, in reverse order, each file system listed in
+.IR mtab .
+.PP
+Physically write-protected and magnetic tape file
+systems must be mounted read-only
+or errors will occur when access times are updated,
+even if no explicit write is attempted.
+.SH EXAMPLES
+.TP
+.B "/etc/mount /dev/ra02 /usr"
+Mount the file system on disk
+.L /dev/ra02
+on directory
+.LR /usr .
+.TP
+.B "/etc/mount /dev/null /proc 2"	
+Mount the process file system.
+.SH FILES
+.TF /etc/fstab
+.TP
+.F /etc/mtab
+mount table
+.TP
+.F /etc/fstab
+file system table
+.SH "SEE ALSO"
+.IR fmount (2),
+.IR fstab (5), 
+.IR netfs (8)
+.SH BUGS
+Mounting file systems full of garbage may crash the system.
+.br
+Mounting a root directory on a non-directory
+makes some apparently good pathnames invalid.

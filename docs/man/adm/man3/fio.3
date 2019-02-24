@@ -1,0 +1,255 @@
+.TH FIO 3
+.CT 2 file_io
+.SH NAME
+Finit, Frdline, Fgetc, Fread, Fseek, Fundo,
+Fputc, Fprint, Fwrite, Fflush, Ftie, Fclose, Fexit \(mi fast buffered input/output
+.SH SYNOPSIS
+.nf
+.2C
+.B #include <fio.h>
+.PP
+.B void Finit(fd, buf)
+.B char *buf;
+.PP
+.B void Fclose(fd);
+.PP
+.B int Fprint(fildes, format [, arg ...])
+.B int fildes;
+.B char \(**format;
+.PP
+.B char *Frdline(fd)
+.PP
+.B int FIOLINELEN(fd)
+.PP
+.B long FIOSEEK(fd)
+.PP
+.B int Fgetc(fd)
+.PP
+.B void Fundo(fd)
+.PP
+.B long Fseek(fd, offset, ptr)
+.B long offset;
+.PP
+.B int Fputc(fd, c)
+.PP
+.B long Fread(fd, addr, nbytes)
+.B char *addr;
+.B long nbytes;
+.PP
+.B int Fwrite(fd, addr, nbytes)
+.B char *addr;
+.B long nbytes;
+.PP
+.B int Fflush(fd)
+.PP
+.B void Ftie(ifd, ofd)
+.PP
+.B Fexit(type)
+.1C
+.fi
+.SH DESCRIPTION
+These routines provide buffered I/O, faster than, and incompatible
+with
+.IR stdio (3).
+The routines can be called in any order.
+I/O on different file descriptors is independent.
+.PP
+.I Finit
+initializes a buffer (whose type is
+.IR Fbuffer )
+associated with the file descriptor
+.IR fd .
+Any buffered input associated with
+.I fd
+will be lost.
+The buffer can be supplied by the user
+(it should be at least
+.B sizeof(Fbuffer)
+bytes)
+or if
+.I buf
+is
+.BR "(char *)0" ,
+.I Finit
+will use
+.IR malloc (3).
+.IR Finit
+must be called after a stretch of
+.IR non- fio
+activity, such as
+.IR close
+or
+.IR lseek (2),
+between
+.I fio
+calls on the same file descriptor number;
+it is unnecessary, but harmless, before the first
+.I fio
+activity on a given file descriptor number.
+.PP
+.I Fclose
+flushes the buffer for
+.IR fd ,
+.IR free s
+the buffer if it was allocated by
+.IR Finit ,
+and then closes
+.IR fd .
+.PP
+.I Frdline
+reads a line from the file associated with the file descriptor
+.IR fd .
+The newline at the end of the line is replaced by a 0
+byte.
+Lines longer than 4096 characters will have characters deleted.
+.I Frdline
+returns a pointer to the start of the line or
+.L (char *)0
+on end of file or read error.
+The macro
+.I FIOLINELEN
+returns the length (not including the 0
+byte) of the most recent line returned by
+.IR Frdline .
+The value is undefined after a call to any other
+.I fio
+routine.
+.PP
+.I Fgetc
+returns the next character from the file descriptor
+.IR fd ,
+or a negative value
+at end of file.
+.PP
+.I Fread
+reads
+.I nbytes
+of data from the file descriptor
+.I fd
+into memory starting at
+.IR addr .
+The number of bytes read is returned on success
+and a negative value is returned if a read error occurred.
+.PP
+.I Fseek
+applies
+.IR lseek (2)
+to
+.I fd
+taking buffering into account.
+It returns the new file offset.
+The macro
+.I FIOSEEK
+returns the file offset of the next character to be processed.
+.PP
+.I Fundo
+makes the characters returned by the last call to
+.I Frdline
+or
+.I Fgetc
+available for reading again.
+There is only one level of undo.
+.PP
+.I Fputc
+outputs the low order 8 bits of
+.I c
+on the file associated with file descriptor
+.IR fd .
+If this causes a
+.IR write
+(see
+.IR read (2))
+to occur and there is an error,
+a negative value is returned.
+Otherwise, zero is returned.
+.PP
+.I Fprint
+is a buffered interface to
+.IR print (3).
+If this causes a
+.IR write
+to occur and there is an error,
+a negative value is returned.
+Otherwise, the number of chars output is returned.
+.PP
+.I Fwrite
+outputs
+.I nbytes
+bytes of data starting at
+.I addr
+to the file associated with file descriptor
+.IR fd .
+If this causes a
+.IR write
+to occur and there is an error,
+a negative value is returned.
+Otherwise, the number of bytes written is returned.
+.PP
+.I Fflush
+causes any buffered output associated with
+.I fd
+to be written;
+it must precede a call of
+.I close
+on
+.IR fd.
+The return is as for
+.IR Fputc .
+.PP
+.I Ftie
+links together two file descriptors such that any
+.IR fio -initiated
+.IR read (2)
+on
+.I ifd
+causes a
+.I Fflush
+of
+.I ofd
+(if it has been initialized).
+It is appropriate for most programs used as filters to do
+.BR Ftie(0,1) .
+The tie may be broken by
+.BR "Ftie(ifd, -1)" .
+.PP
+.I Fexit
+is used to clean up all
+.I fio
+buffers.
+If
+.I type
+is zero, the buffers are
+.IR Fflush ed,
+otherwise they are
+.IR Fclose d.
+.B "Fexit(0)"
+is automatically called at
+.IR exit (3).
+.SH SEE ALSO
+.IR open (2),
+.IR print (3),
+.IR stdio (3)
+.SH DIAGNOSTICS
+.I Fio
+routines that return integers yield
+.B -1
+if 
+.I fd
+is not the descriptor of an open file or if the operation
+is inapplicable to
+.I fd.
+.SH BUGS
+The data returned by
+.I Frdline
+may be overwritten by calls to any other
+.I fio
+routine.
+.br
+.I Fgetc
+is much slower than
+access through a pointer returned by
+.I Frdline.
+.br
+There is no 
+.IR scanf (3)
+analogue.

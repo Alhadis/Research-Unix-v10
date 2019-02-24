@@ -1,0 +1,124 @@
+.TH GETUID 2
+.CT 2 proc_man secur
+.SH NAME
+getuid, getgid, geteuid, getegid, getlogname, getpid, getppid, getpgrp, setuid, setgid, setruid, setlogname, setpgrp \(mi get or set 
+user, group, or process identity
+.SH SYNOPSIS
+.nf
+.2C
+.B int getuid()
+.PP
+.B int geteuid()
+.PP
+.B int getgid()
+.PP
+.B int getegid()
+.PP
+.B int getlogname(buf)
+.B char *buf;
+.PP
+.B int getpid()
+.PP
+.B int getppid()
+.PP
+.B int getpgrp(pid)
+.B int pid;
+.PP
+.B int setuid(uid)
+.PP
+.B int setgid(gid)
+.PP
+.B int setruid(uid)
+.PP
+.B int setlogname(buf)
+.B char buf[8];
+.PP
+.B int setpgrp(pid, pgrp)
+.B int pid, pgrp;
+.sp 3	\" to balance columns
+.1C
+.fi
+.SH DESCRIPTION
+.I Getuid
+returns the real userid of the current process,
+.I geteuid
+the effective userid.
+The real userid identifies the person who is logged in,
+rather than the effective userid, which
+determines access permission at the moment.
+It is thus useful to set-userid programs to find out who invoked them.
+.PP
+.I Getgid
+returns the real groupid,
+.I getegid
+the effective groupid.
+.PP
+.I Getlogname
+copies the login name of the current process
+into the buffer pointed to by
+.IR buf ,
+which must be at least eight characters long.
+.PP
+.I Getpid
+returns
+the process id of
+the current process,
+.I getppid
+that of its parent process.
+.PP
+.I Getpgrp
+returns the process group id of process
+.IR pid ;
+0
+means the current process.
+.PP
+.I Setuid
+.RI ( setgid )
+sets the effective and real userid (groupid) of the current process to
+.I uid
+.RI ( gid ).
+Both the effective and the real userid (groupid) are set.
+These calls are permitted only if the process is super-user
+or if the argument is the real or effective userid (groupid).
+.PP
+.I Setruid
+sets the real userid only.
+It may only be used by the super-user.
+.PP
+.I Setlogname
+sets the login name
+returned by
+.IR getlogname .
+It may only be used by the super-user.
+.PP
+.I Setpgrp
+sets the process group id of
+process
+.I pid
+to
+.IR pgrp .
+.I Pid
+0 is the current process.
+Only the super-user may set the process group
+of processes with other userids or set a process group to 0.
+.SH "SEE ALSO"
+.IR getuid (1),
+.IR getlogin (3)
+.SH DIAGNOSTICS
+.IR getlogname :
+.BR EFAULT
+.br
+.IR setlogname :
+.BR EFAULT ,
+.B EPERM 
+.br
+.IR setuid ,
+.IR setgid ,
+.IR setruid ,
+.IR setpgrp :
+.B EPERM
+.SH BUGS
+Non-super-user processes may set the process
+group of descendant processes;
+only certain unsupported shells use this,
+and the facility may vanish presently.
