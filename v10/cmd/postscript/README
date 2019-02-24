@@ -1,0 +1,220 @@
+
+Version 3.3 PostScript printer support programs. The package is now
+included as part of the DWB package. The instructions in this file
+ONLY apply if the PostScript support package has been separated from
+the DWB package.
+
+-------------
+Major Changes
+-------------
+
+In what follows TARGETS, BINDIR, and POSTBIN refer to definitions made
+in the top level makefile (file postscript.mk). All are described in the
+next section. The important changes are:
+
+ 1: dpost now reads ASCII font tables. makedev and the old binary font
+    tables are completely gone.
+
+ 2: The default PostScript font tables (directory postscript/devpost)
+    now only include the standard 35 fonts available on most PostScript
+    printers. All width tables were built on a version 47.0 QMS PS-810
+    using files in postscript/buildtables.
+
+ 3: Additional tables (the ones that were in the devpost collection
+    in DWB 3.0) have been moved to directory postscript/devpost.add.
+    By default they are not installed. If you need these tables include
+    devpost.add in the TARGETS list in file postscript.mk.
+
+    If you're not already using the extra font tables don't start now.
+    Font names are poorly chosen, particularly since the .fp request
+    can now handle long font names (as synonyms). The devpost.add
+    tables are completely unsupported. There is no guarantee these
+    tables will be included in future releases.
+
+ 4: The original collection of PostScript font tables are supplied
+    (directory devopost), but by default are not installed. If you need
+    the tables add devopost to the TARGETS list in file postscript.mk.
+
+    If you're not already using the old PostScript font tables don't
+    start now. The devopost tables are unsupported and will likely not
+    be included in future releases.
+
+ 5: dpost recognizes two new fields in the ASCII font tables. An entry
+    that begins with fontname, as in
+
+		fontname Times-Roman
+
+    is expected to be the full PostScript font name. All PostScript font
+    tables should include a fontname entry. The second entry is,
+
+		named in prologue
+
+    and is used to disable runtime abbreviation of font names - dpost
+    assumes the abbreviation is already in the prologue (file dpost.ps).
+
+ 6: All traces of the Varitimes font tables (VR, VI, VB, and VX) have
+    been removed.
+
+ 7: Bracket building problems on have been fixed by adding a Metrics
+    entry for braceleftbt to dpost.ps. Compensates for an apparent
+    mistake in Adobe's Symbol font.
+
+ 8: Translators (e.g. dpost, postprint) no longer leave save objects on
+    the operand stack. New and old versions of the translators and
+    prologues should not be mixed.
+
+ 9: Passing output from new translators through an old version of
+    postreverse may fail if the more than one page image is being
+    printed on each sheet of paper. The new version of postreverse
+    is safe and probably should be installed on all your systems,
+    even if you don't install any other part of the package.
+
+10: dpost and picpack are now only installed in directory BINDIR. The
+    makefiles,
+
+		postscript/dpost/dpost.mk
+		postscript/picpack/picpack.mk
+
+    delete dpost and picpack from POSTBIN before installing the new
+    versions. Change the two makefiles if you expect to find dpost
+    and picpack in directory POSTBIN.
+
+11: The mechanism for compiling DKHOST code in postio on internal
+    System V machines has been changed. The only way to get it is to
+    set DKHOST to TRUE in postscript.mk. Makefiles now assume dk.h and
+    libdk.a are in standard places (i.e. /usr/include and /usr/lib).
+    If that's not the case on your system you may have to edit file
+    postio/postio.mk.
+
+12: Man pages and programs are installed together - there's no easy
+    way to avoid it. Setting MAN1DIR and MAN5DIR to some existing
+    temporary directory (e.g. /tmp) means programs will be properly
+    installed but man pages won't go anywhere permanent.
+
+Check the VERSION file for additional changes.
+
+-------------------
+Tuning The Makefile
+-------------------
+
+Source files, man pages, and low level makefiles can all be updated
+to reflect settings in postscript.mk in one simple step (described
+later). In most cases you only need to edit file postscript.mk.
+
+First save a copy of file postscript.mk. Then adjust the following
+definitions in file postscript.mk:
+
+  SYSTEM    best match for your version of Unix. Current choices for
+	    SYSTEM are:
+
+			SYSV	- System V
+			V9	- Ninth Edition
+			BSD4_2	- Berkeley (eg. Sun)
+
+	    Controls conditional compilation in a few places.
+
+  GROUP	    group assigned to all installed files
+
+  OWNER	    owner of everything that's installed
+
+  BINDIR    dpost and picpack go here. All other programs go in POSTBIN.
+	    BINDIR must already exist - it will not be created during an
+	    install.
+
+  HOSTDIR   hostresident font directory for PostScript printers. Only
+	    used in the font download program.
+
+  FONTDIR   width table directory - for troff and most postprocessors
+
+  MAN1DIR   command manpages. A command and its manpage are installed
+	    together - there's no easy way to avoid it. Setting MAN1DIR
+	    to an existing temporary directory (e.g. /tmp) means an
+	    install will work but manpages won't go anywhere permanent.
+	    MAN1DIR must already exist - it will not be created during
+	    an install.
+
+  POSTBIN   where most PostScript support programs go. dpost and picpack
+	    the exceptions.
+
+  POSTLIB   prologues and miscellaneous PostScript files. Primarily for
+	    the programs that live in POSTBIN.
+
+  CFLGS	    common compiler options - used to build CFLAGS in the low
+	    level makefiles. CLFGS and LDFLGS are best set on the make
+	    command line.
+
+  LDFLGS    common link editor options - used to build LDFLAGS in the
+	    low level makefiles. LDFLGS and CFLGS are best set on the
+	    make command line.
+
+  DKHOST    must only be set to TRUE or FALSE. TRUE means compile DKHOST
+	    Datakit support code in postio. Only used if SYSTEM is SYSV.
+
+  DOROUND   must only be set to TRUE or FALSE. TRUE means PostScript
+	    translators include code that maps clipping path dimensions
+	    into known paper sizes.
+
+  TARGETS   the default list of what's built by make. Each target must
+	    be the name of a source directory. A target that names a
+	    non-existent source directory is ignored. Setting TARGETS
+	    on the make command line overrides the default list.
+
+-------------------
+Updating The Source
+-------------------
+
+Whenever file postscript.mk changes you should update source files,
+man pages, and low level makefiles by typing,
+
+	make -f postscript.mk changes
+
+------------------------
+More System Dependencies
+------------------------
+
+The package has been compiled and tested on System V and Ninth Edition
+Unix Systems and on Sun workstations. Most differences are handled via
+the SYSTEM definition in postscript.mk. Problems that remain are:
+
+  SYSV - System V
+    Use the native compiler if you're on an internal System V UTS
+    machine.
+
+  V9 - Ninth or Tenth Edition
+    chown is in /etc and chgrp no longer exists - it's been folded into
+    the chown command. You may be forced to build a simple chgrp shell
+    script (put it in your bin) that calls chown. If you're not superuser
+    set OWNER to your login name and GROUP to your group id.
+
+  BSD4_2 - Sun Workstations
+    Use the Bourne shell. chown is should be in /usr/etc. Add /usr/etc
+    to your PATH and export PATH. If you're not superuser set OWNER to
+    your login name and GROUP to your group id.
+
+----------------------
+Installing The Package
+----------------------
+
+To build (but not install) the default package (i.e. everything named by
+TARGETS in postscript.mk) type,
+
+	make -f postscript.mk all
+
+To build and install the package type,
+
+	make -f postscript.mk all install
+
+After the package is installed use,
+
+	make -f postscript.mk clobber
+
+to delete binary files and compiled programs from the source directories.
+
+To select part of the package define TARGETS on the command line. For
+example,
+
+	make -f postscript.mk TARGETS="dpost devpost" all install
+
+builds and installs dpost and the PostScript font tables. Quotes hide
+white space from the shell.
+

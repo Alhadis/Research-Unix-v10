@@ -1,0 +1,3917 @@
+# To unbundle, sh this file
+echo assert.c 1>&2
+sed 's/.//' >assert.c <<'//GO.SYSIN DD assert.c'
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern struct TBL *tbl;
+- extern int *globvars, nrvars;
+- extern int assertbl, abase, errortbl, ebase;
+-
+-require(TT, stuff, by)
+-{
+-	if (assertbl != NONE)
+-		assert(TT, stuff, by);
+-	if (errortbl != NONE)
+-		errort(TT, stuff, by);
+-}
+-
+-inscope(TT, stuff, by)
+-{ register int i;
+-
+-	for (i = 0; i < tbl[assertbl].nrcols; i++)
+-		if (TT == tbl[assertbl].coltyp[i]
+-		&&  stuff == tbl[assertbl].colmap[i]
+-		&&  by == tbl[assertbl].colorg[i])
+-			return 1;
+-
+-	return 0;
+-}
+-
+-assert(TT, stuff, by)
+-{ int h, i, j, x, frst;
+-
+-	for (frst = 0; frst < tbl[assertbl].nrcols; frst++)
+-		if (tbl[assertbl].coltyp[frst] == TT
+-		&&  stuff == tbl[assertbl].colmap[frst]
+-		&&  by == tbl[assertbl].colorg[frst])
+-			break;
+-
+-	if (frst == tbl[assertbl].nrcols)
+-		return;		/* not within assertion's scope */
+-
+-	for (i = 0; i < tbl[assertbl].nrrows; i++)
+-	{
+-		if (globvars[i+abase] != 1)
+-			continue;
+-
+-		for (j = frst; j < tbl[assertbl].nrcols; j++)
+-		{
+-			if (TT == tbl[assertbl].coltyp[j]
+-			&&  stuff == tbl[assertbl].colmap[j]
+-			&&  by == tbl[assertbl].colorg[j])
+-			{
+-			 if (tbl[assertbl].ptr[i][j].nrpils == 0)
+-			 	output("assertion violated: ", 1);
+-			 else
+-			 for (h = 0; h < tbl[assertbl].ptr[i][j].nrpils; h++)
+-			 {	x = tbl[assertbl].ptr[i][j].one[h].transf;
+-				globvars[x+abase] = 2;
+-				globvars[i+abase] = 0;
+-	}	}	}}
+-	for (i = abase; i < nrvars; i++)
+-		if (globvars[i] == 2)
+-			globvars[i] = 1;
+-}
+-
+-assertholds()
+-{ int i;
+-	if (assertbl == NONE)
+-		return 1;
+-
+-	for (i = abase; i < nrvars; i++)
+-		if (globvars[i] && tbl[assertbl].endrow[i-abase])
+-			return 1;
+-	return 0;
+-}
+-
+-errort(TT, stuff, by)
+-{ int h, i, j, x, frst;
+-
+-	for (frst = 0; frst < tbl[errortbl].nrcols; frst++)
+-		if (tbl[errortbl].coltyp[frst] == TT
+-		&&  stuff == tbl[errortbl].colmap[frst]
+-		&&  by == tbl[errortbl].colorg[frst])
+-			break;
+-
+-	if (frst == tbl[errortbl].nrcols)
+-		return;		/* not within assertion's scope */
+-
+-	for (i = 0; i < tbl[errortbl].nrrows; i++)
+-	{
+-		if (globvars[i+ebase] != 1)
+-			continue;
+-
+-		for (j = frst; j < tbl[errortbl].nrcols; j++)
+-		{
+-			if (TT == tbl[errortbl].coltyp[j]
+-			&&  stuff == tbl[errortbl].colmap[j]
+-			&&  by == tbl[errortbl].colorg[j])
+-			{
+-			 if (tbl[errortbl].ptr[i][j].nrpils == 0)
+-			 	globvars[i+ebase] = 0;
+-			 else
+-			 for (h = 0; h < tbl[errortbl].ptr[i][j].nrpils; h++)
+-			 {	x = tbl[errortbl].ptr[i][j].one[h].transf;
+-				globvars[x+ebase] = 2;
+-				globvars[i+ebase] = 0;
+-			 }
+-			}
+-		}
+-	}
+-	for (i = ebase; i < nrvars; i++)
+-		if (globvars[i] == 2)
+-		{	globvars[i] = 1;
+-			if (tbl[errortbl].endrow[i-ebase])
+-				output("error matched: ", 2);
+-		}
+-	globvars[ebase] = 1;
+-}
+-
+-peekassert(ice)
+-	struct FREEZE *ice;
+-{ register int i;
+-  if (assertbl != NONE)
+-	for (i = abase; i < nrvars; i++)
+-		globvars[i] = ice->varsaved[i];
+-  else if (errortbl != NONE)
+-	for (i = ebase; i < nrvars; i++)
+-		globvars[i] = ice->varsaved[i];
+-}
+//GO.SYSIN DD assert.c
+echo cmalloc.c 1>&2
+sed 's/.//' >cmalloc.c <<'//GO.SYSIN DD cmalloc.c'
+-#ifdef debug
+-#define ASSERT(p) if(!(p))botch("p");else
+-botch(s)
+-char *s;
+-{
+-	printf("assertion botched: %s\n",s);
+-	abort();
+-}
+-#else
+-#define ASSERT(p)
+-#endif
+-
+-/*	C storage allocator
+- *	circular first-fit strategy
+- *	works with noncontiguous, but monotonically linked, arena
+- *	each block is preceded by a ptr to the (pointer of) 
+- *	the next following block
+- *	blocks are exact number of words long 
+- *	aligned to the data type requirements of ALIGN
+- *	pointers to blocks must have BUSY bit 0
+- *	bit in ptr is 1 for busy, 0 for idle
+- *	gaps in arena are merely noted as busy blocks
+- *	last block of arena is empty and
+- *	has a pointer to first
+- *	idle blocks are coalesced during space search
+- *
+- *	a different implementation may need to redefine
+- *	ALIGN, NALIGN, BLOCK, BUSY, INT
+- *	where INT is integer type to which a pointer can be cast
+-*/
+-#define INT int
+-#define ALIGN int
+-#define NALIGN 1
+-#define WORD sizeof(union store)
+-#define BLOCK 1024
+-#define BUSY 1
+-#define NULL 0
+-#define testbusy(p) ((INT)(p)&BUSY)
+-#define setbusy(p) (union store *)((INT)(p)|BUSY)
+-#define clearbusy(p) (union store *)((INT)(p)&~BUSY)
+-
+-union store {
+-	      union store *ptr;
+-	      ALIGN dummy[NALIGN];
+-	      int calloc;	/*calloc clears an array of integers*/
+-};
+-
+-static	union store alloca;	/* initial arena */
+-static	union store *allocb = &alloca;	/*arena base*/
+-static	union store *allocp = &alloca;	/*search ptr*/
+-static	union store *alloct = &alloca;	/*arena top; for speedier ialloc*/
+-static	union store allocx, allocy;	/*for benefit of realloc*/
+-extern	char *sbrk();
+-
+-/* a cache list of frequently-used sizes is maintained. From each
+- * cache entry hangs a chain of available blocks (marked busy
+- * to keep out of the first fit search)  
+-*/
+-#define CACHEMAX 100	/* largest block to be cached (in words) */
+-#ifndef pdp11
+-#define CACHESIZ 13	/* number of entries (prime) */
+-#else
+-#define CACHESIZ 0
+-#endif
+-static struct cache {
+-	int size;
+-	union store *chain;
+-} cache[CACHESIZ];
+-
+-char *
+-malloc(nbytes)
+-unsigned nbytes;
+-{
+-	register union store *p, *q;
+-	register nw;
+-	register temp;
+-	register struct cache *cp;
+-
+-	ASSERT(allock(allocp)&1);
+-	nw = (nbytes+WORD+WORD-1)/WORD;
+-	if(CACHESIZ && nw<CACHEMAX && nw>2) {	/* see note + below */
+-		cp = cache + nw%CACHESIZ;
+-		p = cp->chain;
+-		if(p && nw==cp->size) {
+-			cp->chain = p[1].ptr;
+-			ASSERT(testbusy(p->ptr));
+-			ASSERT(clearbusy(p->ptr)-p==nw);
+-			return (char*)(p+1);
+-		}
+-	}
+-	ASSERT(allock(allocp)&3);
+-	for(; ; ) {	/* done at most twice */
+-		p = allocp;
+-		if(alloca.ptr!=0)		/*C can't initialize union*/
+-		for(temp=0; ; ) {
+-			if(!testbusy(p->ptr)) {
+-				while(!testbusy((q=p->ptr)->ptr)) {
+-					ASSERT(q>p);
+-					p->ptr = q->ptr;
+-				}
+-				allocp = p;
+-				if(q>=p+nw && p+nw>=p)	/*room; no wrap*/
+-					goto found;
+-			}
+-			q = p;
+-			p = clearbusy(p->ptr);
+-			if(p <= q) {
+-				ASSERT(p==allocb);
+-				if(++temp>1)
+-					break;
+-			}
+-		}
+-		temp = nw;
+-		p = (union store *)sbrk(0);
+-		q = allocp->ptr;
+-		if(!testbusy(q) && q+1 == p)
+-			temp -= p - allocp;
+-		temp = ((temp+BLOCK/WORD)/(BLOCK/WORD))*(BLOCK/WORD);
+-		if(p+temp <= p)
+-			return(NULL);
+-		for( ; ; ) {
+-			register s;
+-			q = (union store *)sbrk(temp*WORD);
+-			if((INT)q != -1)
+-				break;
+-			for(cp=cache; cp<cache+CACHESIZ; cp++) {
+-				for(p=cp->chain; p; p=p[1].ptr) {
+-					ASSERT(testbusy(p->ptr));
+-					p->ptr = clearbusy(p->ptr);
+-					ASSERT(p->ptr-p==cp->size);
+-				}
+-				cp->chain = 0;
+-			}
+-			s = (temp-nw)/2;
+-			if(s <= 0)
+-				return(NULL);
+-			temp -= s;
+-		}
+-		ialloc((char *)q, (unsigned)temp*WORD);
+-	}
+-found:
+-	q = p + nw;
+-	if(p->ptr > q) {
+-		allocx = *q;
+-		q->ptr = p->ptr;
+-	}
+-	p->ptr = setbusy(q);
+-	ASSERT(allock(allocp)&7);
+-	return((char *)(p+1));
+-}
+-/* + note CACHESIZ is tested for conditional compilation; nw>2 assumes there's
+- * no point in caching smaller sizes (they are rarely used and always
+- * can be allocated) and protects against the old storage compaction trick:
+- * free(p); free(dummy);dummy=malloc(1);realloc(p)
+- * (otherwise free(dummy) would destroy allocy, which pertains to p)
+-*/
+-
+-/*	freeing strategy tuned for LIFO allocation
+-*/
+-free(ap)
+-char *ap;
+-{
+-	register union store *p = (union store *)ap, *q;
+-	register nw;
+-	register struct cache *cp;
+-
+-	--p;
+-	ASSERT(allock(p));
+-	ASSERT(testbusy(p->ptr));
+-	nw = clearbusy(p->ptr) - p;
+-	ASSERT(nw>0);
+-	if(CACHESIZ && nw<CACHEMAX && nw>2) {
+-		cp = cache + nw%CACHESIZ;
+-		if(nw != cp->size) {
+-			q = cp->chain;
+-			if(q) {
+-				ASSERT(testbusy(q->ptr));
+-				q->ptr = clearbusy(q->ptr);
+-				ASSERT(q->ptr-q==cp->size);
+-				cp->chain = q[1].ptr;
+-			}
+-			if(!q)
+-				cp->size = nw;
+-			else
+-				goto nocache;
+-		}
+-		allocy = p[1];
+-		p[1].ptr = cp->chain;
+-		cp->chain = p;
+-		ASSERT(allock(allocp)&017);
+-		return;
+-	}
+-nocache:
+-	allocp = p;
+-	p->ptr = clearbusy(p->ptr);
+-	ASSERT(allock(allocp)&037);
+-	ASSERT(p->ptr<=alloct);
+-}
+-
+-/* ialloc(q, nbytes) inserts a block that did not come
+- * from malloc into the arena
+- *
+- * q points to new block
+- * r points to last of new block
+- * p points to last cell of arena before new block
+- * s points to first cell of arena after new block
+-*/
+-ialloc(qq, nbytes)
+-char *qq;
+-unsigned nbytes;
+-{
+-	register union store *p, *q, *s;
+-	union store *r;
+-
+-	q = (union store *)qq;
+-	r = q + (nbytes/WORD) - 1;
+-	q->ptr = r;
+-	if(alloca.ptr==0)		/*C can't initialize union*/
+-		alloca.ptr = &alloca;
+-	if(q > alloct) {
+-		p = alloct;
+-		alloct = r;
+-	} else
+-		allocp = p = allocb;
+-	for( ; ; p=s) {
+-		s = clearbusy(p->ptr);
+-		if(s==allocb)
+-			break;
+-		ASSERT(s>p);
+-		if(s>r) {
+-			if(p<q)
+-				break;
+-			else
+-				ASSERT(p>r);
+-		}
+-	}
+-	p->ptr = q==p+1? q: setbusy(q);
+-	r->ptr = s==r+1? s: setbusy(s);
+-	if(allocb > q)
+-		allocp = allocb = q;
+-}
+-
+-/*	realloc(p, nbytes) reallocates a block obtained from malloc()
+- *	and freed since last call of malloc()
+- *	to have new size nbytes, and old content
+- *	returns new location, or 0 on failure
+-*/
+-
+-char *
+-realloc(pp, nbytes)
+-char *pp;
+-unsigned nbytes;
+-{
+-	register union store *q;
+-	register union store *p = (union store *)pp;
+-	register union store *s, *t;
+-	register unsigned nw;
+-	struct cache *cp;
+-	unsigned onw;
+-
+-	q = p-1;
+-	ASSERT(allock(q));
+-	if(testbusy(q->ptr)) {
+-		allocp = q;
+-		q->ptr = clearbusy(q->ptr);
+-		if(CACHESIZ) {
+-			nw = q->ptr - q;
+-			cp = cache + nw%CACHESIZ;
+-			if(cp->chain==q) {
+-				ASSERT(cp->size==nw);
+-				cp->chain = p->ptr;	/*p->ptr==q[1].ptr*/
+-				*p = allocy;
+-			} else
+-				ASSERT(notonchain(q,cp->chain));
+-		}
+-	}
+-	onw = q->ptr - p;
+-	q = (union store *)malloc(nbytes);
+-	if(q==NULL || q==p)
+-		return((char *)q);
+-	ASSERT(q<p||q>p[-1].ptr);
+-	s = p;
+-	t = q;
+-	nw = (nbytes+WORD-1)/WORD;
+-	if(nw<onw)
+-		onw = nw;
+-	while(onw--!=0)
+-		*t++ = *s++;
+-	ASSERT(clearbusy(q[-1].ptr)-q==nw);
+-	if(q<p && q+nw>=p)
+-		q[q+nw-p] = allocx;
+-	ASSERT(allock(q-1));
+-	return((char *)q);
+-}
+-
+-#ifdef debug
+-
+-notonchain(p,q)
+-union store *p, *q;
+-{
+-	for(;q; q=clearbusy(q->ptr))
+-		if(q==p)
+-			return 0;
+-	return 1;
+-}
+-
+-allock(q)
+-union store *q;
+-{
+-#ifdef longdebug
+-	register union store *p, *r;
+-	int x;
+-	for(x=0; x<CACHESIZ; x++) {
+-		p = cache[x].chain;
+-		if(p==0)
+-			continue;
+-		for( ; p; p=p[1].ptr) {
+-			ASSERT(testbusy(p->ptr));
+-			ASSERT(clearbusy(p->ptr)-p==cache[x].size);
+-		}
+-	}
+-	x = 0;
+-	p = allocb;
+-	if(alloca.ptr==0)
+-		return(1);
+-	for( ; (r=clearbusy(p->ptr)) > p; p=r) {
+-		if(p==q)
+-			x++;
+-	}
+-	return(r==allocb&(x==1|p==q));
+-#else
+-	return(q>=allocb);
+-#endif
+-}
+-#endif
+//GO.SYSIN DD cmalloc.c
+echo makefile 1>&2
+sed 's/.//' >makefile <<'//GO.SYSIN DD makefile'
+-CFLAGS = -g
+-OBJS = malloc_t.o cmalloc.o trace.expr.o trace1.o trace2.o trace3.o trace4.o trace5.o trace6.o trace7.o trace8.o trace9.o assert.o
+-
+-#	FILES:
+-#		trace.h		constants and macro definitions
+-#		trace.d		data structures
+-#		trace1.c	reads in the tables, sets up data structures
+-#		trace2.c	memory allocation	
+-#		trace3.c	the symbolic execution procedures
+-#		trace4.c	state space handler
+-#		trace5.c	lookup table for system states
+-#		trace6.c	lookup table for queue states
+-#		trace7.c	lookup table for leaf-states
+-#		trace8.c	lookup table for variable & parameter states
+-#		trace9.c	lookup table for process states
+-#		trace.expr.c	evaluation of expressions
+-#		malloc_t.c	memory allocation interface to cmalloc.c
+-#		assert.c	assertion primitives
+-
+-trace:	$(OBJS)
+-	cc $(CFLAGS) $(OBJS) -o trace
+-
+-%.o:	%.c trace.d trace.h
+-	cc $(CFLAGS) -c $%.c
+-
+-clean:
+-	rm -f *.o pret.* mon.out core a.out
+-
+-install:
+-	cp trace /usr/bin
+-
+//GO.SYSIN DD makefile
+echo malloc_t.c 1>&2
+sed 's/.//' >malloc_t.c <<'//GO.SYSIN DD malloc_t.c'
+-#include <stdio.h>
+-#include "trace.h"
+-
+-#define DEBUG	0
+-
+-#if DEBUG
+-#define log(e, u, d)	event[e][u] += (long) d;
+-#else
+-#define log(e, u, d)
+-#endif
+-
+-#define A_LARGE 64
+-#define A_USER 0x55000000
+-
+-#define POOL	0
+-#define ALLOC	1
+-#define FREE	2
+-#define NREVENT	3
+-
+- union M {
+-	long size;
+-	union M *link;
+- };
+-
+- union M *freelist[A_LARGE];
+- long	 req[A_LARGE];
+- long	 event[NREVENT][A_LARGE];
+-
+-char *
+-talloc(u)
+-	long u;
+-{ union M *m;
+-  register r;
+-  char *Smalloc();
+-
+-	u = ((u-1)/sizeof(union M) + 2);
+-
+-	if( u >= A_LARGE )
+-	{	log(ALLOC, 0, (long) 1);
+-		m = (union M *) malloc( u * sizeof(union M) );
+-		if (m == NULL)
+-			whoops("malloc fault");
+-	} else
+-	{	if( freelist[u] == NULL )
+-		{	r = req[u] += req[u] ? req[u] : 1;
+-			if (r > NOTOOBIG)
+-				r = req[u] = NOTOOBIG+1;
+-			log(POOL, (int) u, (long) r);
+-			freelist[u] = (union M *) Smalloc( r*u*sizeof(union M) );
+-			if (freelist[u] == NULL)
+-				whoops("malloc fault");
+-
+-			(freelist[u] + u*(r-1))->link = 0;
+-			for (m = freelist[u] + u*(r-2); m >= freelist[u]; m -= u)
+-					m->link = m+u;
+-		}
+-		log(ALLOC, (int) u, (long) 1);
+-
+-		m = freelist[u];
+-		freelist[u] = m->link;
+-	}
+-	m->size = u | A_USER;
+-/*
+-	for (r = 1; r < u; )
+-		(&m->size)[r++] = 0;
+-*/
+-	return (char *) (m+1);
+-}
+-
+-tfree(v)
+-	char *v;
+-{ register union M *m = (union M *) v;
+-  register long u;
+-
+-	--m;
+-	if ( (m->size&0xFF000000) != A_USER)
+-	{	fprintf(stderr, "panic: releasing a free block\n");
+-		kill(getpid(), 3);
+-	}
+-
+-	u = (m->size &= 0xFFFFFF);
+-	if ( u >= A_LARGE )
+-	{	log(FREE, (int) 0, (long) 1);
+-		free(m);
+-	}
+-	else
+-	{	log(FREE, (int) u, (long) 1);
+-		m->link = freelist[u];
+-		freelist[u] = m;
+-	}
+-}
+-
+-#if DEBUG
+-double
+-a_stats()
+-{ register int i;
+-  long p, a, f, j;
+-  long sum = 0;
+-
+-	fprintf(stderr, "chunk\t  pool\tallocs\t frees\t spill\n");
+-	for (i = 0; i < A_LARGE; i++)
+-	{
+-		p = event[POOL][i];
+-		a = event[ALLOC][i];
+-		f = event[FREE][i];
+-
+-		if( !(p|a|f) )
+-			continue;
+-
+-		j = (long) (i * sizeof(union M));
+-		fprintf(stderr, "%5d\t%6ld\t%6ld\t%6ld\t%6ld\n", j, p, a, f, a-f);
+-
+-		sum += p*j;
+-	}
+-	fprintf(stderr, "total pools  %7u\n", sum);
+-
+-	return (double) sum;
+-}
+-#endif
+//GO.SYSIN DD malloc_t.c
+echo trace.d 1>&2
+sed 's/.//' >trace.d <<'//GO.SYSIN DD trace.d'
+- struct ELM {
+-	short transf;		/* next state function */
+-	short valtrans;		/* value transferred   */
+- };
+-
+- struct IND {
+-	short nrpils;
+-	struct ELM *one;
+- };
+-
+- struct VARPARS {
+-	short nrms,    *ms;		/* message parameters */
+-	short nrvs,    *vs;		/* pvar parameters    */
+-	short nrlvars, *lvarvals;	/* local variables    */
+- };
+-
+- struct TBLPARS {
+-	short nrms;
+-	short nrvs;			/* max available space for params */	
+-	short nrlvars;			/* max available space for locvars */
+- };
+-
+- struct LOCVARS {
+-	short nrlvars, *lvarvals;
+- };
+-
+- struct CPARS {
+-	short callwhat;
+-	short nrms,    *ms;		/* message parameters */
+-	short nrvs,    *vs;		/* pvar parameters    */
+- };
+-
+- struct LBT {
+-	int *mapcol, *orgcol;		/* mapped versions of colmap and colorg */
+- };
+-
+-/*
+- *	endrow:		proper endstates of the process table
+- *	deadrow:	set if deadend (eg return state)
+- *	badrow:		row with at least one output option
+- *	labrow:		labeled row (potential start of a loop)
+- */
+-
+- struct TBL {
+-	int nrrows, nrcols;
+-	int *endrow, *deadrow, *badrow, *labrow;
+-	int *colmap, *colorg, *coltyp;
+-	char **rowname;
+-
+-	struct IND **ptr;
+-	struct CPARS *calls;
+- };
+-
+- struct MBOX {
+-	char limit;		/* length of queue */
+-	char owner;		/* the process reading from this queue */
+-	char qname[PLENTY];	/* user-level name for the queue */
+- };
+-
+- struct MNAME {
+-	char mname[PLENTY];
+- };
+-
+- struct BLTIN {
+-	short target;
+-	short type;
+-	short value;
+- };
+-
+- struct REVPOL {
+-	char toktyp;
+-	short tokval;
+- };
+-
+- struct PROCSTACK {
+-	short uptable;			/* table where we come from         */
+-	short uptransf;			/* pending transition in that table */
+-
+-	struct VARPARS  *varparsaved;	/* saves parameters and locals */
+-	struct PROCSTACK *follow;	/* next stackframe */
+- };
+-
+-#define USED	32768
+-#define PASSED	16384
+-#define TRAIL	1
+-
+- struct QUEUE {
+-	short mesg;			/* on rcv PASSED is OR'ed in */
+-	unsigned short cargo;		/* when set USED is OR'ed in */
+-#if TRAIL
+-	short tstate[2];		/* linecode reference */
+-#endif TRAIL
+-	struct QUEUE *next;
+-	struct QUEUE *last;
+-	struct QUEUE *s_forw;
+-	struct QUEUE *s_back;
+- };
+-
+- struct CONTS {
+-	short mesg;
+-	unsigned short cargo;
+- };
+-
+- struct TEMPLATE {
+-	short *g_vars;			/* current globals   */
+-	struct LOCVARS   **l_vars;	/* current local vars */
+-	struct PROCSTACK **traceback;	/* traceback of complete stack */
+- };
+-
+- struct STATE {
+-	unsigned short *pstate;		/* old states & maps    */
+-	struct TEMPLATE *pcon;		/* variables and stacks */
+-	struct VISIT *next;
+- };
+-
+-#define ANALYZED	16384
+-
+- struct VISIT {
+-	unsigned int howmany;	/* which queues are nonempty */
+-	struct CONTS **c;	/* queue contents  */
+-	union {
+-		struct QUEUE *s;	/* when searching, last message sent  */
+-		short countme;		/* when analyzed, counts nr of returns */
+-	} prop;
+-	unsigned short depth;	/* level of first visit, ANALYZED is OR'ed in */
+-	struct VISIT *next;
+- };
+-
+-#define ISANA(x)	(x->depth &  ANALYZED)
+-#define DEPTH(x)	(x->depth & ~ANALYZED)
+-
+-/*
+- *	normal ppushes (via forward()) save the parameters in the procstack
+- *	so that the corresponding ppop (via backup()) can reset them properly
+- *
+- *	series of ppushes and ppops, performed in a single freeze() call
+- *	(via the retable() and dotable() subroutines) are different:
+- *
+- *	additional ppushes are no problem, since they save the
+- *	proper state information via the normal route
+- *
+- *	additional ppops however would lose the procstacked info
+- *	that info is stored in the CUBE structure so that when
+- *	a ppop from freeze() is undone in unfreeze()
+- *	the proper state information can be restored onto the procstack
+- */
+-
+- struct CUBE {
+-	short poporpush;
+-	short which;
+-	short procsaved;
+-	short transfsaved;
+-
+-	struct VARPARS  *varparsaved;	/* parameter map and local var map */
+-
+-	struct CUBE *pntr;
+-	struct CUBE *rtnp;
+- };
+-
+- struct FREEZE {
+-	short lastsav;
+-	short *statsaved;		/* save states of tables */
+-	short *varsaved;		/* save global variables */
+-	short whichvar;			/* set if a var changed */
+-	short oldvalue;			/* of that loc var      */
+-
+-	struct CUBE *cube;		/* place to save stackframe */
+- };
+-
+- struct Swiffle {
+-	struct STATE *st;
+-	struct VISIT *vi;
+-	struct Swiffle *next;
+-	struct Swiffle *last;
+- };
+//GO.SYSIN DD trace.d
+echo trace.expr.c 1>&2
+sed 's/.//' >trace.expr.c <<'//GO.SYSIN DD trace.expr.c'
+-#include <stdio.h>
+-#include <math.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+-#define DEBUG	0
+-
+-#define setv	 1
+-#define addeq	 2
+-#define subeq	 3
+-#define muleq	 4
+-#define diveq	 5
+-#define modeq	 6
+-#define plus	 7
+-#define minus	 8
+-#define times	 9
+-#define div	10
+-#define mod	11
+-#define power	12
+-#define uminus	13
+-#define gt	14
+-#define lt	15
+-#define ge	16
+-#define le	17
+-#define eq	18
+-#define ne	19
+-#define land	20
+-#define lor	21
+-#define lnot	22
+-#define princ	23
+-#define prdec	24
+-#define poinc	25
+-#define podec	26
+-
+-#define OP	0
+-#define NM	1
+-
+-#define unary(c)	(c == uminus || c == lnot || c >= princ)
+-#define binary(c)	!unary(c)
+-
+- extern struct REVPOL **expr;
+- extern int nexpr, nrvars, *globvars;
+- extern struct VARPARS *procpars;
+-
+- struct REVPOL *rev;
+- int curproc, revp;
+-
+- struct {
+-	char how;
+-	short whichvar;
+-	short oldvalue;
+- } storewhere;
+-
+-evalexpr(n, pr, b)
+-	struct FREEZE *b;
+-{ int i;
+-	if (n == NONE)
+-		return 0;
+-	if (n < 0 || n >= nexpr)
+-		whoops("unknown expression");
+-
+-	rev = expr[n];
+-	revp = 0;
+-	curproc = pr;
+-	storewhere.how = 0;
+-
+-	if ((i = getval()) < 0)
+-		i += 3*MANY;
+-	else
+-	 	i -= 3*MANY;	/* should return stripped constant */
+-#if DEBUG
+-	fprintf(stderr, "evaluated expr %d, process %d, result %d\n", n, pr, i);
+-#endif
+-
+-	b->whichvar = storewhere.whichvar;
+-	b->oldvalue = storewhere.oldvalue;
+-
+-	return storewhere.how;
+-}
+-
+-evalcond(n, pr)
+-{ int i;
+-	if (n < 0 || n >= nexpr)
+-	{	fprintf(stderr, "%d\n", n);
+-		whoops("unknown expression - evalcond");
+-	}
+-
+-	rev = expr[n];
+-	revp = 0;
+-	curproc = pr;
+-	storewhere.how = 0;
+-
+-	if ((i = getval()) < 0)
+-		i += 3*MANY;
+-	else
+-	 	i -= 3*MANY;	/* should return stripped constant */
+-#if DEBUG
+-	fprintf(stderr, "evaluated cond %d, process %d, result %d\n", n, pr, i);
+-#endif
+-	if (storewhere.how != 0)
+-		whoops("illegal assignment in expression");
+-
+-	return i;
+-}
+-
+-unoper(c, n)
+-{ int i = convert(n, curproc);
+-	switch (c)
+-	{	case uminus:	return (-i);
+-		case lnot  :	return (!i);
+-		case princ :	remem(n); setvar(n, i+1); return i;
+-		case prdec :	remem(n); setvar(n, i-1); return i;
+-		case poinc :	remem(n); return setvar(n, i+1);
+-		case podec :	remem(n); return setvar(n, i-1);
+-		default    :	whoops("unknown unary operator");
+-	}
+-}
+-
+-bioper(c, n, m)	
+-{ int i, j;
+-  double a, b;
+-
+-	if (c != setv)
+-		i = convert(n, curproc);
+-	j = convert(m, curproc);
+-	switch (c)
+-	{	case setv:	remem(n); return setvar(n, j);
+-		case addeq:	remem(n); return setvar(n, i+j);
+-		case subeq:	remem(n); return setvar(n, i-j);
+-		case muleq:	remem(n); return setvar(n, i*j);
+-		case diveq:	remem(n); return setvar(n, i/j);
+-		case modeq:	remem(n); return setvar(n, i%j);
+-		case plus:	return (i+j);
+-		case minus:	return (i-j);
+-		case times:	return (i*j);
+-		case div:	return (i/j);
+-		case mod:	return (i%j);
+-		case gt	:	return (i>j);
+-		case lt	:	return (i<j);
+-		case ge	:	return (i>=j);
+-		case le	:	return (i<=j);
+-		case eq	:	return (i==j);
+-		case ne	:	return (i!=j);
+-		case land:	return (i&&j);
+-		case lor:	return (i||j);
+-		default:	whoops("unkown binary operator");
+-	}
+-}
+-
+-getval()
+-{ int tok = revp++;
+-  int res;
+-
+-	if (rev[tok].toktyp == NM)
+-		res = rev[tok].tokval;
+-	else
+-	{	if (unary(rev[tok].tokval))
+-			res = unoper(rev[tok].tokval, getval());
+-		else
+-			res = bioper(rev[tok].tokval, getval(), getval());
+-
+-		if (res < 0)
+-			res -= 3*MANY;
+-		else
+-			res += 3*MANY;
+-	}
+-
+-	return res;
+-}
+-
+-setvar(which, v)
+-{ int u = wapper(which, curproc);
+-  int towhat = v;
+-
+-	if (u >= 2*MANY || u < 0)
+-		whoops("lhs of assignment not a variable");
+-
+-	if (u < MANY)
+-	{	if (u >= nrvars)
+-		{	fprintf(stderr, "setvar %d %d %d\n", which, v, u);
+-			whoops("illegal assignment");
+-		}
+-
+-		globvars[u] = (short) towhat;
+-	}
+-	else
+-	{	u -= MANY;
+-		if (u >= (int) procpars[curproc].nrlvars)
+-			whoops("unknown local variable");
+-		procpars[curproc].lvarvals[u]  = (short) towhat;
+-	}
+-
+-	return towhat;
+-}
+-
+-remem(u)
+-{	if (storewhere.how != 0)
+-		whoops("multiple assignment in expression");
+-
+-	if (u < MANY)
+-	{
+-#if DEBUG
+-	fprintf(stderr, "setting global %d\n", u);
+-#endif
+-		storewhere.whichvar = (short) u;
+-		storewhere.oldvalue = globvars[u];
+-		storewhere.how = GV;
+-	}
+-	else
+-	{	storewhere.whichvar = (short) u;
+-
+-		u -= MANY;
+-#if DEBUG
+-	fprintf(stderr, "setting local %d\n", u);
+-#endif
+-		storewhere.oldvalue = procpars[curproc].lvarvals[u];
+-		storewhere.how = LV;
+-	}
+-}
+//GO.SYSIN DD trace.expr.c
+echo trace.h 1>&2
+sed 's/.//' >trace.h <<'//GO.SYSIN DD trace.h'
+-#define NONE	-1
+-#define MAXPROC	16
+-#define PLENTY	16		/* max namelength */
+-
+-#define MANY	512		/* range globals: 0 - MANY          */
+-				/* range locals : MANY - 2*MANY     */
+-				/* range params : 2*MANY and 3*MANY */
+-				/* range constants: 3*MANY++ or 3*MANY-- */
+-
+-				/* `column types:'       */
+-#define INP	10		/* recv specific message */
+-#define DFL	11		/* default input from q  */
+-#define TMO	12		/* transition on timeout */
+-#define OUTP	13		/* append message to a q */
+-#define SPN	14		/* builtin call or transit state */
+-#define CND	15		/* conditional   */
+-#define FCT	16		/* function call */
+-
+-#define INCR	16		/* increment a sequence number       */
+-#define DECR	17		/* decrement a sequence number       */
+-#define SUBT	18		/* subtract    */
+-#define ADDT	19		/* add         */
+-#define SETV	32		/* set seq. number to initial value  */
+-#define ISEQ	256		/* compare two variables (s.numbers) */
+-#define NTEQ	257		/* != */
+-#define GREQ	258		/* >= */
+-#define SMEQ	259		/* <= */
+-#define GRNQ	260		/* >  */
+-#define SMNQ	261		/* <  */
+-
+-#define POP	1
+-#define PUSH	-1
+-
+-#define SO	2	/* send only    */
+-#define RO	4	/* recv only    */
+-#define SR	6	/* send & recv  */
+-#define TC	8	/* reftask call */
+-#define TO	16	/* timeout      */
+-#define LV	32	/* local  var updated */
+-#define GV	64	/* global var updated */
+-
+-#define FAIL	-1	/* backward receive: cargo mismatch */
+-
+-#define NOREF(i)	(i < 0 || i >= MAXPROC)
+-#define NOTOOBIG	16383	/* was  32767 */
+//GO.SYSIN DD trace.h
+echo trace1.c 1>&2
+sed 's/.//' >trace1.c <<'//GO.SYSIN DD trace1.c'
+-#include <stdio.h>
+-#include <signal.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+-#if 0
+-#define debug(s1, s2, s3, s4, s5)	printf(s1, s2, s3, s4, s5)
+-#else
+-#define debug(s1, s2, s3, s4, s5)	
+-#endif
+-
+- struct TBL       *tbl;
+- struct LBT	  *lbt;
+- struct MBOX      *mbox;
+- struct MNAME     *fullname;
+-
+- struct REVPOL **expr;
+- struct PROCSTACK **procstack;
+-
+- struct VARPARS	  *procpars;
+- struct TBLPARS	  *tblpars;
+- struct LOCVARS   *tblvars;
+- struct TBLPARS   *tablpars;
+-
+- struct QUEUE     **starter, **head, **tail;
+- struct QUEUE     *s_first, *s_last;
+-
+-/*
+- * reftasks : mapping of logic reftask id to table number
+- * processes: mapping of logic process id to table number
+- * basics   : initial process table
+- */
+-
+- int *state, *reftasks, *processes, *basics;
+- int *qsize, *globvars, *inits, *xob;
+-
+- /*
+-  * the state-set of an assertion table is mapped
+-  * onto the global variables (to simplify state checking)
+-  * the first global that is an element from the state set
+-  * is given by integer `abase'
+-  */
+-
+- int abase = -1;		/* base of assertion table state set */
+- int ebase = -1;		/* base of error table state set */
+- int assertbl = -1;		/* table used for assertion checking */
+- int errortbl = -1;		/* table used for assertion checking */
+- int msgbase = -1, maxlevel = -1, maxreached = -1;
+-
+- int maxcol=0, nrtbl=0, nrqs=0, nrprocs=0, nrrefs=0;
+- int nrinit=0, nrvars=0, nexpr=0, nrmesgs=0, linecode=0;
+- int QMAX=2;
+-
+- char qoverride = 0;
+- char noshortcut = 0;		/* disable timeout heuristics */
+- char prbyq = 2;		/* controls output format     */
+- char blast = 0;		/* blast search mode   */
+- char qandirty = 0;		/* scatter search mode */
+- char lockplus = 0;		/* report both buffer locks and loops */
+- char firstlock = 0;		/* stop at first buffer lock found    */
+- char maxxed = 0;		/* bound on search depth  */
+- char prefix = 0;		/* print all prefixes too */
+- char timedd = 0;		/* verbose mode    */
+- char completed = 0;		/* not interrupted */
+- char muststore = 0;		/* must perform loop check and store state */
+- char sensible = 0;		/* default mode: try a sensible partial search */
+-
+- double zapper = (double) 30000;
+- double tryswiff=0, noswiff=0, cannot=0;
+-
+- long zapped = 0, locksf = 0, loopsf = 0;
+- long normf = 0, callno = 0;
+-
+- int *effnrstates;	/* effective nr of table states per process */
+- int aperiod = 120;
+-
+- char *topofmem, *sbrk(), *Smalloc();
+- char fname[64];
+-
+- FILE *mb;
+-
+- extern double iseen, ireseen, painful, kurshan;
+-
+-onalarm()
+-{	float t;
+-	struct { long u, p, cu, cp; } tim;
+-
+-	times(&tim);
+-	t = (float) (tim.u  + tim.p)/ (float) 60.0;
+-
+-	if (++callno%10 == 1)
+-	{	fprintf(stderr, " seconds  depth  states   zapped");
+-		fprintf(stderr, "  prefix terms loops locks   memory\n");
+-	}
+-	fprintf(stderr, "%8.2f %6d ", t, maxreached);
+-	fprintf(stderr, "%6g %8ld %7g ", iseen+ireseen, zapped, kurshan);
+-	fprintf(stderr, "%5ld %5ld ", normf, loopsf);
+-	fprintf(stderr, "%5ld %8u\n", locksf, sbrk(0) - topofmem);
+-	signal(SIGALRM, onalarm);
+-	alarm(aperiod);
+-}
+-
+-postlude()
+-{	struct { long u, p, cu, cp; } tim;
+-	extern double COUNT;
+-	float u, s;
+-
+-	fflush(stdout);
+-	if (!completed)
+-		fprintf(stderr, "trace: interrupted\n");
+-
+-	if (timedd)
+-	{	times(&tim);
+-		u = (float) tim.u / (float) 60.0;
+-		s = (float) tim.p / (float) 60.0;
+-
+-		fprintf(stderr, "\ttime: %.2fs u + ", u);
+-		fprintf(stderr, "%.2fs sys = %.2fs\n\n", s, u+s);
+-		fprintf(stderr, "\t%g states cached, ", iseen+ireseen);
+-		fprintf(stderr, "%ld states zapped\n",  zapped);
+-		fprintf(stderr, "\tsearch depth reached: %d; ", maxreached);
+-		fprintf(stderr, "memory used: %u\n\t", sbrk(0) - topofmem );
+-		fprintf(stderr, "%ld deadlocks, ", locksf);
+-		fprintf(stderr, "%ld loops, ", loopsf);
+-		fprintf(stderr, "%ld terminating executions, and ", normf);
+-		fprintf(stderr, "%g prefixes\n", kurshan);
+-		fprintf(stderr, "\t%g edges traversed", COUNT);
+-		fprintf(stderr, ", %g states analyzed twice\n", painful);
+-		if (cannot > 0)
+-		fprintf(stderr, "\t%g cache replacements failed\n", cannot);
+-		if (tryswiff > 0)
+-		fprintf(stderr, "\ttryswiff  %5g noswiff  %g\n",tryswiff,noswiff);
+-	}
+-	exit(completed == 0);
+-}
+-
+-wisdom()
+-{
+-	if (sensible)
+-	{	timedd = firstlock = qandirty = 1;
+-		fprintf(stderr, "default search: ");
+-		fprintf(stderr, "-vxjqm %d %d\n", QMAX, maxlevel);
+-	} else
+-	{	fprintf(stderr, "%s search, ", (blast) ? "blast" :
+-					(qandirty) ? "scatter" : "exhaustive");
+-		fprintf(stderr, "depth bound %d\n", maxlevel);
+-	}
+-}
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	char c;
+-	int  i=1, j, base=2;
+-
+-	strcpy(fname, "pret.out");
+-	if (argc > 1 && argv[1][0] == '-')
+-	{	base++;
+-		while ((c = argv[1][i++]) != '\0')
+-			switch (c) {
+-			case 'a': prefix = 1;	break;
+-			case 'b': blast = qandirty = 1;	break;
+-			case 'c': if (argc >= base)
+-				  {	sscanf(argv[base-1], "%d", &j);
+-					base++;
+-				  } else
+-				  	usage("missing argument for `c' flag");
+-				  firstlock = lockplus = timedd = 1;
+-				  switch (j) {
+-					case 0: blast = qandirty = 1; break;
+-					case 1: maxxed = 3;	/* fall through */
+-					case 2: qandirty = 1; break;
+-					case 3: maxxed = 2; break; /* 1{ x effnr */
+-					case 4: maxxed = 3;	   /* 2 x effnr  */
+-					case 5: break;		   /* 8 x effnr  */
+-					default: usage("unknown validation class");
+-				  }
+-				  break;
+-			case 'f': prbyq = 1; break;
+-			case 'F': prbyq = 0; break;
+-			case 'j': firstlock = 1; break;
+-			case 'k': if (argc >= base)
+-				  {	sscanf(argv[base-1], "%d", &j);
+-					zapper = (double) (j * 1000);
+-					base++;
+-				  } else
+-				  	usage("missing argument for `k' flag");
+-				  break;
+-			case 'l': lockplus = 1;	break;
+-			case 'm': maxxed = 1;
+-				  if (argc >= base)
+-				  {	sscanf(argv[base-1], "%d", &maxlevel);
+-					base++;
+-				  } else
+-				  	usage("missing argument for `m' flag");
+-				  break;
+-			case 'n': noshortcut = 1; break;
+-			case 'q': qoverride = 1;
+-				  if (argc >= base)
+-				  {	sscanf(argv[base-1], "%d", &QMAX);
+-					base++;
+-				  } else
+-				  	usage("missing argument for `q' flag");
+-				  break;
+-			case 'r': if (argc >= base)
+-				  {	sscanf(argv[base-1], "%d", &j);
+-					base++;
+-				  } else
+-				  	usage("missing argument for `r' flag");
+-				  signal(SIGALRM, postlude);
+-				  aperiod = 0;
+-				  alarm(j*60);
+-				  break;
+-			case 'R': if (argc >= base)
+-				  {	sscanf(argv[base-1], "%d", &j);
+-					base++;
+-				  } else
+-				  	usage("missing argument for `R' flag");
+-				  aperiod = j*60;
+-				  break;
+-			case 's': setup(); showtables(timedd); exit(0);
+-				  break;
+-			case 'v': timedd = 1;	break;
+-			case 'x': qandirty = 1; break;
+-			default : usage("unknown option");
+-			}
+-	} else
+-	{	sensible = qoverride = 1;
+-	}
+-
+-	if (argc >= base-1)
+-		sscanf(argv[base-1], "%s", fname);
+-	else
+-		strcpy(fname, "pret.out");
+-
+-	setup();
+-	init();
+-	topofmem = sbrk(0);
+-
+-	if (maxxed != 1)
+-	{
+-		for (j = maxlevel = 0; j < nrprocs; j++)
+-			maxlevel += effnrstates[processes[j]];
+-
+-		switch (maxxed) {
+-			case 3: maxlevel *= 2; break;
+-			case 2: maxlevel = (3*maxlevel)/2; break;
+-			case 0: if (sensible)
+-					maxlevel *= 2;
+-				else
+-					maxlevel *= 8;	/* avoid pathetic cases */
+-				break;
+-			default: whoops("cannot happen - main");
+-		}
+-		maxxed = 1;
+-	}
+-	if (aperiod > 0)
+-	{	signal(SIGALRM, onalarm);
+-		alarm(aperiod);
+-	} signal(SIGINT, postlude);
+-
+-	wisdom();
+-	muststore = 1;	/* must always store initial state */
+-	FSE(0);
+-	completed = 1;
+-	postlude();
+-}
+-
+-setup()
+-{
+-	if ((mb = fopen(fname, "r")) == NULL)
+-	{	fprintf(stderr, "cannot find `%s'\n", fname);
+-		exit(1);
+-	}
+-
+-	getglobals();
+-	gettables();
+-	getexprs();
+-
+-	fclose(mb);
+-}
+-
+-getglobals()
+-{ register int i, j;
+-  int a, b, c, x, y, z;
+-
+-	if (fscanf(mb, "%d linecode\n", &linecode) != 1)
+-		badinput("linecode");
+-	a = fscanf(mb, "%d procedures (assert %d/%d)\n", &x, &assertbl, &errortbl);
+-	if (a != 3)
+-		badinput("procedures");
+-	if (fscanf(mb, "%d processes\n", &y) != 1)
+-		badinput("processes");
+-	if (fscanf(mb, "%d queues:\n", &z) != 1)
+-		badinput("queues");
+-
+-	debug("%d procs, %d functions, %d queues, assert %d\n", y, x, z, assertbl);
+-
+-	nrtbl = x + y;
+-	nrqs = z;
+-	alloc1(x, y, z);
+-
+-	getmesnames();
+-
+-	for (i = 0; i < z; i++)
+-	{	if (fscanf(mb, "%s\t%d/%d/%d: ", mbox[i].qname, &b, &a, &c) != 4)
+-			badinput("queue sorts");
+-		alloc2(i, a, b);
+-		for (j = 0; j < c; j++)
+-		{	fscanf(mb, "%d,", &b);
+-			xob[b] = i;
+-		}
+-	}
+-
+-	if (fscanf(mb, "%d inits:\n", &nrinit) != 1)
+-		badinput("queue inits");
+-
+-	alloc3(nrinit);
+-	for (i = 0; i < nrinit; i++)
+-		fscanf(mb, "%d,", &(inits[i]));
+-
+-	if (fscanf(mb, "%d g-variables: ", &nrvars) != 1)
+-		badinput("g-variables");
+-
+-	alloc4(nrvars);
+-
+-	for (i = 0; i < nrvars; i++)
+-		if (fscanf(mb, "%d,", &a) != 1)
+-			badinput("g-var-inits");
+-		else
+-		{	if ((b = determine(a)) == 1 || b == 2)
+-				badinput("g-var bad init");
+-			else
+-				globvars[i] = (short) a;
+-		}
+-}
+-
+-getmesnames()
+-{ register int i;
+-	if (fscanf(mb, "%d messages, base %d:\n", &nrmesgs, &msgbase) != 2)
+-		badinput("messages");
+-
+-	alloc45(nrmesgs);
+-
+-	for (i = 0; i < nrmesgs; i++)
+-		if (fscanf(mb, "%s ", fullname[i].mname) != 1)
+-			badinput("mesg");
+-}
+-
+-gettables()
+-{ register int i, j;
+-  int a, b, c, d;
+-  char name[32];
+-
+-	processes[0] = -1;
+-	if (nrtbl >= 64)
+-		badinput("too many process tables...");
+-	for (i = 0; i < nrtbl; i++)
+-	{	if ((j = fscanf(mb, "%s %d:%d/%d:", name, &a, &b, &c)) != 4)
+-		{	printf("matched %d: %s %d\n", j, name, a);
+-			badinput("table header");
+-		}
+-
+-		debug("table %d: %s (%d) ", i, name, a, 0);
+-		debug("r/c: %d/%d\n", b, c, 0, 0);
+-
+-		if (b >= 1024)
+-			badinput("too many states");
+-		if ((tbl[i].nrrows = b) == 0)
+-			badinput("empty table");
+-		tbl[i].nrcols = c;
+-
+-		if (strcmp(name, "REF") == 0)
+-		{	reftasks[a] = i;
+-			nrrefs++;
+-		} else
+-		{	processes[a] = basics[a] = i;
+-			nrprocs++;
+-			effnrstates[i] = b;
+-		}
+-
+-		if (b > 0)
+-		{	alloc5(i);
+-			for (j = 0; j < c; j++)
+-			{	if (fscanf(mb, "%d(%d),", &b, &d) != 2)
+-					badinput("column header");
+-
+-				debug("%d(%d),\n", b, d, 0, 0);
+-
+-				tbl[i].coltyp[j] = d;
+-				tbl[i].colmap[j] = b;
+-				if (d != FCT && d != SPN && d != CND)
+-					tbl[i].colorg[j] = whichq(b);
+-				else
+-					tbl[i].colorg[j] = -1;
+-			}
+-			getrows(i);
+-			getspecials(i);
+-			getcalls(i);
+-			getparams(a, i);
+-			getlocvars(a, i);
+-}	}	}
+-
+-getrows(nn)
+-{ int a, b, c;
+-  int n = nn;
+-  char tmp[128];
+-
+-	for (;;)
+-	{	if (fscanf(mb, "%d/%d (%d) ", &a, &b, &c) != 3)
+-			badinput("row");
+-
+-		if (a == 0 && b == 0 && c == 0)
+-			break;
+-
+-		debug("row %d, col %d, size %d:\n", a, b, c, 0);
+-
+-		if (c == 0)
+-			continue;
+-
+-		tbl[n].deadrow[a] = 0;
+-		getentries(n, a, b, c);
+-	}
+-	if (!linecode) return;
+-
+-	if (fscanf(mb, "%s\n", tmp) != 1 || strcmp(tmp, "rownames:") != 0)
+-		badinput("rownames");
+-	for (a = 0; a < tbl[n].nrrows; a++)
+-	{	for (b = 0; (tbl[n].rowname[a][b] = getc(mb)) != '\n'; b++) ;
+-		tbl[n].rowname[a][b] = '\0';
+-	}
+-}
+-
+-getentries(nn, m, p, q)
+-{ register int i;
+-  int x, y, n = nn;
+-
+-	tbl[n].ptr[m][p].nrpils = (short) q;
+-
+-	alloc6(n, m, p, q);
+-
+-	for (i = 0; i < q; i++)
+-	{	if (fscanf(mb, "[%d,%d] ", &x, &y) != 2)
+-			badinput("table entry");
+-		tbl[n].ptr[m][p].one[i].transf   = (short) x;
+-		tbl[n].ptr[m][p].one[i].valtrans = (short) y;
+-
+-		debug("\t[%d,%d] \n", x, y, 0, 0);
+-	}
+-}
+-
+-getspecials(in)
+-{ register int i;
+-  int n, m;
+-  char stri[64];
+-	if (fscanf(mb, "ENDSTATES %d: ", &n) != 1)
+-		badinput("endstates");
+-
+-	for (i = 0; i < n; i++)
+-	{	if (fscanf(mb, "%d,", &m) != 1 || m < 0 || m >= tbl[in].nrrows)
+-			badinput("endstate");
+-		tbl[in].endrow[m] = 1;
+-	}
+-	if ((m = fscanf(mb, "%s %d: ", stri, &n)) != 2 ||
+-		strcmp(stri, "BADSTATES") != 0)
+-	{	printf("read %s %d\n", stri, n);
+-		badinput("badstates");
+-	}
+-
+-	for (i = 0; i < n; i++)
+-	{	if (fscanf(mb, "%d,", &m) != 1 || m < 0 || m >= tbl[in].nrrows)
+-			badinput("badstate");
+-		tbl[in].badrow[m] = 1;
+-	}
+-
+-	if ((m = fscanf(mb, "%s %d: ", stri, &n)) != 2 ||
+-		strcmp(stri, "LABSTATES") != 0)
+-	{	printf("read %s %d\n", stri, n);
+-		badinput("labstates");
+-	}
+-
+-	for (i = 0; i < n; i++)
+-	{	if (fscanf(mb, "%d,", &m) != 1 || m < 0 || m >= tbl[in].nrrows)
+-			badinput("labstate");
+-		tbl[in].labrow[m] = 1;
+-	}
+-	debug("specials:\n", 0, 0, 0, 0);
+-	for (i = 0; i < tbl[in].nrrows; i++)
+-	{	n = tbl[in].endrow[i];
+-		m = tbl[in].badrow[i];
+-		debug("\t%d: %d/%d/%d\n", i, n, m, tbl[in].labrow[i]);
+-	}
+-}
+-
+-getparams(pr, tb)
+-{ int  n, m;
+-  char stri[64];
+-	if (fscanf(mb, "%s %d/%d", stri, &n, &m) != 3)
+-	{	printf("read %s %d/%d\n", stri, n, m);
+-		badinput("parameters");
+-	}
+-
+-	tblpars[tb].nrms = (short) n;		/* required sizes  */
+-	tblpars[tb].nrvs = (short) m;
+-
+-	if (processes[pr] == tb)
+-		alloc8(pr, 2*n, 2*m);		/* avalaible sizes */
+-}
+-
+-getlocvars(p, tb)
+-{ register int i;
+-  int n, m;
+-	if (fscanf(mb, "%d l-variables: ", &n) != 1)
+-		badinput("l-variables");
+-
+-	if (processes[p] != tb)
+-	{	tblvars[tb].nrlvars = (short) n;	/* required size */
+-		if (n > 0)
+-			tblvars[tb].lvarvals = (short *)
+-				Smalloc(n * sizeof(short));
+-		for (i = 0; i < n; i++)
+-			if (fscanf(mb, "%d,", &m) != 1)
+-				badinput("l-vars");
+-			else
+-				tblvars[tb].lvarvals[i] = (short) m;
+-	} else
+-	{	tablpars[p].nrlvars = (short) (2*n);	/* available size */
+-		procpars[p].nrlvars = (short) n;	/* actually used  */
+-		if (n > 0)
+-			procpars[p].lvarvals = (short *)
+-				Emalloc((2*n) * sizeof(short));
+-		for (i = 0; i < n; i++)
+-			if (fscanf(mb, "%d,", &m) != 1)
+-				badinput("lvar-inits");
+-			else
+-				procpars[p].lvarvals[i] = (short) m;
+-	}
+-}
+-
+-getcalls(in)
+-{ register int i, j;
+-  int k, n, m, a, b, N;
+-  char stri[64];
+-	if (fscanf(mb, "%s %d", stri, &n) != 2)		/* FCTS */
+-	{	printf("read %s %d\n", stri, n);
+-		badinput("function calls");
+-	}
+-	alloc9(in, n);
+-	for (i = 0, N = n; i < N; i++)
+-	{	if (fscanf(mb, "%d-%d/%d: ", &n, &m, &k) != 3)
+-			badinput("fct call");
+-
+-		alloc10(in, i, n, m, k);
+-
+-		effnrstates[in] += tbl[reftasks[n]].nrrows;
+-
+-		for (j = m+k, a = b = 0; j > 0; j--)
+-		{	if (fscanf(mb, "%d/%d", &n, &m) != 2)
+-				badinput("fct call entry");
+-			if (n == 0)
+-				tbl[in].calls[i].ms[a++] = (short) m;
+-			else
+-				tbl[in].calls[i].vs[b++] = (short) m;
+-	}	}
+-}
+-
+-getexprs()
+-{ int i, j, a, b, c;
+-  char name[32];
+-
+-	if (fscanf(mb, "%s %d\n", name, &nexpr) != 2)
+-		badinput("nexpr");
+-	if (strcmp(name, "EXPR") != 0)
+-		badinput("expressions");
+-
+-	expr = (struct REVPOL **)
+-		Smalloc(nexpr * sizeof(struct REVPOL *));
+-
+-	for (i = 0; i < nexpr; i++)
+-	{	fscanf(mb, "%d: ", &a);
+-
+-		expr[i] = (struct REVPOL *)
+-			Smalloc(a * sizeof(struct REVPOL));
+-
+-		for (j = 0; j < a; j++)
+-		{	fscanf(mb, "%d/%d: %d\n", &b, &c);
+-			expr[i][j].toktyp = b;
+-			expr[i][j].tokval = c;
+-	}	}
+-}
+-
+-showtables(how)
+-{ register int i, j;
+-  int k, n, m, p;
+-  char table[2*MAXPROC][64];
+-
+-	for (i = 0; i < nrprocs; i++)
+-	{	j = processes[i];
+-		sprintf(table[j], "process %d", i);
+-	}
+-	for (i = 0; i < nrrefs; i++)
+-	{	j = reftasks[i];
+-		sprintf(table[j], "reftask %d", i);
+-	}
+-
+-	for (i = 0; i < nrtbl; i++)
+-	{
+-		printf("\n%s (table %d):\n", table[i], i);
+-		if (how && linecode)
+-		{	for (j = 2+strlen(tbl[i].rowname[0]); j > 0; j--)
+-				putchar(' ');
+-		} else	printf("  ");
+-		putchar('\t');
+-		for (k = 0; k < tbl[i].nrcols; k++)
+-		{	switch(tbl[i].coltyp[k]) {
+-				case INP:  printf("I:"); break;
+-				case DFL:  printf("D:"); break;
+-				case TMO:  printf("T:"); break;
+-				case OUTP: printf("O:"); break;
+-				case SPN:  printf("S:"); break;
+-				case CND:  printf("C:"); break;
+-				case FCT:  printf("F:"); break;
+-			}
+-			if (tbl[i].colorg[k] != -1)
+-			printf("%d/%d\t", tbl[i].colmap[k], tbl[i].colorg[k]);
+-			else
+-				printf("%d  \t", tbl[i].colmap[k]);
+-		}
+-
+-		for (j = 0; j < tbl[i].nrrows; j++)
+-		{	if (!how || !linecode)
+-				printf("\n%2d\t", j);
+-			else
+-				printf("\n%2d/%s\t", j, tbl[i].rowname[j]);
+-			for (k = 0; k < tbl[i].nrcols; k++)
+-			{	if (how)
+-				{
+-				for (p = 0; p < tbl[i].ptr[j][k].nrpils; p++)
+-				{	n = (int) tbl[i].ptr[j][k].one[p].transf;
+-					printf("%d,", n);
+-				}
+-				} else
+-				{
+-				if (tbl[i].ptr[j][k].nrpils > 0)
+-				{	n = (int) tbl[i].ptr[j][k].one[0].transf;
+-					m = (int) tbl[i].ptr[j][k].one[0].valtrans;
+-					printf("%d(%d)", n, m);
+-				}
+-				if (tbl[i].ptr[j][k].nrpils > 1)
+-					putchar('+');
+-				}
+-				putchar('\t');
+-			}
+-	}	}
+-	putchar('\n');
+-}
+-
+-whichq(n)
+-{ int i;
+-	if (n < 0 || n >= MANY)
+-		return -1;
+-
+-	if ((i = xob[n]) == -1)
+-		badinput("mbox sort incomplete");
+-
+-	return i;
+-}
+-
+-init()
+-{ register int i, m;
+-	state = (int *)
+-		Smalloc(nrprocs * sizeof(int));
+-	qsize = (int *)
+-		Smalloc(nrqs * sizeof(int));
+-	head = (struct QUEUE **)
+-		Smalloc(nrqs * sizeof(struct QUEUE *));
+-	tail = (struct QUEUE **)
+-		Smalloc(nrqs * sizeof(struct QUEUE *));
+-	starter = (struct QUEUE **)
+-		Smalloc(nrqs * sizeof(struct QUEUE *));
+-
+-
+-	for (i = 0; i < nrqs; i++)
+-	{	starter[i] = (struct QUEUE *)
+-			Smalloc(sizeof(struct QUEUE));
+-		starter[i]->next = NULL;
+-		qsize[i] = 0;
+-		head[i] = tail[i] = starter[i];
+-	}
+-
+-	decode();
+-	initable();	/* do not change the order of inits */
+-	iniqtable();
+-	inihash();
+-
+-	for (i = 0; i < nrprocs; i++)
+-	{	state[i] = 0;
+-		procstack[i] = NULL;
+-
+-		lbt[i].mapcol = (int *)
+-			Smalloc(maxcol * sizeof(int));
+-		lbt[i].orgcol = (int *)
+-			Smalloc(maxcol * sizeof(int));
+-		fiddler(i);
+-	}
+-
+-	s_last = NULL;
+-
+-	for (i = 0; i < nrinit; i++)
+-	{	m = inits[i];
+-		if (send(m, whichq(m), NONE, NONE, 0) == 0)
+-			badinput("qsize too small for initial string...");
+-	}
+-	if (assertbl != NONE)
+-	{	assertbl = reftasks[assertbl];
+-
+-		abase = nrvars;
+-		nrvars += tbl[assertbl].nrrows;
+-
+-		if (abase > 0)
+-			globvars = (int *)
+-				Realloc(globvars, nrvars * sizeof(int));
+-		else
+-			globvars = (int *)
+-				Smalloc(nrvars * sizeof(int));
+-
+-		globvars[abase] = 1;
+-		for (i = abase+1; i < nrvars; i++)
+-			globvars[i] = 0;
+-	}
+-	if (errortbl != NONE)
+-	{	errortbl = reftasks[errortbl];
+-
+-		ebase = nrvars;
+-		nrvars += tbl[errortbl].nrrows;
+-
+-		if (ebase > 0)
+-			globvars = (int *)
+-				Realloc(globvars, nrvars * sizeof(int));
+-		else
+-			globvars = (int *)
+-				Smalloc(nrvars * sizeof(int));
+-
+-		globvars[ebase] = 1;
+-		for (i = ebase+1; i < nrvars; i++)
+-			globvars[i] = 0;
+-	}
+-}
+-
+-decode()
+-{ register int i, j, m;
+-
+-	for (i = 0; i < nrvars; i++)
+-	{	m = convert(globvars[i], NONE);
+-		globvars[i] = (short) m;
+-	}
+-	for (i = 0; i < nrprocs; i++)
+-	for (j = 0; j < procpars[i].nrlvars; j++)
+-	{	m = convert(procpars[i].lvarvals[j], i);
+-		procpars[i].lvarvals[j] = (short) m;
+-	}
+-}
+//GO.SYSIN DD trace1.c
+echo trace2.c 1>&2
+sed 's/.//' >trace2.c <<'//GO.SYSIN DD trace2.c'
+-#include <stdio.h>
+-#include <errno.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern struct TBL       *tbl;
+- extern struct LBT	 *lbt;
+- extern struct MBOX      *mbox;
+- extern struct MNAME     *fullname;
+- extern struct REVPOL    **expr;
+- extern struct PROCSTACK **procstack;
+-
+- extern struct VARPARS	 *procpars;
+- extern struct TBLPARS	 *tblpars;
+-
+- extern struct LOCVARS   *tblvars;
+- extern struct TBLPARS	 *tablpars;
+-
+- extern int *reftasks, *processes, *basics;
+- extern int *globvars, *inits, *xob, *effnrstates;
+-
+- extern char qoverride;
+- extern int QMAX, msgbase, maxcol, assertbl, errortbl;
+-
+-#define tell(s)	fprintf(stderr, s)
+-
+-usage(str)
+-	char *str;
+-{	fprintf(stderr, "trace: %s\n", str);
+-	tell("usage: trace [-?] [N]\n");
+-	tell("\t-a show all prefixes leading into old states\n");
+-	tell("\t-b `blast mode' (quick, very partial search)\n");
+-	tell("\t-c  N  perform class N validation (N: 0..5) \n");
+-	tell("\t-f or -F alternative formats for printing queue histories\n");
+-	tell("\t-j stop at the first buffer lock found\n");
+-	tell("\t-k  N  restrict the state space cache to N thousand states\n");
+-	tell("\t-l show normal execution sequences and loops, but no prefixes\n");
+-	tell("\t-m  N  restrict search depth to N steps\n");
+-	tell("\t-n don't use timeout heuristics\n");
+-	tell("\t-q  N  set bound N on maximum queue size used\n");
+-	tell("\t-r  N  restrict the runtime to  N minutes\n");
+-	tell("\t-R  N  report on progress every N minutes\n");
+-	tell("\t-s show the transition tables (different if combined with `v')\n");
+-	tell("\t-v verbose - print execution times, etc.\n");
+-	tell("\t-x perform a scatter search\n");
+-	tell("\tno flag: try a sensible partial search\n");
+-	exit(1);
+-}
+-
+-/*
+- * calls on Emalloc and Realloc go straight to the library malloc
+- * it is used for data that may be realloced but is never released
+- * - Smalloc claims memory that is never realloced and never released
+- * - emalloc and efree handle memory that is never realloced but often released
+- * - talloc and tfree are direct calls on the tac-package (used via emalloc)
+- */
+-
+-char *
+-Stake(n)
+-{ char *try, *sbrk(), *Emalloc();
+-  extern int errno;
+-
+-	do {
+-		try = sbrk(n);
+-	} while ((int) try == -1 && errno == EINTR);
+-
+-	if ((int) try == -1)
+-		return Emalloc(n);	/* maybe some mem left here */
+-
+-	return try;
+-}
+-
+-#define CHUNK	4096
+-
+-char *have;
+-long left = 0;
+-
+-char *
+-Smalloc(n)
+-	unsigned n;
+-{ char *try;
+-
+-	if (n == 0)
+-		return (char *) NULL;
+-	if (left < n)
+-	{	unsigned grow = (n < CHUNK) ? CHUNK : n;
+-		have = Stake(grow);
+-		left = grow;
+-	}
+-	try = have;
+-	have += n;
+-	left -= n;
+-
+-	return try;
+-}
+-
+-char *
+-Emalloc(n)
+-	unsigned n;
+-{ char *try, *malloc();
+-
+-	if (n == 0)
+-		return (char *) NULL;
+-	if ((try = malloc(n)) == NULL)
+-		whoops("malloc fault");
+-
+-	return try;
+-}
+-
+-char *
+-Realloc(a, b)
+-	char *a; unsigned b;
+-{ char *try, *realloc();
+-
+-	if (b == 0)
+-		return (char *) NULL;
+-	if ((try = realloc(a, b)) == NULL)
+-		whoops("realloc returns 0");
+-
+-	return try;
+-}
+-
+-char *
+-emalloc(n)
+-	unsigned n;
+-{ char *try;
+-  char *talloc();
+-
+-	if (n == 0)
+-		return (char *) NULL;
+-	if ((try = talloc(n)) == NULL)
+-		whoops("talloc fault");
+-
+-	return try;
+-}
+-
+-efree(at)
+-	char *at;
+-{
+-	if (at) tfree(at);
+-}
+-
+-alloc1(x, y, z)
+-{ int n = x+y;
+-	tbl      = (struct TBL *)
+-		Smalloc(n * sizeof(struct TBL));
+-	tblpars  = (struct TBLPARS *)
+-		Smalloc(n * sizeof(struct TBLPARS));
+-	tblvars  = (struct LOCVARS *)
+-		Smalloc(n * sizeof(struct LOCVARS));
+-	reftasks = (int *)
+-		Smalloc(x * sizeof(int));
+-	processes = (int *)
+-		Smalloc(y * sizeof(int));
+-	lbt       = (struct LBT *)
+-		Smalloc(y * sizeof(struct LBT));
+-	procpars  = (struct VARPARS *)
+-		Smalloc(y * sizeof(struct VARPARS));
+-
+-	tablpars  = (struct TBLPARS *)
+-		Smalloc(y * sizeof(struct TBLPARS));
+-
+-	basics    = (int *)
+-		Smalloc(y * sizeof(int));
+-	procstack = (struct PROCSTACK **)
+-		Smalloc(y * sizeof(struct PROCSTACK *));
+-	mbox      = (struct MBOX *)
+-		Smalloc(z * sizeof(struct MBOX));
+-
+-	effnrstates = (int *)
+-		Smalloc(n * sizeof(int));
+-}
+-
+-alloc2(n, p, who)
+-{ char x;
+-
+-	x = (qoverride && p > QMAX)? QMAX : p;
+-
+-	if (x >= 256)
+-		whoops("illegal queue size");
+-	if (x >= 16)
+-		fprintf(stderr, "warning, very large qsize (%d), queue %d\n", x, n);
+-
+-	mbox[n].limit = x;
+-	mbox[n].owner = (who >= 0) ? who : 0;
+-}
+-
+-alloc3(n)
+-{	inits = (int *)
+-		Smalloc(n * sizeof(int));
+-}
+-
+-alloc4(n)
+-{	if (assertbl == NONE && errortbl == NONE)
+-		globvars = (int *)
+-			Smalloc(n * sizeof(int));
+-	else
+-		globvars = (int *)
+-			Emalloc(n * sizeof(int));
+-}
+-
+-alloc45(n)
+-{ register int i;
+-	fullname = (struct MNAME *)
+-		Smalloc(n * sizeof(struct MNAME));
+-	xob = (int *)
+-		Smalloc((n+msgbase) * sizeof(int));
+-	for (i = 0; i < n+msgbase; i++)
+-		xob[i] = -1;
+-}
+-
+-alloc5(n)
+-{ register int i, j, r, c;
+-
+-	r = tbl[n].nrrows;
+-	if ((c = tbl[n].nrcols) > maxcol)
+-		maxcol = c;
+-
+-	tbl[n].endrow  = (int *) Smalloc(r * sizeof(int));
+-	tbl[n].deadrow = (int *) Smalloc(r * sizeof(int));
+-	tbl[n].badrow  = (int *) Smalloc(r * sizeof(int));
+-	tbl[n].labrow  = (int *) Smalloc(r * sizeof(int));
+-	tbl[n].colmap  = (int *) Smalloc(c * sizeof(int));
+-	tbl[n].colorg  = (int *) Smalloc(c * sizeof(int));
+-	tbl[n].coltyp  = (int *) Smalloc(c * sizeof(int));
+-	tbl[n].ptr     = (struct IND **) Smalloc(r * sizeof(struct IND *));
+-	tbl[n].rowname = (char **) Smalloc(r * sizeof(char *));
+-
+-	for (i = 0; i < r; i++)
+-	{	tbl[n].ptr[i] = (struct IND *)
+-			Smalloc(c * sizeof(struct IND));
+-		tbl[n].rowname[i] = (char *)
+-			Smalloc(128 * sizeof(char));
+-
+-		for (j = 0; j < c; j++)
+-			tbl[n].ptr[i][j].nrpils = 0;
+-		tbl[n].deadrow[i] = 1;
+-		tbl[n].endrow[i] = tbl[n].badrow[i] = 0;
+-		tbl[n].labrow[i] = 0;
+-	}
+-	tbl[n].labrow[0] = 1;	/* make sure initial state is always checked */
+-}
+-
+-alloc6(n, m, p, q)
+-{	tbl[n].ptr[m][p].one = (struct ELM *)
+-		Smalloc(q * sizeof(struct ELM));
+-}
+-
+-alloc8(pr, p, q)
+-{
+-	tablpars[pr].nrms = (short) p;			/* available */
+-	tablpars[pr].nrvs = (short) q;
+-
+-	procpars[pr].ms = (short *)
+-		Emalloc(p * sizeof(short));
+-	procpars[pr].vs = (short *)
+-		Emalloc(q * sizeof(short));
+-
+-	procpars[pr].nrms = 0;				/* actually used */
+-	procpars[pr].nrvs = 0;
+-}
+-
+-alloc9(in, p)
+-{
+-	tbl[in].calls = (struct CPARS *)
+-		Smalloc(p * sizeof(struct CPARS));
+-}
+-
+-alloc10(in, cn, p, q, r)
+-{
+-	tbl[in].calls[cn].callwhat = (short) p;
+-	tbl[in].calls[cn].nrms = (short) q;
+-	tbl[in].calls[cn].nrvs = (short) r;
+-
+-	tbl[in].calls[cn].ms = (short *)
+-			Smalloc(q * sizeof (short));
+-
+-	tbl[in].calls[cn].vs = (short *)
+-			Smalloc(r * sizeof (short));
+-}
+-
+-whoops(s)
+-	char *s;
+-{
+-	fprintf(stderr, "trace: %s\n", s);
+-	postlude();
+-	exit(1);
+-}
+-
+-badinput(s)
+-	char *s;
+-{	extern char fname[];
+-
+-	fflush(stdout);
+-	fprintf(stderr, "trace: read error `%s': %s\n", s, fname);
+-	exit(1);
+-}
+//GO.SYSIN DD trace2.c
+echo trace3.c 1>&2
+sed 's/.//' >trace3.c <<'//GO.SYSIN DD trace3.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+-#define DEBUG	0
+-
+-#define BS(n)	((n) & ~(PASSED))
+-
+- extern struct TBL       *tbl;
+- extern struct LBT	 *lbt;
+- extern struct MBOX      *mbox;
+- extern struct MNAME     *fullname;
+- extern struct PROCSTACK **procstack;
+-
+- extern struct VARPARS	 *procpars;
+- extern struct TBLPARS	 *tblpars;
+-
+- extern struct LOCVARS   *tblvars;
+- extern struct TBLPARS   *tablpars;
+-
+- extern struct QUEUE **starter, **head, **tail;
+- extern struct QUEUE *s_first, *s_last;
+- extern struct VISIT *lastvisit;
+-
+- extern int *reftasks, *processes, *basics;
+- extern int *globvars, *inits, *state, *qsize;
+-
+- extern int nrtbl, nrqs, nrrefs, nrprocs, nrinit;
+- extern int nrvars, nrmesgs, msgbase;
+- extern int maxlevel, maxreached;
+-
+- extern char noshortcut, prbyq, timedd, blast, qandirty, muststore;
+- extern char maxxed, completed, lockplus, firstlock;
+-
+- extern long locksf, normf, loopsf;
+- extern double zapper;
+-
+- short lastqueue;		/* the last queue addressed */
+- int level = 0;
+- double COUNT = 0;
+-
+- char *emalloc(), *Realloc(), *Emalloc();
+-
+-determine(m)
+-{
+-	if (m >= 3*MANY)	return 0;	/* constant  */
+-	else if (m >= 2*MANY)	return 1;	/* parameter */
+-	else if (m >= MANY)	return 2;	/* local     */
+-	else if (m >= 0)	return 3;	/* global    */
+-	else if (m < -3*MANY)	return 5;	/* negative number */
+-	else if (m <= -2)	return 4;	/* expression */
+-	else
+-		whoops("cannot happen - determine");
+-}
+-
+-convert(m, pr)
+-{ int res, n = m;
+-
+-	/* convert a pvar: global, local, parameter, or a constant */
+-
+-	switch (determine(n)) {
+-	case 5: res = n + 3*MANY; break;
+-	case 4: res = evalcond(-(m+2), pr); break;
+-	case 0: res = n - 3*MANY; break;
+-	case 1: res = wapper(m, pr); break;
+-	case 2: n -= MANY;
+-		if (n >= 0 && n < (int) procpars[pr].nrlvars)
+-			res = (int) procpars[pr].lvarvals[n];
+-		else
+-			whoops("reference to non-existing local var");
+-		break;
+-	case 3:	if (n >= 0 && n < nrvars)
+-			res = globvars[n];
+-		else
+-			whoops("reference to non-existing global var");
+-		break;
+-	default:
+-		whoops("cannot happen - convert");	/* got a parameter */
+-		break;
+-	}
+-	return res;
+-}
+-
+-wapper(n, pr)
+-{ int x = n - 2*MANY;
+-  int y;
+-	if (x < 0 || x >= MANY)
+-		return n;	/* not a parameter */
+-	else
+-	{	if (x >= procpars[pr].nrvs)
+-			whoops("unknown parameter of type pvar");
+-		y = (int) procpars[pr].vs[x];
+-		if (y >= 2*MANY && y < 3*MANY)
+-			whoops("unresolved parameter reference");
+-		return y;
+-	}
+-}
+-
+-mapper(n, pr)			/* convert a message parameter */
+-{ register int x = n - MANY;
+-
+-	if (x < 0 || x >= MANY)
+-		return n;	/* not a parameter */
+-	else
+-	{	if (x >= procpars[pr].nrms)
+-			whoops("bad news: illegal message parameter");
+-		return ((int)procpars[pr].ms[x]);
+-	}
+-}
+-
+-matchon(n, m, t, trial, TT, pr)
+-{
+-#if DEBUG
+-	printf("trial %d, pr %d; ", trial, pr);
+-	if (TT == INP || TT == OUTP)
+-		printf("msg %s, ", fullname[n-msgbase].mname);
+-	else
+-		printf("code %d, ", n);
+-	printf("q %d, tbl %d, type %d\n", m, t, TT);
+-#endif
+-
+-	if (trial == 2)
+-		return (TT == TMO && qsize[m] == 0);
+-	else
+-	{
+-		switch (TT) {
+-		case FCT :
+-		case SPN : return 1;
+-		case CND : return (evalcond(n, pr));
+-		case DFL : return (qsize[m] > 0 && no_other(t,head[m]->mesg,pr));
+-		case INP : return (qsize[m] > 0 && BS(head[m]->mesg) == n);
+-		case TMO : return (noshortcut && qsize[m] == 0);
+-		case OUTP: return (qsize[m] < mbox[m].limit);
+-		default  : whoops("unknown type in column head");
+-		}
+-	}
+-}
+-
+-no_other(x, yy, pr)
+-{ struct TBL *tmp = &(tbl[x]);
+-  int y = BS(yy);
+-  int j = tmp->nrcols;
+-  int h = state[pr];
+-  int i;
+-
+-	for (i = 0; i < j; i++)
+-	{	if (tmp->coltyp[i] == INP
+-		&&  tmp->ptr[h][i].nrpils > 0
+-		&&  y == lbt[pr].mapcol[i])
+-			return 0;
+-	}
+-	return 1;
+-}
+-
+-send(m, to, with, pr, nst)
+-{ struct QUEUE *tmp;
+-  register struct QUEUE *hook = tail[to];
+-  int what = NONE;
+-
+-	if (with != NONE)
+-	{	if ((what = convert(with, pr)) >= USED - 1 || what < 0)
+-		{	output("aborted: ", 0);
+-			whoops("cargo too large or negative");
+-		}
+-		hook->cargo = (unsigned short) ( what | USED );
+-	} else
+-		hook->cargo = (unsigned short) 0;
+-
+-	if (qsize[to] >= mbox[to].limit)
+-		whoops("cannot happen - send");
+-
+-	tmp = (struct QUEUE *) emalloc(sizeof(struct QUEUE));
+-	tmp->last  = hook;
+-#if TRAIL
+-	hook->tstate[0] = (short) processes[pr];
+-	hook->tstate[1] = (short) nst;
+-#endif TRAIL
+-
+-	hook->mesg = (short) m;
+-	hook->next = tmp;
+-	hook->s_back = s_last;
+-	hook->s_forw = NULL;
+-	if (s_last == NULL)
+-		s_first = hook;
+-	else
+-		s_last->s_forw = hook;
+-
+-	s_last = hook;
+-	tail[to] = tmp;
+-	qsize[to]++;
+-#if DEBUG
+-	printf("\tsent %d to %d, size %d, ", m, to, qsize[to]);
+-	printf("cargo %d [%d]\n", what, hook->cargo);
+-#endif
+-	require(OUTP, m, to);
+-
+-	return 1;
+-}
+-
+-receive(from, with, pr, ice)
+-	struct FREEZE *ice;
+-{ struct QUEUE *hook;
+-  int what=NONE, wither;
+-
+-	if (qsize[from] <= 0)
+-		whoops("trying to receive from empty queue");
+-
+-	hook = head[from];
+-	if (hook->cargo & USED)
+-	{	what = (int) ((hook->cargo) & (~USED));
+-		if (with == NONE)
+-		{	fprintf(stderr, "value %d sent (msg: ", what);
+-			putname(hook, 1);
+-			fprintf(stderr, ") but not expected\n");
+-		}
+-		else
+-		{	ice->whichvar = wither = wapper(with, pr);
+-			if (wither >= 3*MANY || wither <= -3*MANY)
+-				whoops("receiving into a constant...");
+-			if (wither < MANY)
+-			{	ice->oldvalue = globvars[wither];
+-				globvars[wither] = what;
+-			} else
+-			{ int n = wither - MANY;	
+-				if (n >= 0 && n < (int) procpars[pr].nrlvars)
+-				{	ice->oldvalue = procpars[pr].lvarvals[n];
+-					procpars[pr].lvarvals[n] = (short) what;
+-				} else
+-					whoops("unknown local var");
+-			}
+-		}
+-	} else
+-	{	if (with != NONE)
+-		{	fprintf(stderr, "value %d expected (msg: ", with);
+-			putname(hook, 1);
+-			fprintf(stderr, ") but not sent\n");
+-		}
+-	}
+-
+-	hook->mesg |= PASSED;
+-#if DEBUG
+-	printf("\trecv %d from queue %d, ", head[from]->mesg & (~PASSED), from);
+-	printf("cargo %d [%d], into var %d\n", what, hook->cargo, with);
+-#endif
+-
+-	head[from] = hook->next;
+-	qsize[from]--;
+-
+-	require(INP, (hook->mesg & (~PASSED)), from);
+-
+-	return 1;
+-}
+-
+-unrecv(from)
+-{
+-	if (head[from] == starter[from])
+-		whoops("unreceiving beyond initial state");
+-
+-	head[from] = head[from]->last;
+-	head[from]->mesg &= (~PASSED);
+-
+-	qsize[from]++;
+-}
+-
+-unsend()
+-{ short i = lastqueue;
+-
+-	if (tail[i] == starter[i])
+-		whoops("unsending beyond initial state");
+-	if ((tail[i] = tail[i]->last) != s_last)
+-		whoops("unsend: tail not last sent message");
+-
+-	if ((s_last = s_last->s_back) != NULL)
+-		s_last->s_forw = NULL;
+-	else
+-		s_first = NULL;
+-	efree(tail[i]->next);
+-
+-	qsize[i]--;
+-}
+-
+-output(tag, willabort)
+-	char *tag;
+-{ struct QUEUE *tmp;
+-
+-	printf("%s", tag);
+-
+-	if ((tmp = s_first) != NULL)
+-	{	formatted((struct QUEUE *) 0);
+-		if (prbyq != 2)
+-		do putname(tmp, 0); while ((tmp = tmp->s_forw) != NULL);
+-		putchar('\n');
+-	} else
+-		printf("null output\n");
+-
+-	if (willabort == 2 || (firstlock && willabort == 1))
+-	{	completed = 1;
+-		postlude();
+-	}
+-}
+-
+-putname(tmp, how)
+-	struct QUEUE *tmp;
+-{ int i, k = (int) (BS(tmp->mesg)) - msgbase;
+-  char nnn[128];
+-
+-	i = strlen(fullname[k].mname);
+-	if (tmp->mesg & PASSED)
+-		sprintf(nnn, "%s", fullname[k].mname);
+-	else
+-	{	sprintf(nnn, "[%s]", fullname[k].mname);
+-		i += 2;
+-	}
+-
+-	if (tmp->cargo & USED)
+-		sprintf(&nnn[i], "(%d),", (tmp->cargo & (~USED)));
+-	else
+-		sprintf(&nnn[i], ",");
+-
+-	if (how)
+-		fprintf(stderr, "%s", nnn);
+-	else
+-		printf("%s", nnn);
+-
+-	return strlen(nnn);
+-}
+-
+-inendstate()
+-{ int i, j, k;
+-
+-	for (i = 0, k = nrprocs; i < nrprocs; i++)
+-	{	j = processes[i];
+-		if (j != basics[i] || tbl[j].endrow[state[i]] != 1)
+-			k--;
+-	}
+-	return k;
+-}
+-
+-formatted(at)
+-	struct QUEUE *at;
+-{ struct QUEUE *tmp = s_first;
+-  int i, j; extern int linecode;
+-
+-	if (tmp == NULL)
+-		return;
+-
+-	switch((int) prbyq) {
+-	case 0: break;
+-	case 1:
+-		for (i = 0; i < nrqs; i++)
+-		{	printf("\n\t%s = {", mbox[i].qname);
+-			for (tmp = starter[i]; tmp != tail[i]; tmp = tmp->next)
+-				putname(tmp, 0);
+-			printf("}");
+-		}
+-		printf("\nexecution sequence:\n\t");
+-		break;
+-	case 2: putchar('\n');
+-		for (i = 0; i < nrqs; i++)
+-			printf("%2d = %s\n", i, mbox[i].qname);
+-		for (i = 0; i < nrqs; i++)
+-			printf("\t%2d", i);
+-#if TRAIL
+-		if (linecode)
+-			printf("               \tsource");
+-#endif TRAIL
+-		putchar('\n');
+-		do
+-		{	if (tmp == at)
+-				printf(" >>");
+-			for (i = j = whichq(BS(tmp->mesg)); i >= 0; i--)
+-				putchar('\t');
+-			i = putname(tmp, 0);
+-#if TRAIL
+-			if (linecode)
+-			{ for (i = 16-i;   i > 0; i--) putchar(' ');
+-			  for (j = nrqs-j; j > 0; j--) putchar('\t');
+-			  printf("%s", tbl[tmp->tstate[0]].rowname[tmp->tstate[1]]);
+-			}
+-#endif TRAIL
+-			putchar('\n');
+-		} while ((tmp = tmp->s_forw) != NULL);
+-		if (at != NULL)
+-			printf(" >>\n");
+-		break;
+-	}
+-}
+-
+-putloop(at, aa)
+-	struct QUEUE *at;
+-	char aa;
+-{ register struct QUEUE *tmp = s_first;
+-
+-	if (aa)
+-		printf("loop:\t");
+-	else
+-		printf("assertion violated: ");
+-
+-	if (s_first != NULL)
+-	{	formatted(at);
+-		if (prbyq != 2)
+-		{	do
+-			{	putname(tmp, 0);
+-				if (tmp == at)
+-					printf("//");
+-			} while ((tmp = tmp->s_forw) != NULL);
+-			printf("//\n");
+-		}
+-	} else
+-		printf("null output\n");
+-}
+-
+-ppop(pr)
+-{ struct PROCSTACK *tmp = procstack[pr];
+-  int i = (int) procstack[pr]->uptable;
+-
+-	if (procstack[pr] == NULL)
+-		whoops("null stack");
+-
+-	restorvarpars(tmp->varparsaved,  pr);
+-	procstack[pr] = procstack[pr]->follow;
+-
+-	efree(tmp->varparsaved);
+-	efree(tmp);
+-
+-	return i;	/* we're returing to this table */
+-}
+-
+-ppush(pr, what, tr)
+-{ struct PROCSTACK *tmp;
+-
+-	tmp = (struct PROCSTACK *)
+-		emalloc(sizeof(struct PROCSTACK));
+-
+-	tmp->varparsaved  = (struct VARPARS *)
+-			emalloc(sizeof(struct VARPARS));
+-
+-	savevarpars (tmp->varparsaved,  pr);
+-
+-	tmp->uptable = (short) what;
+-	tmp->uptransf = (short) tr;
+-	tmp->follow = procstack[pr];
+-	procstack[pr] = tmp;
+-}
+-
+-setlvars(to, pr)
+-{ register int i;
+-  short z = tblvars[to].nrlvars;
+-
+-	if (z > tablpars[pr].nrlvars)
+-	{	if (tablpars[pr].nrlvars > 0)
+-			procpars[pr].lvarvals = (short *)
+-				Realloc(procpars[pr].lvarvals, z * sizeof(short));
+-		else
+-			procpars[pr].lvarvals = (short *)
+-				Emalloc(z * sizeof(short));
+-
+-		tablpars[pr].nrlvars = z;
+-	}
+-
+-	procpars[pr].nrlvars = z;
+-
+-	for (i = 0; i < z; i++)
+-		procpars[pr].lvarvals[i] = convert(tblvars[to].lvarvals[i], pr);
+-}
+-
+-setpars(from, to, pr)
+-	struct CPARS *from;
+-{ struct VARPARS tbuff;
+-  register int i;
+-  short x = tblpars[to].nrms;
+-  short y = tblpars[to].nrvs;
+-
+-	savemapped(&tbuff, from, pr);	/* mapper() needs old nrms & nrvs */
+-
+-	if (x > tablpars[pr].nrms)
+-	{	if (tablpars[pr].nrms > 0)
+-			procpars[pr].ms = (short *)
+-				Realloc(procpars[pr].ms, x * sizeof(short));
+-		else
+-			procpars[pr].ms = (short *)
+-				Emalloc(x * sizeof(short));
+-
+-		tablpars[pr].nrms = x;
+-	}
+-	if (y > tablpars[pr].nrvs)
+-	{	if (tablpars[pr].nrvs > 0)
+-			procpars[pr].vs = (short *)
+-				Realloc(procpars[pr].vs, y * sizeof(short));
+-		else
+-			procpars[pr].vs = (short *)
+-				Emalloc(y * sizeof(short));
+-
+-		tablpars[pr].nrvs = y;
+-	}
+-
+-	procpars[pr].nrms = tbuff.nrms;
+-	procpars[pr].nrvs = tbuff.nrvs;
+-
+-	for (i = 0; i < procpars[pr].nrms; i++)
+-		procpars[pr].ms[i] = tbuff.ms[i];
+-
+-	for (i = 0; i < procpars[pr].nrvs; i++)
+-		procpars[pr].vs[i] = tbuff.vs[i];
+-
+-	efree(tbuff.ms); efree(tbuff.vs);
+-}
+-
+-#if DEBUG
+-showstate()
+-{ int i, j;
+-	printf("%2d: S:", level);
+-	for (i = 0; i < nrprocs; i++)
+-		printf("%d,", state[i]);
+-	printf("M:");
+-	for (i = 0; i < nrprocs; i++)
+-		printf("%d,", processes[i]);
+-	printf("Q:");
+-	for (i = 0; i < nrqs; i++)
+-		printf("%d,", qsize[i]);
+-	printf("H:");
+-	for (i = 0; i < nrqs; i++)
+-		if (qsize[i] == 0)
+-			printf("-,");
+-		else
+-		{	j = (int) BS(head[i]->mesg);
+-			printf("%s,", fullname[j-msgbase].mname);
+-		}
+-	printf("\tV:");
+-	for (i = 0; i < nrprocs; i++)
+-	{	for (j = 0; j < procpars[i].nrlvars; j++)
+-			printf("%d ", procpars[i].lvarvals[j]);
+-		putchar(';');
+-	}
+-	putchar('\n');
+-}
+-#endif
+-
+-retable(prc, ice)
+-	struct FREEZE *ice;
+-{ struct CUBE *it, *here;
+-  int t = processes[prc];
+-
+-	if (ice->cube == NULL)
+-	{	here = ice->cube = (struct CUBE *)
+-			emalloc(sizeof(struct CUBE));
+-		here->pntr = here->rtnp = NULL;
+-	} else
+-	{	for (it = ice->cube; it->pntr != NULL; it = it->pntr)
+-			;
+-		it->pntr = (struct CUBE *)
+-			emalloc(sizeof(struct CUBE));
+-		it->pntr->rtnp = it;
+-		here = it->pntr;
+-		here->pntr = NULL;
+-	}
+-	here->poporpush = POP;
+-	here->which = (short) prc;
+-	here->procsaved = (short) t;
+-	here->transfsaved = procstack[prc]->uptransf;
+-	here->varparsaved  = (struct VARPARS *)
+-			emalloc(sizeof(struct VARPARS));
+-
+-	savevarpars(here->varparsaved, prc);
+-	processes[prc] = ppop(prc);
+-	fiddler(prc);
+-	state[prc] = (int) here->transfsaved;
+-	muststore = tbl[processes[prc]].labrow[state[prc]];
+-}
+-
+-savevarpars(at, j)
+-	struct VARPARS *at;
+-{ register int i;
+-  struct VARPARS *it;
+-
+-	it = &(procpars[j]);
+-	at->nrms    = it->nrms;
+-	at->nrvs    = it->nrvs;
+-	at->nrlvars = it->nrlvars;
+-
+-	at->ms = (short *) emalloc(it->nrms * sizeof(short));
+-	at->vs = (short *) emalloc(it->nrvs * sizeof(short));
+-	at->lvarvals = (short *) emalloc(it->nrlvars * sizeof(short));
+-
+-	for (i = 0; i < at->nrms; i++)
+-		at->ms[i] = it->ms[i];
+-	for (i = 0; i < at->nrvs; i++)
+-		at->vs[i] = it->vs[i];
+-	for (i = 0; i < it->nrlvars; i++)
+-		at->lvarvals[i] = it->lvarvals[i];
+-}
+-
+-savemapped(at, it, j)
+-	struct VARPARS *at;
+-	struct CPARS  *it;
+-{ register int i;
+-
+-	at->nrms = it->nrms;
+-	at->nrvs = it->nrvs;
+-
+-	at->ms = (short *)
+-		emalloc(it->nrms * sizeof(short));
+-	at->vs = (short *)
+-		emalloc(it->nrvs * sizeof(short));
+-
+-	for (i = 0; i < at->nrms; i++)
+-		at->ms[i] = (short) mapper(it->ms[i], j);
+-
+-	for (i = 0; i < at->nrvs; i++)
+-		at->vs[i] = (short) convert(it->vs[i], j);
+-}
+-
+-restorvarpars(at, pr)
+-	struct VARPARS *at;
+-{ register int i;
+-
+-	procpars[pr].nrms     = at->nrms;
+-	procpars[pr].nrvs     = at->nrvs;
+-	procpars[pr].nrlvars = at->nrlvars;
+-
+-	for (i = 0; i < at->nrms; i++)
+-		procpars[pr].ms[i] = at->ms[i];
+-
+-	for (i = 0; i < at->nrvs; i++)
+-		procpars[pr].vs[i] = at->vs[i];
+-
+-	for (i = 0; i < at->nrlvars; i++)
+-		procpars[pr].lvarvals[i] = at->lvarvals[i];
+-
+-	efree(at->ms);
+-	efree(at->vs);
+-	efree(at->lvarvals);
+-}
+-
+-freeze(icy)
+-	struct FREEZE *icy;
+-{ register int i;
+-  struct FREEZE *ice = icy;
+-
+-  ice->statsaved = (short *) emalloc(nrprocs * sizeof(short));
+-  ice->varsaved  = (short *) emalloc(nrvars  * sizeof(short));
+-
+-  ice->lastsav = lastqueue;
+-  ice->cube = NULL;
+-
+-  for (i = 0; i < nrvars; i++)
+-  	ice->varsaved[i] = (short) globvars[i];
+-
+-  for (i = 0; i < nrprocs; i++)
+-  {
+-	ice->statsaved[i] = (short) state[i];
+-
+-	while (tbl[processes[i]].deadrow[state[i]] && procstack[i] != NULL)
+-		retable(i, ice);
+- }
+-}
+-
+-unfreeze(ice)
+-	struct FREEZE *ice;
+-{ struct CUBE *here;
+-  register int i;
+-
+-  lastqueue = ice->lastsav;
+-
+-  for (i = 0; i < nrprocs; i++)
+-  	state[i] = (int) ice->statsaved[i];
+-  for (i = 0; i < nrvars; i++)
+-  	globvars[i] = (int) ice->varsaved[i];
+-
+-  if ((here = ice->cube) != NULL)
+-	while (here->pntr != NULL)
+-		here = here->pntr;
+-
+-  for (; here != NULL;)
+-  {	i = (int) here->which;
+-	if (here->poporpush == PUSH)
+-	{	processes[i] = ppop(i);
+-	} else
+-	{	/* use cube to restore the values from before the ppop */
+-		ppush(i, processes[i], (int) here->transfsaved);
+-		restorvarpars (here->varparsaved,  i);
+-		processes[i] = (int) here->procsaved;
+-		efree(here->varparsaved);
+-	}
+-	efree(here);
+-	fiddler(i);
+-
+-	if (here == ice->cube)
+-		break;
+-	else
+-		here = here->rtnp;
+-  }
+-  efree(ice->statsaved);
+-  efree(ice->varsaved);
+-}
+-
+-FSE(I)
+-{ short g, h, i, j, k, t, x, y, z, X, Y, how;
+-  char progress = 0, internal;
+-  struct FREEZE *delta = (struct FREEZE *) emalloc(sizeof(struct FREEZE));
+-  struct STATE *iam = NULL, *inloop();
+-  struct VISIT *ticket;
+-
+-  if (level >= maxreached)
+-  {	if (maxxed && level >= maxlevel)
+-	{	efree(delta);
+-		return;
+-	}
+-	if (level > maxreached)
+-		maxreached = level;
+-  }
+-  freeze(delta);
+-
+-  if (muststore && (iam = inloop()) == NULL)
+-  {	unfreeze(delta);
+-	efree(delta);
+-	return;
+-  }
+-
+-/*
+- *	this state has not been seen before; the state
+- *	information has been saved in the structure
+- *	`STATE'; queue information has been saved in the
+- *	last `VISIT' template of this state;
+- *	we save a pointer to this template in a local variable:
+- *	to be able to mark the state `analyzed' when we return
+- *	for efficiency a pointer to the last visit is kept in a global `lastvisit'
+- */
+-  ticket = lastvisit;
+-  level++;
+-  COUNT += (double) 1;
+-
+-/* three tries:
+- *	1st try accepts internal moves (no timeouts, no outputs),
+- *	2nd try accepts any moves except timeouts,
+- *	3rd try accepts only timeouts.
+- */
+-
+-  for (X = 0; X <= 2; X++)
+-  {	internal = 0;
+-	for (g = 0, i = I; g < nrprocs; g++, i = (i+1)%nrprocs)
+-	{	t = processes[i];
+-		k = state[i];
+-
+-		if (X == 0 && tbl[t].badrow[k])
+-			continue;	/* first try: skip fsm without receives */
+-
+-	for (j = 0; j < tbl[t].nrcols; j++)
+-	{	if ((z = tbl[t].ptr[k][j].nrpils) == 0)
+-			continue;
+-
+-		x = lbt[i].mapcol[j];
+-		y = lbt[i].orgcol[j];
+-		Y = tbl[t].coltyp[j];
+-
+-		if (matchon(x, y, t, X, Y, i))
+-		{	for (h = 0; h < z; h++)
+-			{	how = forward(t, k, j, h, x, y, i, Y, delta);
+-
+-				if (qandirty || how == 0 || how >= LV || how == TC)
+-					internal = 1;
+-
+-				progress++;
+-#if DEBUG
+-				printf("\tdown   - %d/%d/%d\n", t, j, h);
+-				showstate();
+-#endif
+-			/*	FSE(mbox[lastqueue].owner); */
+-				FSE(0);
+-
+-				backup(k, how, y, i, delta);
+-#if DEBUG
+-				printf("\tup   - %d/%d/%d\n", t, j, h);
+-				showstate();
+-#endif
+-    		}	}		/* innermost loop: non-determinism */
+-		if (blast && progress > 0)
+-			break;
+-	}				/* inner loop: options per process */
+-	if (internal)
+-		break;
+-	}				/* outer loop: parallelism         */
+-	if (progress)
+-		break;			/* normal exit */
+-  }					/* outermost loop: 2 trials */
+-  if (progress == 0)
+-  {
+-	if ((k = inendstate()) == nrprocs)
+-	{	normf++;
+-		if (assertholds())
+-		{	if (lockplus) output("endstate: ", 0);
+-		} else
+-			output("assertion violated: ", 0);
+-	}
+-	else
+-	{	locksf++;
+-		if (k == 0)
+-			output("deadlock: ", 1);
+-		else
+-			output("partial lock: ", 1);
+-		if (linecode)
+-		{	printf("State at time of lock:\n");
+-			for (i = 0; i < nrprocs; i++)
+-				printf("\tprocess %3d: state %s\n", i,
+-			tbl[processes[i]].rowname[state[i]]);
+-			putchar('\n');
+-  }	}	}
+-
+-  level--;
+-
+-  unfreeze(delta); efree(delta);
+-  if (iam != NULL)
+-  {	mark(iam, ticket);
+-	if (zapper > 0 && (progress == 0 || level >= maxlevel-3))
+-		swiffle(iam, ticket);
+-  }
+-}
+-
+-forward(tb, k, j, h, m, from, pr, TT, ice)
+-	struct FREEZE *ice;
+-{ int how=0, n=m;
+-  struct ELM *at;
+-
+-	ice->whichvar = NONE;
+-
+-	at = &(tbl[tb].ptr[k][j].one[h]);
+-
+-	switch (TT) {
+-		case SPN: how = evalexpr(at->valtrans, pr, ice);
+-			  break;
+-		case CND: break;	/* `matchon()' already checked it */
+-		case FCT: m = (int) tbl[tb].calls[n].callwhat;
+-			  ppush(pr, processes[pr], (int) at->transf);
+-			  setpars(&(tbl[tb].calls[n]), reftasks[m], pr);
+-			  setlvars(reftasks[m], pr);
+-			  processes[pr] = reftasks[m];
+-			  fiddler(pr);
+-			  state[pr] = 0;
+-			  muststore = tbl[processes[pr]].labrow[0];
+-			  return TC;
+-		case TMO: send(m, from, NONE, pr, at->transf);
+-			  receive(from, NONE, pr, ice);
+-			  lastqueue = (short) from;
+-			  how = TO;
+-			  break;
+-		case DFL:
+-		case INP: receive(from, (int) at->valtrans, pr, ice);
+-			  how = RO;
+-			  break;
+-		case OUTP: send(m, from, (int) at->valtrans, pr, at->transf);
+-			  lastqueue = (short) from;
+-			  how |= SO;
+-			  break;
+-	}
+-	state[pr] = (int) at->transf;
+-	muststore = tbl[processes[pr]].labrow[state[pr]];
+-
+-	return (how);
+-}
+-
+-backup(k, how, bx, i, ice)
+-	struct FREEZE *ice;
+-{ int u = (int) ice->whichvar;
+-
+-	if (u != NONE)
+-	{	if (u >= MANY)
+-			procpars[i].lvarvals[u-MANY] = ice->oldvalue;
+-		else
+-			globvars[u] = ice->oldvalue;
+-	}
+-	switch (how) {
+-		case TC: u = processes[i];
+-			 processes[i] = ppop(i);
+-			 fiddler(i);
+-			 break;
+-		case TO: unrecv(bx);
+-		case SO: unsend();
+-			 peekassert(ice);
+-			 break;
+-		case SR: unsend();
+-		case RO: unrecv(bx);
+-			 peekassert(ice);
+-		default: break;
+-	} state[i] = k;
+-}
+-
+-fiddler(pr)
+-{ register int i, t = processes[pr];
+-
+-	for (i = 0; i < tbl[t].nrcols; i++)
+-		if (tbl[t].colmap[i] >= MANY)
+-		{	lbt[pr].mapcol[i] = mapper(tbl[t].colmap[i], pr);
+-			lbt[pr].orgcol[i] = whichq(lbt[pr].mapcol[i]);
+-		} else
+-		{	lbt[pr].mapcol[i] = tbl[t].colmap[i];
+-			lbt[pr].orgcol[i] = tbl[t].colorg[i];
+-		}
+-	
+-}
+//GO.SYSIN DD trace3.c
+echo trace4.c 1>&2
+sed 's/.//' >trace4.c <<'//GO.SYSIN DD trace4.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern char lockplus, prefix;
+- extern struct QUEUE *s_last;
+- extern int *processes, *globvars, *state, *qsize;
+- extern int nrprocs, nrrefs, nrvars, nrqs, level, assertbl, nrtbl;
+- extern long loopsf, zapped;
+- extern struct TBL *tbl;
+- extern struct PROCSTACK **procstack;
+- extern struct VARPARS *procpars;
+-
+- short *Factor, maxr = 0;
+- double iseen=0, ireseen=0, painful=0, kurshan=0;
+-
+- struct VISIT *lastvisit;
+- struct STATE *giveme(), *setstate();
+- char *Smalloc(), *emalloc();
+-
+-struct STATE *
+-inloop()
+-{ struct STATE *tmp;
+-  register struct VISIT *hook;
+-  register int x; char aa;
+-  int i, nrnonempty=0, nrnon=0;
+-  short h, hashvalue();
+-
+-	for (i = 0; i < nrqs; i++)
+-		if (qsize[i] > 0)
+-		{	nrnonempty += (1<<i);
+-			nrnon++;
+-		}
+-	h = hashvalue(nrnonempty);
+-	for (x = member(h); x > 0; x--)
+-	{	tmp = giveme(h, x);
+-		if (samestate(tmp))
+-		{	for (hook = tmp->next; hook != NULL; hook = hook->next)
+-			{
+-				if (hook->howmany != nrnonempty
+-				|| !Queuesmatch(hook, nrnon))
+-					continue;
+-
+-				if (ISANA(hook))
+-				{	if (DEPTH(hook) > level)
+-					{	painful += 1;
+-						continue;
+-					}
+-					if (prefix)
+-						output("prefix: ", 0);
+-					hook->prop.countme += 1;
+-					kurshan += (double) 1;
+-					return NULL;
+-				} else
+-				{	loopsf++;
+-					aa = (assertbl == NONE)? 1 : assertholds();
+-					if (aa == 0 || lockplus)
+-						putloop(hook->prop.s, aa);
+-					return NULL;
+-			}	}
+-			return setstate(tmp, h);
+-		}
+-	}
+-	return setstate((struct STATE *) NULL, h);
+-}
+-
+-cmplvars(one, two)
+-	struct LOCVARS *one;
+-	struct VARPARS *two;
+-{ int i;
+-
+-	if (one->nrlvars != two->nrlvars)
+-		return 0;
+-
+-	for (i = 0; i < one->nrlvars; i++)
+-		if (one->lvarvals[i] != two->lvarvals[i])
+-			return 0;
+-
+-	return 1;
+-}
+-
+-cmplocals(one, two)
+-	struct VARPARS *one, *two;
+-{ int i;
+-
+-	if (one->nrlvars != two->nrlvars)
+-		return 0;
+-
+-	for (i = 0; i < one->nrlvars; i++)
+-		if (one->lvarvals[i] != two->lvarvals[i])
+-			return 0;
+-
+-	return 1;
+-}
+-
+-cmparams(one, two)
+-	struct VARPARS *one, *two;
+-{ int i;
+-
+-	if (one->nrms != two->nrms || one->nrvs != two->nrvs)
+-		whoops("cannot happen - cmparams");
+-
+-	for (i = 0; i < one->nrms; i++)
+-		if (one->ms[i] != two->ms[i])
+-			return 0;
+-
+-	for (i = 0; i < one->nrvs; i++)
+-		if (one->vs[i] != two->vs[i])
+-			return 0;
+-
+-	return 1;
+-}
+-
+-cmpstacks(older, newer)
+-	struct PROCSTACK *older, *newer;
+-{ struct PROCSTACK *tmp1 = older;
+-  struct PROCSTACK *tmp2 = newer;
+-
+-	while (tmp2 != NULL)
+-	{	
+-		if (tmp1->uptable  != tmp2->uptable
+-		||  tmp1->uptransf != tmp2->uptransf)
+-			return 0;
+-
+-		if (cmplocals(tmp1->varparsaved, tmp2->varparsaved) == 0
+-		||  cmparams (tmp1->varparsaved, tmp2->varparsaved) == 0)
+-			return 0;
+-
+-		tmp1 = tmp1->follow;
+-		tmp2 = tmp2->follow;
+-	}
+-	return 1;
+-}
+-
+-samestate(at)
+-	struct STATE *at;
+-{
+-	return (sameP(at->pstate) && sametempl(at->pcon));
+-}
+-
+-cpylvars(into, from)
+-	struct LOCVARS  *into;
+-	struct VARPARS *from;
+-{ register int i;
+-
+-	into->nrlvars = from->nrlvars;
+-	into->lvarvals = (short *)
+-		Smalloc(from->nrlvars * sizeof(short));
+-	for (i = 0; i < from->nrlvars; i++)
+-		into->lvarvals[i] = from->lvarvals[i];
+-}
+-
+-cpylocals(into, from)
+-	struct VARPARS *into, *from;
+-{ register int i;
+-
+-	into->nrlvars = from->nrlvars;
+-	into->lvarvals = (short *)
+-		Smalloc(from->nrlvars * sizeof(short));
+-	for (i = 0; i < from->nrlvars; i++)
+-		into->lvarvals[i] = from->lvarvals[i];
+-}
+-
+-cpyparams(into, from)
+-	struct VARPARS *into, *from;
+-{ int i;
+-
+-	into->nrms = from->nrms;
+-	into->ms = (short *)
+-		Smalloc(from->nrms * sizeof(short));
+-	for (i = 0; i < from->nrms; i++)
+-		into->ms[i] = from->ms[i];
+-
+-	into->nrvs = from->nrvs;
+-	into->vs = (short *)
+-		Smalloc(from->nrvs * sizeof(short));
+-	for (i = 0; i < from->nrvs; i++)
+-		into->vs[i] = from->vs[i];
+-}
+-
+-cpystacks(left, right)
+-	struct PROCSTACK *left, *right;
+-{ struct PROCSTACK *into = left;
+-  struct PROCSTACK *from = right;
+-
+-	while (from != NULL)
+-	{	into->varparsaved = (struct VARPARS *)
+-			Smalloc(sizeof(struct VARPARS));
+-		cpylocals(into->varparsaved, from->varparsaved);
+-		cpyparams(into->varparsaved, from->varparsaved);
+-
+-		into->uptable  = from->uptable;
+-		into->uptransf = from->uptransf;
+-
+-		if ((from = from->follow) != NULL)
+-		{	into->follow = (struct PROCSTACK *)
+-				Smalloc(sizeof(struct PROCSTACK));
+-			into = into->follow;
+-	}	}
+-}
+-
+-struct STATE *
+-newstate(pha)
+-	int pha;
+-{ struct STATE *hook;
+-  struct VISIT *findastate();
+-  struct TEMPLATE *inTtable();
+-  unsigned short *inPtable();
+-
+-	hook = (struct STATE *) Smalloc(sizeof(struct STATE));
+-	hook->pstate = inPtable();
+-	hook->pcon   = inTtable();
+-	hook->next   = findastate(hook);	/* first visit */
+-
+-	insert(pha, hook);
+-
+-	return hook;
+-}
+-
+-struct VISIT *
+-oldstate(where)
+-	struct STATE *where;
+-{ register struct VISIT *tmp;
+-  struct VISIT *try, *findastate();
+-
+-	ireseen += (double)1;
+-	try = findastate(where);
+-	
+-	if (where->next == NULL)
+-		where->next = try;
+-	else
+-	{	for (tmp = where->next; tmp->next != NULL; tmp = tmp->next)
+-			;
+-		tmp->next = try;
+-	}
+-
+-	return try;
+-}
+-
+-struct STATE *
+-setstate(where, ha)
+-	struct STATE *where;
+-{ struct STATE *tmp;
+-  struct VISIT *work;
+-
+-	if (where == NULL)
+-	{	tmp = newstate(ha);
+-		work = tmp->next;
+-	} else
+-	{	tmp = where;
+-		work = oldstate(where);
+-	}
+-
+-	work->prop.s = s_last;
+-	work->depth = (short) level;
+-
+-	lastvisit = work;
+-	relink(work);
+-
+-	return tmp;
+-}
+-
+-struct VISIT *
+-pickstate(at)
+-	struct STATE *at;
+-{ struct VISIT *latter = NULL;
+-  register struct VISIT *hook = at->next;
+-
+-	for (hook = at->next; hook != NULL; hook = hook->next)
+-	{	if (ISANA(hook))
+-		{	if (latter == NULL)
+-				at->next = hook->next;
+-			else
+-				latter->next = hook->next;
+-
+-			efree(hook->c);
+-			hook->next = NULL;
+-			zapped++;
+-
+-			return hook;
+-		}
+-		latter = hook;
+-	}
+-	return NULL;
+-}
+-
+-struct VISIT *
+-picknown(at, want)
+-	struct STATE *at;
+-	struct VISIT *want;
+-{ struct VISIT *latter = NULL;
+-  register struct VISIT *hook;
+-
+-	for (hook = at->next; hook != NULL; hook = hook->next)
+-	{	if (hook == want)
+-			break;
+-		latter = hook;
+-	}
+-	if (hook == NULL)
+-		whoops("cannot happen - picknown");
+-
+-	if (latter == NULL)
+-		at->next = hook->next;
+-	else
+-		latter->next = hook->next;
+-
+-	efree(hook->c);
+-	hook->next = NULL;
+-
+-	zapped++;
+-	return hook;
+-}
+-
+-inihash()
+-{ register int i;
+-  char *Smalloc();
+-
+-	for (i = 0; i < nrtbl; i++)
+-		if (tbl[i].nrrows > maxr)
+-			maxr = tbl[i].nrrows;
+-
+-	Factor = (short *)
+-		Smalloc(maxr * sizeof(short));
+-
+-	for (i = 0; i < maxr; i++)
+-		Factor[i] = rand()%NOTOOBIG;	/* number between 0 and 16k */
+-}
+-
+-short
+-hashvalue(g)
+-{ register int i, h;
+-
+-	for (i = h = 0; i < nrprocs; i++)
+-	{	h = ((h << 2) | (h >> 13));	/* rotate */
+-		h ^= Factor[state[i]] ^ Factor[processes[i]];
+-	}
+-	h += g;
+-	return (h & NOTOOBIG);
+-}
+//GO.SYSIN DD trace4.c
+echo trace5.c 1>&2
+sed 's/.//' >trace5.c <<'//GO.SYSIN DD trace5.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern struct QUEUE **head, **tail;
+- extern int *qsize, nrqs, level, maxreached;
+- extern double iseen, ireseen, zapper;
+- extern double tryswiff, noswiff, cannot;
+- char *Realloc(), *Emalloc(), *Smalloc(), *emalloc();
+-
+- struct HTABLE {
+-	struct STATE **index;		/* index [h] [ibound]    */
+-	short ibound;			/* nr of available slots */
+-	short nr;			/* nr of occupied  slots */
+- } oldstates[NOTOOBIG+1];		/* index of hash values  */
+-
+- int hbound=0, hlast=0;
+-
+-growindex(h)
+-{ int nsz = (int) oldstates[h].ibound + 8;
+-
+-	if (nsz == 8)
+-		oldstates[h].index = (struct STATE **)
+-			Emalloc(nsz * sizeof(struct STATE *));
+-	else
+-		oldstates[h].index = (struct STATE **)
+-			Realloc(oldstates[h].index, nsz * sizeof(struct STATE *));
+-	
+-	oldstates[h].ibound = (short) nsz;
+-}
+-
+-initable()
+-{	register int i;
+-
+-	for (i = 0; i < NOTOOBIG+1; i++)
+-	{	oldstates[i].nr = 0;
+-		oldstates[i].ibound = 0;
+-	}
+-	hbound = NOTOOBIG+1;
+-}
+-
+-insert(h, pnt)		/* enter state pointer into the table at hash value h */
+-	struct STATE *pnt;
+-{ short cin;
+-
+-	if (h >= hbound)
+-	{	fprintf(stderr, "h %d, hbound %d, NOTOOBIG %d\n",h,hbound,NOTOOBIG);
+-		whoops("cannot happen - insert");
+-	}
+-	cin = oldstates[h].nr++;
+-	iseen += (double) 1;
+-
+-	if (cin >= oldstates[h].ibound)
+-		growindex(h);
+-
+-	oldstates[h].index[cin] = pnt;
+-}
+-
+-mark(stt, vis)
+-	struct STATE *stt;
+-	struct VISIT *vis;
+-{
+-	vis->prop.countme = 0;
+-	vis->depth |= ANALYZED;
+-}
+-
+-relink(vis)
+-	struct VISIT *vis;
+-{ struct CONTS *inqtable();
+-  register int i, j, k;
+-
+-	for (i = j = k = 0; i < nrqs ; i++)
+-		if (qsize[i] > 0)
+-		{	j++;
+-			k += (1 << i);
+-		}
+-	vis->howmany = k;
+-
+-	if (zapper == 0)	/* grow without bound */
+-		vis->c = (struct CONTS **)
+-			Smalloc(j * sizeof(struct CONTS *));
+-	else
+-		vis->c = (struct CONTS **)
+-			emalloc(j * sizeof(struct CONTS *));
+-
+-	for (i = k = 0; i < nrqs; i++)
+-	{	if (qsize[i] == 0)
+-			continue;
+-
+-		vis->c[k++] = inqtable(i);
+-	}
+-}
+-
+-member(h) {	return (h < hbound) ? oldstates[h].nr : 0; }
+-
+-struct STATE *
+-giveme(h, n)
+-{ int m = n - 1;
+-	if (h >= hbound || oldstates[h].nr <= m || oldstates[h].index[m] == NULL)
+-		whoops("cannot happen - giveme");
+-
+-	return oldstates[h].index[m];
+-}
+-
+-struct VISIT *
+-findany(avoid)
+-	struct STATE *avoid;
+-{ register int i, j;
+-  struct VISIT *try, *pickstate();
+-
+-	for (i = (hlast+1)%hbound; i != hlast; i++, i %= hbound)
+-	for (j = 0; j < oldstates[i].nr; j++)
+-		if (oldstates[i].index[j] != avoid
+-		&&  (try = pickstate(oldstates[i].index[j])) != NULL)
+-		{	hlast = i;
+-			return try;
+-		}
+-
+-	cannot += (double) 1;	/* couldn't find a victim */
+-	try = (struct VISIT *) Smalloc(sizeof(struct VISIT));
+-	try->next = NULL;
+-
+-	return try;
+-}
+-
+-struct VISIT *
+-findastate(avoid)
+-	struct STATE *avoid;
+-{ struct VISIT *try = NULL;
+-  struct VISIT *findany(), *picknown();
+-  struct Swiffle *unswiffle(), *trs;
+-
+-	if (ireseen < zapper || zapper == 0)
+-	{	try = (struct VISIT *) Smalloc(sizeof(struct VISIT));
+-		try->next = NULL;
+-		return try;
+-	}
+-	tryswiff += (double) 1;
+-	if ((trs = unswiffle(avoid)) != NULL
+-	&& (try = picknown(trs->st, trs->vi)) != NULL)
+-		return try;
+-	noswiff += (double) 1;
+-
+-	return findany(avoid);
+-}
+//GO.SYSIN DD trace5.c
+echo trace6.c 1>&2
+sed 's/.//' >trace6.c <<'//GO.SYSIN DD trace6.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern struct QUEUE **head, **tail;
+- extern int *qsize, nrqs, level;
+-
+- char *Realloc(), *Emalloc(), *Smalloc();
+-
+- struct CONTS ***oldqueues;		/* index of queue states */
+- long *nrqstates, *qbound;
+-
+-iniqtable()
+-{ register int i;
+-	nrqstates = (long *)
+-		Smalloc(nrqs * sizeof(long));
+-	qbound = (long *)
+-		Smalloc(nrqs * sizeof(long));
+-
+-	oldqueues = (struct CONTS ***)
+-		Smalloc(nrqs * sizeof(struct CONTS **));
+-
+-	for (i = 0; i < nrqs; i++)
+-		nrqstates[i] = qbound[i] = 0;
+-}
+-
+-growqtable(p)
+-{ int nsz = qbound[p] + 32;
+-
+-	if (nsz == 32)
+-		oldqueues[p] = (struct CONTS **)
+-			Emalloc(nsz * sizeof(struct CONTS *));
+-	else
+-		oldqueues[p] = (struct CONTS **)
+-			Realloc(oldqueues[p], nsz * sizeof(struct CONTS *));
+-	
+-	qbound[p] = nsz;
+-}
+-
+-struct CONTS *
+-Qinsert(p)
+-{ struct CONTS * try;
+-  struct QUEUE * tmp;
+-  register int i, j;
+-
+-	i = p;
+-	j = qsize[p];
+-
+-	if (nrqstates[p] >= qbound[p])
+-		growqtable(p);
+-
+-	try = (struct CONTS *)
+-		Smalloc((j+1) * sizeof(struct CONTS));
+-
+-	try[0].mesg  = i;
+-	try[0].cargo = j;
+-
+-	for (tmp = head[i], j = 1; tmp != tail[i]; tmp = tmp->next, j++)
+-	{	try[j].mesg  = (tmp->mesg & ~PASSED);
+-		try[j].cargo = tmp->cargo;
+-	}
+-
+-	if (--j != qsize[p])
+-		whoops("cannot happen - Qinsert");
+-
+-	oldqueues[p][nrqstates[p]] = try;
+-	nrqstates[p] += 1;
+-
+-	return try;
+-}
+-
+-struct CONTS *
+-inqtable(p)
+-{	register int i;
+-
+-	if (qsize[p] == 0)
+-		whoops("cannot happen - inqtable");
+-
+-	for (i = 0; i < nrqstates[p]; i++)
+-		if (samequeue(oldqueues[p][i]))
+-			return oldqueues[p][i];
+-
+-	return Qinsert(p);
+-}
+-
+-samequeue(at)
+-	struct CONTS *at;
+-{
+-	register struct QUEUE *tmp;
+-	register int j, k, m;
+-
+-	k = at[0].mesg;		/* which queue is this */
+-	m = at[0].cargo;	/* how many elements are here */
+-
+-	if (qsize[k] != m)
+-		return 0;
+-
+-	for (tmp = head[k], j = 1; tmp != tail[k]; tmp = tmp->next, j++)
+-	{	if (at[j].mesg  != (tmp->mesg & ~PASSED)
+-		||  at[j].cargo != tmp->cargo)
+-			return 0;
+-	}
+-	return 1;
+-}
+-
+-Queuesmatch(vis, k)
+-	struct VISIT *vis;
+-	register int k;
+-{
+-	register int i;
+-
+-	for (i = 0; i < k; i++)
+-		if (samequeue(vis->c[i]) == 0)
+-			return 0;
+-	return 1;
+-}
+//GO.SYSIN DD trace6.c
+echo trace7.c 1>&2
+sed 's/.//' >trace7.c <<'//GO.SYSIN DD trace7.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+-struct Swiffle *slist, *slast, *flast;
+-int nswiff = 0, fswiff = 0;
+-
+-struct Swiffle *
+-unswiffle(avoid)
+-	struct STATE *avoid;
+-{
+-	register struct Swiffle *try;
+-	register int i;
+-	struct Swiffle *result = (struct Swiffle *) NULL;
+-
+-	for (i = nswiff, try = slist; i > 0; i--, try = try->next)
+-		if (try->st != avoid)
+-		{	result = try;
+-			getput(try, i);
+-			break;
+-		}
+-
+-	return result;
+-}
+-
+-swiffle(this, that)
+-	struct STATE *this;
+-	struct VISIT *that;
+-{
+-	struct Swiffle *getswiff(), *try;
+-
+-	try = getswiff();
+-	try->st = this;
+-	try->vi = that;
+-
+-	if (nswiff++ == 0)
+-		slist = try;
+-	else
+-	{	slast->next = try;
+-		try->last = slast;
+-	}
+-	slast = try;
+-}
+-
+-getput(try, n)
+-	struct Swiffle *try;
+-{
+-/* unlink from slist: */
+-	if (try == slist)
+-		slist = try->next;
+-	else
+-		try->last->next = try->next;
+-
+-	if (n > 1)
+-		try->next->last = try->last;
+-
+-	if (try == slast)
+-	{	if (try == slist)
+-			slast = (struct Swiffle *) NULL;
+-		else
+-			slast = try->last;
+-	}
+-	nswiff--;
+-
+-/* relink in flist: */
+-
+-	try->next = (struct Swiffle *) NULL;
+-
+-	if (fswiff++ == 0)
+-		try->last = (struct Swiffle *) NULL;
+-	else
+-	{	flast->next = try;
+-		try->last = flast;
+-	}
+-	flast = try;
+-}
+-
+-struct Swiffle *
+-getswiff()
+-{	struct Swiffle *try;
+-	char *Smalloc();
+-
+-	if (fswiff == 0)
+-		try = (struct Swiffle *) Smalloc(sizeof(struct Swiffle));
+-	else
+-	{	fswiff--;
+-		try = flast;
+-		if ((flast = try->last) != NULL)
+-			flast->next = (struct Swiffle *) NULL;
+-	}
+-	try->next = try->last = (struct Swiffle *) NULL;
+-
+-	return try;
+-}
+//GO.SYSIN DD trace7.c
+echo trace8.c 1>&2
+sed 's/.//' >trace8.c <<'//GO.SYSIN DD trace8.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern int *globvars;
+- extern int nrprocs, nrrefs, nrvars;
+- extern struct PROCSTACK **procstack;
+- extern struct VARPARS *procpars;
+-
+- char *Realloc(), *Emalloc(), *Smalloc();
+-
+- struct TEMPLATE **templates;
+- int nrtemplates = 0, tbound = 0;
+-
+-growttable()
+-{ int nsz = tbound + 32;
+-
+-	if (nsz == 32)
+-		templates = (struct TEMPLATE **)
+-			Emalloc(nsz * sizeof(struct TEMPLATE *));
+-	else
+-		templates = (struct TEMPLATE **)
+-			Realloc(templates, nsz * sizeof(struct TEMPLATE *));
+-	
+-	tbound = nsz;
+-
+-}
+-
+-struct TEMPLATE *
+-Tinsert()
+-{ struct TEMPLATE *try;
+-  register int i;
+-
+-	if (nrtemplates >= tbound)
+-		growttable();
+-
+-	try = (struct TEMPLATE *)
+-		Smalloc(sizeof(struct TEMPLATE));
+-	try->l_vars = (struct LOCVARS **)
+-		Smalloc(nrprocs * sizeof(struct LOCVARS *));
+-	try->g_vars = (short *)
+-		Smalloc(nrvars * sizeof(short));
+-
+-	for (i = 0; i < nrvars; i++)
+-		try->g_vars[i] = (short) globvars[i];
+-
+-	if (nrrefs > 0)
+-		try->traceback = (struct PROCSTACK **)
+-			Smalloc(nrprocs * sizeof(struct PROCSTACK *));
+-
+-	for (i = 0; i < nrprocs; i++)
+-	{	try->l_vars[i] = (struct LOCVARS *)
+-			Smalloc(sizeof(struct LOCVARS));
+-
+-		cpylvars(try->l_vars[i], &(procpars[i]));
+-
+-		if (nrrefs > 0)
+-		{	if (procstack[i] == NULL)
+-			{	try->traceback[i] = NULL;
+-				continue;
+-			}
+-			try->traceback[i] = (struct PROCSTACK *)
+-				Smalloc(sizeof(struct PROCSTACK));
+-			cpystacks(try->traceback[i], procstack[i]);
+-	}	}
+-
+-	templates[nrtemplates] = try;
+-	nrtemplates++;
+-
+-	return try;
+-}
+-
+-struct TEMPLATE *
+-inTtable()
+-{ register int i;
+-
+-	for (i = 0; i < nrtemplates; i++)
+-		if (sametempl(templates[i]))
+-			return templates[i];
+-
+-	return Tinsert();
+-}
+-
+-sametempl(at)
+-	struct TEMPLATE *at;
+-{ register int i;
+-
+-	for (i = 0; i < nrprocs; i++)
+-	{	if (cmplvars(at->l_vars[i], &(procpars[i])) == 0 ||
+-		   (nrrefs > 0 && cmpstacks(at->traceback[i], procstack[i]) == 0))
+-			return 0;
+-	}
+-
+-	for (i = 0; i < nrvars; i++)
+-		if (at->g_vars[i] != (short) globvars[i])
+-			return 0;
+-
+-	return 1;
+-}
+//GO.SYSIN DD trace8.c
+echo trace9.c 1>&2
+sed 's/.//' >trace9.c <<'//GO.SYSIN DD trace9.c'
+-#include <stdio.h>
+-#include "trace.h"
+-#include "trace.d"
+-
+- extern int nrprocs, *processes, *state;
+-
+- char *Realloc(), *Emalloc(), *Smalloc();
+-
+- unsigned short **pstates;
+- int pgrowth = 32;
+- int nrpstates = 0;
+- int pbound = 0;
+-
+-growPtable()
+-{ int p = pbound + pgrowth;
+-
+-	if (p == pgrowth)
+-		pstates = (unsigned short **)
+-			Emalloc(p * sizeof(unsigned short *));
+-	else
+-		pstates = (unsigned  short **)
+-			Realloc(pstates, p * sizeof(unsigned short *));
+-	pbound = p;
+-}
+-
+-unsigned short *
+-Pinsert()
+-{ unsigned short *try;
+-  register int i;
+-
+-	if (nrpstates >= pbound)
+-		growPtable();
+-
+-	try = (unsigned  short *)
+-		Smalloc(nrprocs * sizeof(unsigned  short));
+-
+-	for (i = 0; i < nrprocs; i++)
+-		try[i] = (unsigned short) (state[i] + (processes[i]<<10));
+-
+-	pstates[nrpstates++] = try;
+-
+-	return try;
+-}
+-
+-unsigned  short *
+-inPtable()
+-{ register int i;
+-
+-	for (i = 0; i < nrpstates; i++)
+-		if (sameP(pstates[i]))
+-			return pstates[i];
+-
+-	return Pinsert();
+-}
+-
+-sameP(at)
+-	unsigned  short *at;
+-{ register int i;
+-
+-	for (i = 0; i < nrprocs; i++)
+-	{	if ((at[i]&1023) != (unsigned short) state[i]
+-		||   at[i]>>10   != (unsigned short) processes[i])
+-			return 0;
+-	}
+-	return 1;
+-}
+//GO.SYSIN DD trace9.c

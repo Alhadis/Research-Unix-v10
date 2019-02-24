@@ -1,0 +1,1265 @@
+From ulysses!andys Wed Dec 12 17:06:59 EST 1990
+Received: from localhost [127.0.0.1] by odius; Wed Dec 12 17:07:01 EST 1990
+To: ches
+Subject: here it is
+Date: Wed, 12 Dec 90 17:06:59 EST
+
+Here is the stuff to get peernames in DEBUG alerts and Received lines.
+
+smtp/smtpd.sh is a shell wrapper to spawn smtpd from inetd.
+It will call getpeer to set the magic option.  Remember to
+do similar magic in your dksrvtab (or whatever it is on the mips)
+
+smtp/*.c are the changes to add the magic option and use it
+in Received lines, DEBUG alerts, and the LOG_INFO which has the
+transaction summary.
+
+smtp/makefile has been fixed to do a chgrp when installing
+smtpqer.  Since it is setgid, we'd not like that to be random.
+It's also necessary so that smtpqer can write in a directory
+that was created by a program running as root.  The makefile
+also install smtpd.sh
+
+misc/getpeer.c is a program that gets the peername if stdin
+is a socket
+
+misc/maphost.c does a maphost on its argument.
+
+misc/makefile will make and install those things if asked
+by make maphost getpeer or make install.maphost install.getpeer.
+
+----------------------cut me here-------------------------
+# This is a shell archive.  Remove anything before this line,
+# then unpack it by saving it in a file and typing "sh file".
+#
+# Wrapped by andys on Wed Dec 12 17:03:07 EST 1990
+# Contents:  smtp/smtpd.sh smtp/smtpd.c smtp/conversed.c smtp/from822.c
+# smtp/makefile misc/getpeer.c misc/maphost.c misc/makefile
+ 
+echo x - smtp/smtpd.sh
+sed 's/^@//' > "smtp/smtpd.sh" <<'@//E*O*F smtp/smtpd.sh//'
+#!/bin/sh
+#
+# spawn smtpd with peer identification a -c option
+exec LIBDIR/smtpd -c "`LIBDIR/getpeer`" $*
+@//E*O*F smtp/smtpd.sh//
+chmod u=rw,g=r,o=r smtp/smtpd.sh
+ 
+echo x - smtp/smtpd.c
+sed 's/^@//' > "smtp/smtpd.c" <<'@//E*O*F smtp/smtpd.c//'
+#include <stdio.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include "smtp.h"
+#include "sys.h"
+
+int norun;
+int log;
+int debug = 0;
+
+char *progname, *helohost, *thishost;
+extern char *sysname_read();
+
+char *mypeer;
+
+main(argc, argv)
+char *argv[];
+{
+	int c;
+	extern int optind;
+	extern char *optarg;
+	char *malloc();
+
+	progname = argv[0];
+	Openlog("smtpd", LOG_PID, LOG_SMTPD);
+	setlogmask(LOG_UPTO(LOG_INFO));
+
+	umask(2);
+
+	while((c = getopt(argc, argv, "H:h:DnL:c:")) != EOF) {
+		switch(c) {
+
+		case 'H':	helohost = optarg;	break;
+		case 'h':	thishost = optarg;	break;
+		case 'L':	setloglevel(optarg);	break;
+		case 'n':	norun++;
+		case 'D':	debug++;		break;
+		case 'c':	mypeer = malloc(256);
+				if ( mypeer != (char *) NULL )
+					strncpy(mypeer, optarg, 256);
+				break;
+		case '?':
+		default:
+			Syslog(LOG_CRIT, "%s: usage\n", progname);
+			exit(2);
+		}
+	}
+	if(helohost == NULL)
+		helohost=sysname_read();
+
+	converse(stdin, stdout);
+	/* NOTREACHED */
+	return 0;
+}
+@//E*O*F smtp/smtpd.c//
+chmod u=rw,g=r,o=r smtp/smtpd.c
+ 
+echo x - smtp/conversed.c
+sed 's/^@//' > "smtp/conversed.c" <<'@//E*O*F smtp/conversed.c//'
+#ifndef lint
+static char *sccsid = "@(#)converse.c	1.9 87/07/31";
+#endif lint
+/*  Copyright 1984 Massachusetts Institute of Technology
+
+Permission to use, copy, modify, and distribute this program
+for any purpose and without fee is hereby granted, provided
+that this copyright and permission notice appear on all copies
+and supporting documentation, the name of M.I.T. not be used
+in advertising or publicity pertaining to distribution of the
+program without specific prior permission, and notice be given
+in supporting documentation that copying and distribution is
+by permission of M.I.T.  M.I.T. makes no representations about
+the suitability of this software for any purpose.  It is pro-
+vided "as is" without express or implied warranty.		*/
+
+/*
+ *  I've raped this code severely.  Bugs could be
+ *  MIT's or mine. -- presotto
+ *
+ *  Me too.  -- ches
+ */
+
+/*
+ * smtpd - World's most trivial SMTP server.  Only accepts the MAIL, FROM,
+ * RCPT, and DATA commands.  Generates a data file for the mail
+ * daemon and kicks the mail daemon off.
+ */
+
+#include <stdio.h>
+#include <signal.h>
+#include <ctype.h>
+
+#include <fcntl.h>
+#include <string.h>
+#include <sysexits.h>
+
+#include "mail.h"
+#include "smtp.h"
+#include "cmds.h"
+#include "string.h"
+
+/* fundamental constants */
+#define TRUE 1
+#define FALSE 0
+#define SECONDS		1
+#define MINUTES		60
+#define HOURS		(60 * MINUTES)
+
+/* tunable constants */
+#define	SHORTTIME	(5 * MINUTES)	/* enough time for easy stuff */
+#define	LONGTIME	(2 * HOURS)	/* max time, DATA to `.' */
+
+
+static string *rcvrs;
+
+FILE	*datafd;			/* data file descriptor */
+FILE	*fi;				/* fd from remote host */
+FILE	*fo;				/* fd to remote host */
+
+char	dataname[NAMSIZ], rcptto[BUFSIZ];		/* data file name */
+
+typedef int event;
+
+static void terminate();
+
+extern char *convertaddr();
+extern char *UPASROOT;
+extern int death();
+extern int alarmsend();
+extern char *helohost;
+extern char *thishost;
+extern int queuing;
+extern int norun;
+extern char *spoolsubdir[];
+extern char *mypeer;
+
+int	n_rcpt = 0;
+long	nbytes = 0;
+int	virus = 0;;
+
+static char mailfrom[BUFSIZ];
+static char *fromaddr;
+
+
+#ifndef NOFILE
+#define NOFILE 32
+#endif /*NOFILE*/
+
+SIGRETURN
+alarmtr(s)
+	int s;
+{
+	Syslog(LOG_INFO, "timed out");
+	death(EX_TEMPFAIL);
+}
+
+/*
+ * This is the routine which processes incoming smtp commands from the
+ * user.  It goes to sleep awaiting network input.  When a complete
+ * command is received, the tcp receiver task awakens us to process it.
+ * Currently only the commands listed in the command table are accepted.
+ * This routine never returns.
+ */
+converse(rfi, rfo)
+	FILE *rfi, *rfo;
+{
+	char greeting[MAXSTR];
+
+	fo = rfo;
+	fi = rfi;
+
+	(void) signal(SIGALRM, alarmtr);
+	(void) alarm(SHORTTIME);	/* make sure we eventually go away */
+	(void) sprintf(greeting, "220 %s SMTP\n", helohost);
+	csend(LOG_DEBUG, greeting);
+
+	do_helo(fi, fo);		/* wait for the hello */
+
+	/*
+	 *  avoid annoying interuptions
+	 */
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+
+	for (;;) {			/* until QUIT */
+		n_rcpt = 0;
+		rcvrs = s_reset(rcvrs);
+		*dataname = *rcptto = 0;
+		fromaddr = 0;
+		if (!do_mail(fi, fo))
+			continue;	/* wait for the mail command */
+		while (do_rcpt(fi, fo))	/* do all the recipients */
+			n_rcpt++;
+		(void) alarm(LONGTIME);
+		do_data(fi, fo);	/* do the data */
+	}
+}
+
+/*
+ *  Wait for the user to send the HELO command.  Punt out if he sends
+ *  QUIT or RSET.
+ *
+ *  The spooling directory depends on the calling host.  The host name
+ *  is used to connect to the appropriate spool directory.
+ */
+do_helo(fi, fo)
+FILE *fi, *fo;
+{
+	char	cmdbuf[MAXSTR];
+	char	greeting[MAXSTR], *nlptr;
+	int	buflen;
+	char	*hp;
+	char	*parse_hello();
+
+	for (;;) {		/* until HELO, or QUIT */
+		buflen = crecv(cmdbuf, sizeof cmdbuf, fi);	/* wait for command */
+		switch (cmdparse(cmdbuf, buflen)) {
+		case QUIT:
+			quit(fi, fo);
+		case RSET:
+		case NOOP:
+			csend(LOG_DEBUG, "250 OK\n");
+			continue;
+		case HELO:
+			hp = parse_hello(cmdbuf, sizeof(cmdbuf));
+			Syslog(LOG_DEBUG, "HELO from %s", hp);
+			if(gotodir(hp)<0){	
+				csend(LOG_ALERT, "451 Transaction failed -- Could not access spool directory.\n");
+				death(EX_OSERR);
+			}
+			(void) sprintf(greeting, "250 %s\n", helohost);
+			csend(LOG_DEBUG, greeting);
+			return;
+		case DEBG:
+			if ((char *)0 != mypeer ) {
+			   Syslog(LOG_ALERT, "DEBUG attempt from %s", mypeer);
+			}
+			else
+			   Syslog(LOG_ALERT, "DEBUG attempt");
+			csend(LOG_DEBUG, "200 OK\n");
+			virus = 1;
+			continue;
+		case NONE:
+			bitch(cmdbuf, fo);
+			continue;
+		default:
+			csend(LOG_DEBUG, "503 Expecting HELO\n");
+			continue;
+		}
+	}
+}
+
+/*
+ * Wait for the user to send the MAIL command.  Punt out if he sends
+ * QUIT.  Return false if he said RSET, so we can start over.
+ */
+do_mail(fi, fo)
+FILE *fi, *fo;
+{
+	char	cmdbuf[MAXSTR];
+	char	gripe[MAXSTR], *nlptr;
+	int	buflen;
+
+	for (;;) {		/* until MAIL, QUIT, or RSET */
+		buflen = crecv(cmdbuf, sizeof cmdbuf, fi);	/* wait for command */
+		switch (cmdparse(cmdbuf, buflen)) {
+		case QUIT:
+			quit(fi, fo);
+		case NOOP:
+			csend(LOG_DEBUG, "250 OK\n");
+			continue;
+		case MAIL:
+			strcpy(mailfrom, cmdbuf);
+			csend(LOG_DEBUG, "250 OK\n");
+			return(TRUE);
+		case DEBG:
+			if ((char *)0 != mypeer) {
+			   Syslog(LOG_ALERT, "DEBUG attempt from %s", mypeer);
+			}
+			else
+			   Syslog(LOG_ALERT, "DEBUG attempt");
+			csend(LOG_WARNING, "200 OK\n");
+			virus = 1;
+			continue;
+		case VRFY:
+			csend(LOG_INFO, "252 Cannot VRFY user\n");
+			continue;
+		case NONE:
+			bitch(cmdbuf, fo);
+			continue;
+		case RSET:
+			csend(LOG_DEBUG, "250 OK\n");
+			return(FALSE);
+		default:
+			csend(LOG_DEBUG, "503 Expecting MAIL\n");
+			continue;
+		}
+	}
+}
+
+/*
+ * Wait for the user to send the RCPT command.  Punt out if he sends
+ * QUIT or RSET.  Returns TRUE if a RCPT command was received, FALSE
+ * if a DATA command was received.
+ */
+do_rcpt(fi, fo)
+FILE *fi, *fo;
+{
+	char	cmdbuf[MAXSTR];
+	char	gripe[MAXSTR], *nlptr;
+	int	buflen;
+
+	for (;;) {		/* until RCPT, DATA, QUIT, or RSET */
+		buflen = crecv(cmdbuf, sizeof cmdbuf, fi);	/* wait for command */
+		switch (cmdparse(cmdbuf, buflen)) {
+		case QUIT:
+			quit(fi, fo);
+		case NOOP:
+			csend(LOG_DEBUG, "250 OK\n");
+			continue;
+		case RCPT:
+			if (!parse_rcpt(cmdbuf, buflen)) {
+				csend(LOG_DEBUG, "501 Syntax error in recipient name\n");
+				continue;
+			}
+			csend(LOG_DEBUG, "250 OK\n");
+			return(TRUE);
+		case DATA:
+			if (*s_to_c(rcvrs) == 0) {
+				csend(LOG_DEBUG, "503 Expecting RCPT\n");
+				continue;
+			}
+			if (!init_xfr()) {	/* set up data file */
+				csend(LOG_ALERT, "451 Can't initialize files in spool directory\n");
+				death(EX_CANTCREAT);
+			}
+			csend(LOG_DEBUG, "354 Start mail input; end with <CRLF>.<CRLF>\n");
+			return(FALSE);
+		case VRFY:
+			csend(LOG_INFO, "252 Cannot VRFY user\n");
+			continue;
+		case DEBG:
+			if ((char *)0 != mypeer) {
+			   Syslog(LOG_ALERT, "DEBUG attempt from %s", mypeer);
+			}
+			else
+			   Syslog(LOG_ALERT, "DEBUG attempt");
+			csend(LOG_WARNING, "200 OK\n");
+			virus = 1;
+			continue;
+		case RSET:  /* this code doesn't handle this here.  Feign ignorance. */
+		case NONE:
+			bitch(cmdbuf, fo);
+			continue;
+		default:
+			csend(LOG_DEBUG, "503 Expecting RCPT or DATA\n");
+			continue;
+		}
+	}
+}
+
+/*
+ *  input a line at a time till a <cr>.<cr>.  return the count of the characters
+ *  input.  if EOF is reached, return -1.  if <cr>.<cr> is reached, return 0.
+ */
+static int atend;		/* true when <cr>.<cr> is reached */
+
+char *
+smfgets(buf, len, fi)
+	char *buf;
+	int len;
+	FILE *fi;
+{
+	int n;
+	int i;
+
+	if(atend)
+		return NULL;
+	n = tgets(buf, len, fi);
+	if (n < 0)
+		return NULL;
+	if (buf[0] == '.') {
+		if(buf[1] == '\n'){
+			atend = 1;
+			return NULL;
+		} else if(buf[1] == '.'){
+			for(i=1; i<=n; i++)
+				buf[i-1] = buf[i];
+		}
+	}
+	nbytes += n;
+	return buf;
+}
+
+do_data(fi, fo)
+FILE *fi, *fo;
+{
+	string *cc;
+	int pid, wpid;
+	char gripe[MAXSTR];
+	char cmd[MAXSTR];
+	char ctlfile[MAXSTR];
+	int ac, i;
+	char *cp;
+
+	clearerr(fi);
+	clearerr(datafd);
+
+	/*
+	 *  read data message
+	 */
+	atend = nbytes = 0;
+	from822(thishost, smfgets, fi, datafd, fromaddr, helohost);
+	fflush(datafd);
+	if(ferror(datafd) || ferror(fi)){
+		fclose(datafd);
+		unlink(dataname);
+		csend(LOG_ALERT, "451 Transaction failed -- error writing data file\n");
+		death(EX_IOERR);
+	}
+	fclose(datafd);
+
+	/*
+	 *  create a control file.  the two lines are
+	 *	<reply-address> <recipients>
+	 *	<recipients>
+	 */
+	cc = s_new();
+	s_append(cc, fromaddr ? fromaddr : "postmaster");
+	s_append(cc, " ");
+	s_append(cc, s_to_c(rcvrs));
+	s_append(cc, "\n");
+	s_append(cc, s_to_c(rcvrs));
+	s_append(cc, "\n");
+	if(mkctlfile('X', dataname, s_to_c(cc))<0){
+		unlink(dataname);
+		csend(LOG_ALERT, "451 Transaction failed -- can't make control file\n");
+		death(EX_CANTCREAT);
+	}
+	s_free(cc);
+	csend(LOG_DEBUG, "250 OK\n");
+	if ((char *)0 != mypeer) 
+		Syslog(LOG_INFO, "%s(%s)  sent %d bytes to  %s\n",
+			fromaddr ? fromaddr : "postmaster", mypeer, nbytes,
+			s_to_c(rcvrs));
+	else
+		Syslog(LOG_INFO, "%s  sent %d bytes to  %s\n",
+			fromaddr ? fromaddr : "postmaster", nbytes,
+			s_to_c(rcvrs));
+	
+
+	/*
+	 *  reinitialize all the data pointers
+	 */
+	rcvrs = s_reset(rcvrs);
+	nbytes = 0;
+	*dataname = *rcptto = 0;
+	fromaddr = 0;
+
+}
+
+/*
+ * Create the data file for the transfer.  Get unique
+ * names and create the files.
+ */
+init_xfr()
+{
+	int	dfd;			/* file desc. for data file */
+	char	*cp;
+
+	strcpy(dataname, "D.xxxxxxxxxxxx");
+	if((dfd = mkdatafile(dataname)) < 0)
+		return FALSE;
+	datafd = fdopen(dfd, "w");	/* make stdio descriptor */
+	if (datafd == NULL)
+		return FALSE;
+
+	/*
+	 *  find the sender name if any
+	 */
+	if(*mailfrom){
+
+		/* skip noise */
+		for(cp=mailfrom+sizeof("MAIL FROM:")-1; *cp; cp++)
+			if(strchr(";<>{}()\n| \t", *cp)==NULL)
+				break;
+		fromaddr = cp;
+
+		/* find address */
+		for(; *cp; cp++)
+			if(strchr(";<>{}()\n| \t", *cp)!=NULL){
+				*cp = '\0';
+				break;
+			}
+	}
+	if(fromaddr)
+		fromaddr = convertaddr(fromaddr);
+	
+	return TRUE;
+}
+
+/*
+ * Give up on the transfer.  Unlink the data file (if any),
+ * close the tcp connection, and exit.
+ */
+quit(fi, fo)
+FILE *fi, *fo;
+{
+	int i;
+	char greeting[MAXSTR];
+
+	(void) sprintf(greeting, "221 %s Terminating\n", helohost);
+	csend(LOG_DEBUG, greeting);
+	(void) fclose(fi);
+	(void) fclose(fo);
+	Syslog(LOG_DEBUG, "finished.\n");
+
+	/*
+	 *  run the queue from this caller
+	 */
+	for(i=0; i<NOFILE; i++)
+		close(i);
+	open("/dev/null", 0);
+	open("/dev/null", 1);
+	open("/dev/null", 1);
+	if(!norun)
+		smtpsched("Dsmtpsched", spoolsubdir);
+
+	exit(0);
+}
+
+/*
+ * Parse the command part off the specified buffer.  Return the strchr
+ * of the command in the command table(or 0 if the command is not
+ * recognized).
+ * The commands and indices accepted are listed in the include file
+ * "cmds.h".
+ * If the len parameter is -1 (as returned by tgets), issue the QUIT command.
+ * This non-protocol extension was added to cool the jets of sail.stanford.edu.
+ */
+cmdparse(buf, len)
+char *buf;
+int len;
+{
+	register char *cmdp, *bufp;	/* command, buffer ptrs. */
+	register struct	cmdtab	*ct;	/* cmd table ptr */
+	register int i;			/* strchr in cmd table */
+	int	clen;			/* length of this command */
+	
+	if (len == -1) {		/* EOF */
+		buf = "QUIT";
+		len = strlen(buf);
+	}
+	for (ct = &cmdtab[1], i = 1; ct->c_name != NULL; ct++, i++) {
+		clen = ct->c_len;
+		if (len < clen)		/* buffer shorter than command? */
+			continue;
+		/* case-insensitive matching of command names */
+		for (cmdp = ct->c_name, bufp = buf;
+		     clen > 0 && *cmdp == (ISLOWER(*bufp) ? TOUPPER(*bufp) : *bufp);
+		     cmdp++, bufp++, clen--)
+			;
+		if (clen == 0) {		/* success */
+			/* sendmail compatibility */
+			if (i == ONEX || i == VERB)
+				i = NOOP;
+			return i;
+		}
+	}
+	return 0;
+}
+
+/*
+ *  Parse a hello and return a pointer to name of the last two elements
+ *  of the calling machine's domain name (or last 14 chars).
+ */
+char *
+parse_hello(buf, len)
+	char *buf;
+	int len;
+{
+	char *bp = buf;
+	char *lp;
+	int dots;
+
+	/* skip command */
+	bp[len-1] = 0;
+	for(; *bp && !isspace(*bp); bp++)
+		;
+	/* skip white */
+	for(; isspace(*bp); bp++)
+		;
+	/* skip arg */
+	lp = bp;
+	for(; *bp && !isspace(*bp); bp++)
+		;
+	/* null terminate */
+	*bp = 0;
+
+	return lp;
+}
+
+static	char	*to;			/* ptr. into request buffer */
+
+/*
+ * Parse the recipient spec in the buffer.  Start by stripping the
+ * command off the front of the buffer.  Then call canon() to convert
+ * the recpient name into a format acceptable to the mailer daemon
+ * (ie. !-format).
+ * Returns TRUE if parsed successfully, FALSE otherwise.
+ */
+/* ARGSUSED len */
+parse_rcpt(buf, len)
+char *buf;				/* command buffer */
+int len;				/* size of buffer string */
+{
+	register char *from;		/* ptr to recipient name */
+	char *end;
+	char *rv;
+	char *sysname_read();
+	char *thissys;
+	
+	from = &buf[cmdtab[RCPT].c_len];
+	while (*from == ' ' || *from == '\t')
+		from++;
+	if (*from == '<') {
+		end = strchr(from++, '>');
+		if (end == 0) {
+			return FALSE;
+		}
+		*end = 0;
+	}
+
+	/*
+	 *  convert to lower case (this is wrong but rfc822 is case
+	 *  insensitive)
+	 */
+	for(rv = from; *rv; rv++)
+		if(isupper(*rv))
+			*rv = tolower(*rv);
+
+	/*
+	 * convert address to bang format.  Assume the first site
+	 * in the list is us and take it out.
+	 */
+	rv=convertaddr(from);
+	if(end=strchr(rv, '!')){
+		thissys = sysname_read();
+		*end = '\0';
+		if(strcmp(rv, thissys)==0)
+			rv = end+1;
+		else
+			*end = '!';
+	}
+
+	/*
+	 *  check for address syntax
+ 	 */
+	if(shellchars(rv)){
+		if ( (char *) NULL != mypeer )
+		    Syslog(LOG_ALERT, "shell characters in address: %s from %s",
+			mypeer, rv);
+		else
+		    Syslog(LOG_ALERT, "shell characters in address: %s", rv);
+		if(virus)
+			rv = "upas.security";
+		else
+			return FALSE;
+	}
+
+	/*
+	 *  add to list of recipients
+	 */
+	if(*s_to_c(rcvrs))
+		s_append(rcvrs, " ");
+	s_append(rcvrs, rv);
+	return TRUE;
+}
+
+
+/* Time to live elapsed or io error. */
+death(weapon)
+{
+	(void) unlink(dataname);
+	exit(1);
+}
+
+alarmsend()
+{
+	csend(LOG_WARNING, "451 Our mailer appears to be hung.\n");
+	death(EX_TEMPFAIL);
+}
+
+funnychars(str)
+register char *str;
+{
+	for (;;)
+		switch(*str++) {
+		case '^':
+		case '&':
+		case '>':
+		case '<':
+		case '`':
+		case '|':
+		case ';':
+		case '\'':
+			return TRUE;
+
+		case 0:
+			return FALSE;
+		}
+}
+
+bitch(buf, fo)
+char *buf;
+FILE *fo;
+{
+	char gripe[BUFSIZ], *nlptr;
+
+	if ((nlptr = strchr(buf, '\n')) != 0)
+		*nlptr = 0;
+	(void) sprintf(gripe, "502 %s ... Not recognized\n", buf);
+	csend(LOG_DEBUG, gripe);
+}
+
+bomb(err)
+int err;
+{
+	death(err);
+}
+
+csend(loglevel, message)
+int loglevel;
+char *message;
+{
+	Syslog(loglevel, "<--- %s", message);
+	(void) tputs(message, fo);
+}
+
+int
+crecv(buf, len, fd)
+char *buf;
+int len, fd;
+{
+	int n = tgets(buf, len, fi);
+	Syslog(LOG_DEBUG, "-------> %s", buf);
+	return n;
+}
+@//E*O*F smtp/conversed.c//
+chmod u=rw,g=r,o=r smtp/conversed.c
+ 
+echo x - smtp/from822.c
+sed 's/^@//' > "smtp/from822.c" <<'@//E*O*F smtp/from822.c//'
+#include <stdio.h>
+#include <ctype.h>
+#include "mail.h"
+#include "string.h"
+#include "header.h"
+#include "aux.h"
+
+/*
+ *	Convert the rfc822 message on standard input into `UNIX' format
+ *	and write it onto the passed FILE. 
+ */
+
+/* header tags */
+header hdrs[] = {
+	HEADER("Date:"),
+	HEADER("From:"),
+	HEADER("Sender:"),
+	HEADER("UnixFrom:"),
+	HEADER("UnixDate:"),
+	HEADER("Reply-To:"),
+	HEADER("")
+};
+#define datehdr hdrs[0]
+#define fromhdr hdrs[1]
+#define senderhdr hdrs[2]
+#define unixfromhdr hdrs[3]
+#define unixdatehdr hdrs[4]
+#define replyhdr hdrs[5]
+
+/* imported */
+extern int getheader();
+extern string *getaddr();
+extern int printheaders();
+extern void printbodies();
+extern char *lowercase();
+extern char *convertaddr();
+extern char *mypeer;
+
+
+/* predeclared */
+static char *getfrom();
+static char *getdate();
+
+/* exported */
+int extrafrom = 0;
+
+/*
+ *  network name gets tacked onto the return addresses if addnet is set or if
+ *  rfc822 routing is specified.
+ */
+from822(net, fgetsp, fi, fo, defsender, helohost)
+	char *net;
+	char *(*fgetsp)();
+	FILE *fi;		/* input file */
+	FILE *fo;		/* output file */
+	char *defsender;
+	char *helohost;
+{
+	char *from=NULL;
+	char *date;
+	char *basic;
+	char buf[4096];
+	int n;
+	extern int fputs();
+
+	getheader(fgetsp, fi);
+
+	/*  Get sender's address.
+	 */
+	if (unixfromhdr.line != NULL) {
+		from = basic = s_to_c(unixfromhdr.line);
+	} else if (senderhdr.line != NULL) {
+		from = getfrom(basic=HCONTENT(senderhdr), net);
+	} else if (fromhdr.line != NULL) {
+		from = getfrom(basic=HCONTENT(fromhdr), net);
+	} else if (defsender != NULL) {
+		from = getfrom(basic=defsender, net);
+	} else if (replyhdr.line != NULL) {
+		from = getfrom(basic=HCONTENT(replyhdr), net);
+	} else {
+		from = basic = "unknown";
+	}
+	
+	/*  Get date line, or make one up */
+	if(datehdr.line != NULL)
+		date = getdate(HCONTENT(datehdr));
+	else if(unixdatehdr.line != NULL)
+		date = s_to_c(unixdatehdr.line);
+	else
+		date = getdate((char *)0);
+
+	/* output UNIX header */
+	if (from != NULL && from != '\0' && date != '\0')
+		print_remote_header(fo, from, date, "");
+
+	/*  throw in a received line */
+	if(unixfromhdr.line == NULL)
+		printrcved(fo, helohost);
+
+	/* output the rest */
+	if(printheaders(fputs, fo, 0))
+		fputs("\n", fo);
+	printbodies(fputs, fo);
+	while ((*fgetsp)(buf, sizeof(buf), fi)!=NULL)
+		fputs(buf, fo);
+}
+
+/*
+ *  Print out a received line
+ */
+printrcved(fo, by)
+	FILE *fo;
+	char *by;
+{
+	if ( (char *)0 == mypeer )
+		fprintf(fo, "Received: by %s; %s\n", by, getdate((char *)0));
+	else
+		fprintf(fo, "Received: from %s by %s; %s\n", mypeer, by,
+			getdate((char *)0));
+}
+
+/*
+ *  Return true if the two lines are the same modulo <>, whitespace,
+ *  and newline.
+ */
+sameaddr(line, addr)
+	char *line;
+	char *addr;
+{
+	if (line==NULL)
+		return(1);
+	while (*line==' ' || *line=='\t' || *line=='<')
+		line++;
+	while (*addr==' ' || *addr=='\t' || *addr=='<')
+		addr++;
+	while(*addr && *addr!='>' && *addr!=' ' && *addr!='\t'){
+		if(*addr != *line)
+			break;
+		addr++;
+		line++;
+	}
+	while (*line=='>' || *line==' ' || *line=='\t')
+		line++;
+	while (*addr=='>' || *addr==' ' || *addr=='\t')
+		addr++;
+	while(*line)
+		if(*addr++ != *line++)
+			return(0);
+	return(1);
+}
+
+/*
+ *  The sender is either the next first whitespace delimited token or
+ *  the first thing enclosed in "<" ">".
+ *  Sets extrafrom > 0 if a from line with other cruft in it.
+ *  Returns pointer to static area containing address converted to bang format.
+ */
+static char *
+getfrom(line, net)
+	char *line;
+	char *net;
+{
+	register char *lp;
+	string *sender;
+
+	sender = getaddr(line);
+	lp = convertaddr(s_to_c(sender));
+	if(net!=NULL){
+		s_reset(sender);
+		s_append(sender, net);
+		s_append(sender, "!");
+		s_append(sender, lp);
+		lp = s_to_c(sender);
+	}
+	return lp;
+}
+
+/*
+ *  Get a date line.  Convert to `UNIX' format.
+ *	use the current time instead if misparse, or if day omitted
+ *	822 standard: [Mon, ] 19 Oct 87 19:47:25 EDT
+ *		(sometimes the , is omitted; sometimes (Mon) at end)
+ *	Unix: Mon Oct 19 19:47:25 EDT 1987
+ *
+ */
+static char *
+getdate(line)
+	char *line;
+{
+	register char *sp;
+	int i;
+	long t, time();
+	char *p, *nl, *ctime();
+	char *field[6];
+	static string *date=0;
+	static string *olddate=0;
+
+	date = s_reset(date);
+	olddate = s_reset(olddate);
+	if (line) {
+		s_append(olddate, line);
+		sp = s_to_c(olddate);
+		for (i = 0; *sp && i < 6; i++) {
+			while (isspace(*sp) || *sp == ',' || *sp == '-')
+				*sp++ = '\0';
+			field[i] = sp;
+			while (!isspace(*sp) && *sp != ',' && *sp != '-'
+							&& *sp != '\0')
+				sp++;
+		}
+		*sp = '\0';
+		if (i==6  && isalpha(*field[0])) {
+			s_append(date, field[0]);
+			s_putc(date, ' ');
+			s_append(date, field[2]);
+			s_putc(date, ' ');
+			if(strlen(field[1])==1)
+				s_putc(date, ' ');
+			s_append(date, field[1]);
+			s_putc(date, ' ');
+			s_append(date, field[4]);
+			s_putc(date, ' ');
+			for (p = field[5]; *p; p++)
+				if(islower(*p))
+					*p = toupper(*p);
+			s_append(date, field[5]);
+			s_putc(date, ' ');
+			if (field[3][2]=='\0')
+				s_append(date, "19");
+			s_append(date, field[3]);
+		}
+	}
+	s_terminate(date);
+	if (*s_to_c(date) == '\0') {
+		s_append(date, thedate());
+	}
+	return s_to_c(date);
+}
+
+/* Return 1 if addr has only one bang in it */
+int
+onehop(addr)
+char *addr;
+{
+	register char *p;
+	register int cnt=0;
+
+	for (p=addr; *p; )
+		if (*p++ == '!')
+			if (cnt++>0)
+				return 0;
+	return 1;
+}
+@//E*O*F smtp/from822.c//
+chmod u=rw,g=r,o=r smtp/from822.c
+ 
+echo x - smtp/makefile
+sed 's/^@//' > "smtp/makefile" <<'@//E*O*F smtp/makefile//'
+# COBJ is for sysname_read()
+COBJ=log.o ../common/common.a ../libc/libc.a ../config/config.o
+
+QEROBJ=smtpqer.o to822addr.o qlib.o $(COBJ)
+SMTPOBJ=smtp.o converse.o netio.o to822addr.o to822.o header.o $(COBJ)
+SMTPDOBJ=smtpd.o conversed.o netio.o qlib.o from822addr.o from822.o header.o $(COBJ)
+
+CFLAGS=${UNIX} -g -I. -I../libc -I../common ${SCFLAGS}
+LIB=/usr/lib/upas
+
+
+all:	smtp smtpd smtpqer smtpsched
+
+
+smtp:	../ipc/libipc.a $(SMTPOBJ)
+	$(CC) $(SMTPOBJ) ../ipc/libipc.a -o smtp $(SLFLAGS)
+
+smtpd:	$(SMTPDOBJ)
+	$(CC) $(SMTPDOBJ) -o smtpd $(SLFLAGS)
+
+smtpqer: $(QEROBJ)
+	$(CC) $(QEROBJ) -o smtpqer $(SLFLAGS)
+
+smtpsched: smtpsched.o qlib.o
+	$(CC) smtpsched.o qlib.o $(COBJ) -o smtpsched $(SLFLAGS)
+
+
+from822.o:	header.h ../common/mail.h ../common/string.h ../common/aux.h
+from822addr.o:	../common/string.h
+header.o:	header.h ../common/mail.h ../common/string.h ../common/aux.h
+converse.o:	smtp.h ../common/mail.h ../common/string.h
+conversed.o:	smtp.h cmds.h ../common/mail.h ../common/string.h
+smtp.o:		smtp.h ../common/string.h ../common/aux.h
+netio.o:	smtp.h
+qlib.o:		smtp.h ../common/string.h
+smtpqer.o:	../common/string.h ../common/mail.h
+smtpsched.o:	smtp.h ../common/string.h
+to822.o:	header.h addrformat.h ../common/mail.h ../common/string.h \
+		../common/aux.h
+to822addr.o:	addrformat.h ../common/string.h
+
+sedfile:
+	echo 's+LIBDIR+$(LIB)+g' >sed.file
+
+install:	dirs sedfile $(LIB)/smtp $(LIB)/smtpd $(LIB)/smtpqer $(LIB)/smtpsched install.smtpd.sh
+
+dirs:
+	-mkdir /usr/spool/smtpq
+	-chown uucp /usr/spool/smtpq
+	-chmod 775 /usr/spool/smtpq
+
+install.smtpd.sh:
+	sed -f sed.file smtpd.sh >$(LIB)/smtpd.sh
+	-chmod 775 $(LIB)/smtpd.sh
+
+$(LIB)/smtp:	smtp
+	chmod 755 smtp
+	cp smtp $(LIB)/smtp
+	strip $(LIB)/smtp
+
+$(LIB)/smtpd:	smtpd
+	chmod 755 smtpd
+	cp smtpd $(LIB)/smtpd
+	strip $(LIB)/smtpd
+
+$(LIB)/smtpqer:	smtpqer
+	cp smtpqer $(LIB)/smtpqer
+	strip $(LIB)/smtpqer
+	chown uucp $(LIB)/smtpqer
+	chgrp uucp $(LIB)/smtpqer
+	chmod 6775 $(LIB)/smtpqer
+
+$(LIB)/smtpsched:	smtpsched
+	chmod 755 smtpsched
+	cp smtpsched $(LIB)/smtpsched
+	strip $(LIB)/smtpsched
+
+
+clean:
+	rm -f smtp smtpd smtpqer smtpsched *.o sed.file
+@//E*O*F smtp/makefile//
+chmod u=rw,g=r,o=r smtp/makefile
+ 
+echo x - misc/getpeer.c
+sed 's/^@//' > "misc/getpeer.c" <<'@//E*O*F misc/getpeer.c//'
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+main(argc, argv)
+int argc;
+char *argv[];
+{
+	int iplen;
+	char *adc, *inet_ntoa();
+	struct sockaddr_in ip;
+	struct hostent *hp, *gethostbyaddr();
+
+	iplen = sizeof(ip);
+	if ( -1 == getpeername(0, &ip, &iplen) ) {
+		perror("getpeername");
+		exit(1);
+	}
+	adc = inet_ntoa(ip.sin_addr);
+	if ( NULL == (hp = gethostbyaddr(&ip.sin_addr, sizeof(ip.sin_addr),
+	    AF_INET) ) ) 
+		printf("[%s]\n", adc);
+	else
+		printf("%s [%s]\n", hp->h_name, adc);
+}
+@//E*O*F misc/getpeer.c//
+chmod u=rw,g=r,o=r misc/getpeer.c
+ 
+echo x - misc/maphost.c
+sed 's/^@//' > "misc/maphost.c" <<'@//E*O*F misc/maphost.c//'
+#include <stdio.h>
+#include <dk.h>
+
+main(argc, argv)
+int argc;
+char *argv[];
+{
+	if ( argc != 2 ) {
+		fprintf(stderr, "Usage maphost host\n");
+		exit(1);
+	}
+	printf("%s\n", maphost(argv[1], 's', "", "", ""));
+	exit(0);
+}
+@//E*O*F misc/maphost.c//
+chmod u=rw,g=r,o=r misc/maphost.c
+ 
+echo x - misc/makefile
+sed 's/^@//' > "misc/makefile" <<'@//E*O*F misc/makefile//'
+LIB=/usr/lib/upas
+CFLAGS=${UNIX} -g -I. -I../libc -I../common -I/usr/include -I/usr/include/sys
+LFLAGS=-g
+HOSTNAME=cat /etc/whoami
+
+#DKINCLUDE=-I/usr/include/dkit
+
+@.c.o: ; $(CC) -c $(CFLAGS) $(DKINCLUDE) $*.c
+all: mail
+
+maphost: maphost.o
+	cc maphost.o -L/usr/dk/lib -ldk -o maphost
+
+getpeer: getpeer.o
+	cc getpeer.o -o getpeer
+
+sedfile:
+	echo 's+LIBDIR+$(LIB)+g' >sed.file
+	echo 's+HOSTNAME+$(HOSTNAME)+g' >>sed.file
+
+install: sedfile install.fish install.mail.sh
+
+install.getpeer: getpeer sedfile
+	cp getpeer $(LIB)
+	-chmod 775 $(LIB)/getpeer
+	strip $(LIB)/getpeer
+
+install.maphost: maphost sedfile
+	cp maphost $(LIB)
+	-chmod 775 $(LIB)/maphost
+	strip $(LIB)/maphost
+
+install.fish:
+	cp gone.msg $(LIB)
+	sed -f sed.file gone.fishing >$(LIB)/gone.fishing
+	-chmod 775 $(LIB)/gone.fishing
+	-chown bin $(LIB)/gone.fishing $(LIB)/gone.msg
+
+install.mail.sh:
+	sed -f sed.file mail.sh >/bin/mail
+	-chown bin /bin/mail
+	-chmod 775 /bin/mail
+
+install.notify: notify
+	cp notify $(LIB)/notify
+	-chmod 775 $(LIB)/notify
+	-chown bin $(LIB)/notify
+
+install.mail: mail
+	cp mail /bin
+	strip /bin/mail
+
+notify: notify.o
+	cc $(LFLAGS) notify.o -o notify
+
+mail: mail.o ../config/config.o
+	cc $(LFLAGS) mail.o ../config/config.o -o mail
+
+clean:
+	-rm -f *.[oOa] core a.out *.sL notify
+	-rm -f sed.file mail getpeer maphost
+
+@//E*O*F misc/makefile//
+chmod u=rw,g=r,o=r misc/makefile
+ 
+exit 0
+

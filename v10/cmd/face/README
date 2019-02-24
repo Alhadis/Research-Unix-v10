@@ -1,0 +1,23 @@
+There are two pieces to the face server:
+faces is the real server; it should be run on the machine where
+the face files live.
+faced is the client interface; it should be run on each machine
+where faces be available.
+faced is a netb face server (start it via faced.go with runfs or setup);
+it calls faces when necessary, requests filenames and face data, and
+drops the connection when idle to conserve network resources on the
+central machine.
+faced and faces speak a private protocol, defined (mostly) in faceproto.h.
+
+In the research world, faced and faced.go should be in /usr/netb
+everywhere; faces should be run only on kwee.
+
+faced is portable but needs libnetb.a; see /usr/src/netfs.
+faces is portable if you adjust the contents of dirent.h,
+do something about the call to select in faces.c, and have
+libipc.a.  All the network-dependent code is believed to be
+in faces.c; perhaps it can be ported to other worlds.
+
+The absolute filenames /usr/net/people.tab and /usr/net/machine.tab
+are compiled into faces.c; absolute pathnames for the directories where
+faces live are compiled into file.c.  All of these are botches.

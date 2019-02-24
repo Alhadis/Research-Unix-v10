@@ -1,0 +1,146 @@
+.TH DIST 8
+.ds ld /usr/lib/dist
+.SH NAME
+connect, dispatch \(mi generic network client and server
+.PP
+query, receive, notify \(mi network clients
+.PP
+answer, transmit, notified \(mi network servers
+.SH SYNOPSIS
+.B \*(ld/connect
+.I remote-system remote-cmd io local-cmd local-args
+.PP
+.B \*(ld/query
+.PP
+.B \*(ld/receive
+.I package-id
+.PP
+.B \*(ld/notify
+.I package-id
+.PP
+.B \*(ld/dispatch
+.I remote-system remote-user
+.PP
+.B \*(ld/answer
+.I remote-system remote-user
+.PP
+.B \*(ld/transmit
+.I remote-system remote-user
+.PP
+.B \*(ld/notified
+.I remote-system remote-user
+.SH DESCRIPTION
+These programs act behind the scenes on behalf of
+.IR dist (1).
+.I Connect
+and
+.I dispatch
+deal with all the details of establishing and authenticating connections
+on the network.  The remaining programs are independent of the underlying
+network.
+.PP
+.I Connect
+encapsulates all the details of making a call on the underlying network.
+Its arguments are mostly self explanatory.
+.I Remote-cmd
+must be one of
+.BR answer ", " transmit ", or " notified "."
+If
+.I io
+is
+.BR i ,
+the standard input of the local command is connected
+to the standard output of the remote command.  If
+.B i
+is not specified, the local command inherits its local
+standard input, and the remote command has its standard
+output directed to a log file.
+Similarly,
+.B o
+means the standard output of the local command is connected
+to the standard input of the remote command.  If
+.B o
+is not specified, the local command inherits its local
+standard output, and the remote command has its standard
+input attached to
+.BR /dev/null .
+Legal possibilities are
+.BR i ,
+.BR o ,
+and
+.BR io.
+.PP
+.I Dispatch
+is intended to be called by a generic network daemon
+such as
+.IR svcmgr (8).
+It talks to
+.I connect
+and takes care of establishing the appropriate standard input and
+output before calling
+.IR answer ,
+.IR transmit ,
+or
+.IR notified .
+.I Dispatch
+expects arguments giving the remote system, remote user, and remote
+address, and passes these to whatever program it calls.
+.PP
+.I Query
+is a simple program called by
+.I connect
+with its standard input attached to the remote
+.IR answer .
+.I Query
+displays a formatted version of the queue list from the remote machine.
+(It may even turn out to be the same as
+.BR /bin/cat .)
+.PP
+.I Receive
+is a more complicated program that is called by
+.I connect
+with both its input and output attached to the remote
+.IR transmit .
+.I Receive
+performs actual software installation and sends a transcript of any
+errors back to the remote system.
+.PP
+.I Notify
+is a simple program called by
+.I connect
+with its standard output attached to the remote
+.IR notified .
+.I Notify
+sends an announcement of the availability of some specific package.
+.PP
+All of the servers read a configuration file,
+.BR \*(ld/conf ,
+to determine how to handle installation on behalf
+of a given remote system and user.  The file consists of lines
+containing patterns and actions.  Empty lines or lines beginning
+with a '\c
+.BR "#" "'"
+are ignored.  The first three fields (separated by white space)
+of each line are regular
+expressions to be matched the remote system name, remote user name,
+and file name respectively.  The first line in which all three match
+will be chosen.
+The remainder of the line contains
+the associated actions.
+Each action is an alphanumeric name, optionally followed immediately
+by a parenthesized argument.
+.PP
+Someday the actions will be enumerated here, but I don't know what
+they are yet.
+.SH EXAMPLES
+A simple configuration file:
+.EX
+.ta \w'00000000'u +\w'00000000'u +\w'00000000'u +\w'00000000'u +\w'00000000'u +\w'00000000'u
+# system	user		pathname	action
+# we are willing to distribute stuff to coma and pyxis.
+(coma|pyxis)	.*		.*		accept(yes)
+\&.*		.*		.*		accept(no)
+.EE
+.SH "SEE ALSO"
+.IR dist (1),
+.IR dist (5)

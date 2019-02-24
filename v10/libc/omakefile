@@ -1,0 +1,349 @@
+OBJ=o/_exit.o o/abort.o o/abs.o o/access.o o/acct.o o/alarm.o\
+	o/asin.o o/atan.o o/atof.o o/atoi.o o/atol.o o/calloc.o o/cerror.o\
+	o/chdir.o o/chmod.o o/chown.o o/chroot.o o/chrtab.o\
+	o/close.o o/closedir.o o/clrerr.o o/creat.o o/crypt.o o/ctime.o\
+	o/cttyname.o o/ctype.o o/data.o o/dialout.o o/doprint.o\
+	o/doprnt.o o/doscan.o\
+	o/dup.o o/ecvt.o o/erf.o o/errlst.o o/error.o o/execl.o o/execle.o\
+	o/execv.o o/execve.o o/execvp.o o/exit.o o/exp.o o/fabs.o o/fchmod.o\
+	o/fchown.o o/fdopen.o o/fgetc.o o/fgets.o o/filbuf.o\
+	o/fioflush.o o/fiogetc.o o/fioinit.o o/fiofillbuf.o o/fioputc.o\
+	o/fiordline.o o/fioread.o o/fioseek.o o/fioundo.o o/fioprint.o\
+	o/fiowrite.o o/floor.o\
+	o/flsbuf.o o/fmod.o o/fopen.o o/fork.o o/fprintf.o o/fputc.o\
+	o/fmount.o o/funmount.o \
+	o/fputs.o o/freopen.o o/frexp.o o/fseek.o o/fstab.o o/fstat.o\
+	o/ftell.o o/ftw.o o/galloc.o o/gamma.o o/gcd.o o/gcvt.o o/getchar.o\
+	o/getenv.o o/getgid.o o/getgrent.o o/getgrgid.o\
+	o/getline.o o/getfields.o\
+	o/getgrnam.o o/getlog.o o/getlogin.o o/getopt.o o/getpass.o\
+	o/getpid.o o/getpw.o o/getpwent.o o/getpwnam.o o/getpwuid.o\
+	o/gets.o o/getuid.o o/getw.o o/getwd.o o/gmount.o o/hypot.o\
+	o/index.o o/ioctl.o o/iread.o o/isatty.o o/itol.o o/j0.o o/j1.o\
+	o/jn.o o/kill.o o/l3tol.o \
+	o/labs.o o/lcm.o o/ldexp.o o/linedis.o o/link.o\
+	o/locv.o o/log.o o/lseek.o o/lstat.o o/ltod.o o/ltoi.o o/ltol3.o\
+	o/malloc.o o/max.o o/mcount.o o/memccpy.o o/memchr.o o/memcmp.o\
+	o/memcpy.o o/memset.o o/min.o o/mkdir.o o/mknod.o o/mktemp.o\
+	o/modf.o o/mon.o o/mount.o o/nap.o o/nice.o o/nlist.o\
+	o/onexit.o o/open.o\
+	o/opendir.o o/perror.o o/pipe.o o/popen.o o/pow.o o/pow10.o\
+	o/print.o o/printf.o\
+	o/prof.o o/ptopen.o o/putchar.o o/puts.o o/putw.o o/qsort.o\
+	o/rand.o o/rdwr.o o/read.o o/readdir.o o/readlink.o o/reboot.o\
+	o/regcomp.o o/regerror.o o/regex.o o/regexec.o o/regsub.o o/rew.o\
+	o/rin.o o/rindex.o o/rmdir.o o/sbrk.o o/scanf.o o/seekdir.o\
+	o/select.o o/setbuf.o o/setgid.o o/setjmp.o o/setpgrp.o\
+	o/setruid.o o/settod.o o/setuid.o o/sgn.o o/signal.o o/sin.o\
+	o/sinh.o o/sleep.o o/sprintf.o o/sqrt.o o/stat.o o/stime.o\
+	o/strcat.o o/strcatn.o o/strchr.o o/strcmp.o o/strcmpn.o o/strcpy.o\
+	o/strcpyn.o o/strcspn.o o/strdup.o o/strlen.o o/strncat.o\
+	o/strncmp.o o/strncpy.o o/strout.o o/strpbrk.o o/strrchr.o\
+	o/strspn.o o/strtok.o o/stty.o o/stuff.o o/swab.o o/swapon.o\
+	o/symlink.o o/sync.o o/syscall.o o/system.o o/tan.o o/tanh.o\
+	o/tell.o o/telldir.o o/time.o o/times.o o/timezone.o o/tmpnam.o\
+	o/tolower.o o/toupper.o o/ttyname.o o/ttyslot.o o/udiv.o o/umask.o\
+	o/umount.o o/uname.o o/ungetc.o o/unlink.o o/urem.o o/utime.o\
+	o/vadvise.o o/valloc.o o/vlimit.o o/vtimes.o o/wait.o\
+	o/wait3.o o/write.o
+
+DESTDIR=
+
+libc.a:	$(OBJ)
+#	rm -f libc.a
+#	cd o; ar qc ../libc.a `lorder *.o | tsort`
+#	ar ma flsbuf.o libc.a exit.o
+#	ar m libc.a cleanup.o
+	ar uv libc.a $(OBJ)
+	ranlib libc.a
+
+clean:
+	rm -f o/*.o libc.a
+
+install: $(DESTDIR)/lib/libc.a $(DESTDIR)/lib/crt0.o $(DESTDIR)/lib/mcrt0.o
+
+$(DESTDIR)/lib/libc.a: libc.a
+	cp $(DESTDIR)/lib/libc.a liboc.a
+	cp libc.a $(DESTDIR)/lib/libc.a
+	ranlib $(DESTDIR)/lib/libc.a
+
+$(DESTDIR)/lib/crt0.o: crt0.o
+	cp crt0.o $(DESTDIR)/lib
+
+$(DESTDIR)/lib/mcrt0.o: mcrt0.o
+	cp mcrt0.o $(DESTDIR)/lib
+
+crt0.o:	csu/crt0.s
+	cc -S csu/crt0.s
+
+mcrt0.o:	csu/mcrt0.s
+	cc -S csu/mcrt0.s
+
+o/%:
+	cc -O -c $^
+	ld -x -r $% && mv a.out o/$% && rm $%
+
+o/doprnt.o:	stdio/doprnt.S
+	cp stdio/doprnt.S doprnt.c
+	cc -E doprnt.c | as -o doprnt.o
+	ld -x -r doprnt.o && mv a.out o/doprnt.o
+	rm doprnt.c doprnt.o
+
+o/errlst.o: gen/errlst.c
+	cc -S gen/errlst.c
+	ed - <gen/:errfix errlst.s
+	as -o errlst.o errlst.s
+	ld -x -r errlst.o && mv a.out o/errlst.o
+	rm errlst.[os]
+
+o/fiofillbuf.o:	fio/fiofillbuf.c /usr/include/fio.h
+o/fioflush.o:	fio/fioflush.c /usr/include/fio.h
+o/fiogetc.o:	fio/fiogetc.c /usr/include/fio.h
+o/fioinit.o:	fio/fioinit.c /usr/include/fio.h
+o/fioputc.o:	fio/fioputc.c /usr/include/fio.h
+o/fioprint.o:	fio/fioprint.c /usr/include/fio.h
+o/fiordline.o:	fio/fiordline.c /usr/include/fio.h
+o/fioread.o:	fio/fioread.c /usr/include/fio.h
+o/fioseek.o:	fio/fioseek.c /usr/include/fio.h
+o/fioundo.o:	fio/fioundo.c /usr/include/fio.h
+o/fiowrite.o:	fio/fiowrite.c /usr/include/fio.h
+o/mcount.o:	gen/mcount.s
+o/udiv.o:	gen/udiv.s
+o/urem.o:	gen/urem.s
+o/abort.o:	gen/abort.c
+o/abs.o:	gen/abs.s
+o/atof.o:	gen/atof.s
+o/atoi.o:	gen/atoi.c
+o/atol.o:	gen/atol.c
+o/calloc.o:	gen/calloc.c
+o/chrtab.o:	gen/chrtab.c
+o/closedir.o:	gen/closedir.c
+o/crypt.o:	gen/crypt.c
+o/ctime.o:	gen/ctime.c
+o/cttyname.o:	gen/cttyname.c
+o/ctype.o:	gen/ctype.c
+o/dialout.o:	gen/dialout.c
+o/doprint.o:	gen/doprint.c
+o/ecvt.o:	gen/ecvt.c
+o/execvp.o:	gen/execvp.c
+o/exit.o:	gen/exit.c /usr/include/libc.h
+o/frexp.o:	gen/frexp.s
+o/ftw.o:	gen/ftw.c
+o/galloc.o:	gen/galloc.c
+o/gcd.o:	gen/gcd.c
+o/getenv.o:	gen/getenv.c
+o/getfields.o:	gen/getfields.s
+o/getline.o:	gen/getline.c
+o/getlogin.o:	gen/getlogin.c
+o/getopt.o:	gen/getopt.c
+o/getwd.o:	gen/getwd.c
+o/index.o:	gen/index.c
+o/iread.o:	gen/iread.c
+o/isatty.o:	gen/isatty.c
+o/labs.o:	gen/labs.s
+o/l3tol.o:	gen/l3tol.c
+o/lcm.o:	gen/lcm.c
+o/ldexp.o:	gen/ldexp.s
+o/linedis.o:	gen/linedis.c
+o/ltol3.o:	gen/ltol3.c
+o/malloc.o:	gen/malloc.c
+o/max.o:	gen/max.c
+o/memccpy.o:	gen/memccpy.s
+o/memchr.o:	gen/memchr.s
+o/memcmp.o:	gen/memcmp.s
+o/memcpy.o:	gen/memcpy.s
+o/memset.o:	gen/memset.s
+o/min.o:	gen/min.c
+o/mktemp.o:	gen/mktemp.c
+o/modf.o:	gen/modf.s
+o/mon.o:	gen/mon.c
+o/nlist.o:	gen/nlist.c
+o/onexit.o:	gen/onexit.c /usr/include/libc.h
+o/opendir.o:	gen/opendir.c
+o/perror.o:	gen/perror.c
+o/print.o:	gen/print.c
+o/ptopen.o:	gen/ptopen.c
+o/qsort.o:	gen/qsort.c
+o/rand.o:	gen/rand.c
+o/readdir.o:	gen/readdir.c
+o/regcomp.o:	gen/regcomp.c
+o/regerror.o:	gen/regerror.c
+o/regex.o:	gen/regex.c
+o/regexec.o:	gen/regexec.c
+o/regprog.o:	gen/regprog.h
+o/regsub.o:	gen/regsub.c
+o/rin.o:	gen/rin.c
+o/rindex.o:	gen/rindex.c
+o/seekdir.o:	gen/seekdir.c
+o/sgn.o:	gen/sgn.c
+o/sleep.o:	gen/sleep.c
+o/strcat.o:	gen/strcat.s
+o/strcatn.o:	gen/strcatn.c
+o/strchr.o:	gen/strchr.s
+o/strcmp.o:	gen/strcmp.s
+o/strcmpn.o:	gen/strcmpn.c
+o/strcpy.o:	gen/strcpy.s
+o/strcpyn.o:	gen/strcpyn.c
+o/strcspn.o:	gen/strcspn.s
+o/strdup.o:	gen/strdup.c
+o/strlen.o:	gen/strlen.s
+o/strncat.o:	gen/strncat.s
+o/strncmp.o:	gen/strncmp.s
+o/strncpy.o:	gen/strncpy.s
+o/strpbrk.o:	gen/strpbrk.s
+o/strrchr.o:	gen/strrchr.c
+o/strspn.o:	gen/strspn.s
+o/strtok.o:	gen/strtok.c
+o/stty.o:	gen/stty.c
+o/swab.o:	gen/swab.c
+o/tell.o:	gen/tell.c
+o/telldir.o:	gen/telldir.c
+o/timezone.o:	gen/timezone.c
+o/tolower.o:	gen/tolower.c
+o/toupper.o:	gen/toupper.c
+o/ttyname.o:	gen/ttyname.c
+o/ttyslot.o:	gen/ttyslot.c
+o/uname.o:	gen/uname.c
+o/valloc.o:	gen/valloc.c
+o/asin.o:	math/asin.c
+o/atan.o:	math/atan.c
+o/erf.o:	math/erf.c
+o/exp.o:	math/exp.c
+o/fabs.o:	math/fabs.s
+o/floor.o:	math/floor.c
+o/fmod.o:	math/fmod.c
+o/gamma.o:	math/gamma.c
+o/hypot.o:	math/hypot.c
+o/j0.o:	math/j0.c
+o/j1.o:	math/j1.c
+o/jn.o:	math/jn.c
+o/log.o:	math/log.c
+o/pow.o:	math/pow.c
+o/pow10.o:	math/pow10.c
+o/sin.o:	math/sin.c
+o/sinh.o:	math/sinh.c
+o/sqrt.o:	math/sqrt.c
+o/tan.o:	math/tan.c
+o/tanh.o:	math/tanh.c
+o/clrerr.o:	stdio/clrerr.c
+o/data.o:	stdio/data.c
+o/doprnt.o:	stdio/doprnt.s
+o/doscan.o:	stdio/doscan.c
+o/error.o:	stdio/error.c
+o/fdopen.o:	stdio/fdopen.c
+o/fgetc.o:	stdio/fgetc.c
+o/fgets.o:	stdio/fgets.c
+o/filbuf.o:	stdio/filbuf.c
+o/flsbuf.o:	stdio/flsbuf.c
+o/fopen.o:	stdio/fopen.c
+o/fprintf.o:	stdio/fprintf.c
+o/fputc.o:	stdio/fputc.c
+o/fputs.o:	stdio/fputs.c
+o/freopen.o:	stdio/freopen.c
+o/fseek.o:	stdio/fseek.c
+o/fstab.o:	stdio/fstab.c
+o/ftell.o:	stdio/ftell.c
+o/gcvt.o:	stdio/gcvt.c
+o/getchar.o:	stdio/getchar.c
+o/getgrent.o:	stdio/getgrent.c
+o/getgrgid.o:	stdio/getgrgid.c
+o/getgrnam.o:	stdio/getgrnam.c
+o/getpass.o:	stdio/getpass.c
+o/getpw.o:	stdio/getpw.c
+o/getpwent.o:	stdio/getpwent.c
+o/getpwnam.o:	stdio/getpwnam.c
+o/getpwuid.o:	stdio/getpwuid.c
+o/gets.o:	stdio/gets.c
+o/getw.o:	stdio/getw.c
+o/popen.o:	stdio/popen.c
+o/printf.o:	stdio/printf.c
+o/putchar.o:	stdio/putchar.c
+o/puts.o:	stdio/puts.c
+o/putw.o:	stdio/putw.c
+o/rdwr.o:	stdio/rdwr.c
+o/rew.o:	stdio/rew.c
+o/scanf.o:	stdio/scanf.c
+o/setbuf.o:	stdio/setbuf.c
+o/sprintf.o:	stdio/sprintf.c
+o/stdio.o:	stdio/stdio.h
+o/strout.o:	stdio/strout.c
+o/stuff.o:	stdio/stuff.c
+o/system.o:	stdio/system.c
+o/tmpnam.o:	stdio/tmpnam.c
+o/ungetc.o:	stdio/ungetc.c
+o/_exit.o:	sys/_exit.s
+o/access.o:	sys/access.s
+o/acct.o:	sys/acct.s
+o/alarm.o:	sys/alarm.s
+o/cerror.o:	sys/cerror.s
+o/chdir.o:	sys/chdir.s
+o/chmod.o:	sys/chmod.s
+o/chown.o:	sys/chown.s
+o/chroot.o:	sys/chroot.s
+o/close.o:	sys/close.s
+o/creat.o:	sys/creat.s
+o/dup.o:	sys/dup.s
+o/execl.o:	sys/execl.s
+o/execle.o:	sys/execle.s
+o/execv.o:	sys/execv.s
+o/execve.o:	sys/execve.s
+o/fchmod.o:	sys/fchmod.s
+o/fchown.o:	sys/fchown.s
+o/fork.o:	sys/fork.s
+o/fmount.o:	sys/fmount.s
+o/funmount.o:	sys/funmount.s
+o/fstat.o:	sys/fstat.s
+o/getgid.o:	sys/getgid.s
+o/getlog.o:	sys/getlog.s
+o/getpid.o:	sys/getpid.s
+o/getuid.o:	sys/getuid.s
+o/gmount.o:	sys/gmount.s
+o/ioctl.o:	sys/ioctl.s
+o/itol.o:	gen/itol.s
+o/kill.o:	sys/kill.s
+o/link.o:	sys/link.s
+o/locv.o:	sys/locv.s
+o/lseek.o:	sys/lseek.s
+o/lstat.o:	sys/lstat.s
+o/ltod.o:	gen/ltod.s
+o/ltoi.o:	gen/ltoi.s
+o/mkdir.o:	sys/mkdir.s
+o/mknod.o:	sys/mknod.s
+o/mount.o:	sys/mount.s
+o/nap.o:	sys/nap.s
+o/nice.o:	sys/nice.s
+o/open.o:	sys/open.s
+o/pipe.o:	sys/pipe.s
+o/prof.o:	sys/prof.s
+o/read.o:	sys/read.s
+o/readlink.o:	sys/readlink.s
+o/reboot.o:	sys/reboot.s
+o/rmdir.o:	sys/rmdir.s
+o/sbrk.o:	sys/sbrk.s
+o/select.o:	sys/select.s
+o/setgid.o:	sys/setgid.s
+o/setjmp.o:	sys/setjmp.s
+o/setpgrp.o:	sys/setpgrp.s
+o/setruid.o:	sys/setruid.s
+o/settod.o:	sys/settod.s
+o/setuid.o:	sys/setuid.s
+o/signal.o:	sys/signal.s
+o/stat.o:	sys/stat.s
+o/stime.o:	sys/stime.s
+o/swapon.o:	sys/swapon.s
+o/symlink.o:	sys/symlink.s
+o/sync.o:	sys/sync.s
+o/syscall.o:	sys/syscall.s
+o/time.o:	sys/time.s
+o/times.o:	sys/times.s
+o/umask.o:	sys/umask.s
+o/umount.o:	sys/umount.s
+o/unlink.o:	sys/unlink.s
+o/utime.o:	sys/utime.s
+o/vadvise.o:	sys/vadvise.s
+o/vfork.o:	sys/vfork.s
+o/vlimit.o:	sys/vlimit.s
+o/vtimes.o:	sys/vtimes.s
+o/wait.o:	sys/wait.s
+o/wait3.o:	sys/wait3.s
+o/write.o:	sys/write.s

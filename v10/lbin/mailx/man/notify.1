@@ -1,0 +1,114 @@
+'\"macro stdmacro
+.if n .pH g1.notify %W% of %G%
+.nr X
+.if \nX=0 .ds x} notify 1 "Essential Utilities" "\&"
+.if \nX=1 .ds x} notify 1 "Essential Utilities"
+.if \nX=2 .ds x} notify 1 "" "\&"
+.if \nX=3 .ds x} notify "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4notify\f1 \- notify user of the arrival of new mail 
+.SH SYNOPSIS
+\f4notify\fP \f4\-y\fP [ \f4\-m\fP \f2mailfile\fP ]
+.br
+\f4notify\fP [ \f4\-n\fP ]
+.SH DESCRIPTION
+.PP
+When a new mail message arrives,
+the \f4mail\fP command first checks if the recipient's mailbox indicates
+that the message is to be forwarded elsewhere (to some other recipient or
+as the input to some command).
+\f4notify\fP is used to set up forwarding on the user's mailbox so that the new
+message is saved into an alternative mailbox and,
+if the user is currently logged in,
+he or she is notified immediately of the arrival of new mail.
+.PP
+Command-line options are:
+.sp .5
+.PD 0
+.TP 12
+\f4\-m\f2\0mailfile\f1
+File to save mail messages into while automatic notification is activated.
+If not specified, it defaults to \f2$HOME/.mailfile\fP.
+.TP
+\f4\-n\f1
+Remove mail notification facility
+.TP
+\f4\-y\f1
+Install mail notification facility
+.PD
+.PP
+If invoked with no arguments,
+\f4notify\fP reports whether automatic mail notification is activated or not.
+.PP
+The notification is done by looking in \f4/etc/utmp\f1 to
+determine if the recipient is currently logged in,
+and if so, on which terminal device. 
+Then the terminal device is opened for writing and the user is notified about
+the new message.
+The notification will indicate who the message is from.
+If the message contains a \f4Subject:\fP header line it will be included.
+(For security, all unprintable characters within the header will be converted
+to an exclamation point.)
+.PP
+If the user is logged in multiple times he or she will get multiple
+notifications, one per terminal.
+To disable notifications to a particular login session,
+the \f4mesg\fP(1) command can be used to disable writing
+to that terminal.
+.PP
+If there are multiple machines connected together via RFS or NFS,
+\f4notify\f1 will look up the \f4/etc/utmp\fP files on the other systems as
+well.
+To do this, the file \f4/etc/mail/notify.sys\f1 will be
+consulted, which will contain two columns, the first being the name of a
+system and the second being a path to find the root filesystem for that
+machine.
+.PP
+If \f4notify\fP has troubles delivering the mail to the specified mailfile,
+\f4notify\fP
+will look up the directory of the mailfile in \f4/etc/mail/notify.fsys\fP.
+If the file's directory is found in the first column of the file, the mail will be
+forwarded to the system listed in the second column instead of being returned
+to the sender.
+.SH FILES
+.PD 0
+.TP 18
+\f4/tmp/notif\f1\(**
+temporary file
+.TP 18
+\f4/var/mail/\f1\(**
+users' standard mailboxes
+.TP 18
+\f4/usr/lib/mail/notify2\f1
+program that performs the notification
+.TP 18
+\f4/etc/mail/notify.fsys\f1
+list of file systems and home systems
+.TP 18
+\f4/etc/mail/notify.sys\f1
+list of machines and paths to their root filesystems
+.TP 18
+\f4/etc/utmp\f1
+list of users who are logged in
+.PD
+.SH SEE ALSO
+\f4mail\fP(1), \f4mesg\fP(1).
+.br
+.IR "User\'s Guide" .
+.br
+.ne 8
+.SH NOTES
+Because \f4notify\fP uses the ``\f4Forward to \(bv\f2command\f1'' facility of
+\f4mail\fP to implement notifications,
+\f4/var/mail/\f2username\f1 should not be specified as the place
+to put newly arrived messages via the \f4\-m\fP invocation option.
+The \f4mail\fP command uses
+\f4/var/mail/\f2username\f1 to hold either mail messages,
+\f4or\fP indications of mail forwarding,
+but not both simultaneously.
+.PP
+If the user is using \f4layers\fP(1),
+the notification will \f4only\fP appear in the \f4login\fP window.
+.\"@(#)notify.1	1.2
+.Ee

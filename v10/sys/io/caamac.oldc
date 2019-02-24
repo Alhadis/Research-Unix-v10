@@ -1,0 +1,158 @@
+/*#include	"../h/param.h"*/
+/*#include	"../h/dir.h"*/
+/*#include	"../h/user.h"*/
+/*#include	"../h/conf.h"*/
+/*#include	"../h/seg.h"*/
+
+#include	<sys/param.h>
+#include	<sys/dir.h>
+#include	<sys/user.h>
+#include	<sys/ubaddr.h>
+#include	<sys/conf.h>
+/*#include	<sys/seg.h>*/
+
+#include	<sys/camac.h> 
+
+extern struct ubaddr camaddr[];		/* defined in conf..*/
+extern int camcnt;
+extern caddr_t camcaddr[];
+
+int camopen(), camclose(), camread(), camwrite(), camioctl();
+struct cdevsw camcdev = cdinit(camopen, camclose, camread, camwrite, camioctl);
+
+#define	BASE	0766000			/* start addr of Camac registers for VAX*/
+/*#define	BASE	166000		 old LSI start addr */
+
+struct camregs {
+	unsigned	csr;
+	unsigned	datahi;
+	unsigned	lamlo;
+	unsigned	lamhi;
+};
+struct camregs	*regs;
+
+unsigned	*intvector;
+
+camopen()
+{
+	regs = (struct camregs *) (BASE + 01400);
+	intvector = (unsigned *) (BASE + 01416);
+
+	regs->csr = 0;		/* initialize csr */
+}
+
+camclose()
+{
+	/* not used */
+}
+
+camread()
+{
+	/* not used */
+}
+
+camwrite()
+{
+	/* not used */
+}
+
+camioctl(dev, cmd, usr_buf)
+caddr_t		usr_buf;
+{
+	extern int		copyin(), copyout();	
+	struct module_info	buffer1;
+	struct reg_info		buffer2;
+
+	unsigned		*Dev_addr(), *device, datalo, datahi;
+	char			*cdevice;
+
+	switch(cmd) {
+
+	case CAMREAD:
+	case CAMWRITE:
+	case CAMSET:
+		if(copyin(usr_buf, (caddr_t)&buffer1, sizeof(buffer1)))
+			u.u_error = EFAULT;
+
+		device = Dev_addr(buffer1.N, buffer1.A);
+
+		switch(cmd) {
+
+		case CAMREAD:
+		/* Turn off no read bit, set f-bits, lv others unchanged */
+			regs->csr = (regs->csr & ~04007) | (buffer1.F & 7);
+
+			datalo = *device;
+			datahi = regs->datahi;
+			buffer1.data = (long)datahi << 16;
+			buffer1.data += (long) datalo;
+			break;
+
+		case CAMWRITE:
+			regs->csr = (regs->csr & ~04007) | (buffer1.F & 7);
+			regs->datahi = buffer1.data >> 16;
+			*device = buffer1.data & 0177777;
+			break;
+		
+		case CAMSET:
+			regs->csr &= ~04000;	/* turn on "no-read" bit */
+			cdevice = (char*)device; /* Cntrl ops need "MOVB"*/
+			*cdevice = buffer1.F;
+			regs->csr &= ~04000;	/* turn off no read bit */
+			buffer1.Q = (regs->csr & 0200) >> 7;
+			break;
+		}
+		
+		buffer1.Q = (regs->csr & 0200) >> 7;
+		if(copyout((caddr_t)&buffer1, usr_buf, sizeof(buffer1)))
+			u.u_error = EFAULT;
+			
+		break;
+
+	case CSRREAD:
+	case LAMLOREAD:
+	case LAMHIREAD:
+	case VCTREAD:
+
+		switch(cmd) {
+
+		case CSRREAD:	buffer2.reg = regs->csr;
+				break;
+
+		case LAMLOREAD:	buffer2.reg = regs->lamlo;
+				break;
+
+		case LAMHIREAD:	buffer2.reg = regs->lamhi;
+				break;
+
+		case VCTREAD:	buffer2.reg = *intvector;
+				break;
+		}
+
+		if(copyout((caddr_t)&buffer2, usr_buf, sizeof(buffer2)))
+			u.u_error = EFAULT;
+		break;
+
+	case CSRWRITE:
+		if(copyin(usr_buf, (caddr_t)&buffer2, sizeof(buffer2)))
+			u.u_error = EFAULT;
+
+		regs->csr = buffer2.reg;
+		break;
+	}
+}
+
+cam0int()
+{
+	/* not used */
+}
+
+unsigned *
+Dev_addr(N,A)
+int	N,A;
+{
+	unsigned	addr;
+
+	addr = (unsigned)(BASE + N * 040 + A * 2);
+	return((unsigned *)addr);
+}

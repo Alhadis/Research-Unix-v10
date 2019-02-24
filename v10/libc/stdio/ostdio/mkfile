@@ -1,0 +1,35 @@
+BUILTINS =
+DESTDIR = /usr
+CFLAGS = -O 
+
+o = atof.o doprnt.o doscan.o fprintf.o printf.o scanf.o sprintf.o
+
+ostdio.a: $o
+	ar cr $target $o
+	ranlib $target
+
+clean:
+	rm -f *.o
+
+doprnt.o:
+	cp doprnt.S doprnt.c
+	cc -E doprnt.c | as -o doprnt.o
+	ld -x -r doprnt.o
+	mv a.out doprnt.o
+	rm doprnt.c
+
+%.o: %.c
+	cc $CFLAGS -c $stem.c
+	ld -x -r $stem.o
+	mv a.out $stem.o
+
+%.o: %.s
+	as -o $stem.o $stem.s
+	ld -x -r $stem.o
+	mv a.out $stem.o
+
+install:V: $DESTDIR/lib/libostdio.a
+	
+$DESTDIR/lib/libostdio.a: ostdio.a
+	cp $prereq $target
+	ranlib $target

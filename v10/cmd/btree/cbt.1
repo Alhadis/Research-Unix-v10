@@ -1,0 +1,71 @@
+.TH CBT 1
+.SH NAME
+cbt
+\- programs for b-trees
+.SH SYNOPSIS
+.B cbt
+.I command
+arguments ...
+.SH DESCRIPTION
+.PP
+B-trees support lookup of values by key.
+A b-tree
+.I file
+corresponds to two files,
+.I file.T
+and
+.IR file.F .
+.I file.T
+contains the keys and pointers to values.
+.I file.F
+contains the values.
+If the b-tree is an
+.I index
+there is no
+.I .F
+file.
+.PP
+.B cbt creat
+.I arguments
+creates empty b-trees.
+Each argument may be a file name or the flag
+.BR -i .
+The b-trees created for all the names following a flag argument
+will be indexes.
+.PP
+.B cbt report
+.I file-names
+reports on the sizes of the files.
+If the amount of useful data is much less than the file sizes,
+.B cbt squash
+.I file
+will make the b-tree much smaller by reconstructing it in nearly
+minimal form.
+.PP
+.B cbt cat
+.I file
+prints out the contents of the b-tree in the form
+.RS
+.I key tab value new-line
+.RE
+.PP
+.B cbt build [-r]
+.I file
+fills an empty b-tree with key-value pairs read from the standard
+input.
+The keys must be sorted and without duplicates.
+If the optional argument is not present, then the part of each line
+up to the first tab is the key, and the part after the first tab,
+not including the new-line, is the value.
+If the optional argument is present, then the input is assumed to
+be a sequence of
+.RS
+.RI short klen; char key[klen]; short vlen; char value[vlen]
+.RE
+quadruples.
+The smallest possible value for
+.I klen
+is 1,
+so the shortest quadruple consists of 2 short integers and one character.
+.SH SEE ALSO
+memo by pjw, cbt(3)

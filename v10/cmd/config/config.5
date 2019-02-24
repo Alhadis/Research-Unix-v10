@@ -1,0 +1,149 @@
+.TH CONFIG 5
+.SH NAME
+config \- system configuration template files
+.SH DESCRIPTION
+These files are used as input by
+.IR config (8).
+Except as noted,
+they are kept in
+.IR /usr/sys/conf .
+.PP
+.I Files
+names the source files
+that make up the kernel.
+Each line consists of a filename
+(relative to
+.IR /usr/sys )
+followed by some magic words.
+For example:
+.IP
+sys/acct.c	standard
+.PP
+is a file used by any version of the system;
+.IP
+dev/uba.c	standard device-driver
+.PP
+is also always used,
+and contains device register references
+(which may require special compilation hacks);
+.IP
+dev/ju.c	optional ju device-driver
+.PP
+is included only if the
+.I ju
+device is expected;
+.IP
+dev/ttyld.c	optional tty pseudo-device
+.PP
+is included only if the
+.I tty
+pseudo-device is requested.
+.PP
+.I Devices
+describes possible device drivers,
+file system handlers,
+and line disciplines;
+the information is used to generate
+handler dispatch tables.
+It consists of lines with the following blank-separated fields:
+.IP
+Type of handler:
+.I device
+for character devices,
+.I stream-device
+for character stream devices,
+.I block-device
+for block devices,
+.I file-system
+for file system handlers,
+.I line-discipline
+for line discipline handlers.
+If the type is preceded by the word `standard'
+.RI ( e.g.
+.IR "standard block-device" ),
+the handler is always included;
+otherwise,
+it is included only if requested.
+.IP
+Table index:
+major device number,
+filesystem type,
+or line discipline number.
+.IP
+Driver name.
+Used in
+.IR files 
+and
+.IR conf .
+.I Config
+writes a header file
+.I name.h
+for each device;
+if that device
+is configured,
+NAME
+is defined to be
+the number of devices
+of that type.
+.IP
+Entry point name.
+Used as a prefix for data structure
+and driver entry points.
+.IP
+Entry points.
+For block devices,
+some of
+.IR open ,
+.IR close ,
+.IR strategy ,
+.IR dump ,
+.IR B_TAPE
+(the last puts the flag
+.I B_TAPE
+in the
+.I d_flags
+entry in the block device switch);
+for character devices,
+.IR open ,
+.IR close ,
+.IR read ,
+.IR write ,
+.IR ioctl ,
+.IR reset .
+For stream devices
+and line disciplines,
+.I info
+should be specified.
+For file system handlers,
+.IR put ,
+.IR get ,
+.IR free ,
+.IR updat ,
+.IR read ,
+.IR write ,
+.IR trunc ,
+.IR stat ,
+.IR nami ,
+.IR mount ,
+.IR ioctl .
+.PP
+As a special case,
+lines beginning with
+.RB ` : '
+are copied intact to
+.IR conf.c .
+This can be used for hacks like
+.IP
+: int mem_no = 3;	/* major device number of memory special file */
+.PP
+Addenda to
+.I files
+and
+.I devices
+specific to a particular machine
+may be kept in
+.IR /usr/sys/ machine /files
+and
+.IR /usr/sys/ machine /devices .
+The addenda are treated as if appended to the
+general files.

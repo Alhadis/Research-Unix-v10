@@ -1,0 +1,32 @@
+.IS
+ARC {
+	var a1, b1, c1,
+	a2, b2, c2;
+	start ~ center + abs(radius)*cis(startang);
+	end ~ center + abs(radius)*cis(endang);
+	midway ~ center + abs(radius)*cis(midang);
+	im(start-center)*re(cis(startang))
+	~ re(start-center)*im(cis(startang));
+	im(end-center)*re(cis(endang))
+	~ re(end-center)*im(cis(endang));
+	im(midway-center)*re(cis(midang))
+	~ re(midway-center)*im(cis(midang));
+	a1 ~ 2*(re(end)-re(start));
+	b1 ~ 2*(im(end)-im(start));
+	c1 ~ -re(start)*re(start) - im(start)*im(start)
+	+ re(end)*re(end) + im(end)*im(end);
+	a2 ~ 2*(re(end)-re(midway));
+	b2 ~ 2*(im(end)-im(midway));
+	c2 ~ -re(midway)*re(midway) - im(midway)*im(midway)
+	+ re(end)*re(end) + im(end)*im(end);
+	a1*re(center) + b1*im(center) ~ c1;
+	a2*re(center) + b2*im(center) ~ c2;
+	startang ~ atan2 (start - center);
+	midang ~ atan2 (midway - center);
+	endang ~ atan2 (end - center);
+	radius ~ abs (start - center);
+	radius ~ abs (midway - center);
+	radius ~ abs (end - center);
+	midway ~ start;
+}
+.IE

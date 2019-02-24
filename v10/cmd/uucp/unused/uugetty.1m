@@ -1,0 +1,84 @@
+.TH UUGETTY 1M
+.SH NAME
+uugetty  \- set terminal type, modes, speed, and line discipline
+.SH SYNOPSIS
+.B /usr/lib/uucp/getty
+[
+.B \-h
+] [
+.B \-t
+timeout
+] [
+.B \-r
+]
+line
+[
+speed
+[
+type
+[
+linedisc
+] ] ]
+.br
+.B /usr/lib/uucp/getty \-c
+file
+.SH DESCRIPTION
+.I Uugetty
+is identical to getty(1m) but changes have been made to support
+using the line for uucico, cu, and ct;
+that is, the line can be used in both directions.
+The uugetty will allow users to login, but if the line is free,
+uucico, cu, or ct can use it for dialing out.
+The implementation depends on the fact that uucico, cu, and ct
+create lock files when devices are used.
+When the "open()" returns
+(or the first character is read when
+.B \-r
+option is used)
+the status of the lock file indicates whether the line is being
+used by uucico, cu, ct, or someone trying to login.
+Note that in the
+.B \-r
+case, several <carriage-return> characters may be required before the
+login message is output.
+The human users will be able to handle this slight inconvenience.
+Uucico trying to login will have to be told by using the following
+login script:
+
+	""  \\r\\d\\r\\d\\r\\d\\r in:--in: . . .
+.sp
+where the . . . is whatever would normally be used for the login sequence.
+
+Here is a /etc/inittab entry using uugetty on an 801/212
+dialer:
+
+	30:2:respawn:/usr/lib/uucp/uugetty -t 60 cul04 1200
+
+The line name, cul04 is the name that appears in the /usr/lib/uucp/Devices
+file for the 212 dialer.
+
+An entry for an intelligent modem or direct line that has a uugetty
+on each end must use the
+.B \-r
+option.
+(This causes uugetty to wait to read a character before it put out the
+login message, thus preventing two uugettys from looping.)
+Here is a /etc/inittab entry using uugetty on an intelligent modem or
+direct line:
+
+	30:2:respawn:/usr/lib/uucp/uugetty -r -t 60 tty12 1200
+
+.SH FILES
+/etc/gettydefs
+.br
+/etc/issue
+.SH "SEE ALSO"
+ct(1C),
+init(1M),
+login(1),
+ioctl(2),
+getty(1m),
+gettydefs(4),
+inittab(4),
+tty(7).
+.SH BUGS

@@ -1,0 +1,41 @@
+<../mkconf.$SYS
+<../mkrules.$SYS
+
+LPROG=mkpkg inspkg seal unseal
+LIB=lib-$O.a
+LIBOBJ=alloc.$O args.$O chk.$O crypt.$O data.$O ftw.$O fullname.$O \
+ gid.$O header.$O mkcsum.$O mkdir.$O package.$O path.$O pwd.$O \
+ transname.$O uid.$O
+
+compile:V: $LPROG
+
+install:V: compile
+	test -d $LDIR || mkdir $LDIR
+	cp $LPROG $LDIR
+
+mkpkg: mkpkg.$O $LIB
+	$CC -o $target $prereq $CCLIB
+
+inspkg: inspkg.$O $LIB
+	$CC -o $target $prereq $CCLIB
+
+seal: seal.$O $LIB
+	$CC -o $target $prereq $CCLIB
+
+unseal: unseal.$O $LIB
+	$CC -o $target $prereq $CCLIB
+
+lib-$O.a: $LIBOBJ
+	rm -f lib-$O.a
+	ar r lib-$O.a $LIBOBJ
+	$RL lib-$O.a
+
+# Need to check these.
+alloc.$O args.$O data.$O fullname.$O gid.$O: asd.h ar.h
+header.$O inspkg.$O mkdir.$O: asd.h ar.h
+mkpkg.$O package.$O path.$O pwd.$O seal.$O: asd.h ar.h
+transname.$O uid.$O unseal.$O: asd.h ar.h
+mkcsum.$O seal.$O unseal.$O: seal.h
+
+clean:V:
+	rm -f *.[$OS] lib-[$OS].a $LPROG

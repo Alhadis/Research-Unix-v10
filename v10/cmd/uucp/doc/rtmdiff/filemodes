@@ -1,0 +1,81 @@
+.Bh
+File permissions
+.PP
+Files in
+.I /usr/lib/uucp
+should be protected
+pretty much as always:
+nothing should have general write permissions,
+.I Systems
+and all the
+.I L.sys
+files
+should not have general read permissions.
+Other data files
+can probably be left readable,
+depending on your level of paranoia:
+for example,
+some of the information in
+.I Permissions
+could be helpful
+to breakin artists.
+.PP
+.I Uucico ,
+.I uusched ,
+.I uuxqt ,
+.I uucp ,
+.I uustat ,
+and
+.I uux
+should be set-user-\s-1ID\s0
+.I uucp
+(or whatever is used locally
+as the administrative login
+for
+.I uucp ).
+They need not be
+set-group-\s-1ID\s0.
+None of the other programs
+should have any set-\s-1ID\s0 bits.
+.PP
+Shell scripts
+invoked by
+.I cron
+should run as user
+.I uucp .
+.PP
+Neither the spool directory
+.I /usr/spool/uucp
+nor any of its subsidiary directories
+need have general write permissions.
+Command files
+(\c
+.B C. )
+are made generally readable
+but not writeable;
+data files and execute files
+(\c
+.B D. ,
+.B X. )
+are kept inaccessible
+except by
+.I uucp .
+Logfiles
+(\c
+.I .Log/\(**/\(** )
+are not generally writeable.
+For no sensible reason,
+however,
+the error logs in
+.I .Admin
+and the system status files in
+.I .Status
+are left in mode 0666.
+.PP
+All this is philosophically
+very similar to the old
+.I uucp ;
+however,
+installing the new system
+is a marvelous opportunity
+to get it wrong.

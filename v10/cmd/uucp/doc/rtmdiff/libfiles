@@ -1,0 +1,256 @@
+.Bh
+Data in the
+.I lib
+directory
+.PP
+Most of the data files in
+.I /usr/lib/uucp
+have changed their names,
+and some have changed their content.
+.Sh
+Systems
+.PP
+Names of remote systems
+and information about how to call them
+has been moved from
+.I L.sys
+to
+.I Systems .
+The old
+.I uucp
+programs searched several
+.I L.sys
+files
+(\c
+.I L.sys ,
+.I L.sys.dk ,
+.I L.sys.local ,
+.I L.sys.general );
+the new system
+has been changed locally
+to search
+.I Systems.local ,
+.I Systems.dk ,
+.I Systems ,
+.I Systems1 ,
+and
+.I Systems.gen
+in that order.
+.I L.sys.general
+has become
+.I Systems.gen
+to keep the filename
+short enough
+to please
+.I namei .
+.PP
+The format of system entries
+has changed slightly,
+but most old
+.I L.sys
+entries
+should be OK.
+Caller type
+.B CMD
+has gone away,
+and
+type
+.B DIR
+isn't really there anymore;
+get help from [1]
+if you must cope with direct lines.
+.PP
+Login chat scripts
+are slightly different.
+The old system
+sent a newline
+(ASCII LF)
+after each token;
+the new one sends
+a carriage return
+(ASCII CR).
+There are now many more
+special character escapes;
+all of the old ones
+are supported
+(as well as a few
+which have crept into
+.I L.sys
+even though the old
+.I uuco
+didn't know about them).
+The
+.B GARB
+and
+.B JUNK
+magic cookies are gone;
+use the
+.I expect\-send\-expect
+syntax instead.
+.Sh
+Permissions
+.PP
+Information about
+which machines have what access,
+formerly spread among
+.I L.logins ,
+.I L.limited ,
+and a set of unchangeable defaults
+(such as stuff found in
+.I USERFILE
+in other
+.I uucp s)
+has been consolidated into a new file named
+.I Permissions .
+There are many parameters which can be set here.
+The minimum that must be present is a line
+of the form
+.IP
+.B LOGNAME= login
+.LP
+for each real user-\s-1ID\s0
+which will be used for
+incoming
+.I uucp .
+Note that this means any user who will
+run
+.I uucico
+as a slave;
+in particular,
+any users whose shell is
+.I uucico ,
+and the user named in
+the
+.I uucp
+entry in
+.I /etc/procctl .
+.PP
+By default,
+only files in
+.I /usr/spool/uucppublic
+may be read or written,
+and
+only
+.I rmail
+may be called as a remote command.
+.PP
+A
+.I Permissions
+file which approximates
+the old system's behaviour
+might look like
+.DS
+.B
+LOGNAME=uucp
+LOGNAME=uucpa
+MACHINE=OTHER \e
+	COMMANDS=/bin/rmail:/etc/asd/asdrcv
+.R
+.DE
+.PP
+To allow locally queued requests
+to be sent when a remote calls
+under (say) login name
+.I uucpa ,
+add
+.B SENDFILES=yes
+to the
+.B LOGNAME=uucpa
+line.
+If
+.B VALIDATE=hippo
+is added,
+machine
+.I hippo
+will only be allowed
+to log in as
+.I uucpa .
+This is similar
+to what
+.I L.logins
+did in the old system,
+but somewhat less precise.\(dg
+.FS
+\(dg
+Any machine logging in
+as
+.I uucpa
+will be sent local work;
+in the old system,
+particular machines could be named.
+A safer practice
+is to devote a login
+to each trusted machine,
+or perhaps to several trusted machines
+(and no suspect ones).
+.FE
+.PP
+The behaviour induced by
+.I L.limited
+in the old system
+(refuse connection
+from systems we don't recognize)
+is caused in the new one
+by the existence of
+.I /usr/lib/uucp/remote.unknown .
+If this file
+exists and is executable,
+it is invoked
+whenever a system
+not listed in any
+.I Systems
+file calls.
+As distributed,
+it is a shell script
+which appends the time
+and the system name
+to a log file.
+To allow calls from
+unknown systems,
+remove it
+(or just turn off execute permissions).
+.PP
+To learn more than you
+probably want to know about
+.I Permissions ,
+see Appendix IV
+in [1].
+.Sh
+Other data files
+.PP
+.I L.devices
+has been renamed
+.I Devices ;
+its format has changed a bit too.
+It must contain the following two lines
+for Datakit
+and autodialers called by
+.I dialout (3):
+.DS
+.B
+DK DK 0 Any DK \eD
+ACU \- \- Any Dialout
+.R
+.DE
+Any existing
+.I L.devices
+is almost certainly obsolete.
+If not,
+see [1] for help.
+.PP
+.I L.dialcodes
+has been renamed
+.I Dialcodes .
+Its format has not changed.
+.PP
+A new file,
+.I Poll,
+lists systems which should be 
+polled for work periodically,
+and when they should be called.
+.PP
+.I L.sysequiv ,
+.I L.genequiv ,
+and
+.I L.netequiv
+have disappeared.

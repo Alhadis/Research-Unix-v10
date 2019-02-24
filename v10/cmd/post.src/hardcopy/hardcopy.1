@@ -1,0 +1,131 @@
+.ds dQ /usr/lib/postscript
+.TH HARDCOPY 1 "DWB 3.2"
+.SH NAME
+.B hardcopy
+\- redirects output from PostScript file operators to paper
+.SH SYNOPSIS
+\*(mBhardcopy\f1
+.OP "" options []
+.OP "" files []
+.SH DESCRIPTION
+.B hardcopy
+surrounds
+.I files
+with PostScript that redirects file output to paper,
+and writes the results on the standard output.
+If no
+.I files
+are specified, or if
+.OP \-
+is one of the input
+.IR files ,
+the standard input is read.
+The following
+.I options
+are understood:
+.TP 0.75i
+.OP \-c num
+Print
+.I num
+copies of each page.
+By default only one copy is printed.
+.TP 0.75i
+.OP \-f name
+Print
+.I files
+using font
+.IR name ,
+which should be the name of a constant width font.
+The default font is Courier.
+.TP 0.75i
+.OP \-m num
+Magnify each page by the factor
+.IR num .
+Pages are scaled uniformly about the origin,
+which is located near the upper left corner of
+each page.
+The default magnification is 1.0.
+.TP 0.75i
+.OP \-p mode
+Print
+.I files
+in either \*(mBportrait\fP or \*(mBlandscape\fP
+.IR mode .
+Only the first character of
+.I mode
+is significant.
+The default
+.I mode
+is \*(mBportrait\fP.
+.TP 0.75i
+.OP \-s num
+Print
+.I files
+using point size
+.IR num .
+When printing in landscape mode
+.I num
+is scaled by a factor that depends on the
+imaging area of the device.
+The default size for portrait mode is 10.
+.TP 0.75i
+.OP \-x num
+Translate the origin
+.I num
+inches along the positive x axis.
+The default
+coordinate system has the origin fixed near the
+upper left corner of the page, with positive
+x to the right and positive y down the page.
+Positive
+.I num
+moves everything right.
+The default offset is 0.25 inches.
+.TP 0.75i
+.OP \-y num
+Translate the origin
+.I num
+inches along the positive y axis.
+Positive
+.I num
+moves text down the page.
+The default offset is 0.25 inches.
+.TP 0.75i
+.OP \-L file
+Use
+.I file
+as the PostScript prologue.
+.br
+The default is
+.MR \*(dQ/hardcopy.ps .
+.PP
+.B hardcopy
+generates paper output from data that a PostScript program
+normally sends back to a host computer.
+It is particularly useful for recovering data from a printer
+that does not allow access to its serial port.
+.SH EXAMPLES
+For a list of ROM based fonts type:
+.EX
+echo 'FontDirectory {pop ==} forall' | hardcopy | lp \(el
+.EE
+To recover the version number of the PostScript interpreter:
+.EX
+echo 'version ==' | hardcopy -pland | lp \(el
+.EE
+To build and print a width table for font
+.MW R
+type:
+.EX
+trofftable -TLatin1 R | hardcopy | lp \(el
+.EE
+.SH WARNINGS
+Results are unpredictable if the input
+.I files
+make changes to the graphics state.
+.SH FILES
+.MW \*(dQ/hardcopy.ps
+.SH SEE ALSO
+.BR buildtables (1),
+.BR postio (1),
+.BR trofftable (1)

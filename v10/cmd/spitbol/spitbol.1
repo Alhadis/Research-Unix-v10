@@ -1,0 +1,404 @@
+.TH SPITBOL 1
+.SH NAME
+spitbol \- SPITBOL Compiler
+.SH SYNOPSIS
+.B spitbol
+[ options ]
+.I "ifile ..."
+.SH DESCRIPTION
+.I Spitbol
+is an implementation of Macro SPITBOL, which is an upward compatible
+version of the SNOBOL4 programming language.
+(Version 3 of SNOBOL4 is the reference version for comparison.)
+Most SNOBOL4 programs
+which operate correctly using SNOBOL4 should operate correctly
+when compiled and executed using
+.I spitbol.
+.P
+All names used in a program are normally mapped to UPPER CASE during
+compilation and execution. 
+For strict compatibility with SNOBOL4, use the \-f
+option or \-CASE control statement.
+.P
+All
+.IR ifile s
+are read in order before the standard input.
+Standard output comes only from assignments to OUTPUT and from
+error messages.
+Program listings and statistics are generated
+only when requested by options.
+.P
+Compiler Options:
+.P
+.TP
+.B \-f
+don't fold lower case names to UPPER CASE
+.TP
+.B \-e
+don't send error messages to the terminal 
+.TP
+.B \-l
+generate source listing
+.TP
+.B \-c
+generate compilation statistics
+.TP
+.B \-x
+generate execution statistics
+.TP
+.B \-a
+like
+.B "\-lcx"
+.TP
+.B \-p
+long listing format; generates form feeds
+.TP
+.B \-z
+use standard listing format
+.TP
+.B \-h
+write
+.I spitbol
+header to standard output
+.TP
+.B \-n
+suppress execution (like \-NOEXEC control card)
+.TP
+.BI \-m dd
+max size (words) of created object
+[default
+.BI \-m 8192
+]
+.TP
+.BI \-s dd
+maximum size (words) of stack space
+[default
+.BI \-s 2048
+]
+.TP
+.BI \-i dd
+size (words) of increment by which dynamic area is increased
+[default
+.BI \-i 4096
+]
+.TP
+.BI \-d dd
+size (words) of maximum allocated dynamic area
+[default
+.BI \-d 256K
+]
+.TP
+.BI \-u " string"
+executing program may retrieve string with HOST(0)
+.TP
+.BI \-o " ofile"
+write listing, statistics and dump to
+.I ofile
+and OUTPUT to standard output
+.P
+Note:
+.I dd
+can be followed by a
+.B k
+to indicate units of 1024.
+.P
+.B "Input/Output"
+.P
+.IR Spitbol 's
+interface to the UNIX system handles two modes of i/o transfers:
+.P
+.RS 5
+.I "line mode"
+where records are delimited by new-line characters.
+The interface strips them on input and
+appends them on output.
+.P
+.I "raw mode"
+where a predetermined number of bytes
+are transferred.
+.P
+.RE
+The particular mode to be used is specified by the programmer
+in the INPUT or OUTPUT function call and is processed by the
+interface.
+The maximum length of an input record is set by the
+.B \-l
+or
+.B \-r
+argument.
+The size of an output record is the length of the string written,
+plus one for a new line character if in line mode.
+.P
+The form of the INPUT/OUTPUT function call is
+.P
+.RS 10
+INPUT/OUTPUT(.name,channel,file_name args)
+.RE
+.P
+.I name
+is the variable name to be input/output associated.
+.P
+.I "channel"
+is an integer or string that identifies the i/o association.
+The channel id can be used in subsequent calls to EJECT, ENDFILE,
+INPUT, OUTPUT, REWIND, and SET.
+If the
+.I channel
+is omitted or the null string, the association is deemed
+to be made to the system's standard input or output stream.
+.P
+.I "file_name args"
+specifies the source/destination of the
+input/output and any i/o processing arguments. The
+.I file_name
+can be either a path name to a file or a
+command string. Command strings are distinguished from
+file names by a leading "!". The character following the
+"!" is the delimiter used to separate the command string
+from any i/o processing arguments. The ending delimiter
+may be omitted if there are no i/o processing arguments.
+There must always be at least one space between the
+.I file_name
+and
+.I args,
+even if the
+.I file_name
+is null.
+.P
+In the following examples the string used in the INPUT/OUTPUT
+call is on the left side of the equal sign and the command
+string executed on the right side.
+.P
+"!*who" = who   "!*who* \-c" = who  "!$ls \-l$ \-c" = ls \-l
+.P
+input/output arguments:
+.TP
+.B \-a
+Append output to existing file. If file doesn't exist
+then it is created.
+If
+.B \-a
+is not specified then file
+is created.
+.TP
+.BI \-b dd
+Set internal buffer size to
+.I dd
+characters. This value
+is the byte count used on all input/output transfers
+except for the last write to an output file. [default 
+.BI \-b 1024
+]
+.TP
+.B \-c
+Like
+.BI \-r 1
+.TP
+.BI \-f dd
+Use
+.I dd
+as file desciptor for i/o.
+.I spitbol
+assumes that
+.I dd
+has been opened by the shell. File names and
+.BI \-f dd
+arguments are mutually exclusive.
+File descriptors 
+0, 1, and 2
+may
+be accessed in this manner.
+.TP
+.BI \-l dd
+Line mode: maximum input record length is
+.I dd
+characters;
+output record length is length of string
+plus one (for new line). [default
+.BI \-l 1024
+]
+.TP
+.BI \-r dd
+Raw mode: input record length is
+.I dd
+characters; output
+record length is length of string assigned to name.
+.TP
+.B \-w
+On output, each record is directly written to the
+file without any intermediate buffering.
+The interface automatically sets this option
+for terminal output.
+Any buffer length specifications are ignored.
+On input, each request results in the interface issuing
+a single
+.IR read (2)
+system call.
+The result is exactly the data returned by
+.IR read ,
+except that if
+.IR read
+returns 0, the input request fails.
+The maximum length requested can be set by the
+.B \-r
+option;
+.B \-l
+is incompatible with
+.B \-w
+on input.
+.P
+More than one type of transfer may be associated with a channel.
+This is accomplished by calling INPUT/OUTPUT after the initial
+call with the name, channel, and file arguments. The
+file name or
+.B \-f
+argument must not be specified on calls subsequent
+to the first!
+.P
+A new standard function, SET, is available and allows executing programs to
+set the file pointer for input and output files. SET used in conjunction
+with assignments to output associated variables will correctly overwrite
+parts of files.
+SET is called with three arguments as follows
+.P
+.RS 10
+SET(channel,integer,integer)
+.RE
+.P
+The arguments are the same as those to the
+.IR lseek (2)
+system call, except that
+the first argument identifies a spitbol channel instead of
+a file descriptor.
+.P
+.B "EXIT support"
+.P
+The EXIT function terminates execution with certain side effects:
+.P
+.TP 10
+EXIT(\fIcommand-string\fP)
+causes the value of
+.I command-string
+to be handed to the Shell to be executed after
+.I spitbol
+terminates.
+.TP 10
+EXIT(\fIn\fP)
+If
+.I n
+is greater than 0, a load module will be written in
+.I a.out
+before termination.
+Executing this load module will restore the state of the
+.I spitbol
+system to what it was when EXIT was called, except that
+any files other than the standard input, output, and error
+will have been closed.
+To the SNOBOL4 program, it will appear as if
+EXIT had returned a null string.
+If
+.I n
+is exactly 1,
+the generated load module will identify
+the version of
+.I spitbol
+that created it in a message when it
+begins execution.
+If
+.I n
+is greater than 1,
+it will resume quietly.
+See the reference manual for further details.
+.P
+.B "The HOST function"
+.TP
+HOST()
+returns the host string read from /usr/lib/spithost.
+.P
+.TP
+HOST(0)
+returns the string specified with the
+.B \-u
+option
+on the command line.
+If
+.B \-u
+was not specified the
+null string is returned.
+.TP
+HOST(1,"command string")
+executes the command string
+and continues.
+.TP
+HOST(2,\fIn\fP)
+returns argument number
+.I n
+from the command line.
+It fails if
+.I n
+is out of range or not an integer.
+This is useful for writing
+.I spitbol
+programs that behave like system commands.
+.TP
+HOST(3)
+returns the index of the first command line argument
+that was not examined by
+.IR spitbol .
+This allows the user program to interpret additional
+command line arguments.
+.TP
+HOST(4,"var")
+returns the value of the environment variable
+.IR var .
+If the value is too long for an internal buffer
+(presently 512 bytes) it is quietly truncated.
+.SH "MISCELLANY"
+.P
+A file is not actually opened until the first attempt
+to read or write it.
+Thus if a variable is associated to an output file,
+and no value is ever assigned to that variable, the file
+will not be created, and, if it already existed, its old
+contents will remain unchanged.
+If you want an output file to be created even though it
+might be empty, REWIND it immediately after forming the
+output association.
+.P
+Folding of names to UPPER CASE can be controlled during compilation
+by the \-CASE control statement and during execution by the &CASE keyword.
+A value of 0 prevents folding to UPPER CASE and a value of 1
+forces folding to UPPER CASE.
+.P
+Integers are represented by 32-bit quantities and thus restricted in range
+from \-2147483648 to 2147483647. 
+Real numbers are implemented in single precision.
+.P
+Setting &STLIMIT = \-1 inhibits statement limit checking and provides
+a way to execute arbitrarily many statements.
+.P
+The name TERMINAL is available with default associations for input and
+output to the terminal.
+.P
+If the first line of the first input file begins with
+.B #!
+then that line is ignored.
+This meshes well with the way that
+.IR exec (2)
+treats files beginning with
+.BR #! .
+.P
+Setting &PROFILE = 1 causes
+.I spitbol
+to accumulate profile information during program execution
+and print this information after the program terminates.
+.SH "FILES"
+/usr/lib/vaxspitv35.err  \- Error text.
+.br
+/usr/lib/spithost \- Host computer and operating system identifier.
+.SH "SEE ALSO"
+.I "Macro SPITBOL Program Reference Manual"
+by R. B. K. Dewar, A. P. McCann, R. E. Goldberg, and Steven G. Duff
+.P
+.I "The SNOBOL4 Programming Language, Second Edition"
+by R. E. Griswold, J. F. Poage and I. P. Polonsky

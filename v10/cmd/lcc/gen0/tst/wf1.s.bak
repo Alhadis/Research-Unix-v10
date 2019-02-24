@@ -1,0 +1,494 @@
+progbeg argv=../rcc 
+segment text
+export main
+function main type=int function class=auto scope=GLOBAL ncalls=3
+local word type=array 20 of char class=auto scope=LOCAL offset=0 ref=20000
+local root type=pointer to struct node class=auto scope=LOCAL offset=20 ref=12000
+maxoffset=24
+node#2 ADDRLP count=1 root
+node#3 CNSTP count=1 0
+node'1 ASGNP count=0 #2 #3 4 4
+node#5 ADDRGP count=1 next
+node#6 CNSTI count=1 0
+node'4 ASGNI count=0 #5 #6 4 4
+node#2 ADDRGP count=1 3
+node'1 JUMPV count=0 #2
+2:
+node#2 ADDRLP count=1 word
+node'1 ARGP count=0 #2 4 4
+node#4 ADDRLP count=1 root
+node'3 ARGP count=0 #4 4 4
+node#6 ADDRGP count=1 lookup
+node'5 CALLI count=1 #6
+node#8 CVUP count=2 #5
+node#10 INDIRI count=1 #8
+node#11 CNSTI count=1 1
+node#9 ADDI count=1 #10 #11
+node'7 ASGNI count=0 #8 #9 4 4
+3:
+node#2 ADDRLP count=1 word
+node'1 ARGP count=0 #2 4 4
+node#4 ADDRGP count=1 getword
+node'3 CALLI count=1 #4
+node#6 CNSTI count=1 0
+node'5 NEI count=0 #3 #6 2
+node#3 ADDRLP count=1 root
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#5 ADDRGP count=1 tprint
+node'4 CALLI count=0 #5
+node#2 CNSTI count=1 0
+node'1 RETI count=0 #2
+1:
+end main
+export err
+function err type=int function class=auto scope=GLOBAL ncalls=2
+caller's parameter s type=pointer to char class=auto scope=PARAM offset=0 ref=0
+callee's parameter s type=pointer to char class=auto scope=PARAM offset=0 ref=1000
+maxoffset=0
+node#2 ADDRGP count=1 6
+node'1 ARGP count=0 #2 4 4
+node#5 ADDRFP count=1 s
+node#4 INDIRP count=1 #5
+node'3 ARGP count=0 #4 4 4
+node#7 ADDRGP count=1 printf
+node'6 CALLI count=0 #7
+node#2 CNSTI count=1 1
+node'1 ARGI count=0 #2 4 4
+node#4 ADDRGP count=1 exit
+node'3 CALLI count=0 #4
+node'1 RETV count=0
+5:
+end err
+export getword
+function getword type=int function class=auto scope=GLOBAL ncalls=4
+caller's parameter buf type=pointer to char class=auto scope=PARAM offset=0 ref=0
+callee's parameter buf type=pointer to char class=auto scope=PARAM offset=0 ref=2000
+local c type=int class=register scope=LOCAL offset=0 ref=60000
+local s type=pointer to char class=register scope=LOCAL offset=4 ref=13000
+maxoffset=8
+8:
+9:
+node#2 ADDRGP count=1 getchar
+node'1 CALLI count=2 #2
+node#4 ADDRLP count=1 c
+node'3 ASGNI count=0 #4 #1 4 4
+node#6 CNSTI count=1 -1
+node'5 EQI count=0 #1 #6 11
+node#9 ADDRLP count=1 c
+node#8 INDIRI count=1 #9
+node'7 ARGI count=0 #8 4 4
+node#11 ADDRGP count=1 isletter
+node'10 CALLI count=1 #11
+node#13 CNSTI count=1 0
+node'12 EQI count=0 #10 #13 8
+11:
+node#2 ADDRLP count=1 s
+node#4 ADDRFP count=1 buf
+node#3 INDIRP count=1 #4
+node'1 ASGNP count=0 #2 #3 4 4
+node#2 ADDRGP count=1 15
+node'1 JUMPV count=0 #2
+12:
+node#2 ADDRLP count=2 s
+node'1 INDIRP count=2 #2
+node#5 CNSTI count=1 1
+node#4 ADDP count=1 #1 #5
+node'3 ASGNP count=0 #2 #4 4 4
+node#9 ADDRLP count=1 c
+node#8 INDIRI count=1 #9
+node#7 CVIC count=1 #8
+node'6 ASGNC count=0 #1 #7 1 1
+13:
+node#2 ADDRGP count=1 getchar
+node'1 CALLI count=1 #2
+node#4 ADDRLP count=1 c
+node'3 ASGNI count=0 #4 #1 4 4
+15:
+node#3 ADDRLP count=2 c
+node#2 INDIRI count=1 #3
+node'1 ARGI count=0 #2 4 4
+node#5 ADDRGP count=1 isletter
+node'4 CALLI count=2 #5
+node'6 ASGNI count=0 #3 #4 4 4
+node#8 CNSTI count=1 0
+node'7 NEI count=0 #4 #8 12
+node#3 ADDRLP count=1 s
+node#2 INDIRP count=1 #3
+node#4 CNSTC count=1 0
+node'1 ASGNC count=0 #2 #4 1 1
+node#4 ADDRLP count=1 s
+node#3 INDIRP count=1 #4
+node#2 CVPU count=1 #3
+node#7 ADDRFP count=1 buf
+node#6 INDIRP count=1 #7
+node#5 CVPU count=1 #6
+node'1 LEU count=0 #2 #5 16
+node#2 CNSTI count=1 1
+node'1 RETI count=0 #2
+node#2 ADDRGP count=1 7
+node'1 JUMPV count=0 #2
+16:
+node#2 CNSTI count=1 0
+node'1 RETI count=0 #2
+7:
+end getword
+export isletter
+function isletter type=int function class=auto scope=GLOBAL
+caller's parameter c type=int class=auto scope=PARAM offset=0 ref=0
+callee's parameter c type=int class=register scope=PARAM offset=0 ref=5000
+maxoffset=0
+node#2 ADDRFP count=1 c
+node#4 ADDRFP count=1 c
+node#3 INDIRI count=1 #4
+node'1 ASGNI count=0 #2 #3 4 4
+node#3 ADDRFP count=1 c
+node#2 INDIRI count=2 #3
+node#4 CNSTI count=1 65
+node'1 LTI count=0 #2 #4 19
+node#6 CNSTI count=1 90
+node'5 GTI count=0 #2 #6 19
+node#2 ADDRFP count=2 c
+node#4 INDIRI count=1 #2
+node#5 CNSTI count=1 32
+node#3 ADDI count=1 #4 #5
+node'1 ASGNI count=0 #2 #3 4 4
+19:
+node#3 ADDRFP count=1 c
+node#2 INDIRI count=2 #3
+node#4 CNSTI count=1 97
+node'1 LTI count=0 #2 #4 21
+node#6 CNSTI count=1 122
+node'5 GTI count=0 #2 #6 21
+node#3 ADDRFP count=1 c
+node#2 INDIRI count=1 #3
+node'1 RETI count=0 #2
+node#2 ADDRGP count=1 18
+node'1 JUMPV count=0 #2
+21:
+node#2 CNSTI count=1 0
+node'1 RETI count=0 #2
+18:
+end isletter
+export lookup
+function lookup type=pointer to struct node function class=auto scope=GLOBAL ncalls=8
+caller's parameter word type=pointer to char class=auto scope=PARAM offset=0 ref=0
+callee's parameter word type=pointer to char class=auto scope=PARAM offset=0 ref=2875
+caller's parameter p type=pointer to pointer to struct node class=auto scope=PARAM offset=4 ref=0
+callee's parameter p type=pointer to pointer to struct node class=register scope=PARAM offset=4 ref=3000
+local cond type=int class=auto scope=LOCAL offset=0 ref=1250
+maxoffset=4
+node#2 ADDRFP count=1 p
+node#4 ADDRFP count=1 p
+node#3 INDIRP count=1 #4
+node'1 ASGNP count=0 #2 #3 4 4
+node#5 ADDRFP count=1 p
+node#4 INDIRP count=1 #5
+node#3 INDIRP count=1 #4
+node#2 CVPU count=1 #3
+node#6 CNSTU count=1 0
+node'1 EQU count=0 #2 #6 24
+node#3 ADDRFP count=1 word
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#9 ADDRFP count=1 p
+node#8 INDIRP count=1 #9
+node#7 INDIRP count=1 #8
+node#10 CNSTI count=1 12
+node#6 ADDP count=1 #7 #10
+node#5 INDIRP count=1 #6
+node'4 ARGP count=0 #5 4 4
+node#12 ADDRGP count=1 strcmp
+node'11 CALLI count=1 #12
+node#14 ADDRLP count=1 cond
+node'13 ASGNI count=0 #14 #11 4 4
+node#3 ADDRLP count=1 cond
+node#2 INDIRI count=1 #3
+node#4 CNSTI count=1 0
+node'1 GEI count=0 #2 #4 26
+node#3 ADDRFP count=1 word
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#8 ADDRFP count=1 p
+node#7 INDIRP count=1 #8
+node#6 INDIRP count=1 #7
+node#9 CNSTI count=1 4
+node#5 ADDP count=1 #6 #9
+node'4 ARGP count=0 #5 4 4
+node#11 ADDRGP count=1 lookup
+node'10 CALLI count=1 #11
+node#14 CVUP count=1 #10
+node#13 CVPU count=1 #14
+node'12 RETI count=0 #13
+node#2 ADDRGP count=1 23
+node'1 JUMPV count=0 #2
+26:
+node#3 ADDRLP count=1 cond
+node#2 INDIRI count=1 #3
+node#4 CNSTI count=1 0
+node'1 LEI count=0 #2 #4 28
+node#3 ADDRFP count=1 word
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#8 ADDRFP count=1 p
+node#7 INDIRP count=1 #8
+node#6 INDIRP count=1 #7
+node#9 CNSTI count=1 8
+node#5 ADDP count=1 #6 #9
+node'4 ARGP count=0 #5 4 4
+node#11 ADDRGP count=1 lookup
+node'10 CALLI count=1 #11
+node#14 CVUP count=1 #10
+node#13 CVPU count=1 #14
+node'12 RETI count=0 #13
+node#2 ADDRGP count=1 23
+node'1 JUMPV count=0 #2
+28:
+node#5 ADDRFP count=1 p
+node#4 INDIRP count=1 #5
+node#3 INDIRP count=1 #4
+node#2 CVPU count=1 #3
+node'1 RETI count=0 #2
+node#2 ADDRGP count=1 23
+node'1 JUMPV count=0 #2
+24:
+node#3 ADDRGP count=1 next
+node#2 INDIRI count=1 #3
+node#4 CNSTI count=1 2000
+node'1 LTI count=0 #2 #4 30
+node#2 ADDRGP count=1 32
+node'1 ARGP count=0 #2 4 4
+node#4 ADDRGP count=1 err
+node'3 CALLI count=0 #4
+30:
+node#5 ADDRGP count=1 next
+node#4 INDIRI count=1 #5
+node#6 CNSTI count=1 4
+node#3 LSHI count=1 #4 #6
+node#7 ADDRGP count=1 words
+node#2 ADDP count=1 #3 #7
+node#8 CNSTI count=1 0
+node'1 ASGNI count=0 #2 #8 4 4
+node#5 ADDRGP count=1 next
+node#4 INDIRI count=1 #5
+node#6 CNSTI count=1 4
+node#3 LSHI count=2 #4 #6
+node#7 ADDRGP count=1 words+8 (34)
+node#2 ADDP count=1 #3 #7
+node#8 CNSTP count=2 0
+node'1 ASGNP count=0 #2 #8 4 4
+node#11 ADDRGP count=1 words+4 (33)
+node#10 ADDP count=1 #3 #11
+node'9 ASGNP count=0 #10 #8 4 4
+node#3 ADDRFP count=1 word
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#5 ADDRGP count=1 strlen
+node'4 CALLI count=1 #5
+node#8 CNSTI count=1 1
+node#7 ADDI count=1 #4 #8
+node'6 ARGI count=0 #7 4 4
+node#10 ADDRGP count=1 malloc
+node'9 CALLI count=1 #10
+node#15 ADDRGP count=1 next
+node#14 INDIRI count=1 #15
+node#16 CNSTI count=1 4
+node#13 LSHI count=1 #14 #16
+node#17 ADDRGP count=1 words+12 (35)
+node#12 ADDP count=1 #13 #17
+node#18 CVUP count=1 #9
+node'11 ASGNP count=0 #12 #18 4 4
+node#7 ADDRGP count=1 next
+node#6 INDIRI count=1 #7
+node#8 CNSTI count=1 4
+node#5 LSHI count=1 #6 #8
+node#9 ADDRGP count=1 words+12 (38)
+node#4 ADDP count=1 #5 #9
+node#3 INDIRP count=1 #4
+node#2 CVPU count=1 #3
+node#10 CNSTU count=1 0
+node'1 NEU count=0 #2 #10 36
+node#2 ADDRGP count=1 39
+node'1 ARGP count=0 #2 4 4
+node#4 ADDRGP count=1 err
+node'3 CALLI count=0 #4
+36:
+node#6 ADDRGP count=1 next
+node#5 INDIRI count=1 #6
+node#7 CNSTI count=1 4
+node#4 LSHI count=1 #5 #7
+node#8 ADDRGP count=1 words+12 (40)
+node#3 ADDP count=1 #4 #8
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#11 ADDRFP count=1 word
+node#10 INDIRP count=1 #11
+node'9 ARGP count=0 #10 4 4
+node#13 ADDRGP count=1 strcpy
+node'12 CALLI count=0 #13
+node#2 ADDRGP count=2 next
+node'1 INDIRI count=2 #2
+node#5 CNSTI count=1 1
+node#4 ADDI count=1 #1 #5
+node'3 ASGNI count=0 #2 #4 4 4
+node#8 ADDRFP count=1 p
+node#7 INDIRP count=1 #8
+node#11 CNSTI count=1 4
+node#10 LSHI count=1 #1 #11
+node#12 ADDRGP count=1 words
+node#9 ADDP count=2 #10 #12
+node'6 ASGNP count=0 #7 #9 4 4
+node#14 CVPU count=1 #9
+node'13 RETI count=0 #14
+23:
+end lookup
+export tprint
+function tprint type=int function class=auto scope=GLOBAL ncalls=3
+caller's parameter tree type=pointer to struct node class=auto scope=PARAM offset=0 ref=0
+callee's parameter tree type=pointer to struct node class=register scope=PARAM offset=0 ref=3000
+maxoffset=0
+node#2 ADDRFP count=1 tree
+node#4 ADDRFP count=1 tree
+node#3 INDIRP count=1 #4
+node'1 ASGNP count=0 #2 #3 4 4
+node#4 ADDRFP count=1 tree
+node#3 INDIRP count=1 #4
+node#2 CVPU count=1 #3
+node#5 CNSTU count=1 0
+node'1 EQU count=0 #2 #5 42
+node#5 ADDRFP count=1 tree
+node#4 INDIRP count=1 #5
+node#6 CNSTI count=1 4
+node#3 ADDP count=1 #4 #6
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#8 ADDRGP count=1 tprint
+node'7 CALLI count=0 #8
+node#2 ADDRGP count=1 44
+node'1 ARGP count=0 #2 4 4
+node#6 ADDRFP count=1 tree
+node#5 INDIRP count=2 #6
+node#4 INDIRI count=1 #5
+node'3 ARGI count=0 #4 4 4
+node#10 CNSTI count=1 12
+node#9 ADDP count=1 #5 #10
+node#8 INDIRP count=1 #9
+node'7 ARGP count=0 #8 4 4
+node#12 ADDRGP count=1 printf
+node'11 CALLI count=0 #12
+node#5 ADDRFP count=1 tree
+node#4 INDIRP count=1 #5
+node#6 CNSTI count=1 8
+node#3 ADDP count=1 #4 #6
+node#2 INDIRP count=1 #3
+node'1 ARGP count=0 #2 4 4
+node#8 ADDRGP count=1 tprint
+node'7 CALLI count=0 #8
+42:
+node'1 RETV count=0
+41:
+end tprint
+export strcmp
+function strcmp type=int function class=auto scope=GLOBAL
+caller's parameter s1 type=pointer to char class=auto scope=PARAM offset=0 ref=0
+callee's parameter s1 type=pointer to char class=register scope=PARAM offset=0 ref=22000
+caller's parameter s2 type=pointer to char class=auto scope=PARAM offset=4 ref=0
+callee's parameter s2 type=pointer to char class=register scope=PARAM offset=4 ref=21500
+maxoffset=0
+node#2 ADDRFP count=1 s1
+node#4 ADDRFP count=1 s1
+node#3 INDIRP count=1 #4
+node'1 ASGNP count=0 #2 #3 4 4
+node#2 ADDRFP count=1 s2
+node#4 ADDRFP count=1 s2
+node#3 INDIRP count=1 #4
+node'1 ASGNP count=0 #2 #3 4 4
+node#2 ADDRGP count=1 47
+node'1 JUMPV count=0 #2
+46:
+node#2 ADDRFP count=2 s1
+node'1 INDIRP count=2 #2
+node#5 CNSTI count=1 1
+node#4 ADDP count=1 #1 #5
+node'3 ASGNP count=0 #2 #4 4 4
+node#8 INDIRC count=1 #1
+node#7 CVCI count=1 #8
+node#9 CNSTI count=1 0
+node'6 NEI count=0 #7 #9 49
+node#2 CNSTI count=1 0
+node'1 RETI count=0 #2
+node#2 ADDRGP count=1 45
+node'1 JUMPV count=0 #2
+49:
+node#2 ADDRFP count=2 s2
+node#4 INDIRP count=1 #2
+node#5 CNSTI count=1 1
+node#3 ADDP count=1 #4 #5
+node'1 ASGNP count=0 #2 #3 4 4
+47:
+node#5 ADDRFP count=1 s1
+node#4 INDIRP count=1 #5
+node#3 INDIRC count=1 #4
+node#2 CVCI count=1 #3
+node#9 ADDRFP count=1 s2
+node#8 INDIRP count=1 #9
+node#7 INDIRC count=1 #8
+node#6 CVCI count=1 #7
+node'1 EQI count=0 #2 #6 46
+node#5 ADDRFP count=1 s1
+node#4 INDIRP count=1 #5
+node#3 INDIRC count=1 #4
+node#2 CVCI count=1 #3
+node#6 CNSTI count=1 0
+node'1 NEI count=0 #2 #6 51
+node#2 CNSTI count=1 -1
+node'1 RETI count=0 #2
+node#2 ADDRGP count=1 45
+node'1 JUMPV count=0 #2
+51:
+node#5 ADDRFP count=1 s2
+node#4 INDIRP count=1 #5
+node#3 INDIRC count=1 #4
+node#2 CVCI count=1 #3
+node#6 CNSTI count=1 0
+node'1 NEI count=0 #2 #6 53
+node#2 CNSTI count=1 1
+node'1 RETI count=0 #2
+node#2 ADDRGP count=1 45
+node'1 JUMPV count=0 #2
+53:
+node#6 ADDRFP count=1 s1
+node#5 INDIRP count=1 #6
+node#4 INDIRC count=1 #5
+node#3 CVCI count=1 #4
+node#10 ADDRFP count=1 s2
+node#9 INDIRP count=1 #10
+node#8 INDIRC count=1 #9
+node#7 CVCI count=1 #8
+node#2 SUBI count=1 #3 #7
+node'1 RETI count=0 #2
+45:
+end strcmp
+segment bss
+export next
+global next type=int class=auto scope=GLOBAL
+space 4
+export words
+global words type=array 2000 of struct node class=auto scope=GLOBAL
+space 32000
+import strcpy
+import strlen
+import malloc
+import getchar
+import exit
+import printf
+segment lit
+global 44 type=array 7 of char class=static scope=GLOBAL
+defstring "%d\011%s\012\000"
+global 39 type=array 20 of char class=static scope=GLOBAL
+defstring "out of word storage\000"
+global 32 type=array 20 of char class=static scope=GLOBAL
+defstring "out of node storage\000"
+global 6 type=array 6 of char class=static scope=GLOBAL
+defstring "? %s\012\000"
+progend

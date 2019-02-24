@@ -1,0 +1,165 @@
+.ds dH /usr/lib/font/postscript
+.TH DOWNLOAD 1 "DWB 3.2"
+.SH NAME
+download \- host-resident PostScript font download
+.SH SYNOPSIS
+\fBdownload\f1
+.BI "" options []
+.BI "" files []
+.SH DESCRIPTION
+.B download
+prepends host-resident fonts to
+.I files
+and writes the results on the standard output.
+If no
+.I files
+are specified, or if
+.BI \-
+is one of the input
+.IR files ,
+the standard input is read.
+.B download
+assumes the input
+.I files
+are a single PostScript job and that requested fonts
+can be included at the start of each input
+.IR file .
+The following
+.I options
+are understood:
+.TP 1.0i
+.BI \-f
+Force a complete scan of each input
+.I file.
+In the absence of an explicit comment pointing
+.I download
+to the end of the file, the default scan stops
+immediately after the PostScript header comments.
+.TP 1.0i
+.BI \-m name
+Use
+.I name
+as the font map table.
+A
+.I name
+that begins with
+.MW /
+is the full pathname of the
+map table.
+Otherwise
+.I name
+is relative to the host font directory.
+.TP 1.0i
+.BI \-p printer
+Read the printer-resident font list from file
+.br
+.MI /etc/lp/printers/ printer /residentfonts \f1.
+.br
+Fonts named in this file are printer-resident and
+will not be downloaded.
+.TP 1.0i
+.BI \-H dir
+Use
+.I dir
+as the host font directory.
+The default is
+.MR \*(dH .
+.TP 1.0i
+.BI \-T dir
+Use
+.I dir
+as the temporary file directory.
+Only used to make a copy of standard input.
+By default
+.I dir
+is set to
+.MR /tmp .
+.PP
+Requested fonts are named in a
+.MW %%DocumentFonts:
+comment in the input
+.IR files .
+Available fonts are the ones listed in the map table
+selected using the
+.BI \-m
+option.
+.PP
+The map table consists of fontname\-filename pairs.
+The fontname is the full name of the PostScript font,
+exactly as it would appear in a
+.MW %%DocumentFonts:
+comment.
+The filename is the pathname of the host resident font.
+A filename that begins with a
+.MW /
+is used as is,
+otherwise the pathname is relative to the host font
+directory.
+Comments are introduced by
+.MW %
+(as in PostScript) and
+extend to the end of the line.
+.PP
+The only candidates for downloading are fonts listed
+in the map table that point
+.B download
+to readable files.
+A font is downloaded at most once.
+Requests for unlisted fonts or inaccessible files
+are ignored.
+All requests are ignored if the map table can't be read.
+.SH EXAMPLES
+A map table used to control the downloading
+of the Bookman font family might be,
+.EX -1
+%
+% The first string is the full PostScript font name. The second string
+% is the file name - relative the host font directory unless it begins
+% with a /.
+%
+
+  Bookman-Light            KR
+  Bookman-LightItalic      KI
+  Bookman-Demi             KB
+  Bookman-DemiItalic       KX
+.EE
+Use file
+.MW myprinter
+(in the default host font directory) as the
+map table:
+.EX
+download -m myprinter \f2file
+.EE
+Set the host font directory to
+.MW /tmp/font
+and use
+.MW /tmp/font/xxx
+as the map table:
+.EX
+download -H /tmp/font -mxxx \f2file
+.EE
+.SH DIAGNOSTICS
+0 exit status is returned if
+.I files
+were successfully processed.
+.SH BUGS
+.B download
+should be part of a more general program.
+.PP
+.B download
+does not look for
+.MW %%PageFonts:
+comments
+and there is no way to force multiple downloads of
+a particular font.
+.PP
+Using full pathnames, either in map tables or for the map table
+name, is not often recommended.
+.SH SEE ALSO
+.BR dpost (1),
+.BR postdaisy (1),
+.BR postdmd (1),
+.BR postio (1),
+.BR postmd (1),
+.BR postprint (1),
+.BR posttek (1)

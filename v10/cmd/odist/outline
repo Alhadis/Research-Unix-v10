@@ -1,0 +1,90 @@
+1.  intro:
+	talk about the source code problem, cascaded redistribution solution
+	implies that distribution scheme should be simple.  (rdist is hairy
+	and so is coda, because of exotic config file syntax.)
+	survey three existing systems: coda, rdist, ship.
+		taxonomy of existing systems:
+			rdist: config file driven, server pushes
+			ship: command driven, server pushes
+			coda: config file driven, client calls
+		our system completes the square:
+			dist: command driven, client calls
+2.  can be divided into four phases:
+	build
+	package
+	transmit
+	install
+	heterogeneous networks solved by recursively applying this scheme
+	(actually 'recursively' isn't quite right: we need only one level of cascade
+	if all machines are on the same network.  multiple network types are also
+	solved by cascading, of course...)
+	notice that the 'package' and 'install' phases are coupled by a common
+	package file format, but the rest of the system is relatively decoupled.
+3.  the build phase
+	there's lots of room here for variability, and the later phases
+	in order to support cascaded redistribution, this has to be fairly standard.
+	don't really care how things get built, so long as they get built!
+	we decided to support recompilation of C programs in a minimal ANSI
+	and POSIX.1 environment (with research extensions) to start with.
+	finally, we use 'mk' to recompile, with a few standard targets.
+4.  the package phase
+	we use standard (Posix) tar files
+	finding existing Posix tar programs to be of questionable portability (GNU tar)
+	or gargantuan (Pax), we wrote a few commands for creating and manipulating
+	tar files (tarc, tarx, tarf)
+	we introduce a simple filter, "tarf", that allows us to transform path
+	names and user id's in the tar file in a uniform way.
+	all packages contain absolute path names for files to be installed;
+	non absolute path names are reserved for control files of the distribution
+	system (for example, the file 'distcmds', if present, contains commands to be
+	executed after the files are installed)
+5.  the transmission phase
+	we operate on a variety of networks on a 'client calls' basis.
+	we do only hostname authentication on the server (although this could
+	be changed), and send all queued distributions at once; the client
+	then determines which distributions it will attempt to install, which
+	it will defer, and which it will reject.  (idea: should deferred
+	distributions go to a holding area on the client rather than continuing
+	to be held on the server--we could do this with 'dist localhost' and
+	hence supersede any previous version of the deferred distribution!!!)
+	security: since installation always procedes on the basis of whatever
+	user id is calling, we can ignore the issue of client security.
+	we regard this as a substantial advantage over 'server pushes' type
+	remote distribution systems.
+	there should be a notify mechanism, but it is not yet clear how it should
+	work.  i'll figure it out before i'm done.
+	on the client, we can check the plausibility of a given distribution
+	before installing it.  we use simple heuristics to do this rather than
+	trying to do a perfect job of predicting whether a given user will be
+	able to install a given distribution successfully.  if the heuristics
+	fail, then we report installation errors.
+6.  the installation phase
+	installation proceeds in passes:
+	1.  a backup is made of all files to be clobbered by the distribution
+	2.  'remove' commands are executed.
+	3.  the distribution is installed.
+	4.  directory contents not clobbered by installing the new distribution
+	are clobbered.
+	5.  any associated cmd file is executed.
+	6.  the backup allows the distribution process to be unwound.  if there
+	are any failures.  if there are failures, report a failure transcript
+	to the server.
+7.  more detailed comparison to existing systems
+	rdist, coda -- config files, "exception" files, how do i do that stuff
+	with 'dist'
+	improvements over Koenig's 'ship'
+8.  some lessons learned:
+	if there is any one big lesson i learned (really, relearned) in developing
+	this system, it is that: there is a simpler way.
+	i started out initially to build a software distribution system;
+	i began by collecting wish lists from users.  this was obviously necessary,
+	but was also in some sense a mistake: the wish lists were a mile long!
+	had i implemented every user's wish list, the system would be a lot bigger,
+	a lot buggier, and a lot more incomprehensible.
+	now, it is possible to "build a software distribution system" in the
+	most direct brute force way, but it is much simpler to decompose the
+	problem into phases and consider them independently.
+	corollary: use existing mechanisms whenever possible.  for example,
+	(Posix) tar files for packages, existing network authentication mechanisms.
+	reinventing the wheel will only cause somebody else more grief later.
+9.  acknowledgements and bibliography

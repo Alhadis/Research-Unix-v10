@@ -1,0 +1,207 @@
+ALL command line arguments that are addresses will be !-format:
+!-format addresses: h1!h2!u
+	means route to host h1, from there to h2, and user u there.
+	a "uucp" as host means the bangs on the right will remain
+		after translation to %@-format.
+
+822-format: @h1,@h2:u%h5%h4@h3
+	means h1!h2!h3!h4!h5!u
+
+%@-format addresses: u%h3%h2@h1
+	822-format without using the source-routing list at the beginning.
+	We understand the full 822-format coming in, but send out
+		only %@-format.
+
+remote-from-line: From fpath date remote from sys
+	where fpath, date, and sys are non-whitespace.  fpath in !-format
+
+local-from-line: From fpath date
+
+Unix-mail-format: a remote-from-line followed by message
+
+822-mail-format: group of headers (format "tag: stuff", stuff can go
+	over multiple lines), including at least "From:" and "Date:",
+	then blank line, then message.  Addresses in headers are in
+	822-format.
+
+rmail [-#] [-d] to1 to2 ...
+
+	-# means just print action
+	-d means print rewrite actions
+	to1 to2 etc. are in !-format
+	stdin has Unix-mail-format
+
+	reads stdin into message structure *mp
+	parses first line as remote-from-line
+		sets mp->sender=sys!fpath (or just fpath, if "remote from ")
+			and mp->date to date
+		if fails, uses "upasname" environment var, else
+			logname of caller, else Liz.Bimmler
+	(the send program is just like rmail, but doesn't expect a first
+	 remote-from-line, so mp->sender is upasname or logname of caller)
+	gateway code changes a sender like a!b!c!d!u to c!d!u if
+		a and b are in /usr/lib/upas/equivlist or are equal
+		to the local system, and c is not.  Then, if remainder
+		(say c!d!u) is such that rewriting u gives c!d!u, then
+		mp->sender will just be u.
+	mp->replyaddr set to copy of mp->sender, unless there
+		are shell characters in it: then "postmaster"
+	bind(to1, to2, ...) follows rewrite rules (see man 8 upas and
+		man 7 mail).  \s in rules replaced by mp->sender.
+		forwarding allowed only if all machines on mp->sender
+		or all machines on dest are in /usr/lib/upas/forwardlist
+		(or if that file doesn't exist)
+	for each bound address, one of:
+		cat it to mbox, with local-from-line (fpath=mp->sender)
+	    or	pipe message (with remote-from-line, fpath=mp->sender,
+			sys=sysname_read(), changing "^From " to ">From ")
+			to a command
+	    or	complain about mail (if ontty, report error, else
+			make a message to mp->replyaddr from "postmaster"
+			with appropriate error message
+
+
+fromsmtp [-h host] [-s defaultsender] [-d] to1 to2 ...
+
+	-d means just print the command that will be piped to, and
+		the standard input that will be given to it
+	if no -h, host is NULL
+	if no -s, defaultsender is NULL
+	to1, to2, ...  in !-format (shouldn't have cur host at beginning,
+		unless have upas rewrite rules to handle that)
+	stdin in 822-mail-format
+
+	starts up
+		/bin/rmail to1 to2 ...
+	calls from822(host, pointer to rmail pipe, defaultsender) to filter the
+		stdin message into Unix-mail-format, and
+		into the rmail command
+
+from822(net, file pointer, defsender)
+	stdin in 822-mail-format or Unix-mail-format
+
+	if first line is "From x y remote from z", then
+		unixfrom=z!x, unixdate=y
+	if it is "From x y" then unixfrom=x, unixdate=y
+	reads header lines (have ':' after only non-whitespace) from stdin
+	from is first non-null in this list:
+		unixfrom, Reply-To:-header', From:-header', Sender:-header',
+		defsender, "unknown"
+		(where header' means the value of the field modified as follows:
+		 take first whitespace delimited token or the first thing
+		 enclosed in <...>, and convert it to !-format from 822-format,
+		 then prepend "net!" if net is non-NULL (i.e., if -h net was
+		 given on command line to fromsmtp)
+	date is Date:-header (with juggled field order) or unixdate
+	write remote-from-line, with fpath=from, date=date, sys=""
+	write header lines, in order they were gotten, with no change
+	copy out the rest of stdin
+
+tosmtp [-d domain] [-H helohost] [-f] [-n] [-u] [tohost from to1 to2 ...]
+
+	Pass -d, -H along along to smtp (if no -f)
+	if -f, just act as filter to stdout
+	from, to1, to2 in !-format (with current host, tohost respect.)
+	stdin in Unix-mail-format
+
+	sender=from, or if from has no ! in it, then sysname_read()!from
+	if not -f, starts up
+	    smtp [-d domain] [-H helohost] sender tohost from to1 to2 ...
+	if -u (unixformat) then copy stdin to smtp or stdout
+	else call to822(pointer to smtp pipe or stdout, sender, domain, rcvrs)
+		(where domain is NULL if no -d, and rcvrs is NULL if -n
+		 else rcvrs is "to1', to2', ... ton'" and to1' is the
+		 conversion of to1 to %@-format, etc.)
+
+to822(file pointer, sender, domain, rcvrs)
+	stdin in Unix-mail-format
+	output goes to file pointer
+
+	read first line, parse as remote-from-line (fpath, date, sys)
+	(exit if couldn't parse as such)
+	read any 822 headers
+	caddr=sender converted to %@-format, with .domain added to end
+		if domain is non-NULL and sender's last component has
+		not '.' in it
+	if there's a From:-header, let faddr be the first token or
+		thing enclosed in <...>.  If faddr ends doesn't end in
+		.domain (if domain!=NULL) and faddr isn't the same as caddr,
+		then print "From: caddr" and turn original into >From:
+	else (there's not From:-header)
+		print "From: caddr"
+	[we ignore fpath]
+	if there's no Date:-header, use date from above, juggled order
+	if there's no To:-header and rcvrs is non-NULL, use that
+	write the headers, in original order (perhaps changing From: to >From:)
+	write a newline
+	write rest of stdin
+
+smtpqer [-g] [-H  helohost] [-d domain] [-u] from tohost to...
+
+	from, to in !-format
+	stdin in Unix-mail-format
+
+	unless -g, add HOSTNAME! to from address (HOSTNAME= this host)
+	unless -u, run
+		tosmtp [-H  helohost] [-d domain] from tohost to...
+			> /usr/spool/smtpq/x.y.msg (x, y are numbers)
+		(to convert message into 822 format)
+	make a shell script called /usr/spool/smtpq/x.y.sh that:
+		runs smtp [-H helohost] [-d domain] from tohost to...
+		removes files if ok
+		runs returnsmtpmail if no such user or host
+	start runsmtpq to run all shell scripts in spool directory
+
+smtp [-H helohost] [-d domain] [-D] sender targethost to1 to2 ...
+
+	if no -H,  use sysname_read() is used for helohost
+	if no -d domain, use 0
+	-D for debugging
+	sender !-format (with cur host)
+	to1, to2, ... in !-format (with targethost)
+	stdin in any format that receiver can understand
+
+	convert sender to %@-format, adding .domain if it is non-NULL and
+		the last component has no '.'
+	convert to1, to2, ... to %@-format
+	connect to smtp port on targethost
+	sends
+		HELO helohost
+		MAIL FROM:<sender'>
+		RCPT TO:<to1'>
+		RCPT TO:<to2'>
+		...
+		DATA
+		stdin, adding \r after \n and making . transparent
+		.
+		QUIT
+
+smtpd [-d] [-H helohost] [-h thishost]
+
+	-d sets socket debugging
+	if no -H, use sysname_read()
+	if no -h, NULL
+
+	listens on smtp port for connections, forking when get one
+	expect				send
+		HELO			250 helohost
+		MAIL FROM:<sender>	250 OK
+		RCPT TO:<to1>		250 OK
+		RCPT TO:<to2>		250 OK
+		...
+		DATA			354 Start mail input; end with .	
+		message in 822-format, with hidden dots
+		.
+	message gets put into a tmp file
+	sender and to's should be in 822-format
+	then runs
+		fromsmtp [-s sender] [-h thishost] to1' to2' ... < tmp file
+	and sends either 250 OK  or  554 Transaction failed
+	where to1' to2' are gotten from to1 to2 by converting to
+		!-format, with the first machine stripped off
+		(since it should be the local machine)
+	the -s usually appears (unless there's an error parsing MAIL FROM)
+		[MISTAKE? should convert to !-format??]
+	the -h appears if it appeared in command line
+
+

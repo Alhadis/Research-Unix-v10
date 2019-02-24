@@ -1,0 +1,340 @@
+SHAPES
+#	basic shapes
+F:	'FREE';
+N:	'NAME'	:2;
+T:	'TEMP'	:1;
+A:	'AUTO'	:1;
+P:	'PARAM'	:1;
+CC:	'CC';
+R:	'REG':0;
+
+#	constants
+C:	:4;
+Cna:	NONAME :4;
+C0:	CONVAL 0 :0;
+C1:	CONVAL 1 :0;
+C2:	CONVAL 2 :0;
+C3:	CONVAL 3 :0;
+C4:	CONVAL 4 :0;
+C8:	CONVAL 8 :0;
+
+CR: C, R;
+
+#	more complicated address modes
+
+SOREG: *(R+C):1,  *R:1 , *(R-Cna) :1;
+AWD: SOREG,R,T,N,C,P,A;
+# indirect addresses
+INDIR: *N:3, *T:3, *SOREG:3, *P:3, *A:3;
+IAWD: AWD, INDIR;
+# char addresses, short addresses, long addresses, double addresses
+#	(auto decrement, auto increment, indexed, double index, and IAWD)
+CADRS: R + AWD;
+SADRS: ((R<<C1) + AWD), ('UAND'(AWD))+(R<<C1);
+LADRS: ((R<<C2) + AWD), ('UAND'(AWD))+(R<<C2);
+DADRS: ((R<<C3) + AWD), ('UAND'(AWD))+(R<<C3);
+CAWD: *(R -= C1), *(R ++ C1), *( R + AWD ), IAWD ;
+SAWD: *(R -= C2), *(R ++ C2), *((R<<C1)+AWD), *(('UAND'(AWD))+(R<<C1)), IAWD ;
+LAWD: *(R -= C4), *(R ++ C4), *((R<<C2)+AWD), *(('UAND'(AWD))+(R<<C2)), IAWD ;
+DAWD: *(R -= C8), *(R ++ C8), *((R<<C3)+AWD), *(('UAND'(AWD))+(R<<C3)), IAWD ;
+SFLD: 'FLD' IAWD;
+SCC: 'CONV' CAWD[c];
+SCUC: 'CONV' CAWD[uc];
+SCCUC: SCC, SCUC;
+SCS: 'CONV' SAWD[s];
+SCUS: 'CONV' SAWD[us];
+SCSUS: SCS, SCUS;
+SFLT: 'CONV' LAWD[f], LAWD[f];
+CDAWD: 'CONV' DAWD[d], DAWD[d];
+
+OPCODES
+# default cost - can we make costing more accurate?
+#	current method: add 1 for each opcode and 1 for each operand
+DCOST  :3;
+
+C0	{$N}	"":0;
+
+'COMOP' F,F {$N} "" ;
+'COMOP' F,R {$R $A $>} "Y" ;
+'COMOP' F,CC {$C $A} "" ;
+
+'GENLAB' F  {$N} "\\LL:\n" ;
+'GENLAB' R  {$L} "\\LL:\n" ;
+'GENLAB' CC  {$C} "\\LL:\n" ;
+
+'GENUBR' F  {$N} "ZI" ;
+'GENUBR' C  {$N} "ZI" ;
+'GENUBR' R  {$N} "ZI" ;
+'GENBR' CC  {$N} "ZI" ;
+
+'CM' F,F {$N} "";
+
+'CALL' C,F {$A $< $1} "	calls	Zc,CL\n" ;
+'CALL' R,F {$A $< $1} "	calls	Zc,(AL)\n" ;
+
+'UCALL' C {$A $1} "	calls	$0,CL\n" ;
+'UCALL' R {$A $< $1} "	calls	$0,(AL)\n" ;
+
+= LAWD[p], CADRS {$L} "	movab	ZM,AL\n" ;
+= LAWD[p], SADRS {$L} "	movaw	ZM,AL\n" ;
+= LAWD[p], LADRS {$L} "	moval	ZM,AL\n" ;
+= LAWD[p], DADRS {$L} "	movad	ZM,AL\n" ;
+
+= CAWD[cuc],  C0 {$R} "	clrb	AL\n" :2;
+= CAWD[cuc],  C0 {$L} "	clrb	AL\n" :2;
+= CAWD[cuc], CR {$L}	"RL!R	movb	AR,AL\n" ;
+= CAWD[cuc], CR {$R $C}	"	movb	AR,AL\n" ;
+= CAWD[cuc], CAWD[cuc] {$L}	"	movb	AR,AL\n" ;
+= CAWD[cuc], CAWD[cuc] {$R $C}	"	movb	AR,AL\n" ;
+
+= SAWD[sus],  C0 {$R} "	clrw	AL\n" :2;
+= SAWD[sus],  C0 {$L} "	clrw	AL\n" :2;
+= SAWD[sus], SCC {$L $C}	"	cvtbw	AR,AL\n" ;
+= SAWD[sus], SCUC {$L $C}	"	movzbw	AR,AL\n" ;
+= SAWD[sus], CR {$L}	"RL!R	movw	AR,AL\n" ;
+= SAWD[sus], CR {$R $C}	"	movw	AR,AL\n" ;
+= SAWD[sus], SAWD[sus] {$L}	"	movw	AR,AL\n" ;
+= SAWD[sus], SAWD[sus] {$R $C}	"	movw	AR,AL\n" ;
+
+= LAWD[iuip], SCC {$L $C}	"	cvtbl	AR,AL\n" ;
+= LAWD[iuip], SCUC {$L $C}	"	movzbl	AR,AL\n" ;
+= LAWD[iuip], SCS {$L $C}	"	cvtwl	AR,AL\n" ;
+= LAWD[iuip], SCUS {$L $C}	"	movzwl	AR,AL\n" ;
+= LAWD[iuip],  C0 {$R} "	clrl	AL\n" ;
+= LAWD[iuip],  C0 {$L} "	clrl	AL\n" ;
+= LAWD[iuip], CR {$L} "RL!R	movl	AR,AL\n" ;
+= LAWD[iuip], CR {$R $C} "	movl	AR,AL\n" ;
+= LAWD[iuip], LAWD[iuip] {$L} "RL!R	movl	AR,AL\n" ;
+= LAWD[iuip], LAWD[iuip] {$R $C} "	movl	AR,AL\n" ;
+
+= SFLD[], LAWD[] { $R } "	insv	AR,$HL,$SL,AL\n" :5;
+= LAWD[isc], SFLD[] {$L} "	extv	$HR,$SR,AR,AL\n" :5;
+= LAWD[uiusuc], SFLD[] {$L} "	extzv	$HR,$SR,AR,AL\n" :5;
+
+C0[iuisuspcuc] {$1} "	clrl	A1\n" :2;
+
+# why not AL ??
+CAWD[cuc] {$C} "	tstb	AR\n" :2;
+SAWD[sus] {$C} "	tstw	AR\n" :2;
+LAWD[iuip] {$C} "	tstl	AR\n" :2;
+LAWD[f] {$C}  	"	tstf	AR\n" :2;
+DAWD[d] {$C}   	"	tstd	AR\n" :2;
+CAWD[cuc] {$> $1} "RR!1	movb	AR,A1\n" :3;
+CAWD[cuc] {$> $1 $C} "	movb	AR,A1\n" :3;
+SAWD[sus] {$> $1} "RR!1	movw	AR,A1\n" :3;
+SAWD[sus] {$> $1 $C} "	movw	AR,A1\n" :3;
+LAWD[iuip] {$> $1} "RR!1	movl	AR,A1\n" :3;
+LAWD[iuip] {$> $1 $C} "	movl	AR,A1\n" :3;
+LAWD[f]  {$> $1} "	movf	AR,A1\n" :3;
+LAWD[f]  {$> $1 $C} "RR!1	movf	AR,A1\n" :3;
+DAWD[d]  {$> $P $1} "	movd	AR,A1\n" :3;
+DAWD[d]  {$> $P $1 $C} "RR!1	movd	AR,A1\n" :3;
+
+'FLD' IAWD[isc] {$< $1} "	extv	$H.,$S.,AL,A1\n" :5;
+'FLD' IAWD[uiusuc] {$< $1} "	extzv	$H.,$S.,AL,A1\n" :5;
+
+'ARG' LAWD[iuip]  {$N} "	pushl	AL\n" :2;
+'ARG' C 	 {$N} "	pushl	AL\n" :2;
+'ARG' SCS  {$N} "	cvtwl	AL,-(sp)\n" ;
+'ARG' SCC  {$N} "	cvtbl	AL,-(sp)\n" ;
+'ARG' SCUS  {$N} "	movzwl	AL,-(sp)\n" ;
+'ARG' SCUC  {$N} "	movzbl	AL,-(sp)\n" ;
+'ARG' LAWD[f] "	cvtfd	AL,-(sp)\n" ;
+'ARG' DAWD[d] "	movd	AL,-(sp)\n" ;
+
+# comparison opcodes
+#	"complex" comparisons - circumvent CONV nodes
+# these phantom conversions should be removed in optim(), where allowed
+#'CMP' SCCUC, Cuc[iui] {$C} "	cmpb	AL,AR\n" ;
+#'CMP' SCCUC, R {$C} "	cmpb	AL,AR\n" ;
+
+'CMP' CAWD[cuc], CAWD[cuc] {$C} "	cmpb	AL,AR\n" ;
+#risky--used to be Cus on rhs
+'CMP' SAWD[sus], C {$C} "	cmpw	AL,AR\n" ;
+'CMP' SAWD[sus], R {$C} "	cmpw	AL,AR\n" ;
+'CMP' SAWD[sus], SAWD[sus] {$C} "	cmpw	AL,AR\n" ;
+'CMP' SFLT, SFLT {$C} "	cmpf	AL,AR\n" ;
+
+#	"simple" comparisons - actually appear in tree
+'CMP' LAWD[iuip], LAWD[iuip] {$C} "	cmpl	AL,AR\n" ;
+'CMP' DAWD[d], DAWD[d] {$C} "	cmpd	AL,AR\n" ;
+
+# unary minus
+'UMINUS' LAWD[iuip] {$< $1} "	mnegl	AL,A1\n" ;
+'UMINUS' DAWD[d] {$P $< $1} "	mnegd	AL,A1\n" ;
+
+# compute addresses of automatics and parameters
+'UAND' A {$1} "	moval	AL,A1\n" ;
+'UAND' P {$1} "	moval	AL,A1\n" ;
+'UAND' T {$1} "	moval	AL,A1\n" ;
+
+# second operand of ++ and -- is the constant to be added or subtracted
+# could play some games here with condition codes, since I think that
+# inc doesn't change them...
+++ CAWD[c], C1 {$1} "F	cvtbl	A-L,A1\n	incb	AL\n" :2;
+++ CAWD[uc], C1 {$1} "F	movzbl	A-L,A1\n	incb	AL\n" :2;
+++ CAWD[c], C {$1} "F	cvtbl	A-L,A1\n	addb2	AR,AL\n" ;
+++ CAWD[uc], C {$1} "F	movzbl	A-L,A1\n	addb2	AR,AL\n" ;
+++ SAWD[s], C1 {$1} "F	cvtwl	A-L,A1\n	incw	AL\n" :2;
+++ SAWD[us], C1 {$1} "F	movzwl	A-L,A1\n	incw	AL\n" :2;
+++ SAWD[s], C {$1} "F	cvtwl	A-L,A1\n	addw2	AR,AL\n" ;
+++ SAWD[us], C {$1} "F	movzwl	A-L,A1\n	addw2	AR,AL\n" ;
+++ LAWD[iuip], C1 {$1} "F	movl	A-L,A1\n	incl	AL\n" ;
+++ LAWD[iuip], C {$1} "F	movl	A-L,A1\n	addl2	AR,AL\n" ;
+
+-- CAWD[c], C1 {$1} "F	cvtbl	A-L,A1\n	decb	AL\n" :2;
+-- CAWD[uc], C1 {$1} "F	movzbl	A-L,A1\n	decb	AL\n" :2;
+-- CAWD[c], C {$1} "F	cvtbl	A-L,A1\n	subb2	AR,AL\n" ;
+-- CAWD[uc], C {$1} "F	movzbl	A-L,A1\n	subb2	AR,AL\n" ;
+-- SAWD[s], C1 {$1} "F	cvtwl	A-L,A1\n	decw	AL\n" :2;
+-- SAWD[us], C1 {$1} "F	movzwl	A-L,A1\n	decw	AL\n" :2;
+-- SAWD[s], C {$1} "F	cvtwl	A-L,A1\n	subw2	AR,AL\n" ;
+-- SAWD[us], C {$1} "F	movzwl	A-L,A1\n	subw2	AR,AL\n" ;
+-- LAWD[iuip], C1 {$1} "F	movl	A-L,A1\n	decl	AL\n" :2;
+-- LAWD[iuip], C {$1} "F	movl	A-L,A1\n	subl2	AR,AL\n" ;
+
+# & SAWD[susp], C {$C} "	bit	AL,AR\n" ;
+# * R[susp], SAWD[susp] {$< $>  $2} "RL!1RL!2\tmov\tAL,A2\nRL!1\tmul\tAR,A2\nRL=1\tmul\tAR,AL\n" ;
+# % SAWD[susp], SAWD[susp] {$<  $2} "RL!2	mov\tAL,r1\nZV\tdiv\tAR,r0\n" ;
+# / SAWD[susp], SAWD[susp] {$< 2 $1} "RL!2\tmov\tAL,r1\nZV\tdiv\tAR,r0\n" ;
+
++= CAWD[cuc], C1 {$L $C} "	incb	AL\n" :2;
++= SAWD[sus], C1 {$L $C} "	incw	AL\n" :2;
++= LAWD[iuip], C1 {$L $C} "	incl	AL\n" :2;
++= LAWD[iuip], LAWD[iuip] {$L $C} "	addl2	AR,AL\n" ;
+
+-= CAWD[cuc], C1 {$L $C} "	decb	AL\n" :2;
+-= SAWD[sus], C1 {$L $C} "	decw	AL\n" :2;
+-= LAWD[iuip], C1 {$L $C} "	decl	AL\n" :2;
+-= LAWD[iuip], LAWD[iuip] {$L $C} "	subl2	AR,AL\n" ;
+
+|= LAWD[iuip], LAWD[iuip] {$L $C} "	bisl2	AR,AL\n" ;
+
+&= LAWD[iuip], Cna {$L $C} "	bicl2	Zk,AL\n" ;
+&= LAWD[iuip], LAWD[iuip] {$L 1 $C} "	mcoml	AR,A1\n	bicl2	A1,AL\n" :6;
+
+^= LAWD[iuip], LAWD[iuip] {$L $C} "	xorl2	AR,AL\n" ;
+
+# right operand must be CAWD due to VAX operand typing
+<<= LAWD[iuip], CAWD[iuip]  "	ashl	AR,A-L,AL\n" ;
+<< LAWD[iuip], CAWD[iuip] {$1 $> $<}  "	ashl	AR,AL,A1\n" ;
+
+>>= LAWD[i], LAWD[iuip]  {$L 1 $>} "	mnegl	AR,A1\n	ashl	A1,A-L,AL\n" :7;
+>> LAWD[i], LAWD[iuip]  {$1 $>} "	mnegl	AR,A1\n	ashl	A1,AL,A1\n" :7;
+# left operand must be IAWD due to VAX operand typing
+>>= IAWD[i], C  {$L} "	extv	AR,ZU,A-L,AL\n" :5;
+>> IAWD[i], C  {$1 $>} "	extv	AR,ZU,AL,A1\n" :5;
+
+>>= IAWD[uip],CAWD[iuip] {$L 1 $C}"\tsubl3\tA-R,$32,A1\n\textzv\tAR,A1,A-L,AL\n":9;
+>> IAWD[uip], CAWD[iuip] {$1 $C} "\tsubl3\tA-R,$32,A1\n\textzv\tAR,A1,AL,A1\n":9;
+>>= IAWD[uip], C  {$L} "	extzv	AR,ZU,A-L,AL\n" :5;
+>> IAWD[uip], C  {$1 $>} "	extzv	AR,ZU,AL,A1\n" :5;
+
+# convert characters to other types
+'CONV' [sus] CAWD[uc] {$< $1 $C} "	movzbw	AL,A1\n" ;
+'CONV' [iuip] CAWD[uc] {$< $1 $C} "	movzbl	AL,A1\n" ;
+'CONV' [sus] CAWD[c]  {$< $1 $C} "	cvtbw	AL,A1\n" ;
+'CONV' [iuip] CAWD[c]  {$< $1 $C} "	cvtbl	AL,A1\n" ;
+'CONV' [f] CAWD[uc]  {$< $1 $C} "\tmovzbl\tAL,A1\n\tcvtlf\tA1,A1\n" :6;
+'CONV' [d] CAWD[uc]  {$< $P $1 $C} "\tmovzbl\tAL,A1\n\tcvtld\tA1,A1\n" :6;
+'CONV' [f] CAWD[c]  {$< $1 $C}   "	cvtbf	AL,A1\n" ;
+'CONV' [d] CAWD[c]  {$< $P $1 $C}   "	cvtbd	AL,A1\n" ;
+
+# convert short to other types
+'CONV' [cuc] SAWD[sus]  {$< $1} "RL!1	movw	AL,A1\n" ;
+'CONV' [cuc] SAWD[sus]  {$< $1 $C} "	movw	AL,A1\n" ;
+'CONV' [iuip] SAWD[s]  {$< $1 $C} "	cvtwl	AL,A1\n" ;
+'CONV' [iuip] SAWD[us]  {$< $1 $C} "	movzwl	AL,A1\n" ;
+'CONV' [f] SAWD[us]  {$< $1 $C} "\tmovzwl\tAL,A1\n\tcvtlf\tA1,A1\n" :6;
+'CONV' [d] SAWD[us]  {$< $P $1 $C} "\tmovzwl\tAL,A1\n\tcvtld\tA1,A1\n" :6;
+'CONV' [f] SAWD[s]  {$< $1 $C}  "	cvtwf	AL,A1\n" ;
+'CONV' [d] SAWD[s]  {$< $P $1 $C}  "	cvtwd	AL,A1\n" ;
+
+# convert integer (long values) to other types
+'CONV' [cucsusiuip] LAWD[iuip]  {$< $1} "RL!1	movl	AL,A1\n" ;
+'CONV' [cucsusiuip] LAWD[iuip]  {$< $1 $C} "	movl	AL,A1\n" ;
+#?? need conversion for unsigned to [fd].  cvtl_ won't work correctly
+#use cvtl_ for unsigned for now
+'CONV' [f] LAWD[iuip]  {$< $1 $C} "	cvtlf	AL,A1\n" ;
+'CONV' [d] LAWD[iuip]  {$< $1 $P $C} "	cvtld	AL,A1\n" ;
+
+# convert floating to other types
+'CONV' [cuc] LAWD[f]  {$< $1 $C} "	cvtfb	AL,A1\n" ;
+'CONV' [sus] LAWD[f]  {$< $1 $C} "	cvtfw	AL,A1\n" ;
+'CONV' [iuip] LAWD[f]  {$< $1 $C} "	cvtfl	AL,A1\n" ;
+'CONV' [d] LAWD[f]  {$< $1 $P $C} "	cvtfd	AL,A1\n" ;
+
+# convert double to other types
+'CONV' [cuc] DAWD[d]  {$< $1 $C} "	cvtdb	AL,A1\n" ;
+'CONV' [sus] DAWD[d]  {$< $1 $C} "	cvtdw	AL,A1\n" ;
+'CONV' [iuip] DAWD[d]  {$< $1 $C} "	cvtdl	AL,A1\n" ;
+'CONV' [f] DAWD[d]  {$< $1 $C} "	cvtdf	AL,A1\n" ;
+
+
+# structure manipulation
+#	movc3 blows regs r0 - r5, so ask for all temps
+'STARG' AWD {$A $< $> $N} "	subl2	ZT,sp\nZS" ;
+'STASG' AWD, AWD {$A $> $L} "ZS" ;
+
+'INIT' [cuc] C  {$N} "	.byte	CL\n" ;
+'INIT' [sus] C  {$N} "	.word	CL\n" ;
+'INIT' [iuip] C  {$N} "	.long	CL\n" ;
+
+= DAWD[d], DAWD[d] {$L} "RL!R	movd	AR,AL\n" ;
+= DAWD[d], DAWD[d] {$R $C} "	movd	AR,AL\n" ;
+= LAWD[f], LAWD[f] {$R} "	movl	AR,AL\n" ;
+= LAWD[f], LAWD[f] {$C}	"	movf	AR,AL\n" ;
+= LAWD[f], CDAWD {$R $C} "	cvtdf	AR,AL\n" ;
+
+# integer opcodes
+#	how about two-address opcodes, such as
+#	+ LAWD[ip], R[ip] {$R} "	addl2	AL,AR\n" ;
+# is someone smart enough to commute this if necessary??
++ LAWD[iuip], LAWD[iuip] {$1 $< $>} "	addl3	AL,AR,A1\n" :4;
+- LAWD[iuip], LAWD[iuip] {$1 $< $>} "	subl3	AR,AL,A1\n" :4;
+* LAWD[iuip], LAWD[iuip] {$< $> $1} "	mull3	AR,AL,A1\n" :4;
+/ LAWD[ip], LAWD[ip] {$< $> $1} "	divl3	AR,AL,A1\n" :4;
+/ LAWD[iui], LAWD[iui] {$A $1 $<} "\tpushl\tAR\n\tpushl\tAL\n\tcalls\t$2,udiv\n" :11;
+~ LAWD[iuip] {$1 $< $C} "	mcoml	AL,A1\n" ;
+| LAWD[iuip], LAWD[iuip] {$1 $< $> $C} "	bisl3	AR,AL,A1\n" :4;
+& LAWD[iuip], LAWD[iuip] {$C} "	bitl	AR,AL\n" ;
+# & LAWD[iuip], Cna {$C} "	bitl	AR,AL\n" ;
+& LAWD[iuip], Cna {$1 $< $C} "	bicl3	Zk,AL,A1\n" :4;
+& LAWD[iuip], LAWD[iuip] {$1 $> $C} "\tmcoml	AR,A1\n	bicl3	A1,AL,A1\n" :7;
+% LAWD[ip], LAWD[ip] {$C $1 1} "\tdivl3\tA-R,A-L,A1\n\tmull2\tAR,A1\n\tsubl3\tA1,AL,A1\n" :11;
+% LAWD[iui], LAWD[iui] {$A $1 $< $>} "\tpushl\tAR\n\tpushl\tAL\n\tcalls\t$2,urem\n" :11;
+# following 3 address ops not included to reduce number of templates
+# = LAWD[iuip], ( LAWD[iuip] + LAWD[iuip] ) "	addl3	A(RL),A(RR),AL\n" :4;
+# = LAWD[iuip], ( LAWD[iuip] - LAWD[iuip] ) "	subl3	A(RR),A(RL),AL\n" :4;
+# = LAWD[iuip], ( LAWD[iuip] | LAWD[iuip] ) "	bicl3	A(RL),A(RR),AL\n" :4;
+
+
+# double opcodes
++ DAWD[d], DAWD[d] {$< $> $P $1 $C} "	addd3	AR,AL,A1\n" :4;
+- DAWD[d], DAWD[d] {$< $> $P $1 $C} "	subd3	AR,AL,A1\n" :4;
+* DAWD[d], DAWD[d] {$< $> $P $1 $C} "	muld3	AR,AL,A1\n" :4;
+/ DAWD[d], DAWD[d] {$< $> $P $1 $C} "	divd3	AR,AL,A1\n" :4;
+
+# double assignment opcodes
++= DAWD[d], DAWD[d] {$L $C} "	addd2	AR,AL\n" ;
+-= DAWD[d], DAWD[d] {$L $C} "	subd2	AR,AL\n" ;
+*= DAWD[d], DAWD[d] {$L $C} "	muld2	AR,AL\n" ;
+/= DAWD[d], DAWD[d] {$L $C} "	divd2	AR,AL\n" ;
+
+# float opcodes
++ LAWD[f], LAWD[f] {$< $> $1 $C} "	addf3	AR,AL,A1\n":3;
+- LAWD[f], LAWD[f] {$< $> $1 $C} "	subf3	AR,AL,A1\n":3;
+* LAWD[f], LAWD[f] {$< $> $1 $C} "	mulf3	AR,AL,A1\n":3;
+/ LAWD[f], LAWD[f] {$< $> $1 $C} "	divf3	AR,AL,A1\n":3;
+
+# float assignment opcodes
++= LAWD[f], LAWD[f] {$L $C} "	addf2	AR,AL\n";
+-= LAWD[f], LAWD[f] {$L $C} "	subf2	AR,AL\n";
+*= LAWD[f], LAWD[f] {$L $C} "	mulf2	AR,AL\n";
+/= LAWD[f], LAWD[f] {$L $C} "	divf2	AR,AL\n";
+
+# for the use of fortran only 
+
+# 'GOTO' C  {$N} "	jbr	CL\n" ;
+# 'GOTO' N[iui]  {$N} "	jmp	*UL\n" ;
+# 'GOTO' N[suscucp]  {$N} "	jmp	*AL\n" ;

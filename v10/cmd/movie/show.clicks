@@ -1,0 +1,15 @@
+awk ' # show.clicks:  make a new view counting clicks
+NR==1 && $1!="view"   { print "view", (oldview = "default.view") }
+$1 == "view"	      {	oldview = $2 }
+$1 == "click"	      { if ((cname = $2) == "") cname = "no.name"
+			print "view click.count"
+			if ((n=cnum[cname]) == 0) {
+				n = cnum[cname] = ++clicks
+				print "l" n ": text rjust 0", -n, cname ": "
+			}
+			print "v" n ": text ljust 0", -n, "\" " ++ccnt[n]
+			print "last: text ljust 0", -n, "bullet"
+			print "view " oldview
+		      }
+		      { print $0 }
+' $*

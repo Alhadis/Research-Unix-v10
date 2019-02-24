@@ -1,0 +1,6 @@
+main()
+{
+	qreset();
+	nocalibs();
+	qstatus();
+}

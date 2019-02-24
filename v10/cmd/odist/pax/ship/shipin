@@ -1,0 +1,1375 @@
+OLDEST_nmake=910111 OLDEST_pax=881111 OLDEST_shipop=910211
+:
+#
+# software shipment installation control
+#
+# @(#)shipin (ulysses!gsf) 03/31/91
+#
+# ship/shipin [options] [component ...] [name=value ...]
+#
+# options:
+#
+#	-c	don't compute closure if components specified
+#	-i	read in from spool but do not uncrate or build
+#		(files set up for shipout)
+#	-n	show actions but do not execute
+#	-r usr	usr is the shipment recipient
+#	-s dir	shipment spool hierarchy copied to dir
+#	-t	show component closure but do not build
+#	-u	uncrate shipment source but do not build
+#	-x	set -x
+#	-E	ignore previous tool build errors
+#	-F	force (re)build (not uncrating unless -u)
+#	-X tool	exclude tools from uncrating or building
+#
+# The component arguments cause shipin to build only on those components.
+# All component source will be uncrated.
+#
+# The remaining arguments are passed as arguments to the generating
+# makes or shell scripts -- handy for `name=value' overrides.
+#
+# The minimum configuration must have an $INSTALLROOT/ship subdirectory.
+# See $INSTALLROOT/ship/README for more details.
+#
+
+#
+# we don't do csh here
+#
+
+":" || exec sh $0 $argv:q || exit 1
+
+#
+# this script may be overwritten while it is being executed
+# so copy it and exec from the copy
+#
+
+case $1 in
+-x)	set -x
+	;;
+*)	case $- in
+	*x*)	set '' -x ${1+"$@"}; shift ;;
+	esac
+	;;
+esac
+case $- in
+*x*)	case $PS4 in
+	*'$LINENO'*)	;;
+	*)		PS4='+[$LINENO]+ ' ;;
+	esac
+	;;
+esac
+_command_=ship/shipin
+case $0 in
+*.save)	;;
+*)	cp $_command_ $_command_.save 2>/dev/null && exec $_command_.save ${1+"$@"} ;;
+esac
+
+#
+# the components in ORDER are built first
+# OLDEST_<cmd> is the oldest version of <cmd> that can be used
+#
+
+INSTALLROOT=`pwd`
+export INSTALLROOT
+
+ORDER="ksh nmake"
+
+USER=${USER-${LOGNAME-`echo $HOME | sed 's/.*\///'`}}
+INSTALLER=$USER
+export INSTALLER
+RECIPIENT=${RECIPIENT-$USER}
+FROMSYS=`(uname -n || hostname || cat /etc/whoami) 2>/dev/null`
+PATH=:$PATH:$INSTALLROOT/bin
+export PATH
+case $PS4 in
++\ *|+*\ )
+	;;
+*)	PS4="+ $PS4"
+	export PS4
+	;;
+esac
+
+SHIP=$INSTALLROOT/ship
+BIN=$INSTALLROOT/bin
+_bypass_=Install
+LOG=in.log
+_mail_=/bin/mail
+OWNER=owner
+PAX_INFO="!PAX!CA!"
+_read_=
+REPORT=report
+SHIPDATE=[0-9][0-9][0-9][0-9][0-9][0-9]
+SHIPMENT=*$SHIPDATE
+SHIPSLOG=$SHIP/shipslog
+TMP=tmp
+
+for f in $ORDER
+do	eval RELEASE_$f=
+	eval STATE_$f=
+done
+
+if	(unalias make) 2> /dev/null
+then	unalias cp make rm
+fi
+
+#
+# check for old exit status botch
+#
+
+_set_=
+(set -e; false || true) && _set_=e || echo "$_command_: command errors ignored because of shell botch" >&2
+_set_="set -x$_set_;"
+
+#
+# force the native preroot
+#
+
+if	/etc/preroot / /bin/cat </dev/null >/dev/null 2>&1
+then	ccs=native
+	if	test -d /$ccs
+	then	r=`ls -lid / | sed 's,/.*,,'`
+		p=`ls -lid /$ccs | sed 's,/.*,,'`
+		case $p in
+		$r)	;;
+		*)	CCS=$ccs
+			export CCS
+			exec /etc/preroot /$ccs ${SHELL-/bin/sh} $_command_ ${1+"$@"}
+			;;
+		esac
+	fi
+else	ccs=
+fi
+
+#
+# gobble the options
+#
+
+_closure_=1
+_exclude_=" bin cmd lib src shipslog "
+_force_=
+_ignore_=
+_intermediate_=
+_options_=
+_total_=
+_trace_=
+_uncrate_=
+_uuspool_=
+while	:
+do	case $# in
+	0)	break ;;
+	esac
+	case $1 in
+	-[rsX])	case $# in
+		1)	set '?'; continue ;;
+		esac
+		case $1 in
+		-r)	RECIPIENT=$2 ;;
+		-s)	_uuspool_="$_uuspool_ $2" ;;
+		-X)	_exclude_="$_exclude$2 " ;;
+		esac
+		_options_="$_options_ $1"
+		shift
+		;;
+	-c)	_closure_= ORDER= ;;
+	-i)	_intermediate_=1 ;;
+	-n)	_trace_=echo ;;
+	-t)	_total_=1 _trace_=: _components_= ;;
+	-u)	_uncrate_=1 ;;
+	-x)	set -x ;;
+	-E)	_ignore_=1 ;;
+	-F)	_force_=1 ;;
+	--)	_options_="$_options_ $1"; shift; break ;;
+	'?'|[-+]*)	echo "Usage: $_command_ [-cintuxEF] [-r recipient] [-s spool-dir] [-X tool] [tool ...] [name=value ...]" >&2; exit 2 ;;
+	*)	break ;;
+	esac
+	_options_="$_options_ $1"
+	shift
+done
+
+#
+# option controlled vars
+#
+
+export RECIPIENT
+case $_uuspool_ in
+"")	case $SHIPSPOOL in
+	"")	SHIPSPOOL="/usr/spool/uucppublic/$RECIPIENT/* /usr/spool/uucppublic/receive/$RECIPIENT/*" ;;
+	esac
+	;;
+*)	SHIPSPOOL=$_uuspool_ ;;
+esac
+export SHIPSPOOL
+
+#
+# must be in $INSTALLROOT
+#
+
+if	test ! -d ship
+then	echo "$_command_: must have \$INSTALLROOT/ship directory" >&2; exit 1
+fi
+
+#
+# recover from previous incomplete shipins
+#
+
+cd ship
+case $_trace_ in
+?*)	$_trace_ cd ship ;;
+esac
+for f in shipseal*
+do	if	test -f $f
+	then	$_trace_ rm -f $f
+	fi
+done
+for f in O?*
+do	if	test -f $f
+	then	$_trace_ mv $f `echo $f | sed 's/^O//'`
+	fi
+done
+cd $INSTALLROOT
+case $_trace_ in
+?*)	$_trace_ cd $INSTALLROOT ;;
+esac
+
+#
+# shipop provides the C language ship support
+#
+
+_shipop_=$SHIP/shipop
+test -f $_shipop_ && ($_shipop_) </dev/null >/dev/null 2>&1 && test "`sed -e '/^@(#)shipop .* [0-9][0-9]\/[0-9][0-9]\/[0-9][0-9]$/!d' -e 's/.*\(..\)\/\(..\)\/\(..\)$/\3\1\2/' < $_shipop_`" -ge "$OLDEST_shipop" 2>/dev/null || _shipop_=': WARNING : reship shipop.c'
+
+#
+# check the manifest and mail the validation seal for each shipment
+# then copy from the spool area to $SHIP
+#
+# the validation seal will eventually be a digital signature
+#
+
+_reship_=
+_verify_=
+for UUSHIP in $SHIPSPOOL
+do	if	test -d $UUSHIP
+	then	cd $UUSHIP
+		case $_trace_ in
+		?*)	$_trace_ cd $UUSHIP ;;
+		esac
+		for f in ${SHIPDATE}*.*
+		do	if	test -f $f/manifest
+			then	_manifest_=`cat $f/manifest`
+				d=
+				for i in $_manifest_
+				do	if	test ! -f $i
+					then	echo "$f: $i has not arrived yet" >&2
+						d=1
+					fi
+				done
+				case $d in
+				?*)	continue ;;
+				esac
+				if	test -f $f/id
+				then	_id_=`cat $f/id`
+					_key_=`echo "$_id_" | sed -e 's/[^ 	]*[ 	]//'`
+					_id_=`echo "$_id_" | sed -e 's/[ 	].*//'`
+					case $_trace_ in
+					"")	case $_shipop_ in
+						$SHIP/shipop)
+							;;
+						*)	if	($SHIP/shipop) </dev/null >/dev/null 2>&1
+							then	_shipop=$SHIP/shipop
+							else	for d in $SHIP $f
+								do	if	test -f $d/shipop.c
+									then	cc -o $SHIP/shipop $d/shipop.c
+										rm -f shipop.o
+										if	($SHIP/shipop) </dev/null >/dev/null 2>&1
+										then	_shipop_=$SHIP/shipop
+										else	case $_shipop_ in
+											*ERROR*)
+												;;
+											*)	_shipop_=': ERROR : shipop.c compile failed'
+												echo "$f: warning: shipop required to validate shipments" >&2
+												;;
+											esac
+											rm -f $SHIP/shipop
+										fi
+										break
+									fi
+								done
+							fi
+							;;
+						esac
+						case $_shipop_ in
+						$SHIP/shipop)	_seal_=`$_shipop_ seal $_manifest_` ;;
+						*)		_seal_=$_shipop_ ;;
+						esac
+						$_mail_ $_id_ > /dev/null 2>&1 <<!
+Subject: software shipment seal
+$_key_	$_seal_
+!
+						;;
+					esac
+				else	case $_shipop_ in
+					*WARNING*)	;;
+					*)		echo "$f: warning: shipment missing validation id" >&2 ;;
+					esac
+				fi
+				_unspool_=
+				for i in $_manifest_
+				do	case $i in
+					$f/shipin)	_reship_=1 ;;
+					$f/unspool)	_unspool_=$i ;;
+					esac
+					case $i in
+					$f/*)	b=`echo $i | sed 's/.*\///'`
+						if	test -f $SHIP/$b
+						then	$_trace_ cp $SHIP/$b $SHIP/O${b}
+							_verify_="$_verify_ $b"
+						fi
+						;;
+					esac
+				done
+				if	test "" != "$_unspool_" -a -f $_unspool_ && $_trace_ . $_unspool_
+				then	: ok
+				else	echo "$f: cannot unspool shipment" >&2; continue
+				fi
+				d=
+				for i in $_manifest_
+				do	case $i in
+					$f/*)	;;
+					*.000)	d="$d $i" ;;
+					esac
+				done
+				d=`echo "$d " | sed -e 's,//*[^/ ]* , ,g'`
+				$_trace_ rm -rf $f $d
+			fi
+		done
+		cd $INSTALLROOT
+		case $_trace_ in
+		?*)	$_trace_ cd $INSTALLROOT ;;
+		esac
+	fi
+done
+case $_trace_ in
+"")	_reship_=
+	cd $SHIP
+	for i in $_verify_
+	do	if	test "`sed -e '/^@(#).* [0-9][0-9]\/[0-9][0-9]\/[0-9][0-9]$/!d' -e 's/.*\(..\)\/\(..\)\/\(..\)$/\3\1\2/' < O$i`" -ge "`sed -e '/^@(#).* [0-9][0-9]\/[0-9][0-9]\/[0-9][0-9]$/!d' -e 's/.*\(..\)\/\(..\)\/\(..\)$/\3\1\2/' < $i`"
+		then	mv O$i $i
+		else	case $i in
+			shipin)	_reship_=1
+				;;
+			shipop.c)	
+				cc -o Oshipop shipop.c
+				rm -f shipop.o
+				if	(Oshipop) </dev/null >/dev/null 2>&1
+				then	mv Oshipop shipop
+					_shipop_=$SHIP/shipop
+				else	rm -f Oshipop
+				fi
+				;;
+			esac
+			rm -f O$i
+		fi
+	done
+	cd $INSTALLROOT
+	;;
+esac
+case $_reship_ in
+?*)	$_trace_ exec $_command_ $_options_ ${1+"$@"} ;;
+esac
+
+#
+# intermediate unpacking from spool area done
+#
+
+case $_intermediate_ in
+?*)	exit 0 ;;
+esac
+
+#
+# must have shipop by this point
+#
+
+if	test -f "$_shipop_" && ($_shipop_) </dev/null >/dev/null 2>&1
+then	:
+elif	test -f $SHIP/shipop.c && cc -o $SHIP/shipop $SHIP/shipop.c && ($SHIP/shipop) </dev/null >/dev/null 2>&1
+then	rm -f shipop.o
+	_shipop_=$SHIP/shipop
+else	echo "$_command_: must have shipop to continue [$_shipop_]" >&2
+	exit 1
+fi
+
+#
+# grab the select args
+#
+
+SELECT=" "
+while	:
+do	case $# in
+	0)	break ;;
+	esac
+	case $1 in
+	*=*)	break ;;
+	esac
+	SELECT="$SELECT$1 "
+	shift
+done
+
+#
+# handle character class botch -- it's hard to believe 9th edition
+# did this, easier to believe BSD never added it
+#
+
+cclasstype='^'
+case a in
+[${cclasstype}0]) ;;
+[!0])	cclasstype='!' ;;
+*)	cclasstype='' ;;
+esac
+
+#
+# set up and verify the default directory hierarchy
+#
+
+hierarchy="src src/cmd src/lib ship/shipslog"
+case $_uncrate_ in
+"")	hierarchy="$hierarchy bin etc fun include lib man man/man1 man/man3 man/man8" ;;
+esac
+for d in $hierarchy
+do	if	test ! -d $d
+	then	$_trace_ mkdir $d
+	fi
+done
+if	test ! -f src/Makefile
+then	case $_trace_ in
+	"")	echo ":MAKE: lib - cmd" > src/Makefile ;;
+	*)	$_trace_ echo ":MAKE: lib - cmd" "> src/Makefile" ;;
+	esac
+fi
+if	test ! -f src/lib/Makefile
+then	case $_trace_ in
+	"")	echo ":MAKE: libx - *" > src/lib/Makefile ;;
+	*)	$_trace_ echo ":MAKE: libx - *" "> src/lib/Makefile" ;;
+	esac
+fi
+if	test ! -f src/cmd/Makefile
+then	case $_trace_ in
+	"")	echo ":MAKE: probe - ccc cpp - *" > src/cmd/Makefile ;;
+	*)	$_trace_ echo ":MAKE: probe - ccc cpp - *" "> src/cmd/Makefile" ;;
+	esac
+fi
+
+#
+# ignore and silent may be used by nmake generated bootstraps
+#
+
+case $_trace_$_uncrate_ in
+"")	if	test ! -f bin/ignore
+	then	cat > bin/ignore <<'!'
+:
+"$@"
+exit 0
+!
+		chmod +x bin/ignore
+	fi
+	if	test ! -f bin/silent
+	then	cat > bin/silent <<'!'
+:
+case $1 in
++|-|"") exit 0 ;;
+esac
+"$@"
+!
+		chmod +x bin/silent
+	fi
+	;;
+esac
+trap 'exit 2' 1 2
+
+#
+# check if we can use pax -- punt to cpio
+#
+
+_path_=`echo $PATH | sed -e 's/:/ /g' -e 's,///*,/,g'`
+NEED_pax=
+CPIO=
+PAX=
+for p in $_path_
+do	for f in $p/pax $p/pax.save
+	do	if	($f -f /dev/null -z /dev/null) >/dev/null 2>&1 && test "`sed -e '/^@(#)pax .* [0-9][0-9]\/[0-9][0-9]\/[0-9][0-9]$/!d' -e 's/.*\(..\)\/\(..\)\/\(..\)$/\3\1\2/' < $f`" -ge "$OLDEST_pax" 2>/dev/null
+		then	case $f in
+			$BIN/pax)	if	test ! -f $f.save
+					then	$_trace_ cp $f $f.save
+					fi
+					;;
+			esac
+			PAX=$f
+			break 2
+		fi
+	done
+done
+case $PAX in
+"")	local=
+	for p in $_path_
+	do	if	test -f $p/cpio
+		then	case $p in
+			$BIN)	local=$p/cpio ;;
+			*)	CPIO=$p/cpio; break ;;
+			esac
+		fi
+	done
+	case $CPIO in
+	"")	case $local in
+		"")	echo $_command_: must have cpio to uncrate >&2; exit 1 ;;
+		esac
+		CPIO=$local
+		;;
+	esac
+	;;
+esac
+
+#
+# finish up initialization
+#
+
+case $_trace_ in
+?*)	$_trace_ cd $SHIP ;;
+esac
+cd $SHIP
+
+#
+# uncrate the archives into the source tree
+#
+
+COMPONENTS_SELECT=" "
+for NAME in *
+do	case $_exclude_ in
+	*" $NAME "*)	continue ;;
+	esac
+	if	test -f $NAME/items
+	then	# don't rebuild items under local control
+		echo "$_command_: warning: $NAME: delete ship/$NAME/items to build" >&2
+		continue
+	fi
+	case $cclasstype in
+	'!'|'^')
+		case $NAME in
+		*[${cclasstype}a-zA-Z_0-9]*)
+			continue ;;
+		esac
+		;;
+	'')	case "`echo $NAME | grep '[^a-zA-Z_0-9]'`" in
+		?*)	continue ;;
+		esac
+		;;
+	esac
+	if	test -d $NAME
+	then	_release_=
+		_state_=found
+		case $NAME in
+		*_*)	eval `echo $NAME | sed 's/\([^_]*\)_\(.*\)/_system_=\1 _tool_=\2/'`
+			_root_=$INSTALLROOT/$_system_
+			if	test ! -d $_root_
+			then	$_trace_ mkdir $_root_
+			fi
+			for d in $hierarchy
+			do	case $d in
+				ship/*)	;;
+				*)	if	test ! -d $_root_/$d
+					then	$_trace_ mkdir $_root_/$d
+					fi
+					;;
+				esac
+			done
+			;;
+		*)	_root_=$INSTALLROOT
+			_tool_=$NAME
+			;;
+		esac
+		case $_tool_ in
+		lib*)	_type_=lib ;;
+		*)	_type_=cmd ;;
+		esac
+		_source_=$_root_/src/$_type_/$_tool_
+		if	test ! -d $_source_
+		then	$_trace_ mkdir $_source_
+		fi
+		cd $NAME
+		base=	# newest base
+		delta=	# newest delta for newest base [not in dlist]
+		dlist=	# list of deltas for newest base [no delta]
+		need=	# pax needed to uncrate
+		new=	# delta shipments requiring new base
+		old=	# first base for new chain
+		remove=	# old shipments to be removed
+		for d in $SHIPMENT
+		do	case $d in
+			"$SHIPMENT")
+				;;
+			*)	if	test -f $d/base
+				then	remove="$remove $base $dlist $delta $need $new"
+					base=$d
+					delta=
+					need=
+					new=
+				else	case $PAX in
+					"")	need="$need $d"
+						;;
+					*)	case $base in
+						"")	dlist="$dlist $d"
+							;;
+						*)	if	test -f $d/$base
+							then	dlist="$dlist $delta"
+								delta=$d
+							elif	test "" != "$delta" -a -f $d/$delta
+							then	dlist="$dlist $base"
+								case $new in
+								"")	old=$base ;;
+								esac
+								new="$new $delta"
+								base=$delta
+								delta=$d
+							else	dlist="$dlist $d"
+							fi
+							;;
+						esac
+						;;
+					esac
+				fi
+				;;
+			*)	dlist="$dlist $d"
+				;;
+			esac
+		done
+		for i in $new
+		do	echo generate $NAME $i base from $old >&2
+			case $_trace_ in
+			"")	echo "generate $NAME $i base from $old [`date`]" >> $SHIP/$NAME/$LOG
+				if	$PAX -rw -z $old/base < $i/$old > $i/base
+				then	touch $i/GENERATED
+				else	echo "cannot generate $i base from $old" >&2
+					echo "cannot generate $i base from $old" >> $SHIP/$NAME/$LOG
+					break
+				fi
+				;;
+			*)	$_trace_ "$PAX -rw -z $SHIP/$NAME/$old/base < $SHIP/$NAME/$i/$old > $i/base"
+				$_trace_ touch $SHIP/$NAME/$i/GENERATED
+				;;
+			esac
+			old=$i
+		done
+		case $base in
+		"")	echo "$_command_: warning: $NAME: no base archive" >&2
+			cd $SHIP
+			continue
+			;;
+		esac
+		case `echo $remove $dlist` in
+		?*)	case $_trace_ in
+			"")	rm -rf $remove $dlist 2>/dev/null ;;
+			*)	$_trace_ "(cd $NAME; rm -rf" $remove $dlist")" ;;
+			esac
+			;;
+		esac
+		cd $_source_
+		case $delta in
+		"")	_release_=$base type=base ;;
+		*)	_release_=$delta type=delta ;;
+		esac
+		if	test 11 = "$_force_$_uncrate_" -o ! -f $SHIP/$NAME/$_release_/UNCRATED
+		then	echo uncrate $NAME $_release_ $type >&2
+			case $_trace_ in
+			"")	echo "uncrate $NAME $_release_ $type [`date`]" >> $SHIP/$NAME/$LOG ;;
+			esac
+			error=
+			if	test ! -f $SHIP/$NAME/$_release_/items
+			then	echo "$_command_: warning: $NAME: no items file" >&2
+			fi
+			case $type in
+			base)	if	test ! -f $SHIP/$NAME/$_release_/GENERATED
+				then	case $_trace_ in
+					"")	rm -rf * ;;
+					*)	$_trace_ "(cd $_source_; rm -rf *)" ;;
+					esac
+				fi
+				case $PAX in
+				"")	case $_trace_ in
+					"")	if	$CPIO -icdmu < $SHIP/$NAME/$_release_/base
+						then	test -f $PAX_INFO && $_shipop_ xap `$CPIO -ictmu` && rm -f $PAX_INFO
+						else	error="$CPIO $type read failed"
+						fi
+						;;
+					*)	$_trace_ "$CPIO -icdmu < $SHIP/$NAME/$_release_/base" ;;
+					esac
+					;;
+				*)	if	$_trace_ $PAX -r -f $SHIP/$NAME/$_release_/base
+					then	: ok
+					else	error="$PAX $type read failed"
+					fi
+					;;
+				esac
+				;;
+			delta)	if	$_trace_ $PAX -r -f $SHIP/$NAME/$_release_/$base -z $SHIP/$NAME/$base/base
+				then	$_trace_ touch $SHIP/$NAME/$base/UNCRATED
+				else	error="$PAX $type read failed"
+				fi
+				;;
+			esac
+			case $error in
+			"")	$_trace_ touch $SHIP/$NAME/$_release_/UNCRATED ;;
+			*)	echo "$_command_: $NAME: $_release_: uncrate error: $error" >&2
+				case $_trace_ in
+				"")	echo "uncrate $NAME $_release_ $type error: $error" >> $SHIP/$NAME/$LOG ;;
+				esac
+				_state_=error
+				;;
+			esac
+		fi
+		cd $SHIP
+		eval STATE_$NAME=$_state_
+		case $_state_ in
+		error)	;;
+		*)	eval RELEASE_$NAME=$_release_ SOURCE_$NAME=$_source_ TOOL_$NAME=$_tool_
+			COMPONENTS_SELECT="$COMPONENTS_SELECT$NAME "
+			for i in $need
+			do	NEED_pax="$NEED_pax $NAME/$i"
+			done
+			;;
+		esac
+	fi
+done
+case $COMPONENTS_SELECT in
+" ")	exit 0 ;;
+esac
+case $_uncrate_ in
+?*)	case $NEED_pax in
+	?*)	case $STATE_pax in
+		found)	;;
+		*)	echo $_command_: pax required to uncrate$NEED_pax >&2 ;;
+		esac
+		;;
+	esac
+	exit 0
+	;;
+esac
+
+#
+# determine the ordered list of components to (re)build
+#
+
+case $SELECT in
+" ")	COMPONENTS="$ORDER $COMPONENTS_SELECT" ;;
+*)	COMPONENTS=
+	for NAME in $COMPONENTS_SELECT
+	do	case $SELECT in
+		*" $NAME "*)	COMPONENTS="$COMPONENTS $NAME" ;;
+		esac
+	done
+	;;
+esac
+
+#
+# get the component closure
+#
+
+case $_closure_ in
+"")	ORDER=$COMPONENTS
+	;;
+*)	ORDER=
+	for NAME in $COMPONENTS
+	do	old=
+		new=$NAME
+		while :
+		do	case $new in
+			$old)	break ;;
+			esac
+			dup=
+			for _item_ in $new
+			do	# we assume ITEMS_* not in environment
+				eval _items_='"$'ITEMS_$_item_'"'
+				case $_items_ in
+				"")	eval _release_='$'RELEASE_$_item_
+					_items_=`cat $_item_/$_release_/items 2>/dev/null`" $_item_"
+					eval ITEMS_$_item_='"$'_items_'"'
+					;;
+				esac
+				dup="$dup $_items_"
+			done
+			old=$new
+			new=
+			for _item_ in $dup
+			do	eval SEEN_$_item_=
+			done
+			for _item_ in $dup
+			do	eval seen='$'SEEN_$_item_
+				case $seen in
+				"")	eval SEEN_$_item_=1
+					new="$new $_item_"
+					;;
+				esac
+			done
+		done
+		eval ITEMS_$NAME='"'$new'"'
+		ORDER="$ORDER $new"
+	done
+	dup=$ORDER
+	ORDER=
+	for NAME in $dup
+	do	eval SEEN_$NAME=
+	done
+	for NAME in $dup
+	do	eval seen='$'SEEN_$NAME
+		case $seen in
+		"")	eval SEEN_$NAME=1
+			ORDER="$ORDER $NAME"
+			;;
+		esac
+	done
+	;;
+esac
+_built_=
+COMPONENTS=
+for NAME in $ORDER
+do	case $_exclude_ in
+	*" $NAME "*)	continue ;;
+	esac
+	eval _release_='$'RELEASE_$NAME
+	test -f $NAME/$_release_/items || continue
+	case $_force_ in
+	"")	_built_=$NAME/$_release_/BUILT
+		eval _items_='$'ITEMS_$NAME
+		for i in $_items_
+		do	case " $COMPONENTS " in
+			*" $i "*)	_built_=; break ;;
+			esac
+			case $i in
+			$NAME)	;;
+			*)	eval _built_='"'$_built_ $i/'$'RELEASE_$i/BUILT'"' ;;
+			esac
+		done
+		case $_built_ in
+		?*)	if	$_shipop_ newer $_built_
+			then	continue
+			fi
+			;;
+		esac
+		;;
+	esac
+	$_trace_ rm -f $NAME/$_release_/BUILT
+	if	test "" != "$_force_" -o "" != "$_ignore_" -o ! -f $NAME/$_release_/ERROR
+	then	COMPONENTS="$COMPONENTS $NAME"
+		$_trace_ rm -f $NAME/$_release_/ERROR
+	elif	test ! -f $NAME/$_release_/BYPASS
+	then	echo "$_command_: $NAME/$_release_: new shipment required" >&2
+	fi
+done
+
+#
+# check if we can use nmake from the start
+#
+
+ACCEPT=nmake
+_make_=
+for p in $_path_
+do	if	test -f $p/nmake && test "`$p/nmake -n -f - 'error 0 $(MAKEVERSION:@/.*\(..\)\/\(..\)\/\(..\)$/\3\1\2/)' . 2>&1`" -ge "$OLDEST_nmake" 2>/dev/null
+	then	_make_=$p/nmake
+		STATE_nmake=installed
+		ACCEPT=
+		break
+	fi
+done
+case $_make_ in
+""|$BIN/nmake)
+	MAKEPP=$INSTALLROOT/lib/cpp
+	MAKERULES=$INSTALLROOT/lib/make/makerules
+	export MAKEPP MAKERULES
+	_make_=$BIN/nmake
+	;;
+esac
+MAKEPATH=
+VPATH=
+export MAKEPATH VPATH
+
+#
+# (re)build the components
+#
+
+cd $INSTALLROOT
+for NAME in $COMPONENTS
+do	eval _items_='$'ITEMS_$NAME
+	case $_trace_ in
+	"")	for i in $_items_
+		do	case $i in
+			$NAME)	;;
+			*)	eval r='$'RELEASE_$i
+				if	test ! -f $SHIP/$i/$r/BUILT
+				then	echo "$i needed to build $NAME" >&2
+					echo "$i needed to build $NAME" >> $SHIP/$NAME/$LOG
+					continue 2
+				fi
+				;;
+			esac
+		done
+		;;
+	esac
+	eval _release_='$'RELEASE_$NAME _source_='$'SOURCE_$NAME _tool_='$'TOOL_$NAME
+	case $_total_ in
+	?*)	_components_="$_components_ $NAME/$_release_"
+		continue
+		;;
+	esac
+	echo build $NAME $_release_ >&2
+	$_trace_ cd $_source_
+	case $_trace_ in
+	"")	start="`date`"
+		if	test -f $_bypass_
+		then	touch $SHIP/$NAME/$_release_/BYPASS
+		else	case $STATE_nmake in
+			installed|ok)
+				case $NAME in
+				nmake)	$_make_ -o "ignorelock mismatch" ${1+"$@"}
+					MAKEPP=$INSTALLROOT/lib/cpp ./nmake -o "ignorelock mismatch" -bcf Makerules.mk
+					MAKEPP=$INSTALLROOT/lib/cpp MAKERULES=./Makerules.mo ./nmake -o "ignorelock mismatch" install ${1+"$@"}
+					;;
+				*)	$_make_ -o "ignorelock mismatch" install ${1+"$@"}
+					;;
+				esac
+				error=$?
+				;;
+			*)	if	test -f Mamfile
+				then	# here it is -- make+state in v7 shell
+case $_read_ in
+"")	case `(echo ok | (read -r a; echo $a) 2>/dev/null)` in
+	ok)	_read_='read -r' ;;
+	*)	_read_=read ;;
+	esac
+	;;
+esac
+(
+_list_=
+_main_=0
+_mam_=MAM
+_targ_=install
+
+trap "rm -f $_mam_.*.tmp; exit 1" 1 2
+# some shells die with diff,next,same in vars
+: > $_mam_.diff.tmp
+exec 9> $_mam_.list.tmp
+if	test -f $_mam_.list -a -f $_mam_.time
+then	$_shipop_ state $_mam_.list < $_mam_.list | sort > $_mam_.sort.tmp
+	comm -12 $_mam_.time $_mam_.sort.tmp | sed 's/ .*//' > $_mam_.same.tmp
+	rm -f $_mam_.sort.tmp
+else	: > $_mam_.same.tmp
+fi
+
+_index_=_
+_ifs_=$IFS
+case $_read_ in
+"read") # read strips \ -- thanks a lot
+	# tmp file avoids char at a time read
+	sed 's/\\/\\\\/g' Mamfile > $_mam_.read.tmp
+	exec < $_mam_.read.tmp
+	rm -f $_mam_.read.tmp
+	;;
+*)	exec < Mamfile
+	;;
+esac
+eval `sed -e '1,/^make /d' -e '/^setv /!d' -e 's/^setv \([^ 	]*\).*/\1= /' Mamfile`
+for _data_
+do	eval `echo $_data_ | sed -e 's/\"/\\\\"/g' -e 's/=/=\\"/' -e 's/$/\\"/'`
+done
+while	IFS=' '; $_read_ _op_ _data_
+do	IFS=$_ifs_
+	case $_op_ in
+	"note")	continue
+		;;
+	"setv") set $_data_
+		eval _data_='$'$1
+		case $_data_ in
+		"")	_data_=$1
+			shift
+			eval $_data_="$*"
+			;;
+		esac
+		continue
+		;;
+	"make")	eval _name_$_index_=$_name_
+		eval _prev_$_index_=$_prev_
+		eval _cmds_$_index_='"'"$_cmds_"'"'
+		eval _attr_$_index_=$_attr_
+		eval _name_=$_data_
+		_prev_=$_index_
+		_cmds_=
+		_attr_=U
+		case $_main_ in
+		0)	case $_name_ in
+			$_targ_)_main_=1 ;;
+			*)	_attr_= ;;
+			esac
+			;;
+		1)	case $_force_ in
+			"")	grep "^$_name_\$" $_mam_.same.tmp >/dev/null && _attr_= ;;
+			esac
+			;;
+		*)	_attr_=
+			;;
+		esac
+		case $_attr_ in
+		*U*)	echo $_name_ >> $_mam_.diff.tmp ;;
+		esac
+		_index_=_$_index_
+		eval _name_$_index_=$_name_
+		eval _prev_$_index_=$_prev_
+		eval _cmds_$_index_=$_cmds_
+		eval _attr_$_index_=$_attr_
+		echo $_name_ >&9
+		continue
+		;;
+	"prev")	case $_attr_ in
+		*U*)	;;
+		*)	case $_force_ in
+			"")	if	grep "^$_data_\$" $_mam_.diff.tmp >/dev/null
+				then	_attr_=U$_attr_
+				elif	grep "^$_data_\$" $_mam_.same.tmp >/dev/null
+				then	:
+				else	_attr_=U$_attr_
+				fi
+				;;
+			*)	_attr_=U$_attr_
+				;;
+			esac
+			;;
+		esac
+		continue
+		;;
+	esac
+	case $_index_ in
+	_)	echo $_op_: missing make op >&2; continue ;;
+	esac
+	case $_op_ in
+	"attr")	case $_data_ in
+		"meta"|"suff")	_attr_=M ;;
+		esac
+		;;
+	"exec"|"....")
+		case $_cmds_ in
+		"")	_cmds_=$_data_
+			;;
+		*)	_cmds_="$_cmds_
+$_data_"
+			;;
+		esac
+		;;
+	"done")	eval _data_=$_data_
+		_prop_=
+		case $_name_ in
+		$_targ_)	_main_=2 ;;
+		esac
+		case $_data_ in
+		$_name_)case $_attr_ in
+			*M*)	;;
+			*U*)	case $_cmds_ in
+				"")	case $_attr_ in
+					*U*)	_prop_=U ;;
+					esac
+					;;
+				*)	eval "($_set_$_cmds_) </dev/null" ||
+					{
+					_code_=$?
+					case $_set_ in
+					*-*e*)	;;
+					*)	case $_cmds_ in
+						*if*then*fi*|"||")	_code_=0 ;;
+						esac
+						;;
+					esac
+					case $_code_ in
+					0)	;;
+					*)	echo "*** exit code $_code_ making $_name_" >&2
+						rm -f $_mam_.*.tmp
+						exit $_code_
+						;;
+					esac
+					}
+					_prop_=U
+					;;
+				esac
+				;;
+			esac
+			_index_=$_prev_
+			eval _name_='$'_name_$_index_
+			eval _prev_='$'_prev_$_index_
+			eval _cmds_='$'_cmds_$_index_
+			eval _attr_='$'_attr_$_index_
+			case $_attr_ in
+			*U*)	;;
+			*)	_attr_=$_prop_$_attr_ ;;
+			esac
+			;;
+		*)	echo $_data_: $_op_ $_name_ expected >&2
+			;;
+		esac
+		;;
+	esac
+done
+exec 9>&-
+mv $_mam_.list.tmp $_mam_.list
+rm -f $_mam_.*.tmp
+$_shipop_ state $_mam_.list < $_mam_.list | sort > $_mam_.time
+case $_main_ in
+2)	;;
+*)	echo "*** don't know how to make $_targ_" >&2; exit 1 ;;
+esac
+exit 0
+); error=$?
+					# ... indent
+				elif	test -f makefile
+				then	make -f makefile install ${1+"$@"}; error=$?
+				elif	test -f Makescript
+				then	./Makescript ${1+"$@"}; error=$?
+				elif	test -f $_tool_.bs
+				then	./$_tool_.bs ${1+"$@"}; error=$?
+				else	echo "$_command_: cannot build $NAME" >&2; error=1
+				fi
+				;;
+			esac
+			case $error+$NAME in
+			0+nmake) $BIN/nmake -n -f /dev/null debug </dev/null >/dev/null 2>&1 || error=1 ;;
+			esac
+			case $error in
+			0)	touch $SHIP/$NAME/$_release_/BUILT ;;
+			*)	touch $SHIP/$NAME/$_release_/ERROR ;;
+			esac
+		fi 2>&1 | tee $SHIP/$NAME/$TMP 1>&2
+		if	test -f $SHIP/$NAME/$_release_/BUILT
+		then	state=ok
+		elif	test -f $SHIP/$NAME/$_release_/BYPASS
+		then	state=bypass
+		else	state=error
+		fi
+		{
+			echo "build $NAME $_release_ $state [$start] [`date`]"
+			case $ccs in
+			?*)	echo preroot CCS = $CCS ;;
+			esac
+			# some egreps blow this
+			sed \
+			-e '/^$/d' \
+			-e '/^[ 	]/d' \
+			-e '/^+ /d' \
+			-e '/^[^ 	]*:$/d' \
+			-e '/^[a-z] - /d' \
+			-e '/^[a-zA-Z_][a-zA-Z_0-9]*$/d' \
+			-e '/^[a-zA-Z_][a-zA-Z_0-9]*=/d' \
+			-e '/[Cc]opyright/d' \
+			-e '/: warning: assignment .* == was expected/d' \
+			-e '/: warning: if .* no effect/d' \
+			-e '/: warning: Symbol .* multiply defined/d' \
+				$SHIP/$NAME/$TMP
+			rm -f $SHIP/$NAME/$TMP
+		} >> $SHIP/$NAME/$LOG 2> /dev/null
+		eval STATE_$NAME=$state
+		;;
+	*)	if	test -f $_source_/$_bypass_
+		then	$_trace_ "refer to $_source_/$_bypass_ to install $NAME"
+		else	case $STATE_nmake in
+			installed|ok)
+				case $NAME in
+				nmake)	$_trace_ $_make_ -o "ignorelock mismatch" ${1+"$@"}
+					$_trace_ ./nmake -o "ignorelock mismatch" -bcf Makerules.mk
+					$_trace_ ./nmake -o "ignorelock mismatch" install ${1+"$@"}
+					;;
+				*)	$_trace_ $_make_ -o "ignorelock mismatch" install ${1+"$@"}
+					;;
+				esac
+				;;
+			*)	if	test -f $_source_/Mamfile
+				then	$_trace_ "mamexec < Mamfile"
+				elif	test -f $_source_/Makescript
+				then	$_trace_ ./Makescript ${1+"$@"}
+				elif	test -f $_source_/$_tool_.bs
+				then	$_trace_ ./$_tool_.bs ${1+"$@"}
+				else	$_trace_ install $NAME
+				fi
+				;;
+			esac
+		fi
+		;;
+	esac
+	$_trace_ cd $INSTALLROOT
+
+	#
+	# accept stuff built before nmake to sync the state files
+	#
+
+	case $NAME in
+	$ACCEPT)
+		for NAME in $COMPONENTS
+		do	eval state='$'STATE_$NAME _source_='$'SOURCE_$NAME
+			case $state in
+			ok)	case $_trace_ in
+				"")	cd $_source_
+					{
+						$BIN/nmake -o "accept ignorelock mismatch" install
+					} 2>&1 | tee $SHIP/$NAME/$TMP 1>&2
+					{
+						echo "accept $NAME"
+						egrep -v '^([^ 	]*:$|	|\+ |[a-z] - |[a-zA-Z_][a-zA-Z_0-9]*=|$)' $SHIP/$NAME/$TMP
+						rm -f $SHIP/$NAME/$TMP
+					} 2>&1 >> $SHIP/$NAME/$LOG
+					cd $INSTALLROOT
+					;;
+				*)	$_trace_ cd $_source_
+					$_trace_ $BIN/nmake -o "accept ignorelock mismatch" install
+					$_trace_ cd $INSTALLROOT
+					;;
+				esac
+				;;
+			esac
+		done
+		case $NAME in
+		$ACCEPT)	break ;;
+		esac
+		;;
+	esac
+done
+case $_total_ in
+?*)	case $RANDOM in
+	$RANDOM)cd $SHIP
+		ls -Cd $_components_
+		;;
+	*)	PS3=''
+		eval '	select i in $_components_
+			do	:
+			done </dev/null'
+		;;
+	esac
+	exit 0
+	;;
+esac
+
+#
+# check for installation reports
+#
+
+bypass=
+owners=
+
+for NAME in $COMPONENTS
+do	eval state='$'STATE_$NAME _release_='$'RELEASE_$NAME _source_='$'SOURCE_$NAME
+	case $state in
+	bypass)	bypass="$bypass
+	$_source_/$_bypass_"
+			;;
+	esac
+	o=$SHIP/$NAME/$_release_/$OWNER
+	if	test -s $o
+	then	r=`cat $SHIP/$NAME/$_release_/$REPORT 2>/dev/null`
+		case $r in
+		*\[no\]*)	r= ;;
+		esac
+		case $r' + '$state in
+		?*' + '*|*' + 'error)
+			address=`cat $o`
+			owner=`echo $address | sed -e 's/.*\(.............\)/\1/' -e 's/^[^a-zA-Z_]/_/' -e 's/[^a-zA-Z_0-9]/_/g'`
+			eval f='$'built_$owner
+			eval built_$owner='"$'f $NAME'"'
+			report=
+			for f in $SHIP/$NAME/$LOG $r
+			do	case `ls -dt $f $SHIPSLOG/!$owner 2>/dev/null` in
+				$f*)	report="$report $f" ;;
+				esac
+			done
+			case $report in
+			?*)	eval f='$'address_$owner
+				case $f in
+				"")	owners="$owners $owner"
+					eval address_$owner=$address
+					;;
+				esac
+				eval eval report_$owner=\\\"\$report_$owner \\\[$NAME\\\] $report\\\"
+				;;
+			esac
+			;;
+		esac
+	fi
+done
+
+#
+# mail the bypass installation message
+#
+
+case $_trace_' + '$bypass in
+' + '?*) $_mail_ $INSTALLER > /dev/null 2>&1 <<!
+Subject: software shipment manual installation
+
+refer to the following for manual installation:$bypass
+!
+	;;
+esac
+
+#
+# mail the installation reports, one per owner
+#
+
+
+for owner in $owners
+do	eval address='$'address_$owner
+	case $_trace_ in
+	"")	{
+			eval report='$'report_$owner
+			echo "Subject: software shipment report"
+			echo
+			eval f='"$'built_$owner'"'
+			case $INSTALLER in
+			$RECIPIENT)	echo "by $FROMSYS!$INSTALLER on [`date`] :" $f ;;
+			*)		echo "by $FROMSYS!$INSTALLER for $RECIPIENT on [`date`] :" $f ;;
+			esac
+			id="`(uname -a) 2>/dev/null`"
+			case $id in
+			?*)	echo "system $id" ;;
+			esac
+			id=
+			for f in $report
+			do	case $f in
+				\[*\])	id="$f "; continue ;;
+				$SHIP/*)echo ----- $id`echo $f | sed 's/.*\///'` ----- ;;
+				*)	echo ----- $id$f ----- ;;
+				esac
+				cat $f
+				case $f in
+				$SHIP/*/$LOG) rm -f $f ;;
+				esac
+			done
+		} > $SHIPSLOG/!$owner
+		$_mail_ $address < $SHIPSLOG/!$owner > /dev/null 2>&1
+		case $? in
+		0)	;;
+		*)	$_mail_ $INSTALLER <<!
+Subject: please forward this to $address
+
+`cat $SHIPSLOG/!$owner`
+!
+			;;
+		esac
+		;;
+	*)	$_trace_ $_mail_ $address "< $SHIPSLOG/!$owner" ;;
+	esac
+done
+
+#
+# check if any components required pax to uncrate
+#
+
+case $NEED_pax in
+?*)	case $STATE_pax in
+	ok)	$_trace_ exec $_command_ $_options_ $SELECT ${1+"$@"} ;;
+	*)	echo $_command_: pax required to uncrate$NEED_pax >&2 ;;
+	esac
+	;;
+esac
+
+#
+# done
+#
+
+exit 0

@@ -1,0 +1,60 @@
+From cbosg!alice!mjm Sun Oct 11 19:47:11 1981
+To: cbosg!cbosgd!mark
+Subject: ex-vi
+Status: RO
+
+Mark,
+     Just made vi on the 3B from the source on Jim Farrell's tape.
+It seems to be working OK.  Almost no problems but ...
+
+(1)  In the makefile, expreserve is loaded with ex_extern.o;
+ex_extern.o is not needed and furthermore it gives a
+multiple declaration error for the global structure H.
+
+(2)  In the xstr.c you provided there are two problems for the 3B.
+I needed to change line 96 (added extern keyword) to:
+	printf("extern char\txstr[];\n");
+and line 370 (%02x --> %.2x) to:
+	fprintf(xdotcf, "0x%.2x," ,c);
+(The second one is a 3B library bug, but it will likely be around for a while.)
+
+(3)   In termlib/tc3.c I needed to add the extern keyword
+before the declaration "char *UP".  And in termlib/tputs.c,
+the #include <sgtty.h> is not needed (for anyone).
+
+(4)   Here is my bcopy.c for vi, with an asm() ifdef'd in for the 3B;
+you may or may not want to put it in the offical source.
+
+/* block copy from from to to, count bytes */
+static char *sccsid = "@(#)bcopy.c	7.1	7/8/81";
+bcopy(from, to, count)
+#ifdef vax
+	char *from, *to;
+	int count;
+{
+
+	asm("	movc3	12(ap),*4(ap),*8(ap)");
+}
+#else ifdef u3b		/* mjm */
+	register char *from, *to;
+	register int count;
+{
+	asm("	movblkb	%r6, %r8, %r7");
+}
+#else
+	register char *from, *to;
+	register int count;
+{
+	while ((count--) > 0)	/* mjm */
+		*to++ = *from++;
+}
+#endif
+
+(5)    If there is an "exchanges" file for 3.7,
+I would very much appreciate a copy of it.
+Also I'd like to know about any future bugs and/or improvements.
+
+Thanks,   Mel
+
+
+

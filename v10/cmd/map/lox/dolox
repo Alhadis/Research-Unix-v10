@@ -1,0 +1,18 @@
+rot=0
+case $2 in
+-o)	rot=$4
+	case $3 in
+	90)	:	;;
+	*)	echo cannot handle displaced pole
+	esac	;;
+"")	;;
+*)	echo if option -o is present it should be first
+esac
+lox $1 </dev/null | sed '/^85/,$d' |awk '{print $1, -$4}' >$$a
+awk '{print -$1, -$2}' $$a >$$b
+awk '{print $1, $2+179.5+'$rot'}' $$a >edge${1}a
+awk '{print $1, $2-179.5+'$rot'}' $$a >edge${1}b
+awk '{print $1, $2+179.5+'$rot'}' $$b >edge${1}c
+awk '{print $1, $2-179.5+'$rot'}' $$b >edge${1}d
+MAPPROG=./map /usr/bin/map loxodromic $*  -g -b -t edge$1* 
+

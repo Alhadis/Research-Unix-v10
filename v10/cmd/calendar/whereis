@@ -1,0 +1,34 @@
+case $1 in
+"" | [Jj]an* | [Ff]eb* | [Mm]ar* | [Aa]pr* | [Mm]ay* | [Jj]un* | [Jj]ul* | [Aa]ug* | [Ss]ep* | [Oo]ct* | [Nn]ov* | [Dd]ec*)
+	per=`getuid`
+	;;
+*)
+	per=$1
+	shift
+	;;
+esac
+
+/usr/lib/calendar1 /usr/$per/calendar |
+case $# in
+0)
+	set `date`
+	case $2 in
+	Jan*)	d=jan ;;
+	Feb*)	d=feb ;;
+	Mar*)	d=mar ;;
+	Apr*)	d=apr ;;
+	May*)	d=may ;;
+	Jun*)	d=jun ;;
+	Jul*)	d=jul ;;
+	Aug*)	d=aug ;;
+	Sep*)	d=sep ;;
+	Oct*)	d=oct ;;
+	Nov*)	d=nov ;;
+	Dec*)	d=dec ;;
+	esac
+	grep -y "$d[^ ]*\ \ *$3[^0-9]"  ;;
+
+1)	grep -y "$1[^ ]*"  ;;
+
+*)	grep -y "$1[^ ]*\ \ *$2[^0-9]"  ;;
+esac

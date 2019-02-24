@@ -1,0 +1,160 @@
+#!/bin/sh
+PATH=/v/bin:/bin:/usr/bin
+#	f77 - Unix script to compile and load fortran (C, Pascal, assembly) codes
+
+#	usage:	f77 [-O] [-o absfile] [-c] files [-l library]
+
+#		-o objfile	Override default executable name a.out.
+
+#		-c		Do not call linker, leave relocatables in *.o.
+
+#		-m		produce a load map (objfile.map).
+
+#		-S		leave assembler output on file.s
+
+#		-l library	(passed to ld).
+
+#		files		FORTRAN source files ending in .f .
+#				C source files ending in .c .
+#				Assembly language files ending in .s .
+#				efl source files ending in .e .
+
+F77=/usr/dmg/F77/libF77.a
+I77=/usr/dmg/I77/libI77.a
+s=/tmp/stderr_$$
+t=/tmp/f77_$$.o
+CC=${CC_f2c:-/v/bin/lcc}
+EFL=${EFL:-/usr/dmg/bin/Efl}
+EFLFLAGS=${EFLFLAGS:-'system=portable deltastno=10'}
+F2C=${F2C:-/usr/dmg/bin/f2c}
+F2CFLAGS=${F2CFLAGS:=-AR}
+rc=0
+trap "rm -f $s $t; exit \$rc" 0
+lib=/lib/num/lib.lo
+OUTF=a.out
+cOPT=1
+set -- `getopt cgmL:N:Oo:pQ:Sw123 "$@"`
+case $? in 0);; *) exit 1;; esac
+while
+	test X"$1" != X--
+do
+	case "$1"
+	in
+	-c)
+		cOPT=0
+		shift
+		;;
+	-g)
+		CFLAGS="$CFLAGS -g"
+		shift;;
+	-o)
+		OUTF=$2
+		shift 2
+		;;
+
+	-O)	case $2 in -1) O=-O1;; -2) O=-O2;; -3) O=-O3;; *) O=-O;; esac
+		case $O in -O);; *) shift;; esac
+		# lcc ignores -O...
+		shift
+		;;
+
+	-w)
+		F2CFLAGS="$F2CFLAGS -w"
+		shift;
+		;;
+
+	-N)	F2CFLAGS="$F2CFLAGS $1""$2"
+		shift 2
+		;;
+
+	-S)
+		CFLAGS="$CFLAGS -S"
+		cOPT=0
+		shift
+		;;
+
+	-[123])
+		echo "invalid parameter $1" 1>&2
+		shift
+		;;
+	*)
+		echo "invalid parameter $1" 1>&2
+		shift
+		;;
+	esac
+done
+shift
+while
+	test -n "$1"
+do
+	case "$1"
+	in
+	*.f)
+		b=`basename $1 .f`
+		$F2C $F2CFLAGS $1
+		case $? in 0);; *) exit;; esac
+                $CC -c $CFLAGS $b.c
+		case $? in 0);; *) exit;; esac
+		OFILES="$OFILES $b.o"
+		rm $b.c
+		case $cOPT in 1) cOPT=2;; esac
+		shift
+		;;
+	*.e)
+		b=`basename $1 .e`
+		$EFL $EFLFLAGS $1 >$b.f
+		case $? in 0);; *) exit;; esac
+		$F2C $F2CFLAGS $b.f
+		case $? in 0);; *) exit;; esac
+                $CC -c $CFLAGS $b.c
+		case $? in 0);; *) exit;; esac
+		OFILES="$OFILES $b.o"
+		rm $b.[ce]
+		case $cOPT in 1) cOPT=2;; esac
+		shift
+		;;
+	*.s)
+		echo $1: 1>&2
+		OFILE=`basename $1 .s`.o
+		${AS:-/bin/as} -o $OFILE $AFLAGS $1
+		case $? in 0);; *) exit;; esac
+		OFILES="$OFILES $OFILE"
+		case $cOPT in 1) cOPT=2;; esac
+		shift
+		;;
+	*.c)
+		echo $1: 1>&2
+		OFILE=`basename $1 .c`.o
+                $CC -c $CFLAGS $1
+		rc=$?; case $rc in 0);; *) exit;; esac
+		OFILES="$OFILES $OFILE"
+		case $cOPT in 1) cOPT=2;; esac
+		shift
+		;;
+	*.o)
+		OFILES="$OFILES $1"
+		case $cOPT in 1) cOPT=2;; esac
+		shift
+		;;
+	-l)
+		OFILES="$OFILES -l$2"
+		shift 2
+		case $cOPT in 1) cOPT=2;; esac
+		;;
+	-l*)
+		OFILES="$OFILES $1"
+		shift
+		case $cOPT in 1) cOPT=2;; esac
+		;;
+	-o)
+		OUTF=$2; shift 2;;
+	*)
+		OFILES="$OFILES $1"
+		shift
+		;;
+	esac
+done
+
+case $cOPT in 2) $CC -o $OUTF -u MAIN__ $OFILES $F77 $I77 -lm -lc;; esac
+rc=$?
+exit $rc

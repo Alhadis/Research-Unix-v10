@@ -1,0 +1,3349 @@
+# To unbundle, sh this file
+echo be.h 1>&2
+sed 's/.//' >be.h <<'//GO.SYSIN DD be.h'
+-#define BERROR		100		/* first btree value of errno */
+-#define BUTRAN		BERROR + 0	/* user caused tran abort */
+-#define BNOWRITE	BERROR + 1	/* not opened for writing */
+-#define BIOWRT		BERROR + 2	/* wrote short record */
+-#define BNOMEM		BERROR + 3	/* no mem from malloc */
+-#define BFATAL		BERROR + 4	/* last chance for user */
+-#define BTALL		BERROR + 5	/* tree becoming taller than MXHT */
+-#define BLASTE		BERROR + 6	/* one past last btree value of errno */
+-extern int	errno;
+-/*0101010011100100*/
+//GO.SYSIN DD be.h
+echo cbt.h 1>&2
+sed 's/.//' >cbt.h <<'//GO.SYSIN DD cbt.h'
+-#ifdef TEST
+-#define NDSZ	64
+-#else
+-#define NDSZ 1024	/* for berkeley systems */
+-#endif
+-#define MAXKLEN	(NDSZ/4)-8
+-#if MAXKLEN > 255
+-#undef MAXKLEN
+-#define MAXKLEN 255
+-#endif
+-#define MXHT	5
+-typedef short ndaddr;
+-/* for communication with users */
+-typedef struct {
+-	char *mdata;
+-	unsigned short mlen;
+-} mbuf;
+-typedef struct bfile {
+-	struct bfile *next;
+-	struct hdr *path[MXHT + 1];
+-	char height, advnc, rdwrt, flag[MXHT + 1];
+-	ndaddr loc[MXHT + 1];
+-	int tfd, dfd;
+-	char *fname, *altname;
+-	struct rdptr {
+-		struct dkey *rptr;	/* current dkey */
+-		short rnum;	/* its ordinal */
+-		char rpref[MAXKLEN];	/* first dcom bytes of its key */
+-	} rdptr;
+-	char fatal;			/* this bfile can't be used */
+-} bfile;
+-extern bfile *bopen();
+-extern mbuf bkey();
+-
+-#define BERROR		100		/* first btree value of errno */
+-#define BUTRAN		BERROR + 0	/* user caused tran abort */
+-#define BNOWRITE	BERROR + 1	/* not opened for writing */
+-#define BIOWRT		BERROR + 2	/* wrote short record */
+-#define BNOMEM		BERROR + 3	/* no mem from malloc */
+-#define BFATAL		BERROR + 4	/* last chance for user */
+-#define BTALL		BERROR + 5	/* tree becoming taller than MXHT */
+-#define BRDERR		BERROR + 6	/* read short record or read error */
+-#define BLASTE		BERROR + 7	/* one past last btree value of errno */
+-extern int	errno;
+-
+-/* users can ignore the rest of this stuff */
+-/* keys in nodes */
+-typedef struct dkey {
+-	unsigned char dlen;	/* total size of structure */
+-	char dcom;		/* bytes in common with preceding */
+-	char dkey[MAXKLEN];	/* rest of key */
+-} dkey;
+-#define DKEYSZ	2	/* overhead in dkey */
+-/* node header */
+-typedef struct hdr {
+-	long hstamp;	/* for owning process */
+-	short kcnt;	/* keys in node */
+-	char htype;
+-	char hlev;
+-} hdr;
+-typedef struct {
+-	short tfree;	/* free bytes in node, at end for triv checking */
+-} trailer;
+-#define nfree(p)	((trailer *)((char *)(p) + NDSZ - sizeof(trailer)))->tfree
+-#define SHARED	1
+-#define INDEX	2
+-#define READONLY	4
+-#define bf_type(b, t)	((b)->path[0]->htype & (t))
+-#define treeonly(b)	bf_type(b, INDEX)
+-#define shared(b)	bf_type(b, SHARED)
+-#define readonly(b)	bf_type(b, READONLY)
+-/* disk addresses */
+-typedef struct {
+-	long lloc;
+-	unsigned short llen;
+-} lfaddr;
+-#define ndadr(b, j)	((ndaddr *)((char *)(b) + NDSZ - sizeof(trailer)) - (j) - 1)
+-#define lfadr(b, j)	((lfaddr *)((char *)(b) + NDSZ - sizeof(trailer)) - (j) - 1)
+-#define mustwrite(bf, n)	bf->flag[n]	/* for getincore */
+-/* node format:
+- *	hdr, dkey, dkey, dkey, ..., space, adr, adrn, ..., adr0, trailer
+- */
+-extern int	bdump;	/* dump on first fatal error */
+-extern long	tranid;	/* unique transaction id */
+-#ifndef EOF
+-#ifndef NULL
+-#define NULL	0
+-#endif
+-#define EOF	-1
+-#endif
+-#define NOTFOUND	0
+-#define FOUND		1
+-
+-#define alloc(x)	(x *)malloc(sizeof(x))
+-#define stamped(b)	b->hstamp == tranid
+-/*1000001111101111*/
+//GO.SYSIN DD cbt.h
+echo pr.h 1>&2
+sed 's/.//' >pr.h <<'//GO.SYSIN DD pr.h'
+-typedef struct {
+-	short		match;	/* FOUND, NOTFOUND, or EOF */
+-	unsigned char	ncom,	/* len of prefix in common with d */
+-			ocom;	/* len for predecessor of d */
+-	dkey *d;		/* first key >= requested */
+-				/* or, if match==EOF, last in node */
+-} private;
+-/*0111110111010100*/
+//GO.SYSIN DD pr.h
+echo bdelete.c 1>&2
+sed 's/.//' >bdelete.c <<'//GO.SYSIN DD bdelete.c'
+-#include "cbt.h"
+-#include "pr.h"
+-
+-extern bfile *curbf;
+-bdelete(bf, key) bfile *bf; mbuf key;
+-{	dkey *dold, *dnew;
+-	hdr *b;
+-	int svlen, dellen;
+-	char *ffree;
+-
+-	if(bf == NULL)
+-		return(EOF);
+-	if(notran(bf))
+-		return(EOF);
+-	if(!bf->rdwrt) {
+-		errno = BNOWRITE;
+-		return(EOF);
+-	}
+-	if(bseek(bf, key) != FOUND)
+-		return(NOTFOUND);
+-	b = bf->path[0];
+-	dold = bf->rdptr.rptr;
+-	if(bf->rdptr.rnum + 1 >= b->kcnt) {
+-		nfree(b) += dold->dlen + (treeonly(bf)? 0: sizeof(lfaddr));
+-		--b->kcnt;
+-		mustwrite(bf, 0) = 1;
+-		if(b->hlev == 0 && b->kcnt <= 0 || b->hlev > 0 && b->kcnt < 0) {
+-			mustwrite(bf, 0) = 0;
+-			ndelete(1, key);
+-		}
+-		if(b->kcnt < 0)
+-			b->kcnt = 0;
+-		(void) bseek(bf, key);
+-		return(FOUND);
+-	}
+-
+-	if(treeonly(bf))
+-		ffree = (char *)&nfree(b) - nfree(b);
+-	else
+-		ffree = (char *)lfadr(b, b->kcnt - 1) - nfree(b);
+-	svlen = dold->dlen;
+-	dnew = (dkey *)((char *)dold + dold->dlen);
+-	if(dnew->dcom <= dold->dcom) {
+-		mvgbt((char *)dold, (char *)dnew, ffree - (char *)dnew);
+-		if(!treeonly(bf))
+-			rmlfadr(b, bf->rdptr.rnum);
+-		b->kcnt--;
+-		mustwrite(bf, 0) = 1;
+-		nfree(b) += svlen + (treeonly(bf)? 0: sizeof(lfaddr));
+-		(void) bseek(bf, key);
+-		return(FOUND);
+-	}
+-	dellen = dnew->dcom - dold->dcom;
+-	/* writing over dold */
+-	dold->dlen = dnew->dlen + dellen;
+-	mvgbt(dold->dkey + dellen, dnew->dkey, ffree - dnew->dkey);
+-	if(!treeonly(bf))
+-		rmlfadr(b, bf->rdptr.rnum);
+-	b->kcnt--;
+-	mustwrite(bf, 0) = 1;
+-	nfree(b) += svlen - dellen + (treeonly(bf)? 0: sizeof(lfaddr));
+-	(void) bseek(bf, key);
+-	return(FOUND);
+-}
+-rmlfadr(b, n) hdr *b; unsigned int n;
+-{
+-	mvgbt((char *)lfadr(b, b->kcnt - 2), (char *)lfadr(b, b->kcnt - 1),
+-		(int)sizeof(lfaddr) * (b->kcnt - 1 - n));
+-}
+-rmndadr(b, n) hdr *b; unsigned short n;
+-{
+-	mvgbt((char *)ndadr(b, b->kcnt - 1), (char *)ndadr(b, b->kcnt),
+-		(int)sizeof(ndaddr) * (b->kcnt - n));
+-}
+-ndelete(lev, key) mbuf key;
+-{	hdr *b;
+-	int svlen, dellen;
+-	unsigned short n;
+-	private x;
+-	char *ffree;
+-	dkey *dold, *dnew;
+-	if(lev > curbf->height) {
+-		b = curbf->path[curbf->height];
+-		b->hlev = 0;
+-		curbf->height = 0;
+-		mustwrite(curbf, 0) = 1;
+-		curbf->loc[0] = 0;
+-		nfree(b) = NDSZ - sizeof(hdr) - sizeof(trailer);
+-		b->kcnt = 0;
+-		mvgbt((char *)curbf->path[0], (char *)b, NDSZ);
+-		return;
+-	}
+-	b = curbf->path[lev];
+-	n = xscan(b, key, &x);
+-	if(x.match == EOF) {
+-		if(b->kcnt <= 0) {
+-			mustwrite(curbf, lev) = 0;
+-			ndelete(lev+1, key);
+-			return;
+-		}
+-		b->kcnt--;
+-		nfree(b) += sizeof(ndaddr) + x.d->dlen;
+-		mustwrite(curbf, lev) = 1;
+-		return;
+-	}
+-	dold = x.d;
+-	dnew = (dkey *)((char *)dold + dold->dlen);
+-	ffree = (char *)ndadr(b, b->kcnt) - nfree(b);
+-	svlen = dold->dlen;
+-	if(n + 1 >= b->kcnt || dnew->dcom <= dold->dcom) {
+-		mvgbt((char *)dold, (char *)dnew, ffree - (char *)dnew);
+-		rmndadr(b, n);
+-		b->kcnt--;
+-		mustwrite(curbf, lev) = 1;
+-		nfree(b) += sizeof(ndaddr) + svlen;
+-		return;
+-	}
+-	dellen = dnew->dcom - dold->dcom;
+-	/* writing over dold */
+-	dold->dlen = dnew->dlen + dellen;
+-	mvgbt(dold->dkey + dellen, dnew->dkey, ffree - dnew->dkey);
+-	rmndadr(b, n);
+-	b->kcnt--;
+-	mustwrite(curbf, lev) = 1;
+-	nfree(b) += sizeof(ndaddr) + svlen - dellen;
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:bdelete.c\n"};
+-/*1101110100011001*/
+//GO.SYSIN DD bdelete.c
+echo bt.c 1>&2
+sed 's/.//' >bt.c <<'//GO.SYSIN DD bt.c'
+-#include "cbt.h"
+-#include "pr.h"
+-
+-bfile		*curbf;
+-extern bfile	*newtran();
+-extern char	*malloc(), *strcpy();
+-extern long	lseek();
+-
+-bfile *bopen(s, typ) char *s;	/* typ is 0 or 2 */
+-{	bfile *p;
+-	int n, i;
+-
+-	p = alloc(bfile);
+-	if(p == NULL)
+-		goto nomem;
+-	n = strlen(s);
+-	p->fname = malloc((unsigned)n + 3);
+-	if(p->fname == NULL)
+-		goto nomem;
+-	(void) strcpy(p->fname, s);
+-	strcpy(p->fname + n, ".T");
+-	if((p->tfd = open(p->fname, typ)) == -1) {
+-		free(p->fname);
+-		free((char *)p);
+-		return(NULL);
+-	}
+-	p->rdwrt = typ;
+-	p->fatal = p->advnc = 0;
+-	p->altname = NULL;
+-	for(i = 0; i <= MXHT; i++) {
+-		p->path[i] = NULL;
+-		p->flag[i] = 0;
+-		p->loc[i] = 0;
+-	}
+-	p->path[0] = (hdr *)malloc(NDSZ);
+-	if(p->path[0] == NULL)
+-		goto nomem;
+-	curbf = p;
+-	if(ndrd(0, 0) == EOF)
+-		return(NULL);
+-	strcpy(p->fname + n, ".F");
+-	if(!treeonly(p) && (p->dfd = open(p->fname, typ)) == -1) {
+-		(void) close(p->tfd);
+-		free(p->fname);
+-		free(p->path[0]);
+-		free((char *)p);
+-		return(NULL);
+-	}
+-	else if(treeonly(p))
+-		p->dfd = -1;
+-	p->fname[n] = 0;
+-	if(shared(p))
+-		return(newtran(p));
+-	else if(tranid == 0)
+-		tranid = getlpid();
+-	p->height = p->path[0]->hlev;
+-	for(n = 1; n <= p->height; n++)
+-		if((p->path[n] = (hdr *)malloc(NDSZ)) == NULL)
+-			goto nomem;
+-	if(p->height > 0)
+-		mvgbt((char *)p->path[p->height], (char *)p->path[0], NDSZ);
+-	(void) bfirst(p);
+-	return(p);
+-nomem:
+-	errno = BNOMEM;
+-	return(NULL);
+-}
+-
+-bseek(bf, key) bfile *bf; mbuf key;
+-{	private m;
+-	int i;
+-	if(bf == NULL)
+-		return(EOF);
+-	if(notran(bf))
+-		return(EOF);
+-	if(!readonly(bf))
+-		for(i = 0; i < bf->height; i++)
+-			if(mustwrite(bf, i))
+-				if(fixpath(bf) == EOF)
+-					return(EOF);
+-	bf->rdptr.rnum = desce(bf, key, &m);
+-	if(bf->rdptr.rnum == EOF)
+-		return(EOF);
+-	bf->advnc = 0;
+-	bf->rdptr.rptr = m.d;
+-	if(m.match == EOF) {
+-		if(advance() == EOF)
+-			return(EOF);
+-		if(bf->rdptr.rptr != NULL)
+-			m.match = NOTFOUND;
+-	}
+-	if(m.match != EOF)
+-		mvgbt(bf->rdptr.rpref, key.mdata, bf->rdptr.rptr->dcom);
+-		/* maybe use rptr instead of m.d */
+-	return(m.match);
+-}
+-
+-bfirst(bf) bfile *bf;
+-{	mbuf key;
+-	key.mlen = 0;
+-	return(bseek(bf, key));
+-}
+-
+-bclose(bf) bfile *bf;
+-{	int i;
+-	if(bf == NULL)
+-		return;
+-	if(shared(bf)) {
+-		if(intran())
+-			trabort();
+-		rmtran(bf);
+-	}
+-	else
+-		bflush(bf);
+-	free(bf->fname);
+-	for(i = 0; i <= MXHT; i++)
+-		if(bf->path[i] != NULL)
+-			free((char *)bf->path[i]);
+-	if(bf->tfd != -1)
+-		(void) close(bf->tfd);
+-	if(bf->dfd != -1)
+-		(void) close(bf->dfd);
+-	free((char *)bf);
+-}
+-
+-bflush(bf) bfile *bf;
+-{	int i;
+-	if(bf == NULL)
+-		return(0);
+-	if(!bf->rdwrt) {
+-		errno = BNOWRITE;
+-		return(EOF);
+-	}
+-	curbf = bf;
+-	if(shared(bf))
+-		if(intran()) {
+-			trabort();
+-			return(EOF);
+-		}
+-		else return(0);
+-	for(i = 0; i <= bf->height; i++) {
+-		if(!mustwrite(bf, i))
+-			continue;
+-		if(readonly(bf) || i == bf->height)
+-			if(ndwrt(bf->path[i], bf->loc[i]) == EOF)
+-				return(EOF);
+-		else
+-			if(fixpath(bf) == EOF)
+-				return(EOF);
+-		bf->flag[i] = 0;
+-	}
+-	return(0);
+-}
+-
+-breclen(bf) bfile *bf;
+-{
+-	if(bf == NULL)
+-		return(EOF);
+-	if(notran(bf))
+-		return(EOF);
+-	if(bf->advnc)
+-		if(advance() == EOF)
+-			return(EOF);
+-	if(bf->rdptr.rnum >= bf->path[0]->kcnt)
+-		return(EOF);
+-	if(treeonly(bf))
+-		return(0);
+-	return(lfadr(bf->path[0], bf->rdptr.rnum)->llen);
+-}
+-
+-mbuf bkey(bf) bfile *bf;
+-{	mbuf x;
+-	dkey *d;
+-	if(bf == NULL)
+-		goto eof;
+-	if(notran(bf))
+-		goto eof;
+-	if(bf->advnc)
+-		if(advance() == EOF)
+-			goto eof;
+-	if(bf->rdptr.rnum >= bf->path[0]->kcnt)
+-		goto eof;
+-	d = bf->rdptr.rptr;
+-	x.mlen = d->dlen - DKEYSZ + d->dcom;
+-	mvgbt(bf->rdptr.rpref + d->dcom, d->dkey, d->dlen-DKEYSZ);
+-	x.mdata = bf->rdptr.rpref;
+-	return(x);
+-eof:
+-	x.mlen = 0;
+-	x.mdata = NULL;
+-	return(x);
+-}
+-
+-bread(bf, key, rec) bfile *bf; mbuf *key, *rec;
+-{
+-	dkey *d;
+-	lfaddr *x;
+-	if(bf == NULL)
+-		return(NULL);
+-	if(notran(bf))
+-		return(EOF);
+-	if(bf->advnc)
+-		if(advance() == EOF)
+-			return(EOF);
+-	if(bf->rdptr.rnum >= bf->path[0]->kcnt)
+-		return(EOF);
+-	if(key != NULL) {
+-		d = bf->rdptr.rptr;
+-		key->mlen = d->dlen - DKEYSZ + d->dcom;
+-		mvgbt(key->mdata, bf->rdptr.rpref, d->dcom);
+-		mvgbt(key->mdata + d->dcom, d->dkey, d->dlen - DKEYSZ);
+-	}
+-	if(rec != NULL && !treeonly(bf)) {
+-		x = lfadr(bf->path[0], bf->rdptr.rnum);
+-		rec->mlen = x->llen;
+-		if(rec->mlen != 0) {
+-			(void) lseek(bf->dfd, x->lloc, 0);
+-			if(read(bf->dfd, rec->mdata, (int)rec->mlen)
+-				!= rec->mlen) {
+-				errno = BRDERR;
+-				return(EOF);
+-			}
+-		}
+-	}
+-	bf->advnc = 1;
+-	return(0);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:bt.c\n"};
+-/*0001011110110101*/
+//GO.SYSIN DD bt.c
+echo btadd.c 1>&2
+sed 's/.//' >btadd.c <<'//GO.SYSIN DD btadd.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-
+-/* like btbuild, but random access */
+-char keybuf[NDSZ];
+-char recbuf[32767];
+-mbuf key = { keybuf, 0};
+-mbuf rec = { recbuf, 0};
+-bfile *bf;
+-int cflag;
+-
+-main(argc, argv)
+-char **argv;
+-{	int n;
+-	if(argv[1][0] == '-') {
+-		cflag++;
+-		argc--;
+-		argv++;
+-	}
+-	if(argc != 2) {
+-		fprintf(stderr, "usage: btadd bfile < recs\n");
+-		exit(1);
+-	}
+-	if((bf = bopen(argv[1], 2)) == NULL) {
+-		perror(argv[1]);
+-		exit(1);
+-	}
+-	for(;;) {
+-		get(2, (char *)&key.mlen);
+-		if(key.mlen > MAXKLEN) {
+-			fprintf(stderr, "key too long\n");
+-			exit(1);
+-		}
+-		get(key.mlen, key.mdata);
+-		get(2, (char *)&rec.mlen);
+-		if(rec.mlen > sizeof(recbuf)) {
+-			fprintf(stderr, "rec len %ud: recompile btadd\n",
+-				rec.mlen);
+-			abort();
+-		}
+-		get(rec.mlen, rec.mdata);
+-		(void)bwrite(bf, key, rec);
+-		bfirst(bf);
+-		if(bseek(bf, key) != FOUND) {
+-			key.mdata[key.mlen] = 0;
+-			fprintf(stderr, "vanished:%s:\n", key.mdata);
+-			abort();
+-		}
+-		if(cflag)
+-			bcheck(bf);
+-	}
+-}
+-get(n, s)
+-char *s;
+-{	int m;
+-	for(m = 0; n > 0; n -= m) {
+-		m = read(0, s, n);
+-		if(m == 0) {
+-			bclose(bf);
+-			exit(0);
+-		}
+-		if(m < 0) {
+-			fprintf(stderr, "io error in btadd\n");
+-			abort();
+-		}
+-		s += m;
+-	}
+-}
+-
+-mbuf new, old;
+-char newbuf[NDSZ], oldbuf[NDSZ];
+-bcheck(bf)
+-bfile *bf;
+-{	long i;
+-	int j, k;
+-	char *p;
+-	bfirst(bf);
+-	new.mdata = newbuf;
+-	old.mdata = oldbuf;
+-	for(i = 0;; i++) {
+-		if(bread(bf, &new, (mbuf *)NULL) == EOF)
+-			break;
+-		if(i > 0) {
+-			k = new.mlen;
+-			if(old.mlen < new.mlen)
+-				k = old.mlen;
+-			for(j = 0; j < k; j++)
+-				if(new.mdata[j] != old.mdata[j])
+-					break;
+-			if(j != k) {
+-				if(new.mdata[j] > old.mdata[j])
+-					continue;
+-bad:
+-				fprintf(stderr, "disorder at key %ld\n", i);
+-				key.mdata[key.mlen] = 0;
+-				fprintf(stderr, "key is:%s:\n", key.mdata);
+-				abort();
+-			}
+-			if(old.mlen >= new.mlen)
+-				goto bad;
+-		}
+-		p = old.mdata;
+-		old = new;
+-		new.mdata = p;
+-	}
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/25:btadd.c\n"};
+-/*1100001100101101*/
+//GO.SYSIN DD btadd.c
+echo btbuild.c 1>&2
+sed 's/.//' >btbuild.c <<'//GO.SYSIN DD btbuild.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-#define SZ	MXHT+1
+-
+-typedef struct {
+-	unsigned short mlen;
+-	char mdata[NDSZ];	/* max size of values */
+-} xbuf;
+-int address[SZ];	/* where the next address goes in the node */
+-xbuf curkey[SZ];	/* last key put in the node */
+-xbuf shortone;		/* for compression */
+-int freecnt[SZ];		/* number of bytes left in node */
+-dkey *kp[SZ];		/* where to put next dkey in node */
+-char node[SZ][NDSZ];	/* the nodes */
+-char used[SZ+1];	/* which nodes have been used */
+-xbuf nkey;		/* as read by getrec */
+-struct {
+-	unsigned short mlen;
+-	char mdata[32767];
+-} val;
+-lfaddr currec;		/* where getrec put val */
+-FILE *tfd, *dfd;
+-char name[16];
+-int type;
+-long reccnt;
+-extern char *malloc();
+-
+-char *
+-prkey(a)
+-xbuf *a;
+-{	int i;
+-	unsigned char c;
+-	static char buf[4*NDSZ], *p;
+-	for(i = 0, p = buf; i < a->mlen; i++) {
+-		c = a->mdata[i];
+-		if(c < ' ') {
+-			*p++ = '^';
+-			c += ' ';
+-		}
+-		if(c < 127)
+-			*p++ = (char)c;
+-		else {
+-			*p++ = '\\';
+-			*p++ = (c >> 6) + '0';
+-			*p++ = ((c&63)>>3) + '0';
+-			*p++ = c&7 + '0';
+-		}
+-	}
+-	*p++ = 0;
+-	return(buf);
+-}
+-pref(a, b, lev) xbuf *a, *b;
+-{	register int n;
+-	register char *p, *q;
+-	for(n = 0, p = a->mdata, q = b->mdata; n < a->mlen && n < b->mlen; n++)
+-		if(*p++ != *q++)
+-			break;
+-	p--, q--;
+-	if(lev == 0 && ((n == b->mlen && n >= a->mlen) || *p > *q)) {
+-		fprintf(stderr, "key %ld out of order:\n", reccnt);
+-		fprintf(stderr, "key %ld is %s\n", reccnt - 1, prkey(a));
+-		fprintf(stderr, "key %ld is %s\n", reccnt, prkey(b));
+-	}
+-	return(n);
+-}
+-
+-getrec()
+-{
+-	reccnt++;
+-	if(mget(&nkey))
+-		return(-1);
+-	if(mget((xbuf *)&val))
+-		fail("half a record read");
+-	if((currec.llen = val.mlen) != 0) {
+-		currec.lloc = ftell(dfd);
+-		(void) fwrite(val.mdata, 1, val.mlen, dfd);
+-		if(ferror(dfd))
+-			fail("value write");
+-	}
+-	else currec.lloc = 0;
+-	return(1);
+-}
+-
+-mget(a) xbuf *a;
+-{
+-	(void) fread((char *)&(a->mlen), 1, sizeof(a->mlen), stdin);
+-	if(feof(stdin) || ferror(stdin))
+-		return(1);
+-	if(fread(a->mdata, 1, a->mlen, stdin) != a->mlen)
+-		return(1);
+-	return(0);
+-}
+-
+-ndaddr ndwrt(level)
+-{	ndaddr loc;
+-	int i;
+-	hdr *x;
+-	trailer *t;
+-	loc = ftell(tfd)/NDSZ;
+-	x = (hdr *)(node[level]);
+-	x->hlev = level;
+-	t = (trailer *)(node[level] + NDSZ - sizeof(trailer));
+-	t->tfree = freecnt[level];
+-	x->kcnt = address[level] - (level == 0? 0: 1);
+-	x->htype = type;
+-	(void) fwrite(node[level], 1, NDSZ, tfd);
+-	if(ferror(tfd))
+-		fail("node write");
+-	for(i = 0; i < NDSZ; i++)
+-		node[level][i] = 0;
+-	address[level] = 0;
+-	curkey[level].mlen = 0;
+-	freecnt[level] = NDSZ - sizeof(hdr) - sizeof(trailer);
+-	if(level)
+-		freecnt[level] -= sizeof(ndaddr);
+-	kp[level] = (dkey *)(node[level] + sizeof(hdr));
+-	return(loc);
+-}
+-
+-finish(level, ptr) ndaddr ptr;
+-{	ndaddr loc;
+-	if(!used[level])
+-		return;
+-	*ndadr(node[level], address[level]++) = ptr;
+-	if(!used[level + 1])
+-		fseek(tfd, 0L, 0);
+-	loc = ndwrt(level);
+-	finish(level + 1, loc);
+-}
+-
+-insert(level, key, ptr) xbuf *key; ndaddr ptr;
+-{	int n, len;
+-	char *p;
+-	ndaddr loc;
+-	used[level] = 1;
+-	n = pref(&curkey[level], key, level);
+-	len = DKEYSZ + key->mlen - n + sizeof(ptr);
+-	if(len < freecnt[level]) {
+-		*ndadr(node[level], address[level]++) = ptr;
+-		kp[level]->dlen = len - sizeof(ptr);
+-		kp[level]->dcom = n;
+-		mvgbt(kp[level]->dkey, key->mdata + n, key->mlen - n);
+-		p = (char *)(kp[level]) + kp[level]->dlen;
+-		kp[level] = (dkey *)p;
+-		freecnt[level] -= len;
+-		curkey[level] = *key;
+-	}
+-	else {
+-		*ndadr(node[level],address[level]++) = ptr;
+-		loc = ndwrt(level);
+-		insert(level+1, key, loc);
+-		curkey[level].mlen = 0;
+-	}
+-}
+-
+-doit()
+-{	int n, len;
+-	ndaddr loc;
+-	char *p;
+-	for(;;) {
+-		if(getrec() == -1)
+-			break;
+-		used[0] = 1;
+-		n = pref(&curkey[0], &nkey, 0);
+-		len = DKEYSZ + nkey.mlen - n + sizeof(currec);
+-		if(type & INDEX)
+-			len -= sizeof(currec);
+-		if(len < freecnt[0]) {
+-			freecnt[0] -= len;
+-			if(!(type & INDEX))
+-				*lfadr(node[0], address[0]++) = currec;
+-			else
+-				address[0]++;
+-			kp[0]->dlen = DKEYSZ + nkey.mlen - n;
+-			kp[0]->dcom = n;
+-			mvgbt(kp[0]->dkey, nkey.mdata + n, nkey.mlen - n);
+-			p = (char *)(kp[0]) + kp[0]->dlen;
+-			kp[0] = (dkey *)p;
+-			curkey[0] = nkey;
+-		}
+-		else {
+-			shortest(&curkey[0], &nkey);
+-			loc = ndwrt(0);
+-			freecnt[0] -= DKEYSZ + nkey.mlen + sizeof(currec);
+-			if(type & INDEX)
+-				freecnt[0] += sizeof(currec);
+-			insert(1, &shortone, loc);
+-			if(!(type & INDEX))
+-				*lfadr(node[0], address[0]++) = currec;
+-			else
+-				address[0]++;
+-			kp[0]->dlen = DKEYSZ + nkey.mlen;
+-			kp[0]->dcom = 0;
+-			mvgbt(kp[0]->dkey, nkey.mdata, nkey.mlen);
+-			p = (char *)(kp[0]) + kp[0]->dlen;
+-			kp[0] = (dkey *)p;
+-			curkey[0] = nkey;
+-		}
+-	}
+-	if(!used[1])
+-		(void) fseek(tfd, 0L, 0);
+-	loc = ndwrt(0);
+-	finish(1, loc);
+-}
+-
+-init(s)
+-char *s;
+-{	int i;
+-	hdr *b;
+-	char xx[NDSZ];
+-	(void) sprintf(name, "%s.T", s);
+-	tfd = fopen(name, "r");
+-	if(tfd == NULL) {
+-		perror(s);
+-		exit(1);
+-	}
+-	fread(xx, 1, NDSZ, tfd);
+-	fclose(tfd);
+-	tfd = fopen(name, "w");
+-	(void) fseek(tfd, (long)NDSZ, 0);
+-	b = (hdr *)xx;
+-	type = b->htype;
+-	(void) sprintf(name, "%s.F", s);
+-	if((type & INDEX) != INDEX)
+-		dfd = fopen(name, "w");
+-	for(i = 0; i < SZ; i++) {
+-		freecnt[i] = NDSZ - sizeof(hdr) - sizeof(trailer);
+-		if(i)
+-			freecnt[i] -= sizeof(ndaddr);
+-		kp[i] = (dkey *)(node[i] + sizeof(hdr));
+-	}
+-}
+-
+-main(argc, argv)
+-char **argv;
+-{
+-	if(argc != 2) {
+-		fprintf(stderr, "%s: too many arguments\n", argv[1]);
+-		exit(1);
+-	}
+-	init(argv[1]);
+-	doit();
+-	exit(0);
+-}
+-
+-shortest(a, b) xbuf *a, *b;
+-{	int n;
+-	char *p, *q, *s;
+-	p = a->mdata;
+-	q = b->mdata;
+-	s = shortone.mdata;
+-	for(n = 0; n < a->mlen && n < b->mlen; n++, p++, q++)
+-		if(*p == *q)
+-			*s++ = *p;
+-		else break;
+-	if(n < a->mlen) {
+-	again:
+-		if(n + 1 == a->mlen)
+-			*s++ = *p;
+-		else if(*p + 1 < *q)
+-			*s++ = *p + 1;
+-		else {
+-			*s++ = *p++;
+-			n++;
+-			if(*p + 1 > *p)
+-				*s++ = *p + 1;
+-			else goto again;
+-		}
+-	}
+-	shortone.mlen = s - shortone.mdata;
+-}
+-prbuf(x) xbuf *x;
+-{	int i;
+-	for(i = 0; i < x->mlen; i++)
+-		printf("%3.3o ", x->mdata[i]);
+-	putchar('\n');
+-}
+-fail(s)
+-char *s;
+-{
+-	perror(s);
+-	exit(2);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:btbuild.c\n"};
+-/*1101000110100100*/
+//GO.SYSIN DD btbuild.c
+echo btcat.c 1>&2
+sed 's/.//' >btcat.c <<'//GO.SYSIN DD btcat.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-extern char *malloc(), *realloc();
+-extern mbuf bkey();
+-extern bfile *bopen();
+-int rflag;
+-int rsize = 64;
+-mbuf key, rec;
+-char tabchar = '\t';
+-main(argc, argv) char **argv;
+-{
+-	rec.mdata = malloc(rsize);
+-	key.mdata = malloc(NDSZ);
+-	for(argc--, argv++; argc > 0; argc--, argv++) {
+-		switch(*argv[0]) {
+-		case '-':
+-			if(argv[0][1] == 'R')
+-				rflag = 1;
+-			else fprintf(stderr, "unknown option %s\n", argv[0]);
+-			break;
+-		default:
+-			copy(argv[0]);
+-			break;
+-		}
+-	}
+-	exit(0);
+-}
+-copy(s) char *s;
+-{	bfile *bt;
+-	int n;
+-	bt = bopen(s, 0);
+-	if(bt == NULL) {
+-		perror(s);
+-		exit(1);
+-	}
+-	if(bfirst(bt) == EOF) {
+-		fprintf(stderr, "%s empty\n", s);
+-		return;
+-	}
+-	while((n = breclen(bt)) != EOF) {
+-		if(n > rsize) {
+-			rsize = n;
+-			rec.mdata = realloc(rec.mdata, rsize);
+-		}
+-		(void) bread(bt, &key, &rec);
+-		if(!rflag) {
+-			out(key);
+-			putchar(tabchar);
+-			out(rec);
+-			putchar('\n');
+-		}
+-		else {
+-			fwrite((char *)&key.mlen, 1, sizeof(short), stdout);
+-			fwrite(key.mdata, key.mlen, 1, stdout);
+-			fwrite((char *)&rec.mlen, 1, sizeof(short), stdout);
+-			fwrite(rec.mdata, rec.mlen, 1, stdout);
+-		}
+-			
+-	}
+-	bclose(bt);
+-}
+-out(a) mbuf a;
+-{	int i;
+-	for(i = 0; i < a.mlen; i++) putchar(*(a.mdata + i));
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/4/8:btcat.c\n"};
+-/*1110000011011001*/
+//GO.SYSIN DD btcat.c
+echo btcreat.c 1>&2
+sed 's/.//' >btcreat.c <<'//GO.SYSIN DD btcreat.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-#define error(x, y) {fprintf(stderr, x, y); exit(1); }
+-
+-int iflag, rflag;
+-char node[NDSZ];
+-char buf[512];
+-extern char *malloc();
+-
+-main(argc, argv)
+-char **argv;
+-{	int i, fd;
+-	hdr *b;
+-	char *p;
+-	for(i = 1; i < argc; i++) {
+-		if(argv[i][0] == '-') {
+-			for(p = argv[i] + 1; *p; p++)
+-				if(*p == 'i')
+-					iflag = 1;
+-				else if(*p == 'r')
+-					rflag = 1;
+-				else
+-					error("unknown flag %c\n", *p);
+-			if(i >= argc - 1)
+-				error("file name?", 0);
+-			continue;
+-		}
+-		if(!iflag) {
+-			sprintf(buf, "%s.F", argv[i]);
+-			if((fd = creat(buf, 0666)) < 0) {
+-				perror(buf);
+-				exit(1);
+-			}
+-			close(fd);
+-		}
+-		sprintf(buf, "%s.T", argv[i]);
+-		if((fd = creat(buf, 0666)) < 0) {
+-			perror(buf);
+-			if(!iflag) {
+-				sprintf(buf, "%s.F", argv[i]);
+-				unlink(buf);
+-			}
+-			exit(1);
+-		}
+-		b = (hdr *)node;
+-		b->kcnt = 0;
+-		if(iflag)
+-			b->htype |= INDEX;
+-		if(rflag)
+-			b->htype |= READONLY;
+-		nfree(b) = NDSZ - sizeof(hdr) - sizeof(trailer);
+-		if(write(fd, node, NDSZ) != NDSZ)
+-			perror("failed");
+-		close(fd);
+-	}
+-	exit(0);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:btcreat.c\n"};
+-/*0011011101111110*/
+//GO.SYSIN DD btcreat.c
+echo btdelete.c 1>&2
+sed 's/.//' >btdelete.c <<'//GO.SYSIN DD btdelete.c'
+-/* read keys from stdin, and delete the records from argv[1] */
+-#include "stdio.h"
+-#include "cbt.h"
+-
+-char buf[NDSZ];
+-bfile *bf;
+-mbuf key;
+-
+-main(argc, argv)
+-char **argv;
+-{	char *p;
+-	int c = 0;
+-	if(argc != 2) {
+-		fprintf(stderr, "usage: delete b-tree < keys\n");
+-		exit(1);
+-	}
+-	if((bf = bopen(argv[1], 2)) == NULL) {
+-		perror(argv[1]);
+-		exit(1);
+-	}
+-	key.mdata = buf;
+-loop:
+-	if(c == EOF) {
+-		bclose(bf);
+-		exit(0);
+-	}
+-	for(p = buf; (c = getchar()) != '\n' && c != EOF; *p++ = c)
+-		;
+-	*p = 0;
+-	key.mlen = p - buf;
+-	if(key.mlen == 0)
+-		goto loop;
+-	if(!bdelete(bf, key))
+-		fprintf(stderr, "not in file:%s\n", buf);
+-	goto loop;
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:btdelete.c\n"};
+-/*0010110100010101*/
+//GO.SYSIN DD btdelete.c
+echo btdiag.c 1>&2
+sed 's/.//' >btdiag.c <<'//GO.SYSIN DD btdiag.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-#include "sys/types.h"
+-#include "sys/stat.h"
+-
+-extern bfile *bopen();
+-extern char *malloc();
+-extern int errno;
+-int errcnt;
+-char nodes[MXHT + 1][NDSZ];
+-int loc[MXHT + 1];
+-char *seen;
+-dkey *curd[MXHT + 1];
+-char curkey[MXHT + 1][MAXKLEN];
+-int keynum[MXHT + 1];
+-mbuf tinykey = { "", 0};
+-mbuf giantkey = {"\177\177\177\177", 4};
+-
+-main(argc, argv)
+-char **argv;
+-{	bfile *bt;
+-	int n;
+-	if(argc < 2)
+-		error("file name?");
+-	bt = bopen(argv[1], 0);
+-	if(bt == 0)
+-		error("couldn't open tree");
+-	n = diagnose(bt);
+-	printf("return value is %d\n", n);
+-	exit(n);
+-}
+-
+-diagnose(b)
+-bfile *b;
+-{	int i;
+-	struct stat statb;
+-	if(fstat(b->tfd, &statb) < 0)
+-		error("can't stat tree");
+-	if(statb.st_size % NDSZ || statb.st_size <= 0) {
+-		printf("tree size %d mod ndsz %d != 0\n", statb.st_size, NDSZ);
+-		errcnt++;
+-	}
+-	if(b->height > MXHT || b->height < 0) {
+-		printf("tree height %d weird max %d\n", b->height, MXHT);
+-		return(-1);
+-	}
+-	seen = malloc(statb.st_size / NDSZ);
+-	for(i = 0; i < statb.st_size/NDSZ; i++)
+-		seen[i] = -1;
+-	lseek(b->tfd, 0, 0);
+-	if((i = read(b->tfd, nodes[b->height], NDSZ)) != NDSZ) {
+-		printf("read of root returned %d (%d)\n", i, errno);
+-		error("can't proceed");
+-	}
+-	return(dolevel(b->tfd, b->height, tinykey, giantkey) || errcnt);
+-}
+-
+-mbuf
+-firstkey(n)
+-{	hdr *b;
+-	mbuf z;
+-	int i;
+-	b = (hdr *)nodes[n];
+-	keynum[n] = 0;
+-	if(keynum[n] >= b->kcnt) {
+-		z.mlen = -1;
+-		return(z);
+-	}
+-	curd[n] = (dkey *)(b+1);
+-	for(i = 0; i < curd[n]->dlen - DKEYSZ; i++)
+-		curkey[n][i] = curd[n]->dkey[i];
+-	z.mlen = i;
+-	z.mdata = curkey[n];
+-	return(z);
+-}
+-
+-mbuf
+-nextkey(n)
+-{	mbuf z;
+-	char *p = (char *)curd[n];
+-	dkey *d;
+-	int i;
+-	hdr *b = (hdr *)nodes[n];
+-	if(++keynum[n] >= b->kcnt) {
+-		z.mlen = -1;
+-		return(z);
+-	}
+-	p += curd[n]->dlen;
+-	d = curd[n] = (dkey *)p;
+-	z.mdata = curkey[n];
+-	for(i = 0; i < d->dlen - DKEYSZ; i++)
+-		z.mdata[d->dcom + i] = d->dkey[i];
+-	z.mlen = i + d->dcom;
+-	return(z);
+-}
+-
+-dolevel(fd, lev, lokey, hikey)
+-mbuf lokey, hikey;
+-{	int i, j;
+-	mbuf left, right;
+-	char leftx[MAXKLEN];
+-	hdr *b = (hdr *)nodes[lev];
+-	if(lseek(fd, loc[lev] * NDSZ, 0) < 0 || read(fd, nodes[lev], NDSZ) != NDSZ) {
+-		printf("couldn't read node %d, level %d\n", loc[lev], lev);
+-		return(-1);
+-	}
+-	if(seen[loc[lev]] != -1) {
+-		printf("node %d visited twice, at lev %d and %d\n", lev, seen[loc[lev]], lev);
+-		if(lev != seen[loc[lev]])
+-			return(-1);
+-	}
+-	else
+-		seen[loc[lev]] = lev;
+-	if(check(loc[lev], nodes[lev], lokey, hikey))
+-		return(-1);
+-	if(lev == 0)
+-		return(0);
+-	right = firstkey(lev);
+-	left.mlen = lokey.mlen;
+-	left.mdata = leftx;
+-	for(j = 0; j < left.mlen; j++)
+-		left.mdata[j] = lokey.mdata[j];
+-	for(i = 0; i < b->kcnt; i++) {
+-		loc[lev - 1] = *ndadr(b, i);
+-		if(dolevel(fd, lev - 1, left, right))
+-			return(-1);
+-		left.mlen = right.mlen;
+-		for(j = 0; j < left.mlen; j++)
+-			left.mdata[j] = right.mdata[j];
+-		right = nextkey(lev);
+-		if(right.mlen < 0)
+-			printf("unexpected end of keys, node %d\n", loc[lev]);
+-	}
+-	loc[lev - 1] = *ndadr(b, i);
+-	return(dolevel(fd, lev - 1, left, hikey));
+-}
+-
+-check(noden, b, lokey, hikey)
+-hdr *b;
+-mbuf lokey, hikey;
+-{	int i, plen, sz, j;
+-	char *p, prefix[MAXKLEN];
+-	dkey *d;
+-
+-	/* check space allocation */
+-	sz = sizeof(hdr) + sizeof(trailer) + nfree(b);
+-	if(nfree(b) < 0) {
+-		printf("nfree: %d < 0, node %d\n", nfree(b), noden);
+-		errcnt++;
+-	}
+-	if(sz > NDSZ) {
+-		printf("nfree: %d impossibly large, node %d\n", nfree(b), noden);
+-		errcnt++;
+-	}
+-	if(b->kcnt < 0) {
+-		printf("kcnt %d < 0, node %d\n", b->kcnt, noden);
+-		return(-1);
+-	}
+-	p = (char *)(b+1);
+-	for(i = 0; i < b->kcnt; i++) {
+-		d = (dkey *)p;
+-		if(d->dlen < DKEYSZ) {
+-			printf("node %d, key %d, dlen %d too small\n", noden, i, d->dlen);
+-			return(-1);
+-		}
+-		if(b->hlev)
+-			sz += sizeof(ndaddr);
+-		else if(!(b->htype & INDEX))
+-			sz += sizeof(lfaddr);
+-		if((sz += d->dlen) > NDSZ) {
+-			printf("node %d, contents too large\n", noden);
+-			return(-1);
+-		}
+-		p += d->dlen;
+-	}
+-	if(b->hlev)
+-		sz += sizeof(ndaddr);
+-	if(sz != NDSZ) {
+-		printf("node %d, size %d ndsz %d\n", noden, sz, NDSZ);
+-		return(-1);
+-	}
+-	/* check key ordering */
+-	p = (char *)(b + 1);
+-	d = (dkey *)p;
+-	if(d->dcom != 0) {
+-		printf("node %d first key has dcom %d > 0\n", noden, d->dcom);
+-		return(-1);
+-	}
+-	plen = lokey.mlen;
+-	for(i = 0; i < plen; i++)
+-		prefix[i] = lokey.mdata[i];
+-	for(i = 0; i < b->kcnt; i++) {
+-		if(d->dcom > plen) {
+-			printf("node %d key %d, dcom %d bigger than len %d of prev key\n",
+-				noden, i, d->dcom, plen);
+-			return(-1);
+-		}
+-		for(j = 0; j < d->dlen - DKEYSZ; j++) {
+-			if(j + d->dcom > plen)
+-				break;
+-			if(d->dkey[j] < prefix[d->dcom + j]) {
+-				printf("node %d, key %d out of order\n",
+-					noden, i);
+-				errcnt++;
+-				break;
+-			}
+-			else if(d->dkey[j] == prefix[d->dcom + j])
+-				continue;
+-			else
+-				break;
+-		}
+-		for(j = 0; j < d->dlen - DKEYSZ; j++)
+-			prefix[j + d->dcom] = d->dkey[j];
+-		plen = j + d->dcom;
+-	}
+-	for(i = 0; i < plen && i < hikey.mlen; i++) {
+-		if(prefix[i] < hikey.mdata[i])
+-			return(0);
+-		else if(prefix[i] == hikey.mdata[i])
+-			continue;
+-		printf("node %d last key too large pref %s, hi %s\n", noden, prefix, hikey.mdata);
+-		return(-1);
+-	}
+-	if(plen > hikey.mlen) {
+-		printf("node %d last key too large plen %d, hikey.len %d\n", noden, plen, hikey.mlen);
+-		return(-1);
+-	}
+-	return(0);
+-}
+-
+-error(s)
+-char *s;
+-{
+-	printf("%s\n", s);
+-	exit(1);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:btdiag.c\n"};
+-/*1100001011001101*/
+//GO.SYSIN DD btdiag.c
+echo btexer.c 1>&2
+sed 's/.//' >btexer.c <<'//GO.SYSIN DD btexer.c'
+-#include "cbt.h"
+-extern char *malloc();
+-
+-bfile *bt;
+-mbuf *key;
+-char *state;
+-#define IN	1
+-#define OUT	2
+-int cnt, keysz;
+-char *buf;
+-char cmdbuf[128];
+-mbuf rec = {"", 0};
+-extern char *outkey();
+-char *filename;
+-
+-main(argc, argv)
+-char **argv;
+-{	int i;
+-	if(argc != 3)
+-		error("usage: file key-cnt");
+-	bt = bopen(filename = argv[1], 2);
+-	if(bt == 0)
+-		error("bopen");
+-	sprintf(cmdbuf, "btdiag %s", argv[1]);
+-	cnt = atoi(argv[2]);
+-	printf("cnt = %d\n", cnt);
+-	key = (mbuf *)malloc(cnt * sizeof(mbuf));
+-	keysz = NDSZ/5;
+-	if(keysz > MAXKLEN)
+-		keysz = MAXKLEN;
+-	printf("keysz %d\n", keysz);
+-	buf = malloc((keysz + 1) * cnt);
+-	state = malloc(cnt);
+-	if(buf == 0 || state == 0)
+-		error("key malloc");
+-	for(i = 0; i < cnt; i++)
+-		state[i] = OUT;
+-	for(i = 0; i < cnt; i++)
+-		key[i].mlen = keysz;
+-	for(i = 0; i < cnt; i++)
+-		key[i].mdata = buf + i * (keysz + 1);
+-	srand(0);
+-	for(i = 0; i < cnt * (keysz + 1); i++)
+-		buf[i] = rand() % 94 + ' ' + 1;
+-	for(i = 0; i < cnt; i++)
+-		buf[i * (keysz + 1) + keysz] = 0;
+-	doit();
+-	printf("sbrk %d\n", sbrk(0));
+-	exit(0);
+-}
+-
+-doit()
+-{
+-	allin();
+-	test("allin ok\n");
+-	checkseek();
+-	out(500);
+-	test("out 500 ok\n");
+-	checkseek();
+-	in(500);
+-	test("in 500 ok\n");
+-	checkseek();
+-	out(700);
+-	test("out 700 ok\n");
+-	checkseek();
+-	in(700);
+-	test("in 700 ok\n");
+-	checkseek();
+-	out(1000);
+-	test("out 1000 ok\n");
+-	checkseek();
+-	in(100);
+-	test("in 100 ok\n");
+-	checkseek();
+-	in(200);
+-	test("in 200 ok\n");
+-	checkseek();
+-	in(300);
+-	test("in 300 ok\n");
+-	checkseek();
+-}
+-
+-test(s)
+-char *s;
+-{	int n;
+-	bclose(bt);
+-	n = system(cmdbuf);
+-	if(n) {
+-		printf("%s returned %d\n", cmdbuf, n);
+-		exit(1);
+-	}
+-	else
+-		printf(s);
+-	bt = bopen(filename, 2);
+-	if(bt == NULL)
+-		error(filename);
+-}
+-
+-error(s)
+-char *s;
+-{
+-	perror(s);
+-	exit(1);
+-}
+-
+-allin()
+-{	int i;
+-	for(i = 0; i < cnt; i++) {
+-		if(state[i] == IN)
+-			continue;
+-		if(bwrite(bt, key[i], rec) == EOF)
+-			printf("write error %d on key %d\n", errno, i);
+-		else
+-			state[i] = IN;
+-	}
+-}
+-
+-in(n)
+-{	int i;
+-	for(i = 0; i < cnt; i++) {
+-		if(state[i] == IN || (rand() % 1007) >= n)
+-			continue;
+-		else if(bwrite(bt, key[i], rec) == EOF)
+-			printf("write error %d on key %d\n", errno, i);
+-		else
+-			state[i] = IN;
+-	}
+-}
+-
+-out(n)
+-{	int i, count = 0;
+-	for(i = 0; i < cnt; i++) {
+-		if(state[i] == OUT || (rand() % 1007) >= n)
+-			continue;
+-		if(bdelete(bt, key[i], rec) != 1) {
+-			printf("bdelete error %d on key %s\n", errno, outkey(i));
+-			printf("out(%d) deleted %d\n", n, count);
+-			bflush(bt);
+-			exit(1);
+-		}
+-		else if(bt->fatal)
+-			printf("set fatal flag, bdelete key %d %s err %d\n", i, outkey(i), errno);
+-		else {
+-			count++;
+-			state[i] = OUT;
+-		}
+-	}
+-}
+-
+-checkseek()
+-{	int i, j, count = 0;
+-	mbuf x;
+-	printf("\tcheckseek");
+-	for(i = 0; i < cnt; i++) {
+-		if(state[i] == OUT)
+-			continue;
+-		if(bseek(bt, key[i]) != FOUND) {
+-			printf("sought key %s, not found\n", key[i].mdata);
+-			continue;
+-		}
+-		x = bkey(bt);
+-		for(j = 0; j < keysz; j++)
+-			if(key[i].mdata[j] != x.mdata[j]) {
+-				printf("bkey mismatch at key %d\n", i);
+-				break;
+-			}
+-		count++;
+-	}
+-	printf(" saw %d\n", count);
+-}
+-
+-char *
+-outkey(n)
+-{	static char kb[MAXKLEN + 1];
+-	int i;
+-	strncpy(kb, key[n].mdata, keysz);
+-	return(kb);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:btexer.c\n"};
+-/*1101101100011000*/
+//GO.SYSIN DD btexer.c
+echo btran.c 1>&2
+sed 's/.//' >btran.c <<'//GO.SYSIN DD btran.c'
+-#include "stdio.h"
+-#define MAX	8192
+-char tab = '\t';
+-char *line, *oline;
+-char abuf[MAX], bbuf[MAX];
+-int cnt, ocnt;
+-main()
+-{	long lcnt = 0;
+-	line = abuf;
+-	oline = bbuf;
+-	for(; !feof(stdin); ) {
+-		lcnt++;
+-		(void) fgets(line, MAX, stdin);
+-		if(feof(stdin)) cnt = 0;
+-		else cnt = strlen(line);
+-		if(cnt >= MAX-1) {
+-			fprintf(stderr, "line %ld too long\n", lcnt);
+-			cnt = 0;
+-		}
+-		output();
+-	}
+-	exit(0);
+-}
+-output()
+-{	unsigned short u;
+-	char *p;
+-	if(ocnt <= 1) {	/* oline was used to give ooline a newline */
+-		swtch();
+-		return;
+-	}
+-	if(cnt != 1)	/* line isnt a newline to be added to oline */
+-		oline[--ocnt] = 0;
+-	else oline[ocnt] = 0;
+-	for(p = oline; *p && *p != tab; p++);
+-	u = p - oline;
+-	(void) fwrite((char *)&u, 1, sizeof(u), stdout);
+-	(void) fwrite(oline, (int)u, 1, stdout);
+-	if(*p == tab)
+-		p++;
+-	if(oline + ocnt - p < 0)
+-		u = 0;
+-	else u = oline + ocnt - p;
+-	(void) fwrite((char *)&u, 1, sizeof(u), stdout);
+-	(void) fwrite(p, (int)u, 1, stdout);
+-	swtch();
+-}
+-swtch()
+-{	char *x;
+-	x = line;
+-	line = oline;
+-	oline = x;
+-	ocnt = cnt;
+-}
+-static char VER[] = "\n80/2/13:btran.c\n";
+-/*1111100011110011*/
+//GO.SYSIN DD btran.c
+echo btreport.c 1>&2
+sed 's/.//' >btreport.c <<'//GO.SYSIN DD btreport.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-#include "sys/types.h"
+-#include "sys/stat.h"
+-extern bfile *bopen();
+-
+-long ndcnt[MXHT + 1];
+-long frcnt, reccnt, reclen;
+-bfile *bt;
+-
+-main(argc, argv)
+-char **argv;
+-{	int i, j;
+-	for(i = 1; i < argc; i++) {
+-		doarg(argv[i]);
+-		for(j = 0; j <= MXHT; j++)
+-			ndcnt[j] = 0;
+-		frcnt = reccnt = reclen = 0;
+-		if(i+1 < argc)
+-			putchar('\n');
+-	}
+-	exit(0);
+-}
+-
+-doarg(s)
+-char *s;
+-{	struct stat statbuf;
+-	long x;
+-	int i;
+-	bt = bopen(s, 0);
+-	if(bt == NULL) {
+-		i = strlen(s);
+-		if(s[i-2] == '.') {
+-			s[i-2] = 0;
+-			if(s[i-1] == 'F')
+-				return;
+-			if(s[i-1] == 'T')
+-				bt = bopen(s, 0);
+-		}
+-		if(bt == NULL) {
+-			perror(s);
+-			return;
+-		}
+-	}
+-	fstat(bt->tfd, &statbuf);
+-	printf("%s.T %ld bytes", s, statbuf.st_size);
+-	if(bt->dfd > 0 && fstat(bt->dfd, &statbuf) == 0)
+-		printf(", %s.F %ld bytes", s, statbuf.st_size);
+-	putchar('\n');
+-	donode(0);
+-	for(x = i = 0; i <= MXHT; i++)
+-		x += ndcnt[i] * NDSZ;
+-	printf("%ld bytes used in tree\n", x);
+-	for(i = 0; i <= bt->height; i++)
+-		printf(" %ld nodes at level %d", ndcnt[i], i);
+-	printf("\n%ld bytes free\n", frcnt);
+-	printf("%ld records totalling %ld bytes\n", reccnt, reclen);
+-	bclose(bt);
+-}
+-
+-/* this routine believes the tree is well-formed */
+-donode(n)
+-{	char buf[NDSZ];
+-	hdr *b = (hdr *)buf;
+-	int i;
+-	(void) lseek(bt->tfd, (long)NDSZ * n, 0);
+-	(void) read(bt->tfd, buf, NDSZ);
+-	ndcnt[b->hlev]++;
+-	frcnt += nfree(b);
+-	if(b->hlev)
+-		for(i = 0; i <= b->kcnt; i++)
+-			donode(*ndadr(b, i));
+-	else
+-		for(i = 0; i < b->kcnt; i++) {
+-			reccnt++;
+-			if(!(b->htype & INDEX))
+-				reclen += lfadr(b, i)->llen;
+-		}
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/4/26:btreport.c\n"};
+-/*1010101001010110*/
+//GO.SYSIN DD btreport.c
+echo btsquash.c 1>&2
+sed 's/.//' >btsquash.c <<'//GO.SYSIN DD btsquash.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-
+-extern int errno;
+-mbuf key, value;
+-char kbuf[NDSZ], vbuf[32767];
+-bfile *bfd;
+-FILE *pfd;
+-extern FILE *popen();
+-char iflag, rflag;
+-
+-main(argc, argv)
+-char **argv;
+-{
+-	if(argc != 2) {
+-		fprintf(stderr, "usage; %s file-name\n", argv[0]);
+-		exit(1);
+-	}
+-	bfd = bopen(argv[1], 0);
+-	if(bfd == NULL)
+-		fail(argv[1]);
+-	strcpy(vbuf, "cbt creat ");
+-	if(bfd->path[0]->htype & INDEX) {
+-		iflag = 1;
+-		strcat(vbuf, "-i ");
+-	}
+-	if(bfd->path[0]->htype & READONLY) {
+-		rflag = 1;
+-		strcat(vbuf, "-r");
+-	}
+-	sprintf(kbuf, "%s TS%d", vbuf, getpid());
+-	if(system(kbuf) != 0) {
+-		fprintf(stderr, "%s failed\n", kbuf);
+-		exit(1);
+-	}
+-	sprintf(kbuf, "cbt build -r TS%d", getpid());
+-	pfd = popen(kbuf, "w");
+-	if(pfd == NULL)
+-		fail(kbuf);
+-	key.mdata = kbuf;
+-	value.mdata = vbuf;
+-	errno = 0;
+-	while(bread(bfd, &key, &value) != EOF) {
+-		(void) fwrite((char *)&key.mlen, 1, sizeof(key.mlen), pfd);
+-		(void) fwrite(key.mdata, 1, key.mlen, pfd);
+-		(void) fwrite((char *)&value.mlen, 1, sizeof(value.mlen), pfd);
+-		(void) fwrite(value.mdata, 1, value.mlen, pfd);
+-		if(ferror(pfd))
+-			fail("write to build");
+-	}
+-	if(errno)
+-		fail("extracting");
+-	if(pclose(pfd) != 0)
+-		fail("pipe close");
+-	sprintf(kbuf, "%s.T", argv[1]);
+-	sprintf(vbuf, "TS%d.T", getpid());
+-	unlink(kbuf);
+-	link(vbuf, kbuf);
+-	if(iflag)
+-		exit(0);
+-	sprintf(kbuf, "%s.F", argv[1]);
+-	sprintf(vbuf, "TS%d.F", getpid());
+-	unlink(kbuf);
+-	link(vbuf, kbuf);
+-	if(errno)
+-		perror("linking");
+-	exit(0);
+-}
+-
+-fail(s)
+-char *s;
+-{
+-	perror(s);
+-	exit(2);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/4/26:btsquash.c\n"};
+-/*0100011001101001*/
+//GO.SYSIN DD btsquash.c
+echo bttest.c 1>&2
+sed 's/.//' >bttest.c <<'//GO.SYSIN DD bttest.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-extern char *malloc();
+-extern bfile *bopen();
+-extern mbuf bkey();
+-extern long lseek();
+-
+-char *onearg();
+-mbuf key, value;
+-bfile *it;
+-#define OPEN	1
+-#define CLOSE	2
+-#define SEEK	3
+-#define FIRST	4
+-#define NEXT	5
+-#define WRITE	6
+-#define BT	7
+-#define LEV	8
+-#define NODE	9
+-#define KEY	10
+-#define FLUSH	11
+-#define COMMIT	12
+-#define SHELL	13
+-#define DELETE	14
+-#define START	15
+-#define CHECK	16
+-struct cmd
+-{	int cmt, cln;
+-	char *ccm;
+-} cmnd[] =
+-{	{OPEN, 4, "open"},
+-	{CLOSE, 5, "close"},
+-	{SHELL, 1, "!"},
+-	{DELETE, 6, "delete"},
+-	{SEEK, 4, "seek"},
+-	{FIRST, 5, "first"},
+-	{NEXT, 4, "next"},
+-	{NEXT, 4, "read"},
+-	{WRITE, 5, "write"},
+-	{CHECK, 5, "check"},
+-	{BT, 2, "bt"},
+-	{LEV, 3, "lev"},
+-	{NODE, 4, "node"},
+-	{KEY, 3, "key"},
+-	{FLUSH, 5, "flush"},
+-	{COMMIT, 6, "commit"},
+-	{START, 5, "start"},
+-	{START, 7, "trstart"},
+-	{0, 0, 0}
+-};
+-char line[128];
+-char ndbuf[512];
+-main()
+-{
+-	int n;
+-	char *s, *p;
+-	key.mdata = malloc(200);
+-	value.mdata = malloc(200);
+-	for(;;) {
+-		for(n = 0; n < sizeof(line); n++)
+-			line[n] = 0;
+-		(void) fgets(line, sizeof(line), stdin);
+-		if(feof(stdin)) break;
+-		switch(cmtp(line)) {
+-		default:
+-			printf("?\n");
+-			break;
+-		case CLOSE:
+-			bclose(it);
+-			break;
+-		case SHELL:
+-			(void) system(line);
+-			printf("!\n");
+-			break;
+-		case START:
+-	/*		printf("%d\n", trstart()); */
+-			break;
+-		case COMMIT:
+-	/*		btcommit(); */
+-			break;
+-		case FLUSH:
+-			bflush(it);
+-			break;
+-		case OPEN:
+-			s = onearg(line);
+-			it = bopen(s, 2);
+-			if(it == NULL || errno)
+-			{	perror(s);
+-			}
+-			break;
+-		case DELETE:
+-			s = onearg(line);
+-			if(s[strlen(s)-1] == '\n')
+-				s[strlen(s)-1] = 0;
+-			todatum(s, &key);
+-			printf("%d\n", bdelete(it, key));
+-			break;
+-		case SEEK:
+-			s = onearg(line);
+-			if(s[strlen(s)-1] == '\n')
+-				s[strlen(s)-1] = 0;
+-			todatum(s, &key);
+-			printf("%d\n", bseek(it, key));
+-			break;
+-		case FIRST:
+-			printf("%d\n", bfirst(it));
+-			break;
+-		case NEXT:
+-			printf("%d - ", bread(it, &key, &value));
+-			prbuf(value);
+-			printf(" | ");
+-			prbuf(key);
+-			putchar('\n');
+-			break;
+-		case WRITE:
+-			twoarg(line, &s, &p);
+-			todatum(s, &key);
+-			todatum(p, &value);
+-			printf("%d\n", bwrite(it, key, value));
+-			break;
+-		case BT:
+-			prbt(it);
+-			break;
+-		case LEV:
+-			(void) sscanf(line, "%d", &n);
+-			if(n < 0 || n > it->height)
+-			{	printf("out of range\n");
+-				break;
+-			}
+-			tprnode(it->path[n]);
+-			break;
+-		case NODE:
+-			(void) sscanf(line, "%d", &n);
+-			(void) lseek(it->tfd, (long)n*NDSZ, 0);
+-			(void) read(it->tfd, ndbuf, NDSZ);
+-			tprnode((hdr *)ndbuf);
+-			break;
+-		case CHECK:
+-			(void) sscanf(line, "%d", &n);
+-			(void) lseek(it->tfd, (long)n * NDSZ, 0);
+-			(void) read(it->tfd, ndbuf, NDSZ);
+-			checknode((hdr *)ndbuf);
+-			break;
+-		case KEY:
+-			printf("%d ", breclen(it));
+-			prbuf(bkey(it));
+-			putchar('\n');
+-			break;
+-		}
+-	}
+-	exit(0);
+-}
+-cmtp(s) char *s;
+-{	struct cmd *p;
+-	int i;
+-	for(p=cmnd; p->cln != 0; p++)
+-		if(strncmp(s, p->ccm, p->cln) == 0)
+-		{	for(i=0; i<p->cln; i++)
+-				line[i] =' ';
+-			return(p->cmt);
+-		}
+-	return(-1);
+-}
+-char *onearg(s) char *s;
+-{	char *p, *q;
+-	for(p=s; *p == ' '; p++);
+-	for(q=p; *q && *q!='\n'; q++);
+-	*q = 0;
+-	return(p);
+-}
+-todatum(s, k) char *s; mbuf *k;
+-{	int i;
+-	k->mlen = strlen(s);
+-	if(s[k->mlen - 1] == '\n')
+-		k->mlen--;
+-	for(i=0; i<k->mlen; i++)
+-		k->mdata[i] = s[i];
+-}
+-twoarg(a, b, c) char *a, **b, **c;
+-{	char *p, *q;
+-	for(; *a==' '; a++);
+-	for(p=a; *p && *p!='\t'; p++);
+-	*p++ = 0;
+-	for(q=p; *q && *q!='\n'; q++);
+-	*q = 0;
+-	*b = a;
+-	*c = p;
+-}
+-prbuf(a) mbuf a;
+-{	int i;
+-	printf("%d:", a.mlen);
+-	for(i=0; i<a.mlen; i++)
+-		putchar(a.mdata[i]);
+-}
+-prbt(a) bfile *a;
+-{	int i;
+-	printf("ht %d adv %d rdw %d flags ", a->height, a->advnc,
+-		a->rdwrt);
+-	for(i = 0; i <= MXHT; i++)
+-		printf(" %d", a->flag[i]);
+-	putchar('\n');
+-	printf("nodes ");
+-	for(i = 0; i <= MXHT; i++)
+-		printf(" %d", a->loc[i]);
+-	putchar('\n');
+-	printf("rdkey #%d:", a->rdptr.rnum);
+-	printf(":\n");
+-}
+-tprnode(a) hdr *a;
+-{	int i;
+-	dkey *q;
+-	prhdr(a);
+-	q = (dkey *)(a+1);
+-	for(i = 0; i < a->kcnt; i++) {
+-		if(a->hlev == 0)
+-			prlfa(lfadr(a, i));
+-		else prnda(ndadr(a, i));
+-		prkey(q);
+-		q = (dkey *)((char *)q + q->dlen);
+-	}
+-	if(a->hlev)
+-		prnda(ndadr(a, i));
+-	putchar('\n');
+-}
+-checknode(a)
+-hdr *a;
+-{	int i;
+-	char *p;
+-	for(i = 0, p = (char *)(a + 1); i < a->kcnt; i++)
+-		p += *p;
+-	i = p - (char *)a + nfree(a) + sizeof(trailer);
+-	if(a->hlev)
+-		i += (a->kcnt + 1) * sizeof(ndaddr);
+-	else if(!treeonly(it))
+-		i += a->kcnt * sizeof(lfaddr);
+-	if(i == NDSZ) {
+-		printf("ok\n");
+-		return;
+-	}
+-	printf("nfree should be %d not %d\n", NDSZ - i + nfree(a),
+-		nfree(a));
+-}
+-prhdr(a) hdr *a;
+-{
+-	printf("stamp %ld kcnt %d type %d lev %d free %d\n",
+-		a->hstamp, a->kcnt, a->htype, a->hlev, nfree(a));
+-}
+-prlfa(a) lfaddr *a;
+-{
+-	if(treeonly(it))
+-		printf("\t");
+-	else
+-		printf("%ld %u\t", a->lloc, a->llen);
+-}
+-prnda(a) ndaddr *a;
+-{
+-	printf("%u\t", *a);
+-}
+-prkey(b) dkey *b;
+-{	int i;
+-	for(i = 0; i < b->dcom; i++)
+-		putchar(' ');
+-	for(i = 0; i < b->dlen - DKEYSZ; i++)
+-		putchar(b->dkey[i]);
+-	putchar('\n');
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:bttest.c\n"};
+-/*0111000111010001*/
+//GO.SYSIN DD bttest.c
+echo bwrite.c 1>&2
+sed 's/.//' >bwrite.c <<'//GO.SYSIN DD bwrite.c'
+-#include "cbt.h"
+-#include "pr.h"
+-
+-typedef union {
+-	ndaddr na;
+-	lfaddr la;
+-} addr;
+-static char splitting[MXHT+1];
+-extern bfile *curbf;
+-extern ndaddr oldnode(), newnode();
+-extern char *malloc();
+-
+-extern long brecwrite();
+-
+-bwrite(bf, key, rec) mbuf key, rec; bfile *bf;
+-{	addr u;
+-	int n;
+-	if(bf == NULL)
+-		return(EOF);
+-	if(!bf->rdwrt) {
+-		errno = BNOWRITE;
+-		return(EOF);
+-	}
+-	if(notran(bf))
+-		return(EOF);
+-	if(key.mlen > MAXKLEN)
+-		return(EOF);
+-	if(!treeonly(bf)) {
+-		u.la.llen = rec.mlen;
+-		u.la.lloc = brecwrite(rec);
+-		if(u.la.lloc == EOF)
+-			return(EOF);
+-	}
+-	if(desce(bf, key, (private *)NULL) == EOF)
+-		return(EOF);
+-	n = xinsert(0, key, u);
+-	(void) bseek(bf, key);
+-	return(n);
+-}
+-
+-fixpath(bf)
+-bfile *bf;
+-{	addr u;
+-	hdr *b;
+-	int i, n, j;
+-	for(i = 0; i < bf->height; i++) {
+-		if(!mustwrite(bf, i))
+-			continue;
+-		n = bf->loc[i];
+-		if((u.na = oldnode(i)) == EOF)
+-			return(EOF);
+-		b = bf->path[i+1];
+-		for(j = 0; j <= b->kcnt; j++)
+-			if(*ndadr(b, j) == n)
+-				break;
+-		if(j > b->kcnt){ /* curtains, the parent doesn't point to us */
+-			errno = BFATAL;
+-			return(EOF);
+-		}
+-		*ndadr(b, j) = u.na;
+-		mustwrite(bf, i + 1) = 1;
+-	}
+-	return(0);
+-}
+-
+-xinsert(lev, key, u) mbuf key; addr u;
+-{	private x;
+-	int n, dellen;
+-	hdr *b = curbf->path[lev];
+-	char ba[NDSZ], bb[NDSZ];
+-	dkey *dx, *dy;
+-	if(splitting[lev])
+-		if(desce(curbf, key, (private *)NULL) == EOF)
+-			return(EOF);
+-	n = xscan(b, key, &x);
+-	if(x.match == FOUND) {
+-		if(treeonly(curbf))
+-			return(FOUND);
+-		else if(lev)
+-			*ndadr(b, n) = u.na;
+-		else
+-			*lfadr(b, n) = u.la;
+-		mustwrite(curbf, lev) = 1;
+-		return(FOUND);
+-	}
+-	dx = (dkey *)ba;
+-	dy = (dkey *)bb;
+-	dellen = newx(&x, key, dx, dy);
+-	if(lev)
+-		dellen += sizeof(ndaddr);
+-	else if(!treeonly(curbf))
+-		dellen += sizeof(lfaddr);
+-	if(dellen > nfree(b)) {
+-		if(nsplit(lev) == EOF)
+-			return(EOF);
+-		splitting[lev] = 1;
+-		n = xinsert(lev, key, u);
+-		splitting[lev] = 0;
+-		return(n);
+-	}
+-	addaddr(b, n, u);
+-	newkeys(b, &x, dx, dy);
+-	b->kcnt++;
+-	nfree(b) -= dellen;
+-	mustwrite(curbf, lev) = 1;
+-	return(NOTFOUND);
+-}
+-
+-newx(x, key, c, d) private *x; mbuf key; dkey *c, *d;
+-{	int i, j;
+-	if(x->match != EOF)
+-		c->dcom = x->ocom;
+-	else	c->dcom = x->ncom;
+-	i = key.mlen - c->dcom;
+-	c->dlen = DKEYSZ + i;
+-	mvgbt(c->dkey, key.mdata + c->dcom, i);
+-	if(x->match == EOF)
+-		return(c->dlen);
+-	j = x->ncom - x->d->dcom;
+-	d->dcom = x->ncom;
+-	d->dlen = x->d->dlen - j;
+-	mvgbt(d->dkey, x->d->dkey + j, d->dlen - DKEYSZ);
+-	return(c->dlen - j);
+-}
+-
+-addaddr(b, n, u)
+-hdr *b;
+-addr u;
+-{
+-	if(b->hlev) {
+-		mvgbt((char *)ndadr(b, b->kcnt + 1),
+-			(char *)ndadr(b, b->kcnt),
+-			sizeof(ndaddr) * (b->kcnt + 1 - n) );
+-		*ndadr(b, n) = u.na;
+-		return;
+-	}
+-	if(treeonly(curbf))
+-		return;
+-	mvgbt((char *)lfadr(b, b->kcnt), (char *)lfadr(b, b->kcnt - 1),
+-		sizeof(lfaddr) * (b->kcnt - n));
+-	*lfadr(b, n) = u.la;
+-}
+-
+-newkeys(b, x, c, d)
+-hdr *b;
+-private *x;
+-dkey *c, *d;
+-{	int n;
+-	char *ffree;
+-	if(b->hlev)
+-		ffree = (char *)ndadr(b, b->kcnt) - nfree(b);
+-	else if(treeonly(curbf))
+-		ffree = (char *)&nfree(b) - nfree(b);
+-	else
+-		ffree = (char *)lfadr(b, b->kcnt - 1) - nfree(b);
+-	if(x->match != EOF) {
+-		n = c->dlen + d->dlen;
+-		n -= x->d->dlen;
+-		mvgbt((char *)x->d + n, (char *)x->d, ffree - (char *)x->d);
+-		mvgbt((char *)x->d, (char *)c, c->dlen);
+-		mvgbt((char *)x->d + c->dlen, (char *)d, d->dlen);
+-	}
+-	else if(b->kcnt > 0)
+-		mvgbt((char *)x->d + x->d->dlen, (char *)c, c->dlen);
+-	else
+-		mvgbt((char *)x->d, (char *)c, c->dlen);
+-}
+-
+-nsplit(lev)
+-{	dkey *tod, *fromd;
+-	char prefix[MAXKLEN + 10];
+-	hdr *b = curbf->path[lev];
+-	mbuf key;
+-	addr u;
+-	union {
+-		lfaddr *la;
+-		ndaddr *na;
+-	} from, to;
+-	int mvd, x, i, count, n;
+-	hdr *ha;
+-	char a[NDSZ];
+-
+-	x = (NDSZ - sizeof(hdr) - sizeof(trailer)) / 2;
+-	ha = (hdr *) a;
+-	mvd = count = 0;
+-	tod = (dkey *)(ha + 1);
+-	fromd = (dkey *)(b + 1);
+-	if(lev == 0) {
+-		to.la = lfadr(ha, 0);
+-		from.la = lfadr(b, 0);
+-	}
+-	else {
+-		to.na = ndadr(ha, 0);
+-		from.na = ndadr(b, 0);
+-	}
+-	*ha = *b;
+-	n = (b->kcnt + 1)/2;
+-	if(lev && b->kcnt - n <= 1)
+-		n--;
+-	for(; count < n && mvd <= x; count++) {
+-		mvgbt((char *)tod, (char *)fromd, fromd->dlen);
+-		mvd += fromd->dlen;
+-		tod = (dkey *)((char *)tod + fromd->dlen);
+-		fromd = (dkey *)((char *)fromd + fromd->dlen);
+-		if(lev) {
+-			*to.na-- = *from.na--;
+-			mvd += sizeof(ndaddr);
+-		}
+-		else if(!treeonly(curbf)) {
+-			*to.la-- = *from.la--;
+-			mvd += sizeof(lfaddr);
+-		}
+-	}
+-	if(lev) {	/* another pointer for non-leaves */
+-		*to.na-- = *from.na--;
+-		mvd += sizeof(ndaddr);
+-	}
+-	ha->kcnt = count;
+-	nfree(ha) = NDSZ - sizeof(hdr) - sizeof(trailer) - mvd;
+-	/* if lev == 0, we promote the last key, else the next key */
+-	key.mlen = lastkey(ha, prefix);
+-	if(lev) {
+-		mvgbt(prefix + fromd->dcom, fromd->dkey, fromd->dlen - DKEYSZ);
+-		key.mlen = fromd->dcom + fromd->dlen - DKEYSZ;
+-		count++;
+-		fromd = (dkey *)((char *)fromd + fromd->dlen);
+-	}
+-	u.na = newnode(ha);
+-	if(u.na == EOF) {	/* error while splitting */
+-		curbf->fatal++;
+-		return(EOF);
+-	}
+-	key.mdata = prefix;
+-	/* other half */
+-	if(lev == 0)
+-		to.la = lfadr(ha, 0);
+-	else
+-		to.na = ndadr(ha, 0);
+-	tod = (dkey *)(ha + 1);
+-	tod->dcom = 0;
+-	tod->dlen = fromd->dlen + fromd->dcom;
+-	mvgbt(tod->dkey, prefix, fromd->dcom);
+-	mvgbt(tod->dkey + fromd->dcom, fromd->dkey, fromd->dlen - DKEYSZ);
+-	mvd = tod->dlen;
+-	fromd = (dkey *)((char *)fromd + fromd->dlen);
+-	tod = (dkey *)((char *)tod + tod->dlen);
+-	if(lev) {
+-		*to.na-- = *from.na--;
+-		mvd += sizeof(ndaddr);
+-	}
+-	else if(!treeonly(curbf)) {
+-		*to.la-- = *from.la--;
+-		mvd += sizeof(lfaddr);
+-	}
+-	count++;
+-	for(i = 1; count < b->kcnt; i++, count++) {
+-		mvgbt((char *)tod, (char *)fromd, fromd->dlen);
+-		mvd += fromd->dlen;
+-		tod = (dkey *)((char *)tod + tod->dlen);
+-		fromd = (dkey *)((char *)fromd + fromd->dlen);
+-		if(lev) {
+-			*to.na-- = *from.na--;
+-			mvd += sizeof(ndaddr);
+-		}
+-		else if(!treeonly(curbf)) {
+-			*to.la-- = *from.la--;
+-			mvd += sizeof(lfaddr);
+-		}
+-
+-	}
+-	if(lev) {
+-		*to.na-- = *from.na--;
+-		mvd += sizeof(ndaddr);
+-	}
+-	ha->kcnt = i;
+-	nfree(ha) = NDSZ - sizeof(hdr) - sizeof(trailer) - mvd;
+-	mvgbt((char *)b, (char *)ha, NDSZ);
+-	mustwrite(curbf, lev) = 1;
+-	if(lev < curbf->height) {
+-		if(xinsert(lev + 1, key, u) == EOF) {
+-			curbf->fatal++;
+-			return(EOF);
+-		}
+-	}
+-	else
+-		return(newroot(u, key, b));
+-	return(0);
+-}
+-
+-newroot(u, key, b)
+-addr u;
+-mbuf key;
+-hdr *b;
+-{	hdr *x;
+-	dkey *d;
+-	if(curbf->height >= MXHT) {
+-		errno = BTALL;
+-		curbf->fatal++;
+-		return(EOF);
+-	}
+-	if((x = curbf->path[b->hlev + 1] = (hdr *)malloc(NDSZ)) == NULL) {
+-		errno = BNOMEM;
+-		curbf->fatal++;
+-		return(EOF);
+-	}
+-	*x = *b;
+-	x->hlev++;
+-	d = (dkey *)(x + 1);
+-	d->dlen = DKEYSZ + key.mlen;
+-	d->dcom = 0;
+-	mvgbt(d->dkey, key.mdata, key.mlen);
+-	*ndadr(x, 0) = u.na;
+-	*ndadr(x, 1) = curbf->loc[b->hlev] = newnode(b);
+-	x->kcnt = 1;
+-	nfree(x) = NDSZ - sizeof(hdr) - sizeof(trailer) - DKEYSZ
+-		- key.mlen - 2 * sizeof(ndaddr);
+-	mustwrite(curbf, ++curbf->height) = 1;
+-	return(0);
+-}
+-
+-lastkey(b, s)
+-hdr *b;
+-char *s;
+-{	int i, n;
+-	dkey *p;
+-	p = (dkey *)(b + 1);
+-	for(n = i = 0; i < b->kcnt; i++) {
+-		mvgbt(s + p->dcom, p->dkey, p->dlen - DKEYSZ);
+-		n = p->dlen + p->dcom - DKEYSZ;
+-		p = (dkey *)((char *) p + p->dlen);
+-	}
+-	return(n);
+-}
+-
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:bwrite.c\n"};
+-/*0010010000010101*/
+//GO.SYSIN DD bwrite.c
+echo diskrd.c 1>&2
+sed 's/.//' >diskrd.c <<'//GO.SYSIN DD diskrd.c'
+-#include "cbt.h"
+-
+-extern bfile *curbf;
+-extern long lseek();
+-
+-ndrd(lev, where) ndaddr where;
+-{
+-	if(mustwrite(curbf, lev)) {
+-		/* do we ever get here? (yes, while splitting) */
+-		if(ndwrt(curbf->path[lev], curbf->loc[lev]) == EOF)
+-			return(EOF);
+-		mustwrite(curbf, lev) = 0;
+-	}
+-	if(lseek(curbf->tfd, where * (long)NDSZ, 0) == -1)
+-		return(EOF);
+-	if(read(curbf->tfd, (char *)curbf->path[lev], NDSZ) != NDSZ) {
+-		errno = BRDERR;
+-		return(EOF);
+-	}
+-	curbf->loc[lev] = where;
+-	return(0);
+-}
+-
+-getincore(lev, where) ndaddr where;
+-{
+-	if(ndrd(lev, where) == EOF)
+-		return(EOF);
+-	if(curbf->path[lev]->hlev != lev) {
+-		errno = BRDERR;
+-		curbf->fatal++;
+-		return(EOF);
+-	}
+-	return(0);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:diskrd.c\n"};
+-/*1010100001000111*/
+//GO.SYSIN DD diskrd.c
+echo diskwrt.c 1>&2
+sed 's/.//' >diskwrt.c <<'//GO.SYSIN DD diskwrt.c'
+-#include "cbt.h"
+-
+-extern bfile *curbf;
+-extern long lseek();
+-
+-ndwrt(b, where) hdr *b; ndaddr where;
+-{
+-	if(lseek(curbf->tfd, where * (long)NDSZ, 0) == -1)
+-		return(EOF);
+-	if(write(curbf->tfd, (char *)b, NDSZ) != NDSZ) { /*unacceptable*/
+-		errno = BIOWRT;
+-		curbf->fatal++;
+-		return(EOF);
+-	}
+-	return(0);
+-}
+-
+-long brecwrite(rec) mbuf rec;
+-{	long loc;
+-	int n;
+-	errno = 0;
+-	loc = lseek(curbf->dfd, 0L, 2);
+-	if((n = write(curbf->dfd, rec.mdata, rec.mlen)) == rec.mlen)
+-		return(loc);
+-	else if(n == -1 || errno)
+-		return(EOF);
+-	errno = BIOWRT;
+-	return(EOF);
+-}
+-
+-ndaddr newnode(b) hdr *b;
+-{	long loc;
+-	int n;
+-	b->hstamp = tranid;
+-	loc = lseek(curbf->tfd, 0L, 2);
+-	if(loc == -1)
+-		return(EOF);
+-	if((n = write(curbf->tfd, (char *)b, NDSZ)) != NDSZ)
+-		if(n < 0)
+-			return(EOF);
+-		else {
+-			errno = BIOWRT;
+-			return(EOF);
+-		}
+-	return(loc/NDSZ);
+-}
+-
+-ndaddr oldnode(lev)
+-{	int n;
+-	ndaddr a;
+-	if(curbf->path[lev]->hstamp != tranid) {
+-		a = newnode(curbf->path[lev]);
+-		if(a == EOF)
+-			curbf->fatal++;
+-		curbf->loc[lev] = a;
+-		return(a);
+-	}
+-	if(lseek(curbf->tfd, (long)curbf->loc[lev]*NDSZ, 0) == EOF)
+-		return(EOF);
+-	if((n = write(curbf->tfd, (char *)curbf->path[lev], NDSZ)) != NDSZ) {
+-		if(n >= 0)
+-			errno = BIOWRT;
+-		return(EOF);
+-	}
+-	mustwrite(curbf, lev) = 0;
+-	return(curbf->loc[lev]);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:diskwrt.c\n"};
+-/*0100101010000110*/
+//GO.SYSIN DD diskwrt.c
+echo get.c 1>&2
+sed 's/.//' >get.c <<'//GO.SYSIN DD get.c'
+-#include "stdio.h"
+-#include "cbt.h"
+-extern bfile *bopen();
+-extern mbuf bkey();
+-
+-char *index;
+-char *dfile;
+-char sep = '!';
+-char preflg;
+-char nl;
+-
+-/* get key from index, print all records from dfile.
+- * default file names and separator in the index are as given
+- * preflg => prefix searching
+- */
+-char line[256];
+-char buf1[256], buf2[2048];
+-bfile *bi, *bd;
+-
+-main(argc, argv)
+-char **argv;
+-{	int i;
+-	char *p;
+-	for(i = 1; i < argc && *argv[i] == '-'; i++)
+-		for(p = argv[i] + 1; *(p-1) && *p; p++)
+-			switch(*p) {
+-			default:
+-				fprintf(stderr, "unk flag %c\n", *p);
+-				exit(1);
+-			case 'p':
+-				preflg = 1;
+-				break;
+-			case 'n':
+-				nl = *++p;
+-				break;
+-			case 's':
+-				sep = *++p;
+-				break;
+-			}
+-	if(i < argc) {
+-		dfile = argv[i++];
+-		bd = bopen(dfile, 0);
+-		if(bd == NULL) {
+-			perror(dfile);
+-			exit(1);
+-		}
+-	}
+-	if(i < argc) {
+-		index = argv[i++];
+-		bi = bopen(index, 0);
+-		if(bi == NULL) {
+-			perror(index);
+-			exit(1);
+-		}
+-	}
+-	for(;;) {
+-		(void) fgets(line, sizeof(line), stdin);
+-		if(feof(stdin))
+-			exit(1);
+-		for(p = line; *p && *p != '\n'; p++)
+-			;
+-		if(*p == '\n')
+-			*p = 0;
+-		if(index)
+-			doindex();
+-		dodata();
+-	}
+-}
+-
+-doindex()
+-{	mbuf key, found, newkey, rec;
+-	int cnt;
+-	char *q;
+-	key.mlen = strlen(line);
+-	key.mdata = line;
+-	if(bseek(bi, key) == EOF) {
+-		printf("not found\n");
+-		return;
+-	}
+-	for(cnt = 0; ; cnt++) {
+-		if(bread(bi, &found, (mbuf *)NULL) == EOF)
+-			break;
+-		if(found.mlen < key.mlen || strncmp(found.mdata, line, key.mlen)
+-			break;
+-		if(!preflg && found.mdata[key.mlen] != sep)
+-			break;
+-		for(q = found.mdata; q < found.mdata + found.mlen; q++)
+-			if(*q == sep)
+-				break;
+-		if(*q != sep) {
+-			fprintf(stderr, "retrieved bad index:%s\n",
+-				found.mdata);
+-			continue;
+-		}
+-		newkey.mdata = ++q;
+-		newkey.mlen = found.mlen - (q - found.mdata);
+-		if(bseek(bd, newkey) != FOUND) {
+-			fprintf(stderr, "erro, didn't find %s\n",
+-				newkey.mdata);
+-			continue;
+-		}
+-		bread(bd, (mbuf *)NULL &rec);
+-		for(i = 0; i < rec.mlen; i++)
+-			if(rec.mdata[i] != nl)
+-				putchar(rec.mdata[i]);
+-			else
+-				putchar('\n');
+-		putchar('\n');
+-	}
+-	if(cnt == 0)
+-		printf("not found\n");
+-}
+-/*1010001100101110*/
+//GO.SYSIN DD get.c
+echo lib.c 1>&2
+sed 's/.//' >lib.c <<'//GO.SYSIN DD lib.c'
+-#include "cbt.h"
+-mvgbt(to, from, ln) register char *from, *to;
+-{
+-	if(from > to)
+-		while(ln-- > 0) *to++ = *from++;
+-	else if(from < to)
+-	{	from += ln-1;
+-		to += ln-1;
+-		while(ln-- > 0) *to-- = *from--;
+-	}
+-}
+-
+-prnode(b)
+-hdr *b;
+-{	int i;
+-	char *p;
+-	dkey *d;
+-
+-	printf("kcnt %d htype %d hlev %d nfree %d ndsz %d\n", b->kcnt, b->htype,
+-		b->hlev, nfree(b), NDSZ);
+-	for(i = 0, p = (char *)(b+1); i < b->kcnt; i++) {
+-		d = (dkey *)p;
+-		prdkey(d);
+-		p += d->dlen;
+-	}
+-	putchar('\n');
+-}
+-
+-prdkey(d)
+-dkey *d;
+-{	int i;
+-	printf("(%d,%d,", d->dlen, d->dcom);
+-	for(i = 0; i < MAXKLEN &&i < d->dlen - DKEYSZ; i++) /* dlen unsigned */
+-		putchar(d->dkey[i]);
+-	printf("),");
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:lib.c\n"};
+-/*1001101011001110*/
+//GO.SYSIN DD lib.c
+echo nodesz.c 1>&2
+sed 's/.//' >nodesz.c <<'//GO.SYSIN DD nodesz.c'
+-#include "cbt.h"
+-your nodesize is NDSZ bytes.  Except for checking,
+-nodesize should be the file system block size (cbt.h).
+-/*0100111000000100*/
+//GO.SYSIN DD nodesz.c
+echo prelim.c 1>&2
+sed 's/.//' >prelim.c <<'//GO.SYSIN DD prelim.c'
+-#include "stdio.h"
+-char line[129];
+-main()
+-{	unsigned short n;
+-	for(;;) {
+-		fgets(line, sizeof(line), stdin);
+-		if(feof(stdin))
+-			break;
+-		n = strlen(line);
+-		n--;
+-		fwrite(&n, 1, sizeof(n), stdout);
+-		fwrite(line, 1, n, stdout);
+-		n = 0;
+-		fwrite(&n, 1, sizeof(n), stdout);
+-	}
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/4/8:prelim.c\n"};
+-/*1011011100100111*/
+//GO.SYSIN DD prelim.c
+echo salvage.c 1>&2
+sed 's/.//' >salvage.c <<'//GO.SYSIN DD salvage.c'
+-/* write out all records pointed to by level 0 blocks,
+- * whether or not the level 0 blocks are accessible.
+- * the output is like that of bcat -R, except that many keys
+- * will be duplicated
+- * In general, the later keys are more up to date
+- * btsalvage xxx | slvg | sort | slvg2 | cbt build -R newxxx
+- * is the optimistic way of slavaging a b-tree in which the non-leaves
+- * have been clobbered
+- */
+-#include "cbt.h"
+-#include "pr.h"
+-#include "stdio.h"
+-
+-bfile		*curbf;
+-extern bfile	*newtran(), *xopen();
+-extern char	*malloc(), *strcpy(), *realloc();
+-extern long	lseek();
+-char keybuf[NDSZ];
+-char *recbuf;
+-int buflen;
+-
+-main(argc, argv)
+-char **argv;
+-{	bfile *bf;
+-	mbuf key, rec;
+-	int n;
+-	if(argc != 2) {
+-		fprintf(stderr, "usage: salvage file\n");
+-		exit(1);
+-	}
+-	bf = xopen(argv[1], 0);
+-	key.mdata = keybuf;
+-	if(bf == NULL) {
+-		fprintf(stderr, "couldn't open %s\n", argv[1]);
+-		exit(1);
+-	}
+-	while((n = breclen(bf)) > buflen) {
+-		if(buflen == 0)
+-			recbuf = malloc(buflen = 1024);
+-		else
+-			recbuf = realloc(recbuf, buflen += 1024);
+-		if(recbuf == NULL) {
+-			fprintf(stderr, "recbuf[%d] failed\n", buflen);
+-			exit(1);
+-		}
+-		rec.mdata = recbuf;
+-	}
+-	for(;;) {
+-		xread(bf, &key, &rec);
+-		write(1, (char *)&key.mlen, 2);
+-		write(1, key.mdata, key.mlen);
+-		write(1, (char *)&rec.mlen, 2);
+-		write(1, rec.mdata, rec.mlen);
+-	}
+-}
+-bfile *xopen(s, typ) char *s;	/* typ is 0 or 2 */
+-{	bfile *p;
+-	int n, i;
+-
+-	p = alloc(bfile);
+-	if(p == NULL)
+-		goto nomem;
+-	n = strlen(s);
+-	p->fname = malloc((unsigned)n + 3);
+-	if(p->fname == NULL)
+-		goto nomem;
+-	(void) strcpy(p->fname, s);
+-	strcpy(p->fname + n, ".T");
+-	if((p->tfd = open(p->fname, typ)) == -1) {
+-		free(p->fname);
+-		free((char *)p);
+-		return(NULL);
+-	}
+-	p->rdwrt = typ;
+-	p->fatal = p->advnc = 0;
+-	p->altname = NULL;
+-	for(i = 0; i <= MXHT; i++) {
+-		p->path[i] = NULL;
+-		p->flag[i] = 0;
+-		p->loc[i] = 0;
+-	}
+-	p->path[0] = (hdr *)malloc(NDSZ);
+-	if(p->path[0] == NULL)
+-		goto nomem;
+-	curbf = p;
+-	if(read(p->tfd, (char *)p->path[0], NDSZ) != NDSZ) {
+-		perror(" first read");
+-		exit(1);
+-	}
+-	strcpy(p->fname + n, ".F");
+-	if(!treeonly(p) && (p->dfd = open(p->fname, typ)) == -1) {
+-		(void) close(p->tfd);
+-		free(p->fname);
+-		free(p->path[0]);
+-		free((char *)p);
+-		return(NULL);
+-	}
+-	else if(treeonly(p))
+-		p->dfd = -1;
+-	p->fname[n] = 0;
+-	p->height = p->path[0]->hlev;
+-	xfirst(p);
+-	return(p);
+-nomem:
+-	errno = BNOMEM;
+-	return(NULL);
+-}
+-
+-breclen(bf) bfile *bf;
+-{
+-	if(bf == NULL)
+-		return(EOF);
+-	if(notran(bf))
+-		return(EOF);
+-	if(bf->advnc)
+-		xadvance();
+-	if(bf->rdptr.rnum >= bf->path[0]->kcnt)
+-		return(EOF);
+-	if(treeonly(bf))
+-		return(0);
+-	return(lfadr(bf->path[0], bf->rdptr.rnum)->llen);
+-}
+-
+-xread(bf, key, rec) bfile *bf; mbuf *key, *rec;
+-{
+-	dkey *d;
+-	lfaddr *x;
+-	if(bf == NULL)
+-		return(NULL);
+-	if(notran(bf))
+-		return(EOF);
+-	if(bf->advnc)
+-		xadvance();
+-	if(bf->rdptr.rnum >= bf->path[0]->kcnt)
+-		return(EOF);
+-	if(key != NULL) {
+-		d = bf->rdptr.rptr;
+-		key->mlen = d->dlen - DKEYSZ + d->dcom;
+-		mvgbt(key->mdata, bf->rdptr.rpref, d->dcom);
+-		mvgbt(key->mdata + d->dcom, d->dkey, d->dlen - DKEYSZ);
+-	}
+-	if(rec != NULL && !treeonly(bf)) {
+-		x = lfadr(bf->path[0], bf->rdptr.rnum);
+-		rec->mlen = x->llen;
+-		if(rec->mlen != 0) {
+-			(void) lseek(bf->dfd, x->lloc, 0);
+-			(void) read(bf->dfd, rec->mdata, (int)rec->mlen);
+-		}
+-		/* errors on read ? */
+-	}
+-	bf->advnc = 1;
+-	return(0);
+-}
+-
+-xstep(level)
+-/* ran off the end of node at lev-1 */
+-{	hdr *b;
+-	int n, i;
+-	ndaddr u;
+-	do {
+-		n = read(curbf->tfd, (char *)curbf->path[0], NDSZ);
+-		if(n == 0)
+-			exit(0);
+-		if(n != NDSZ) {
+-			perror("xstep");
+-			exit(1);
+-		}
+-	} while(curbf->path[0]->hlev != 0);
+-}
+-
+-xadvance()
+-{	mbuf x;
+-	dkey *dold, *dnew;
+-	struct rdptr *y = &curbf->rdptr;
+-	curbf->advnc = 0;
+-	dold = y->rptr;
+-	if(++y->rnum < curbf->path[0]->kcnt) {
+-		dnew = (dkey *)((char *)dold + dold->dlen);
+-		if(dold->dcom < dnew->dcom)
+-			mvgbt(y->rpref + dold->dcom, dold->dkey, dnew->dcom - dold->dcom);
+-		y->rptr = dnew;
+-		return;
+-	}
+-	if(xstep(1) == EOF) {
+-		y->rnum = curbf->path[0]->kcnt + 1;
+-		y->rptr  = NULL;
+-	}
+-	else {
+-		y->rnum = 0;
+-		y->rptr = (dkey *)(curbf->path[0] + 1);
+-	}
+-}
+-
+-xfirst(p)
+-bfile *p;
+-{	int n;
+-	while(p->path[0]->hlev != 0) {
+-		n = read(p->tfd, (char *)p->path[0], NDSZ);
+-		if(n == 0) {
+-			fprintf(stderr, "empty?\n");
+-			exit(0);
+-		}
+-		if(n != NDSZ) {
+-			perror("xfirst");
+-			exit(1);
+-		}
+-	}
+-	curbf->rdptr.rnum = 0;
+-	curbf->rdptr.rptr = (dkey *)(curbf->path[0] + 1);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:salvage.c\n"};
+-/*0000110110110000*/
+//GO.SYSIN DD salvage.c
+echo seek.c 1>&2
+sed 's/.//' >seek.c <<'//GO.SYSIN DD seek.c'
+-#include "cbt.h"
+-#include "pr.h"
+-
+-extern bfile	*curbf;
+-
+-xscan(b, key, x) hdr *b; mbuf key; private *x;
+-{	int ncom, i, n, val;
+-	char a, *p;
+-	dkey *d;
+-
+-	n = i = ncom = 0;
+-	val = NOTFOUND;
+-	p = (char *)(b+1);
+-	d = (dkey *)p;
+-	for(; i < b->kcnt; i++, p += d->dlen) {
+-		d = (dkey *)p;
+-		if(ncom < d->dcom)
+-			goto onward;
+-		if(ncom > d->dcom) {
+-			if(x != NULL) {
+-				x->match = val;
+-				x->ncom = d->dcom;
+-				x->ocom = ncom;
+-				x->d = d;
+-			}
+-			return(i);
+-		}
+-		for(n = ncom; ncom < key.mlen && ncom - n < d->dlen - DKEYSZ; ncom++) {
+-			if((a = d->dkey[ncom - n]) == key.mdata[ncom])
+-				continue;
+-			if(a < key.mdata[ncom])
+-				goto onward;
+-			goto done;
+-		}
+-		if(ncom == key.mlen) {
+-			if(ncom == d->dlen - DKEYSZ + d->dcom)
+-				val = FOUND;
+-			goto done;
+-		}
+-	onward:	;
+-	}
+-/* infinity: */
+-	if(x != NULL) {
+-		x->match = EOF;
+-		x->ncom = ncom;
+-		x->ocom = n;
+-		x->d = d;
+-	}
+-	return(i);
+-done:
+-	if(x != NULL) {
+-		x->match = val;
+-		x->ncom = ncom;
+-		x->ocom = n;
+-		x->d = d;
+-	}
+-	return(i);
+-}
+-
+-desce(bf, key, x) bfile *bf; mbuf key; private *x;
+-{	int i, j;
+-	ndaddr u;
+-	for(i = bf->height; i > 0; i--) {
+-		j = xscan(bf->path[i], key, (private *)NULL);
+-		u = *ndadr(bf->path[i], j);
+-		if(bf->loc[i-1] != u)
+-			if(getincore(i - 1, u) == EOF)
+-				return(EOF);
+-	}
+-	i = xscan(bf->path[0], key, x);
+-	return(i);
+-}
+-
+-step(level)
+-/* ran off the end of node at lev-1 */
+-{	hdr *b;
+-	int n, i;
+-	ndaddr u;
+-	if(level > curbf->height)
+-		return(EOF);
+-	n = curbf->loc[level - 1];
+-	b = curbf->path[level];
+-	for(i = 0; i <= b->kcnt; i++)
+-		if(*ndadr(b, i) == n)
+-			break;
+-	if(i >= b->kcnt)
+-		return(step(level + 1));
+-	n = level;
+-	i++;
+-	do {
+-		u = *ndadr(curbf->path[n], i);
+-		if(curbf->loc[n-1] != u)
+-			if(getincore(n - 1, u) == EOF)
+-				return(EOF);
+-		i = 0;
+-	} while(--n > 0);
+-	return(0);
+-}
+-
+-advance()
+-{	dkey *dold, *dnew;
+-	struct rdptr *y = &curbf->rdptr;
+-	curbf->advnc = 0;
+-	dold = y->rptr;
+-	if(++y->rnum < curbf->path[0]->kcnt) {
+-		dnew = (dkey *)((char *)dold + dold->dlen);
+-		if(dold->dcom < dnew->dcom)
+-			mvgbt(y->rpref + dold->dcom, dold->dkey, dnew->dcom - dold->dcom);
+-		y->rptr = dnew;
+-		return(0);
+-	}
+-	errno = 0;
+-	if(step(1) == EOF) {
+-		if(errno)
+-			return(EOF);
+-		y->rnum = curbf->path[0]->kcnt + 1;
+-		y->rptr  = NULL;
+-	}
+-	else {
+-		y->rnum = 0;
+-		y->rptr = (dkey *)(curbf->path[0] + 1);
+-	}
+-	return(0);
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n82/10/9:seek.c\n"};
+-/*1100011110101111*/
+-/*1101111110111111*/
+//GO.SYSIN DD seek.c
+echo slvg.c 1>&2
+sed 's/.//' >slvg.c <<'//GO.SYSIN DD slvg.c'
+-#include "stdio.h"
+-/* change the output of btsalvage or btcat -R to sortable */
+-/* an 8 byte sortable sequence number is appended to each key
+- * that slvg2 can keep only the last record with a given key */
+-
+-char *buf;
+-int buflen;
+-long reccnt;
+-extern char *malloc(), *realloc();
+-
+-main()
+-{	int n, i, j;
+-	for(;;) {
+-		if(read(0, &n, 2) == 0)
+-			exit(0);
+-		if(n > buflen)
+-			space(n);
+-		read(0, buf, n);
+-		reccnt++;
+-		out(buf, n, '\t');
+-		countout();
+-		read(0, &n, 2);
+-		if(n > buflen)
+-			space(n);
+-		read(0, buf, n);
+-		j = n;
+-		for(i = 0; i < 4; i++) {
+-			putchar('a' + (j & 0xf));
+-			j >>= 4;
+-		}
+-		out(buf, n, '\n');
+-	}
+-}
+-
+-space(n)
+-{
+-	while(n > buflen) {
+-		if(buflen == 0)
+-			buf = malloc(buflen = 1024);
+-		else
+-			buf = realloc(buf, buflen += 1024);
+-		if(buf == 0) {
+-			fprintf(stderr, "buf[%d]failed\n", buflen);
+-			exit(1);
+-		}
+-		
+-	}
+-}
+-
+-out(s, n, c)
+-char *s;
+-{
+-	while(n-- > 0) {
+-		putchar('3' + ((*s >> 6) & 3));
+-		putchar((*s & 077) + ' ');
+-		s++;
+-	}
+-	putchar(c);
+-}
+-
+-countout()
+-{	int i, n;
+-	n = reccnt;
+-	for(i = 7; i >= 0; i--)
+-		putchar('0' + ((n >> (4*i)) & 077));
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/7:slvg.c\n"};
+-/*1100100010001010*/
+//GO.SYSIN DD slvg.c
+echo slvg2.c 1>&2
+sed 's/.//' >slvg2.c <<'//GO.SYSIN DD slvg2.c'
+-/* takes the output fromt slvg | sort and puts it back into
+- * form suitable for btbuild -R
+- * it reduces the two byte codes, and it only keeps the
+- * last version of each record.
+- * the input format is
+- * key tab 8-bytes-of-sequence 4-byete-of-value-len value newline
+- */
+-#include "stdio.h"
+-#define BUF	20000
+-char bufa[BUF], bufb[BUF];
+-char *old = bufa;
+-char *new = bufb;
+-int len;
+-
+-main()
+-{	char *p, *q;
+-	int c, i;
+-loop:
+-	for(p = new; (c = getchar()) != '\t' && c != EOF; *p++ = c)
+-		if(p - new >= BUF) {
+-			fprintf(stderr, "recompile slvg2 with more BUF\n");
+-			exit(1);
+-		}
+-	if(c == EOF)
+-		exit(0);
+-	*p++ = 0;
+-	for(i = 0; i < 8; i++)
+-		getchar();
+-	if((p - new != len || strcmp(old, new) != 0) && len > 0) {
+-		out(old);
+-		dorest();
+-	}
+-	len = p - new;
+-	q = old;
+-	old = new;
+-	new = q;
+-	ignore();
+-	goto loop;
+-}
+-
+-out(s)
+-char *s;
+-{	short n;
+-	char c;
+-	n = (len - 1)/2;
+-	fwrite((char *)&n, 1, 2, stdout);
+-	for(; *s; s++) {
+-		c = (*s - '3') << 6;
+-		c |= *++s- ' ';
+-		putchar(c);
+-	}
+-}
+-
+-ignore()
+-{	int c;
+-	while((c = getchar()) != '\n' && c != EOF)
+-		;
+-	if(c == EOF)
+-		exit(0);
+-}
+-
+-dorest()
+-{	unsigned short n;
+-	int i;
+-	/* 4 bytes of length */
+-	for(i = n = 0; i < 4; i++)
+-		n |= (getchar() - 'a') << (4*i);
+-	fwrite((char *)&n, 1, 2, stdout);
+-	while((i = getchar()) != '\n' && i != EOF) {
+-		n = (i - '3') << 6;
+-		n |= getchar() - ' ';
+-		putchar(n);
+-	}
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:slvg2.c\n"};
+-/*0010100001111110*/
+-/*1110001101011101*/
+//GO.SYSIN DD slvg2.c
+echo tran.c 1>&2
+sed 's/.//' >tran.c <<'//GO.SYSIN DD tran.c'
+-/* place holders */
+-#include "cbt.h"
+-extern long time();
+-long tranid;
+-
+-long getlpid()
+-{
+-	return(time((long *)0) ^ 077777 + getpid());
+-}
+-extern bfile *curbf;
+-bfile *newtran(bf) bfile *bf;
+-{
+-	tranid = getlpid();
+-	return(bf);
+-}
+-
+-notran(bf) bfile *bf;
+-{
+-	curbf = bf;
+-	if(bf->fatal) {
+-		if(bf->fatal++ < 2) {
+-			errno = BFATAL;
+-			return(EOF);
+-		}
+-		perror("btree repeatedly accessed after fatal error");
+-		abort();
+-	}
+-	return(0);
+-}
+-
+-trabort()
+-{
+-	errno = BUTRAN;
+-	tranid = 0;
+-}
+-
+-intran()
+-{
+-	return(0);
+-}
+-
+-rmtran(bf) bfile *bf;
+-{
+-}
+-static struct D { struct D *a; char *b;} VER = {&VER,"\n81/8/9:tran.c\n"};
+-/*0001010110001011*/
+//GO.SYSIN DD tran.c
+echo makefile 1>&2
+sed 's/.//' >makefile <<'//GO.SYSIN DD makefile'
+-.SUFFIXES:	.x .o .c
+-.c.o:
+-	$(CC) $(CFLAGS) -c $<
+-	-ld -r -X $@
+-	mv a.out $@
+-.c.x:
+-	$(CC) $(CFLAGS) -c $<
+-	-ld -r -X $*.o
+-	mv a.out $*.o
+-	ar u btlib $*.o
+-	rm $*.o
+-	touch $*.x
+-CFLAGS=-g
+-debug:	bttest
+-all:	nodesize
+-all:	btlib btcat btbuild bttest btcreat btreport btsquash btran btdelete
+-all:	btadd btdiag btexer
+-bwrite.x bdelete.x diskrd.x diskwrt.x bt.x seek.x tran.x:	cbt.h
+-btsquash.o btcreat.o btreport.o bttest.o btcat.o btbuild.o:	cbt.h
+-btlib:	bt.x seek.x tran.x diskrd.x diskwrt.x bwrite.x bdelete.x lib.x
+-	ranlib btlib
+-bttest:	bttest.o btlib
+-	$(CC) $(CFLAGS) -o bttest bttest.o btlib
+-btran:	btran.o
+-	$(CC) $(CFLAGS) -o btran btran.o
+-btsquash:	btsquash.o btlib
+-	$(CC) $(CFLAGS) -o btsquash btsquash.o btlib
+-btadd:	btadd.o btlib
+-	$(CC) $(CFLAGS) -o btadd btadd.o btlib
+-btreport:	btreport.o btlib
+-	$(CC) $(CFLAGS) -o btreport btreport.o btlib
+-btdelete:	btdelete.o btlib
+-	$(CC) $(CFLAGS) -o btdelete btdelete.o btlib
+-btcreat:	btcreat.o cbt.h
+-	$(CC) $(CFLAGS) -o btcreat btcreat.o btlib
+-btdiag:	btdiag.o btlib
+-	$(CC) $(CFLAGS) -o btdiag btdiag.o btlib
+-btexer:	btexer.o btlib
+-	$(CC) $(CFLAGS) -o btexer btexer.o btlib
+-btcat:	btcat.o btlib
+-	cc -o btcat btcat.o btlib
+-btbuild:	btbuild.o lib.x
+-	$(CC) $(CFLAGS) -o btbuild btbuild.o btlib
+-nodesize:
+-	@cc -E $(CFLAGS) nodesz.c | grep nodesize
+-install:
+-	-cp cbt /usr/bin
+-	-cp cbt.h /usr/include
+-	-cp btlib /usr/lib/libcbt.a
+-	-ranlib /usr/lib/libcbt.a
+-clean:
+-	rm *.o *.x btlib
+//GO.SYSIN DD makefile
+echo cbt 1>&2
+sed 's/.//' >cbt <<'//GO.SYSIN DD cbt'
+-LIB=/usr/lib/btree
+-if test $# = 0
+-then
+-	echo 'cbt add|build|cat|creat|delete|report|squash ...'
+-	exit 1
+-fi
+-x=$1
+-shift
+-case $x in
+-add)	case $1 in
+-	-*)	shift
+-		$LIB/btadd $* ;;
+-	*)	$LIB/btran | $LIB/btadd $* ;;
+-	esac ;;
+-build)	case $1 in
+-	-*)	shift
+-		$LIB/btbuild $* ;;
+-	*)	$LIB/btran | $LIB/btbuild $* ;;
+-	esac ;;
+-cat)	$LIB/btcat $* ;;
+-creat)	$LIB/btcreat $* ;;
+-delete)	case $1 in
+-	-*)	shift
+-		$LIB/btdelete $* ;;
+-	*)	$LIB/btran | $LIB/btdelete $* ;;
+-	esac ;;
+-grep)	$LIB/btgrep $* ;;
+-report)	$LIB/btreport $* ;;
+-squash)	if test $# != 1
+-	then
+-		echo usage cbt squash file-name
+-		exit 1
+-	fi
+-	$LIB/btsquash $1 ;;
+-*)	echo 1>&2 unknown command $x
+-esac
+//GO.SYSIN DD cbt
+echo verify 1>&2
+sed 's/.//' >verify <<'//GO.SYSIN DD verify'
+-PATH=:$PATH
+-export PATH
+-x=$1
+-if test $# = 0
+-then
+-	echo verify rec-cnt
+-	exit 1
+-fi
+-echo 1. loading a btree with $x records
+-btcreat junk
+-awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' <<! | btran | btbuild junk
+-$x
+-!
+-echo 1. does btreport think there are $x records
+-btreport junk
+-echo 2. if btcat doesn\'t agree, it will say so
+-btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}'
+-echo 2. end of load test
+-echo
+-echo 3. delete all the records
+-awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' <<! | btdelete junk
+-$x
+-!
+-echo 3. btreport should think they are all gone
+-btreport junk
+-echo 4. btcat should too
+-btcat junk | awk '{next} END {print NR " records"}'
+-echo 4. there should be no records left
+-echo
+-echo 5. now load them back one at a time
+-echo $x | awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' |
+-	btran | tee foo | btadd junk
+-echo 5. btreport should think there are $x records
+-btreport junk
+-echo 6. btcat should think so too
+-btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+-	END {print NR " records"}'
+-echo 6. there should have been no bad records
+-echo
+-echo 7. now throw every other one away
+-awk '{for(i = 0; i < $1; i+=2) printf "%8.8d\n", i}' <<! | btdelete junk
+-$x
+-!
+-echo 7. btreport should think they are gone
+-btreport junk
+-echo 8. btcat should too
+-btcat junk | awk '{next} END {print NR " records"}'
+-echo 8. there should be half the records left
+-echo
+-echo 9. now squash the file
+-btsquash junk
+-echo 9. btreport says
+-btreport junk
+-echo 10. and can btcat find them all:
+-btcat junk | awk 'length != 9 || $0+0 != 2*NR-1 {print length, $0+0, NR, "bad"}
+-	END {print NR " records"}'
+-echo 10. there should be half the records left
+-echo
+-echo 11. now put the other half back
+-echo $x | awk '{for(i = 0; i < $1; i+=2) printf "%8.8d\n", i}' |
+-	btran | btadd junk
+-echo 11. btreport should see $x records
+-btreport junk
+-echo 12. so should btcat
+-btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+-	END {print NR " records"}'
+-echo 13. and they should all be there after squashing
+-btsquash junk
+-echo 13. btreport should see $x records
+-btreport junk
+-echo 14. so should btcat
+-btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+-	END {print NR " records"}'
+-echo and that is all I could think of doing
+//GO.SYSIN DD verify
+echo README 1>&2
+sed 's/.//' >README <<'//GO.SYSIN DD README'
+-INSTALLING THE BTREE STUFF
+-Acceptance testing -
+-1.  Put the distributed software in a testing directory.
+-	Put the name of the directory in the LIB=  line in cbt.
+-	make all. (If you are not on a vax, remove the -g CFLAG in makefile.)
+-	(If your machine does not have ranlib, remove all references
+-	to it from the makefile.)
+-2.  Run the verify shell script with various arguments.  I use
+-	verify 10, verify 100, and verify 1000.  The last needs 3 minutes
+-	of cpu time.
+-3.  Copy everything to its final directory.  Fix the CFLAGS line in
+-	the makefile by removing -DTEST.  Change the LIB= line in cbt
+-	to point to this directory.  Change the NDSZ definition after
+-	#else in cbt.h to the size of a file system block on your system
+-	(512 or 1024 or whatever).
+-4.  make clean
+-	make all
+-	Run the verify shell script to check that everything is still ok.
+-5.  make install
+//GO.SYSIN DD README

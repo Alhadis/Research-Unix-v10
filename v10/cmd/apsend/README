@@ -1,0 +1,85 @@
+		README for the Apsend and Apstat Commands
+
+				APSEND
+
+Apsend is a command that send device-independent troff output from the
+user's 'home' UNIX system to the dedicated UNIX driving the APS-5
+phototypesetter.
+
+Take the following steps to prepare apsend for your system.
+
+1) Compile the file apsend.mkhd.c (which uses the file apsend.h).
+
+2) Move the a.out file to apsend.mkhd.
+
+3) Check the following shell variables in the apsend command and change if
+necessary: NODE, MKHEAD, FNTABLES, NETWORK.
+
+	NODE - use '`uname -n`' or the actual system nodename
+
+	MKHEAD - use 'apsend.mkhd' (if apsend and apsend.mkhd will reside in
+          the same directory); otherwise use full pathname of apsend.mkhd
+
+	FNTABLES - use '/usr/lib/font' or the actual pathname of the troff font
+	  directory
+
+	NETWORK - use 'uucp1' or 'uucp2' or 'usend' or 'nusend' as explained
+	  below:
+
+		use 'uucp1' for those systems selecting uucp network - AND uucp
+		BY DEFAULT copies source files to the spool directory. (Note:
+		'uucp -C' is usually illegal on these systems.)
+
+		use 'uucp2' for those systems selecting uucp network - AND uucp
+		does NOT by default copy source files to the spool directory
+		(invokes '-C' option of uucp)
+
+		use 'usend' for those systems selecting usend network;
+		must also have the entry 'mhuxm mhuxv  /usr/asp/unpackm'
+		in /usr/asp/udest
+
+		use 'nusend' for those systems selecting nusend network (must
+		have NSC link to MHCC dedicated UNIX)
+
+4) Be sure to leave a blank line as the first line of the apsend shell script.
+
+The apsend command resides in /usr/lbin on the Murray Hill Computer
+Center UNIX systems.
+
+The man page for apsend is included as file apsend.1.
+
+				APSTAT
+
+The apstat command sends a request for the current status of apsend jobs
+(both APS-5 and imagen) to the dedicated UNIX driving both devices.  The
+UNIX acknowledges the status requests via UNIX mail, prepending a brief
+bulletin indicating unusual turnaround conditions, if such exist. The reply
+is sent to the <system>!<login> of the apstat submitter.
+
+Take the following steps to prepare apstat for your system.
+
+1) Compile the file apstat.mkhd.c.
+
+2) Move the a.out file to apstat.mkhd.
+
+3) Check the following shell variables in the apstat command and change if
+necessary: NODE, MKHEAD, REMOTEX, NETWORK.
+	NODE - use '`uname -n`' or the actual system nodename
+	MKHEAD - use 'apstat.mkhd' (if apstat and apstat.mkhd will reside in
+	  the same directory); otherwise use full pathname of apstat.mkhd
+	REMOTEX - set value to '1' to request status via remote execution
+	  of aps.status command; set value to '0' to request status without
+	  remote execution of aps.status command
+	NETWORK - use 'uucp1' or 'uucp2' or 'usend' or 'nusend' as explained
+	  above for the apsend command
+
+4) Be sure to leave a blank line as the first line of the apstat shell script.
+
+The apstat command resides in /usr/lbin on the Murray Hill Computer Center
+UNIX systems.
+
+The man page for apstat is included as file apstat.1.
+
+Please contact Virginia Turner, MH-2F-113, x4661, mhuxm!vbt if you have
+trouble installing apsend or apstat on your system or if the commands do not
+appear to work properly thereafter.

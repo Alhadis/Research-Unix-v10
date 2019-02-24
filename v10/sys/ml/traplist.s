@@ -1,0 +1,14 @@
+	.set	RESADFLT,0
+	.set	PRIVINFLT,1
+	.set	RESOPFLT,2
+	.set	BPTFLT,3
+	.set	XFCFLT,4
+	.set	SYSCALL,5
+	.set	ARITHTRAP,6
+	.set	ASTFLT,7
+	.set	SEGFLT,8
+	.set	PROTFLT,9
+	.set	TRCTRAP,10
+	.set	COMPATFLT,11
+	.set	PAGEFLT,12
+	.set	TABLEFLT,13

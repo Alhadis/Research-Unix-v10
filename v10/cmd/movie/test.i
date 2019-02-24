@@ -1,0 +1,392 @@
+d	v	0	def.view	0.9	-8	10.1	89
+d	c	0	comps
+d	c	1	swaps
+d	p	e
+g	1	t	0	cm7	108	9792	bullet
+g	2	c	0	f7	108	9792	109
+g	3	t	0	cm7	1195	1443	bullet
+g	4	c	0	f7	1195	1443	109
+g	5	t	0	cm7	2282	8865	bullet
+g	6	c	0	f7	2282	8865	109
+g	7	t	0	cm7	3369	9998	bullet
+g	8	c	0	f7	3369	9998	108
+g	9	t	0	cm7	4456	1546	bullet
+g	10	c	0	f7	4456	1546	108
+g	11	t	0	cm7	5542	4020	bullet
+g	12	c	0	f7	5542	4020	109
+g	13	t	0	cm7	6629	824	bullet
+g	14	c	0	f7	6629	824	109
+g	15	t	0	cm7	7716	5257	bullet
+g	16	c	0	f7	7716	5257	109
+g	17	t	0	cm7	8803	927	bullet
+g	18	c	0	f7	8803	927	109
+g	19	t	0	cm7	9890	3298	bullet
+g	20	c	0	f7	9890	3298	108
+g	21	l	0	fx7	1195	0	108	0
+c	0
+e	1	t	0	cm7	108	9792	bullet
+g	1	t	0	cm7	108	1443	bullet
+e	2	c	0	f7	108	9792	109
+g	2	c	0	f7	108	1443	109
+e	3	t	0	cm7	1195	1443	bullet
+g	3	t	0	cm7	1195	9792	bullet
+e	4	c	0	f7	1195	1443	109
+g	4	c	0	f7	1195	9792	109
+c	1
+e	21	l	0	fx7	1195	0	108	0
+g	21	l	0	fx7	2282	0	1195	0
+c	0
+e	3	t	0	cm7	1195	9792	bullet
+g	3	t	0	cm7	1195	8865	bullet
+e	4	c	0	f7	1195	9792	109
+g	4	c	0	f7	1195	8865	109
+e	5	t	0	cm7	2282	8865	bullet
+g	5	t	0	cm7	2282	9792	bullet
+e	6	c	0	f7	2282	8865	109
+g	6	c	0	f7	2282	9792	109
+c	1
+e	21	l	0	fx7	2282	0	1195	0
+g	21	l	0	fx7	1195	0	108	0
+c	0
+e	21	l	0	fx7	1195	0	108	0
+g	21	l	0	fx7	3369	0	2282	0
+c	0
+e	21	l	0	fx7	3369	0	2282	0
+g	21	l	0	fx7	4456	0	3369	0
+c	0
+e	7	t	0	cm7	3369	9998	bullet
+g	7	t	0	cm7	3369	1546	bullet
+e	8	c	0	f7	3369	9998	108
+g	8	c	0	f7	3369	1546	108
+e	9	t	0	cm7	4456	1546	bullet
+g	9	t	0	cm7	4456	9998	bullet
+e	10	c	0	f7	4456	1546	108
+g	10	c	0	f7	4456	9998	108
+c	1
+e	21	l	0	fx7	4456	0	3369	0
+g	21	l	0	fx7	3369	0	2282	0
+c	0
+e	5	t	0	cm7	2282	9792	bullet
+g	5	t	0	cm7	2282	1546	bullet
+e	6	c	0	f7	2282	9792	109
+g	6	c	0	f7	2282	1546	109
+e	7	t	0	cm7	3369	1546	bullet
+g	7	t	0	cm7	3369	9792	bullet
+e	8	c	0	f7	3369	1546	108
+g	8	c	0	f7	3369	9792	108
+c	1
+e	21	l	0	fx7	3369	0	2282	0
+g	21	l	0	fx7	2282	0	1195	0
+c	0
+e	3	t	0	cm7	1195	8865	bullet
+g	3	t	0	cm7	1195	1546	bullet
+e	4	c	0	f7	1195	8865	109
+g	4	c	0	f7	1195	1546	109
+e	5	t	0	cm7	2282	1546	bullet
+g	5	t	0	cm7	2282	8865	bullet
+e	6	c	0	f7	2282	1546	109
+g	6	c	0	f7	2282	8865	109
+c	1
+e	21	l	0	fx7	2282	0	1195	0
+g	21	l	0	fx7	1195	0	108	0
+c	0
+e	21	l	0	fx7	1195	0	108	0
+g	21	l	0	fx7	5542	0	4456	0
+c	0
+e	9	t	0	cm7	4456	9998	bullet
+g	9	t	0	cm7	4456	4020	bullet
+e	10	c	0	f7	4456	9998	108
+g	10	c	0	f7	4456	4020	108
+e	11	t	0	cm7	5542	4020	bullet
+g	11	t	0	cm7	5542	9998	bullet
+e	12	c	0	f7	5542	4020	109
+g	12	c	0	f7	5542	9998	109
+c	1
+e	21	l	0	fx7	5542	0	4456	0
+g	21	l	0	fx7	4456	0	3369	0
+c	0
+e	7	t	0	cm7	3369	9792	bullet
+g	7	t	0	cm7	3369	4020	bullet
+e	8	c	0	f7	3369	9792	108
+g	8	c	0	f7	3369	4020	108
+e	9	t	0	cm7	4456	4020	bullet
+g	9	t	0	cm7	4456	9792	bullet
+e	10	c	0	f7	4456	4020	108
+g	10	c	0	f7	4456	9792	108
+c	1
+e	21	l	0	fx7	4456	0	3369	0
+g	21	l	0	fx7	3369	0	2282	0
+c	0
+e	5	t	0	cm7	2282	8865	bullet
+g	5	t	0	cm7	2282	4020	bullet
+e	6	c	0	f7	2282	8865	109
+g	6	c	0	f7	2282	4020	109
+e	7	t	0	cm7	3369	4020	bullet
+g	7	t	0	cm7	3369	8865	bullet
+e	8	c	0	f7	3369	4020	108
+g	8	c	0	f7	3369	8865	108
+c	1
+e	21	l	0	fx7	3369	0	2282	0
+g	21	l	0	fx7	2282	0	1195	0
+c	0
+e	21	l	0	fx7	2282	0	1195	0
+g	21	l	0	fx7	6629	0	5542	0
+c	0
+e	11	t	0	cm7	5542	9998	bullet
+g	11	t	0	cm7	5542	824	bullet
+e	12	c	0	f7	5542	9998	109
+g	12	c	0	f7	5542	824	109
+e	13	t	0	cm7	6629	824	bullet
+g	13	t	0	cm7	6629	9998	bullet
+e	14	c	0	f7	6629	824	109
+g	14	c	0	f7	6629	9998	109
+c	1
+e	21	l	0	fx7	6629	0	5542	0
+g	21	l	0	fx7	5542	0	4456	0
+c	0
+e	9	t	0	cm7	4456	9792	bullet
+g	9	t	0	cm7	4456	824	bullet
+e	10	c	0	f7	4456	9792	108
+g	10	c	0	f7	4456	824	108
+e	11	t	0	cm7	5542	824	bullet
+g	11	t	0	cm7	5542	9792	bullet
+e	12	c	0	f7	5542	824	109
+g	12	c	0	f7	5542	9792	109
+c	1
+e	21	l	0	fx7	5542	0	4456	0
+g	21	l	0	fx7	4456	0	3369	0
+c	0
+e	7	t	0	cm7	3369	8865	bullet
+g	7	t	0	cm7	3369	824	bullet
+e	8	c	0	f7	3369	8865	108
+g	8	c	0	f7	3369	824	108
+e	9	t	0	cm7	4456	824	bullet
+g	9	t	0	cm7	4456	8865	bullet
+e	10	c	0	f7	4456	824	108
+g	10	c	0	f7	4456	8865	108
+c	1
+e	21	l	0	fx7	4456	0	3369	0
+g	21	l	0	fx7	3369	0	2282	0
+c	0
+e	5	t	0	cm7	2282	4020	bullet
+g	5	t	0	cm7	2282	824	bullet
+e	6	c	0	f7	2282	4020	109
+g	6	c	0	f7	2282	824	109
+e	7	t	0	cm7	3369	824	bullet
+g	7	t	0	cm7	3369	4020	bullet
+e	8	c	0	f7	3369	824	108
+g	8	c	0	f7	3369	4020	108
+c	1
+e	21	l	0	fx7	3369	0	2282	0
+g	21	l	0	fx7	2282	0	1195	0
+c	0
+e	3	t	0	cm7	1195	1546	bullet
+g	3	t	0	cm7	1195	824	bullet
+e	4	c	0	f7	1195	1546	109
+g	4	c	0	f7	1195	824	109
+e	5	t	0	cm7	2282	824	bullet
+g	5	t	0	cm7	2282	1546	bullet
+e	6	c	0	f7	2282	824	109
+g	6	c	0	f7	2282	1546	109
+c	1
+e	21	l	0	fx7	2282	0	1195	0
+g	21	l	0	fx7	1195	0	108	0
+c	0
+e	1	t	0	cm7	108	1443	bullet
+g	0	t	0	cm7	108	824	bullet
+e	2	c	0	f7	108	1443	109
+g	0	c	0	f7	108	824	109
+e	3	t	0	cm7	1195	824	bullet
+g	3	t	0	cm7	1195	1443	bullet
+e	4	c	0	f7	1195	824	109
+g	4	c	0	f7	1195	1443	109
+c	1
+e	21	l	0	fx7	1195	0	108	0
+g	21	l	0	fx7	7716	0	6629	0
+c	0
+e	13	t	0	cm7	6629	9998	bullet
+g	13	t	0	cm7	6629	5257	bullet
+e	14	c	0	f7	6629	9998	109
+g	14	c	0	f7	6629	5257	109
+e	15	t	0	cm7	7716	5257	bullet
+g	15	t	0	cm7	7716	9998	bullet
+e	16	c	0	f7	7716	5257	109
+g	16	c	0	f7	7716	9998	109
+c	1
+e	21	l	0	fx7	7716	0	6629	0
+g	21	l	0	fx7	6629	0	5542	0
+c	0
+e	11	t	0	cm7	5542	9792	bullet
+g	11	t	0	cm7	5542	5257	bullet
+e	12	c	0	f7	5542	9792	109
+g	12	c	0	f7	5542	5257	109
+e	13	t	0	cm7	6629	5257	bullet
+g	13	t	0	cm7	6629	9792	bullet
+e	14	c	0	f7	6629	5257	109
+g	14	c	0	f7	6629	9792	109
+c	1
+e	21	l	0	fx7	6629	0	5542	0
+g	21	l	0	fx7	5542	0	4456	0
+c	0
+e	9	t	0	cm7	4456	8865	bullet
+g	9	t	0	cm7	4456	5257	bullet
+e	10	c	0	f7	4456	8865	108
+g	10	c	0	f7	4456	5257	108
+e	11	t	0	cm7	5542	5257	bullet
+g	11	t	0	cm7	5542	8865	bullet
+e	12	c	0	f7	5542	5257	109
+g	12	c	0	f7	5542	8865	109
+c	1
+e	21	l	0	fx7	5542	0	4456	0
+g	21	l	0	fx7	4456	0	3369	0
+c	0
+e	21	l	0	fx7	4456	0	3369	0
+g	21	l	0	fx7	8803	0	7716	0
+c	0
+e	15	t	0	cm7	7716	9998	bullet
+g	15	t	0	cm7	7716	927	bullet
+e	16	c	0	f7	7716	9998	109
+g	16	c	0	f7	7716	927	109
+e	17	t	0	cm7	8803	927	bullet
+g	17	t	0	cm7	8803	9998	bullet
+e	18	c	0	f7	8803	927	109
+g	18	c	0	f7	8803	9998	109
+c	1
+e	21	l	0	fx7	8803	0	7716	0
+g	21	l	0	fx7	7716	0	6629	0
+c	0
+e	13	t	0	cm7	6629	9792	bullet
+g	13	t	0	cm7	6629	927	bullet
+e	14	c	0	f7	6629	9792	109
+g	14	c	0	f7	6629	927	109
+e	15	t	0	cm7	7716	927	bullet
+g	15	t	0	cm7	7716	9792	bullet
+e	16	c	0	f7	7716	927	109
+g	16	c	0	f7	7716	9792	109
+c	1
+e	21	l	0	fx7	7716	0	6629	0
+g	21	l	0	fx7	6629	0	5542	0
+c	0
+e	11	t	0	cm7	5542	8865	bullet
+g	11	t	0	cm7	5542	927	bullet
+e	12	c	0	f7	5542	8865	109
+g	12	c	0	f7	5542	927	109
+e	13	t	0	cm7	6629	927	bullet
+g	13	t	0	cm7	6629	8865	bullet
+e	14	c	0	f7	6629	927	109
+g	14	c	0	f7	6629	8865	109
+c	1
+e	21	l	0	fx7	6629	0	5542	0
+g	21	l	0	fx7	5542	0	4456	0
+c	0
+e	9	t	0	cm7	4456	5257	bullet
+g	9	t	0	cm7	4456	927	bullet
+e	10	c	0	f7	4456	5257	108
+g	10	c	0	f7	4456	927	108
+e	11	t	0	cm7	5542	927	bullet
+g	11	t	0	cm7	5542	5257	bullet
+e	12	c	0	f7	5542	927	109
+g	12	c	0	f7	5542	5257	109
+c	1
+e	21	l	0	fx7	5542	0	4456	0
+g	21	l	0	fx7	4456	0	3369	0
+c	0
+e	7	t	0	cm7	3369	4020	bullet
+g	7	t	0	cm7	3369	927	bullet
+e	8	c	0	f7	3369	4020	108
+g	8	c	0	f7	3369	927	108
+e	9	t	0	cm7	4456	927	bullet
+g	9	t	0	cm7	4456	4020	bullet
+e	10	c	0	f7	4456	927	108
+g	10	c	0	f7	4456	4020	108
+c	1
+e	21	l	0	fx7	4456	0	3369	0
+g	21	l	0	fx7	3369	0	2282	0
+c	0
+e	5	t	0	cm7	2282	1546	bullet
+g	5	t	0	cm7	2282	927	bullet
+e	6	c	0	f7	2282	1546	109
+g	6	c	0	f7	2282	927	109
+e	7	t	0	cm7	3369	927	bullet
+g	0	t	0	cm7	3369	1546	bullet
+e	8	c	0	f7	3369	927	108
+g	0	c	0	f7	3369	1546	108
+c	1
+e	21	l	0	fx7	3369	0	2282	0
+g	21	l	0	fx7	2282	0	1195	0
+c	0
+e	3	t	0	cm7	1195	1443	bullet
+g	0	t	0	cm7	1195	927	bullet
+e	4	c	0	f7	1195	1443	109
+g	0	c	0	f7	1195	927	109
+e	5	t	0	cm7	2282	927	bullet
+g	0	t	0	cm7	2282	1443	bullet
+e	6	c	0	f7	2282	927	109
+g	0	c	0	f7	2282	1443	109
+c	1
+e	21	l	0	fx7	2282	0	1195	0
+g	21	l	0	fx7	1195	0	108	0
+c	0
+e	21	l	0	fx7	1195	0	108	0
+g	21	l	0	fx7	9890	0	8803	0
+c	0
+e	17	t	0	cm7	8803	9998	bullet
+g	17	t	0	cm7	8803	3298	bullet
+e	18	c	0	f7	8803	9998	109
+g	18	c	0	f7	8803	3298	109
+e	19	t	0	cm7	9890	3298	bullet
+g	0	t	0	cm7	9890	9998	bullet
+e	20	c	0	f7	9890	3298	108
+g	0	c	0	f7	9890	9998	108
+c	1
+e	21	l	0	fx7	9890	0	8803	0
+g	21	l	0	fx7	8803	0	7716	0
+c	0
+e	15	t	0	cm7	7716	9792	bullet
+g	15	t	0	cm7	7716	3298	bullet
+e	16	c	0	f7	7716	9792	109
+g	16	c	0	f7	7716	3298	109
+e	17	t	0	cm7	8803	3298	bullet
+g	0	t	0	cm7	8803	9792	bullet
+e	18	c	0	f7	8803	3298	109
+g	0	c	0	f7	8803	9792	109
+c	1
+e	21	l	0	fx7	8803	0	7716	0
+g	21	l	0	fx7	7716	0	6629	0
+c	0
+e	13	t	0	cm7	6629	8865	bullet
+g	13	t	0	cm7	6629	3298	bullet
+e	14	c	0	f7	6629	8865	109
+g	14	c	0	f7	6629	3298	109
+e	15	t	0	cm7	7716	3298	bullet
+g	0	t	0	cm7	7716	8865	bullet
+e	16	c	0	f7	7716	3298	109
+g	0	c	0	f7	7716	8865	109
+c	1
+e	21	l	0	fx7	7716	0	6629	0
+g	21	l	0	fx7	6629	0	5542	0
+c	0
+e	11	t	0	cm7	5542	5257	bullet
+g	11	t	0	cm7	5542	3298	bullet
+e	12	c	0	f7	5542	5257	109
+g	12	c	0	f7	5542	3298	109
+e	13	t	0	cm7	6629	3298	bullet
+g	0	t	0	cm7	6629	5257	bullet
+e	14	c	0	f7	6629	3298	109
+g	0	c	0	f7	6629	5257	109
+c	1
+e	21	l	0	fx7	6629	0	5542	0
+g	21	l	0	fx7	5542	0	4456	0
+c	0
+e	9	t	0	cm7	4456	4020	bullet
+g	0	t	0	cm7	4456	3298	bullet
+e	10	c	0	f7	4456	4020	108
+g	0	c	0	f7	4456	3298	108
+e	11	t	0	cm7	5542	3298	bullet
+g	0	t	0	cm7	5542	4020	bullet
+e	12	c	0	f7	5542	3298	109
+g	0	c	0	f7	5542	4020	109
+c	1
+e	21	l	0	fx7	5542	0	4456	0
+g	0	l	0	fx7	4456	0	3369	0
+c	0

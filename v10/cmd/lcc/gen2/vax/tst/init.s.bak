@@ -1,0 +1,158 @@
+.data
+.globl _words
+.align 2; _words:.long 1
+.long 2
+.long 3
+.ascii "if\000"
+.space 3
+.space 2
+.long 4
+.long 5
+.space 4
+.ascii "for"
+.space 3
+.space 2
+.long 6
+.long 7
+.long 8
+.ascii "else\000"
+.space 1
+.space 2
+.long 9
+.long 10
+.long 11
+.ascii "whil"
+.byte 101
+.space 1
+.space 2
+.long 0
+.space 8
+.space 8
+.globl _wordlist
+.align 2; _wordlist:.long _words
+.globl _x
+.align 2; _x:.long 1
+.long 2
+.long 3
+.long 4
+.long 0
+.long 5
+.long 6
+.space 12
+.long 7
+.space 16
+.globl _y
+.align 2; _y:.long _x
+.long _x+20
+.long _x+40
+.long 0x0
+.text
+.globl _main
+.align 1
+_main:.word 0xc00
+clrl r10
+jbr L7
+L4:
+clrl r11
+jbr L11
+L8:
+movl _y[r10],r5
+pushl (r5)[r11]
+pushal L12
+calls $8/4,_printf
+L9:
+incl r11
+L11:
+movl _y[r10],r5
+tstl (r5)[r11]
+jneq L8
+pushal L13
+calls $4/4,_printf
+L5:
+incl r10
+L7:
+tstl _y[r10]
+jneq L4
+calls $0/4,_f
+pushl _wordlist
+calls $4/4,_g
+clrl r0
+ret
+.data
+.align 2; L14:.long L15
+.long L16
+.long L17
+.long L18
+.long 0x0
+.text
+.globl _f
+.align 1
+_f:.word 0x800
+movl $L14,r11
+jbr L22
+L19:
+pushl (r11)
+pushal L23
+calls $8/4,_printf
+L20:
+addl2 $4,r11
+L22:
+tstl (r11)
+jneq L19
+ret
+.globl _g
+.align 1
+_g:.word 0xc00
+movl 4(ap),r11
+jbr L27
+L24:
+clrl r10
+jbr L31
+L28:
+pushl (r11)[r10]
+pushal L32
+calls $8/4,_printf
+L29:
+incl r10
+L31:
+cmpl r10,$3
+jlssu L28
+pushal 12(r11)
+pushal L23
+calls $8/4,_printf
+L25:
+addl2 $20,r11
+L27:
+tstl (r11)
+jneq L24
+calls $0/4,_h
+ret
+.globl _h
+.align 1
+_h:.word 0x800
+clrl r11
+jbr L36
+L33:
+mull3 r11,$20,r5
+pushal _words+12(r5)
+pushl _words+8(r5)
+pushl _words+4(r5)
+pushl _words(r5)
+pushal L37
+calls $20/4,_printf
+L34:
+incl r11
+L36:
+cmpl r11,$5
+jlssu L33
+ret
+.text 1
+L37:.ascii "%d %d %d %s\012\000"
+L32:.ascii "%d \000"
+L23:.byte 37,115,10,0
+L18:.ascii "while\000"
+L17:.ascii "else\000"
+L16:.ascii "for\000"
+L15:.ascii "if\000"
+L13:.byte 10,0
+L12:.ascii " %d\000"

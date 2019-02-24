@@ -1,0 +1,127 @@
+'\"macro stdmacro
+.if n .pH g1a.mail_pipe %W% of %G%
+.if \nX=0 .ds x} mail_pipe 1M "Essential Utilities" "\&"
+.if \nX=1 .ds x} mail_pipe 1M "Essential Utilities"
+.if \nX=2 .ds x} mail_pipe 1M "" "\&"
+.if \nX=3 .ds x} mail_pipe "" "" "\&"
+.nr X
+.TH \*(x}
+.SH NAME
+\f4mail_pipe\f1 \- invoke recipient command for incoming mail
+.SH SYNOPSIS
+.PP
+\f4mail_pipe\f1
+[
+\f4\-x\f1
+.I debug_level
+]
+\f4\-r\f1
+.I recipient
+\f4\-R\f1
+.I path_to_sender
+\f4\-c\f1
+.I content_type
+\f4\-S\f1
+.I subject
+.SH DESCRIPTION
+When a new mail message arrives,
+the \f4mail\fP command first checks if the recipient's mailbox indicates
+that the message is to be forwarded elsewhere (to some other recipient or
+as the input to some command).
+If the message is to be piped into a recipient-specified command,
+\f4mail\fP invokes \f4mail_pipe\fP to do some validation and then execute
+the command in the context of the recipient.
+.PP
+Command-line arguments are:
+.PD 0
+.TP 18
+\f4\-x\fP \f2debug_level\fP
+Turn on debugging for this invocation. See the description of the \f4\-x\fP
+option for the \f4mail\fP command for details.
+.TP
+\f4\-r\fP \f2recipient\fP
+The recipient's login id.
+.TP
+\f4\-R\fP \f2path_to_sender\fP
+The return address to the message's originator.
+.TP
+\f4\-c\fP \f2content_type\fP
+The value of the \f4Content-Type:\fP header line in the message.
+.TP
+\f4\-S\fP \f2subject\fP
+The value of the \f4Subject:\fP header line in the message if present.
+.PD
+.PP
+\f4mail_pipe\fP is installed as a setuid-to-root process,
+thus enabling itself to change it's user and group ids to that of the
+recipient as necessary.
+.PP
+When invoked,
+\f4mail_pipe\fP performs the following steps (if a step fails, the exit
+code is noted as [\f2N\f1]):
+.PD 0
+.TP 3
+\-
+Validate invocation arguments [\f41\f1].
+.TP 3
+\-
+Verify that recipient name is \(<= 14 characters long [\f42\f1].
+.TP 3
+\-
+Verify that the setgid flag for the recipient mailbox is set [\f43\f1].
+.TP 3
+\-
+Open \f4/var/mail/\fP\f2recipient\fP [\f44\f1].
+.TP 3
+\-
+Verify that recipient's mailbox starts with the string \f4Forward to\fP [\f45\f1].
+.TP 3
+\-
+Find pipe symbol indicating start of command string in recipient
+mailbox [\f46\f1].
+.TP 3
+\-
+Find entry for recipient in \f4/etc/passwd\f1 [\f47\f1].
+.TP 3
+\-
+Set gid to recipient's gid [\f48\f1].
+.TP 3
+\-
+Set uid to recipient's uid [\f49\f1].
+.TP 3
+\-
+Change current directory to recipient's login directory [\f410\f1].
+.TP 3
+\-
+Allocate space to hold newly \f4exec\f1'ed environment for
+recipient command [\f411\f1].
+.TP 3
+\-
+Parse the recipient command, performing any \f4%\f2keyword\f1 expansions required.
+See the `Forwarding mail' section of \f4mail\fP(1), for more information
+regarding \f4%\f2keyword\f1 substitutions [\f412\f1].
+.TP 3
+\-
+Execute recipient command [\f413\f1 if \f4exec\f1 fails,
+otherwise exit code from recipient command itself].
+.PD
+.SH FILES
+.PD 0
+.TP 20
+\f4/etc/passwd\fP
+to identify sender and locate recipients
+.TP
+\f4/var/mail/\f2recipient\f1
+incoming mail for \f2recipient\fP;
+that is, the mail file
+.TP
+\f4/tmp/MLDBG\(**\fP
+debug trace file
+.TP
+\f4/usr/lib/mail/mail_pipe\fP
+mail_pipe program
+.PD
+.SH SEE ALSO
+\f4mail\fP(1),
+\f4notify\fP(1),
+\f4vacation\fP(1)

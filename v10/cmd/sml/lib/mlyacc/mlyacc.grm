@@ -1,0 +1,159 @@
+(* MLPG.GRM: Grammar specification for ml parser generator
+   Created by David Tarditi
+*)
+open Misc;
+%%
+
+%eof EOF
+%right ARROW
+%left  ASTERISK
+
+%term DELIMITER | OF | Term | Nonterm | START | COLON | ID of string |
+      UNKNOWN of string | EOF | BAR | PROG of string | PREC of LexValue |
+	PERCENT_EOF | PREC_TAG | HEADER of string | PREFER | IPREFER |
+	KEYWORD | FOR | LBRACE | RBRACE | COMMA | ASTERISK | ARROW |
+	TYVAR of string | IDDOT of string | RPAREN | LPAREN | INT of string |
+	STRUCT | VERBOSE | TO | VAL | EQUAL | BLOCK
+
+%nonterm MPC_DECLS of decl_data | MPC_DECL of decl_data |
+	 ID_LIST of string list | TRULE of rule list | TRULELIST of rule list |
+	 BEGIN | TY of string list |
+	 CONSTR_LIST of (constr*constr_data) list |
+	 RHSLIST of rhs_data | RULEPREC of string option |
+	 SUBST_DECL of (string*string) list |
+	 TYPELIST of string list | RECORDLIST of string list |
+	 QUALID of string list | LABEL of string
+
+%%
+
+BEGIN : HEADER MPC_DECLS DELIMITER TRULELIST
+	(make_parser (HEADER,MPC_DECLS,TRULELIST))
+
+MPC_DECLS : MPC_DECLS MPC_DECL  (join_decls MPC_DECLS MPC_DECL)
+
+MPC_DECLS:  ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=NONE,
+		prefer=nil,iprefer=nil,keyword=nil,structure'=NONE,
+		verbose=false})
+
+MPC_DECL: Term CONSTR_LIST
+	    ({ start=NONE,prec=NONE,nonterm=NONE,
+	       term = make_tok_dict CONSTR_LIST, eof = NONE,
+		prefer=nil,iprefer=nil,keyword=nil,structure'=NONE,
+		verbose=false})
+
+	| Nonterm CONSTR_LIST
+	    ({ start=NONE,prec=NONE,nonterm=make_tok_dict CONSTR_LIST,
+	       term = NONE, eof = NONE,prefer=nil,iprefer=nil,keyword=nil,
+	       structure'=NONE,verbose=false})
+	| PREC ID_LIST
+	    ({start=NONE,prec=save_prec(ID_LIST1,PREC1),
+	      nonterm=NONE,term=NONE,eof=NONE,prefer=nil,iprefer=nil,
+	      keyword=nil,structure'=NONE,verbose=false})
+
+	| START ID
+	     ({start=SOME ID,prec=NONE,nonterm=NONE,structure'=NONE,
+	       term = NONE, eof = NONE,prefer=nil,iprefer=nil,keyword=nil,
+	       verbose=false})
+
+	| PERCENT_EOF ID
+	     ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=SOME ID,
+		prefer=nil,iprefer=nil,keyword=nil,structure'=NONE,
+	 	verbose=false})
+
+	| KEYWORD ID_LIST
+	     ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=NONE,
+		prefer=nil,iprefer=nil,keyword=ID_LIST1,structure'=NONE,
+	 	verbose=false})
+
+	| IPREFER ID_LIST
+	     ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=NONE,
+		prefer=nil,iprefer=ID_LIST1,keyword=nil,structure'=NONE,
+		verbose=false})
+
+	| PREFER SUBST_DECL
+	     ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=NONE,
+		prefer=SUBST_DECL1,iprefer=nil,keyword=nil,structure'=NONE,
+		verbose=false})
+
+	| STRUCT ID
+	     ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=NONE,
+		prefer=nil,iprefer=nil,keyword=nil,structure'=SOME ID,
+		verbose=false})
+
+	| VERBOSE
+	     ({start=NONE,prec=NONE,nonterm=NONE,term=NONE,eof=NONE,
+		prefer=nil,iprefer=nil,keyword=nil,structure'=NONE,
+		verbose=true})
+
+SUBST_DECL : SUBST_DECL BAR ID FOR ID
+	      ((ID1,ID2)::SUBST_DECL)
+
+	| ID FOR ID
+	      ([(ID1,ID2)])
+
+CONSTR_LIST : CONSTR_LIST BAR ID OF TY
+	     ((ID,{ty=SOME TY,num=0})::CONSTR_LIST)
+
+	| CONSTR_LIST BAR ID
+	     ((ID,{ty=NONE,num=0})::CONSTR_LIST)
+
+	| ID OF TY ([(ID,{ty=SOME TY,num=0})])
+
+	| ID ([(ID,{ty=NONE,num=0})])
+
+TRULE : ID COLON RHSLIST
+	(map (fn {rhs,code,prec} => {lhs=ID1,rhs=rev rhs,code=code,prec=prec})
+	 RHSLIST1)
+
+TRULELIST:  TRULELIST TRULE (TRULE1 @ TRULELIST1)
+
+	|	 (nil)
+
+ID_LIST : ID_LIST ID (ID1 :: ID_LIST1)
+
+	| 	 (nil)
+
+RHSLIST : ID_LIST RULEPREC PROG
+	    ([{rhs=ID_LIST1,code=PROG1,prec=RULEPREC1}])
+
+	| RHSLIST BAR ID_LIST RULEPREC PROG
+	    ({rhs=ID_LIST1,code=PROG1,prec=RULEPREC1}::RHSLIST1)
+
+TY : TYVAR
+ 	([TYVAR])
+   | LBRACE RECORDLIST RBRACE
+	("{ "::RECORDLIST@[" } "])
+   | LBRACE RBRACE
+	(["{ }"])
+   | LPAREN TY RPAREN
+	(" ( "::(TY@[" ) "]))
+   | LPAREN TYPELIST RPAREN QUALID
+	(" ( "::TYPELIST@(" ) "::QUALID))
+   | TY QUALID
+	(TY@(" "::QUALID))
+   | QUALID
+	(QUALID)
+   | TY ASTERISK TY
+	(TY1@("*"::TY2))
+   | TY ARROW TY
+	(TY1@(" -> "::" "::TY2))
+
+TYPELIST : TYPELIST COMMA TY
+		(TYPELIST@(","::TY))
+	 | TY COMMA TY
+	     (TY1 @ ("," :: TY2))
+
+RECORDLIST : RECORDLIST COMMA LABEL COLON TY
+		(RECORDLIST@(" "::LABEL::" : "::TY))
+	   | LABEL COLON TY
+		(" "::LABEL::" : "::TY)
+
+QUALID : ID	([ID])
+       | IDDOT QUALID (IDDOT::QUALID)
+	 
+LABEL : ID  (ID)
+      | INT (INT)
+
+RULEPREC : PREC_TAG ID (SOME ID1)
+
+RULEPREC : (NONE)

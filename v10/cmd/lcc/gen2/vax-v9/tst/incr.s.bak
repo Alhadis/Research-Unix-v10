@@ -1,0 +1,67 @@
+.text
+.globl _main
+.align 1
+_main:.word 0x0
+ret
+.globl _memchar
+.align 1
+_memchar:.word 0x0
+subl2 $8,sp
+movl -8(fp),r5
+incl -8(fp)
+movb (r5),-4(fp)
+addl3 $1,-8(fp),r5
+movl r5,-8(fp)
+movb (r5),-4(fp)
+movl -8(fp),r5
+decl -8(fp)
+movb (r5),-4(fp)
+addl3 $-1,-8(fp),r5
+movl r5,-8(fp)
+movb (r5),-4(fp)
+ret
+.globl _memint
+.align 1
+_memint:.word 0x0
+subl2 $8,sp
+movl -8(fp),r5
+addl2 $4,-8(fp)
+movl (r5),-4(fp)
+addl3 $4,-8(fp),r5
+movl r5,-8(fp)
+movl (r5),-4(fp)
+movl -8(fp),r5
+addl2 $-4,-8(fp)
+movl (r5),-4(fp)
+addl3 $-4,-8(fp),r5
+movl r5,-8(fp)
+movl (r5),-4(fp)
+ret
+.globl _regchar
+.align 1
+_regchar:.word 0x0
+movb (r4)+,r3
+addl3 $1,r4,r5
+movl r5,r4
+movb (r5),r3
+movl r4,r5
+decl r4
+movb (r5),r3
+addl3 $-1,r4,r5
+movl r5,r4
+movb (r5),r3
+ret
+.globl _regint
+.align 1
+_regint:.word 0x0
+movl (r4)+,r3
+addl3 $4,r4,r5
+movl r5,r4
+movl (r5),r3
+movl r4,r5
+addl2 $-4,r4
+movl (r5),r3
+addl3 $-4,r4,r5
+movl r5,r4
+movl (r5),r3
+ret

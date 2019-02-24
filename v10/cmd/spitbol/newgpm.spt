@@ -1,0 +1,1142 @@
+-IN132
+-TITLE			MACRO TEXT PROCESSOR V780-6.12
+* This program is a document processor based on the principles of
+* C. Strachey's GPM.  All text processor commands consist
+* of macro calls embedded in the string of text.
+* There is a reference document which should be consulted for
+* detailed explanation.
+*
+* Neither the author nor any institution which the author may represent
+* assumes any liability with respect to the use of this program,
+* or makes any representations as to its fitness or merchantability
+* for a particular purpose.
+*
+*		Steven G. Duff
+*		Santa Fe Engineering Services Co.
+*		Research and Development  Ax/1
+*		505 South Main Street
+*		Orange, California  92668   USA
+*		(714) 558-1300
+*
+-STITL REVISION HISTORY
+*
+* o Rev. 6.12 28-APR-1982 [SGD]:
+*   o Made some rearrangements to startup processing and messages.
+*
+* o Rev. 6.11 26-APR-1982 [SGD]:
+*   o Startup command line now processed differently, also errors in
+*     built-in function file now reported.
+*
+* o Rev. 6.10 18-JAN-1982 [SGD]:
+*   o Changed interpretation of {D mname}, where mname is a system
+*     macro.  This now is the same as {Mname} (rather than "SYSTEM").
+*
+* o Rev. 6.02 13-NOV-1981 [SGD]:
+*   o Added BIAS macro.
+*
+* o Rev. 6.01 22-SEP-1981 [SGD]:
+*   o Added SKIPTEXT function and macro.
+*   o Modified READ() to use SKIPTEXT() for BEGINTEXT operation.
+*   o Added QUERY output association for prompting.
+*
+-STITL PATTERN DEFINITION AND INITIALIZATION
+* !!!WARNING!!!  Note that this initializing code must not contain
+*	any labels, as they would prevent the code blocks from being
+*	garbage collected later.
+*
+* To tailor for an individual system, the following initializations
+*	are especially important.  The READ function will have to be
+*	modified, and the startup code which contains some I/O
+*	associations will have to be changed.
+*
+	&TRIM = 1; &ANCHOR = 1; &STLIMIT = 999999999
+	&ALPHABET  BREAK('A') LEN(26) . UPLETS  BREAK('a')  LEN(26) . LOWLETS
+*
+* MINLU and MAXLU set the limits on the input logical unit stack.
+* OUTUNIT is the lun used for output.
+* QUERYUNIT is the lun used for prompts.
+*
+	MINLU = 2
+	MAXLU = 15
+	OUTUNIT = 1
+	QUERYUNIT = 16
+*
+* BIFFILE is the filespec of the Built-in Function File, read in at startup.
+* USERSTART gives the spec for the user's autoload library (no error is
+* issued if this is not found at startup.
+* The INITIAL... files are the filespecs initially assigned for I/O.
+* INITIAL_INPUT should be the pre-association for TERMINAL.  If not, the
+* startup message section will have to be patched up.
+*
+	BIFFILE = 'GPMBIF.GPM'
+	USERSTART = 'GPMSTART'
+	INITIAL_INPUT = '/dev/tty'
+	INITIAL_OUTPUT = '/dev/tty'
+-EJECT
+*
+* BS is the backspace character.  It should only be possible to generate
+* this character with the system function OVER, as other routines assume
+* a certain 'normalized' distribution of backspaces (see OVER).  If no
+* 'non-normal' characters exist in the host machine character set to be
+* used for BS, then it should be translated out in GETLINE.
+*
+* CS is the control sequence character.  It should only be possible to
+* generate this character with the system function CONTROL_SEQ, as
+* there is a standard 'normalized' form for these also.  A control sequence
+* is a string that is emitted to the device, but does not figure in
+* line size computations.
+*
+	BS	= SUBSTR(&ALPHABET,255,1)
+	CS	= SUBSTR(&ALPHABET,254,1)
+	BSPATT	= BREAK(BS)
+*
+* CR is the character used to move to the beginning of a line image, and
+* LF is used to move to the next physical print line.
+*
+	&ALPHABET  LEN(10) LEN(1) . LF LEN(2) LEN(1) . CR
+	CRLF	= CR LF
+*
+* COMPLEXLIM is used to compare against &FNCLEVEL in the macro call circuit.
+* When the function nesting reaches this limit, GPMDOC signals an error
+* It should be set so that a SPITBOL stack overflow with its attendant
+* unplesantness cannot occur.
+*
+	COMPLEXLIM = 1000
+*
+* NCSW is the string which, when appended to filenames on OUTPUT calls
+* will suppress implied carriage control.  GPMDOC instead uses
+* CR, and CRLF combinations at the end of output records explicitly.
+* This is necessary to support overstrikes.
+*
+	NCSW	= ;* this used to be '/NOCR'
+-STITL COMMON STRING INITIALIZATION
+* The reason for the table below is to provide a common string value for
+* strings referenced within the interpreter.  As SPITBOL does not hash
+* strings, if this were not done, space in dynamic would be lost to multiple
+* copies of the same strings.  At the end of initialization, we set H to
+* null, effectively losing the table, and as all the initialization code
+* is also garbage collected away, all string indexes in H are discarded too.
+* Thus we are left with a single copy of the string.  For strings which have
+* name with the same text (either functions or variables), we use a CONVERT
+* of the name to string to gain access to the string referenced by the name.
+* This may seem involved, but it reclaims a substantial amount of space that
+* would otherwise be wasted, and space is at a premium in some versions.
+*
+	H = TABLE(31)
+	H['BEGINTEXT']	= CONVERT(.BEGINTEXT,.STRING)
+	H['BIAS']	= CONVERT(.BIAS,.STRING)
+	H['BSLACK']	= CONVERT(.BSLACK,.STRING)
+	H['CODE']	= CONVERT(.CODE,.STRING)
+	H['COND']	= CONVERT(.COND,.STRING)
+	H['DIFFER']	= CONVERT(.DIFFER,.STRING)
+	H['DOPROP']	= CONVERT(.DOPROP,.STRING)
+	H['DOWHILE']	= CONVERT(.DOWHILE,.STRING)
+	H['END']	= CONVERT(.END,.STRING)
+	H['ENDTEXT']	= CONVERT(.ENDTEXT,.STRING)
+	H['FILL']	= CONVERT(.FILL,.STRING)
+	H['HS']		= CONVERT(.HS,.STRING)
+	H['IDENT']	= CONVERT(.IDENT,.STRING)
+	H['INFORMAT']	= CONVERT(.INFORMAT,.STRING)
+	H['INPUT']	= CONVERT(.INPUT,.STRING)
+	H['JUST']	= CONVERT(.JUST,.STRING)
+	H['LINELENGTH']	= CONVERT(.LINELENGTH,.STRING)
+	H['LINENUM']	= CONVERT(.LINENUM,.STRING)
+	H['LMG']	= CONVERT(.LMG,.STRING)
+	H['NEWLINE']	= CONVERT(.NEWLINE,.STRING)
+	H['OUTOS']	= CONVERT(.OUTOS,.STRING)
+	H['OUTPUT']	= CONVERT(.OUTPUT,.STRING)
+	H['PAGELENGTH']	= CONVERT(.PAGELENGTH,.STRING)
+	H['PRINT']	= 'PRINT'
+	H['RESTORE']	= CONVERT(.RESTORE,.STRING)
+	H['RMG']	= CONVERT(.RMG,.STRING)
+	H['SET']	= CONVERT(.SET,.STRING)
+	H['SETQ']	= 'SETQ'
+	H['SETV']	= 'SETV'
+	H['SKIPTEXT']	= CONVERT(.SKIPTEXT,.STRING)
+	H['SPACING']	= CONVERT(.SPACING,.STRING)
+	H['TSET']	= CONVERT(.TSET,.STRING)
+	H['TSETQ']	= 'TSETQ'
+	H['TSETV']	= 'TSETV'
+	H['{']		= '{'
+	H['}']		= '}'
+	H['<']		= '<'
+	H['>']		= '>'
+*
+* The blank is referenced frequently outside of the initializing code,
+* so we give it permanent status
+*
+	SP	= ' '
+-STITL FUNCTION DEFINITION AND FUNCTION DATA
+  DEFINE('COND()T')
+*
+  DEFINE('CONTROL_SEQ(STR)T')
+*
+  DEFINE('DIAG(FNAME,TAG)OLDEXIT,CARD')
+*
+  DEFINE('DOPROP(PROP,BODY,ORDER)T,I,ARGLIST')
+*
+  DEFINE('DOWHILE(PRED,BODY)')
+*
+  DEFINE('DUMPTEXT(STR)IMAGES,I')
+*
+  DEFINE('END()')
+*
+  DEFINE('GETLINE()T')
+    GL.P1	= RTAB(1) . GETLINE  '-'
+    GL.P2	= SPAN(SP '	')
+*
+  DEFINE('GPMIFY(MSTR,ARGLIST)POS,PREFIX,QS')
+    QSPOS	= ((H['<'] *QBAL $ QS H['>']) | H['<'] $ QS) @POS
+    QBAL	= BREAK('<>') ((H['<'] *QBAL H['>'] *QBAL) | '')
+    NULLARGS	= TABLE(3)
+    GPMSTRING	= TAB(*POS) BREAKX('{<') $ PREFIX
++		((H['{'] @POS *?(GPMIFY = GPMIFY PREFIX MACCALL())) |
++		(*QSPOS *?(GPMIFY = GPMIFY PREFIX QS)))
++				*GPMSTRING |
++		*?(GPMIFY = GPMIFY SUBSTR(MSTR,POS + 1,SIZE(MSTR) - POS))
+*
+  DEFINE('GPMPRINT(MSTR,ARGLIST)POS,PREFIX,QS')
+    GPMSTRPNT	= TAB(*POS) BREAK('{<') $ PREFIX
++		*(IDENT(PREFIX),PUTCHARS(PREFIX))
++		((H['{'] @POS *MACCALL(1)) | (*QSPOS *PUTCHARS(QS)))
++			*GPMSTRPNT |
++		*PUTCHARS(SUBSTR(MSTR,POS + 1,SIZE(MSTR) - POS))
+-EJECT
+  DEFINE('IMAGES(STR)I,T,POS,COUNT')
+    IM.P1	= TAB(*POS)
++		  ((BREAK(BS CS) $ T *?(COUNT = COUNT + SIZE(T))
++		   *?(IMAGES[0] = IMAGES[0] T)
++		   ((BS ('' $ I) *IM.P2) | (CS BS *IM.P3)) @POS *IM.P1) | '')
+    IM.P2	= LEN(1) $ T
++		  *?(IMAGES[I = I + 1] = RPAD(IMAGES[I],COUNT - 1) T)
++		  ((BS *IM.P2) | '')
+    IM.P3	= (NOTANY(CS) $ T BS *?(IMAGES[0] = IMAGES[0] T) *IM.P3) | ''
+*
+  DEFINE('IN_SET(TS,INNAME)NEW_INUNIT,ISNAME,ISVALUE,ISINDEX')
+    IS_ALPATT	= BREAK('=') . ISNAME  LEN(1)  REM . ISVALUE
+*
+  DEFINE('IN_READ(INUNIT,INNAME)INSET_PEND')
+*
+  DEFINE('JUST(JUST,LEN,T)POS,PREFIX')
+    JU.P1	= *GE(LEN = LEN - 1) ((TAB(*POS) | TAB(POS = 0)) LEN(1)
++			BREAK(SP) SPAN(SP)) . PREFIX  @POS
+*
+  DEFINE('LSIZE(STR)T')
+*
+  DEFINE('LSUBSTR(STR,N,LEN)T')
+    LS.P1	= LEN(1) ((BS (*LS.P1 | '')) | *?(T = T + 1))
+    LS.P2	= ARBNO(LS.P1) *EQ(T,N - 1) *?(T = 0) ARBNO(LS.P1) . LSUBSTR
++			*EQ(T,LEN)
+*
+  DEFINE('MACCALL(PFLG)AL1,AL2,AL,T,MACNAME,MACRO,STPOS,SETNAME'
++		',SETTYPE,QN,ARG')
+    MC.P1	= TAB(*POS) *MBAL H['}'] @POS
+    MBAL	= BREAK('{}<') ((H['{'] *MBAL H['}'] *MBAL) |
++		(H['<'] *QBAL H['>'] *MBAL) | '')
+    GPMNAME	= TAB(*POS) BREAK('{< }') $ PREFIX
++		((((H['{'] @POS *?(MACNAME = MACNAME PREFIX MACCALL())) |
++		(*QSPOS *?(MACNAME = MACNAME PREFIX QS)))
++		*GPMNAME) |
++		*?(MACNAME = REPLACE(MACNAME PREFIX,LOWLETS,UPLETS)))
+    GPMARG	= TAB(*POS) BREAK('{<,}') $ PREFIX
++		((((H['{'] @POS ((*IDENT(QN) *?(ARG = ARG PREFIX MACCALL())) |
++		(*DIFFER(QN) (*MBAL H['}']) $ QS @POS
++		*?(ARG = ARG PREFIX '{' QS)))) |
++		(*QSPOS *?(ARG = ARG PREFIX
++		(IDENT(QN) QS, '<' QS '>'))))
++		*GPMARG) | *?(ARG = ARG PREFIX))
+    GPMARG1 = ('@' @POS *GPMARG *?(ARG = MACDEF(ARG))) | *GPMARG
+    GPMARGS = H['}']  |  ',' @POS  '' $ ARG  *GPMARG1
++		*?(AL[T = T + 1] = ARG) *GPMARGS
+    GPMCALL = *GPMNAME *?(AL = TABLE(3))
++		*?(MACNAME ? MC.DOTNAME = '', '') (H['}'] | SPAN(SP)
++		@POS FENCE *?(QN = AEPROP[MACNAME])
++		*GPMARG1 *?(AL[T = 1] = ARG) *GPMARGS) @POS
+    MC.DOTNAME	= (('SET' | 'TSET') ('V' | '')) . SETTYPE '.'
+*
+  DEFINE('MACDEF(MNAME)PROP,T')
+    PROPPATT	= BREAK('\') . MNAME  LEN(1)  REM . PROP
+*
+  DEFINE('OVER(STR,STR2)P,P2,T,T2')
+    OV.P0	= LEN(1) ((BS *OV.P0) | '')
+    OV.P1	= TAB(*P) (*OV.P0 | '') $ T @P
+    OV.P2	= TAB(*P2) (*OV.P0 | *DIFFER(T)) $ T2 @P2
+*
+  DEFINE('PAGEIT(T)LINE,NOPAGE')
+*
+  DEFINE('PUTBLANK(T)')
+*
+  DEFINE('PUTBREAK(T)')
+*
+  DEFINE('PUTCHARS(STR)T,P,CNT')
+    PC.P0	= *(PC.BS = ) BREAK(BS) *?(PC.BS = 1)
+    PC.P1	= TAB(*$LINELENGTH) $ T (*IDENT(PC.BS) | *?(CNT = LSIZE(T))
++			(*EQ(CNT,$LINELENGTH) |
++			 ARB LEN(1) $ T *EQ(CNT = CNT + (IDENT(T,BS) -1,1),
++				$LINELENGTH))) @P
+    PC.P2	= (TAB(*(SIZE(LINE) - P)) (BREAK(SP) | '')) $ LINE
++			(SPAN(SP) | '') REM $ STR
+*
+  DEFINE('PUTLINE(LINE)')
+*
+  DEFINE('READ()T')
+*
+  DEFINE('RESTORE()T')
+*
+  DEFINE('STT(MNAME,VAL,TS)PROP,T')
+	PROPVALS	= TABLE()
+	PROPSTKS	= TABLE()
+	DATA('STKITM(VAL,NEXT)')
+	TSETSTK		= TABLE(31)
+	PROPSTKS['']	= TSETSTK
+*
+  DEFINE('SKIPTEXT(STR)T')
+-STITL DEFINE THE BASE MACROS
+    SETTRAP	= TABLE(17)
+    FAILEXP	= *EQ(1,0)
+    GT0EXP	= *((VAL = CONVERT(VAL,.INTEGER)) GT(VAL,0))
+    GE0EXP	= *((VAL = CONVERT(VAL,.INTEGER)) GE(VAL,0))
+    PRED	= *(APPLY(MACNAME,AL1,AL2),'1')
+    MACROS	= TABLE(181)
+    AEPROP	= TABLE(81)
+    PROPVALS['']	= MACROS
+    PROPVALS['*']	= AEPROP
+	  SETTRAP[H['BIAS']]	= *(INTEGER(VAL) GE($LMG - 1 + VAL,0)
++				(LMGCHARS = DUPL(SP,$LMG - 1 + VAL)))
+	MACROS['BRK']	= *PUTBREAK(0)
+	  SETTRAP[H['BSLACK']]	= GE0EXP
+	MACROS['CAB'] = H['>']
+	MACROS[H['CODE']]	= *?(MACROS[REPLACE(AL1,LOWLETS,UPLETS)] =
++			CONVERT(AL2,.EXPRESSION))
+	MACROS[H['COND']]	= *COND()
+	  AEPROP[H['COND']]	= 1
+	MACROS['CREPROP']	= *?(DIFFER(AL1) (PROPVALS[AL1] = TABLE(AL2)),
++			&ERRTYPE = 307)
+	MACROS['CS']	= *CONTROL_SEQ(AL1)
+	MACROS['D']	= *(CONVERT(MACDEF(AL1),.STRING),
++			APPLY((DIFFER(PFLG) .GPMPRINT, .GPMIFY), '{' AL1 '}',
++				NULLARGS))
+	MACROS['DELPROP']	= *?(DIFFER(AL1) (PROPVALS[AL1] = ),
++			&ERRTYPE = 307)
+	MACROS['DIAG']	= *DIAG()
+	MACROS[H['DIFFER']]	= PRED
+	MACROS[H['DOPROP']]	= *DOPROP(GPMIFY(AL1),AL2,GPMIFY(AL[3]))
+	  AEPROP[H['DOPROP']]	= 1
+	MACROS[H['DOWHILE']]	= *DOWHILE(AL1,AL2)
+	  AEPROP[H['DOWHILE']]	= 1
+	MACROS[H['END']] = *END()
+	MACROS['EQ']	= PRED
+	MACROS['EVEN']	= *(EQ(REMDR(AL1,2),0), 1)
+	MACROS['GE']	= PRED
+	MACROS['GT']	= PRED
+	MACROS[H['HS']]	= '~'
+	  SETTRAP[H['HS']]	= *(HS = SUBSTR(VAL,1,1))
+	MACROS[H['IDENT']]	= PRED
+	  SETTRAP[H['INPUT']]	= *(?(T[MNAME] = VAL) ?(MNAME = FAILEXP)
++				?IN_STT(TS,AL2))
+	  SETTRAP[H['LINELENGTH']] = *(STT('RMG',CONVERT(VAL,.INTEGER) +
++				$LMG - 1) ?(MNAME = FAILEXP))
+	MACROS['LE']	= PRED
+	MACROS['LEQ']	= PRED
+	MACROS['LGE']	= PRED
+	MACROS['LGT']	= PRED
+	MACROS['OUTSTREAM']	= *LINE
+	  SETTRAP['OUTSTREAM'] = *(?(LINE = VAL) ?(MNAME = FAILEXP))
+	MACROS[H['LINENUM']] = 1
+	  SETTRAP[H['LINENUM']] = *(?PUTBREAK(0)
++				(GE(VAL,$LINENUM), PUTBREAK(30000))
++				?PUTBREAK(VAL - $LINENUM)
++				?(MNAME = FAILEXP))
+	  SETTRAP[H['LMG']]	= *(INTEGER(VAL) GT(VAL + $BIAS,0)
++				LE(VAL,$RMG)
++				?($LINELENGTH = $RMG - VAL + 1)
++				(LMGCHARS = DUPL(SP,VAL - 1 + $BIAS)))
+-EJECT
+	MACROS['LLE']	= PRED
+	MACROS['LLT']	= PRED
+	MACROS['LNE']	= PRED
+	MACROS['LS']	= *PUTBREAK((CONVERT(AL1,.INTEGER), &ERRTYPE = 303))
+	MACROS['LT']	= PRED
+	MACROS['NE']	= PRED
+	MACROS['OAB']	= H['<']
+	MACROS['ODD']	= *(NE(REMDR(AL1,2),0), 1)
+	  SETTRAP[H['OUTPUT']]	= *(ENDFILE(1)
++		OUTPUT(.OUTVAR,1,REPLACE(VAL,LOWLETS,UPLETS)
++			(DIFFER($OUTOS), NCSW)))
+	MACROS['OS']	= *OVER(AL1,AL2)
+	  SETTRAP[H['PAGELENGTH']] = GT0EXP
+	  SETTRAP['PAGENUM']	= GE0EXP
+	MACROS[H['PRINT']]	= *GPMPRINT(AL1,ARGLIST)
+	  AEPROP[H['PRINT']]	= 1
+	MACROS[H['RESTORE']]	= *RESTORE()
+	  SETTRAP[H['RMG']]	= *(INTEGER(VAL) GE(VAL,$LMG)
++			($LINELENGTH = VAL - $LMG + 1))
+	MACROS[H['SET']]	= *STT(AL1,AL2)
+	MACROS[H['SETQ']]	= MACROS['SET']
+	  AEPROP[H['SETQ']]	= 1
+	MACROS[H['SETV']]	= *(?STT(AL1,AL2) AL2)
+	MACROS[H['SKIPTEXT']]	= *?SKIPTEXT(AL1)
+	MACROS[H['SPACING']]	= 1
+	  SETTRAP[H['SPACING']]	= GT0EXP
+	MACROS[H['TSET']]	= *STT(AL1,AL2,'T')
+	MACROS[H['TSETQ']]	= MACROS[H['TSET']]
+	  AEPROP[H['TSETQ']]	= 1
+	MACROS[H['TSETV']]	= *(?STT(AL1,AL2,'T') AL2)
+	  SETTRAP[H['TSETV']]	= FAILEXP
+-EJECT
+* Define some names for fast access.
+*
+  BEGINTEXT	= .MACROS[H['BEGINTEXT']]
+  BIAS		= .MACROS[H['BIAS']]
+  BSLACK	= .MACROS[H['BSLACK']]
+  ENDTEXT	= .MACROS[H['ENDTEXT']]
+  FILL		= .MACROS[H['FILL']]
+  INFORMAT	= .MACROS[H['INFORMAT']]
+  JUST		= .MACROS[H['JUST']]
+  LINELENGTH	= .MACROS[H['LINELENGTH']]
+  LINENUM	= .MACROS[H['LINENUM']]
+  LMG		= .MACROS[H['LMG']]
+  NEWLINE	= .MACROS[H['NEWLINE']]
+  OUTOS		= .MACROS[H['OUTOS']]
+  PAGELENGTH	= .MACROS[H['PAGELENGTH']]
+  RMG		= .MACROS[H['RMG']]
+  SPACING	= .MACROS[H['SPACING']]
+-STITL INITIALIZING CODE...
+	H	=
+	&ERRLIMIT = 9999
+	SETEXIT(.ERROR)
+*
+* This defines the GPMDOC-specific errors.  They can be nulled if
+* space is critical.
+*
+	ERRMSGS = ARRAY('300:310')
+	  ERRMSGS[300]	= 'No Such File'
+	  ERRMSGS[301]	= 'Undefined Property'
+	  ERRMSGS[302]	= 'Too Many Nested Calls (Over ' COMPLEXLIM ')'
+	  ERRMSGS[303]	= 'Value Must Be Numeric'
+	  ERRMSGS[304]	= 'Too Many Open Files (Over ' MAXLU - MINLU + 1 ')'
+	  ERRMSGS[305]	= 'Illegal Value'
+	  ERRMSGS[306]	= 'No Value To RESTORE'
+	  ERRMSGS[307]	= 'Illegal Property'
+*
+* Set the free LUN stack
+*
+	GPMIFY('{SET RMG,75}{SET LMG,10}{SET BSLACK,0}{SET PAGELENGTH,55}'
++		'{SET BIAS,0}{SET SPACING,1}{SET PAGENUM,1}{SET HS,~}'
++		,NULLARGS)
+	CURRLU	= MAXLU
+INIT00	CURRLU	= GT(CURRLU,MINLU) CURRLU - 1		:F(INIT00A)
+	TSETSTK[.FREELUNS] = STKITM(CURRLU + 1,TSETSTK[.FREELUNS]) :(INIT00)
+*
+* Try to read the startup built-in function file
+*
+INIT00A	IN_READ(CURRLU,BIFFILE)				:F(INIT01)
+	GPMIFY('{RESET}',NULLARGS)			:(INIT02)
+*
+* Here if the startup function file can't be found - Just set essentials
+*
+INIT01	TERMINAL = "Warning - Can't Load Startup File " BIFFILE
+*
+* Merge from above to try to read the GPMSTART file if it is there
+*
+INIT02
+*	EXIT(-2)
+	CMD_LINE = &ERRTEXT
+*
+* Try to get in the justify external function
+*
+	SETEXIT()
+	JUSTIFY_AVAIL = LOAD('JUSTIFY(STRING,STRING,STRING,INTEGER,INTEGER,'
++			'STRING)STRING','SYS$LIBRARY:JUSTIFY') 1
+	JUSTIFY_BUFF = DIFFER(JUSTIFY_AVAIL) DUPL(' ',250)
+	SETEXIT(.ERROR)
+*
+* Error handling set up.  Ready to do initial I/O
+*
+	OUTPUT(.OUTVAR, OUTUNIT, (MACROS['OUTPUT'] = INITIAL_OUTPUT) NCSW)
+	OUTPUT(.QUERY,QUERYUNIT,INITIAL_OUTPUT NCSW)
+	OUTVAR = CRLF 'GPMDOC V780-6.12/' COLLECT() SP
+	IN_READ(CURRLU,USERSTART)
+*
+* We try to pick up the command line text in double quotes,
+* or failing that, issue a read to the terminal.
+*
+	CMD_LINE  (BREAK('"') LEN(1) SPAN(' 	')
++			(LEN(1) REM) . CMD) :F(INIT04)
+	OUTVAR	= ' Processing...'
+	GPMPRINT(CMD,NULLARGS)
+	EOF_FLAG =
+	IN_READ(CURRLU,INSET_PEND)		:F(INIT04B)
+*
+* Here when finished processing
+*
+INIT03	PUTBREAK(0)				:(END)
+*
+* Come here when there is no initial command to process
+*
+INIT04	OUTVAR	= ' Ready.'
+	OUTVAR = CRLF
+*
+* Loop here until READ cycle completes normally
+*
+INIT04A	INPUT(.INFILE,CURRLU,INITIAL_INPUT)	:F(INIT04C)
+	IN_READ(CURRLU)				:S(INIT05)
+*
+* Merge here on SET chain failure
+*
+INIT04B	TERMINAL = 'Requested File Is Not Available'
+	TERMINAL = 'Command Input Established'
+	PUTBREAK(0)				:(INIT04A)
+*
+* Here when attachment to initial file fails
+*
+INIT04C	TERMINAL = '* Cannot Read From Command Input *'
+	TERMINAL = '       * Dying in Shame *'
+INIT05	:(END)
+-STITL "COND()" - SUPPORT FOR COND MACRO
+* The COND macro takes the form {COND p1,v1,p2,v2,...,pn,vn} .
+* Evaluation of COND consists of evaluating each p(i) (predicate) until one
+* is found that evaluates null.  The evaluation of the following v(i) (value)
+* is then returned as the value of COND .  COND is a special form
+* and thus it is not necessary to quote the predicates or values under normal
+* circumstances.
+*
+COND	T	= DIFFER(GPMIFY(AL[T + 1],ARGLIST)) T + 2	:S(COND)
+	COND	= (DIFFER(PFLG) GPMPRINT(AL[T + 2],ARGLIST),
++			GPMIFY(AL[T + 2],ARGLIST))		:(RETURN)
+-STITL "CONTROL_SEQ(STR)" - TURN STR INTO A CONTROL SEQUENCE
+* A control sequence from STR consists of <BS> characters placed after
+* each character of STR, making a normalized overstrike sequence , and this
+* is then preceeded by a <CS><BS> sequence.
+* The <CS> is to identify a control sequence to the IMAGES routine,
+* and the backspaces are to force the LSIZE length of the control
+* sequence to be effectively zero.
+*
+CONTROL_SEQ  STR (ARB LEN(1) $ T *?(CONTROL_SEQ = CONTROL_SEQ T BS) FAIL)
+	CONTROL_SEQ = (CS BS) CONTROL_SEQ	:(RETURN)
+-STITL "DOWHILE(PRED,BODY)" - SUPPORT FOR DOWHILE MACRO
+* This routine is called to evaluate BODY repeatedly.  The given predicate
+* PRED is evaluated repeatedly prior to the evaluation of BODY.
+* The loop continues as long as the predicate evaluates true (null).
+* The value of DOWHILE is the successive right-concatenations of the
+* results.
+*
+DOWHILE	IDENT(GPMIFY(PRED,ARGLIST))			:F(RETURN)
+	DOWHILE	= DOWHILE (IDENT(PFLG) GPMIFY(BODY,ARGLIST),
++			GPMPRINT(BODY,ARGLIST))		:(DOWHILE)
+-STITL "DOPROP(PROP,BODY,ORDER)" - SUPPORT FOR DOPROP MACRO
+* o This routine is called to apply the entries in the property
+*   table for property PROP to the macro BODY one at a time.
+*   The body is evaluated in a context where the first argument
+*   is the index name for the property, and the second argument
+*   is the corresponding value.
+*
+* o ORDER gives the order in which the entries are presented to
+*   BODY.  If, when evaluated, ORDER gives "UP", the entries
+*   are presented in ascending order.  Similar remarks apply for
+*   "DOWN".  Anything else implies no order.
+*
+* o Note that DOPROP should be defined with the AE property, and
+*   PROP and ORDER evaluated before entering this routine.
+*
+* o As with DOWHILE, this routine returns the successive concatenations
+*   of the repeated evaluations.  (This will be null in the context of
+*   non-null PFLG, since the evaluation is done by GPMPRINT which
+*   returns null.)
+*
+DOPROP	T	= PROPVALS[PROP]
+*
+* The null property (MACROS) is illegal (it contains funny stuff),
+* and so is an undefined property.
+*
+	(DIFFER(PROP) DIFFER(T), &ERRTYPE = 307)
+*
+* A-OK.  Convert to an array and sort if necessary.
+*
+	ORDER	= REPLACE(ORDER,LOWLETS,UPLETS)
+	T	= CONVERT(T,.ARRAY)		:F(RETURN)
+	T	= (IDENT(ORDER,'UP') SORT(T,1),
++			IDENT(ORDER,'DOWN') RSORT(T,1))
+*
+* Loop to invoke the body.
+*
+	I	=
+	ARGLIST	= TABLE(3)
+DOP01	I	= I + 1
+	ARGLIST[1]	= T[I,1]		:F(RETURN)
+	ARGLIST[2]	= T[I,2]
+	DOPROP	= DOPROP (IDENT(PFLG) GPMIFY(BODY,ARGLIST),
++			GPMPRINT(BODY,ARGLIST))	:(DOP01)
+-STITL "DUMPTEXT(STR)" - PUT LINE ON OUTPUT FILE
+* This module puts out a line on the unit attached to OUTVAR.  It
+* checks for begin/end page and handles the multiple printing of
+* overstruck images.
+*
+* First, check for a NEWPAGE condition.
+*
+DUMPTEXT (EQ($LINENUM,1) IDENT(NOPAGE) PAGEIT('NEWPAGE'))
+*
+* Get rid of hard spaces
+*
+	STR	= REPLACE(STR,HS,SP)
+*
+* Check for overstrikes in STR.  If so, IMAGES is called to generate
+* a table containing all the overstrike images of the line (IMAGES[0]=
+* Principal image). Note that the principal image is always output last.
+* This is so CRT's will show something reasonable.
+*
+	STR	BSPATT					:F(DT02)
+*
+* Overstrikes in line. Get all the print images in IMAGES table.
+*
+	IMAGES	= IMAGES(STR)
+	STR	= IMAGES[0]
+*
+* Loop to dump out the overstrike images (unless OUTOS is disabled)
+*
+DT01	OUTVAR	= IDENT($OUTOS) DIFFER(IMAGES[I = I + 1])
++			IMAGES[I] CR			:S(DT01)
+*
+* Merge here to print the principal image in STR, and force a new line.
+*
+DT02	OUTVAR	= STR (DIFFER($OUTOS),CRLF)
+*
+* Bump LINENUM.  If we have reached the end of a page (and paging is
+* permitted via NOPAGE) then flag and process an endpage condition.
+*
+	$LINENUM = $LINENUM + 1
+	(LE($LINENUM,$PAGELENGTH), DIFFER(NOPAGE))	:S(RETURN)
+	MACROS['PAGENUM'] = ?PAGEIT('ENDPAGE')
++		MACROS['PAGENUM'] + 1			:(RETURN)
+-STITL "GETLINE()" - READ A LOGICAL LINE OF INPUT
+* o This module returns a single line of GPMDOC input from the unit attached
+*   to INFILE.  Logical lines are equivalent to physical lines unless the
+*   physical lines are 'continued' with hyphens at the end.  In such cases,
+*   the returned logical lines are the physical lines concatenated together
+*   without the hyphens, and with leading blanks and tabs at the beginning
+*   of continuation lines removed.  Logical lines beginning with "!" are
+*   presumed to be comments, and are discarded.  If the line read is null,
+*   a single hard space is returned so that no-fill works correctly.
+*
+* o The code here also translates tabs to blanks under the fixed assumption
+*   that tabs are set at (input) columns 9, 9+8, 9+2*8, ...
+*
+* o The global EOF_FLAG can be set non-null to force a simulated endfile.
+*   If this is done, it will be reset before FRETURNing.
+*
+* o If the ENDTEXT macro is non-null, and GETLINE sees the line, it
+*   simulates an end-of-file (FRETURNs)
+*
+* o If the INFORMAT macro is non-null (false) then the line is returned as
+*   read, without logical line processing.
+*
+* Read the first input line, and fail if no more exist.
+*
+GETLINE	EOF_FLAG = DIFFER(EOF_FLAG)			:S(FRETURN)
+	GETLINE = INFILE				:F(FRETURN)
+*
+* If the endtext macro is non-null, and this is it, then fail.
+* Endtext is toggled null when this happens.
+*
+	$ENDTEXT = DIFFER($ENDTEXT) IDENT(GETLINE,$ENDTEXT) :S(FRETURN)
+*
+* If the line is empty, set it to a hard space and return
+*
+	GETLINE	= IDENT(GETLINE) HS			:S(RETURN)
+*
+* If INFORMAT is non-null, then return the line.
+*
+	DIFFER($INFORMAT)				:S(RETURN)
+*
+* Examine the line for a continuation hyphen at the end, and go to the
+* exit point if not there.  If it is, this pattern removes it, and
+* we merge into the continuation line loop.
+*
+	GETLINE  GL.P1					:F(GL02)
+*
+* Loop here on successive continuation lines.
+*
+GL01	T	= INFILE				:F(FRETURN)
+	T	GL.P2	=
+	GETLINE = GETLINE T
+	GETLINE GL.P1					:S(GL01)
+*
+* Return unless this is a comment line, in which case get the next line.
+*
+GL02	GETLINE  ANY('!')				:S(GETLINE)
+*
+* Merge to change tabs to blanks and return
+*
+GL03	GETLINE  (BREAK('	') . T  LEN(1)) =
++		RPAD(T,(SIZE(T) / 8) * 8 + 8)		:S(GL03)F(RETURN)
+-STITL "GPMIFY(MSTR,ARGLIST)"
+* o This routine evaluates MSTR according to GPMDOC rules.  They are:
+*   o Ordinary text stands for itself.
+*   o {name  arg,arg,...} is a macro call.  The actual processing
+*     of the macro call is handled by the pattern calling MACCALL,
+*     with POS pointing past the open brace.  The text returned by
+*     MACCALL is appended to the result, with POS having been set
+*     past the close brace, so the scan can continue uninterrupted
+*     inside the same pattern match.
+*   o Material in quotes as: <...material...> is not examined further,
+*     but the outer quotes "<>" are stripped away before material is
+*     appended to the result.
+*   All of this takes place inside of a single pattern match, which is
+*   forming the result in GPMIFY as it goes, by using embedded assignments.
+* o Note that this whole process is recursive, since the pattern can call
+*   MACCALL, which in turn can call for a GPMIFY, etc.
+* o ARGLIST is the table of arguments passed through, to be handed to
+*   MACCALL in case a macro call is seen.
+*
+GPMIFY	MSTR  GPMSTRING					:(RETURN)
+-STITL "GPMPRINT(MSTR,ARGLIST)"
+* o GPMPRINT is just like GPMIFY, except that the result is null, all
+*   evaluations are sent to PUTCHARS as they are scanned out.  It is called
+*   when the result of the evaluation is to be printed, and not used further.
+*
+GPMPRINT MSTR  GPMSTRPNT				:(RETURN)
+-STITL "IMAGES(STR)" - GENERATE TABLE OF OVERSTRIKE IMAGES OF STR
+* This module returns a TABLE indexed numerically starting from zero (integer).
+* Each element contains one overstrike image of STR.  If STR contains no
+* overstrikes, element 0 would contain just the given STR.  If there were
+* overstrikes, then element 0 would contain the 'principal image' of STR,
+* and successively higher table elements would contain the higher orders
+* of overstrikes.  The first null value in element "i" marks the end
+* of the images.  Note that the images are not right padded to the same
+* lengths.
+*
+IMAGES	IMAGES	= TABLE(1)
+IM01	STR	IM.P1
+	IMAGES[0] = IMAGES[0] SUBSTR(STR,POS + 1)	:(RETURN)
+-STITL "IN_READ(INUNIT,INNAME)" - Access initial input files
+* o This module provides access to the READ routine given a unit (INUNIT)
+*   and file (INNAME).  If INNAME is null, the current binding is assumed,
+*   and no initial association is set.
+*
+* o INSET_PEND is set by IN_SET when a "real" input SET is performed to
+*   give the name of the next file to associate.  This routine
+*   handles it by looping on input associations until it is null.
+*
+* o This routine fails if an association cannot be made because of
+*   association failure.  No error is flagged.
+*
+IN_READ	(IDENT(INNAME), INPUT(.INFILE,INUNIT,INNAME))	:F(FRETURN)
+	INSET_PEND =
+	READ()
+	INNAME	= DIFFER(INSET_PEND) INSET_PEND		:S(IN_READ)F(RETURN)
+-STITL "IN_STT(TS,INNAME)" - SET INPUT FILE
+* o This routine is called as a result of the SETTRAP on INPUT.
+*   It will be called for SET, TSET or RESTORE on the INPUT macro.
+*
+* o TS provides the type of set (ref. routine SET).
+*
+* o INNAME is the second argument of the set (filename).  If it is
+*   null, then this is a "pseudo-read", implying no new association
+*   is to be made.
+*
+* o There are three globals used by this routine:
+*
+*   o INUNIT is the current logical unit number.  NEW_INUNIT is a
+*     local which is assigned INUNIT (again) if this is a pseudo-read
+*     and passed to IN_READ.
+*
+*   o INSET_PEND is used for SETs to communicate the SET filename
+*     to IN_READ.
+*
+*   o EOF_FLAG is used to signal GETLINE to force an EOF on the
+*     next call.
+*
+* First, set the error return point, and check for TSETs and RESTOREs
+* A forced RESTORE is handled by simply setting the EOF_FLAG to tell
+* GETLINE to simulate an EOF on the next read.
+*
+IN_SET	EOF_FLAG = IDENT(TS,'R') 1			:S(RETURN)
+	IDENT(TS,'T')					:S(IS01)
+*
+* This is a standard SET.  The way this is handled is to set EOF_FLAG
+* to force close-out of the current read, and to save the SET filename
+* in INSET_PEND.  When the current READ returns (below), INSET_PEND
+* is checked, and if there is a SET pending, the TSET logic is
+* followed to open the new file instead of reverting to the old one.
+* Of course, if the SET filename is null, we are just setting
+* the current file (stupid) and a simple return is sufficient.
+*
+	EOF_FLAG = DIFFER(INNAME) 1
+	INSET_PEND = INNAME				:(RETURN)
+-EJECT
+*
+* This is a TSET.  Arguments (3,4,...) are now processed until a null
+* argument is found.  These arguments are of the form NAME=VALUE and
+* cause an automatic TSET of the given macro name with the indicated value.
+* The corresponding RESTORE is also automatic when the READ finishes.
+*
+IS01	ISINDEX	= 3
+IS00	IDENT(AL[ISINDEX])				:S(IS02)
+	AL[ISINDEX] IS_ALPATT				:F(IS00A)
+	STT(ISNAME,ISVALUE,'T')
+IS00A	ISINDEX	= ISINDEX + 1				:(IS00)
+*
+* Here for TSET.  The process is essentially just to call IN_READ.
+* If this is not a pseudo-read, then we unstack a free unit to give
+* it, otherwise, its a pseudo-read, and we give it the one being
+* used now.
+*
+IS02	NEW_INUNIT = IDENT(INNAME) INUNIT		:S(IS03)
+	(DIFFER(TSETSTK[.FREELUNS]), &ERRTYPE = 304)	:F(RETURN)
+	NEW_INUNIT = VAL(TSETSTK[.FREELUNS])
+	TSETSTK[.FREELUNS] = NEXT(TSETSTK[.FREELUNS])
+*
+* Merge here for pseudo-read to issue the call to IN_READ.
+*
+IS03	(IN_READ(NEW_INUNIT, INNAME), &ERRTYPE = 305)	:F(IS04)
+	(DIFFER(INNAME) ENDFILE(NEW_INUNIT))
+*
+* Merge here after read error to restack the old lun if not pseudo-read,
+* then restore the old environment.
+*
+IS04	TSETSTK[.FREELUNS] = DIFFER(INNAME)
++			STKITM(NEW_INUNIT,TSETSTK[.FREELUNS])
+	INPUT(.INFILE,INUNIT)
+*
+* Now the entry keyword arguments are restored
+*
+IS05	ISINDEX = GE(ISINDEX,3) ISINDEX - 1		:F(RETURN)
+	AL[ISINDEX] IS_ALPATT				:F(IS05)
+	STT(ISNAME,,'R')				:(IS05)
+-STITL "JUST(JUST,LEN,T)"
+* o JUST is called to justify a string JUST with LEN additional
+*   blanks.
+*
+* o If T is non-zero, then the 'odd' blanks are padded on the right.
+*   Otherwise they are jammed in from the left.
+*
+JUST	JUST	= NE(T,0) REVERSE(JUST)
+JU01	JUST JU.P1 = PREFIX SP				:S(JU01)
+	JUST	= NE(T,0) REVERSE(JUST)			:(RETURN)
+-STITL "LSIZE(STR)"
+* o LSIZE returns the number of the final print position of STR (including
+*   backspace characters).   If there are no backspace characters in STR,
+*   then this is the same as SIZE(STR).  If there are no trailing backspaces
+*   and STR is normalized, then LSIZE gives the number of print positions
+*
+LSIZE	STR  BREAKX(BS) *?(T = T + 1) FAIL
+	LSIZE	= SIZE(STR) - 2 * T			:(RETURN)
+-STITL "LSUBSTR(STR,N,LEN)" - TAKE SUBSTRING WITH BACKSPACING
+* o LSUBSTR semantics are the same as SPITBOL's SUBSTR function,
+*   except that it accounts for backspace characters.
+*
+LSUBSTR	LEN	= EQ(LEN,0) LSIZE(STR) - N + 1
+	STR	LS.P2					:S(RETURN)F(FRETURN)
+-STITL "MACCALL(PFLG)" - EVALUATE A MACRO CALL
+* This is the heart of the GPMDOC interpreter in that it processes macro
+* calls ({Name Arg1,Arg2,...}).  PFLG is the stream indicator.  If it is
+* null, the result is to be returned as a string.  If PFLG is nonnull, then
+* the results are going to the PUTCHARS output stream and null is returned.
+* This module is entered from GPMIFY or GPMPRINT when they encounter a macro
+* call open brace.  The global (to MACCALL) variable POS is set to the
+* character index in the global STR where the macro call begins.  MACCALL
+* returns with POS set to the index in MSTR past the macro call.
+*
+* Save the starting index in case a error occurs in any of the evaluations
+* or scans, then check to be sure we haven't exceeded the recursion limit
+* in COMPLEXLIM.  If so, then we scan for a matching close brace for this
+* call, which sets POS for the error routine, and then flag an error 302.
+*
+MACCALL	STPOS	= POS - 1
+	LT(&FNCLEVEL, COMPLEXLIM)			:S(MC01)
+	MSTR	MC.P1
+	&ERRTYPE = 302
+*
+* Here we match out the name and arguments.  If the scan fails then we
+* get out.  Note that this pattern can recurse on MACCALL if the macro
+* call being scanned contains embedded macro calls.
+* This pattern also processes extended SETs by placing the type of
+* extended set (SET,TSET,SETV or TSETV) in SETTYPE and the extension
+* in MACNAME.  Later on we switch things around and loop back to do the
+* set.
+*
+MC01	MSTR  GPMCALL					:F(MC07)
+*
+* Check for an extended SET.
+	SETNAME = DIFFER(SETTYPE) AL[1]			:F(MC02)
+*
+* Got one.  Look up the definition of the first arg to be applied
+* in the macro call, and evaluate it in case it turns out to be expression-
+* valued.
+*
+	AL[1]	= MACDEF(AL[1])
+	AL[1]	= IDENT(DATATYPE(AL[1]),'EXPRESSION') EVAL(AL[1])
+*
+* Merge here when the arguments and macro name are correctly set for
+* evaluation.  Look up the definition of MACNAME, and if it is not
+* a system macro (datatype Expression), go evaluate the string.
+*
+MC02	IDENT(DATATYPE(MACRO = MACDEF(MACNAME)),'EXPRESSION')	:F(MC04)
+*
+* Come here to evaluate a macro that is an expression (merge from extended
+* set looping back to do the final set).  We set AL1 and AL2 to the first
+* and second arguments in order to save some time and space since they are
+* so frequently referenced in the system macros.  Then we evaluate the
+* expression and if results are going to the output stream (PFLG=nonnull) then
+* we send them there.
+*
+MC03	AL1	= AL[1];	AL2	= AL[2]
+	MACCALL	= EVAL(MACRO)
+	(DIFFER(PFLG) DIFFER(MACCALL) IDENT(SETTYPE)  PUTCHARS(MACCALL))
++							:(MC05)
+-EJECT
+*
+* Come here when MACRO is set to a string to be evaluated.  We call either
+* GPMIFY or GPMPRINT depending on where the output is to go.
+*
+MC04	MACCALL	= ((IDENT(PFLG), DIFFER(SETTYPE))
++			GPMIFY(MACRO,AL), GPMPRINT(MACRO,AL))
+*
+* Merge here to check for an extended set in progress.  If we don't need
+* to process the second part of an extended set, we just go to the exit
+* point.
+*
+MC05	MACRO	= DIFFER(SETTYPE) MACROS[SETTYPE]	:F(MC06)
+*
+* We need to loop back to process the SET part of an extended set.
+* Switch around the arguments to make things work out.  Then loop back.
+*
+	SETTYPE = ; AL[1] = SETNAME ; AL[2] = MACCALL	:(MC03)
+*
+* Come here to exit, setting the result null if the result was printed.
+*
+MC06	MACCALL	= DIFFER(PFLG)				:(RETURN)
+*
+* Come here when the macro scan fails.  We reset the scan pointer and FRETURN.
+*
+MC07	POS	= STPOS					:(FRETURN)
+-STITL "MACDEF(MNAME)" - RETURN DEFINITION OF A MACRO.
+* o This routine is invoked by MACCALL and some of the system macros to
+*   look up the definition of a given macro name MNAME.
+*
+* Try for an argument, and if not that then get the definition from the
+* MACROS table.
+*
+MACDEF  MNAME  PROPPATT
+	T	= PROPVALS[PROP]
+	(DIFFER(T), &ERRTYPE = 301)			:F(FRETURN)
+	MACDEF = (IDENT(PROP) INTEGER(MNAME) ARGLIST[CONVERT(MNAME,.INTEGER)],
++		T[REPLACE(MNAME,LOWLETS,UPLETS)])	:(RETURN)
+-STITL "OVER(STR,STR2)" - OVERSTRIKE TWO STRINGS
+* This module returns STR overstruck by STR2.  It insures that the result
+* string is properly aligned on the right if STR and STR2 are of different
+* lengths.  It also insures that no two backspace characters appear
+* consecutively, and that no overstruck blanks are introduced into the
+* result image.  This is the form assumed by the other system routines,
+* so this should be the only routine capable of introducing backspace
+* characters into the text.
+*
+* Since STR and STR2 may contain backspaces themselves, we loop
+* here to match out the next run of characters from STR and STR2
+* that 'map' visually into a single character.  If the STR2 match
+* fails, then we have reached the end of both strings and we return.
+* Otherwise, we append the characters, checking for nulls (end of string),
+* and blanks.
+*
+OVER	STR	OV.P1
+	STR2	OV.P2					:F(RETURN)
+	OVER	= OVER (IDENT(T) T2, IDENT(T2) T, IDENT(T,SP) T2,
++			IDENT(T2,SP) T, T BS T2)	:(OVER)
+-STITL "PAGEIT(T)" - PROCESS NEWPAGE/ENDPAGE CONDITIONS
+* o This module is entered to process a page event in GPMDOC.
+*
+* o "T" is either to "NEWPAGE" or "ENDPAGE" as appropriate.
+*
+* o The routine stacks NEWLINE, SPACING, LMG and RMG, and sets
+*   NOPAGE to a non-null value to prevent recursive page conditions
+*   from occurring.  $LINENUM is set to one both before
+*   and after the page condition.  Processing the
+*   condition itself consists of evaluating the appropriate macro.
+*
+* o LINE is local here, since we need a separate output stream for
+*   the page evaluation.
+*
+PAGEIT	(STT('NEWLINE',,'T') ?STT('SPACING',1,'T')
++		?STT('LMG',10,'T') ?STT('RMG',75,'T'))
+	NOPAGE	= 1
+	(GPMPRINT(MACROS[T],NULLARGS) ?PUTBREAK(0))
+	$LINENUM = IDENT(T,'ENDPAGE') 1
+	(STT('NEWLINE',,'R') ?STT('SPACING',,'R')
++		?STT('LMG',,'R') ?STT('RMG',,'R'))	:(RETURN)
+-STITL "PUTBLANK(T)" - EMIT BLANK LINES
+* This module is entered to send "T" blank lines to the document.
+* It performs checking to see when a new page has occurred ($LINENUM = 1),
+* and stops there, regardless.
+*
+PUTBLANK T = GT(T,0) GT($LINENUM,1) ?DUMPTEXT() T - 1	:F(RETURN)S(PUTBLANK)
+-STITL "PUTBREAK(T)" - PERFORM A LINE BREAK WITH SPACING
+* This module will break the current text in "LINE" to the output, and
+* if T is greater than zero, will put out "T" additional blank lines.
+* If blank lines are emitted, the BSLACK condition is checked after the
+* spacing is performed, and if less than $BSLACK lines remain, the page
+* is run out.  Note that if T>0, at least one blank line is emitted -
+* this is so spacing can occur at the top of a page which would otherwise
+* be defeated by PUTBLANK.
+*
+PUTBREAK LINE = TRIM(LINE)
+	(DIFFER(LINE) PUTLINE(LINE) ?(LINE = ))
+	(GT(T,0) ?DUMPTEXT() ?PUTBLANK(T - 1)
++		?(GE($PAGELENGTH - $LINENUM, $BSLACK), DIFFER(NOPAGE),
++			PUTBLANK(30000)))
++							:(RETURN)
+-STITL "PUTCHARS(STR)" - APPEND CHARACTERS TO OUTPUT STREAM
+* This module suffixes STR to the current LINE, and breaks off a chunk for
+* printing if its LSIZE becomes greater than $LINESIZE.
+*
+* First, suffix on the characters
+*
+PUTCHARS LINE	= DIFFER(STR) LINE STR			:F(RETURN)
+*
+* Check to see if LINE could possibly (ignoring possible backspaces) be too big
+*
+PC01	LE(SIZE(LINE), $LINELENGTH)			:S(RETURN)
+*
+* Set the BS flag (PC.BS) according to whether LINE contains any
+* backspace characters
+*
+	LINE	PC.P0					:F(PC02)
+*
+* LINE contains backspace characters, check the LSIZE to see if it is
+* really too big.
+*
+	LE(LSIZE(LINE), $LINELENGTH)			:S(RETURN)
+*
+* Merge here to print a chunk.  Locate a suitable breakpoint (preferably at
+* the closest blank).  First set P to be the position of the first
+* printing character at line position $LINELENGTH.
+*
+PC02	LINE	PC.P1
+*
+* OK.  Now find the suitable breakpoint by scanning backwards in the
+* LINE for a blank, starting at P. (We can't really scan backwards,
+* so we reverse LINE instead.
+*
+	REVERSE(LINE)	PC.P2
+	LINE	= REVERSE(TRIM(LINE))
+	STR	= TRIM(REVERSE(STR))
+*
+* STR now has the text for printing that was split off from LINE. Justify
+* if called for.
+*
+	STR	= IDENT($JUST)
++		(DIFFER(JUSTIFY_AVAIL)
++			JUSTIFY(STR,JUSTIFY_BUFF,
++				JUSTIFY_BUFF,$LINELENGTH,
++				PC.FLIP = 1 - PC.FLIP,BS),
++		JUST(STR,
++			$LINELENGTH - APPLY((DIFFER(PC.BS) .LSIZE, .SIZE),STR),
++			PC.FLIP = 1 - PC.FLIP))
+*
+* Now print the text
+*
+	PUTLINE(STR)				:(PC01)
+-STITL "PUTLINE(LINE)" - EMIT TEXT.
+* o This module sends "LINE" to DUMPTEXT after appending the left margin and
+*   evaluating any NEWLINE event that exists.  It also handles SPACING if
+*   if it is greater than 1.
+*
+PUTLINE	(DIFFER(LINE) DUMPTEXT(LMGCHARS (IDENT($NEWLINE),
++	?GPMIFY($NEWLINE,NULLARGS)) LINE)
++	?(LE($SPACING,1), PUTBLANK($SPACING - 1))) :(RETURN)
+-STITL "READ()" - READ FROM A FILE
+* o This routine reads from the current input file, and ships the text
+*   to the macro evaluator.  (If the INFORMAT macro is non-null, then
+*   the text is sent straight to PUTCHARS withou processing.)
+*   It returns when GETLINE signals an EOF.
+*
+* o The data read is passed to the evaluator for printing.  The line
+*   fill macro is examined here, and a space or a line break given
+*   at the end of each line depending on its setting.
+*
+* o If the BEGINTEXT macro is non-null, then text is skipped to the
+*   line following.  When this happens, STARTTEXT is toggled null.
+*
+READ
+*
+* If BEGINTEXT is non-null, read lines until we have it.
+*
+	(DIFFER($BEGINTEXT) SKIPTEXT($BEGINTEXT))
+*
+* Loop here on input lines
+*
+RE01	T	= GETLINE()			:F(RETURN)
+	(DIFFER($INFORMAT) PUTCHARS(T) PUTBREAK(0),
++		GPMPRINT(T,NULLARGS)
++		?(IDENT(LINE), IDENT($FILL) PUTCHARS(SP),
++			PUTBREAK(0)))		:(RE01)
+-STITL "RESTORE()" - SUPPORT FOR THE RESTORE MACRO
+* o This routine will call for a restore-type set for each argument
+*   mname until a null one is encountered.
+*
+RESTORE	STT(DIFFER(AL[T = T + 1]) AL[T],,'R')	:S(RESTORE)F(RETURN)
+-STITL "STT(MNAME,VAL,TS)" - SET MACRO VALUE
+* o This is the central logic for all SET, TSET and RESTORE macro forms.
+*
+* o MNAME is the name of the macro, which is translated to upper case.
+*
+* o VAL is the value to be set; it is ignored for RESTORE.
+*
+* o TS is the Type-of-Set-FLAG.  It is null for regular SETs, or 'T' or
+*   'R' respectively.  The flag is used to control processing within
+*   this routine, and also can be used by code executed by SETTRAPs.
+*
+* o If a SETTRAP entry is defined for the macro, it is evaluated before
+*   the value is set.  This evaluation must succeed or a bad value error
+*   is signalled.
+*
+STT	MNAME	= REPLACE(MNAME,LOWLETS,UPLETS)
+	MNAME	PROPPATT
+	T	= PROPVALS[PROP]
+	(DIFFER(T), &ERRTYPE = 301)			:F(RETURN)
+	DIFFER(TS,'T')	 				:S(SET01)
+	PROPSTKS[PROP] = IDENT(PROPSTKS[PROP]) TABLE()
+	PROPSTKS[PROP][MNAME] = STKITM(T[MNAME],PROPSTKS[PROP][MNAME])
+*
+* Merge after TSET (if any) has been pushed.
+*
+SET01	DIFFER(TS,'R')					:S(SET02)
+	(DIFFER(PROPSTKS[PROP][MNAME]), &ERRTYPE = 306)	:F(RETURN)
+	VAL	= VAL(PROPSTKS[PROP][MNAME])
+	PROPSTKS[PROP][MNAME] = NEXT(PROPSTKS[PROP][MNAME])
+*
+* Here after RESTORE (if any) has been popped.
+*
+SET02	(DIFFER(PROP), IDENT(SETTRAP[MNAME]),
++		EVAL(SETTRAP[MNAME]), &ERRTYPE = 305)	:F(RETURN)
+	T[MNAME]	= VAL				:(RETURN)
+-STITL "SKIPTEXT(STR)" - SKIP INPUT LINES
+* o This routine is called to read and skip input text lines until
+*   one is found that matches STR.
+*
+SKIPTEXT T	= INFILE				:F(RETURN)
+	IDENT(T,STR)					:S(RETURN)F(SKIPTEXT)
+-STITL ERROR PROCESSING APPENDAGE
+* o This error appendage is always executed in the local context of whatever
+*   procedure caused it to be invoked
+*
+ERROR	LAST	= &LASTNO				:(TRAP)
+TRAP	&ERRTEXT = GT(&ERRTYPE,300) ERRMSGS[&ERRTYPE]
+	TERMINAL = 'Error on Page: ' MACROS['PAGENUM'] ', Line: '
++		$LINENUM ' [' LAST ']' ' ... '
+	PUTCHARS(TERMINAL = SUBSTR(MSTR, STPOS + 1, POS - STPOS) '-'
++			&ERRTEXT)
+	SETEXIT(.ERROR)
+	:(CONTINUE)
+*
+* This appendage is useful for debugging purposes
+*
+DIAG	TERMINAL = 'Debugger (From: ' FNAME '; Tag: ' TAG
++		') - Control-Z to continue'
+	OLDEXIT	= SETEXIT(.DIAG03)
+DIAG01	SETEXIT(.DIAG03)
+	CARD	= TERMINAL			:F(DIAG02)
+	TERMINAL = EVAL(CARD)			:(DIAG01)
+DIAG02	SETEXIT(OLDEXIT)			:(RETURN)
+DIAG03	TERMINAL = &ERRTEXT			:(DIAG01)
+*
+END

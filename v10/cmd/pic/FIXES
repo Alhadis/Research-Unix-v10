@@ -1,0 +1,184 @@
+June 10, 1992:
+	made invis work better with everything; if the object
+	is filled, invis causes the edge not to be drawn.
+	noedge is a synonym, for compatibility with picasso.
+
+	changed default grayscale value to 0.7.
+
+10/6/91:
+	fiddled eprint to try to get rid of "not a typewriter".
+
+Aug 8, 91:
+
+added extra test in whatpos in misc.c to avoid copying
+uninitialized o_val stuff;  only showed up on plan 9.
+thanks to howard trickey.
+
+May 8, 1991:
+
+removed some old code that was meant to provide dashed splines
+but had no postscript support.  better done another way.
+not yet installed.
+
+Apr 29, 1991:
+
+Made "fill invis" turn off the boundary if box, circle, ellipse
+but leave the filled part visible.  also permitted filled arcs,
+multi-element lines, and splines.  the properties of the latter
+are not completely determined.
+
+for compatibility with picasso, really ought to be "noedge".
+
+July 19, 1990:
+
+Converted to ANSI C.  Alea iacta est.
+
+May 5, 1990:
+
+Fixed shrinking of oversize pictures so that it maintains the proper
+aspect ratio but otherwise fits the box defined by maxpswid and ht.
+(used to be 7x7.)  Should these be done independently instead?
+
+Apr, 1990:
+
+Upgraded set of regression tests from Peter Nelson
+
+Sep 89:
+
+Fixed core dump when .PS < nonexistent
+
+Apr 89:
+
+No warning if undef something not defined.
+
+Fixed bug that gave memory fault when a line had lots of segments.
+
+Fixed bug that omitted variable or place name from "no such place"
+messages.
+
+Fixed bug that didn't assign size to X: right or X: x=0;
+subsequent uses of the label got huge/undefined sizes.
+
+Fixed bug that didn't return sensible dimension for things like
+	B:0,0; print B.wid
+and for blocks containing such things.
+
+Fixed defective makefile (I think).
+
+Feb 89:
+
+Added ^ operator for exponentation.
+
+Dec 88:
+
+Modified storage management so large pictures are handled
+more gracefully.
+
+Mar 88:
+
+Some special stuff to permit limited access to postscript
+for gray scale.  Not much tested, not much used.
+
+Mar 87:
+
+Added variables maxpsht and maxpswid to override built-in
+8.5x11 limits on maximum picture.  Use for landscape mode,
+for example.
+
+Jan 86:
+
+Fixed .PS x y to specify x and y scaling.
+Uses the more constraining, rather than changing
+the aspect ratio.
+
+May 85:
+
+"solid" is now a valid (though uninteresting) attribute.
+
+Mar 85:
+
+Limited amount of point arithmetic:
+	point +/- point
+works
+
+Dec, 1984:
+
+reset varlist
+	resets built-in variables in list to default values.
+	empty list resets everything.
+
+sprintf("format", exprlist)
+	returns a text string suitable for use anywhere "..."
+	can be used.
+
+sh X anything X
+	passes "anything" to a shell for execution after
+	replacing any defined terms in it.
+
+Nov, 1984:
+
+line expr and move expr are treated as line/move by expr
+in current direction.
+
+The -D option has been rendered obsolete -- all output is
+produced with \D commands.  The -T option is also 
+meaningless -- the output is independent of typesetter.
+
+A new variable "arrowhead" controls printing of arrowheads,
+by defining the number of lines printed in a little fan.
+Default is 2;  values around 7 give a filled-in head;
+other values are basically worthless.  Arrowheads on arcs
+are now tilted somewhat in an attempt to improve their
+appearance.
+
+"undef foo" removes the definition of foo.
+
+July 1984:
+
+The functions log, exp (both base 10), sqrt, sin, cos, atan2(,),
+max, min (2 arguments only), int, and rand (which returns a
+float random on [0,1)) are now available,  stolen directly
+from grap.
+
+Added copy, for and if from grap:
+	copy "file"
+	copy "file" thru X macro body X
+	copy thru X macro X [until "str"]
+	for var = expr to expr [by expr] do X anything X
+	if expr then X anything [else X anything X]
+
+In a copy, any .PS or .PE is discarded [sic], so copied files
+can be nested without editing.  .PS <file still works
+but its use is discouraged.
+
+In an if, you can also test "string1" == "string2" or
+"string1" != "string2"
+
+The text primitive is now more systematic:
+"..." ".." "." makes an invisible object with
+properties much like a box.  Height and width
+are settable:  explicit ht and wid modifiers
+affect a specific instance;  variables textht
+and textwid affect all subsequent occurrences.
+"textht" is the height of one line, so the height
+of n strings is n*textht.
+
+Added code from Eric Grosse to correctly compute bounding
+box for arcs.  Also defined corners for arcs as same as
+corresponding circle, an idea due to Tom Cargill.
+
+Limits on text strings, attributes and objects grow until
+memory limit reached.
+
+Permits E format on input numbers.
+
+Output produced in inches, not units, so somewhat more
+typesetter-independent.  The environment variable TYPESETTER
+is examined.
+
+Saves and restores fill state around .PS/.PE.
+
+.PS wid ht
+can be used to set width and height separately for picture;
+default ht is to scale in same proportion as width (as before).
+May give surprising results when both x and y values are given.

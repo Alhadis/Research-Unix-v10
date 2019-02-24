@@ -1,0 +1,85 @@
+'\"macro stdmacro
+.if n .pH g1a.smtpd %W% of %G%
+.nr X
+.if \nX=0 .ds x} smtpd 1M "" "\&"
+.if \nX=1 .ds x} smtpd 1M ""
+.if \nX=2 .ds x} smtpd 1M "" "\&"
+.if \nX=3 .ds x} smtpd "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4smtpd\fP \- receive incoming \s-1SMTP\s+1 messages
+.SH SYNOPSIS
+\f4smtpd\f1 [ \f4\-n\f1 ] [ \f4\-H\f2 helohost \f1] [ \f4\-h\f2 thishost \f1]
+[ \f4\-L\f2 loadlim \f1] [ \f4\-l\f2 maxprocs \f1]
+.SH DESCRIPTION
+\f4smtpd\fP is a daemon that normally runs while in multi-user mode,
+waiting for requests from remote hosts to send mail.
+\f4smtpd\fP listens for these requests on any TLI-based network for which the
+.SM SMTP
+service is defined (to \f4netdir_getbyname\fP(3)).
+Normally, this will only be the ``tcp'' network.
+As requests are received, \f4smtpd\fP will fork off child \f4smtpd\fP
+processes to handle each individual
+.SM SMTP
+transaction.
+.P
+The options to \f4smtpd\fP and their meanings are as follows:
+.TP 12
+\f4\-n\fP
+Do not create \f4smtpsched\fP processes to process the incoming mail.
+Rely on the hourly \f4cron\fP(1) invocation of \f4smtpsched\fP instead.
+.TP
+\f4\-H\f2 helohost\f1
+This option can be used to specify the name to be used for the host in the
+initial
+.SM SMTP
+.SM HELO
+message.
+If it is not specified, the name used in the
+.SM HELO
+message defaults to the
+system node name.
+.TP
+\f4\-h\f2 thishost\f1
+Specify the network name to be prepended onto the sender path in the
+\f4From\fP line of the message.
+This option is passed through to the \f4fromsmtp\fP program.
+.TP
+\f4\-L\f2 loadlim\f1
+Specify the maximum load at which \f4smtpd\fP will
+create children.
+If this option is not specified, there is no limit to the load at which
+children may run.
+The load is determined by reading the kernel variable \f4avenrun\fP.
+.TP
+\f4\-l\f2 maxprocs\f1
+This option is used to specify the maximum number of children of \f4smtpd\fP
+that can be running at once.
+Each child handles one
+.SM SMTP
+conversation.
+If this option is not specified, there is no limit to the number of children
+that may run.
+.P
+Mail that is successfully received is piped to the \f4fromsmtp\fP command,
+which in turn delivers the mail by piping it to \f4rmail\fP.
+A log of all \f4smtpd\fP's activities is kept in the file
+\f4/var/spool/smtpq/LOG\fP.
+.SH FILES
+.TP 25n
+\f4/dev/kmem\fP
+To get the current machine load (avenrun)
+.TP
+\f4/etc/services\fP
+List of TCP/UDP services (SMTP should be 25/tcp)
+.TP
+\f4/etc/net/\(**/services\fP
+List of other TLI networks' services
+.TP
+\f4/usr/lib/mail/surrcmd/fromsmtp\fP
+Where incoming mail is piped to
+.TP
+\f4/var/spool/smtpq/LOG\fP
+Log of smtpd transactions
+.SH "SEE ALSO"
+\f4cron\fP(1M), \f4fromsmtp\fP(1M), \f4smtp\fP(1M)

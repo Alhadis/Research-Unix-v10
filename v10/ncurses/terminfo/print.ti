@@ -1,0 +1,39 @@
+# # --------------------------------
+#	@(#)print.ti	1.10 print 1/6/83
+#
+# print: PRINTERS
+#
+# Generic line printer.  We assume it can backspace, since even those
+# line printers that can't have this hidden by UNIX lpr driver.
+lpr|lp|printer|print|printing|line printer,
+	cr=^M, cud1=^J, ind=^J, ff=^L, bel=^G, cub1=^H,
+	lines#66, cols#132, hc, os,
+# The 'S' beginning mc4 and mc5 is checked for by lp, which sleeps 5 seconds.
+pbox|printerbox|box with print mode switch,
+	mc5=Set printer switch to "print"\r\n,
+	mc4=Set printer switch to "terminal"\r\n,
+2621-pb|hp2621-pb|2621 with printer box,
+	use=printerbox, use=2621,
+blit-pb|blit-pb|blit with printer box,
+	use=printerbox, use=blit,
+daleblit-pb|daleblit-pb|blit with printer box,
+	use=printerbox, use=daleblit,
+h19-pb|heathkit h19 with printer box,
+	use=printerbox, use=h19,
+citoh|ci8510|8510|c.itoh 8510a,
+	cols#80, ri=\Er, bold=\E!, smul=\EX, rmul=\EY, sgr0=\E"\EY, it#8,
+	is2=\E(009\054017\054025\054033\054041\054049\054057\054065\054073.,
+	rep=\ER%p2%3d%p1%c, cub1@, use=lpr,
+citoh-pica|citoh in pica,
+	is1=\EN, use=citoh,
+citoh-elite|citoh in elite,
+	is1=\EE, cols#96, use=citoh,
+citoh-comp|citoh in compressed,
+	is1=\EQ, cols#136, use=citoh,
+# Infinite cols because we don't want lp ever inserting \n\t**.
+citoh-prop|citoh-ps|ips|citoh in proportional spacing mode,
+	is1=\EP, cols#32767, use=citoh,
+citoh-6lpi|citoh in 6 lines per inch mode,
+	is3=\EA, use=citoh,
+citoh-8lpi|citoh in 8 lines per inch mode,
+	is3=\EB, lines#88, use=citoh,

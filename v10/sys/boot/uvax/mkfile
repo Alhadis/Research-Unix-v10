@@ -1,0 +1,14 @@
+LIB=../bb
+BBS=$LIB/bbs
+
+all:V: 1kmscp 4kmscp
+
+1kmscp: $LIB/1kb mscp.t
+	($BBS <mscp.t|dd bs=512 conv=sync; cat $LIB/1kb) >$target
+4kmscp: $LIB/4kb mscp.t
+	($BBS <mscp.t|dd bs=512 conv=sync; cat $LIB/4kb) >$target
+
+%.t: uvhdr.s %.s
+	as -d2 -o $target uvhdr.s $stem.s
+	size $target
+	nm -u $target | sed 's/^/Undefined: /'

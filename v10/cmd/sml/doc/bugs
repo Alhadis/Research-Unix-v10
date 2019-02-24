@@ -1,0 +1,2368 @@
+Known bugs, SML of NJ Version 0.43, 30 November 1989
+
+Key: L = local		    Priority Key:  A = should be done by release 1.0
+     E = Edinburgh			   P = will be fixed when parser redone
+     SB = Stony Brook			   B = should be done after 1.0
+     P = U Penn				   C = not a bug
+
+--------------------------------------------------------------------------------
+2. (L.3):  Mispelled nonnullary constructors in patterns [parser]
+Problem: 
+  Mispelling a constructor with arguments in a pattern leads to misleading
+  error messages.
+Version: 0.18
+Code:  (in typing/typecheck.sml)
+      ...
+	       app genType rvbs
+	   end
+       | EXCEPTIONdec(ebs) =>
+	   let fun checkWeak(VARty(ref(UNBOUND id))) =
+				       ^ -- should have been UBOUND
+		     if tyvarWeakness id > abs
+		     then condemn "type variable in exception type too strong"
+      ...
+Comment:
+  probably requires rewrite of pattern parsing [dbm]
+Priority: P
+--------------------------------------------------------------------------------
+4. (L.5):  duplicate specifications not checked
+Problem:
+  No checking for duplicated specifications in signatures.
+Version: 0.18
+Comment:
+  This should be done when building the signature symbol table.
+Priority: A
+--------------------------------------------------------------------------------
+7. (L.8):  constructor representation
+Problem:
+  There is a bug involving constructor representation.  The compiler
+  examines the structure of a datatype and tries to determine an efficient
+  runtime representation for it.  For example, for the list datatype, nil
+  can be represented as an integer, and :: can just be a pointer to its
+  tuple argument (integers and tuples are distinct).  This fails in our system
+  at the structure level.  For example:
+Version: 0.18
+Code:
+    signature S = sig
+	type 'a t
+	datatype 'a list = nil | :: of 'a t
+    end
+    structure A : S = struct
+	datatype 'a list = nil | :: of 'a t
+	withtype 'a t = 'a * 'a list
+    end
+Comment:
+  Here the compiler can deduce the efficient representation for the
+  (local) list datatype in structure A; but this cannot be deduced in
+  the signature S (an object of type 'a t might not be a pointer).
+Priority: A
+--------------------------------------------------------------------------------
+8. (L.9):  interactive error recovery
+Problem:
+  In the interactive mode, parser error recovery should be suppressed
+  (but isn't); the parser may continue to look for input after an error,
+  when the user would expect to be back at top level.
+Version: 0.18
+Priority: P
+--------------------------------------------------------------------------------
+10. (L.11):  exhaustiveness messages at top-level
+Problem: Top level bindings should not report on exhaustiveness, but they do.
+Version: 0.18
+Priority: C
+--------------------------------------------------------------------------------
+11. (L.12):  poor error messages [parser]
+Problem: Poor error message (parens are needed around the hd::tl pattern):
+Version: 0.18
+Code:
+   -  fun f hd::tl = 4;
+Messages:
+    Error: expected EQUAL, found ID (::)
+    Error: expected nonfix-identifier, found ID ::
+    Error: unbound variable bogus
+    Error: type error: operator and operand don't agree
+    operator : ((wrong*wrong list) -> wrong list)
+    operand : (wrong*('aA list -> 'aA list))
+    expression:
+      bogus :: tl
+    - 
+Comment:
+    The "unbound variable bogus" in particular is confusing.
+Priority: P
+--------------------------------------------------------------------------------
+12. (L.14):  loss of information in value printing
+Problem:
+  When printing values formed using constructors created by functor application,
+  the argument type of the constructor can sometimes be lost, resulting in
+  inability to print the value accurately.
+Version: 0.18
+Code:
+	- functor F(type t) =
+	= struct
+	=   datatype r = C of t end
+	= end;
+
+	- structure S = F(type t = int);
+
+	- S.C 3;
+  [1]   val it = C - : S.r
+
+  But
+  	- signature SS = sig type t datatype r = C of t end;
+
+        - structure S = struct type t = int  datatype r = C of t end;
+
+	- S.C;
+	val it = fn : ?.t -> S.r
+
+	- S.C 3;
+	val it = C 3 : S.r
+
+  and
+	- structure S': SS = struct type t = int  datatype r = C of t end;
+	- S'.C;
+	val it = fn : ?.t -> S'.r
+	- S'.C 3;
+	val it = C 3 : S'.r
+
+Comments:
+  It does not seem possible to recover the context from the structure S, because
+  there is no simple way to get back from the type S.r or the DATACON C to the 
+  structure environment.  This may be a reason for having type constructors
+  contain a pointer to their home structure rather than just the symbolic
+  path.  Another alternative would be to follow the path in S.r to find the
+  structure S so that we can use it as context for the type of C.
+Priority: B
+--------------------------------------------------------------------------------
+13. (L.15):  printing of types from abstraction structure
+Problem:
+  Printing of types from an abstraction is not quite right.
+Code: (test/sigs/test7)
+    signature FOO = 
+    sig
+       type T1 and T2
+       val x1: T1 and x2: T2
+       sharing type T1 = T2
+    end
+
+    abstraction Foo: FOO =
+    struct
+       datatype T1 = CON
+       type T2 = T1
+       val x1 = CON and x2 = CON
+    end
+
+    [Foo.x1,Foo.x2];
+Messages:
+    [-,-] : ?.T1   (* should be Foo.T1 *)
+Priority: B
+--------------------------------------------------------------------------------
+15. (E.12):  Error message
+Problem: Unfortunate error message (I left out `type'):
+Version: ?
+Code: 
+	- signature STWO = sig structure X:SIG and Y:SIG sharing X.t=Y.t end;
+Messages:
+	Error: bad path in sharing specification
+Comments:
+Priority: A
+--------------------------------------------------------------------------------
+17. (E.25):  Inaccurate line numbers
+Problem:
+	Misleading line numbers for some things (eg. type errors in multi-line
+	datatype declarations). Could the system print something like
+	"Line 33ff", or a line range a la LaTeX, for these?
+Version:
+Code:
+Messages:
+Comments:
+Priority: P
+--------------------------------------------------------------------------------
+20. (E.47):  "print" is overloaded rather than polymorphic
+Problem: print should be implemented as a pseudo-polymorphic function like =
+Version: 0.19
+Code:
+	- datatype Foo = FOO1 | FOO2;
+	- print FOO1;
+Messages:
+	Error: type error: no match for overloaded variable:
+	print
+Comments:
+	according to the original SML report, both "print" and "makestring"
+	should be polymorphic identity functions. In our [Edinburgh]
+	compiler, "print" is correctly polymorphic. "makestring" is
+	(incorrectly) overloaded, disallowing "makestring FOO1". Needless
+	to say, I want to be able to do "makestring" on datatypes.
+Priority: C
+--------------------------------------------------------------------------------
+21. (E.48):  Bad error recovery in the typechecker:
+Problem:
+Version: 0.15a
+Code:
+	- signature SIG = sig
+	     exception Foo of int
+	     val A: int
+	     val B: int
+	     val C: int
+	  end;
+
+	- structure S: SIG =
+	     struct
+		exception Foo: int
+			     ^
+		val A = 1
+		val B = 2
+		val C = 3
+	     end
+Messages:
+	Error: Type in structure doesn't match signature
+	name = Foo
+	spec = (int -> exn)
+	actual = exn
+	Error: unmatched val spec: A
+	Error: unmatched val spec: B
+	Error: unmatched val spec: C
+	^ there can be a lot of these!
+Comments:
+	Sometimes the exception error doesn't appear, just giving the unmatched
+	spec errors, rather misleadingly.
+Priority: A
+--------------------------------------------------------------------------------
+24. (E.56): incomplete write
+Problem: [nick]
+    I'm trying to put in some bullet-proof error recovery into my
+    subprocess software, so that "^C" at ML top-level doesn't
+    confuse the daemon. What happens if an "output" operation is
+    active when ^C is hit - does it do a partial write? I seem to be
+    getting some buffer corruption somewhere, as a partial write is
+    immediately followed by another complete write. It might make
+    my life easier if "output" could be guaranteed atomic under "^C"
+    (i.e. any single output operation will complete before Interrupt
+    gets raised).
+       Just a thought. I'll perhaps put timers into the daemon and ML code
+    so that they flush and restart properly - this may solve the problem.
+Version:  ?
+Comments:
+   [Andrew] there should be a way to enable and disable interrupt.
+Priority: B
+--------------------------------------------------------------------------------
+26. (E.58):  export ML within a use
+Problem:
+	Awkward behaviour when exportML is called while a file is being
+	"use"'d - the saved state raises Io_failure. Shouldn't
+	restarting clear the use stack?
+Version:
+Code:
+Messages:
+Comments:
+Priority: C
+--------------------------------------------------------------------------------
+29. (E.62):  use_string in structure definition
+Submitter: Nick
+Date: 3/24/88
+Version: 0.18
+Problem: use_string can cause uncaught Intmap exception
+Code:
+    - structure Foo =
+       struct
+	  val x = use_stream(open_string "val _ = Foo.x;")
+       end;
+Messages: 
+    [opening <instream>]
+    [closing <instream>]
+    uncaught exception Runbind
+Comments: This code shouldn't work, but the Intmap exception should be caught.
+Priority: C
+--------------------------------------------------------------------------------
+36. (L.26): overloading resolution and order of recursive definitions
+Submitter: Dave
+Date: 5/2/88
+Version: 0.18
+Problem: 
+    overloading resolution can depend on the order in which mutually
+    recursive definitions occur
+Code:
+    fun f x = length x
+    and g() = f "abc"
+      (* length is not resolved *)
+    fun g() = f "abc"
+    and f x = length x
+      (* length is resolved *)    
+Messages:
+Comments:
+    Maybe this will remain a "feature".
+Priority: A
+--------------------------------------------------------------------------------
+40. (L.28): Exception aliasing (match compiler)
+Submitter: Dave
+Date: 5/12/88
+Version: 0.19
+Problem:
+   Match compiler doesn't cope with exception aliasing (through functor
+   parameters, for instance).
+   Exceptions in different structures with the same name, or identical
+   exceptions with different names can cause problems for the match
+   compiler.  Currently, in building the decision tree, the match
+   compiler examines constructor names to descriminate among them.
+   In a match like
+	  A.foo =>
+	| B.foo =>
+   the second rule will be found redundant, even if the exceptions are
+   different.  And in
+	  exception foo
+	  exception bar = foo
+
+	  bar =>
+	| foo =>
+   the second rule will not be recognized as redundant.
+   The situation is even worse for exceptions which are functor parameters.
+   For example:
+	structure A = struct exception foo end
+	structure B = struct exception foo end
+	functor F(exception foo) =
+	  struct
+	    fun f A.foo = 1
+	      | f foo = 2
+	      | f B.foo = 3
+	  end
+   Now in F(A.foo) the second case is redundant; in F(B.foo) the third case
+   is redundant; and in F(exception foo) no case is redundant.  Redundancy
+   can't be computed statically while compiling F; and the match compiler
+   can't build a fancy decision tree without watching for functor parameters.
+   Here, the only correct tree would be a case by case check; things get more
+   complicated when tuples are involved.
+   
+   One solution would be to assign stamps statically to exception declarations.
+   Exception specs would get a different class of stamp than exception
+   declarations.  This would allow us to correctly produce efficient matches
+   in most cases, and detect cases where the runtime-dependent check is
+   necessary.
+Code:
+Messages:
+Comments: a fairly nasty one!
+Priority: B
+--------------------------------------------------------------------------------
+46. equality type checking and flexrecords
+Submitter: Dave
+Date: 6/3/88
+Version: 0.20
+Problem:
+    when flexrecords are used a nonequality type may be accepted in a context
+    where an equality record type is required
+Code:
+    fun f(r as {a,...},true) = (r = r)  (* checks only that a admits equality *)
+      | f({b,...},false) = b 3 (* oops, the b field is a function! *)
+Messages:
+    val f = fn : {a:''a,b:int -> bool} * bool -> bool
+    (* argument type is not an equality type *)
+Comments:
+    A fix probably requires a change in the way flexrecords are represented.
+Priority: A
+--------------------------------------------------------------------------------
+48. printing of identity withtype declarations
+Submitter: Dave
+Date: 6/9/88
+Version: 0.20
+Problem:
+  A simple identity declaration in the withtype clause of a datatype declaration
+  will not be printed properly.
+Code:
+  datatype foo = A
+  withtype t = int;
+Messages:
+  datatype  foo
+  con A : foo
+  type  t = t
+Comments:
+  This happens because the backpatching of the type constructor puts the new
+  name in the defining type as well as in the defined type binding.
+Priority: B
+---------------------------------------------------------------------------
+63. curried, clausal def of infix function
+Submitter: Paulson
+Version: Version 0.20, 13 June 1988
+System: Sun3/SunOS
+Problem: parsing of infixes 
+Code: (minimal code fragment that causes bug)
+    - infix orelf;
+    - fun (f orelf g) x = 0;
+    Error: expected EQUAL, found RPAREN
+    Error: atomic expression expected
+    Error: declaration or expression expected, found RPAREN
+
+    - fun f orelf g = fn x => 0;
+    val orelf = fn : 'a * 'b -> 'c -> int
+Comments: 
+  This use of an infix in a pattern seems legal and is accepted by Poly/ML.
+Priority: P
+---------------------------------------------------------------------------
+68. (E.72) spurious error message -- doesn't match sig spec
+Submitter: Nick
+Date: 11/24/88
+Version: 0.24
+System: Sun 3
+Code:
+	- structure S: sig val x: int end = struct val x = hd "s" end;
+	Error: operator and operand don't agree (tycon mismatch)
+	  operator domain: 'S list
+	  operand:         string
+	  in expression:
+	    hd "s"
+	Error: value type in structure doesn't match signature spec
+	  name: x
+	  spec:   int
+	  actual: error
+Priority: A
+---------------------------------------------------------------------------
+69. (E.73) printing of exn spec in inferred signature
+Submitter: Nick
+Date: 11/24/88
+Version: 0.24
+System: Sun 3
+Code:
+	- structure Blah = struct exception BLAH end;
+	structure Blah :
+	  sig
+	    exception BLAH of exn  (* "of exn" should not appear *)
+	  end
+Priority: A
+---------------------------------------------------------------------------
+70. (E.74) constructor shouldn't appear in printed structure signature
+Submitter: Nick
+Date: 11/24/88
+Version: 0.24
+System: Sun 3
+Code:
+	signature SIG =
+	    sig
+		type t
+	    end
+
+	structure S:SIG =
+	    struct
+		datatype t = foo of int
+		val x = 3
+	    end
+Messages:
+	structure S :
+	    sig
+		datatype t
+		  con foo : int -> t  (* shouldn't be printed *)
+	    end
+Comment: constructor foo is not accessible as component of S
+    Also, from Dave Berry (2/2/89):
+    NJ ML prints the constructors of a datatype when that datatype is
+    matched against a "type" in a signature, even if the signature
+    doesn't include the constructors.
+
+    This seems a trivial point (except that it's confusing for the novices on
+    the course we teach).  However, with some complicated programs the compiler
+    bombs out, raising the subscript exception.  You are left in the ML system,
+    but it won't compile your code.
+
+    I don't have a small example of this.  It first hit me preparing
+    examples for the aforementioned course, and it's just hit me again.
+Priority: A
+---------------------------------------------------------------------------
+71. (E.75) Failure to restore enviroment after exception in "use"
+Submitter: Nick
+Date: 11/24/88
+Version: 0.24
+System: Sun 3
+Code:
+      For a file "y.sml" containing "val y = 4";
+
+	- val x = (use "y.sml";
+		   let exception X in raise X end
+		  );
+	[opening y.sml]
+	val y = 4 : int
+	[closing y.sml]
+	uncaught exception X
+	- (* so far so good... *)
+	- x;
+	uncaught exception Runbind
+Comment: needs to be a protect around use to trap exceptions and restore env
+Priority: A
+---------------------------------------------------------------------------
+72. equality types with abstype declarations
+Submitter: kevin
+Date: 11/30/88
+Version: 0.24?
+System: Sun 3
+Code:
+    (* The following definition is accepted by the compiler, resulting in
+       the declaration test: ''a foo -> bool *)
+
+    abstype 'a foo = Foo of 'a list
+    with fun test(Foo x) = (x = []) end;
+
+    (* The next declaration fails with the error
+      Error: operator and operand don't agree (equality type required)
+      operator domain: ''S * ''S
+      operand:         'T foo * 'U foo
+      in expression:
+	x = Foo nil  *)
+
+    abstype 'a foo = Foo of 'a list
+    with fun test(x as Foo _) = (x = Foo []) end;
+
+    (* I'm not sure why one should be allowed and not the other - the old
+       Edinburgh compiler accepted both.  *)
+Priority: A
+---------------------------------------------------------------------------
+73. strange function definition
+Submitter: Trevor
+Date: 12/10/88
+Version: 0.24?
+System: vax
+Problem:
+Code:
+    - fun add-a x = x+1;
+    val a = fn : int -> int
+    - a 3;
+    val it = 4 : int
+Comments:
+    The intent was to have a hyphen in a function name
+    (something like "fun add_a ...".
+Priority: P
+---------------------------------------------------------------------------
+77. unparenthesized infix expressions in fun lhs
+Submitter: Dave Berry
+Date: 12/22/88
+Version: 0.24?
+Code: 
+    infix 4 %;
+    infix 3 %%;
+
+    datatype foo = op % of int * int;
+    fun a % b %% c % d = 0;
+
+    NJ ML accepts this, as does Edinburgh ML.  It is incorrect; brackets
+    are required as follows:
+
+    fun (a % b) %% (c % d) = 0;
+
+    This is defined on page 68 of the definition.  The lhs and rhs of the
+    infixed operator being defined are required to be atomic patterns.
+Priority: P
+---------------------------------------------------------------------------
+79. withtype
+Submitter: Simon (from abstract hardware) via Mike Fourman
+Date: 1/31/88
+Version: 0.24
+Problem:
+    "Did you know that the following is not valid ML?
+
+	datatype type1 = T of type2 * type3
+	withtype type2 = int (* this could be a large expression *)
+	and      type3 = type2 * string;
+
+    The reason is that the "datatype datbind withtype typbind" construct is
+    expanded out into "datatype datbind'; type typbind" where "datbind'" is
+    the the result of using "typbind" to expand "datbind". Note that this
+    construct does *not* expand "typbind" itself, so "type2" is out of scope
+    in its occurrence in "type3". This simultaneous definition property of
+    "withtype" is quite annoying, especially as there is no way to get the
+    effect of sequential definition (other than manually expanding out the
+    body of "type3" - but that is precisely the problem that "withtype" is
+    supposed to solve)."
+
+Code:
+    - 
+	datatype type1 = T of type2 * type3
+	withtype type2 = int (* this could be a large expression *)
+	and      type3 = type2 * string;
+
+
+    - = = Error: Compiler bug: defineEqTycon/eqtyc 1
+    - 
+	datatype type1 = T of type2 * type3
+	withtype type3 = type2 * string
+	withtype type2 = int (* this could be a large expression *);
+
+
+    - = = Error: unbound type constructor (in datatype): type2
+    Error: unbound type constructor (in datatype): type2
+    Error: Compiler bug: defineEqTycon/eqtyc 1
+    - 
+Priority: A
+---------------------------------------------------------------------------
+80. simultaneous type declarations
+Submitter: Dave Berry
+Date: 2/1/89
+Version: 0.24
+Code:
+    - type type2 = int
+    = and  type3 = type2 * string;
+    type  type2 = int
+    type  type3 = type2 * string
+Comments:
+    This is wrong: type2 shouldn't be bound before the declaration of type3.
+Priority: B
+---------------------------------------------------------------------------
+83. unexpected parsing of erroneous datatype declaration
+Submitter: Carl Gunter
+Date: 2/24/88
+Version: 0.20
+Code:
+    - datatype complex = Complex (real,real);
+    datatype  complex
+    con Complex : complex
+    val it = (fn,fn) : (int -> real) * (int -> real)
+Comments:
+    implicit "val it = " inserted after constructor Complex breaks the
+    declaration into a valid datatype declaration and a top-level value
+    expression (implicit value declaration).  This could probably be 
+    detected and suppressed.
+Priority: P
+---------------------------------------------------------------------------
+85. bad error message for failed signature match
+Submitter: John Reppy
+Date: 3/6/89
+Version: 0.28
+Code:
+    - structure Foo : sig
+    =   type foo
+    =   val f : foo -> int
+    = end = struct
+    =   type Foo = int
+    =   fun f x = x
+    = end;
+    Error: unmatched type spec: foo
+    Error: Compiler bug: tycStamp
+Priority: A
+---------------------------------------------------------------------------
+86. incorrectly allows redefining of "="
+Submitter: Dave Berry
+Date: 3/15/89
+Version: 0.29
+Problem:
+    NJML handles the = symbol incorrectly in some cases.
+
+    - val op = = op = ;
+    - nonfix =;
+    - = (true, true);
+    Error: declaration or expression expected, found EQUAL
+
+    The = symbol may not be redefined (Definition, page 4).  The top definition
+    does seem to redefine =, despite the lack of response from the system.
+    I can't see anything in the Definition that forbids making = nonfix,
+    so I suppose it should be possible to use it in a nonfix way.
+
+    Poly/ML gets this right.
+
+    > val op = = op = ;
+    Error- Pattern expected but = was found
+    Exception static_errors raised
+    > nonfix =;
+    nonfix =
+    > = (true, true);
+    val it = true : bool
+
+    It would be more pleasant if the error message said "Can't redefine =".
+
+    Edinburgh ML 3.5 (for what it's worth) forbids the rebinding, and doesn't
+    allow = to be nonfix.
+
+    - val op = = op = ;
+
+    Parse error:
+	Was expecting a Prefix/infix/suffix-identifier
+    In:  ... val op <?> =
+
+    - nonfix =;
+
+    Parse error:
+	Insufficient repetition
+    In:  ... nonfix <?> =
+
+    The "Insufficient repetition" message is the model of clarity we should all
+    be aiming for :-).
+Priority: C
+---------------------------------------------------------------------------
+87. execute subprocess dies on interrupt on blocked input
+Submitter: dbm
+Date: 3/19/89
+Version: 0.31
+System: Sun3/100, SunOS 4.0.1; VAX8550, V9
+Problem: interrupting blocked call of input from execute subprocess
+	 kills subprocesss
+Code:
+	val (ins,outs) = execute "cat"
+	input ins 5;
+	^Cuncaught exception Interrupt
+Messages:
+   After interrupt, System.system("ps x"), indicates that "cat"
+   subprocess has disappeared, and subsequent attempt to flush output
+   to outs raises exeption Io("output: write failed").
+Comments:
+   end_of_stream also blocks, and interrupting a call of end_of_stream
+   seems to have the same effect.
+Priority: B
+---------------------------------------------------------------------------
+89. continuation line string escape at beginning of string
+Submitter: dbm
+Date: 4/3/89
+Version: 0.33
+System: Sun 3, SunOS 4.0.1
+Code:
+    - "\			(* CR after \ at beginning of string *)
+    - akdk";
+    Error: unclosed string
+    =		    		(* second CR typed *)
+    Error: unclosed string
+    Error: unbound variable kdk
+    = ;
+    Error: operator is not a function
+      operator: string
+      in expression:
+	"" kdk
+Priority: B
+---------------------------------------------------------------------------
+90. secondary prompt is not set in multi-line strings and comments.
+Submitter: dbm and duba
+Date: 4/3/89
+Version: 0.33
+System: All
+Priority: B
+---------------------------------------------------------------------------
+92. uncaught Nth exception after type constructor arity mismatch in sigmatch
+Submitter: David Tarditi, Princeton University, drt@notecnirp.princeton.edu
+Date: 6/23/89
+Version: 0.33
+System: Vax/4.3 BSD
+Problem: Mismatching arities on types causes uncaught exception Nth
+	 later in signature checking.
+
+Example:
+
+functor OrdSet(B : sig
+			type elem
+			val gt : elem * elem -> bool
+			val eq : elem * elem -> bool
+		   end) =
+struct
+end
+
+structure Bad =
+    struct
+	type 'a elem = int * 'a
+	val gt = fn ((a:int,_),(b,_)) => a > b
+	val eq = fn ((a:int,_),(b,_)) => a = b
+    end
+
+structure  X = OrdSet(Bad)
+
+Result:
+
+Standard ML of New Jersey, Version 0.33, 1 April 1989
+val it = () : unit
+std_in, line 18: Error: mismatching tycon arities: elem
+uncaught exception Nth
+
+Comments:
+
+The uncaught exception Nth appears to occur while matching the actual types
+of eq and gt against the types in the signature of the formal
+structure parameter.
+Priority: A
+---------------------------------------------------------------------------
+95. infix declaration interferes with type parsing
+Submitter: David Tarditi, Princeton University, drt@notecnirp
+Date: 4/30/89
+Version: 0.33
+System: Vax/4.3 BSD
+Problem: Spurious declaration of infix for an identifier causes problems
+	 when it is used as a type constructor later.
+
+Sample Run:
+
+Standard ML of New Jersey, Version 0.33, 1 April 1989
+val it = () : unit
+- type ('a,'b) --> = 'a -> 'b;
+type ('a,'b)  --> = 'a -> 'b
+
+- val a = fn _ => 5;
+val a = fn : 'a -> int
+
+- a : ('a,int) -->;
+val it = fn : 'a -> int
+
+- infix -->;
+
+- a : ('a,int) -->;
+Error: (user) bound type variable propagated out of scope
+  it : 'aU -> int
+
+
+Comments:
+	The declaration of an identifier to be infix should not
+affect type constructors.  Infix declarations apply only to data
+constructors and value identifiers.  The declaration of '-->' to
+be infix should not affect the use of '-->' as a type constructor,
+even though the declaration is spurious.
+
+P.S.
+	Maybe there should be a way to declare type identifiers to be
+infix.  I was trying to declare '-->' to be infix because I was creating
+different kinds of arrows for my effects inference.  --> could denote
+a function that is pure, while -*-> could denote a function with an
+effect.  I need to do this to bootstrap the pervasive environment
+without assuming that all built-in functions have side-effects.
+
+Priority: P
+---------------------------------------------------------------------------
+100. constructor not printed after open declaration
+Submitter: Nick Rothwell
+Date: 7/18/89
+Version: 0.33
+Problem:
+  In this case, a datatype is being printed as a type: the constructor isn't
+  shown (although it's still bound):
+Code:
+
+    - signature X = sig datatype T = T end;
+    signature X =
+      sig
+	datatype T
+	  con T : T
+      end
+
+    - structure X: X = struct datatype T = T end;
+    structure X :
+      sig
+	datatype T
+	  con T : T
+      end
+
+    - open X;
+    type  T = T
+
+Priority: A
+---------------------------------------------------------------------------
+104. Labels with leading zeroes should not be accepted (this is made
+     explicit on page 5 of version 3 of the Standard).
+Submitter: Simon Finn (simon%abstract-hardware-ltd.co.uk@nsfnet-relay.ac.uk)
+Date: 7/28
+Version: 0.33
+Code:
+    - {0000002 = 999};
+    val it = {2=999} : {2:int}
+Priority: B
+---------------------------------------------------------------------------
+105. Large numeric labels are disallowed.    
+Submitter: Simon Finn (simon%abstract-hardware-ltd.co.uk@nsfnet-relay.ac.uk)
+Date: 7/28
+Version: 0.33
+Code:
+    -  {9999999999999999999999 = 999};
+Messages:
+    Error: integer too large
+    Error: nonpositive integer label, found 0
+Priority: B
+---------------------------------------------------------------------------
+107. NJML disappears into an infinite loop when trying to parse large real numbers;
+     presumably some error recovery code is flakey.
+Submitter: Simon Finn (simon%abstract-hardware-ltd.co.uk@nsfnet-relay.ac.uk)
+Date: 7/28
+Version: 0.33
+Code:
+    - 1.0E308;
+    val it = 1.0E308 : real
+    - 1.0E309;
+    Error: Real constant  out of range
+    - 2.0E308; (* wait a long time ... *)
+    val it = uncaught exception Interrupt
+    - 
+Comment:
+Furthermore, a failing program elaboration or evaluation (such as the above)
+should not rebind the variable "it" (ML Standard v3, rules 194 and 195).
+NJML sometimes does (as above).
+
+Furthermore, trying to print "it" when it has been bound to such an
+exception sometimes seems to crash the system (it refuses to respond to
+further input); at other times the exception Runbind is raised.
+
+Priority: A
+---------------------------------------------------------------------------
+109. sharing of datatypes not handled properly
+Submitter: Simon Finn (simon%abstract-hardware-ltd.co.uk@nsfnet-relay.ac.uk)
+Date: 7/28
+Version: 0.33
+Code:
+    signature EQSIG =
+    sig
+      type r
+      datatype s = S of r
+	   and t = T of s
+      sharing type r = t
+    end;
+
+    functor F(X : EQSIG) =
+    struct
+      fun test(x : X.t) = (x = x);
+    end;
+Messages:
+
+    signature EQSIG =
+      sig
+	type r
+	datatype s
+	  con S : r -> s
+	datatype t
+	  con T : s -> t
+      end
+    Error: operator and operand don't agree (equality type required)
+      operator domain: ''S * ''S
+      operand:         ?.t * ?.t
+      in expression:
+	x = x
+    Error: Compiler bug: abstractType
+
+Comment:
+    Both are wrong, as the signature EQSIG elaborates to the same semantic object
+    as the following (which both treat correctly):
+
+    signature EQSIG =
+    sig
+      type r
+      datatype s = S of t
+	   and t = T of s
+      sharing type r = t
+    end;
+
+Priority: A
+---------------------------------------------------------------------------
+110. val rec
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: val rec form of definition rejected
+Code:
+
+- val x = 1 and rec y = fn z => z; (* should compile *)
+Error: expected an atomic pattern, found REC
+Error: expected EQUAL, found REC
+Error: atomic expression expected, found REC
+Error: declaration or expression expected, found REC
+
+Comment: [Simon] the compiler should accept the above declaration.
+Comment: [Andrew] The compiler should not accept the above declaration;
+		  this is a case where the Def'n of SML is brain-damaged.
+Priority: C
+---------------------------------------------------------------------------
+111. local polymorphic definitions
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: local polymorphic definitions rejected
+Code:
+
+- val q = let exception x of '_a in 1 handle x _ => 2 end;
+Error: type variable in exception type not weak enough
+
+- local exception x of '_a in val q = 1 handle x _ => 2 end;
+Error: type variable in exception type not weak enough
+
+
+Comment: the compiler should accept both the above definitions,
+         which are valid, since the imperative type variable '_a
+         is *not* free in the top level declaration.
+Priority: A
+---------------------------------------------------------------------------
+112. equality
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: equality misbehaving
+Code:
+
+(0.0 = ~0.0, 0.0 = ~ 0.0, ~0.0 = ~ 0.0);    (* (true,true,true) *)
+
+infix eq; fun x eq y = x = y;
+(0.0 eq ~0.0, 0.0 eq ~ 0.0, ~0.0 eq ~ 0.0); (* (true,false,false) *)
+
+infix eq; fun (x:real) eq y = x = y;
+(0.0 eq ~0.0, 0.0 eq ~ 0.0, ~0.0 eq ~ 0.0); (* (true,true,true) *)
+
+Comment: the polymorphic equality function should give
+         consistent results, even when the type of its
+         argument is known to be real.
+Priority: A
+---------------------------------------------------------------------------
+113. empty declarations
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: Parsing empty declarations
+Code:
+
+    let val x = 1; (* empty declaration *) ; val y = 2 in x + y end;
+    Error: expected IN, found SEMICOLON
+    Error: atomic expression expected, found SEMICOLON
+    Error: atomic expression expected, found VAL
+    Error: expected END, found VAL
+    Error: declaration or expression expected, found IN
+
+Comment: the above program is syntactically correct.
+Priority: P
+---------------------------------------------------------------------------
+115. cyclic signatures
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: cyclic signatures
+Code:
+
+    (* shouldn't be allowed, since object (signature) is not cycle-free *)
+    signature bad =
+    sig
+      structure A :
+      sig
+	structure B : sig end;
+      end;
+      sharing A = A.B;
+    end;
+
+Comment: NJML accepts the above signature declaration, which should be
+         rejected because it elaborates to a cyclic semantic object;
+         cyclic objects are not semantically admissible.
+         Not a bug?  (signature will never match a structure)
+Priority: C
+---------------------------------------------------------------------------
+116. pattern declares no variables warning (?)
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: Missing warning message
+Code:
+
+let val _ = 1 in 2 end;
+local val _ = 1 in val it = 2 end;
+
+
+Comment: Each of the above should produce a "Pattern declares
+         no variables" warning message, but neither does.
+
+         Not a bug 
+Priority: C
+---------------------------------------------------------------------------
+117. sharing and equality attributes
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: problems with equality attribute
+Code:
+
+(***************************************************************************)
+(* This is illegal in version 3 of the ML standard                         *)
+(* s may only be elaborated to a non-equality type (+ extra bits)          *)
+(* t may only be elaborated to an equality type (for consistency with its  *)
+(* constructor environment)                                                *)
+(* Hence s and t can't share                                               *)
+(***************************************************************************)
+
+signature BADSIG =
+sig
+  datatype s = Dummy of bool -> bool
+  datatype t = Dummy of int
+  sharing type s = t;
+end;
+
+Comment: NJML accepts this signature but shouldn't. Getting the
+         equality attribute right in the presence of sharing
+         constraints seems to be quite a tricky problem.
+
+Priority: A
+---------------------------------------------------------------------------
+118. deviation from Definition, div and mod
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: div / mod give non-standard results
+Code:
+
+fun divmod (m,n) = (m div n,m mod n);
+(* should give (1,2)   *) divmod(5,3);   (* gives (1,2)   *)
+(* should give (~2,1)  *) divmod(~5,3);  (* gives (~1,~2) *)
+(* should give (~2,~1) *) divmod(5,~3);  (* gives (~1,2)  *)
+(* should give (1,~2)  *) divmod(~5,~3); (* gives (1,~2)  *)
+
+Comments: I'd like the initial dynamic basis to conform to the Standard.
+          (More efficient, non-standard versions should be hidden away.)
+Priority: A
+---------------------------------------------------------------------------
+119. deviation from Definition
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: I/O functions are curried, Standard has them uncurried
+Code:
+
+    - input;
+    val it = fn : instream -> int -> string
+
+Comments: I'd like the initial dynamic basis to conform to the Standard.
+          (More efficient, non-standard versions should be hidden away.)
+Priority: C
+---------------------------------------------------------------------------
+120. deviation from Definition
+Submitter: Simon Finn, Abstract Hardware Ltd, simon@uk.co.ahl
+Date: 7/18/89
+Version: 0.33
+System: Sun3/SunOS 4.0
+Problem: Prelude functions raise the wrong exceptions
+Code:
+
+    0.0 / 0.0; (* raises Overflow *)
+    1.0 / 0.0; (* raises Real *)
+
+Comments: I'd like the initial dynamic basis to conform to the Standard.
+          (More efficient, non-standard versions should be hidden away.)
+This one is even trickier; Poly/ML doesn't raise any exception at all
+for these (it prints NaN.0 and Infinity.0 respectively).
+Priority: A
+---------------------------------------------------------------------------
+126.  scope of explicit type variables
+Submitter: Mads Tofte <mads%lfcs.edinburgh.ac.uk@NSFNET-RELAY.AC.UK>
+Date: 7/11/89
+Version: 0.33
+Problem:
+New Jersey ML (Version 33) does not accept the following declarations.
+It complains that a user bound type variable escapes out of scope in `insert'.
+But the scope of ''a and 'b is the whole of the fun declaration.  The problem
+seems to be associated with mutual recursion.
+
+  type (''a, 'b)map = (''a *  'b) list
+
+  fun plus(l:(''a,'b)map ,[]: (''a, 'b)map ): (''a, 'b)map = l
+    | plus(l,hd::tl) = plus(insert(l,hd), tl)
+  and insert([], p) = [p]
+    | insert((x,y)::rest, (x',y')) = 
+        if x=x' then (x',y')::rest
+        else (x,y) :: insert(rest,(x',y'));
+
+Priority: A
+---------------------------------------------------------------------------
+127. sharing and equality types
+Submitter: Mads Tofte <mads%lfcs.edinburgh.ac.uk@NSFNET-RELAY.AC.UK>
+Date: 7/11/89
+Version: 0.33
+Problem: 
+New Jersey ML does not accept the following functor declaration (it
+complains that S.x is not of equality type).  According to the
+Definition, two types share only if they have the same name (stamp).
+In particular, since equality is an attribute of type names (Version
+3, page 16), one admits equality iff the other does (one cannot have
+different ``views'' of equality).  
+
+Presumably the problem is a bug in the unification of type names.
+
+Code:
+    functor f(structure S : sig type t val x: t end
+	      structure T : sig eqtype t end
+	      sharing S = T
+	     )=
+    struct val b:bool = S.x = S.x
+    end;
+      
+Priority: A
+---------------------------------------------------------------------------
+133. overloading resolution is weaker than Edinburgh SML or Poly ML
+Submitter: Larry Paulson (lcp@computer-lab.cambridge.ac.uk)
+Date: 5/8/89
+Version: 0.33
+Problem:
+Code:
+    datatype 'a tree = Stree of 'a list * (string * 'a tree) list
+    fun insert ((key::keys, x), Stree(xs,alist)) =
+	  let fun inslist((keyi,tri)::alist) =
+		    if key<keyi then alist else (keyi,tri) :: inslist alist
+	  in  Stree(xs, inslist alist)  end;
+Messages:
+    Error: overloaded variable "<" cannot be resolved
+Priority: A
+---------------------------------------------------------------------------
+134. type checking
+Submitter: 
+  Erik Tarnvik 
+  Department of Computing Science
+  University of Umea
+  SWEDEN
+  erikt@cs.umu.se
+Date: 5/12/89
+Version: 0.33
+System: Sun3
+Problem:
+The compiler reports a type clash were it shouldn't.
+
+Code:
+    type 'a ft = (int * 'a) list;
+
+    fun f ([]:'a ft) x = []:'a ft
+      | f (((y,fy)::l):'a ft) x = 
+	  if x = y
+	  then l:'a ft
+	  else (y,fy)::(f l x):'a ft
+
+    and g (l:'a ft) (x,fx) = (x,fx) :: (f l x):'a ft;
+
+Messages:
+    type 'a  ft = (int * 'a) list
+    line 10: Error: operator and operand don't agree (bound type var)
+      operator domain: (int * 'aU) list
+      operand:         'aU ft
+      in expression:
+	f l
+Comments:
+The Edinburgh SML (ver 3.3) does not report an error on this code.
+If the 'and' in the last line is changed to 'fun', no error is reported.
+I hope I haven't missunderstood something about SML. This is a bug, isn't it?
+See #126.
+Priority: 
+---------------------------------------------------------------------------
+135. eqtype vs abstype
+Submitted: Bernard Sufrin (sufrin%prg.oxford.ac.uk@NSFnet-Relay.AC.UK)
+Date: 7/26/89
+Version: 0.33
+Problem: interaction of abstype and eqtype
+
+I ran into this problem whilst writing you a long note concerning
+abstraction bindings structure bindings and their respect for type and
+eqtype specifications. Here's a miniature version of the larger
+problem.
+
+We want a pair of types Open and Shut, and transfer functions between
+them. The two signatures below are candidates for describing such a
+structure: the latter leaves visible the equality on Open, the former
+should not.
+
+    signature T =
+    sig
+      type Shut
+      type Open
+      val Shut:Open->Shut
+      and Open: Shut->Open
+    end
+
+    signature U =
+    sig
+      type Shut
+      eqtype Open
+      val Shut:Open->Shut
+      and Open: Shut->Open
+    end
+
+Now we design a functor which simply wraps something up in order to shut it.
+
+    functor absT(type Open)  =
+    struct
+      type Open = Open
+      abstype Shut = SHUT of Open  with
+	val Shut  = SHUT
+	fun Open(SHUT x) = x
+      end
+    end
+
+Now we instantiate it:
+
+    structure b:T = absT(type Open=int)
+
+Compiler yields:
+
+    structure b :
+    sig
+      eqtype Shut         <----- can't be right, surely
+      eqtype Open
+      val Open : Shut -> Open
+      val Shut : Open -> Shut
+    end
+
+The equality on Shut has leaked, despite the fact that the actual
+representation of Shut is an abstype. (The same happens if absT is
+itself constrained to yield a T)
+
+    - b.Shut 3=b.Shut 4;
+    val it = false : bool
+
+On the other hand using an abstraction binding
+
+    abstraction ab:T = absT(type Open=int)
+
+Compiler yields, correctly,
+
+    structure ab :
+      sig
+	type Shut
+	type Open
+	val Open : Shut -> Open
+	val Shut : Open -> Shut
+      end
+
+but I cannot actually apply ab.Shut to an integer (its domain is not
+int, but an opaque and different type, namely ab.Open).  Now let's try
+
+    abstraction au:U = absT(type Open=int)
+
+Compiler yields, correctly,
+
+    structure au :
+    sig
+      type Shut                                    
+      eqtype Open
+      val Open : Shut -> Open
+      val Shut : Open -> Shut
+    end
+
+but I still can't apply au.Shut to an integer. Incidentally in my
+original note I asked (a) whether I ought to be able to, (b) if so,
+whether eqtype was not getting a bit overloaded [equality visible AND
+representation visible] (c) if not, how could one do this sort of
+thing at all?
+
+Meanwhile
+
+    structure argh:U = absT(type Open=int)
+
+still makes Open and Shut both eqtypes.  More bizarrely, we have
+
+    abstype opaque = opaque of int with
+     val hide = opaque
+     val show = fn(opaque x)=>x
+    end
+
+    structure biz:T = absT(type Open=opaque)
+
+Compiler yields
+
+    structure biz :
+      sig
+	eqtype Shut                 <--- wow!
+	type Open
+	val Open : Shut -> Open
+	val Shut : Open -> Shut
+      end
+
+Shut is now an eqtype despite being an abstype whose representation
+includes another abstype!
+
+Priority: A
+---------------------------------------------------------------------------
+136. linkdata problem
+Submitter: John Reppy (ulysses!jhr, jhr@cs.cornell.edu)
+Date: 7/12/89
+Version: 0.36
+System: Sun 3, SunOS 4.0.3
+Problem: failure to build
+Code:
+When I tried to build 0.36 on the sun-3, I got the message
+
+	ld: : Is a directory
+
+on the load of the runtime system.  The problem is with the allmo.o
+file.  I am able to build the system using "-noshare".
+
+Priority: A
+---------------------------------------------------------------------------
+137. profiler failure
+Submitter: Ian Dickinson,  HP Labs, Information Systems Centre,    Bristol
+	     ijd%otter@hplabs.hp.com
+Date: 9/28/89
+Version: 0.33
+System: HP 9000 HP-UX 6.3
+Problem: 
+I have a small, compute intensive program (around 2K lines of code including
+comments).  With the profiler turned on, njml fails repeatably at the first
+major collect:
+
+        - test 30 30;
+        Case 30: TOLUENE, A,O-DICHLORO
+
+        [Major collection... 54% used (2332228/4249436), 2483 msec]
+        unknown signal: 20
+
+        Process SML exited abnormally with code 148
+
+Priority: A
+--------------------------------------------------------------------------------
+139.
+Submitter: Brian Boutel, brian@comp.vuw.ac.nz
+Date: 9 November 1989
+Version: 0.36 & later
+System: HP/Sun 3
+Problem: compiling with gcc doesn't work 
+Description:
+
+    I have been trying again to port sml to H-P 68030 boxes running
+    MORE/bsd, using the Gnu C  compiler. 
+
+    We have a mix of Sun3 and H-P machines, and, although I have installed
+    sml on the suns, it would be convenient to have it available on the H-Ps as well.
+
+    The H-P port has not worked, and to separate the problems arising from
+    the Operating System from those arising from the use of gcc, I have
+    tried building sml on the suns with gcc (using the -traditional
+    option). The build completes, but the resulting sml dies immediately
+    while doing a major garbage collection. It does not get as far as
+    announcing itself as Standard ML of .....
+    I have tried various options, (optimiser on/off some of the gcc -f
+    options) without effect. Have you tried gcc? I am anxious to persue
+    this as  I think getting a gcc compiled version to run on the suns is
+    the right first step towards porting to the H-Ps. Can you offer any suggestions?
+
+    I am using sml version 0.36.  ( I tried today to ftp to
+    research.att.com to check for a later version, but found an empty
+    directory when logging on as anonymous, and was refused permission to
+    log on as mldist.)
+
+
+    Changes made to the source are summarised as
+
+    ------
+    gnu C compiler requires f68881 to be changed to m68881
+    Changed in makeml by introducing $CCOMP, set to GNUCC for machine hp300,
+    otherwise "", and testing it in defining CFL for M68
+
+    ----------------
+    for H-P, sys/exec.h defines MID_HP300 instead of M_68020
+    linkdata.c and export.c have conditional code if HP300 defined
+    makeml has to pass HP300 to make for linkdata
+    -------------
+    for H-P, callgc.c has FPE_TRAPV_TRAP undefined, and
+    TRAPV returns FPE_INTOVF_TRAP
+    so FPE_TRAPV_TRAP is defined as FPE_INTOVF_TRAP in callgc.c
+    ----------
+    _minitfp_ and _fp_state_mc68881 not defined anywhere for H-P
+    .globl omitted if HP300 in M68.prim.s
+    --------------------
+    run dies because stack clobbered by apply
+    Registers saved ala NeXT/MACH in saveregs/restoreregs in prim.s if GNUCC
+Priority: B
+--------------------------------------------------------------------------------
+141. interrupting gc dumps core
+Submitter: peter@central.cis.upenn.edu (Peter Buneman)
+Date: 18 November 1989
+Version: 0.39
+System: ??
+Problem:
+    I've found occasions on which our current version of ML goes a bit
+    flakey after being interrupted during garbage collection.  I haven't
+    been able to pin it down until now.  The following interactive session
+    appears to be repeatable.
+Code:
+    % sml
+    Standard ML of New Jersey, Version 0.39, 8 September 1989
+    val it = () : unit
+    - fun foo() = 1::foo();
+    val foo = fn : unit -> int list
+    - foo();
+
+    [Major collection...
+    [Increasing heap to 7144k]
+     70% used (1752720/2487664), 4810 msec]
+
+    [Increasing heap to 7280k]
+
+    [Major collection... 62% used (2484132/3975316), 7580 msec]
+		  *** I typed <cntrl>C during this garbage collection
+    [Increasing heap to 11648k]
+    uncaught exception Interrupt
+    - fun bar() = bar();
+    val bar = fn : unit -> 'a
+    - bar();      *** I did not type <cntrl>C here !!
+    uncaught exception Interrupt
+    - bar();      *** nor here!!
+    uncaught exception Interrupt
+    - 
+Comments:
+    In 0.43d2 I can't repeat this behavior, but interrupting during gc causes
+    a bus error or segmentation fault. [dbm]
+Priority: A
+--------------------------------------------------------------------------------
+142. import incompatible with interpreter only image
+Submitter: Bernard Sufrin <sufrin%prg.oxford.ac.uk@NSFnet-Relay.AC.UK>
+Date: 27 Sept 1989
+Version: 0.39
+System: Sun 3 ?
+Problem: import into interpreter
+Description:
+    Problem: it is not possible to import precompiled stuff; the compiler 
+    decides that the .bin file is not in the right format; tries to recompile,
+    and fails for lack of a code generator.
+
+    Here's an example...
+
+    - import "/prg/pl/sml/lib/lex";
+    [reading /prg/pl/sml/lib/lex.bin... ]
+    [/prg/pl/sml/lib/lex.bin is the wrong format; recompiling]
+    [closing /prg/pl/sml/lib/lex.bin]
+    [reading /prg/pl/sml/lib/lex.sml]
+      [reading /prg/pl/sml/lib/lib/lib/extend.bin... ]
+      [/prg/pl/sml/lib/lib/lib/extend.bin is the wrong format; recompiling]
+      [closing /prg/pl/sml/lib/lib/lib/extend.bin]
+      [reading /prg/pl/sml/lib/lib/lib/extend.sml]
+    /prg/pl/sml/lib/lib/lib/extend.sml, line 52: Error: Compiler bug: no code generator!
+      [closing /prg/pl/sml/lib/lib/lib/extend.sml]
+    [closing /prg/pl/sml/lib/lex.sml]
+    IMPORT failed (compile-time exception: Syntax)
+
+    When trying to reproduce the import bug
+    you might try making the dependency graph more than three arcs deep.
+
+Comments:
+    Obviously we don't want to have to dispense with import
+    when using the intepreter-only (typically it'd be students loading
+    precompiled libraries), but I presume we don't want the complication of
+    lambda-formatted bin files as well as machine code bin files.  May I
+    propose the following:
+
+    import from an ionly system should behave like import in the cg system if
+    everything is up-to-date.
+
+    if something is out of date, then import should either abort, or behave
+    like use (I prefer the latter, I think, but you might make it
+    controllable from a System.Control variable).
+Priority: A?
+--------------------------------------------------------------------------------
+143.
+Submitter: Jawahar Malhotra (malhotra%metasoft.uucp@BBN.COM)
+Date: 26 October 1989
+Version: ??
+System: ??
+Problem: use dumping core on magic input file length
+Description:
+    I have a source file which contains a signature definition and a
+    functor definition. When I load it using the "use" statement, the
+    compiler responds with the signature defn and the functor defn but
+    then dumps core just before its prints the [<closing file>] line.
+    Strangely, if I add another blank line to the file, everything is 
+    OK. If you like, I can mail you the file; please let me know if
+    you would like the file.
+
+    Here is a reproduction of the compiler's output:
+
+    - use "oareadattr.sml";
+    [opening oareadattr.sml]
+    signature OAREADATTR = ...
+    ...
+    ...
+      end
+    functor OAReadAttrFun : <sig>
+    Segmentation Fault (core dumped)
+Comments:
+Priority: A
+--------------------------------------------------------------------------------
+144. not waiting for child process
+Submitter: Jawahar Malhotra, Meta Software; malhotra%metasoft@bbn.com
+Date: 20 Oct 89
+Version: 0.33
+System: SUN OS 3.5
+Problem: 	
+	njsml doesn't wait for child process (created by a call to
+	execute) to terminate. Suppose I execute the following 
+	sml stmt:
+
+	- execute "ls /users/malhotra";
+
+	njsml creates a child process in which it runs ls. When ls 
+	is done, it does an exit(0). In order for the exit to
+	complete, its parent process (njsml in this case) should
+	do a wait(). However, njsml doesn't do this and hence the
+	"ls" process blocks on its exit and remains until njsml
+	exits. The state of this process (as displayed by "ps") is:
+
+	malhotra  2376  0.0  0.1    0    0 p2 Z     0:00 <exiting>
+
+Comments: 
+	One fix would be to prevent the process created by "execute" from
+	being njsml's child. In this case, njsml would not have to wait to
+	collect the child's termination status. This can be done by
+	forking twice. Hence the code for execute might look like:
+	(assume njsml is process p1)
+
+	------------------------------------------------------------
+
+	/* in process p1 */
+
+	if (fork() == 0)	{	/* in p2 */
+		if (fork() == 0) {	/* in p3 */
+			.........			
+			execl(......);
+			.......
+		}
+		else {				/* in p2 */
+			exit(0);
+		}
+	}
+	
+	/* in p1 */
+
+	wait(0);			/* wait for p2 to exit */
+
+	------------------------------------------------------------	
+
+	Another fix (maybe easier to implement) is to install a signal
+	handler for SIGCHLD.
+
+	signal(SIGCHLD, ack);
+
+	where ack() is simply:
+
+	ack()
+	{
+	  wait(0);
+	}
+Final Comment:
+You may remember that I once mentioned a problem with the processes
+created by "execute". I have  a solution which I thought I'd share
+with you. I use the wait fn call:
+
+fun wait status = 
+  System.Unsafe.syscall(84, [System.Unsafe.cast status], 1);
+
+For example, I could do
+
+	- execute "ls .";
+	> val....
+	- ......
+
+	- wait(0);
+	> val it = <pid of child>;
+
+This will also be useful in predefining a sync "execute" i.e.
+
+	val sync_execute  = fn file => (execute file; wait(0));
+
+
+Priority: B
+--------------------------------------------------------------------------------
+145. stale top-level continuations cause type bugs
+Submitter: Andrzej Filinski, CMU Computer Science (andrzej@cs.cmu.edu)
+Date: Oct 11, 1989
+Version: 0.39 (8 September 1989)
+System: Sun3/4.3BSD
+Problem: Capturing top-level continuation messes up the type system
+Code:
+
+    val cl = ref([]:int cont list);
+    callcc (fn k=>(cl:=[k]; 42));
+    val u = throw (hd (!cl)) 65; (* value 65 with universal type! *)
+    u+1;     (* u as integer *)
+    u^"str"; (* u as string *)
+    u:bool;  (* u as boolean (cannot print) *)
+    u:real;  (* u as real (core dump) *)
+
+Comments: This may be a tricky problem, i.e. it is not quite clear
+what the "right" behavior should be when the top-level continuation
+is captured and carried across commands. Please don't take this as a
+criticism of callcc/throw in general, though; they're great! Any plans
+for integrating them more deeply in the language, like exceptions?
+Priority: B
+--------------------------------------------------------------------------------
+149. infinite gc loop with insufficient swap space
+Submitter:  jhr@cs.cornell.edu (John Reppy)
+Date: 18 Sept 89
+Version: 0.39
+System: Vax
+Problem: 
+    SML/NJ is being used at Cornell for a course this semester, and we've
+    run into a problem with it on multi-user vaxen.  If there isn't sufficient
+    swap space for the system to run, it seems to get into an infinite loop
+    of garbage collection attempts.  I should fail gracefully in this situation.
+Priority: A
+--------------------------------------------------------------------------------
+150. incomplete sharing spec accepted
+Submitter:  Simon Finn <simon%abstract-hardware-ltd.co.uk@NSFnet-Relay.AC.UK>
+Date: 13 Sept 89
+Version: 0.33
+Problem:
+    Both NJML (v0.33) and Poly/ML (v1.80x) erroneously parse the following:
+
+    signature SIG =
+    sig
+      type t
+      sharing type t
+    end;
+Comments:
+    The above signature is illegal, since sharing constraints must involve
+    at least two types / structures ("n >= 2" in section 3.5, figure 7).
+
+    This bug was found by Mike Crawley.
+Priority: A
+--------------------------------------------------------------------------------
+151. can't limit length of list printed
+Submitter:  Lawrence C Paulson <lcp%computer-lab.cambridge.ac.uk@NSFnet-Relay.AC.UK>
+Date: 14 Sept 1989
+Version: ??
+Problem:
+    How do you tell New Jersey ML not to print all the elements of a list?
+    System.Control.Print.printDepth seems to consider nesting only.
+Code:
+    - take(100,ms);
+    val it = [1861294,62685628,105212158,14112418,78287461,35512822,180290056,316473
+    64,72270388,168319897,212829007,43941079,142303594,174252739,117587239,56623288,
+    96050461,46119052,152678905,140061256,13973941,209088847,109015732,167261566,142
+    82215,159257329,69147538,162991570,121739197,19339324,52452037,18146911,23268574
+    ,183534766,93272557,163056892,193407172,50009149,131379349,28143469,114167002,14
+    8862536,85731877,182107423,28619248,67440382,145320439,121674259,172092145,16412
+    2099,196052140,141367123,32002813,17851816,198701119,46866244,196351819,12166451
+    8,163288573,14499193,10976578,64526104,139008271,417145,67962574,64746709,994460
+    5,117181366,115999456,124879621,188830621,158322193,82998094,187333183,178599706
+    ,158794345,17054389,62405431,142521907,182072470,22294474,162171034,163367647,12
+    3860254,25498117,13136599,105899185,53939356,184226566,191249065,66913411,177659
+    797,114495331,28730221,76001191,104114101,180588016,60920215,151887592,208100422
+    ] : int list
+
+    - [[[[[[[[[[[4]]]]]]]]]]];
+    val it = [[[[[#]]]]] : int list list list list list list list list list list list
+    -
+Priority: A
+--------------------------------------------------------------------------------
+152. floating point errors
+Submitter: Lawrence C Paulson <lcp%computer-lab.cambridge.ac.uk@NSFnet-Relay.AC.UK>
+Date:  Thu, 14 Sep 89
+Version: ??
+Problem:
+    Why cannot New Jersey handle integers that are well within the maximum
+    available on the hardware?
+Code:
+    - exp(31.0 * ln 2.0);
+    val it = 2147483648.0 : real
+
+    - floor 2000000000.0;
+    uncaught exception Floor
+Priority: A?  (partly fixed in 0.43?)
+--------------------------------------------------------------------------------
+153. interrupting corouting loop dumps core
+Submitter: Bernard Sufrin <sufrin%prg.oxford.ac.uk@NSFnet-Relay.AC.UK>
+Date:  Sep 15 11:14:13 1989
+Version: 0.43
+System: Sun 3
+Problem: producer consumer segementation fault
+        interrupt consumer(producer) with a single ^c to cause a segmentation
+	fault
+Code:
+    datatype state = S of state cont;
+
+    fun  resume(S k: state) : state = callcc( fn  k':state cont => throw k (S k'))
+
+    fun  initiate(p:state -> unit) = callcc( fn  k : state cont => (p(S k); S k))
+
+    val  buf = ref 0;
+
+    fun  producer(s:state):unit =
+    let  val  n=ref 0
+	val ccont : state ref = ref(resume s)
+    in
+	while true do (inc n; buf := !n; ccont := resume(!ccont))
+    end
+
+    fun  consumer(prod: state->unit) : unit =
+    let  val pcont = ref(initiate prod) in
+	while true do (pcont := resume(!pcont); print (!buf))
+    end
+Priority: A
+--------------------------------------------------------------------------------
+154. import smashing memory
+Submitter: Benjamin Pierce, CMU (bcp@cs.cmu.edu)
+Date: 11/34/89
+Version: 0.41
+System: Sun3/SunOS 3.5.2
+Problem: import seems to be smashing memory
+Comments:
+    I've included a minimal version of program that exercises this bug on
+    my machine.  Slightly different versions give different incorrect
+    results, or simply fail with bus errors.  Removing the first line of
+    tconst.sml (the import of globals, which is never used here) gives the
+    correct answer.
+Transcript:
+    Standard ML of New Jersey, Version 0.41, 25 October 1989
+    val it = () : unit
+    - use "main.sml";
+    [opening main.sml]
+    val it = () : unit
+    [reading checker.sml]
+      [reading tconst.sml]
+	[reading globals.sml]
+	[closing globals.sml]
+	[writing globals.bin... done]
+      [closing tconst.sml]
+      [writing tconst.bin... done]
+    [closing checker.sml]
+    [writing checker.bin... done]
+    signature GLOBALS
+    signature CHECKER
+    signature TCONST
+    functor TConstFun : <sig>
+    functor GlobalsFun : <sig>
+    functor CheckerFun : <sig>
+    structure TConst
+    val it = "\000\^VG\200" : ?.t		     <--- Should be "int"
+    [closing main.sml]
+    val it = () : unit
+    - 
+
+Code:
+    (* ------------------------  globals.sml: ---------------------- *)
+    signature GLOBALS = sig
+
+    val member: ''a -> ''a list -> bool
+
+    end
+
+
+    functor GlobalsFun() : GLOBALS = struct
+
+    fun member x [] = false
+      | member x (y::l) = (x=y) orelse (member x l)
+
+    end
+
+
+    (* ------------------------  tconst.sml: ---------------------- *)
+    import "globals";
+
+    signature TCONST = sig
+
+    type t
+
+    val from_string: string -> t
+
+    end
+
+    functor TConstFun((*structure Globals:GLOBALS*)): TCONST = struct
+
+    exception IllegalTConst of string
+
+    type t = string
+
+    fun member x [] = false
+      | member x (y::l) = (x=y) orelse (member x l)
+
+    fun from_string s = if not (member s ["int", "real", "bool"])
+		       then raise IllegalTConst(s)
+		       else s
+
+    end
+
+
+    (* ------------------------  checker.sml: ---------------------- *)
+    import "tconst";
+
+    signature CHECKER = sig
+
+    end (* CHECKER *)
+
+
+    functor CheckerFun() : CHECKER = struct
+
+
+    end (* CheckerFun *)
+
+
+    (* ------------------------  main.sml: ---------------------- *)
+    System.Control.Print.signatures := false;
+
+    import "checker";
+
+    (* structure Globals:GLOBALS = GlobalsFun(); *)
+    structure TConst:TCONST = TConstFun((*structure Globals=Globals*));
+
+    TConst.from_string "int";
+
+Priority: A
+--------------------------------------------------------------------------------
+155. Compiler bug caused by of missing structure
+Submitter: Banjamin Pierce (bcp@cs.cmu.edu)
+Date: 11/3/89
+Version: 0.39
+System: Sun3/SunOS
+Problem: Missing structure component shows up later as compiler bug
+Transcript:
+
+    Standard ML of New Jersey, Version 0.39, 8 September 1989
+    - use "compilerbug.sml";
+    [opening compilerbug.sml]
+    val it = () : unit
+    signature GLOBALS
+    functor GlobalsFun : <sig>
+    signature SYMBOL
+    functor SymbolFun : <sig>
+    signature TCONST
+    functor TConstFun : <sig>
+    signature AST
+    functor AstFun : <sig>
+    structure Globals
+    structure TConst
+    structure Symbol
+    compilerbug.sml, line 225: Error: unmatched structure spec: TConst
+    compilerbug.sml, line 225: Error: Compiler bug: TypesUtil.lookTycPath.1
+    [closing compilerbug.sml]
+    - 
+
+Code:
+
+System.Control.Print.signatures := false;
+
+signature GLOBALS = sig
+
+exception NotImplemented of string
+
+val listtostring: ('a -> string) 
+	       -> string -> string -> string 
+	       -> ('a list)
+	       -> string
+
+val member: ''a -> ''a list -> bool
+
+end
+
+functor GlobalsFun() : GLOBALS = struct
+
+exception NotImplemented of string
+
+fun listtostring f init med fin is =
+    let fun lts [] = ""
+          | lts [i] = (f i)
+          | lts (i::is) = (f i) ^ med ^ (lts is)
+    in
+        init ^ (lts is) ^ fin
+    end
+
+fun member x [] = false
+  | member x (y::l) = (x=y) orelse (member x l)
+
+end
+
+signature SYMBOL = sig
+
+type symbol
+
+val new_symbol: string -> symbol
+val equal_symbol: symbol -> symbol -> bool
+val tostring: symbol -> string
+
+end
+
+functor SymbolFun(): SYMBOL =
+struct
+type symbol = string
+fun new_symbol s = s
+fun equal_symbol s1 s2 = (s1=s2)
+fun tostring s = s
+end
+
+signature TCONST = sig
+
+type t
+
+exception IllegalTConst of string
+
+val from_string: string -> t
+val tostring: t -> string
+val le_const: t -> t -> bool
+
+end
+
+functor TConstFun(structure Globals:GLOBALS): TCONST = struct
+open Globals
+
+exception IllegalTConst of string
+
+type t = string
+
+fun tostring s = s
+
+fun from_string s = if not (member s ["int", "real", "bool"])
+		   then raise IllegalTConst(s)
+		   else s
+
+fun le_const s s' = (s=s') orelse ((s="int") andalso (s'="real"))
+
+end
+
+signature AST = sig
+
+structure Symbol: SYMBOL
+structure TConst: TCONST
+
+type label 
+
+datatype const = INTCONST of int
+	       | REALCONST of real
+	       | STRINGCONST of string
+
+type id
+type type_var
+
+datatype texp = 
+	NS
+      | CONJ of texp * texp
+      | ARROW of texp * texp
+      | TYPECONST of TConst.t
+      | OBJECT of label * texp
+      | TVAR of type_var
+
+datatype exp = 
+	VAR of id
+      | CONST of const
+      | LAMBDA of id * exp
+      | TLAMBDA of id * texp list * exp
+      | APP of exp * exp
+      | BUILDOBJ of label * exp
+      | EXTRACTFIELD of exp * label
+      | MERGE of exp * exp
+      | BUILDSEQ of exp list
+      | REC of exp
+      | IF of exp * exp * exp
+      | LETTYPE of type_var * texp
+      | LETREC of (id * texp * exp) list * exp
+
+val exptostring: exp -> string;
+val texptostring: texp -> string;
+
+end
+
+functor AstFun(structure Symbol: SYMBOL
+	       structure TConst: TCONST) = struct
+
+structure Symbol = Symbol
+
+(* ########################################################
+Adding the line
+	
+	structure TConst = TConst
+	
+makes the program work fine. 
+########################################################### *)
+
+type label = Symbol.symbol
+
+datatype const = INTCONST of int
+	       | REALCONST of real
+	       | STRINGCONST of string
+	    (* | ... others? *)
+
+type id = Symbol.symbol
+type type_var = Symbol.symbol
+
+datatype texp = 
+	NS
+      | CONJ of texp * texp
+      | ARROW of texp * texp
+      | TYPECONST of TConst.t
+      | OBJECT of label * texp
+      | TVAR of type_var
+
+datatype exp = 
+	VAR of id
+      | CONST of const
+      | LAMBDA of id * exp
+      | TLAMBDA of id * texp list * exp
+      | APP of exp * exp
+      | BUILDOBJ of label * exp
+      | EXTRACTFIELD of exp * label
+      | MERGE of exp * exp
+      | BUILDSEQ of exp list
+      | REC of exp
+      | IF of exp * exp * exp
+      | LETTYPE of type_var * texp
+      | LETREC of (id * texp * exp) list * exp
+
+fun exptostring e = "<exp>"
+
+fun texptostring (NS) = "ns"
+  | texptostring (ARROW(t1,t2)) = "(" ^ (texptostring t1) 
+  			        ^ "->" ^ (texptostring t2) ^ ")"
+  | texptostring (CONJ(t1,t2)) = "(" ^ (texptostring t1) 
+  			        ^ "&" ^ (texptostring t2) ^ ")"
+  | texptostring (OBJECT(l,t1)) = "(" ^ (Symbol.tostring l)
+  			        ^ ":" ^ (texptostring t1) ^ ")"
+  | texptostring (TYPECONST(i)) = TConst.tostring i
+  | texptostring (TVAR(i)) = Symbol.tostring i
+
+end
+
+structure Globals : GLOBALS = GlobalsFun();
+structure TConst : TCONST = TConstFun(structure Globals=Globals);
+structure Symbol : SYMBOL = SymbolFun();
+(* commenting out the signature declaration on the next line results in 
+   one additional error! *)
+structure Ast : AST = AstFun(structure Symbol=Symbol
+				   structure TConst=TConst);
+signature SUBTYPE = sig
+
+structure Ast: AST
+
+val le : Ast.texp -> Ast.texp -> bool
+
+end (* SUBTYPE *)
+
+structure Subtype : SUBTYPE = struct
+
+structure Ast = Ast
+open Ast
+structure Globals = Globals
+open Globals
+
+fun lei(s, ts, (NS)) = true
+  | lei(s, ts, (CONJ(t1,t2))) = lei(s, ts, t1) andalso lei(s, ts, t2)
+  | lei(s, ts, (ARROW(t1,t2))) = lei(s, (ts@[t1]), t2)
+  | lei((NS), ts, (t as TYPECONST(_))) = false
+  | lei(CONJ(s1,s2), ts, (t as TYPECONST(_))) =
+  		lei(s1, ts, t) orelse lei(s2, ts, t)
+  | lei(ARROW(s1,s2), [], (t as TYPECONST(_))) = false
+  | lei(ARROW(s1,s2), ta::ts, (t as TYPECONST(_))) = 
+  		lei(ta, [], s1) andalso lei(s2, ts, t)
+  | lei((TYPECONST(sc)), ta::ts, (TYPECONST(tc))) = false
+  | lei((TYPECONST(sc)), [], (TYPECONST(tc))) = TConst.le_const sc tc
+  | lei(s, ts, t) = raise NotImplemented ("lei " 
+  				^ (Ast.texptostring s) 
+  				^ " "
+  				^ (listtostring Ast.texptostring 
+  						"[" "," "]" ts)
+  				^ " "
+  				^ (Ast.texptostring t))
+
+fun le s t = lei(s, [], t)
+
+end (* SubtypeFun *)
+
+Priority: A
+--------------------------------------------------------------------------------
+156. confusing parser error message
+Submitter: dbm
+Date: 4 Nov 1989
+Version: 0.43
+Problem:
+    Misspelled constructor (VALbind instead of VARbind) in line
+
+	  | scan ((VALbind _)::_) = ...
+
+    causes inappropriate message:
+
+    basics/typesutil.sml, line 74: Error: identifiers in clauses don't match
+Priority: P
+--------------------------------------------------------------------------------
+157. nested imports corrupt memory (same as 154?)
+Submitter: sufrin%prg.oxford.ac.uk@NSFnet-Relay.AC.UK
+Date: 3 Nov 89
+Version: 0.39
+System: Sun 3
+Problem:
+    I have had a good deal of trouble with transitive imports. Symptom is
+    segmentation failure on first call of a procedure defined in a functor
+    imported transitively.
+
+    parser:
+	    defines abstractsyntax, lexer, and parser functors
+
+    codegen:
+	    imports parser
+	    defines code generator 
+
+    main:
+	    imports codegen
+	    instantiates abstractsyntax, lexer, parser
+	    crashes at first invocation of procedure defined in parser.
+
+    When I remove the "import parser" from codegen, and 
+    import it directly from main, then all is well.
+
+    This actually arose in a student's system, and I haven't time to try it in
+    smaller contexts.  Does the symptom sound familiar? If not, I can send the
+    whole lot to you.
+Priority: A
+--------------------------------------------------------------------------------
+160. errorty fails to match sig spec 
+Submitter: dbm
+Date: 18 Oct 89
+Version: 0.43
+System: Sun 3
+Problem: error type not matched in checking signature spec
+Messages:
+    typing/functor.sml, line 363: Error: value type in structure doesn't match
+     signature spec
+      name: abstractBody
+      spec: Structure * stampsets -> Structure
+      actual: Structure * error -> Structure
+Priority: A
+--------------------------------------------------------------------------------
+162. ByteArray subscript exception expected
+Submitter: 	Jawahar Malhotra, Meta Software Corp., 
+			malhotra%metasoft@bbn.com
+Date:		10/17/89
+Version: 	0.33
+System: 	Sun OS 3.5
+Problem: 	ByteArray.extract doesn't raise Subscript exception when I
+			think it should.
+Code:		
+			val ba = ByteArray.array(4,0);
+			
+			(* I feel that the following SHOULD raise an exception *)
+			ByteArray.extract(ba,4,0);	
+
+			(* the following two statements CORRECTLY raise exceptions *)
+
+			ByteArray.extract(ba,5,0);
+			ByteArray.sub(ba,4);
+Priority: C
+--------------------------------------------------------------------------------
+163. function definition syntax
+Submitter: Andy Gordon, Cambridge University, adg@cl.cam.ac.uk
+Date: Mon Oct 16 15:26:44 1989
+Version: Version 0.33, 1 April 1989
+System: Sun
+Problem: another strange function definition
+Code:
+fun cps-fact n k = cps-fact n k;
+
+Messages:
+Error: Compiler bug: generalizeTy -- bad arg
+  fact : 'S -> 'T -> undef
+
+Comments:
+Like in bug 73, I was mistakenly trying to define a function whose identifier
+contained a hyphen, but this time the compiler complains of a Compiler bug.
+
+Priority: P
+--------------------------------------------------------------------------------
+164. NS32 in makeml
+Submitter: Allan E. Johannesen, wpi, aej@wpi.wpi.edu
+Date: 13-Oct-1989
+Version: 0.39, maybe.  That was the number in the README
+System: Encore
+Problem: makeml error
+Code: makeml -encore
+Messages: makeml: must specify machine type
+Comments:
+
+please put NS32 in $MACHINE case of makeml
+
+maybe:
+
+	NS32)
+		if test "$OPSYS" != BSD
+		then
+			echo "makeml: bad os ($OPSYS) for encore"
+			exit 1
+		fi
+		if test -z "$MO"
+		then
+			MO="../mo.encore"
+		fi
+		MODULE="$MODULEKIND"Encore
+	;;
+
+Priority: A
+--------------------------------------------------------------------------------
+167. repeated bound type variables in type declaration
+Submitter: Nick Rothwell
+Date: 5 Oct 89
+Version: 0.39?
+System: Sun 3
+Problem: multiple binding occurences of type variable accepted
+Code:
+        - datatype ('a, 'a, 'a) T = A of 'a | B of 'a;
+        datatype ('a,'b,'c)  T
+        con A : 'a -> ('a,'b,'c) T
+        con B : 'a -> ('a,'b,'c) T
+Priority: B
+--------------------------------------------------------------------------------
+168. profiling on sparc
+Submitter: Tom Murtagh ( tpm@rice.edu)
+Date: Oct 4, 1989
+Version: 0.38
+System: Sun4/SunOS 4.0.3c
+Problem: unhandled exception Match in codegenerator when Profiling enabled
+
+I stumbled across what appears to be another problem in the Sparc code
+generator.  It seems to fail when any function is compiled with
+profiling enabled.  This time I do have a minimal code fragment:
+
+% sml
+Standard ML of New Jersey, Version 0.38, 23 August 1989
+val it = () : unit
+-  System.Control.Profile.profiling := true;
+val it = () : unit
+- (fn x => x);
+?exception Match in SparcCM.storeindexl
+uncaught exception Match
+
+Status: fixed in 0.43 (?)
+--------------------------------------------------------------------------------
+169. inferring eqtypes in signatures
+Submitter: Randy Pollack <rap%lfcs.edinburgh.ac.uk@NSFnet-Relay.AC.UK>
+Date: Wed, 27 Sep 89
+Problem: NJML (V0.39) is too liberal in inferring eqtypes in signatures
+Code:
+    - functor F() = struct abstype t = E with val mk_t = E end end;
+    functor F : <sig>
+    - structure f = F();
+    structure f :
+      sig
+	eqtype t            (*** incorrect ***)
+	val mk_t : t
+      end
+
+    however:
+
+    - structure f = struct abstype t = E with val mk_t = E end end;
+    structure f :
+      sig
+	type t              (*** correct ***)
+	val mk_t : t
+      end
+Priority: A
+--------------------------------------------------------------------------------
+170.  error in makeml script 
+Submitter: sufrin%prg.oxford.ac.uk@NSFnet-Relay.AC.UK
+Date: Wed Sep 27
+Transcript:
+26 % makeml -sun3 -ionly -o smli -m 3 
+(cd runtime; make clean)
+rm -f *.o lint.out prim.s linkdata allmo.s
+rm -f mo
+ln -s ../mo.m68 mo
+(cd runtime; rm -f run allmo.o)
+(cd runtime; make MACHINE=M68 linkdata)
+cc -O  -DM68  -o linkdata linkdata.c
+runtime/linkdata [runtime/IntNull.mos] > runtime/allmo.o
+(cd runtime; make MACHINE=M68 'DEFS= -DSUN3 -DSUN3 -DBSD' 'CFL=-n -Bstatic -f68881' 'ASMBLR=as')
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  run.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  gc.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  callgc.c
+cc: Warning: Obsolete option -B
+/lib/cpp -DM68 -DSUN3 -DSUN3 -DBSD M68.prim.s > prim.s
+as -o prim.o prim.s
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  prof.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  export.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  objects.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  cstruct.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD  -mc68020 -c  trace.c
+cc: Warning: Obsolete option -B
+cc -O -n -Bstatic -f68881 -DM68 -DSUN3 -DSUN3 -DBSD -o run run.o gc.o callgc.o prim.o prof.o export.o objects.o cstruct.o trace.o allmo.o
+cc: Warning: Obsolete option -B
+_Loader: ld: allmo.o: multiply defined
+*** Error code 2
+make: Fatal error: Command failed for target `run'
+echo (System.Control.interp := true; exportML "smli"; output std_out System.version; output std_out "\n"); | runtime/run -m 3 -r 20 -h 2048 IntNull
+makeml: runtime/run: cannot execute
+
+Priority: A
+

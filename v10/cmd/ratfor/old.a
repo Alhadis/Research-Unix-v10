@@ -1,0 +1,1366 @@
+!<arch>
+r.g             381252378   3     4     100664  1226      `
+%{
+extern int transfer;
+extern	int	indent;
+%}
+
+%term	IF ELSE FOR WHILE BREAK NEXT 
+%term	DIGITS DO
+%term	GOK DEFINE INCLUDE
+%term	REPEAT UNTIL
+%term	RETURN
+%term	SWITCH CASE DEFAULT
+%%
+
+statl	: statl  stat
+	|
+	;
+stat	: if stat	={ indent--; outcont($1); }
+	| ifelse stat	={ indent--; outcont($1+1); }
+	| switch fullcase '}'	={ endsw($1, $2); }
+	| while stat	={ whilestat($1); }
+	| for stat	={ forstat($1); }
+	| repeat stat UNTIL	={ untils($1,1); }
+	| repeat stat		={ untils($1,0); }
+	| BREAK	={ breakcode(); }
+	| NEXT		={ nextcode(); }
+	| do stat	={ dostat($1); }
+	| GOK		={ gokcode($1); }
+	| RETURN	={ retcode(); }
+	| ';'
+	| '{' statl '}'
+	| label stat
+	| error		={ errcode(); yyclearin; }
+	;
+switch	: sw '{'
+	;
+sw	: SWITCH	={ swcode(); }
+	;
+fullcase: caselist	={ $$ = 0; }
+	| caselist defpart	={ $$ = 1; }
+	;
+caselist: casepart
+	| caselist casepart
+	;
+defpart	: default statl
+	;
+default	: DEFAULT	={ getdefault(); }
+	;
+casepart: case statl
+	;
+case	: CASE	={ getcase(); }
+	;
+label	: DIGITS	={ transfer = 0; outcode($1); }
+	;
+if	: IF		={ ifcode(); }
+	;
+ifelse	: if stat ELSE	={ elsecode($1); }
+	;
+while	: WHILE	={ whilecode(); }
+	;
+for	: FOR		={ forcode(); }
+	;
+repeat	: REPEAT	={ repcode(); }
+	;
+do	: DO		={ docode(); }
+	;
+%%
+r.h             381252378   3     4     100664  1172      `
+#include <stdio.h>
+#include <ctype.h>
+#include "y.tab.h"
+
+#
+#define	putbak(c)	*ip++ = c
+/*	#define	getchr()	(ip>ibuf?*--ip: getc(infile[infptr]))	*/
+
+#define	LET	1
+#define	DIG	2
+#define	COMMENT	'#'
+#define	QUOTE	'"'
+
+extern int	transfer;
+
+#define	INDENT	3	/* indent delta */
+#define	CONTFLD	6	/* default position of continuation character */
+extern	int	contfld;	/* column for continuation char */
+extern	int	contchar;
+extern	int	dbg;
+extern	int	yyval;
+extern	int	*yypv;
+extern	int	yylval;
+extern	int	errorflag;
+
+extern	char	comment[];	/* save input comments here */
+extern	int	comptr;	/* next free slot in comment */
+extern	int	printcom;	/* print comments, etc., if on */
+extern	int	indent;	/* level of nesting for indenting */
+
+extern	char	ibuf[];
+extern	char	*ip;
+
+extern	FILE	*outfil;	/* output file id */
+extern	FILE	*infile[];
+extern	char	*curfile[];
+extern	int	infptr;
+extern	int	linect[];
+
+extern	char	fcname[];
+
+extern	int	svargc;
+extern	char	**svargv;
+
+#define EOS 0
+#define	HSHSIZ	101
+struct	nlist {
+	char	*name;
+	char	*def;
+	int	ydef;
+	struct	nlist *next;
+};
+
+struct nlist	*lookup();
+char	*install();
+char	*malloc();
+extern	char	*fcnloc;
+extern	char	*FCN1loc;
+
+r0.c            381252391   3     4     100664  1416      `
+#include "r.h"
+
+int	swlevel	= -1;
+int	swexit[5];
+int	nextcase[5];
+
+swcode() {
+	transfer = 0;
+	putcom("switch");
+	swlevel++;
+	if (swlevel >= 5)
+		error("Switches nested > 5");
+	swexit[swlevel] = yyval = genlab(1);
+	outcode("\tI");
+	outnum(yyval);
+	outcode(" = ");
+	balpar();
+	outdon();
+	nextcase[swlevel] = 0;
+	indent++;
+}
+
+getcase() {
+	int t, lpar;
+	char token[100];
+
+	if (nextcase[swlevel] != 0) {
+		outgoto(swexit[swlevel]);
+		outcont(nextcase[swlevel]);
+	}
+	indent--;
+	outcode("\tif(.not.(");
+	do {
+		outcode("I");
+		outnum(swexit[swlevel]);
+		outcode(".eq.(");
+		lpar = 0;
+		do {
+			if ((t=gtok(token)) == ':')
+				break;
+			if (t == '(')
+				lpar++;
+			else if (t == ')')
+				lpar--;
+			else if (t == ',') {
+				if (lpar == 0)
+					break;
+				}
+			outcode(token);
+		} while (lpar >= 0);
+		if (lpar < 0)
+			error("Missing left parenthesis in case");
+		if (t == ',')
+			outcode(").or.");
+	} while (t != ':');
+	if (lpar != 0)
+		error("Missing parenthesis in case");
+	outcode(")))");
+	nextcase[swlevel] = genlab(1);
+	outgoto(nextcase[swlevel]);
+	indent++;
+}
+
+getdefault() {
+	char token[200];
+	if (gnbtok(token) != ':')
+		error("Missing colon after default");
+	outgoto(swexit[swlevel]);
+	outcont(nextcase[swlevel]);
+	indent--;
+	putcom("default");
+	indent++;
+}
+
+endsw(n, def) {
+	if (def == 0)
+		outcont(nextcase[swlevel]);
+	swlevel--;
+	if (swlevel < -1)
+		error("Switches unwound too far");
+	indent--;
+	outcont(n);
+}
+r1.c            531971900   3     4     100664  6119      `
+#include "r.h"
+
+#define	wasbreak	brkused[brkptr]==1 || brkused[brkptr]==3
+#define	wasnext	brkused[brkptr]==2 || brkused[brkptr]==3
+
+int	transfer	= 0;	/* 1 if just finished retrun, break, next */
+
+char	fcname[200];
+char	scrat[500];
+
+int	brkptr	= -1;
+int	brkstk[50];	/* break label */
+int	typestk[50];	/* type of loop construct */
+int	brkused[50];	/* loop contains BREAK or NEXT */
+
+int	forptr	= 0;
+char	*forstk[50];
+
+repcode() {
+	transfer = 0;
+	outcont(0);
+	putcom("repeat");
+	yyval = genlab(3);
+	indent++;
+	outcont(yyval);
+	brkstk[++brkptr] = yyval+1;
+	typestk[brkptr] = REPEAT;
+	brkused[brkptr] = 0;
+}
+
+untils(p1,un) int p1,un; {
+	outnum(p1+1);
+	outtab();
+	if (un > 0) {
+		outcode("if(.not.");
+		balpar();
+		outcode(")");
+	}
+	transfer = 0;
+	outgoto(p1);
+	indent--;
+	if (wasbreak)
+		outcont(p1+2);
+	brkptr--;
+}
+
+ifcode() {
+	transfer = 0;
+	outtab();
+	outcode("if(.not.");
+	balpar();
+	outcode(")");
+	outgoto(yyval=genlab(2));
+	indent++;
+}
+
+elsecode(p1) {
+	outgoto(p1+1);
+	indent--;
+	putcom("else");
+	indent++;
+	outcont(p1);
+}
+
+whilecode() {
+	transfer = 0;
+	outcont(0);
+	putcom("while");
+	brkstk[++brkptr] = yyval = genlab(2);
+	typestk[brkptr] = WHILE;
+	brkused[brkptr] = 0;
+	outnum(yyval);
+	outtab();
+	outcode("if(.not.");
+	balpar();
+	outcode(")");
+	outgoto(yyval+1);
+	indent++;
+}
+
+whilestat(p1) int p1; {
+	outgoto(p1);
+	indent--;
+	putcom("endwhile");
+	outcont(p1+1);
+	brkptr--;
+}
+
+balpar() {
+	register c, lpar;
+	while ((c=gtok(scrat)) == ' ' || c == '\t')
+		;
+	if (c != '(') {
+		error("missing left paren");
+		return;
+	}
+	outcode(scrat);
+	lpar = 1;
+	do {
+		c = gtok(scrat);
+		if (c==';' || c=='{' || c=='}' || c==EOF) {
+			pbstr(scrat);
+			break;
+		}
+		if (c=='(')
+			lpar++;
+		else if (c==')')
+			lpar--;
+		else if (c == '\n') {
+			while ((c = gtok(scrat)) == ' ' || c=='\t' || c=='\n')
+				;
+			pbstr(scrat);
+			continue;
+		}
+		else if (c == '=' && scrat[1] == '\0')
+			error("assigment inside conditional");
+		outcode(scrat);
+	} while (lpar > 0);
+	if (lpar != 0)
+		error("missing parenthesis");
+}
+
+int	labval	= 23000;
+
+genlab(n){
+	labval += n;
+	return(labval-n);
+}
+
+gokcode(p1) {
+	transfer = 0;
+	outtab();
+	outcode(p1);
+	eatup();
+	outdon();
+}
+
+eatup() {
+	int t, lpar;
+	char temp[100];
+	lpar = 0;
+	do {
+		if ((t = gtok(scrat)) == ';' || t == '\n')
+			break;
+		if (t == '{' || t == '}' || t == EOF) {
+			pbstr(scrat);
+			break;
+		}
+		if (t == ',' || t == '+' || t == '-' || t == '*' || t == '('
+		  || t == '&' || t == '|' || t == '=') {
+			while (gtok(temp) == '\n')
+				;
+			pbstr(temp);
+		}
+		if (t == '(')
+			lpar++;
+		else if (t==')') {
+			lpar--;
+			if (lpar < 0) {
+				error("missing left paren");
+				return(1);
+			}
+		}
+		outcode(scrat);
+	} while (lpar >= 0);
+	if (lpar > 0) {
+		error("missing right paren");
+		return(1);
+	}
+	return(0);
+}
+
+forcode(){
+	int lpar, t;
+	char *ps, *qs;
+
+	transfer = 0;
+	outcont(0);
+	putcom("for");
+	yyval = genlab(3);
+	brkstk[++brkptr] = yyval+1;
+	typestk[brkptr] = FOR;
+	brkused[brkptr] = 0;
+	forstk[forptr++] = malloc(1);
+	if ((t = gnbtok(scrat)) != '(') {
+		error("missing left paren in FOR");
+		pbstr(scrat);
+		return;
+	}
+	if (gnbtok(scrat) != ';') {	/* real init clause */
+		pbstr(scrat);
+		outtab();
+		if (eatup() > 0) {
+			error("illegal FOR clause");
+			return;
+		}
+		outdon();
+	}
+	if (gnbtok(scrat) == ';')	/* empty condition */
+		outcont(yyval);
+	else {	/* non-empty condition */
+		pbstr(scrat);
+		outnum(yyval);
+		outtab();
+		outcode("if(.not.(");
+		for (lpar=0; lpar >= 0;) {
+			if ((t = gnbtok(scrat)) == ';')
+				break;
+			if (t == '(')
+				lpar++;
+			else if (t == ')') {
+				lpar--;
+				if (lpar < 0) {
+					error("missing left paren in FOR clause");
+					return;
+				}
+			}
+			if (t != '\n')
+				outcode(scrat);
+		}
+		outcode("))");
+		outgoto(yyval+2);
+		if (lpar < 0)
+			error("invalid FOR clause");
+	}
+	ps = scrat;
+	for (lpar=0; lpar >= 0;) {
+		if ((t = gtok(ps)) == '(')
+			lpar++;
+		else if (t == ')')
+			lpar--;
+		if (lpar >= 0 && t != '\n')
+			while(*ps)
+				ps++;
+	}
+	*ps = '\0';
+	qs = forstk[forptr-1] = malloc((unsigned)(ps-scrat+1));
+	ps = scrat;
+	while (*qs++ = *ps++)
+		;
+	indent++;
+}
+
+forstat(p1) int p1; {
+	char *bp, *q;
+	bp = forstk[--forptr];
+	if (wasnext)
+		outnum(p1+1);
+	if (nonblank(bp)){
+		outtab();
+		outcode(bp);
+		outdon();
+	}
+	transfer = 0;
+	outgoto(p1);
+	indent--;
+	putcom("endfor");
+	outcont(p1+2);
+	for (q=bp; *q++;);
+	free(bp);
+	brkptr--;
+}
+
+retcode() {
+	register c;
+	if ((c = gnbtok(scrat)) != '\n' && c != ';' && c != '}') {
+		pbstr(scrat);
+		outtab();
+		outcode(fcname);
+		outcode(" = ");
+		eatup();
+		outdon();
+	}
+	else if (c == '}')
+		pbstr(scrat);
+	outtab();
+	outcode("return");
+	outdon();
+	transfer = 1;
+}
+
+docode() {
+	transfer = 0;
+	outtab();
+	outcode("do ");
+	yyval = genlab(2);
+	brkstk[++brkptr] = yyval;
+	typestk[brkptr] = DO;
+	brkused[brkptr] = 0;
+	outnum(yyval);
+	eatup();
+	outdon();
+	indent++;
+}
+
+dostat(p1) int p1; {
+	outcont(p1);
+	indent--;
+	if (wasbreak)
+		outcont(p1+1);
+	brkptr--;
+}
+
+breakcode() {
+	int level, t;
+
+	level = 0;
+	if ((t=gnbtok(scrat)) == DIG)
+		level = atoi(scrat) - 1;
+	else if (t != ';')
+		pbstr(scrat);
+	if (brkptr-level < 0)
+		error("illegal BREAK");
+	else {
+		outgoto(brkstk[brkptr-level]+1);
+		brkused[brkptr-level] |= 1;
+	}
+	transfer = 1;
+}
+
+nextcode() {
+	int level, t;
+
+	level = 0;
+	if ((t=gnbtok(scrat)) == DIG)
+		level = atoi(scrat) - 1;
+	else if (t != ';')
+		pbstr(scrat);
+	if (brkptr-level < 0)
+		error("illegal NEXT");
+	else {
+		outgoto(brkstk[brkptr-level]);
+		brkused[brkptr-level] |= 2;
+	}
+	transfer = 1;
+}
+
+nonblank(s) char *s; {
+	int c;
+	while (c = *s++)
+		if (c!=' ' && c!='\t' && c!='\n')
+			return(1);
+	return(0);
+}
+
+int	errorflag	= 0;
+
+error(s1) char *s1; {
+	if (errorflag == 0)
+		fprintf(stderr, "ratfor:");
+	fprintf(stderr, "error at line %d, file %s: ",linect[infptr],curfile[infptr]);
+	fprintf(stderr, s1);
+	fprintf(stderr, "\n");
+	errorflag = 1;
+}
+
+errcode() {
+	int c;
+	if (errorflag == 0)
+		fprintf(stderr, "******\n");
+	fprintf(stderr, "*****F ratfor:");
+	fprintf(stderr, "syntax error, line %d, file %s\n", linect[infptr], curfile[infptr]);
+	while ((c=getchr())!=';' && c!='}' && c!='\n' && c!=EOF && c!='\0')
+		;
+	if (c == EOF || c == '\0')
+		putbak(c);
+	errorflag = 1;
+}
+
+r2.c            381252393   3     4     100664  3352      `
+#include "r.h"
+
+extern int hollerith;
+extern int uppercase;
+
+char	outbuf[80];
+int	outp	= 0;
+int	cont	= 0;
+int	contchar	= '&';
+
+char	comment[320];
+int	comptr	= 0;
+int	indent	= 0;
+
+outdon() {
+	outbuf[outp] = '\0';
+	if (outp > 0)
+		fprintf(outfil, "%s\n", outbuf);
+	outp = cont = 0;
+}
+
+putcom(s) char *s; {
+	if (printcom) {
+		ptc(uppercase? 'C' : 'c');
+		outtab();
+		pts(s);
+		outdon();
+	}
+}
+
+outcode(xp) char *xp; {
+	register c, c1, j;
+	char *q, *p, *s;
+
+	p = (char *) xp;	/* shut lint up */
+	if (cont == 0 && comptr > 0)	/* flush comment if not on continuation */
+		flushcom();
+	while( (c = *p++) ){
+		c1 = *p;
+		if (isalpha(c) || isdigit(c)) {
+			if (uppercase)
+				foldup(p-1);
+			pts(p-1);
+			break;
+		}
+		s = NULL;	/* generally set to something like .ge. */
+		switch(c){
+
+		case '"': case '\'':
+			j = 0;
+			for (q=p; *q; q++) {
+				if (*q == '\\')
+					q++;
+				j++;
+			}
+			if (outp+j+2 > 71)
+				contcard();
+			if (hollerith) {
+				outnum(--j);
+				ptc(uppercase ? 'H' : 'h');
+			} else
+				ptc(c);
+			while (*p != c) {
+				if (*p == '\\')
+					p++;
+				ptc(*p++);
+			}
+			if (!hollerith)
+				ptc(c);
+			p++;
+			break;
+		case '$': case '\\':
+			if (strlen(p-1)+outp > 71)
+				contcard();
+			if (c1 == '"' || c1 == '\'') {
+				ptc(c1);
+				p++;
+			} else
+				for (p--; *p; p++)
+					ptc(*p);
+			break;
+		case '%':
+			outp = 0;
+			while (*p)
+				ptc(*p++);
+			break;
+		case '>':
+			if( c1=='=' ){
+				s = ".ge."; p++;
+			} else
+				s = ".gt.";
+			break;
+		case '<':
+			if( c1=='=' ){
+				s = ".le."; p++;
+			} else if( c1=='>' ){
+				s = ".ne."; p++;
+			} else
+				s = ".lt.";
+			break;
+		case '=':
+			if( c1=='=' ){
+				s = ".eq."; p++;
+			} else
+				s = "=";
+			break;
+		case '!': case '^':
+			if( c1=='=' ){
+				s = ".ne."; p++;
+			} else
+				s = ".not.";
+			break;
+		case '&':
+			if( c1=='&' )
+				p++;
+			s = ".and.";
+			break;
+		case '|':
+			if( c1=='|' )
+				p++;
+			s = ".or.";
+			break;
+		case '\t':
+			outtab();
+			break;
+		case '\n':
+			ptc(' ');
+			break;
+		default:
+			ptc(c);
+			break;
+		}
+		if (s != NULL) {
+			if (uppercase)
+				foldup(s);
+			pts(s);
+		}
+	}
+}
+
+foldup(s)	/* convert s to upper case */
+char *s;
+{
+	while (*s) {
+		if (islower(*s))
+			*s = toupper(*s);
+		s++;
+	}
+}
+
+ptc(c) char c; {
+	if( outp > 71 )
+		contcard();
+	outbuf[outp++] = c;
+}
+
+pts(s) char *s; {
+	if (strlen(s)+outp > 71)
+		contcard();
+	while(*s)
+		ptc(*s++);
+}
+
+contcard(){
+	int n;
+	outbuf[outp] = '\0';
+	fprintf(outfil, "%s\n", outbuf);
+	n = 6;
+	if (printcom) {
+		n += INDENT * indent + 1;
+		if (n > 35) n = 35;
+	}
+	for( outp=0; outp<n; outbuf[outp++] = ' ' );
+	outbuf[contfld-1] = contchar;
+	cont++;
+	if (cont > 19)
+		error("more than 19 continuation cards");
+}
+
+outtab(){
+	int n;
+	n = 6;
+	if (printcom) {
+		n += INDENT * indent;
+		if (n > 35) n = 35;
+	}
+	while (outp < n)
+		ptc(' ');
+}
+
+outnum(n) int n; {
+	int a;
+	if( a = n/10 )
+		outnum(a);
+	ptc(n%10 + '0');
+}
+
+outcont(n) int n; {
+	transfer = 0;
+	if (n == 0 && outp == 0)
+		return;
+	if( n > 0 )
+		outnum(n);
+	outcode("\tcontinue");
+	outdon();
+}
+
+outgoto(n) int n; {
+	if (transfer != 0)
+		return;
+	outcode("\tgoto ");
+	outnum(n);
+	outdon();
+}
+
+flushcom() {
+	int i, j;
+	if (printcom == 0)
+		comptr = 0;
+	else if (cont == 0 && comptr > 0) {
+		for (i=j=0; i < comptr; i++)
+			if (comment[i] == '\n') {
+				comment[i] = '\0';
+				fprintf(outfil, "%s\n", &comment[j]);
+				j = i + 1;
+			}
+		comptr = 0;
+	}
+}
+rio.c           381252394   3     4     100664  3357      `
+#include "r.h"
+#define	BUFSIZE	512
+char	ibuf[BUFSIZE];
+char	*ip = ibuf;
+
+
+gtok(s) char *s; {	/* get token into s */
+	register c;
+	register char *p;
+	struct nlist *q;
+
+	for(;;) {
+		p = s;
+		*p++ = c = getchr();
+		if (isalpha(c) || isdigit(c)) {
+			while (isalpha(*p = getchr()) || isdigit(*p))
+				p++;
+			putbak(*p);
+			*p = '\0';
+			if ((q = lookup(s))->name != NULL && q->ydef == 0) {	/* found but not keyword */
+				if (q->def != fcnloc && q->def != FCN1loc) {	/* not "function" */
+					pbstr(q->def);
+					continue;
+				}
+				getfname();	/* recursive gtok */
+			}
+			for (p=s; *p; p++)
+				if (isupper(*p))
+					*p = tolower(*p);
+			for (p=s; *p; p++)
+				if (!isdigit(*p))
+					return(LET);
+			return(DIG);
+		}
+		switch(c) {
+		case 0:
+			if (infptr > 0) {
+				fclose(infile[infptr]);
+				infptr--;
+				continue;
+			}
+			if (svargc > 1) {
+				svargc--;
+				svargv++;
+				if (infile[0] != stdin)
+					fclose(infile[0]);
+				if (!strcmp(*svargv, "-"))
+					infile[0] = stdin;
+				else if( (infile[0] = fopen(*svargv,"r")) == NULL )
+					cant(*svargv);
+				linect[0] = 0;
+				curfile[0] = *svargv;
+				continue;
+			}
+			return(EOF);	/* real eof */
+		case ' ':
+		case '\t':
+			while ((c = getchr()) == ' ' || c == '\t')
+				;	/* skip others */
+			if (c == COMMENT || c == '_') {
+				putbak(c);
+				continue;
+			}
+			if (c != '\n') {
+				putbak(c);
+				*p = '\0';
+				return(' ');
+			} else {
+				*s = '\n';
+				*(s+1) = '\0';
+				return(*s);
+			}
+		case '_':
+			while ((c = getchr()) == ' ' || c == '\t')
+				;
+			if (c == COMMENT) {
+				putbak(c);
+				gtok(s);	/* recursive */
+			}
+			else if (c != '\n')
+				putbak(c);
+			continue;
+		case '[':
+			*p = '\0';
+			return('{');
+		case ']':
+			*p = '\0';
+			return('}');
+		case '$':
+		case '\\':
+			if ((*p = getchr()) == '(' || *p == ')') {
+				putbak(*p=='(' ? '{' : '}');
+				continue;
+			}
+			if (*p == '"' || *p == '\'')
+				p++;
+			else
+				putbak(*p);
+			*p = '\0';
+			return('$');
+		case COMMENT:
+			comment[comptr++] = 'c';
+			while ((comment[comptr++] = getchr()) != '\n')
+				;
+			flushcom();
+			*s = '\n';
+			*(s+1) = '\0';
+			return(*s);
+		case '"':
+		case '\'':
+			for (; (*p = getchr()) != c; p++) {
+				if (*p == '\\')
+					*++p = getchr();
+				if (*p == '\n') {
+					error("missing quote");
+					putbak('\n');
+					break;
+				}
+			}
+			*p++ = c;
+			*p = '\0';
+			return(QUOTE);
+		case '%':
+			while ((*p = getchr()) != '\n')
+				p++;
+			putbak(*p);
+			*p = '\0';
+			return('%');
+		case '>': case '<': case '=': case '!': case '^':
+			return(peek(p, '='));
+		case '&':
+			return(peek(p, '&'));
+		case '|':
+			return(peek(p, '|'));
+		default:
+			if (!isprint(c))
+				continue;
+		case '\n':
+			*p = '\0';
+			return(*s);
+		}
+	}
+}
+
+gnbtok(s) char *s; {
+	register c;
+	while ((c = gtok(s)) == ' ' || c == '\t')
+		;
+	return(c);
+}
+
+getfname() {
+	while (gtok(fcname) == ' ')
+		;
+	pbstr(fcname);
+	putbak(' ');
+}
+
+peek(p, c1) char *p, c1; {
+	register c;
+	c = *(p-1);
+	if ((*p = getchr()) == c1)
+		p++;
+	else
+		putbak(*p);
+	*p = '\0';
+	return(c);
+}
+
+pbstr(str)
+register char *str;
+{
+	register char *p;
+
+	p = str;
+	while (*p++);
+	--p;
+	if (ip >= &ibuf[BUFSIZE]) {
+		error("pushback overflow");
+		exit(1);
+	}
+	while (p > str)
+		putbak(*--p);
+}
+
+getchr() {
+	register c;
+
+	if (ip > ibuf)
+		return(*--ip);
+	c = getc(infile[infptr]);
+	if (c == '\n')
+		linect[infptr]++;
+	if (c == EOF)
+		return(0);
+	return(c);
+}
+
+rlex.c          381252397   3     4     100664  4974      `
+# include "r.h"
+
+char *keyword [] = {
+	"do",
+	"if",
+	"else",
+	"for",
+	"repeat",
+	"until",
+	"while",
+	"break",
+	"next",
+	"define",
+	"include",
+	"return",
+	"switch",
+	"case",
+	"default",
+	0};
+
+int keytran[] = {
+	DO,
+	IF,
+	ELSE,
+	FOR,
+	REPEAT,
+	UNTIL,
+	WHILE,
+	BREAK,
+	NEXT,
+	DEFINE,
+	INCLUDE,
+	RETURN,
+	SWITCH,
+	CASE,
+	DEFAULT,
+	0};
+
+char	*fcnloc;	/* spot for "function" */
+char	*FCN1loc;	/* spot for "FUNCTION"; kludge */
+
+int	svargc;
+char	**svargv;
+char	*curfile[10]	= { "" };
+int	infptr	= 0;
+FILE	*outfil	= { stdout };
+FILE	*infile[10]	= { stdin };
+int	linect[10];
+
+int	contfld	= CONTFLD;	/* place to put continuation char */
+int	printcom	= 0;	/* print comments if on */
+int	hollerith	= 0;	/* convert "..." to 27H... if on */
+int	uppercase	= 0;	/* produce output in upper case (except for "...") */
+
+#ifndef unix
+#define OPTION(L)	(tolower(i) == tolower(L))
+#else
+#define OPTION(L)	(i == L)
+#endif
+#ifdef	gcos
+#define BIT(n)	(1 << 36 - 1 - n)
+#define FORTRAN	BIT(1)
+#define FDS	BIT(4)
+#define EXEC	BIT(5)
+#define FORM	BIT(14)
+#define LNO	BIT(15)
+#define BCD	BIT(16)
+#define OPTZ	BIT(17)
+int	compile	= FORTRAN | FDS;
+#define GCOSOPT()	if (OPTION('O')) compile |= OPTZ; \
+			else if (i == '6') compile |= FORM; \
+			else if (OPTION('R')) compile = 0
+#else
+#define GCOSOPT()
+#define ffiler(S)	"can't open"
+#endif
+
+main(argc,argv) int argc; char **argv; {
+	int i;
+	while(argc>1 && argv[1][0]=='-' && (i = argv[1][1]) != '\0') {
+		if (isdigit(i)) {
+			contfld = i - '0';
+			if (argv[1][2]!='\0')
+				contchar = argv[1][2];
+		} else if (OPTION('C'))
+			printcom++;
+		else if (OPTION('h'))
+			hollerith++;
+		else if (OPTION('u') && (argv[1][2] == 'c' || argv[1][2] == 'C'))
+			uppercase++;
+		GCOSOPT();
+		argc--;
+		argv++;
+	}
+
+#ifdef	gcos
+	if (!intss()) {
+		fputs("\t\t    Version 2.1 : read INFO/RATFOR (07/13/79)\n", stderr);
+		if (compile) {
+			static char name[80] = "s*", opts[20] = "yw";
+			char *opt = (char *)inquire(stdout, _OPTIONS);
+			if (!strchr(opt, 't')) { /* if stdout is diverted */
+				sprintf(name, "%s\"s*\"",  (char *)inquire(stdout, _FILENAME));
+				strcpy(&opts[1], opt);
+			}
+			if (freopen(name, opts, stdout) == NULL)
+				cant(name);
+		}
+	} else {
+		compile = 0;
+		if (argc < 2 && inquire(stdin, _TTY))
+			freopen("*src", "rt", stdin);
+	}
+#endif
+
+	svargc = argc;
+	svargv = argv;
+	if (svargc > 1)
+		putbak('\0');
+	for (i=0; keyword[i]; i++)
+		install(keyword[i], "", keytran[i]);
+	fcnloc = install("function", "", 0);
+	FCN1loc = install("FUNCTION", "", 0);
+	yyparse();
+#ifdef	gcos
+	if (compile) {
+		if (errorflag) { /* abort */
+			cretsw(EXEC);
+		} else { /* good: call forty */
+			FILE *dstar; /* to intercept "gosys" action */
+
+			if ((dstar = fopen("d*", "wv")) == NULL)
+				cant("d*");
+			fputs("$\tforty\tascii", dstar);
+			if (fopen("*1", "o") == NULL)
+				cant("*1");
+			fclose(stdout, "rl");
+			cretsw(FORM | LNO | BCD);
+			csetsw(compile);
+			gosys("forty");
+		}
+	}
+#endif
+	exit(errorflag);
+}
+
+cant(s) char *s; {
+	linect[infptr] = 0;
+	curfile[infptr] = s;
+	error(ffiler(""));
+	exit(1);
+}
+
+inclstat() {
+	int c;
+	char *ps;
+	char fname[100];
+	while ((c = getchr()) == ' ' || c == '\t');
+	if (c == '(') {
+		for (ps=fname; (*ps=getchr()) != ')'; ps++);
+		*ps = '\0';
+	} else if (c == '"' || c == '\'') {
+		for (ps=fname; (*ps=getchr()) != c; ps++);
+		*ps = '\0';
+	} else {
+		putbak(c);
+		for (ps=fname; (*ps=getchr()) != ' ' &&*ps!='\t' && *ps!='\n' && *ps!=';'; ps++);
+		*ps = '\0';
+	}
+	if ((infile[++infptr] = fopen(fname,"r")) == NULL) {
+		cant(fname);
+		exit(1);
+	}
+	linect[infptr] = 0;
+	curfile[infptr] = fname;
+}
+
+char	str[500];
+int	nstr;
+
+yylex() {
+	int c, t;
+	for (;;) {
+		while ((c=gtok(str))==' ' || c=='\n' || c=='\t')
+			;
+		yylval = c;
+		if (c==';' || c=='{' || c=='}')
+			return(c);
+		if (c==EOF)
+			return(0);
+		yylval = (int) str;
+		if (c == DIG)
+			return(DIGITS);
+		t = lookup(str)->ydef;
+		if (t==DEFINE)
+			defstat();
+		else if (t==INCLUDE)
+			inclstat();
+		else if (t > 0)
+			return(t);
+		else
+			return(GOK);
+	}
+}
+
+int	dbg	= 0;
+
+yyerror(p) char *p; {;}
+
+
+defstat() {
+	int c,i,val,t,nlp;
+	extern int nstr;
+	extern char str[];
+	while ((c=getchr())==' ' || c=='\t');
+	if (c == '(') {
+		t = '(';
+		while ((c=getchr())==' ' || c=='\t');
+		putbak(c);
+	}
+	else {
+		t = ' ';
+		putbak(c);
+	}
+	for (nstr=0; c=getchr(); nstr++) {
+		if (!isalpha(c) && !isdigit(c))
+			break;
+		str[nstr] = c;
+	}
+	putbak(c);
+	str[nstr] = '\0';
+	if (c != ' ' && c != '\t' && c != '\n' && c != ',') {
+		error("illegal define statement");
+		return;
+	}
+	val = nstr+1;
+	if (t == ' ') {
+		while ((c=getchr())==' ' || c=='\t');
+		putbak(c);
+		for (i=val; (c=getchr())!='\n' && c!='#' && c!='\0'; i++)
+			str[i] = c;
+		putbak(c);
+	} else {
+		while ((c=getchr())==' ' || c=='\t' || c==',' || c=='\n');
+		putbak(c);
+		nlp  = 0;
+		for (i=val; nlp>=0 && (c=str[i]=getchr()); i++)
+			if (c == '(')
+				nlp++;
+			else if (c == ')')
+				nlp--;
+		i--;
+	}
+	for ( ; i>0; i--)
+		if (str[i-1] != ' ' && str[i-1] != '\t')
+			break;
+	str[i] = '\0';
+	install(str, &str[val], 0);
+}
+
+rlook.c         381252396   3     4     100664  1117      `
+#define NULL 0
+#define EOS 0
+#define	HSHSIZ	101
+struct	nlist {
+	char	*name;
+	char	*def;
+	int	ydef;
+	struct	nlist *next;
+};
+
+struct	nlist	*hshtab[HSHSIZ];
+struct nlist	*lookup();
+char	*install();
+char	*malloc();
+char	*copy();
+int	hshval;
+
+struct nlist *lookup(str)
+char *str;
+{
+	register char *s1, *s2;
+	register struct nlist *np;
+	static struct nlist nodef;
+
+	s1 = str;
+	for (hshval = 0; *s1; )
+		hshval += *s1++;
+	hshval %= HSHSIZ;
+	for (np = hshtab[hshval]; np!=NULL; np = np->next) {
+		s1 = str;
+		s2 = np->name;
+		while (*s1++ == *s2)
+			if (*s2++ == EOS)
+				return(np);
+	}
+	return(&nodef);
+}
+
+char *install(nam, val, tran)
+char *nam, *val;
+int tran;
+{
+	register struct nlist *np;
+
+	if ((np = lookup(nam))->name == NULL) {
+		np = (struct nlist *)malloc(sizeof(*np));
+		np->name = copy(nam);
+		np->def = copy(val);
+		np->ydef = tran;
+		np->next = hshtab[hshval];
+		hshtab[hshval] = np;
+		return(np->def);
+	}
+	free(np->def);
+	np->def = copy(val);
+	return(np->def);
+}
+
+char *copy(s)
+register char *s;
+{
+	register char *p, *s1;
+
+	p = s1 = (char *) malloc((unsigned)strlen(s)+1);
+	while (*s1++ = *s++);
+	return(p);
+}
+
+makefile        531971899   3     4     100664  422       `
+CFLAGS = -g
+a.out:	r0.o r1.o r2.o rio.o rlook.o rlex.o y.tab.o
+	cc r*.o y.tab.o -ly
+
+r0.o:	r.h y.tab.h r0.c
+r1.o:	r.h y.tab.h r1.c
+r2.o:	r.h y.tab.h r2.c
+rio.o:	r.h y.tab.h rio.c
+rlook.o:	r.h y.tab.h rlook.c
+rlex.o:	r.h y.tab.h rlex.c
+y.tab.c:	r.g
+	yacc -d r.g
+y.tab.h:	r.g
+	yacc -d r.g
+
+list:
+	pr r.g r.h r*.c makefile TODO
+
+install:	a.out
+	strip a.out
+	cp a.out /usr/bin/ratfor
+
+clean:
+	rm -f a.out *.o y.tab.* make.out

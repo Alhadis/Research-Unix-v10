@@ -1,0 +1,122 @@
+                scanf format string decision tree
+                ----- ------ ------ -------- ----
+
+misc:
+    extra arguments are ignored
+
+
+d
+    size indicator:
+        h   pointer to short int
+        l   pointer to long int
+        L   UNDEFINED
+    conversion:
+        signed integer (same as strtol base 10)
+        argument is pointer to int
+
+i
+    size indicator:
+        h   pointer to short int
+        l   pointer to long int
+        L   UNDEFINED
+    conversion:
+        signed integer (same as strtol base 0)
+        argument is pointer to int
+
+o
+    size indicator:
+        h   pointer to unsigned short
+        l   pointer to unsigned long
+        L   UNDEFINED
+    conversion:
+        unsigned integer (same as strtoul base 8)
+        argument is pointer to unsigned int
+
+u
+    size indicator:
+        h   pointer to unsigned short
+        l   pointer to unsigned long
+        L   UNDEFINED
+    conversion:
+        unsigned integer (same as strtoul base 10)
+        argument is pointer to unsigned int
+
+x,X
+    size indicator:
+        h   pointer to unsigned short
+        l   pointer to unsigned long
+        L   UNDEFINED
+    conversion:
+    argument is pointer to float
+
+s
+    size indicator:
+        h   UNDEFINED
+        l   UNDEFINED
+        L   UNDEFINED
+    conversion:
+        sequence of non-whitespace characters
+
+[
+    size indicator:
+        h   UNDEFINED
+        l   UNDEFINED
+        L   UNDEFINED
+    conversion:
+        matches non-empty set of characters fromthe "scanset"
+        argument is pointer to array large enough to recieve input string
+        scanset:
+            all characters between [ and  ]
+            all characters not between [^ and ]
+            the beginning sequences [] and [^] mean that ] is in the list
+            '-' is implementation defined unless as [-   [^-   []-   or [^]-
+            chargument is char *
+
+c
+    size indicator:
+        h   UNDEFINED
+        l   UNDEFINED
+        L   UNDEFINED
+    conversion:
+        match characters up to field width
+        default if no width is 1
+        no null character is added
+        argument is char *
+    
+p
+    size indicator:
+        h   UNDEFINED
+        l   UNDEFINED
+        L   UNDEFINED
+    conversion:
+        matches text produced by printf %p
+        printf -> scanf with %p must produce the same pointer back
+        argument is pointer to void *
+
+n
+    size indicator:
+        h   pointer to short int
+        l   pointer to long int
+        L   UNDEFINED
+    conversion:
+        no input consumed and argument count not incremented
+        argument is pointer to int
+        write number of characters consumed
+
+misc:
+    %% is escape to match % in input
+    width specifies max characters matched
+    whitespace means to skip leading white space up to end of input
+    multibyte characters means to read as long as match occurs (no assignment)
+    input conversion is processed as:
+        skip whitespace unless there is a c, [, or n specifier
+        read an item fromthe input unless processing an 'n' specifier
+        read longest possible match up to width specifier
+        if no characters read, it is a matching failure
+        * suppresses assignment 
+    success leaves trailing whitespace unless there is whiatespace
+            at the end of the directive
+    input failure or matching failure leave next character on the input
+    EOF returned if end of input before any conversions
+    return number of conversions performed, may be less than
+        requeted if matchin or input failure occurs

@@ -1,0 +1,161 @@
+.text
+.globl _main
+.align 2
+_main:link a6,#-80
+movm.l #0x24d8,-72(a6)
+clr.l $d6
+L2:
+clr.l $d7
+L6:
+mov.l &1000,$d4
+muls.w $d6,$d4
+add.l $d7,$d4
+lea _x,$a2
+mov.l $d6,$d3; asl.l &4,$d3
+lea 0($a2,$d3.l),$a2
+mov.l $d7,$d3; asl.l &2,$d3
+mov.l $d4,0($a2,$d3.l)
+L7:
+addq.l &1,$d7
+cmp.l &4,$d7; jlt L6
+lea _x,$a2
+mov.l $d6,$d4; asl.l &4,$d4
+lea 0($a2,$d4.l),$a2
+lea _y,$a1
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l $a2,0($a1,$d4.l)
+L3:
+addq.l &1,$d6
+cmp.l &3,$d6; jlt L2
+jbsr _f
+clr.l $d6
+L10:
+lea -48($a6),$a2
+mov.l $d6,$d4; asl.l &4,$d4
+lea 0($a2,$d4.l),$a2
+mov.l $a2,$a5
+lea _y,$a1
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l $a2,0($a1,$d4.l)
+clr.l $d7
+L14:
+lea _x,$a2
+mov.l $d6,$d4; asl.l &4,$d4
+lea 0($a2,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),0($a5,$d4.l)
+L15:
+addq.l &1,$d7
+cmp.l &4,$d7; jlt L14
+L11:
+addq.l &1,$d6
+cmp.l &3,$d6; jlt L10
+lea -48($a6),$a2
+mov.l $a2,($sp)
+mov.l &_y,4($sp)
+jbsr _g
+clr.l $d0
+L1:
+movm.l -72(a6),#0x24d8
+unlk a6
+rts
+.globl _f
+.align 2
+_f:link a6,#-24
+movm.l #0x4d0,-16(a6)
+clr.l $d6
+L19:
+clr.l $d7
+L23:
+mov.l &_27,($sp)
+lea _x,$a2
+mov.l $d6,$d4; asl.l &4,$d4
+lea 0($a2,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),4($sp)
+jbsr _printf
+L24:
+addq.l &1,$d7
+cmp.l &4,$d7; jlt L23
+L20:
+addq.l &1,$d6
+cmp.l &3,$d6; jlt L19
+mov.l &_28,($sp)
+jbsr _printf
+clr.l $d6
+L29:
+clr.l $d7
+L33:
+mov.l &_27,($sp)
+lea _y,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),4($sp)
+jbsr _printf
+L34:
+addq.l &1,$d7
+cmp.l &4,$d7; jlt L33
+L30:
+addq.l &1,$d6
+cmp.l &3,$d6; jlt L29
+mov.l &_28,($sp)
+jbsr _printf
+L18:
+movm.l -16(a6),#0x4d0
+unlk a6
+rts
+.globl _g
+.align 2
+_g:link a6,#-32
+movm.l #0x34d0,-24(a6)
+mov.l 8($a6),$a5
+mov.l 12($a6),$a4
+clr.l $d6
+L38:
+clr.l $d7
+L42:
+mov.l &_27,($sp)
+mov.l $d6,$d4; asl.l &4,$d4
+lea 0($a5,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),4($sp)
+jbsr _printf
+L43:
+addq.l &1,$d7
+cmp.l &4,$d7; jlt L42
+L39:
+addq.l &1,$d6
+cmp.l &3,$d6; jlt L38
+mov.l &_28,($sp)
+jbsr _printf
+clr.l $d6
+L46:
+clr.l $d7
+L50:
+mov.l &_27,($sp)
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a4,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),4($sp)
+jbsr _printf
+L51:
+addq.l &1,$d7
+cmp.l &4,$d7; jlt L50
+L47:
+addq.l &1,$d6
+cmp.l &3,$d6; jlt L46
+mov.l &_28,($sp)
+jbsr _printf
+L37:
+movm.l -24(a6),#0x34d0
+unlk a6
+rts
+.bss
+.globl _y
+comm _y,12
+.globl _x
+comm _x,48
+.text
+.align 2; _28:.byte 10,0
+.align 2; _27:.ascii " %d\000"

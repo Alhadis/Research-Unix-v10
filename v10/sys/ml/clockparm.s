@@ -1,0 +1,2 @@
+	.set	CLK60HZ,(-16667)
+	.set	CLKBIAS,100

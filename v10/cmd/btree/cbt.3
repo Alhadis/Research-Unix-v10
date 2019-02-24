@@ -1,0 +1,86 @@
+.SH NAME
+bread, bwrite, bopen, bclose, bseek, bkey, bdelete, bfirst, bflush, breclen
+.TH
+cbt(3)
+.SH SYNOPSIS
+.nf
+.B typedef struct { char *mdata; unsigned short mlen; } mbuf;
+.B #include "cbt.h"
+.B bfile *bopen(file, type) char *file;
+.B bseek(bf, key) bfile *bf; mbuf key;
+.B bfirst(bf) bfile *bf;
+.B bclose(bf) bfile *bf;
+.B breclen(bf) bfile *bf;
+.B bread(bf, key, value) bfile *bf; mbuf *key, *value;
+.B bdelete(bf, key) bfile *bf; mbuf key;
+.B bflush(bf) bfile *bf;
+.fi
+.SH DESCRIPTION
+These subroutines are the C interface to B-tree files.
+Load them using
+.I -lcbt.
+The include file contains the definition of
+.I mbuf.
+B-trees may be shared by multiple readers and a single writer, since the effect of a writer's changes
+are not seen until the root of the tree is written back.
+Keys can be no longer than 255 bytes.
+The routines communicate by means of
+a
+.I bfile
+pointer returned by
+.I bopen.
+A B-tree named
+.I file
+corresponds to two
+.UX
+files,
+.I file.T
+and (if the file is not an index)
+.I file.F.
+The
+.I type
+parameter to
+.I bopen
+should be either 0 or 2, as in open (2).
+.br
+.I bclose
+closes a B-tree and (if necessary) rewrites
+its root.
+.br
+.I bflush
+writes the root without closing the B-tree.
+.PP
+The subroutines keep track of a current
+position in each open B-tree.
+When the B-tree is opened the current
+position is just before the first key.
+Calling
+.I bfirst
+has the same effect.
+.I bseek
+makes the current position just before the
+.I key
+and returns FOUND,
+if the key exists in the file,
+or it makes the current position just before
+the next largest key and returns NOTFOUND,
+or, if there is no larger key in the file
+it returns EOF.
+.I bread
+returns the key and value at the current
+position, and advances the current position.
+Note that the arguments to
+.I bread
+are all pointers.
+If either
+.I key
+or
+.I value
+are NULL, the corresponding argument is not returned.
+.I bread stores its results in the buffers
+given in the arguments, and sets the lengths
+of the results in the arguments.
+.I breclen
+returns the length of the value which will
+be returned by the next call to
+.I bread.

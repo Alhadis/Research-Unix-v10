@@ -1,0 +1,84 @@
+BUILTINS =
+#CFLAGS = -g
+CFLAGS =
+CC = lcc
+
+%.o: %.c Efix cpt
+	Efix $stem.c >efix/$stem.c
+	cpt $stem.c efix/$stem.c
+	$CC $CFLAGS -c efix/$stem.c
+
+# cpt preserves times for use with -g
+
+LIBES =
+FILES1 =  mkfile defs tokens main.c init.c tailor.c\
+		gram.head gram.dcl gram.expr gram.exec\
+		lex.l fixuplex symtab.c\
+		dcl.c addr.c struct.c field.c misc.c alloc.c mk.c
+FILES2 =  exec.c blklab.c simple.c print.c temp.c io.c error.c\
+		pass2.c icfile.c free.c dclgen.c namgen.c
+FILES = $FILES1 $FILES2
+P = detab 0 6 12 18 24 30 36 42 48 54 60 66 72 | und -3 | opr -r2
+
+OBJECTS = main.o init.o tailor.o gram.o lex.o symtab.o\
+	dcl.o addr.o struct.o field.o blklab.o\
+	mk.o misc.o alloc.o print.o simple.o exec.o temp.o io.o error.o\
+	pass2.o icfile.o free.o dclgen.o namgen.o
+
+a.out : efix Efix cpt $OBJECTS
+	echo LOAD
+	$CC $CFLAGS $LDFLAGS $OBJECTS $LIBES
+	size
+
+Efix cpt:
+	cd efixsrc; mk
+
+efix: defs tokdefs
+	mkdir efix
+	ln $prereq efix
+
+$OBJECTS :  defs
+lex.o init.o : tokdefs
+
+gram.c:	gram.head gram.dcl gram.expr gram.exec tokdefs
+	( sed <tokdefs "s/#define/%token/" ;\
+		cat gram.head gram.dcl gram.expr gram.exec) >gram.in
+	$YACC $YFLAGS gram.in
+	sed 's!^# include "y.debug"!/* & */!;s!^# line.*!/* & */!' y.tab.c >gram.c
+	rm gram.in y.tab.c
+
+gram.o: gram.c
+	$CC $CFLAGS -c gram.c
+
+lex.c: fixuplex lex.l
+	lex lex.l
+	fixuplex
+	mv lex.yy.c lex.c
+
+lex.o: lex.c
+	$CC $CFLAGS -c lex.c
+
+tokdefs: tokens
+	grep -n . <tokens | sed "s/\([^:]*\):\(.*\)/#define \2 \1/" >tokdefs
+
+clean:
+	rm -rf a.out *.o  lex.c tokdefs gram.c Efix cpt efix efixsrc/*.o
+
+printall:
+	pr $FILES1 | $P
+	pr $FILES2 | $P
+	touch print
+
+print:  $FILES
+	pr $newprereq | $P
+	touch print
+lint: a.out
+	lint -p *.c -lS
+
+install: a.out
+	strip a.out
+	size a.out /usr/bin/efl
+	cp a.out /usr/bin/efl
+
+bundle: $FILES efixsrc/mkfile efixsrc/*.[ch]
+	stree $prereq >/tmp/t/efl.st

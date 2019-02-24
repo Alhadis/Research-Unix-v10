@@ -1,0 +1,117 @@
+'\"macro stdmacro
+.if n .pH g4.mailcnfg %W% of %G%
+.nr X
+.if \nX=0 .ds x} mailcnfg 4 "Essential Utilities" "\&"
+.if \nX=1 .ds x} mailcnfg 4 "Essential Utilities"
+.if \nX=2 .ds x} mailcnfg 4 "" "\&"
+.if \nX=3 .ds x} mailcnfg "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4mailcnfg\f1 \- initialization information for \f4mail\fP and \f4rmail\fP
+.SH DESCRIPTION
+The \f4/etc/mail/mailcnfg\fP file contains initialization information for
+the \f4mail\fP and \f4rmail\fP commands.
+Each entry in \f4mailcnfg\f1 consists of a line of the form
+.P
+.RS 20
+\f2Keyword\f4 = \f2Value\f1
+.RE
+.P
+Leading whitespace, whitespace surrounding the equal sign, and trailing
+whitespace is ignored.
+\f2Keyword\fP may not contain embedded whitespace,
+but whitespace may appear within \f2Value\fP.
+Undefined keywords or badly formed entries are silently ignored.
+.SS Keyword Definitions
+.TP 20
+\f4DEBUG\fP
+Takes the same values as the \f4\-x\fP invocation option of \f4mail\fP.
+This provides a way of setting a system-wide debug/tracing level.
+Typically \f4DEBUG\fP is set to a value of 2, which provides minimal diagnostics
+useful for debugging \f4mail\fP and \f4rmail\fP failures.  The value of the
+\f4\-x\fP \f4mail\fP invocation option will override any specification of
+\f4DEBUG\fP in \f4mailcnfg\fP.
+.TP 20
+\f4CLUSTER\fP
+To identify a closely coupled set of systems by one name to
+all other systems, set \f2Value\fP to the cluster name.
+This string is used to supply the \f5...remote from...\fP information
+on the \f5From\fP header line rather than the system nodename returned by
+\f4uname\fP(2).
+.TP 20
+\f4FAILSAFE\fP
+In the event that the \f4/var/mail\fP directory is accessed via RFS or NFS within
+a cluster (see \f4CLUSTER\fP above),
+provisions must be made to allow for the directory not being available
+when local mail is to be delivered (remote system crash, RFS or NFS problems,
+etc.).  \f2Value\fP is a string that indicates where to forward the
+current message for delivery.  Typically this is the remote system
+that actually \f2owns\fP \f4/var/mail\fP.  In this way, the message is
+queued for delivery to that system when it becomes available.
+For example, assume a cluster of systems (\f4sysa\fP, \f4sysb\fP, \f4sysc\fP) where
+\f4/var/mail\fP is physically mounted on \f4sysc\fP and made available to the
+other machines via RFS or NFS.
+If \f4sysc\fP were to crash,
+the RFS/NFS-accessible \f4/var/mail\fP would become unavailable
+and local deliveries of mail would go to \f4/var/mail\fP on the local
+system. When \f4/var/mail\fP is re-mounted via RFS/NFS, all messages
+deposited in the local directory would be hidden and essentially lost.
+To prevent this, if \f4FAILSAFE\fP is defined in \f4mailcnfg\fP,
+\f4mail\fP and \f4rmail\fP check for the existence of
+\f4/var/mail/:saved\fP, a required subdirectory.
+If this subdirectory does not exist, \f4mail\fP assumes that
+the RFS/NFS-accessible \f4/var/mail\fP is not available and invokes the
+failsafe mechanism of automatically forwarding the message to \f2Value\fP.
+In this example \f2Value\fP would be \f4sysc!%n\fP.
+The \f4%\f2n\f1 keyword is expanded to be the recipient name
+[see \f4mail\fP(1) for details]
+and thus the message would be forwarded to \f4sysc\fP!\f2recipient_name\fP.
+Because \f4sysc\fP is not available, the message remains on the local system
+until \f4sysc\fP is available, and then sent there for delivery.
+.TP 20
+\f4DEL_EMPTY_MFILE\fP
+If not specified, the default action of \f4mail\fP and \f4rmail\fP is to
+delete empty mailfiles if the permissions are 0660 and to retain empty
+mailfiles if the permissions are anything else.
+If \f2Value\fP is \f4yes\fP, empty mailfiles are always deleted,
+regardless of file permissions.
+If \f2Value\fP is \f4no\fP, empty mailfiles are never deleted.
+.TP 20
+\f4DOMAIN\fP
+This string is used to supply the system domain name in place of the
+domain name returned by \f4getdomainame\fP(3).
+.TP 20
+\f4SMARTERHOST\fP
+This string may be set to a smarter host which may be referenced within the
+mail surrogate file via \f4%\&X\f1.
+.TP 20
+\f4%\f2mailsurr_keyword\f1
+As described in \f4mailsurr\fP(4), certain pre-defined single letter keywords
+are textually substituted in surrogate command fields before they are
+executed.
+While none of the predefined keywords may be changed in meaning,
+new ones may be defined to provide a shorthand notation for long strings
+(such as \f4/usr/lib/mail/surrcmd\fP) which may appear repeatedly within
+the \f4mailsurr\fP file.
+Upper case letters are reserved for future use and will be ignored if
+encountered here.
+.SH FILES
+.ft 4
+.nf
+/etc/mail/mailcnfg
+/etc/mail/mailsurr
+/var/mail/:saved
+/usr/lib/mail/surrcmd
+.fi
+.ft 1
+.SH SEE ALSO
+\f4mailsurr\fP(4)
+.br
+\f4mail\fP(1) in the \f2User's Reference Manual\f1
+.br
+\f4uname\fP(2),
+\f4getdomainame\fP(3) in the \f2Programmer's Reference Manual\f1
+.SH NOTES
+If \f4/var/mail\fP is accessed via RFS or NFS and the subdirectory
+\f4/var/mail/:saved\fP is not removed from the local system,
+the \f4FAILSAFE\fP mechanism will be subverted.

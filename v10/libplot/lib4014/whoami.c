@@ -1,0 +1,4 @@
+char *
+whoami(){
+	return("tek");
+}

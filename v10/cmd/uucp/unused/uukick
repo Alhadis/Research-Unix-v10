@@ -1,0 +1,45 @@
+
+#	This shell will start a uucico for the system given.
+
+STATUS=/usr/spool/uucp/.Status
+UUCICO=/usr/lib/uucp/uucico
+
+X=""
+SYS=
+for arg
+do
+	case $arg in
+	-x*) X=$arg;;
+	*) SYS="$arg";;
+	esac
+done
+if [ -z "$SYS" ]
+then
+	echo "$0:  system name required"
+	exit 1
+fi
+
+#  use 7 character maximum name length (SYSNSIZE in uucp.h) for serach
+SYSTEM=`echo $SYS | cut -c1-7`
+
+#  check for existence in L.sys
+XX=
+XX=`uuname | grep $SYSTEM `
+if [ -z "$XX" ]
+then
+	echo "Invalid system name \"$SYSTEM\""
+	exit
+fi
+set $XX
+FULLNAME=$1
+for i
+do
+    if [ $i = $SYS ]; then
+	FULLNAME=$SYS
+	break
+    fi
+done
+
+rm -f $STATUS/${FULLNAME}
+
+$UUCICO  -r1 -s$FULLNAME &

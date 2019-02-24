@@ -1,0 +1,247 @@
+awk '
+BEGIN {
+	sq = "'"'"'"
+	FS = "\t"
+	gre = "'"$GRE"'"
+}
+NF == 0 {
+	next
+}
+$1 != "" {	# new test
+	re = $1
+	if($4 == ""){
+		nopts = 1; opts[0] = ""
+	} else if(substr($4, 1, 1) == "-"){
+		nopts = 1; opts[0] = " " $4
+	} else {
+		for(nopts = 0; nopts < length($4); nopts++){
+			x = substr($4, nopts, 1)
+			if(x == "~") opts[nopts] = ""
+			else opts[nopts] = " -" x
+		}
+	}
+}
+$2 != "" {	# either ~ or !~
+	op = $2
+	if (op == "~")
+		neg = 0
+	else if (op == "!~")
+		neg = 1
+}
+$3 != "" {	# new test string
+	str = $3
+}
+$3 == "\"\"" {	# explicit empty line
+	$3 = ""
+}
+NF > 2 {	# generate a test
+	input = $3
+	for(i = 0; i < nopts; i++){
+	ntests++;
+	if(neg){
+		printf("if echo %s | %s -s %s; then echo %s%d fails %s %s %s %s%s ;else :; fi\n", sq input sq, gre opts[i], sq re sq, sq, NR, opts[i], re, op, input, sq)
+	} else {
+		printf("if echo %s | %s -s %s; then :; else echo %s%d fails %s %s %s %s%s ; fi\n", sq input sq, gre opts[i], sq re sq, sq, NR, opts[i], re, op, input, sq)
+	}
+	}
+}
+END	{ print "echo " sq ntests " simple tests" sq }
+' > regress.i <<\!!!
+a	~	a
+		ba
+		bab
+	!~	""
+		x
+		xxxxx
+.	~	x
+		xxx
+	!~	""			
+.a	~	xa
+		xxa
+		xax
+	!~	a
+		ab
+		""
+$	~	x
+		""
+.$	~	x
+	!~	""
+a$	~	a
+		ba
+		bbba
+	!~	ab
+		x
+		""
+^	~	x
+		""
+		^
+^a$	~	a
+	!~	xa
+		ax
+		xax
+		""
+^a.$	~	ax
+		aa
+	!~	xa
+		aaa
+		axy
+		""
+^$	~	""
+	!~	x
+		^
+^.a	~	xa
+		xaa
+	!~	a
+		""
+^.*a	~	a
+		xa
+		xxxxxxa
+	!~	""
+^.+a	~	xa
+		xxxxxxa
+	!~	""
+		a
+		ax
+a*	~	""
+		a
+		aaaa
+		xa
+		xxxx
+aa*	~	a
+		aaa
+		xa
+	!~	xxxx
+		""
+\$	~	x$
+		$
+		$x
+	!~	""
+		x
+\.	~	.
+	!~	x
+		""
+.^$	~	a^	-G
+	!~	""
+		a^$
+^x$	~	x	-G
+	!~	yx
+		xy
+a\$	~	a$	-G
+	!~	a
+\(ab\)$	~	cab	-G
+		ab
+	!~	ab$
+xr+y	~	xry	~E
+		xrry
+		xrrrrrry
+	!~	ry
+		xy
+xr?y	~	xy	~E
+		xry
+	!~	xrry
+a(bc|def)g	~	abcg	~E
+		adefg
+	!~	abc
+		abg
+		adef
+		adeg
+[0-9]	~	1
+		567
+		x0y
+	!~	abc
+		""
+[^0-9]	!~	1
+		567
+		""
+	~	abc
+		x0y
+x[0-9]+y	~	x0y	~E
+		x23y
+		x12345y
+	!~	0y
+		xy
+x[0-9]?y	~	xy	~E
+		x1y
+	!~	x23y
+X	~	x	-i
+read	~	read	-x
+	!~	xy read
+		x read y
+		xread
+		readx
+read	~	read	-xF
+	!~	xy read
+		x read y
+		xread
+		readx
+read	~	read	-F
+		xy read
+		x read y
+		xread
+		readx
+[.]de..	~	.dexx
+		.deyyy
+	!~	.de
+		.dex
+^|s	~	|sec	-G
+	!~	sec
+..B	~	CDAB	-G
+	!~	ABCD
+$.*tt.*\$	~	$tt$	-G
+^([a-z]+)\1$	~	vivi
+	!~	vivify
+([a-z]+)\1	~	vivi
+		vivify
+		revivi
+	!~	vovify
+		viv
+\(....\).*\1	~	beriberi	-G
+(....).*\1	~	beriberi
+^$	~	
+^$	~		-G
+[ab]\{2\}k	~	abk
+		xyaak
+		zabak
+	!~	zad
+		bq
+		abq
+[ab]\{2,\}d	~	abd
+		abababad
+	!~	ad
+		ababaq
+q[ab]\{2,4\}d	~	qabd
+		qababd
+		qaaad
+	!~	qad
+		qababad
+a[]]b	~	a]b	-E
+a[]]b	~	a]b	-G
+a[^]b]c	~	adc	-E
+a[^]b]c	~	adc	-G
+angel[^e]	~	angelo	-i
+	~	ANGELH
+	!~	angel
+		ANGEL
+		angele
+		ANGELE
+^[^-].*>	~	abc>	-G
+	!~	-a>
+^[A-Z]	~	abc	-i
+		ABC
+^[^A-Z]	!~	abc	-i
+		ABC
+	~	123
+|abc	~	|abc	-G
+	!~	abc
+\(ac*\)c*d[ac]*\1	~	acdacaaa	-G
+(ac*)c*d[ac]*\1	~	acdacaaa
+ram|am	~	am
+.|..	!~	abc	-x
+[a-za-za-za-za-za-za-za-za-za-z]	~	for this line	-E
+[a-za-za-za-za-za-za-za-za-za-z]	~	for this line
+[a-za-za-za-za-za-za-za-za-z]	~	but watch out	-E
+[a-za-za-za-za-za-za-za-za-z]	~	but watch out
+!!!
+cp regress.i ../temp
+sh < regress.i && rm regress.i
+echo "verified simple"

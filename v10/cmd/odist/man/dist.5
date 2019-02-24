@@ -1,0 +1,68 @@
+.TH DIST 5
+.SH NAME
+dist \(mi spool directory structure for
+.B dist
+.SH SYNOPSIS
+.ds sd /usr/spool/dist
+.B \*(sd/Q.*/
+.PP
+.B \*(sd/Q.*/ctl
+.PP
+.B \*(sd/Q.*/data
+.PP
+.B \*(sd/Q.*/files
+.PP
+.B \*(sd/Q.*/[1-9]*.busy
+.PP
+.B \*(sd/Q.*/[1-9]*.done
+.SH DESCRIPTION
+The
+.I dist
+spool directory contains distributions queued for transmission
+to remote systems, and is also used as the working directory when
+unpacking distributions received from remote systems.
+.PP
+Each job has its own subdirectory
+of the spool directory.  Several files with conventional names
+appear in this per-job directory, as well as files with
+generated names containing status information for each remote
+system in the job.
+.PP
+The files in a job's spool directory include:
+.TP
+.B ctl
+The control file contains a list of identifying numbers
+and remote system names.  The identifying number
+is used in file names containing status information for corresponding
+remote system, since network names may not be legal file names.
+The file contains a sequence of lines; each line contains
+an identifying number, a space, and the corresponding remote system name.
+.TP
+.B data
+The data file contains the output of
+.IR mkpkg (1)
+for the distribution.
+.TP
+.B files
+A list of file names specified in the command line
+that created the job.  This is mainly used as a key
+for superseding jobs:  if a new job is created that
+contains a superset of the files of some old
+job, the old job is marked as completed for all remote
+systems it has in common with the new job.
+.TP
+.B [1-9]*.busy
+An empty lock file indicating that the identified system
+is currently receiving the distribution.
+.TP
+.B [1-9]*.done
+Status file indicating that the identified system is
+finished with the distribution.  This file is empty
+if and only if the distribution was successfully installed;
+otherwise it contains any error messages from the remote
+system.
+.SH FILES
+.B \*(sd/*
+.SH "SEE ALSO"
+.IR dist (1),
+.IR dist (8)

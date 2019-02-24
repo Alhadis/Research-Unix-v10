@@ -1,0 +1,18 @@
+CFLAGS=-I.. -DKERNEL
+L=../lib/os.a
+FILES=\
+	$L(acct.x) $L(clock.x) $L(fio.x) $L(iget.x) $L(ioctl.x) \
+	$L(main.x) $L(mount.x) $L(nami.x) \
+	$L(prf.x) $L(rdwri.x) $L(rmap.x) $L(sig.x) $L(slp.x) \
+	$L(streamio.x) $L(subr.x) $L(sys1.x) $L(sys2.x) $L(sys3.x) \
+	$L(sys4.x) $L(sysent.x) $L(text.x) $L(trap.x) $L(trace.x)
+
+$L: $FILES
+	names=`membername $newprereq`
+	ar r $L $names && rm $names
+	ranlib $L
+$L(%):N: %
+%.x: %.c
+	cc $CFLAGS -S $stem.c
+	/lib/c2 <$stem.s | sed -f ../lib/asm.sed | as -o $stem.x
+	rm $stem.s

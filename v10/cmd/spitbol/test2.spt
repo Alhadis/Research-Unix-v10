@@ -1,0 +1,257 @@
+-TITLE  SPITBOL TEST PROGRAM #2 -- DIAGNOSTICS PHASE TWO
+-IN80
+*
+        OUTPUT  = 'TEST #2 '
+*
+*
+*   THIS IS THE STANDARD TEST PROGRAM FOR SPITBOL WHICH
+*   TESTS PATTERN MATCHING
+*
+        &ANCHOR = 0
+        &ANCHOR = 0
+        DEFINE('ERROR()')
+        &TRACE  = 1000
+        &ERRLIMIT = 100
+        TRACE(.ERRTYPE,'KEYWORD')
+        OUTPUT  = '**********************************************'
+        OUTPUT  = '**** SPITBOL DIAGNOSTICS -- PHASE TWO     ****'
+        OUTPUT  = '**********************************************'
+FLOOP   ERRCOUNT = 0
+        TEST    = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+*
+*   TEST PATTERN MATCHING AGAINST SIMPLE STRING
+*
+        TEST  'ABC'                                     :S(S01) ; ERROR()
+S01     TEST 'BCD'                                      :S(S02) ; ERROR()
+S02     TEST 'XYZ'                                      :S(S03) ; ERROR()
+S03     TEST 'ABD'                                      :F(S04) ; ERROR()
+S04     &ANCHOR = 1
+        TEST 'ABC'                                      :S(S05) ; ERROR()
+S05     TEST 'BCD'                                      :F(S06) ; ERROR()
+S06     TEST TEST                                       :S(S06A) ; ERROR()
+*
+*   TEST SIMPLE CASES OF $
+*
+S06A    TEST 'ABC' $ VAR                                :S(S07) ; ERROR()
+S07     IDENT(VAR,'ABC')                                :S(S08) ; ERROR()
+S08     TEST 'ABC' . VARD                               :S(S09) ; ERROR()
+S09     IDENT(VARD,'ABC')                               :S(S10) ; ERROR()
+*
+*   TEST LEN
+*
+S10     &ANCHOR = 0
+        TEST LEN(3) $ VARL                              :S(S11) ; ERROR()
+S11     IDENT(VARL,'ABC')                               :S(S12) ; ERROR()
+S12     TEST LEN(26) $ VARL                             :S(S13) ; ERROR()
+S13     IDENT(VARL,TEST)                                :S(S14) ; ERROR()
+S14     TEST LEN(27)                                    :F(S15) ; ERROR()
+*
+*   TEST TAB
+*
+S15     TEST TAB(3) $ VART                              :S(S16) ; ERROR()
+S16     IDENT(VART,'ABC')                               :S(S17) ; ERROR()
+S17     TEST TAB(26) $ VART                             :S(S18) ; ERROR()
+S18     IDENT(TEST,VART)                                :S(S19) ; ERROR()
+S19     TEST TAB(0) $ VART                              :S(S20) ; ERROR()
+S20     IDENT(VART)                                     :S(S21) ; ERROR()
+*
+*   TEST ARB
+*
+S21     TEST ARB $ VARA 'C'                             :S(S22) ; ERROR()
+S22     IDENT(VARA,'AB')                                :S(S23) ; ERROR()
+S23     &ANCHOR = 1
+        TEST ARB $ VARA POS(60)                         :F(S24) ; ERROR()
+S24     IDENT(VARA,TEST)                                :S(S25) ; ERROR()
+*
+*   TEST POS
+*
+S25     TEST ARB $ VARA POS(2) $ VARP                   :S(S26) ; ERROR()
+S26     (IDENT(VARA,'AB') IDENT(VARP))                  :S(S27) ; ERROR()
+S27     &ANCHOR = 0
+        TEST ARB $ VARA POS(26) $ VARP                  :S(S28) ; ERROR()
+S28     (IDENT(VARA,TEST) IDENT(VARP)) : S(S29) ; ERROR()
+S29     TEST ARB $ VARA POS(0) $ VARP                   :S(S30) ; ERROR()
+S30     IDENT(VARA VARP)                                :S(S31) ; ERROR()
+S31     TEST POS(0) ARB $ VARA POS(26)                  :S(S32) ; ERROR()
+S32     IDENT(TEST,VARA)                                :S(S33) ; ERROR()
+S33     TEST POS(2) ARB $ VARA POS(3)                   :S(S34) ; ERROR()
+S34     IDENT(VARA,'C')                                 :S(S35) ; ERROR()
+S35     TEST POS(27)                                    :F(S36) ; ERROR()
+*
+*   TEST RPOS
+*
+S36     TEST ARB $ VARA RPOS(25)                        :S(S37) ; ERROR()
+S37     IDENT(VARA,'A')                                 :S(S38) ; ERROR()
+S38     TEST ARB $ VARA RPOS(0)                         :S(S39) ; ERROR()
+S39     IDENT(TEST,VARA)                                :S(S39A) ; ERROR()
+S39A    TEST ARB $ VARA RPOS(26)                        :S(S40) ; ERROR()
+S40     IDENT(VARA)                                     :S(S41) ; ERROR()
+S41     TEST RPOS(27)                                   :F(S42) ; ERROR()
+*
+*   TEST RTAB
+*
+S42     TEST RTAB(26) $ VARA                            :S(S43) ; ERROR()
+S43     IDENT(VARA)                                     :S(S44) ; ERROR()
+S44     TEST RTAB(27)                                   :F(S45) ; ERROR()
+S45     TEST RTAB(0) $ VARA                             :S(S46) ; ERROR()
+S46     IDENT(VARA,TEST)                                :S(S47) ; ERROR()
+S47     TEST RTAB(25) $ VARA                            :S(S48) ; ERROR()
+S48     IDENT(VARA,'A')                                 :S(S49) ; ERROR()
+*
+*   TEST @
+*
+S49     TEST LEN(6) @VARA                               :S(S50) ; ERROR()
+S50     IDENT(VARA,6)                                   :S(S51) ; ERROR()
+S51     TEST @VARA                                      :S(S52) ; ERROR()
+S52     IDENT(VARA,0)                                   :S(S53) ; ERROR()
+S53     TEST LEN(26) @VARA                              :S(S54) ; ERROR()
+S54     IDENT(VARA,26)                                  :S(S55) ; ERROR()
+*
+*   TEST BREAK
+*
+S55     TEST BREAK('C') $ VARA                          :S(S56) ; ERROR()
+S56     IDENT(VARA,'AB')                                :S(S57) ; ERROR()
+S57     TEST BREAK('Z()') $ VARA                        :S(S58)     ; ERROR()
+S58     IDENT(VARA,'ABCDEFGHIJKLMNOPQRSTUVWXY')         :S(S59) ; ERROR()
+S59     TEST BREAK(',')                                 :F(S60) ; ERROR()
+S60     LPAD(TEST,1000) BREAK('A') $ VARA               :S(S61) ; ERROR()
+S61     IDENT(LPAD(' ',1000 - 26),VARA)                 :S(S62) ; ERROR()
+S62     LPAD(TEST,1000) BREAK(',')                      :F(S63) ; ERROR()
+*
+*   TEST SPAN
+*
+S63     TEST SPAN(TEST) $ VARA                          :S(S64) ; ERROR()
+S64     IDENT(TEST,VARA)                                :S(S65) ;ERROR()
+S65     TEST SPAN('CDQ') $ VARA                         :S(S66) ; ERROR()
+S66     IDENT(VARA,'CD')                                :S(S67) ; ERROR()
+S67     TEST SPAN(',')                                  :F(S68) ; ERROR()
+S68     LPAD(TEST,1000) SPAN(' ') $ VARA                :S(S69) ; ERROR()
+S69     IDENT(VARA,LPAD(' ',1000 - 26))                 :S(S70) ; ERROR()
+*
+*   TEST BREAKX
+*
+S70     (TEST TEST) POS(0) BREAKX('E') $ VARA '.'       :F(S71) ; ERROR()
+S71     IDENT(VARA,TEST 'ABCD')                         :S(S72) ; ERROR()
+S72     TEST BREAKX('.')                                :F(S73) ; ERROR()
+*
+*   TEST ANY
+*
+S73     TEST ANY('MXZ') $ VARA                          :S(S74) ; ERROR()
+S74     IDENT(VARA,'M')                                 :S(S75) ; ERROR()
+S75     TEST ANY(',.')                                  :F(S76) ; ERROR()
+*
+*   TEST NOTANY
+*
+S76     TEST NOTANY('ABCDEFGHJKLMPQRSTUWXYZ') $ VARA    :S(S77) ; ERROR()
+S77     IDENT(VARA,'I')                                 :S(S78) ; ERROR()
+S78     TEST NOTANY(TEST)                               :F(S79) ; ERROR()
+*
+*   TEST REM
+*
+S79     TEST REM $ VARA                                 :S(S80) ; ERROR()
+S80     IDENT(VARA,TEST)                                :S(S81) ; ERROR()
+S81     TEST LEN(26) REM $ VARA                         :S(S82) ; ERROR()
+S82     IDENT(VARA)                                     :S(S83) ; ERROR()
+*
+*   TEST ALTERNATION
+*
+S83     TEST ('ABD' | 'AB') $ VARA                      :S(D84) ; ERROR()
+D84     IDENT(VARA,'AB')                                :S(D85) ; ERROR()
+D85     TEST (TEST 'A' | TEST) $ VARL                   :S(D86) ; ERROR()
+D86     IDENT(VARL,TEST)                                :S(D00) ; ERROR()
+*
+*   TEST DEFERRED STRINGS
+*
+D00     TEST *'ABC'                                     :S(D01) ; ERROR()
+D01     TEST *'ABD'                                     :F(D06) ; ERROR()
+*
+*   TEST $ . WITH DEFERRED NAME ARGUMENTS
+*
+D06     TEST 'ABC' $ *VAR                               :S(D07) ; ERROR()
+D07     IDENT(VAR,'ABC')                                :S(D08) ; ERROR()
+D08     TEST 'ABC' . *$'VARD'                           :S(D09)  ; ERROR()
+D09     IDENT(VARD,'ABC')                               :S(D10) ; ERROR()
+*
+*   TEST LEN WITH DEFERRED ARGUMENT
+*
+D10     &ANCHOR = 0
+        TEST LEN(*3) $ VARL                             :S(D11) ; ERROR()
+D11     IDENT(VARL,'ABC')                               :S(D15) ; ERROR()
+*
+*   TEST TAB WITH DEFERRED ARGUMENT
+*
+D15     TEST TAB(*3) $ VART                             :S(D16) ; ERROR()
+D16     IDENT(VART,'ABC')                               :S(D21) ; ERROR()
+*
+*   TEST POS WITH DEFERRED ARGUMENT
+*
+D21     &ANCHOR = 1
+        TEST ARB $ VARA POS(*2) $ VARP                  :S(D26) ; ERROR()
+D26     (IDENT(VARA,'AB') IDENT(VARP))                  :S(D27) ; ERROR()
+D27     &ANCHOR = 0
+        TEST ARB $ VARA POS(*0) $ VARP                  :S(D35) ; ERROR()
+D35     IDENT(VARA VARP)                                :S(D36) ; ERROR()
+*
+*   TEST RPOS WITH DEFERRED ARGUMENT
+*
+D36     TEST ARB $ VARA RPOS(*25)                       :S(D37) ; ERROR()
+D37     IDENT(VARA,'A')                                 :S(D38) ; ERROR()
+*
+*   TEST RTAB WITH DEFERRED ARGUMENT
+*
+D38     TEST RTAB(*26) $ VARA                           :S(D43) ; ERROR()
+D43     IDENT(VARA)                                     :S(D49) ; ERROR()
+*
+*   TEST @ WITH DEFERRED ARGUMENT
+*
+D49     TEST LEN(6) @*VARA                              :S(D50) ; ERROR()
+D50     IDENT(VARA,6)                                   :S(D51) ; ERROR()
+D51     TEST @*$'VARA'                                  :S(D52) ; ERROR()
+D52     IDENT(VARA,0)                                   :S(D55) ; ERROR()
+*
+*   TEST BREAK WITH DEFERRED ARGUMENT
+*
+D55     TEST BREAK(*'C') $ VARA                         :S(D56) ; ERROR()
+D56     IDENT(VARA,'AB')                                :S(D57) ; ERROR()
+*
+*   TEST SPAN WITH DEFERRED ARGUMENT
+*
+D57     TEST SPAN(*TEST) $ VARA                         :S(D64) ; ERROR()
+D64     IDENT(TEST,VARA)                                :S(D70) ; ERROR()
+*
+*   TEST BREAKX WITH DEFERRED ARGUMENT
+*
+D70     (TEST TEST) POS(*0) BREAKX(*'E') $ VARA '.'     :F(D71) ; ERROR()
+D71     IDENT(VARA,TEST 'ABCD')                         :S(D73) ; ERROR()
+*
+*   TEST ANY WITH DEFERRED ARGUMENT
+*
+D73     TEST ANY(*'MXZ') $ VARA                         :S(D74) ; ERROR()
+D74     IDENT(VARA,'M')                                 :S(D75) ; ERROR()
+*
+*   TEST NOTANY WITH DEFERRED ARGUMENT
+*
+D75     TEST NOTANY(*'ABCDEFGHJKLMPQRSTUWXYZ') $ VARA   :S(D77)
+        ERROR()
+D77     IDENT(VARA,'I')                                 :S(D79) ; ERROR()
+D79                                                     :(ALLDONE)
+        EJECT
+*
+*   ERROR HANDLING ROUTINE
+*
+ERROR   OUTPUT  = '****** ERROR DETECTED AT ' &LASTNO ' ********'
+        OUTPUT  = DIFFER(&ERRTEXT) '      &ERRTEXT = ' &ERRTEXT
+        ERRCOUNT = ERRCOUNT + 1
+        DUMP(1)                                         :(RETURN)
+*
+*   TERMINATION ROUTINE
+*
+ALLDONE
+        ERRCOUNT = ERRCOUNT + &ERRLIMIT - 100
+        &ERRLIMIT = 100
+        OUTPUT  = EQ(ERRCOUNT,0)
+.           '****           NO ERRORS DETECTED         ****'
+        OUTPUT  = '**********************************************'
+        OUTPUT  = '****           END OF DIAGNOSTICS         ****'
+        OUTPUT  = '**********************************************'
+END

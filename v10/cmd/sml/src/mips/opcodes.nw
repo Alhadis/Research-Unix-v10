@@ -1,0 +1,747 @@
+\chapter{Handling the MIPS opcodes}
+\section{Introduction}
+
+This file generates the code necessary to handle MIPS instructions
+in a natural, mnemonic way from within ML.
+All MIPS instructions occupy 32 bits, and since ML has no simple
+32~bit data type, we use pairs of integerss to represent MIPS instructions.
+A pair [[(hi,lo)]] of 16-bit integers holds the most and least significant
+halfwords of the MIPS word.
+ML integers are 31 bits, so this is more than adequate.
+
+The biggest hassle in converting between these integer pairs and more
+mnemonic representations is that it is too easy to make mistakes
+(especially typographical errors) in writing the code.
+For that reason, I have added an extra level of indirection to the
+whole business by putting all of the instruction descriptions in
+tables.
+These tables are read by an awk script, which writes two ML files:
+{\tt opcodes.sml} and {\tt mipsdecode.sml}.
+The {\tt opcodes.sml} file contains the code needed to convert from
+a mnemonic like [[add(3,4,9)]] (add the contents of register~3 to
+the contents of register~4, placing the result in register~9) to 
+the integer pair representation of the actual bits in that add instruction
+(in this case [[(137,6176)]]).
+The {\tt mipsdecode.sml} file contains a [[decode]] function that converts
+from the integer pair representation of instructions to a string
+representation.
+The string representation is a little hokey at the moment (that is,
+it's different from the one used in the MIPS book), but it represents
+a nice compromise between being readable and easy to generate.
+
+I have contemplating generating a third file to test the whole
+business.
+The idea would be to have a function that would write out (to files)
+two
+parallel representations of the same instruction stream (presumably
+one copy of each known instruction).
+One representation would be the binary one understood by the MIPS.
+The other representation would be a string representation.
+We could then use a tool like {\tt gdb} or {\tt adb} to print out
+the binary as an instruction sequence (i.e. convert back to
+a second string representation) and compare the string representations
+to see if they make sense.
+
+\paragraph{Possible bugs}
+This code should be gone over with care to make sure that negative
+operands (e.g. in [[offset]]) won't break the code.
+
+
+@
+We need a special line in the Makefile to handle this file, since
+it writes both an awk program and that program's input.  The input
+is in module {\tt @<<opcodes table@>>} so the line is
+$$\hbox{[[	$(NOTANGLE) '-Ropcodes table' opcodes.ow > opcodes]]}$$
+The input is nothing but a sequence of tables, each labelled, and
+processed one after anothing according to the label.
+The label is always a single word on a line by itself.
+Tables end with blank lines.
+@ The opcode-to-pair code is written to the standard output, in 
+[[structure Opcodes]].
+The pair-to-string code is written to [["mipsdecode.sml"]], in
+[[structure MipsDecode]].
+
+We begin by defining and and shift functions.
+We make pessimistic assumptions about shifting, trying always to
+keep the arguments between 0 and 31 inclusive.
+<<BEGIN>>=
+print "structure Opcodes = struct"
+print "val andb = Bits.andb"
+print "fun lshift(op1,amt) = "
+print "    if amt<0 then Bits.rshift(op1,0-amt)"
+print "    else Bits.lshift(op1,amt)"
+print "nonfix sub"	# bug fixes; want [[sub]] to be a MIPS opcode
+print "nonfix div"	# bug fixes; want [[div]] to be a MIPS opcode
+
+decode = "mipsdecode.sml";
+print "structure MipsDecode = struct" > decode
+print "val andb = Bits.andb" > decode
+print "fun rshift(op1,amt) = " > decode
+print "    if amt<0 then Bits.lshift(op1,0-amt)" > decode
+print "    else Bits.rshift(op1,amt)" > decode
+<<END>>=
+<<write out the definitions of the decoding functions>>
+print "end (* Opcodes *)"
+print "end (* Decode *)" > decode
+@ The sections BEGIN and END are drawn from 
+ our universal model of an awk program:
+<<*>>=
+BEGIN {
+  <<BEGIN>>
+}
+<<functions>>
+<<statements>>
+END {
+  <<END>>
+}
+@ \section{The opcode tables}
+The numeric codes for all the MIPS opcodes are described in three
+tables in the MIPS book on page~A-87.
+Normal opcodes are six bits, and appear in the [[opcode]] field of the
+instruction.
+Two opcodes [[special]] and [[bcond]] stand for several instructions.
+These instructions are decoded by checking the bit-pattern in the
+[[funct]] and [[cond]] fields of the instructions, respectively.
+
+The tables show which opcodes correspond to which bit-patterns.
+For example, the [[slti]] corresponds to an [[opcode]] value of octal~12.
+The table headed [[opcode]] gives the mnemonics for all six-bit patterns
+in the [[opcode]] field.
+The [[special]] table shows patterns for the [[funct]] field, used with
+the [[special]] opcode.
+The [[bcond]] table shows five-bit patterns for the [[cond]] field,
+used with the [[bcond]] opcode.
+In all tables, stars ([[*]]) stand for unused fields.
+
+Each table is terminated with a blank line.
+<<opcodes table>>=
+			    opcode
+special	bcond	j	jal	beq	bne	blez	bgtz
+addi	addiu	slti	sltiu	andi	ori	xori	lui
+cop0	cop1	cop2	cop3	*	*	*	*
+*	*	*	*	*	*	*	*
+lb	lh	lwl	lw	lbu	lhu	lwr	*
+sb	sh	swl	sw	*	*	swr	*
+lwc0	lwc1	lwc2	lwc3	*	*	*	*
+swc0	swc1	swc2	swc3	*	*	*	*
+
+			    special
+sll	*	srl	sra	sllv	*	srlv	srav
+jr	jalr	*	*	syscall	break	*	*
+mfhi	mthi	mflo	mtlo	*	*	*	*
+mult	multu	div	divu	*	*	*	*
+add	addu	sub	subu	and'	or	xor	nor
+*	*	slt	sltu	*	*	*	*
+*	*	*	*	*	*	*	*
+*	*	*	*	*	*	*	*
+
+			    bcond
+bltz	bgez	*	*	*	*	*	*
+*	*	*	*	*	*	*	*
+bltzal	bgezal	*	*	*	*	*	*
+*	*	*	*	*	*	*	*
+
+
+@ The instructions codes for Coprocessor 1 (floating point)
+are takin from page B-28 of the Mips book.
+<<opcodes table>>=
+			    cop1
+add_fmt	sub_fmt	mul_fmt	div_fmt	*	abs_fmt	mov_fmt	neg_fmt
+*	*	*	*	*	*	*	*
+*	*	*	*	*	*	*	*
+*	*	*	*	*	*	*	*
+cvt_s	cvt_d	*	*	cvt_w	*	*	*
+*	*	*	*	*	*	*	*
+c_f	c_un	c_eq	c_ueq	c_olt	c_ult	c_ole	c_ule
+c_sf	c_ngle	c_seq	c_ngl	c_lt	c_nge	c_le	c_ngt
+
+@
+Now we have to deal with reading these tables, and extracting the
+information stored therein.
+First of all, for each mnemonic [[$i]] we store the corresponding bit
+pattern (as an integer, [[code]]) in the array [[numberof[$i] ]].
+Then, we store the type of the mnemonic (ordinary [[OPCODE]], 
+[[SPECIAL]], [[BCOND]], of [[COP1]]) in the array [[typeof[$i] ]].
+Finally, we store inverse (a map from type and bit pattern to mnemonic)
+in the [[opcode]] array.
+<<store opcode information>>=
+if ($i != "*") {
+	numberof[$i] = code
+	typeof[$i] = type
+	opcode[type,code] = $i
+} else {
+	opcode[type,code] = "reserved"
+}
+@ The types are just constants set at the beginning.
+<<BEGIN>>=
+OPCODE = 1 ; SPECIAL = 2 ; BCOND = 3 ; COP1 = 4
+@ We determine the type by scanning the header word that precedes
+each table.
+Once we see the appropriate table header, we set one of [[opcodes]],
+[[specials]], and [[bconds]], so that determining the type is easy:
+<<set [[type]]>>=
+type = OPCODE * opcodes + SPECIAL * specials + BCOND * bconds + COP1 * cop1s
+@ Seeing the right table header causes us to set the right variable.
+We also remember the line number, because we use the positions of later
+lines to help extract the bit patterns from the table.
+<<statements>>=
+NF == 1 && $1 == "opcode" {
+	startline = NR
+	opcodes = 1
+	next
+}
+NF == 1 && $1 == "special" {
+	startline = NR
+	specials = 1
+	next
+}
+NF == 1 && $1 == "bcond" {
+	startline = NR
+	bconds = 1
+	next
+}
+NF == 1 && $1 == "cop1" {
+	startline = NR
+	cop1s = 1
+	next
+}
+@ Any time we see a blank line, that ends the appropriate table.
+<<statements>>=
+NF == 0 {opcodes = 0; specials = 0; bconds = 0; cop1s = 0
+	<<blank line resets>>
+}
+@ Here is the code that actually extracts the bit patterns from
+the opcode tables.
+The code is the same for each of the three tables.
+
+The [[insist_fields(8)]] issues an error message and returns false (0)
+unless there are exactly 8 fields on the input line.
+<<statements>>=
+opcodes || specials || bconds || cop1s {
+	if (!insist_fields(8)) next
+	<<set [[type]]>>
+	major = NR - startline - 1		# major octal digit from row
+	for (i=1; i<= NF; i++) {
+		minor = i-1			# minor octal digit from column
+		code = minor + 8 * major
+		<<store opcode information>>
+	}
+}
+@ \section{The instruction fields}
+Now that we've dealt with the opcodes, we'll handle other fields of
+the instruction.
+This table tells us the position of each field within the word,
+so that if we know a bit-pattern for each field, we can assemble
+all the fields into an instruction.
+
+Not all fields are used in all instructions.
+Later we'll have a table that indicates exactly which fields are used in
+which instructions.
+For now, we just list the fields and their positions with the
+understanding that some fields will overlap.
+
+The table is taken from the MIPS book, page A-3.
+The numbers are the numbers of the starting and ending bit positions,
+where 0 is the least and 31 the most significant bit.
+The names are exactly those used in the book except [[op']] has been
+substituted for [[op]] since [[op]] is a reserved word in ML.
+
+If a field is signed, we put a [[+]]~sign as the first character
+of its name.
+The sign information is used only in decoding (I think).
+<<opcodes table>>=
+			fields
+op' 26 31
+rs 21 25
+rt 16 20
++immed 0 15
++offset 0 15
+base 21 25
+target 0 25
+rd 11 15
+shamt 6 10
+funct 0 5
+cond 16 20
+<<floating point load/store fields>>
+<<floating point computation fields>>
+
+@ From page B-5.  Most fields are the same as the CPU instruction formats.
+<<floating point load/store fields>>=
+ft 16 20
+@ From page B-6.  Many fields are reused from earlier specifications.
+The computational instructions all have a one bit in position 25.
+Instead of trying to insert special code to handle that, we cheat on
+it by making that bit part of the format, and cheating on the format.
+Thus:
+<<floating point computation fields>>=
+fmt 21 25
+fs 11 15
+fd 6 10
+<<write format info>>=
+print "val S_fmt = 16+0"
+print "val D_fmt = 16+1"
+print "val W_fmt = 16+4"
+
+@ The setup for the fields is similar to that used for the opcodes.
+<<statements>>=
+NF == 1 && $1 == "fields" {
+	startline = NR
+	fields = 1
+	<<write format info>>
+	next
+}
+<<blank line resets>>=
+fields = 0
+<<statements>>=
+fields {
+	if (!insist_fields(3)) next
+	fieldname = $1;  low = $2; high = $3
+	<<look for sign in [[fieldname]] and set [[signed]]>>
+	fieldnames[fieldname]= 1	# rememeber all the field names
+
+	<<write to standard output a function to convert bit-pattern to pair>>
+	<<write to [[decode]] a function to extract field from pair>>
+
+}
+<<look for sign in [[fieldname]] and set [[signed]]>>=
+if (substr(fieldname,1,1)=="+") {
+	signed = 1
+	fieldname = substr(fieldname,2)
+} else {
+	signed = 0
+}
+@
+The idea is that for each of these fields, we want to write a function
+that will take an integer argument and shift it by the right amount.
+Since we have to represent the 32-bit quantities as pairs of integers,
+we actually use two functions, one for the high half and one for the low.
+So, for example, for the [[rd]] field we will produce two function definitions,
+[[rdHI]] and [[rdLO]].
+
+The awk function [[function_definition]] is used to compute ML function
+definitions.
+It takes as arguments the name of the function and the number of arguments
+to that function.
+The arguments are numbered [[A1]], [[A2]], et cetera.
+
+The functions themselves are all tedious combinations of ands and shifts.
+At one time I had convinced myself that this worked.
+<<write to standard output a function to convert bit-pattern to pair>>=
+if (low >= 16) {
+	printf "%s", function_definition(fieldname "LO",1); print "0"
+} else {
+	printf "%s", function_definition(fieldname "LO",1)
+        printf "andb(lshift(A1,%d),65535)\n", low
+}
+if (high < 16) {
+	printf "%s", function_definition(fieldname "HI",1); print "0"
+} else {
+	printf "%s", function_definition(fieldname "HI",1)
+        printf "lshift(A1,%s)\n", mlnumber(low - 16)
+}
+@ The inverse operation is
+to extract a bit pattern from a pair.
+We'll want that if we ever care to decode instructions.
+This time, the function to extract e.g.\ field [[rd]] from a pair
+is the function [[THErd]] applied to that pair.
+
+The functions work first by extracting from the low part, then
+from the high part, and adding everything together.
+If the field is signed, we make the value negative if it is too high.
+<<write to [[decode]] a function to extract field from pair>>=
+printf "%s", function_definition("THE" fieldname,2) > decode
+if (signed) printf "let val n = " > decode
+<<print expression for unsigned value>>
+if (signed) {
+	printf "in if n < %d then n else n - %d\nend\n",
+		2**(high-low), 2**(high-low+1) > decode
+}
+
+<<print expression for unsigned value>>=
+if (low >= 16) {
+	printf "0" > decode
+} else {
+        printf "andb(rshift(A2,%d),%d)", low,
+			(2**(min(15,high)-low+1)-1) > decode
+}
+printf " + " > decode
+if (high < 16) {
+	printf "0\n" > decode
+} else {
+        printf "rshift(andb(A1,%d),%s)\n", (2**(high-16+1)-1),
+			mlnumber(low - 16) > decode
+}
+@ ML uses a strange minus sign ([[~]] instead of [[-]]), 
+so we print numbers that might be negative like this:
+<<functions>>=
+function mlnumber(n, s) {
+	if (n<0) s = sprintf("~%d", -n)
+	else s = sprintf("%d", n)
+	return s
+}
+@ For reasons best known to its designers, awk has no [[min]] function.
+<<functions>>=
+function min(x,y){
+	if (x<y) return x
+	else return y
+}
+@ \section{The list of instructions and their formats}
+This is the section that tells which fields are used in what instructions,
+and in what order the fields appear.
+The information is from Appendix A
+of the MIPS book and should be proofread.
+
+To cut down on the number of ML functions generated, we can comment out
+instructions with a [[#]] in the first column.
+This means that no code will be generated for the instruction, and
+it won't appear in the [[structure Opcodes]].
+<<opcodes table>>=
+			instructions
+add rd rs rt
+addi rt rs immed
+addiu rt rs immed
+addu rd rs rt
+and' rd rs rt
+andi rt rs immed
+beq rs rt offset
+bgez rs offset
+bgezal rs offset
+bgtz rs offset
+blez rs offset
+bltz rs offset
+bltzal rs offset
+bne rs rt offset
+break
+div rs rt
+divu rs rt
+j target
+jal target
+jalr rs rd
+jr rs
+lb rt offset base
+lbu rt offset base
+lh rt offset base
+lb rt offset base
+lhu rt offset base
+lui rt immed
+lw rt offset base
+lwl rt offset base
+lwr rt offset base
+mfhi rd
+mflo rd
+mthi rs
+mtlo rs
+mult rs rt
+multu rs rt
+nor rd rs rt
+or rd rs rt
+ori rt rs immed
+sb rt offset base
+sh rt offset base
+sll rd rt shamt
+sllv rd rt rs
+slt rd rs rt
+slti rt rs immed
+sltiu rt rs immed
+sltu rd rs rt
+sra rd rt shamt
+srav rd rt rs
+srl rd rt shamt
+srlv rd rt rs
+sub rd rs rt
+subu rd rs rt
+sw rt offset base
+swl rt offset base
+swr rt offset base
+syscall
+xor rd rs rt
+xori rt rs immed
+<<floating point instructions>>
+
+
+@ We define only those floating point instructions we seem likely to need.
+To distinguish them as floating point we append an f to their names.
+<<floating point instructions>>=
+add_fmt fmt fd fs ft
+div_fmt fmt fd fs ft
+lwc1 ft offset base
+mul_fmt fmt fd fs ft
+neg_fmt fmt fd fs
+sub_fmt fmt fd fs ft
+swc1 ft offset base
+c_seq fmt fs ft
+c_lt fmt fs ft
+@
+ Here is a terrible hack to enable us to construct branch on coprocessor~1
+true or false.
+We will use [[fun bc1f offset = cop1(0,offset)]] and
+	[[fun bc1t offset = cop1(1,offset)]].
+<<floating point instructions>>=
+cop1 rs rt offset
+@
+
+
+@ For each instruction, we define an ML function with the appropriate
+number of arguments.
+When that function is given an integer in each argument,
+it converts the whole thing to one MIPS instruction, represented as an
+integer pair.
+
+The implementation is a bit of a grubby mess.
+Doing the fields is straightforward enough, but
+for each mnemonic we have to do something different based
+on its type, because each type of opcode goes in a different
+field.
+Moreover, for mnemonics of type [[SPECIAL]], [[BCOND]], and [[COP1]] we
+have to generate [[special]], [[bcond]], and [[cop1]] in the [[op']] field.
+Finally, we have to do it all twice; once for the high order
+halfword and once for the low order halfword.
+<<compute function that generates this instruction>>=
+	printf "%s", function_definition(opname, NF-1)
+	printf "("	# open parenthesis for pair
+	for (i=2; i<= NF; i++) {
+		if (!($i in fieldnames)) <<bad field name>>
+		printf "%sHI(A%d)+", $i, i-1
+	}
+	if (typeof[opname]==OPCODE) {
+		printf "op'HI(%d)", numberof[opname]
+	} else if (typeof[opname]==SPECIAL) {
+		printf "op'HI(%d)+", numberof["special"]
+		printf "functHI(%d)", numberof[opname]
+	} else if (typeof[opname]==BCOND) {
+		printf "op'HI(%d)+", numberof["bcond"]
+		printf "condHI(%d)", numberof[opname]
+	} else if (typeof[opname]==COP1) {
+		printf "op'HI(%d)+", numberof["cop1"]
+		printf "functHI(%d)", numberof[opname]
+	} else <<bad operator name>>
+	printf ", "
+	for (i=2; i<= NF; i++) {
+		if (!($i in fieldnames)) <<bad field name>>
+		printf "%sLO(A%d)+", $i, i-1
+	}
+	if (typeof[opname]==OPCODE) {
+		printf "op'LO(%d)", numberof[opname]
+	} else if (typeof[opname]==SPECIAL) {
+		printf "op'LO(%d)+", numberof["special"]
+		printf "functLO(%d)", numberof[opname]
+	} else if (typeof[opname]==BCOND) {
+		printf "op'LO(%d)+", numberof["bcond"]
+		printf "condLO(%d)", numberof[opname]
+	} else if (typeof[opname]==COP1) {
+		printf "op'LO(%d)+", numberof["cop1"]
+		printf "functLO(%d)", numberof[opname]
+	} else <<bad operator name>>
+	printf ")\n"
+@
+Setup is as before.
+<<statements>>=
+NF == 1 && $1 == "instructions" {
+	startline = NR
+	instructions = 1
+	next
+}
+<<blank line resets>>=
+instructions= 0
+<<statements>>=
+instructions && $0 !~ /^#/ {
+	opname = $1
+
+	<<compute string displayed when this instruction is decoded>>
+########	gsub("[^a-z']+"," ")   ### ill-advised
+
+	<<compute function that generates this instruction>>
+}
+
+@ \paragraph{Decoding instructions}
+When we've decoded an instruction, we have to display some sort of
+string representation that tells us what the instruction is.
+Ideally we should display either just what the assembler expects,
+or perhaps just what dbx displays when asked about actual instructions
+in memory images.
+
+For now, we just give the mnemonic for the instruction, followed
+by a description of each field (followed by a newline).
+The fields are described as name-value pairs.
+
+We rely on the fact that for a field e.g.\ [[rd]], the string
+representation of the value of that field is in [[Srd]].
+<<compute string displayed when this instruction is decoded>>=
+temp = "\"" opname " \""
+for (i=2; i<=NF; i++) {
+	temp = sprintf( "%s ^ \"%s = \" ^ S%s", temp, $i, $i)
+	if (i<NF) temp = sprintf("%s ^ \",\" ", temp)
+}
+displayof[opname]=temp " ^ \"\\n\""
+
+@ The implementation of the decoding function is split into several parts.
+First, we have to be able to extract any field from an instruction.
+Then, we have to be able to decode four kinds of opcodes:
+[[OPCODE]]s, [[BCOND]]s,  [[SPECIAL]]s, and [[COP1]]s.
+The main function is the one that does ordinary opcodes.
+The others are auxiliary.
+<<write out the definitions of the decoding functions>>=
+printf "%s", function_definition("decode",2) > decode
+print "let" > decode
+  <<write definitions of integer and string representations of each field>>
+  <<write expression that decodes the [[funct]] field for [[special]]s>>
+  <<write expression that decodes the [[cond]] field for [[bcond]]s>>
+  <<write expression that decodes the [[funct]] field for [[cop1]]s>>
+print "in" > decode
+  <<write [[case]] expression that decodes the [[op']] field for each instruction>>
+print "end" > decode
+@ We give each field its own name for an integer version, and its name
+preceded by [[S]] for its string version.
+These values are all computed just once, from the arguments to the
+enclosing function ([[decode]]).
+<<write definitions of integer and string representations of each field>>=
+for (f in fieldnames) {
+	printf "val %s = THE%s(A1,A2)\n", f, f  > decode
+	printf "val S%s = Integer.makestring %s\n", f, f  > decode
+}
+@ The next three functions are very much of a piece.
+They are just enormous [[case]] expressions that match up integers
+(bit patterns) to strings.
+The fundamental operation is printing out a decimal value and a string
+for each opcode:
+<<if [[name]] is known, display a case for it>>=
+if (name != ""  && name != "reserved") {
+	<<print space or bar ([[|]])>>
+	disp = displayof[name]
+	if (disp=="") disp="\"" name "(??? unknown format???)\\n\""
+	printf "%d => %s\n", code, disp > decode
+}
+@ Cases must be separated by vertical bars.
+We do the separation by putting a vertical bar before each case except
+the first.
+We use a hack to discover the first; we assume that code~0 is always
+defined, and so it will always be the first.
+<<print space or bar ([[|]])>>=
+if (code!=0) printf " | "  > decode # hack but it works
+else printf "   " > decode
+<<write expression that decodes the [[funct]] field for [[special]]s>>=
+print "val do_special ="  > decode
+print "(case funct of" > decode
+for (code=0; code<256; code++) {
+	name = opcode[SPECIAL,code]
+	<<if [[name]] is known, display a case for it>>
+}
+printf " | _ => \"unknown special\\n\"\n" > decode
+print "   ) " > decode
+<<write expression that decodes the [[cond]] field for [[bcond]]s>>=
+print "val do_bcond =" > decode
+print "(case cond of" > decode
+for (code=0; code<256; code++) {
+	name = opcode[BCOND,code]
+	<<if [[name]] is known, display a case for it>>
+}
+printf " | _ => \"unknown bcond\\n\"\n" > decode
+print "   ) " > decode
+<<write expression that decodes the [[funct]] field for [[cop1]]s>>=
+print "val do_cop1 =" > decode
+print "(case funct of" > decode
+for (code=0; code<256; code++) {
+	name = opcode[COP1,code]
+	<<if [[name]] is known, display a case for it>>
+}
+printf " | _ => \"unknown cop1\\n\"\n" > decode
+print "   ) " > decode
+@ The major expression is a little more complicated, because it has to
+check for [[special]], [[bcond]], and [[cop1]] and handle those separately.
+<<write [[case]] expression that decodes the [[op']] field for each instruction>>=
+print "(case op' of" > decode
+for (code=0; code<256; code++) {
+	name = opcode[OPCODE,code]
+	if (name=="special") {
+		<<print space or bar ([[|]])>>
+		printf "%d => %s\n", code, "do_special" > decode
+	} else if (name=="bcond") {
+		<<print space or bar ([[|]])>>
+		printf "%d => %s\n", code, "do_bcond" > decode
+	} else if (name=="cop1") {
+		<<print space or bar ([[|]])>>
+		printf "%d => %s\n", code, "do_cop1" > decode
+	} else <<if [[name]] is known, display a case for it>>
+}
+printf " | _ => \"unknown opcode\\n\"\n" > decode
+print "   ) " > decode
+@ \section{testing}
+One day someone will have to modify the instruction handler so that
+it generates a test invocation of each instruction.
+Then the results can be handed to something like adb or dbx and we can
+see whether the system agrees with us about what we're generating.
+
+@ \section{Defining ML functions}
+The awk function [[function_definition]] is used to
+come up with ML function definitions.
+It takes as arguments the name of the function and the number of arguments
+to that function, and returns a string containing the initial part of
+the function definition.
+Writing an expression following that string will result in a complete
+ML function.
+
+If we ever wanted to define these things as C preprocessor macros instead,
+we could do it by substituting [[macro_definition]].
+I'm not sure it would ever make sense to do so, but I'm leaving the
+code here anyway.
+<<functions>>=
+function function_definition(name, argc,  i, temp) {
+	if (argc==0) {
+		temp = sprintf("val %s = ", name)
+	} else {
+		temp = sprintf( "fun %s(", name)
+		for (i=1; i< argc; i++) temp = sprintf("%sA%d,", temp,i)
+		temp = sprintf( "%sA%d) = ", temp, argc)
+	}
+	return temp
+}
+<<useless functions>>=
+function macro_definition(name, argc,  i, temp) {
+	if (argc==0) {
+		temp = sprintf("#define %s ", name)
+	} else {
+		temp = sprintf( "#define %s(", name)
+		for (i=1; i< argc; i++) temp = sprintf("%sA%d,", temp,i)
+		temp = sprintf( "%sA%d) ", temp, argc)
+	}
+	return temp
+}
+@ \section{Handling error conditions}
+Here are a bunch of uninteresting functions and modules
+that handle error conditions.
+<<bad operator name>>=
+{
+	print "unknown opcode", opname, "on line", NR > stderr
+	next
+}
+<<bad field name>>=
+{
+	print "unknown field", $i, "on line", NR > stderr
+	next
+}
+<<BEGIN>>=
+stderr="/dev/tty"
+<<functions>>=
+function insist_fields(n) {
+	if (NF != n) {
+		print "Must have", n, "fields on line",NR ":", $0 > stderr
+		return 0
+	} else {
+		return 1
+	}
+}
+@ \section{Leftover junk}
+Like a pack rat, I never throw out anything that might be useful again later.
+<<junk>>=
+function thetype(n) {
+	if (n==OPCODE) return "OPCODE"
+	else if (n==SPECIAL) return "SPECIAL"
+	else if (n==BCOND) return "BCOND"
+	else if (n==COP1) return "COP1"
+	else return "BADTYPE"
+}
+<<decoding junk>>=
+for (f in fieldnames) {
+	printf "^ \"\\n%s = \" ^ Integer.makestring %s\n",f,f > decode
+}
+printf "^\"\\n\"\n" > decode

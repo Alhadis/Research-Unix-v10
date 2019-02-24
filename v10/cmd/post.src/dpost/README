@@ -1,0 +1,34 @@
+
+Troff to PostScript translator. The big change is in the font table
+routines. The old binary format and makedev are gone. Troff and dpost
+now both read ASCII tables. Translating the ASCII font tables in dpost
+(and troff) means some startup overhead. Both programs run a bit slower,
+but it's a small price to pay for the added flexibility.
+
+Long PostScript font names can now be included in the font tables.
+They should follow the fontname keyword as in,
+
+	fontname Times-Roman
+
+The fontname field helps with the DocumentFonts comment, font name
+abbreviations (formally required to be in the prologue), and is used
+to manage host resident fonts.
+
+dpost can also now calculate a reasonably tight BoundingBox, which
+helps picture inclusion. By default the calculations are disabled.
+Use the -B option when you BoundingBox and PageBoundingBox comments.
+If you're stubborn and always want the comment set dobbox (in file
+dpost.c) to TRUE. You'll still need -B to get the the best fit.
+
+Most other changes are bug fixes. Color support has been improved,
+and now works with the drawing routines. The different text encoding
+schemes are all still in. Level 2 is well tested and is now the default.
+For a different default change DFLTENCODING (file dpost.h). Don't make
+level 3 the default unless you can live with ragged right margins.
+
+A typical command line would be,
+
+    pic file | tbl | eqn | troff -mm | dpost >file.ps
+
+file.ps is PostScript and can be sent directly to a printer.
+

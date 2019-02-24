@@ -1,0 +1,39 @@
+OBJDKCC =	dkcc.o dkcanon.o dkxenviron.o dkxstdio.o dkxwrite.o maphost.o
+OBJDIR =	curdir.o
+OBJPUPU =	pupu.o pupucommon.o dk.o pull.o push.o vsprintf.o
+CFLAGS =	-O
+LIBS =		-lipc
+DEST =		/usr/bin
+PUPU = 		/usr/lib/pupu
+
+ALL:V:	dkcc pupu
+
+dkcc:	$OBJDKCC
+	cc $CFLAGS $OBJDKCC $LIBS -o dkcc
+
+pupu:	$OBJDIR $OBJPUPU
+	cc $CFLAGS $OBJPUPU $OBJDIR $LIBS -o pupu
+
+clean:
+	rm -f *.o pupu dkcc
+
+install:	ALL
+	rm -f $DEST/dkcc $DEST/npush $DEST/npull $PUPU
+	cp dkcc $DEST
+	cp pupu $PUPU
+	strip $DEST/dkcc $PUPU
+	ln $PUPU $DEST/npush
+	ln $DEST/npush $DEST/npull
+	/etc/chown bin,bin $DEST/dkcc $PUPU
+	chmod 775 $DEST/dkcc $PUPU
+
+
+dkcc.o:	sysexits.h
+dkxstdio.o:	remfio.h
+dkxstdio.o:	sysexits.h
+dkxstdio.o:	Vtermio.h
+dkxwrite.o:	remfio.h
+dkxwrite.o:	sysexits.h
+pupu.o:	tdefs.h
+pupucommon.o:	pupu.h
+push.o:	pupu.h

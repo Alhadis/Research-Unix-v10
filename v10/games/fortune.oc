@@ -1,0 +1,33 @@
+#include <stdio.h>
+
+char line[500];
+char bline[500];
+
+main(argc, argv)
+char *argv[];
+{
+	register char * l;
+	int i;
+	long time();
+	FILE *f;
+
+	l = "/usr/games/lib/fortunes";
+	if(argc > 1) {
+		l = argv[1];
+	}
+	f = strcmp(l, "-")? fopen(l, "r") : stdin;
+	if (f == NULL) {
+		printf("Memory fault -- core dumped\n");
+		exit(1);
+	}
+	srand((int)time(0));
+	for(i=1;; i++) {
+		l = fgets(line, 500, f);
+		if(l == NULL)
+			break;
+		if(nrand(i) == 0)
+			strcpy(bline, line);
+	}
+	fputs(bline, stdout);
+	return(0);
+}

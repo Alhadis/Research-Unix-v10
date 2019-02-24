@@ -1,0 +1,69 @@
+.text
+.globl _main
+.align 2
+_main:link a6,#-0
+L1:
+unlk a6
+rts
+.globl _f
+.align 2
+_f:link a6,#-8
+movm.l #0x90,-8(a6)
+jbsr _f
+mov.l $d0,$d7
+jbsr _f
+mov.l $d7,$d4; add.l $d0,$d4
+mov.l $d4,8($a6)
+L2:
+movm.l -8(a6),#0x90
+unlk a6
+rts
+.globl _f2
+.align 2
+_f2:link a6,#-12
+movm.l #0xd0,-12(a6)
+jbsr _f
+mov.l $d0,$d6
+tst.l 8($a6); jeq L6
+jbsr _f
+mov.l $d0,$d7
+jra L7
+L6:
+mov.l &1,$d7
+L7:
+mov.l $d6,$d4; add.l $d7,$d4
+mov.l $d4,8($a6)
+L4:
+movm.l -12(a6),#0xd0
+unlk a6
+rts
+.globl _f3
+.align 2
+_f3:link a6,#-52
+movm.l #0x4f0,-52(a6)
+clr.l $d7
+clr.l $d6
+clr.l $d5
+clr.l -4($a6)
+clr.l -8($a6)
+clr.l -12($a6)
+clr.l -16($a6)
+clr.l -20($a6)
+clr.l -24($a6)
+clr.l -28($a6)
+mov.l 12($a6),$a2
+lea 4($a2),$a1
+mov.l $a1,12($a6)
+mov.l 8($a6),$d4
+mov.l $d4,-32($a6)
+tst.l $d4; jeq L11
+jbsr _f
+mov.l $d0,-32($a6)
+L11:
+mov.l -32($a6),($a2)
+L9:
+movm.l -52(a6),#0x4f0
+unlk a6
+rts
+.globl _f4
+

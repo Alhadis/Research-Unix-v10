@@ -1,0 +1,55 @@
+CFLAGS=-g
+MGRDIR=/usr/ipc/mgrs
+BINDIR=/usr/bin
+MGRS=ipconfig routed dkipconfig udpconfig
+BINS=route netstat gettable arp
+ALL=$MGRS $BINS
+LIBIN=../libin/libin.a ../libipc/libipc.a
+LIBCOMMON=../mgrs/common/libcommon.a
+
+all:V:	$ALL
+
+ipconfig:	ipconfig.o
+	cc $CFLAGS -o ipconfig ipconfig.o $LIBIN $LIBCOMMON
+
+dipconfig:	dipconfig.o
+	cc $CFLAGS -o dipconfig dipconfig.o $LIBIN
+
+dkipconfig:	dkipconfig.o
+	cc $CFLAGS -o dkipconfig dkipconfig.o $LIBIN $LIBCOMMON
+
+udpconfig:	udpconfig.o
+	cc $CFLAGS -o udpconfig udpconfig.o
+
+netstat.o: netstat.c
+	cc -c $CFLAGS netstat.c
+
+netstat:	netstat.o
+	cc $CFLAGS -o netstat netstat.o $LIBIN
+
+arp:	arp.o
+	cc $CFLAGS -o arp arp.o $LIBIN
+
+routed:	routed.o
+	cc $CFLAGS -o routed routed.o $LIBIN $LIBCOMMON
+
+route:	route.o
+	cc $CFLAGS -o route route.o $LIBIN
+
+gettable:	gettable.o
+	cc $CFLAGS -o gettable gettable.o $LIBIN
+
+deqnaprom:	deqnaprom.o
+	cc $CFLAGS -o deqnaprom deqnaprom.o $LIBIN
+
+install: all
+	( cd $MGRDIR ; rm -f $MGRS )
+	cp $MGRS $MGRDIR
+	( cd $BINDIR ; rm -f $BINS )
+	cp $BINS $BINDIR
+
+cyntax:V:
+
+clean:
+	rm -f *.[oO] $MGRS $BINS
+

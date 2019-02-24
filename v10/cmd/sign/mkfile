@@ -1,0 +1,28 @@
+L=	notary.a
+F=	$L(ix.o) $L(xs.o) $L(notary.o)
+Y=	ix.O xs.O notary.O
+X=	resign enroll sign verify
+CFLAGS=	-DSIGN=1
+
+
+$X:	$L $Y
+
+$L:	$F
+	names=`membername $newprereq`
+	ar r $L $names && rm $names
+	ranlib $L
+
+$L(%):N: %
+
+%.O %.o: %.c 
+	cyntax -c $stem.c && cc -c $CFLAGS $stem.c
+
+%:	%.o
+	cyntax $stem.O $Y && cc -o $stem $stem.o $L -lipc
+
+clean:
+	rm -f sign verify resign enroll notary.a *.o *.O
+
+install:
+	cp $X /usr/bin
+	(cd /usr/bin; strip $X; chmod 775 $X)

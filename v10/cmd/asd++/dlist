@@ -1,0 +1,24 @@
+#! /bin/sh
+TMP=/tmp/dest$$
+
+case $# in
+0)	set default;;
+esac
+
+for i in $*
+do
+	qns set $i,ship		|
+	cut -f1			>$TMP
+	if test -s $TMP
+	then
+		while read line
+		do
+			qns value dk $line
+		done <$TMP
+	else
+		echo $i
+	fi
+done	|
+sort -u
+
+rm -f $TMP

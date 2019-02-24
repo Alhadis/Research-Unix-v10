@@ -1,0 +1,317 @@
+
+cycle 16
+
+5/3/89: Fix ws manipulator so that it will flushed tied ostream
+	when required.
+
+5/2/89: More cleanup of open_mode arguments.  Add defaults for
+	ifstream::open and ofstream::open.  Change all
+	defaults to filebuf::openprot
+
+cycle 15
+
+4/28/89. Add default open_mode arguments to ifstream and ofstream
+	 constructors.
+
+cycle 14?
+
+4/18/89.  Fix bug is filebuf::seekoff that also caused problems
+	  for tellg and tellp.  
+
+4/13/89.  Change cstreams.c so it doesn't refer to skip (which is
+	a stream compatibility function.
+
+------------------------------------------------
+Cycle 13
+
+Change typedef in strstream.c to avoid use of size_t.  (This is
+because of header file compatibility problems.)
+
+Change exit(10) to abort() in oldformat.c.
+
+Cycle 12
+
+Put in include of <iostream.h> in strstream.h
+
+Change istream::get() so that it really gets expanded inline.
+Previous definition was being outlined.
+
+Reorder declarations so that ipfx comes before any operator>>. Not
+just before the ones that have inline code refering to it. The old
+ordering was resulting in a failure to expand ipfx where it should
+have been.
+
+Move declaration of ios_user_union higher in stream.c in order to
+eliminate a new warning message.
+
+Change values of O_CREAT O_TRUNC O_EXCL in cases where headers don't
+define them (the only known such system is V9)
+
+Fix ostream::out_waiting.  It was just returning non-zero when there was stuff
+accumulated but not consumed.  It was supposed to return the number
+(at least according to the man page.)
+
+-----------------------------------------------------
+Cycle 11
+
+Change cstreams.c for change to way explicit placement works.
+
+Implement bidirectional strstream. 
+
+----------------------------------------------------
+Cycle 9 
+
+Fix bug in void* inserter.  (Showbase should have been set
+but wasn't)
+
+
+--------------------------------------------------
+Cycle 8
+
+streambuf::snextc was not incrementing the get pointer before
+it called underflow.  This had no effect because the streambuf
+classes assume that when underflow is called there
+was nothing in the buffer.  The man page said that although this
+was "normally the case" but doesn't guarantee it.  I wrote a new
+streambuf class that checked for the condition and it failed.
+I've fixed snextc.  
+
+---------------------------------------------------
+Cycle 7  
+
+Fix bug in setstate.  
+
+Change return type of filebuf::close to filebuf*
+
+Add noreplace to open_mode 
+
+Fixed bug in adjustment of floating fields
+
+-----------------------------------------------------
+
+Cycle 6.1 
+
+Interpretation of justification fields was screwed up.
+
+Fix for whitespace eating of character extractor of cycle 6  was
+incomplete. (It might read characters when the stream was
+in error status).
+
+-----------------------------------------------------
+Cycle 6
+
+Make streambuf::xsgetn and streambuf::xsputn virtuals
+
+ios::operator int changed to ios::operator void* in order to allow
+detection of "cin << 5" without requiring any extractor or inserter
+to be declared in class iostream.
+
+sync is moved from ios to istream,  the corresponding action on
+ostreams is flushing.
+
+Reorder declarations in iostream.h to avoid forward enum tag
+declarations.
+
+Fixes to single character extractors to make sure they skip
+whitespace when required.
+
+Massive simplification of format control stuff
+
+	struct fmtinfo goes away as do pushing and popping of it.
+
+	several format state variables are consolodated into
+	a single flag field and new flags are added to control
+	more stuff.  Remaining state variables are fill, precision and
+	width.  New statevariable "flags".
+
+	Flags declared in an enum within ios:
+
+	enum		{ skipws=01,	
+					/* skip whitespace on input */
+			  left=02,  right=04, internal=010,
+					/* padding location */
+			  dec=020, oct=040, hex=0100, 
+					/* conversion base */
+			  showbase=0200, showpoint=0400, uppercase=01000,
+			  showpos=02000, 
+					/* modifiers */
+			  scientific=04000, fixed=010000
+					/* floating point notation */ 					  	  } ;
+	
+	Functions to manipulate the flag field
+		s.flags() 	return current flag
+		s.flags(b)	sets flags to b 
+		s.setf(b)	turns on bits marked in f in flags
+		s.setf(b,f)	assigns b to "field" specified by f
+				(i.e. bits that are on in f)
+
+        static ios int members for convienent reference to fields
+                ios::basefield = hex|dec|oct ;
+                ios::adjustfield = left|right|internal ;
+                ios::floatfield = scientific|fixed ;
+
+New manipulators
+
+	s << setfill(f) 	sets fill state variable
+	s << setprecision(p)	sets precision state variable
+	s << setiosflags(b)	does s.setf(b)
+	s << resetiosflags(b)	does s.setf(0,b)
+
+New user setable state variables
+
+	flags are a long user code may use unassigned bits
+	s.iword(x) 		returns a long& 
+	s.pword(s)		returns a void*& (sharing space with s.iword(x)
+	
+
+	ios::bitalloc()		returns a previously unallocated bit
+	ios::xalloc()		returns a previously unused index
+	
+---------------------------------------------
+Cycle 5
+
+Eliminated a lot of warnings about assigning longs to ints and
+the like.
+
+Put in some overflow detection on integer input (it is still very
+incomplete). 
+
+Change sync_with_stdio into a static member function
+
+Add enum_mode, nocreate.  Causes failure of an open if file does not
+previously exist. 
+
+Changed popfmt to reset width to 0.  This is more consistent with the
+normal use.
+
+Fixed some bugs in interaction of EOF eating whitespace and "ignore"
+
+------------------------------------------
+
+Multiple Inheritance Version.  
+
+Changes from previous version:
+
+MI structure in classes.  Mainly this is a lot of trivial changes.
+But one substantive change arises.  Because ios is now inherited
+as a virtual base class, a constructor with no arguments must
+be used.  Therefore ios::init(streambuf*) is declared protected and
+must be used to initialize in derived classes.
+
+-------------------------------------------
+
+The latest version of the iostream package incorporates a large
+number of changes and bug fixes.  They are listed here in my
+estimation of their importance.
+
+In principle, istream, ostream, and iostream are now distinct
+classes. istream only contains input operations and ostream only
+contains output operations.  iostream is the "join" of the two. There
+is a new class ios containing the common state information from which
+all these are derived.
+
+This means, for example, that cin should't be passed to a function
+expecting an iostream.
+
+In practice to do this would have required a good implementation of
+multiple inheritance with virtual base classes. To avoid relying on
+this feature of C++ all the stream classes are typedefed to ios.
+
+As a consequence of this change several classes derived from
+"istream" and "ostream" have been added.  Namely ifstream, ofstream,
+istrstream and ostrstream.  These (rather than the bidrectional
+fstream and strstream) should be used when a stream for only input or
+only output is desired.
+
+The kludge that used #defines and pointer variables to implement cin,
+cour, cerr and cdebug has been eliminated. The standard streams are
+now declared as extern variables in iostream.h. Their types are
+classes derived from iostream with an assignment operator. So that it
+is now permitted to assign streams to them.
+
+Because cfront now distinguishes int from char in overload resolution
+cout << 'a' now outputs the character 'a' rather than the decimal
+value.  This is an incompatibility with the old stream package, but
+is such a large improvement that I thought it was worth any
+conversion problems it might cause.   This made the manipulator
+"onec" redundant and it has been removed.
+
+The name space has been cleaned up.  A lot of identifiers that were
+previously part of the global name space have been made local to a
+class. A table of the old and new names follows.  Probably the most
+important is the renaming of open_modes.
+
+	old name		new name
+	--------		--------
+
+	iocdebug			// eliminated
+	iocerr				// eliminated
+	iocin				// eliminated
+	iocout				// eliminated
+	
+	cdebug			clog	// Renamed because of
+					// complaints about old name
+
+	state_value		io_state
+					// Renamed because state_value
+					// was too unspecific
+
+	_bad			ios::badbit
+	_eof			ios::eofbit
+	_fail			ios::failbit
+	_good			ios::goodbit
+
+	append			ios::app
+	atend			ios::ate
+	input			ios::in
+	output			ios::out
+
+	seek_beg		ios::beg
+	seek_cur		ios::cur
+	seek_end		ios::end
+
+stream.h contains declarations of the names required for backward
+compatibility with the stream package.
+
+The macros for declaring manipulator classes (IOMANIP and  IOMANIP2)
+have been replaced by a collection of macros that are more
+"template-like". Two argument manipulators are not implemented.
+(Users may follow the pattern in iomanip.h to implement them
+themselves.)
+
+filebuf and fstream operations no longer clear errno.
+
+The virtual declaration of streambuf::setbuf now only has two
+arguments. The three argument form exists in streambuf for
+compatibility with the stream package, but the "official"
+definition has only two arguments. Similarly the documented
+constructor is now streambuf(char*,int).
+
+The members of fstream (ifstream and ofstream) that used to return an
+int as an error indication (namely open, attach, close) now return
+void.  Errors are indicated by setting failbit in the error state.
+There was some confusion here about whether an error was indicated by
+returning 0 or EOF.  Declaraing these functions to return void
+eliminates the possibility of confusion.
+
+strstreambuf now allows setbuf in order to control sizes of
+allocation in dynamic mode. (When character strings are being
+automatically extended.)
+
+More careful checks for whether flushes are required on streams that
+are tied to other streams. (E.g. flushes on cout when characters are
+extracted from cin.)
+
+Tieing now works for insertion. E.g. cerr is tied to cout, so
+insertion into cerr causes cout to be flushed.
+
+Redundant calls to allocate have been removed from streambuf::xsgetn
+and streambuf::xsputn.  (This means that the only calls to
+streambuf::allocate from streambuf member functions are from the
+virtuals that may be overriden in derived classes.)
+
+open with ios::ate (the old atend) no longer implies ios::out (the
+old output).  ios::app does.  (ate is a perfectly sensible mode
+for input.)
+
+eatwhite is defined for compatibility with stream package.

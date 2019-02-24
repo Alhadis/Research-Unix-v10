@@ -1,0 +1,2920 @@
+{Set Program,GPMDOC}
+{Set Version,Version 6.10}
+!
+{Setq Macdescr,-
+  {Set Macroname,{Caps @1}}-
+  {Sec {1}{Cond {Leq @Mode,TEXT},~({2})}}-
+  {Tset Toc,{Rpad {Dbl @1}~-~{2}~,50,.~}~A-{Pagenum}}-
+  {Nfj}-
+  {Macsec Format}-
+}
+!
+{Setq Macsec,-
+  {Cond {Leq {Caps @1},FORMAT},{Ls 1}Format:{Ls 1}{Lin 8}{Nfj},-
+    {Leq {Caps @1},DESCRIPTION},{Ls 1}{Restore Lmg}{Fj},-
+    ,{Hl {+ @Seclevel,2},{Caps @1}}{Fj}-
+  }-
+}
+!
+! Define the list items macros
+! Bl is used to begin a new list.  It should be on the same physical
+! line with the rest of the text.  It does an initial {Li...}
+!
+{Setq Bl,{Set.Add1 Numlist}-
+  {Set LIST${Numlist},0}-
+  {Brk}-
+  {Lin 4}-
+  {Li @1}-
+}
+!
+! Li is called to start a new item in a list.
+! (Bl does this automatically for the first item)
+!
+{Setq Li,{Ls 1}{Set.Add1 LIST${Numlist}}-
+  {Outdent {Size {1}{Setv Listlabel,-
+    {Dowhile{Set Listi,@Numlist} {Gt @Listi,1},-
+      {LIST${Numlist}}.{Set.Sub1 Listi}-
+    }-
+    {LIST$1}:~}}-
+  }{1}{Listlabel}-
+}
+!
+! El is used to return to the previous list level.
+!
+{Setq El,{Brk}{Restore Lmg}{Set.Sub1 Numlist}}
+!
+{Exclude HELP}
+{Load SYS$LIBRARY:AUXLIB.GPM,ROMAN}
+{Setq Endpage,{Ls 2}{Center A-{Roman @Pagenum}}{Eject}}
+{Tsetq Newpage,{Ls 3}}
+{Ls 1}{Center APPENDIX A}
+{Ls 1}{Center - NOTES -}{Ls 2}
+This section contains a complete description of the
+GPMDOC system macros in alphabetical order for {version}.
+ Some abbreviations are used in the Format descriptions which
+require explanation:
+!**
+{Exclude TEXT}
+{Sec GPMDOC}
+HELP is provided for all intrinsic GPMDOC macros.
+ Macros are explained under the subheading corresponding to the
+macro's name.
+ In addition,
+an explanation of the abbreviations used in the "Format"s can be
+obtained under the subheading "Formats".
+{Newsec}
+{Sec Formats}
+!**
+{Ls 1}{Lin 6}{OUTDENT 6}
+<"{MACRO arg1,arg2,...}":>
+{Ls 1}This means you can use the MACRO with the
+normal GPMDOC evaluation process.
+ If MACRO
+takes arguments (arg1, arg2) they are shown.
+ Optional arguments are noted in the description.
+{Ls 1}
+Macros place restrictions or interpretations
+on the arguments that you can pass to them.
+ The required form of an argument is given in the format description
+for each macro according to the following convention:
+{Ls 1}{Lin 8}{OUTDENT 8}
+"mname"~The argument text, after evaluation, is
+used as the {ul name} of a macro.
+ Any "mname" can optionally be suffixed with a backslash ("\") followed
+by a property table name, otherwise, the null property table
+is assumed.
+{Ls 1}Since any string
+of text can serve as a macro name, "mname" can be
+anything.
+ However, "mname" denotes the fact that
+the macro being described will {ul interpret}
+this argument to be a macro name.
+{ls 1}{outdent 8}
+"n"~~~~~The argument text must evaluate to a {ul number}.
+ Either integers or fractional real numbers with decimal points
+can be used.
+ In cases where an integer is required and a
+real number is used, the real number is converted to an
+integer by disregarding the fractional part.
+ The acceptable range of n may be restricted for some macros,
+this is noted in accompanying description.
+ For the purposes of arithmetic, a null string is interpreted as zero.
+{Ls 1}{Outdent 8}"pred"~~The evaluated argument is considered by the
+macro to be a {ul predicate}.
+ Predicates designate true/false values with a null value
+being considered "true," and any string of actual size greater than
+zero is thus considered "false."
+ The GPMDOC built-in system predicate macros such as LT, EVEN, etc.
+return null when they evaluate true, and (by convention) evaluate to
+"1" otherwise.
+ Users defining their own predicate-valued macros are urged to
+follow this convention.
+{ls 1}{outdent 8}
+"str"~~~The argument text can evaluate to any text {ul string}.
+{ls 1}{restore lmg}
+In addition, any of these forms may be preceeded by the letter 'q'.
+ For example, "qstr", "qpred" and the like.
+ This indicates that the argument is {ul not} evaluated by GPMDOC
+before it is given to the macro.
+ The macro itself may, if it chooses, evaluate the argument on its own.
+ This is used primarily by system macros that must {ul conditionally}
+evaluate arguments (e.g. COND, DOWHILE, DOPROP).
+{Ls 1}{outdent 6}
+<"{D MACRO}":>{LS 1}
+This says that the textual definition of MACRO can
+be retrieved.
+ Some system macros are compiled into an internal coded form with no textual
+representation.
+ D applied to these macros will give the same result as "<{MACRO}>",
+and the D form is not shown for them.
+{Ls 1}The "@mname" abbreviation form for arguments is, in operation,
+entirely equivalent to the <"{D mname}"> macro form,
+and these same remarks apply.
+{ls 1}{outdent 6}
+<"{SET MACRO,argument}":>{brk}
+{LS 1}
+This format means that MACRO can sensibly be redefined
+using any form of set (SET, TSET, SETQ, SETV, etc.).
+ Many system macros will have side effects when set,
+such as altering
+the margins or causing spacing down the page.
+{ls 1}{restore lmg}
+The examples try to present several different facets
+of the uses for the macro being described.
+ (The examples are all shown in upper case for emphasis;
+but keep in mind that the case of macro names is not significant.)
+{Ls 1}To avoid making the examples trivial, most of them are
+"real-life", some easy and others a bit more involved.
+ An asterisk next to an example indicates that the
+example is a particularly advanced one.
+ You may wish to skip over these.
+ As a final note, this section does not describe the many macros
+available in libraries.
+{Exclude HELP}
+{P}
+{Restore Newpage}
+{Setq Endpage,{Ls 2}{Center A-{D Pagenum} [{D Macroname}]}{Eject}}
+!**
+!
+! Start the descriptions
+!
+!
+! ADD1
+!
+{macdescr ADD1,Add One To Numeric}
+<{ADD1 n}>
+{macsec description}
+The value of ADD1 is one added to n.  It is equivalent
+to <{+~n,1}>.
+{macsec examples}
+{bl}Add one to the current page number:
+{ls 1}
+{Center <{SET.ADD1 PAGENUM}>}
+{Ls 1}
+{Li *~}Here is a definition for a macro, CASE, that evaluates one
+of its arguments depending on the value of a 'control argument':
+{Ls 1}{Center <{SETQ CASE,{{ADD1 @1}}}>}{Ls 1}
+A macro reference such as <"{CASE~2,SNURF,BLURF,ERFF}"> would
+evaluate to "BLURF" because the "2", in effect, 'selects' argument #3.
+ It does this by adding one to the 2, and then using the resulting "3"
+as the name of a macro to be evaluated.
+ If any of the arguments themselves contained macro calls that were to be
+conditionally evaluated, they could be placed in quotes to defer the
+evaluation.
+{Ls 1}This is not a wholly satisfactory definition, since "<{CASE~0,...}>"
+will evaluate to "0" (argument #1),
+whereas all other values of the first argument that are out of range will
+evaluate null.
+ The definition of CASE could be revised a bit using a COND macro to be:
+{Ls 1}{Center <{SETQ CASE,{COND {NE @1,0},{{ADD1 @1}}}}>}{Ls 1}
+{EL}
+{P}
+!
+! APPEND
+!
+{macdescr APPEND,Join Two Strings}
+<{APPEND str1,str2}>
+{macsec description}
+The value of APPEND is the text value formed by
+appending str1 on the right of str2.
+{macsec notes}
+{bl}A simple left to right juxtaposition of text is
+sufficient to perform this function, so APPEND is only
+useful in extended sets (see example).
+{el}
+{macsec examples}
+{bl}Print an extra line after the page heading from now on:
+{Ls 1}{Center <{SET.APPEND NEWPAGE,<{LS 1}>}>}{Ls 1}
+{EL}
+{P}
+!
+! BEGINTEXT
+!
+{macdescr BEGINTEXT,Starting Input Line}
+<{set BEGINTEXT,str}>
+<{BEGINTEXT}>
+<{D BEGINTEXT}>
+{Macsec Description}
+The value of BEGINTEXT is used with INPUT to define the starting
+line of the new file.
+ If BEGINTEXT is non-null when INPUT is set, GPMDOC will skip over
+input lines looking for one that matches BEGINTEXT.
+ When one is found, input starts with the line that follows.
+{Macsec Notes}
+{Bl}The input lines that are skipped are physical lines of the designated
+input file, not logical lines.
+ This means that continuations are not processed, and also that
+comment lines (those that begin with an exclamation point) can
+are candidates for BEGINTEXT.
+ Comment lines are recommended for BEGINTEXT, as they are otherwise
+ignored by GPMDOC when processing a file.
+{Li}The line for BEGINTEXT must match exactly.
+ The case of letters is significant.
+{el}
+{Macsec examples}
+{bl}Read the file MACLIB.GPM starting at the line following
+one which reads "!LIST 3", and finishing at the line which reads
+"!END 3":
+{Ls 1}
+{Center <{TSET INPUT,MACLIB.GPM,STARTTEXT=!LIST 3,ENDTEXT=!END 3}>}
+{LS 1}
+This sort of thing is useful for a 'macro library' which could contain
+sets of macro definitions for different purposes.
+{el}
+{p}
+!
+! BIAS
+!
+{Macdescr BIAS,Set Page Bias}
+<{set BIAS,n}> (Default: BIAS=0)
+<{BIAS}>
+{Macsec DESCRIPTION}
+BIAS controls the size of the left hand "gutter."
+Its effect is similar to that of setting the left margin,
+except that the right margin is also moved a corresponding amount,
+so the linelength remains unchanged.
+ The sum of BIAS and LMG (current left margin) must always be positive.
+{Macsec NOTES}
+{Bl}BIAS is useful for printing documents on varying devices which
+start printing at different locations.
+{Li}Setting BIAS has no effect on the values of LMG or RMG.
+{El}
+{P}
+!
+! BRK
+!
+{macdescr BRK,Force Line Break}
+<{BRK}>
+{MACSEC DESCRIPTION}
+This macro is identical to <{LS~0}> or <{LS}>.
+ It causes the text line
+currently being assembled to be flushed to the output stream.
+ This is termed a "line break".
+ Right justification is not applied,
+regardless of whether or not it is enabled.
+{MACSEC NOTES}
+{BL}Line break is normally used to force printing to begin on a new
+line when line fill is on, or whilst typing in the middle of a line,
+or within a macro.
+ Note that line fill being off (non-null) forces
+an automatic line break after reading each input line.
+{EL}
+{macsec examples}
+{BL}This example shows how to print successive items on
+separate lines when line fill is enabled, using BRK:
+{ls 1}
+A. Two eggs<{brk}>B. Three cups flour<{brk}>C. Two tbsp. butter
+{ls 1}
+would print as:
+{ls 1}
+A. Two eggs{brk}B. Three cups flour{brk}C. Two tbsp. butter
+{el}
+{P}
+!
+! BSLACK
+!
+{Macdescr BSLACK,End-of-Page Runout}
+<{set BSLACK,n}> (Default: BSLACK=0)
+<{BSLACK}>
+<{D BSLACK}>
+{MACSEC DESCRIPTION}
+The value of BSLACK is used by the system to determine when
+to run out the rest of a page during line skipping.
+Assuming BSLACK has the value "n" and an attempt is made to skip
+lines when less than "n" lines remain on the page, the page is
+simply run out, and an ENDPAGE condition occurs.
+(Line skipping means either an <{LS...}> or
+a <{SET~LINENUM,...}>.)
+{MACSEC NOTES}
+{BL}The value for n cannot be negative.
+{LI}BSLACK can be used to avoid such situations as the first line
+of a paragraph being printed at the bottom of a page.
+{LI}Setting BSLACK to zero effectively nullifies any BSLACK action.
+{EL}
+{P}
+!
+! CAB
+!
+{MACDESCR CAB,Close Angle Bracket}
+<{CAB}>
+{MACSEC DESCRIPTION}
+Evaluates to ">".
+{MACSEC NOTES}
+{BL}This macro, and its companion <{OAB}>, are used in situations
+where the quote symbols are needed without causing the effect
+of quoting, or where they appear in an unbalanced way.
+{EL}
+{MACSEC EXAMPLES}
+{BL}Computer programs often use the GPMDOC quote symbols to
+signify the operations of comparison (less than and greater than).
+For instance:
+{LS 1}
+{center IF A {OAB} B AND A {CAB} C}
+{LS 1}
+in GPM would print as:
+{LS 1}
+{Center IF A  B AND A  C}
+{LS 1}
+The CAB (and OAB) macros could be used:
+{LS 1}
+{CENTER IF A <{OAB}> B AND A <{CAB}> C.}
+{LS 1}
+which evaluates correctly. (It would also be possible to
+achieve the same effect in this example by quoting the entire
+line, or with the use of INFORMAT.)
+{EL}
+{P}
+!
+! CAPS
+!
+{macdescr CAPS,Capitalize Text}
+<{CAPS str}>
+{macsec description}
+The value of a call to CAPS is str, except all lower
+case letters are replaced with their equivalents in
+upper case.
+ It is the same as:
+{ls 1}
+     <{REPLACE str,abc...xyz,ABC...XYZ}>
+{macsec examples}
+{bl}Print the text of the macro TITLE capitalized:
+{ls 1}{Center <{CAPS @TITLE}>}
+{Li *~}Read "FILE1" if the user responds "No" and "FILE2" if
+the user responds "Yes"
+{Ls 1}{Nfj}
+<{TSET INPUT,->
+  <{COND ->
+    <{LEQ {CAPS {SUBSTR {QUERY Enter Yes or No: },1,1}},N},->
+    <FILE1,,FILE2->
+  <}->
+<}>
+{Fj}
+{Ls 1}Note that only the first cahracter of the response
+is compared.
+ It is capitalized so that regardless of whether the user types
+"N" or "n",
+it is still perceived as a 'no' response.
+{Ls 1}You might want to write a predicate macro that would issue a general
+yes/no question (supplied as an argument) to be true if the response
+is affirmative,
+and false if the response is negative.
+ As an enhancement,
+the macro will loop until it gets one of the two responses.
+{Ls 1}{Nfj}
+<{SETQ YNQ,->
+  <{SET YNQ$R}->
+  <{DOWHILE {LNE @YNQ$R,N}{LNE @YNQ$R,Y},->
+    <{SET YNQ$R,{CAPS {SUBSTR {QUERY @1},1,1}}}->
+  <}->
+  <{COND {LEQ @YNQ$R,N},1}->
+<}>
+{Ls 1}{Fj}
+{el}
+{P}
+!
+! CENTER
+!
+{macdescr CENTER,Center a Text Line}
+<{CENTER str}>
+{macsec description}
+CENTER prints str padded on the left with hard spaces so as to cause it to
+appear centered between the current left and right margins.
+ A line break is forced before and after str is printed.
+ The value of the CENTER macro is always null,
+(the centered text is sent directly to the output stream).
+{macsec notes}
+{bl}If str is longer than <{LINELENGTH}>, the text will
+be printed on multiple, uncentered lines.
+{el}
+{macsec examples}
+{bl}Print the text "SUBMITTED IN PARTIAL FULFILLMENT" centered on line 30:
+{Ls 1}{Center <{SET LINENUM,30}{CENTER SUBMITTED IN PARTIAL FULFILLMENT}{BRK}>}
+{Ls 1}
+{Li}Print the text stored in the macro TITLE, centered at the top of every
+page:{Ls 1}{Center <{SETQ NEWPAGE,{CENTER @TITLE}}{BRK}>}{LS 1}
+{el}
+{P}
+!
+! CODE
+!
+{Macdescr CODE,Define Internal Macro Code}
+<{CODE mname,str}>
+{Macsec Description}
+CODE is used to define mname as an internal code sequence in order to
+improve efficiency, or to make available functions that cannot be realistically
+coded in macro form.
+ Str must represent a legitimate internal code string.
+ Evaluation of CODE will 'compile' STR and bind the resulting code
+to mname as a system macro.
+ The value of CODE is null.
+{Ls 1}As this is not a systems reference document, no further elaboration
+of CODE is given here.
+{P}
+!
+! COND
+!
+{MACDESCR COND,Conditional Evaluation}
+<{COND qpred1,qstr1,qpred2,qstr2, ...}>
+{MACSEC DESCRIPTION}
+COND will conditionally evaluate one of str1,~str2,~etc. in
+the following way.
+ First, pred1 is evaluated.
+ If it is null (true), then the value of the COND becomes the
+evaluation of str1.
+ Otherwise, the COND continues by evaluating pred2, and if
+it is true, the value of COND becomes the value of str2.
+{Ls 1}COND allows an indefinite number of predicate-string
+pairs.
+ Since any unspecified arguments are taken as null strings,
+if none of the predicates evaluates null (true), then an implied
+null predicate will be 'seen' past the given arguments and the
+following implied null string will be returned as the value.
+{macsec notes}
+{Bl}While any text may be given for a predicate, generally
+one of the system predicate macros is used.
+ These predicates are described fully under their own sections.
+{Ls 1}For numeric tests, LT, LE, GT, GE, NE, EQ, EVEN and ODD
+are the system predicates.
+{Ls 1}For comparing strings, LLT, LLE, LGT, LGE, LNE, and LEQ
+are the system predicates.
+{Li}All system predicates use the string "1" as the standard
+'false' value.
+ Uses writing their own predicate-valued macros are urged to
+adopt this convention.
+{EL}
+{macsec examples}
+{BL}If less than ten lines remain on the page then skip to a new
+page:
+{LS 1}
+{CENTER <{COND {LT {- @LINENUM,@PAGELENGTH},10},{SET LINENUM,1}}>}
+{LS 1}
+(Note that in this example qpred2 and qstr2 are omitted,
+so they are assumed to be null.)
+{LI}Define a macro <{IFLINES n}> to do the same thing, allowing any
+number n.
+{LS 1}
+{NFJ}
+<{SETQ IFLINES,{COND {LT {- @LINENUM,@PAGELENGTH},@1},->
+     <{SET LINENUM,1}}}>
+{FJ}
+{LI}Move the left margin out 5 spaces, unless it is less than
+5 from the edge already, in which case set it to 1.
+{LS 1}
+{CENTER <{SET LMG,{COND {LE @LMG,5},1,,{- @LMG,5}}}>}
+{CENTER or}
+{CENTER <{COND {LE @LMG,5},{SET LMG,1},,{SET.- LMG,5}}>}
+{EL}
+{p}
+!
+! CREPROP
+!
+{macdescr CREPROP,Create Property Table}
+<{CREPROP str}>
+{Macsec Description}
+CREPROP generates a property table with the name "str".
+ Once such a table has been created, named values can be
+set in the table using the property table name suffixed
+onto the macro name with a backslash ("\").
+{Macsec Notes}
+{bl}Only one property table is initially defined - the so-called
+null property table.
+ The null property table is where all system defined macro values
+reside, and the table which, by default, is referred to if a
+macro name contains no property table reference.
+{li}TSET stacks for the same name in different property tables are
+distinct.
+{li}DELPROP can be used to eliminate a property table and all
+associated values when they are no longer of use.
+{li}DOPROP allows examination of all the values of a property
+table.
+{Li}Numeric names in property tables other than the null table
+do {ul not} refer to argument values, numeric names function no
+differently from other names in these tables.
+{El}
+{macsec examples}
+{bl}Create a property table "SECNUM" and set name "I" in it
+to zero:
+{Ls 1}{Center <{CREPROP SECNUM}{SET I\SECNUM,0}>}{Ls 1}
+{li}The description of DOPROP contains more examples of
+property tables.
+{el}
+{p}
+!
+! CS
+!
+{MACDESCR CS,Create Control Sequence}
+<{CS str}>
+{Macsec description}
+The value of CS is a control sequence for str.
+ A control sequence is printed as "str" but has a defined length of
+zero, regardless of the length of str.
+ Str must not contain any overstrikes or embedded control sequences.
+{Macsec notes}
+{Bl}CS is primarily useful in creating device-dependent control
+sequences that are embedded in the text, but which should not figure
+into line length calculations (e.g. centering, justification, etc.).
+{el}
+{p}
+!
+! D
+!
+{MACDESCR D,Retrieve The Definition of a Macro}
+<{D mname}>
+{macsec description}
+The value of D is the string of characters which form the
+definition of mname.
+{macsec notes}
+{Bl}The definition retrieved is not evaluated, so this is quite
+different from <{mname ...}> if the definition contains quotes
+or macro calls.
+{LI}You can also apply D to arguments as in "<{D~3}>" which will
+give the string of text passed as argument 3, without evaluating it.
+{LI}D applied to system functions will result in the string
+"SYSTEM", since these macros are not defined internally
+using text, but rather as operational sequences using
+a special code.
+{Li}There is an abbreviated form of D which can be used when
+an argument in a macro call is to evaluate to the definition
+of some other macro.
+ If an argument begins with the at-sign ("@"), it is considered
+to be such an argument.
+ The text of the argument following the at-sign is evaluated
+in the normal way, and the result is taken as an "mname".
+ The value of the argument becomes the definition of that mname.
+ There are examples of this abbreviation below.
+{Ls 1}Note that to have this effect,
+the leading "@" cannot be a product of the evaluation,
+it must be the {ul actual first character} of the argument text itself.
+{EL}
+{macsec examples}
+{BL}Print the centered definition of a user-defined macro TITLE
+without evaluating it:
+{LS 1}
+{center <{CENTER {D TITLE}}>}{BRK}{Center or}{Brk}
+{Center <{CENTER @TITLE}>}
+{LI}Suffix the string <{LS 1}> onto NEWLINE without upsetting
+things by evaluating the text already in NEWLINE:
+{LS 1}
+{CENTER <{SET NEWLINE,{D NEWLINE}<{LS 1}>}>}
+{center or}
+{CENTER <{SET.APPEND NEWLINE,<{LS 1}>}>}
+{LS 1}
+Note that a form such as:
+{Ls 1}{Center <{SET NEWLINE,@NEWLINE<{LS 1}>}>}{Ls 1}
+would {ul not} be satisfactory because the "@" applies to
+the resulting text of the {ul entire} argument (including the <"<{LS~1}>">,
+not just the initial part of it.
+{el}
+{P}
+!
+! DATE
+!
+{Macdescr DATE,Date Text}
+<{DATE}>
+{Macsec Description}
+The value of DATE is the date-of-year in the form DD-MMM-YYYY.
+ For example, 08-SEP-1981.
+{p}
+!
+! DBL
+!
+{macdescr DBL,Double-Strike (Bold) Text}
+<{DBL str}>
+{macsec description}
+<{DBL~str}> is equivalent to <{OS~str,str}>.
+ Its value is str overstruck with itself.
+{macsec notes}
+{bl}DBL can be a good substitute for italics.
+{el}
+{macsec examples}
+{bl}Print "THE GETTYSBURG ADDRESS", centered and boldface.
+{LS 1}
+{CENTER <{CENTER {DBL THE GETTYSBURG ADDRESS}}>}
+{ls 1}
+This will print as:
+{ls 1}
+{CENTER {DBL THE GETTYSBURG ADDRESS}}
+{li}Define a macro REALBOLD that will overstrike an image
+with itself sixteen times:
+{ls 1}
+{center <{SETQ REALBOLD,{DBL {DBL {DBL {DBL @1}}}}}>}
+{EL}
+{P}
+!
+! DELPROP
+!
+{Macdescr DELPROP,Delete a Property Table}
+<{DELPROP str}>
+{Macsec Description}
+DELPROP erases a property table and all values and stacks associated
+with it.
+ If further use is to be made of the eradicated property table, a
+new CREPROP must be performed for it.
+{p}
+!
+! DIAG
+!
+{macdescr DIAG,Enter Diagnostic Subsystem}
+<{DIAG}>
+{Macsec Description}
+DIAG is used for system testing.
+ It enters the system debugger.
+ The value of DIAG is null.
+{Ls 1}As this is not a systems manual, no further explanation
+of DIAG is offered here.
+ This function is for debugging and development, and should not
+ordinarily be used.
+{P}
+!
+! DISPLAY
+!
+{macdescr DISPLAY,Print Message on Terminal}
+<{DISPLAY str}>
+{macsec description}
+DISPLAY causes the value of str to be displayed on your
+terminal. The value of DISPLAY itself is null.
+{macsec notes}
+{BL}No formatting is applied to str before it is sent to
+the terminal.
+{LI}QUERY can be used for messages where a response is
+desired.
+{EL}
+{macsec examples}
+{bl}Display an instructional message and begin receiving input from the
+terminal:
+{ls 1}
+{nfj}
+<{DISPLAY <Enter your text, use Control-Z to finish>}->
+          <{TSET INPUT,TT:}}>
+{LS 1}
+{FJ}
+{LI *~}Process the first 10 chapters of a document which has
+been segmented into files: CH1.GPM, CH2.GPM, etc. Precede
+each with an informative message to tell you that GPMDOC is
+still alive.
+{ls 1}
+{nfj}
+     <{DOWHILE {LT @CHAP,10},{SET.ADD1 CHAP}->
+        <{DISPLAY PRINTING CHAPTER {CHAP}}->
+        <{TSET INPUT,CH{CHAP}.GPM}}>
+{FJ}
+{EL}
+{P}
+!
+! DOPROP
+!
+{macdescr DOPROP,Evaluate Property Table}
+<{DOPROP str1,qstr2,str3}>
+{Macsec Description}
+DOPROP uses str1 (case irrelevant)
+as a property table name (the backslash is not specified).
+ Qstr2 is repeatedly evaluated for each non-null
+value in the indicated property table.
+ The context of this evaluation has <{D~1}> (argument one) set to the
+macro name in the property table (without the table name suffix), and
+<{D~2}> set to its corresponding value.
+{Ls 1}If str3 evaluates to the string "UP" (case irrelevant), then
+the table names are presented in ascending sorted order.
+ Similarly, "DOWN" will cause the names to be sorted in descending
+order.
+ Otherwise, the names are presented in an unpredictable order.
+ In all cases, all the name-value pairs are evaluated exactly once.
+{Ls 1}The value of DOPROP is the concatenated result formed by the
+successive evaluations of qstr2.
+{Macsec Notes}
+{bl}For UP and DOWN sorts, names which are numeric will be sorted
+as numbers, not as alphanumerics.
+ For example, the "2" is, as a number, less than "10", but
+considered as a text string, "2" would be greater than "10".
+{el}
+{macsec examples}
+{bl *~}DOPROP can be useful for generating sorted indices.
+ First, define a macro at the beginning of the document such as:
+{Ls 1}{Center <{SETQ INDEX,{SET.APPEND {1}\INDEX,<,>{PAGENUM}}}>}
+{Ls 1}This macro, when invoked in the document with a reference such
+as "<{INDEX Pancakes}>" will append a comma and the current page number to
+the value for PANCAKES on the INDEX property table.  Before using
+the macro, it is also necessary to establish the property table
+with a macro call such as: "<{CREPROP INDEX}>".
+{Ls 1}At the end of the document, you can 'dump' this property table in
+a neat format.
+ The following DOPROP macro shows one way to do this:
+{Ls 1}{Center <{DOPROP INDEX,{RPAD {SUBSTR @1,2},30,.}{2}{BRK},UP}>}
+{Ls 1}This will print successive lines of the form:
+{Ls 1}{Center <PANCAKES.....................18,45,104>}{Ls 1}
+The SUBSTR is used to eliminate the initial comma which the INDEX macro
+puts in front of each page number (including the first).
+{el}
+{p}
+!
+! DOWHILE
+!
+{Macdescr DOWHILE,Repeated Evaluation}
+<{DOWHILE pred,qstr}>
+{MACSEC DESCRIPTION}
+DOWHILE is evaluated by first evaluating the given predicate, and
+if it is true, evaluating qstr.
+ This cycle is repeated until pred becomes non-null (false).
+ The value of the DOWHILE is
+the concatenated values of the successive evaluations of qstr.
+{macsec notes}
+{BL}Be careful that the given predicate will eventually become
+false, or an "infinite loop" will result, and you will have
+to abort GPMDOC.
+{EL}
+{macsec examples}
+{BL *~}Print the numbers from 1 to 20 on successive lines down
+the left margin of the page:
+{Ls 1}{Center <{SET NUM,0}{DOWHILE {LT {SETV.ADD1 NUM},20},{NUM}{BRK}}>}
+{LS 1}Note that the macro NUM is the 'counter,' and that it is
+initialized to zero.
+{LI *~}Print ten numbered copies of a document:
+{LS 1}
+{Center <{SET D#,0}{DOWHILE {LT {SETV.ADD1 D#},10},{TSET INPUT,DOC.GPM}}>}
+{ls 1}
+DOC.GPM presumably contains references to <{D#}> which will
+contain the document number as a result of the DOWHILE.
+{EL}
+{P}
+!
+! DSIZE
+!
+{macdescr DSIZE,Size of Defined Macro}
+<{DSIZE mname}>
+{Macsec Description}
+The value of DSIZE is the number of print columns in the definition
+of mname.
+ DSIZE is equivalent to <{SIZE~{D~mname}}> or <{SIZE~@mname}>,
+but is simpler and more efficient.
+{Macsec Notes}
+{bl}If the definition of mname contains no overstrikes
+then the value of DSIZE is equal to the number of characters in the
+definition.
+{li}DSIZE applied to coded system macros (those for which <"{D mname}">
+is the same as <"{mname}">, will yield the same as <"{SIZE {mname}}">.
+{el}
+{p}
+!
+! DUPL
+!
+{macdescr DUPL,Duplicate a String}
+<{DUPL str,n}>
+{macsec description}
+The value of DUPL is str repeated n times. If n is zero,
+the value of DUPL is null.
+{macsec notes}
+{BL}N must be non-negative.
+{el}
+{macsec examples}
+{bl}Produce 20 periods:
+{ls 1}
+{nfj}
+        <{DUPL .,20}>
+{fj}
+{ls 1}
+{li}Print a line of hyphens across the page:
+{ls 1}
+{nfj}
+        <{BRK}{DUPL -,@LINELENGTH}>
+{FJ}
+{LI *~}Define a macro CPAD, that will return its argument
+text prefixed with the correct number of hard spaces to
+cause the argument to be centered on the line (assuming it is printed
+from the left margin).
+{ls 1}
+{nfj}
+       <{SETQ CPAD,{DUPL @HS,->
+            <{DIV {- @LINELENGTH,{DSIZE 1}},2}}{D 1}}>
+{FJ}
+{Ls 1}
+This macro calculates the number of hard spaces to produce
+by subtracting the size of the argument text from the
+length of the line, and dividing it by two. The argument text
+is appended onto the right of these hard spaces.
+{Ls 1}
+The advantage that this macro might have over the system
+CENTER macro is that CPAD only returns the argument text
+padded on the left with hard spaces.
+ It does not cause any line breaks as does CENTER.
+ This means it would be possible for
+you to print text on the same line to the right of the centered
+text.
+{el}
+{p}
+!
+! EJECT
+!
+{macdescr EJECT,Form Feed}
+<{EJECT},> (Default: See Description)
+<{D EJECT},>
+<{set EJECT},>
+{macsec description}
+<{EJECT}> is initialized with the character codes or
+sequence needed to cause a "form feed" (page eject)
+on the system standard hard copy device.
+{macsec notes}
+{bl}If you are directing OUTPUT to other than the standard
+device, it may be advantageous to set EJECT to a suitable
+value first.
+{li}<{EJECT}> has no effect on <{PAGENUM}>, and for
+that reason is generally only used in ENDPAGE.
+{el}
+{macsec examples}
+{bl}Skip to a new page at the bottom of each page
+{ls 1}
+{nfj}
+        <{SETQ ENDPAGE,{EJECT}}>
+{ls 1}
+{fj}
+{el}
+{p}
+!
+! END
+!
+{macdescr END,Terminate GPMDOC Session}
+<{END}>
+{macsec description}
+An evaluation of <{END}> will cause GPMDOC to flush its
+output stream, close all files, and exit.
+ The value of END is irrelevant.
+{macsec notes}
+{BL}You can exit from GPMDOC by finishing input from the
+initial input file (see the description of INPUT).
+{LI}END can be used at any point in any file regardless
+of present activity.
+{Li}The use of END is normally discouraged,
+as document files that contain it cannot be included (TSET INPUT)
+from other document files.
+{EL}
+{macsec examples}
+{BL}If <{FILENAME}> is null, print an error message and
+ terminate the session.
+{ls 1}
+{nfj}
+<{COND {LEQ @FILENAME},{DISPLAY YOU HAVEN'T SPECIFIED><->
+     <A FILE!}{END}}>
+{FJ}
+{EL}
+{P}
+!
+! ENDPAGE
+!
+{macdescr ENDPAGE,Ending Page Event}
+<{set ENDPAGE,str}> (Default: <ENDPAGE={EJECT}>)
+<{ENDPAGE}>
+<{D ENDPAGE}>
+{macsec description}
+When the value of LINENUM becomes greater than the
+value of PAGELENGTH, an ENDPAGE event occurs, which
+causes the following sequence of events:
+{bl}The line to be printed and any other text in the
+output stream are put aside.
+{li}NEWLINE is TSET to null, SPACING is TSET to one,
+LMG is TSET to 10 and RMG is TSET to 75.
+{li}<"{ENDPAGE}"> is evaluated.
+{li}NEWLINE, SPACING, LMG and RMG are all restored.  This
+completes the ENDPAGE event.
+{el}
+{macsec notes}
+{bl}If NEWLINE, SPACING, LMG or RMG are changed by
+ENDPAGE, changes will only have effect during the ENDPAGE
+event, as these macros are TSET and RESTOREd.
+ If you desire a permanent change, first do a RESTORE, and
+then SET your desired permanent value for the macro.
+ (This will become the value restored at the end of the ENDPAGE
+condition.)
+ Then TSET back the value for the ENDPAGE context.
+{li}NEWPAGE and ENDPAGE conditions are inhibited while
+the ENDPAGE condition is being processed.
+{el}
+{macsec examples}
+{bl}Print the current page number, centered between hyphens
+at the bottom of every page:
+{ls 1}
+{center <{SETQ ENDPAGE,{CENTER - {PAGENUM} -}}>}
+{LI *~}In documents that are to be bound after they
+are printed, it is frequently necessary to provide a
+"gutter" on each page so that printing does not disappear
+down into the binding.  If printing is to be two-sided,
+then odd-numbered pages will need to have this gutter
+on the left, and even-numbered pages will have it on the
+right (or vice-versa).  This, in effect, necessitates
+"sliding" the text horizontally back-and-forth on
+successive pages.  The place to do such sliding is
+ENDPAGE.  (NEWPAGE would be too late, since the margin
+for the first line has already been formed when NEWPAGE occurs.)
+{ls 1}
+<{SETQ ENDPAGE,->{Brk}
+<   {SET.+ BIAS,{COND {EVEN @PAGENUM},5,,-5}}}>
+{El}
+{P}
+!
+! ENDTEXT
+!
+{macdescr ENDTEXT,Ending Input Line}
+<{set ENDTEXT,str}>
+<{ENDTEXT}>
+<{D ENDTEXT}>
+{Macsec Description}
+If ENDTEXT is non-null each physical line read by GPMDOC is compared
+to the definition of ENDTEXT.
+ If it matches, INPUT is RESTOREd immediately.
+ The ENDTEXT line itself is discarded.
+{Macsec Notes}
+{Bl}The input lines that are examined are physical lines of the designated
+input file, not logical lines.
+ This means that continuations are not processed, and also that
+comment lines (those that begin with an exclamation point)
+are candidates for ENDTEXT.
+ Comment lines are recommended for ENDTEXT, as they are otherwise
+ignored by GPMDOC when processing a file.
+{Li}The line for ENDTEXT must match exactly.
+ The case of letters is significant.
+{Li}The ENDTEXT macro is most useful to terminate the context of a
+pseudo-read.
+ To conditionally skip over text in the input stream,
+the SKIPTEXT macro is more useful.
+{el}
+{p}
+!
+! EQ
+!
+{Macdescr EQ,Predicate Comparison for Equality}
+<{EQ n1,n2}>
+{Macsec Description}
+EQ evaluates to null (true) if "n1" is equal to "n2",
+otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! EVEN
+!
+{macdescr EVEN,Predicate Test for Numeric Even}
+<{EVEN n}>
+{Macsec description}
+This predicate will evaluate null if the given argument is an even
+number (zero and negative even numbers are even).
+ Otherwise it evaluates to "1" (false).
+!
+! FILL
+!
+{Macdescr FILL,Line Fill Flag}
+<{set FILL,pred}> (Default: FILL=1)
+<{FILL}>
+<{D FILL}>
+{Macsec Description}
+FILL is a flag that controls line fill mode on input.
+ If fill is enabled (FILL null) then no line break is forced after
+reading logical lines of input text.
+ This allows output to be buffered in the output stream until there
+is enough to just about fit on the line.
+{Macsec Notes}
+{Bl}The FJ and NFJ macros are normally used to control FILL, as
+right justification is usually desired in concert with line fill.
+{el}
+{P}
+!
+! FJ
+!
+{macdescr FJ,Enable Fill and Justify Flags}
+<{FJ}>
+<{D FJ}>
+{macsec description}
+<{D~FJ}> is the string; <"{SET~FILL}{SET~JUST}">.
+It enables both line fill and right justification.
+ The value of FJ is, by the above definition, null.
+{P}
+!
+! GE
+!
+{Macdescr GE,Predicate for Greater or Equal}
+<{GE n1,n2}>
+{Macsec Description}
+GE evaluates to null (true) if "n1" is greater than or equal to "n2",
+otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! GT
+!
+{Macdescr GT,Predicate Comparison for Greater Than}
+<{GT n1,n2}>
+{Macsec Description}
+GT evaluates to null (true) if "n1" is greater than "n2",
+otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! HS
+!
+{MACDESCR HS,Hard Space Character}
+{TSET HS,%}
+<{set HS,str}> (Default: HS=~ (tilde))
+<{HS}>,
+<{D HS}>
+{Restore Hs}
+{MACSEC DESCRIPTION}
+HS is used to alter or reference the Hard Space Character of the
+system. A hard space is a character (other than a space) that
+GPMDOC translates to a space just before the text is printed.
+The hard space can be used where it is desirable to prevent
+line-breaking or right justification.
+{MACSEC NOTES}
+{BL}Only the first character of str is taken for the new
+hardspace.
+{LI}Hard spacing can be disabled entirely by setting HS to a blank.
+{LI}It is impossible for the current hard space character to be
+printed, it must be changed by setting HS first.
+{LI}Note that hard space translation is applied just as the
+line is being printed. Thus if the hard space character is
+changed several times within a line, only the last change will
+have effect.
+{LI}Certain system macros (e.g. T (Tab), CENTER, LPAD, RPAD) can
+emit hard spaces.
+{EL}
+{MACSEC EXAMPLES}
+{BL}Insert ten hard spaces:
+{LS 1}
+{Tset Hs,%}
+{CENTER <{DUPL @HS,10}>}
+{CENTER or}
+{BRK}
+{CENTER <{DUPL ~,10}>}
+{Restore Hs}
+{LI}
+Turn off hard spaces so the tilde can be printed:
+{Tset Hs,%}
+{Ls 1}{Center <{TSET HS, }> A tilde looks like "~"<{BRK}{RESTORE HS}>}
+{El}
+{Restore Hs}
+!
+! INDEX
+!
+{Macdescr INDEX,Locate Position of Substring}
+<{INDEX str1,str2}>
+{Macsec Description}
+The value of INDEX is the numeric position of the first occurrence
+of "str2" within "str1".
+ If "str2" is not in "str1", the value of the INDEX macro is zero.
+ If "str2" is null, the value of INDEX is one.
+{Macsec Notes}
+{Bl}The value of INDEX is the position of the substring (str2),
+not the offset.
+ It is thus useful for use in the SUBSTR macro (see description).
+{el}
+{Macsec Notes}
+{Bl}Display a message if the value of the macro FILE does not
+contain the substring ".GPM":
+{Ls 1}{Center <{COND {EQ {INDEX @FILE,.GPM}},{DISPLAY WRONG FILE!}}>}{Ls 1}
+{El}
+!
+! INFORMAT
+!
+{Macdescr INFORMAT,Logical Line Formatting Flag}
+<{set INFORMAT,pred}> (Default: INFORMAT=null)
+<{INFORMAT}>
+<{D INFORMAT}>
+{Macsec Description}
+The INFORMAT flag controls whether any processing is applied to input.
+ If it is false (non-null) then input lines are processed exactly as read.
+ Continuation hyphens are taken as ordinary characters,
+and comment lines (those that begin
+with an exclamation point) are processed as any other line.
+ No evaluation of macros takes place.
+ Text is sent to the output stream exactly as it is read.
+{Macsec Notes}
+{Bl}Note that output processing (e.g. FILL, JUST) will still be
+applied according to the setting of the flags.
+{li}Processing with INFORMAT set false is faster because less computation
+is required.
+{Li}In general, INFORMAT is used only in an INPUT TSET, where an
+ENDTEXT flag can be specified.
+ Otherwise, since embedded macros are not evaluated it is impossible
+to get INFORMAT set true once it has been set false.
+{el}
+{p}
+!
+! INPUT
+!
+{MACDESCR INPUT,Define the Data Input File}
+<{set INPUT,str,mname1=str1,mname2=str2,...}>
+{macsec description}
+Evaluation of a SET form on the system name INPUT causes GPMDOC
+to read succeeding lines from the device/file specified by "str".
+ If a TSET form is used on INPUT, the current file is not closed
+out, and a subsequent RESTORE (or end-of-file) on the new
+file will cause input to resume from the original file at the
+line following the one which caused the TSET.
+ In general, "<{SET INPUT,...}>" switches input to a different
+file, while a TSET suspends the current file temporarily
+in order to process a new one.
+{Ls 1}Input completes when an end-of-file condition is encountered,
+when a <{RESTORE INPUT}> occurs (for a TSET), or when
+a previously defined ENDTEXT line is seen.
+{ls 1}Arguments out past "str" should evaluate to text of
+the form: "mname=str" (e.g. "LMG=40").
+ Arguments of this form are termed "keyword" arguments,
+and will be TSET by GPMDOC before initiating
+the new input stream, and be automatically RESTOREd by GPMDOC when
+the input is complete.
+ Such keyword arguments are only significant on an INPUT TSET,
+they are ignored on INPUT SETs.
+{Ls 1}A null "str" is termed a 'pseudo-read.'
+ It signifies that input should continue from the current file.
+ This is useful for forms which use the keyword arguments
+to create a 'nested context'.
+{macsec notes}
+(INPUT is somewhat implementation dependent, these notes
+describe the VAX/VMS version.)
+{BL}INPUT TSETs can only be nested to a system-imposed limit
+(between 10 and 20).
+ Pseudo-reads do not count toward that limit.
+ INPUT SETs simply cause the current file to be closed, and
+the designated one to be opened.
+ There is thus no limit to the number of times this can be done.
+{LI}The STARTTEXT and ENDTEXT macros are useful in conjunction
+with INPUT TSETs.  Either or both can be specified as keyword
+arguments to the INPUT set to cause the input to begin or end
+at predetermined points in the file.
+ The INFORMAT system macro flag is also useful in the same
+way to cause a section of a document to be printed {ul literally}.
+{LI}"Str" should be a standard device/file specification. If
+your specification includes commas it must be in quotes ("<<>>") to
+avoid an incorrect argument scan.
+{LI}When GPMDOC is first started, it issues several INPUT sets
+automatically.
+ First is input for the auxilliary built-in
+function definitions contained in a file called GPMBIF.GPM
+on a system account.
+ It then attempts to read a file called
+GPMSTART on your account.
+ (If this file doesn't exist, no error is reported.)
+ GPMDOC finally evaluates the command line and exits.
+If the command line is empty, then INPUT is automatically
+TSET to your terminal (the message "READY" is printed to
+inform you of this condition).
+ A control-Z signals an end-of-file from the terminal, and
+can thus be used to exit GPMDOC when in this mode.
+ The initial commands you specify, either in the command line
+or from your terminal can SET or TSET INPUT for the files
+you want to process.
+{Ls 1}You may want to put frequently used
+"private" macros in your GPMSTART file.
+{LI}INPUT TSETs can be useful in breaking up large documents.
+ Each part of a document can be put in a separate file.
+ These files can then be edited and
+run off individually.
+ To run off all of them, construct another
+file which issues INPUT TSETs to each of the individual files in turn.
+ This "master file" might also contain, or read in, the definitions
+of any macros that are referenced frequently in the document files.
+{Li}A SET on INPUT does not have any effect until the next line is
+read in,
+that is, not until the current line of input has been processed.
+ An INPUT TSET can be issued at any point and has immediate effect.
+The remainder of the line (if any) where the TSET occurred will be
+processed when input is restored.
+{EL}
+{MACSEC EXAMPLES}
+{BL}Start GPMDOC and read and process the text in WHITEPAP.GPM.
+ As no output file is specified, output will be directed at
+the standard output stream.
+ GPMDOC will exit when the file has been processed.
+{LS 1}
+{CENTER <GPMDOC6 {SET INPUT,WHITEPAP.GPM}>}
+{Ls 1}This shows method of specifying a command line to GPMDOC.
+{LI}This macro reference will read and process the text in the
+file [1,40]HELP.GPM.
+ When the end-of-file is reached, input will be resumed
+from the point in the file which issued this TSET.
+{LS 1}{CENTER <{TSET INPUT,<[1,40]HELP.GPM>}>}{LS 1}
+Note the use of the angle brackets to shield the comma in the
+directory string "[1,40]".
+{LI}Read and process text from the user's terminal until
+an end-of-file (control Z) is entered.
+{LS 1}
+{CENTER <{TSET INPUT,TT:}>}
+{LI}Define a macro that will read and process text from the
+user's terminal until *EOF is typed in:
+{Ls 1}{CENTER <{SETQ REOF,{TSET INPUT,TT:,ENDTEXT=*EOF}}>}
+{LS 1}
+{LI}Insert a "boiler-plate" paragraph from a file that the
+user specifies when the document is run off:
+{Ls 1}{CENTER <{TSET INPUT,BOILER{QUERY WHICH PARAGRAPH?}.GPM}>}
+{LS 1}
+Note:  This example assumes that the boiler-plate paragraphs
+all have the form BOILERXXX.GPM; all the user need do in this
+case is enter which XXX is desired.
+{LI}Print a form letter using an address from a file of
+addresses, "ADDR.GPM".
+ This file is assumed to have the form:
+{Ls 1}{Nfj}
+   !**PAULS PIZZA
+   PAUL'S PIZZA EMPORIUM
+   140 SAN PEPPERONI DR.
+   AUSTIN, TEXAS
+   !**
+   !**TERRYS TOYS
+   TERRY'S TOY SHOP
+   #1 NORTH POLE
+   ARTIC CIRCLE
+   !**
+      :
+      :
+{Ls 1}{Fj}
+The user will specify which address to use when the letter is run.
+{Ls 1}{Nfj}
+   !
+   !Print the Sender's Address
+   !
+   <{LIN 40}>
+   Acme Collection Agency
+   Hardline Ave.
+   Cleveland, Ohio
+   <{RESTORE LMG}>
+   !
+   !Now Print the Address
+   !
+   <{TSET INPUT,->
+   <  ADDR.GPM,STARTTEXT=!**{Query Recipient?},ENDTEXT=!**}>
+   !
+   !Do the Body
+   !
+   Dear person:<{Brk}{Fj}>a check of our records
+      :
+      :
+{Ls 1}{Fj}
+{LI}Fortran programs contain characters that could cause
+them to be erroneously processed (e.g. a minus sign at
+the end of a line). This example shows how to insert the
+text of such a program in a document using a literal read.
+{Ls 1}{Center <{TSET INPUT,PROGRAM.FOR,INFORMAT=1,FILL=1,JUST=1}>}
+{Ls 1}
+{Li}This example shows how to print a section of a document exactly
+as it appears using a pseudo-read.
+{Ls 1}{Nfj}
+   :
+   :
+<!> Ordinary text
+   :
+<{TSET INPUT,,INFORMAT=1,FILL=1,JUST=1,Endtext=!**}>
+   :
+<!> Text to be printed as it appears
+   :
+!**
+   :
+<!> Continue with ordinary text
+   :
+   :
+{Ls 1}{Fj}
+Note that here ENDTEXT is used to designate a marker ("!**") that will cause
+the pseudo-read to terminate and thus end literal input.
+Reading then continues on in the ordinary way after the **.
+{Li *~}Set up a file to print the first three chapters of the document
+SHIPLOG. Each chapter is in a separate file.
+{Nfj}{Ls 1}
+    <{TSET INPUT,SHIPLOG1.GPM}>
+    <{TSET INPUT,SHIPLOG2.GPM}>
+    <{TSET INPUT,SHIPLOG3.GPM}>
+              or
+    <{DOWHILE {LT @LOG#,3},{SET.ADD1 LOG#}->
+       <{TSET INPUT,SHIPLOG{LOG#}.GPM}}>
+{Fj}
+{El}
+{P}
+!
+! JUST
+!
+{Macdescr JUST,Right Justification Flag}
+<{set JUST,pred}> (Default: JUST=null)
+<{JUST}>
+<{D JUST}>
+{Macsec description}
+JUST is the GPMDOC right justification flag.
+ If true (null) then all lines that are broken off the output stream
+for printing have spaces inserted in them to cause the rightmost
+character to line up with the right margin.
+ This action will only be applied if the line is broken off as a
+consequence of the output stream accumulating as much or more text than will
+fit on a single output line.
+ Lines printed as a consequence of line breaks are never justified.
+{Macsec Notes}
+{bl}FJ and NFJ are normally used to manipulate FILL and JUST together.
+ Under normal circumstances, FILL should be enabled when JUST is enabled.
+{Li}Spaces are inserted only at points in the line where spaces already
+exist.
+ Spaces in the line are never removed.
+ The spaces are distributed throughout the lines in such a way as
+to reduce the possibility of white 'rivers' or 'lakes' running down the
+page.
+{el}
+{p}
+!
+! LE
+!
+{Macdescr LE,Predicate for Less Than or Equal}
+<{LE n1,n2}>
+{Macsec Description}
+LE evaluates to null (true) if "n1" is less than or equal to "n2",
+otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! LEQ
+!
+{Macdescr LEQ,Predicate for Lexical Equality}
+<{LEQ str1,str2}>
+{Macsec Description}
+LEQ evaluates to null (true) if "str1" is equal to "str2"
+in terms of alphanumeric (lexical) value.
+ This means that the two strings must be identical in all respects,
+including case.
+ Otherwise it evaluates to "1" (false).
+{Macsec Examples}
+{Bl}If the user responds "No" then skip input up to the next line
+of the form "!**":
+{Ls 1}{Center <{COND {LEQ NO,{CAPS {QUERY CONTINUE?}}},{SKIPTEXT !**}}>}
+{Ls 1}
+Note the use of "CAPS" to insure that regardless of the case
+of the user's response,
+the comparison will be true if the response was "no".
+{El}
+{Ls 1}
+See COND for other uses of system predicate macros.
+{P}
+!
+! LGE
+!
+{Macdescr LGE,Predicate for Lexical Greater or Equal}
+<{LGE str1,str2}>
+{Macsec Description}
+LGE evaluates to null (true) if "str1" is greater than or equal to "str2"
+in terms of alphanumeric (lexical) value.
+ Otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! LGT
+!
+{Macdescr LGT,Predicate for Lexical Greater Than}
+<{LGT str1,str2}>
+{Macsec Description}
+LGT evaluates to null (true) if "str1" is greater than "str2"
+in terms of alphanumeric (lexical) value.
+ Otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! LIN
+!
+{Macdescr LIN,Indent the left margin}
+<{LIN n}>
+{Macsec Description}
+<{LIN n}> is equivalent to <{TSET.+ LMG,n}>.
+ It indents the left margin an additional "n" places.
+{Macsec Notes}
+{bl}"n" can be negative to outdent the left margin
+{li}Keep in mind that LIN does a TSET.
+ The left margin prior to the LIN operation is saved on the LMG stack.
+ A subsequent <{RESTORE LMG}> will reactivate it.
+{li}There is a companion RIN macro to indent the right margin.
+{EL}
+{P}
+!
+! LINELENGTH
+!
+{Macdescr LINELENGTH,Number of Print Positions on a Line}
+<{set LINELENGTH,n}> (Default: LINELENGTH=66}
+<{LINELENGTH}>
+<{D LINELENGTH}>
+{macsec description}
+The value of LINELENGTH is the number of print columns between
+the current left and right margins. Setting LINELENGTH has
+the effect of altering the value of RMG (the right margin)
+so as to force <{LINELENGTH}> to equal the requested value.
+{macsec notes}
+{BL}n must be positive and non-zero.
+{el}
+{macsec examples}
+{BL}Set the page to have 40 print columns
+{ls 1}
+{CENTER <{SET LINELENGTH,40}>}
+{LI}If there are less than ten columns on the line, then
+set LINELENGTH to 10.
+{ls 1}
+{CENTER <{COND {LT @LINELENGTH,10},{SET LINELENGTH,10}}>}
+{EL}
+{P}
+!
+! LINENUM
+!
+{MACDESCR LINENUM,Current Line on Page}
+<{set LINENUM,n}>
+<{LINENUM}>
+<{D LINENUM}>
+{macsec description}
+LINENUM always has the number of the next line to be
+printed on the page. It is set to one by the system
+at the conclusion of processing a NEWPAGE condition.
+Thus lines are numbered consecutively starting at one
+with the first line on the page.
+ LINENUM can also be set.
+ This forces a line break, and lines to be skipped until
+the next print line will be at the value specified in the SET.
+This is termed "vertical tabulation".
+{macsec notes}
+{BL}The value for n must be between 1 and <{PAGELENGTH}>.
+{LI}You can use <{SET~LINENUM,1}> to force printing to begin
+on a new page. This is different from <{LS~10000}> in that
+the LS form can cause a blank page to appear if printing
+is already positioned at the top of a page.
+ The <{SET~LINENUM,1}>
+form will cause nothing to happen if the current print line is
+already n.
+ <{SET~LINENUM,1}> should normally be used to begin a page.
+{LI}If the printing has already gone past line n
+on a <{SET~LINENUM,n}>,
+a new page is forced before skipping occurs.
+{EL}
+{macsec examples}
+{BL}Print text centered on line 40.
+{ls 1}
+{nfj}
+   <{SET LINENUM,40}{CENTER REPORT SUBMITTED BY:}{BRK}>
+{FJ}
+{LI}Skip to a new page if more than ten lines have
+been already printed.
+{LS 1}
+{Center <{COND {GT @LINENUM,10},{LS 10000}}>}
+{EL}
+{P}
+!
+! LITERAL
+!
+{Macdescr LITERAL,Process Text Literally}
+<{Literal str}>
+{Macsec Description}
+LITERAL causes subsequent text lines to be processed exactly as they
+appear in the input file.
+ Macros are not evaluated, comment lines are passed, and line fill and
+justification are disabled.
+{Ls 1}A line identical to 'str' causes termination of the LITERAL,
+and a resumption of the previous processing state.
+ If str is omitted, it is assumed to be "!**".
+{Ls 1}LITERAL is defined to be:
+{Ls 1}~~~~~<{BRK}{TSET INPUT,,INFORMAT={COND {LEQ @1},!**,,@1},->
+{Brk }~~~~~<~~~~~INFORMAT=1,JUST=1,FILL=1}>
+{Ls 1}
+!
+! LLE
+!
+{Macdescr LLE,Predicate for Lexical Less Than or Equal}
+<{LLE str1,str2}>
+{Macsec Description}
+LLE evaluates to null (true) if "str1" is less than or equal to "str2"
+in terms of alphanumeric (lexical) value.
+ Otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! LLT
+!
+{Macdescr LLT,Predicate Comparison for Lexical Less Than}
+<{LLT str1,str2}>
+{Macsec Description}
+LLT evaluates to null (true) if "str1" is less than "str2"
+in terms of alphanumeric (lexical) value.
+ Otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! LMG
+!
+{macdescr LMG,Left Margin}
+<{set LMG,n}> (Default: LMG=10)
+<{LMG}>
+<{D LMG}>
+{MACSEC DESCRIPTION}
+The value of LMG tells GPMDOC how far to space out each print
+line from the left BIAS.
+ LMG must always be less than or equal to the right margin (RMG).
+ In addition, the sum of LMG and BIAS must always be a positive value.
+{macsec notes}
+{Bl}The value of LMG is only used by GPMDOC when it is ready to
+print a new line. So if you change LMG several times in a line,
+only the final change will have effect.
+{LI}LMG is used prior to evaluating NEWLINE, so if NEWLINE
+changes LMG, that change will affect the next print line.
+{EL}
+{macsec examples}
+{BL}Set the left margin to 20:
+{ls 1}{nfj}
+          <{SET LMG,20}>
+{Fj}{Ls 1}
+{Li}Set the left margin to 20 to the left of the right
+margin:
+{Ls 1}{Nfj}
+     <{SET LMG,{- @RMG,20}}}>
+{Fj}{Ls 1}
+Note that <{LINELENGTH}> will now equal 21, not 20 because
+both <{LMG}> and <{RMG}> are printing columns.
+{El}
+{P}
+!
+! LNE
+!
+{Macdescr LNE,Predicate Comparison for Lexical Not Equal}
+<{LNE str1,str2}>
+{Macsec Description}
+LNE evaluates to null (true) if "str1" is not equal to "str2"
+in terms of alphanumeric (lexical) value.
+ Otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! LOAD
+!
+{Macdescr LOAD,Load from Library}
+<{LOAD str1,str2}>
+{Macsec Description}
+Load reads from a user 'macro library'.
+ "Str1" is taken as the filename of the library.
+ "Str2" is the name of the 'module' to be loaded.
+ If "str2" is null, then the entire library is processed.
+{Macsec Notes}
+{Bl}The "SYSLOAD" macro can be used when loading from the
+standard system library.
+{Li}Normally, library modules should set macro definitions,
+and not produce any text on their own.
+{Li}The library must be in a particular form in order for
+LOAD to work correctly.
+ Each module must be preceeded by a single line containing
+an exclamation mark in column one,
+and the module name starting in column two of the line.
+ The remainder of the line must be empty.
+{Ls 1}The end of the module must be a single line of the form "!**"
+{Ls 1}LOAD is thus defined as:
+{Ls 1}{Nfj}
+<{COND {LEQ @2},{TSET INPUT,@1},->
+  <{TSET INPUT,@1,STARTTEXT=!{1},ENDTEXT=!**}}>
+{El}
+{P}
+!
+! LPAD
+!
+{macdescr LPAD,Pad a String on the Left}
+<{LPAD str1,n,str2}>
+{macsec description}
+The value of LPAD is str1 prefixed with
+replications of str2 to produce a result of length n.
+ If str1 is already as long or longer than n, the value of LPAD is str1.
+ The value of LPAD is also str1 if n is zero or negative.
+ If str2 must be replicated a non-integral number of times, the
+last replication will be truncated to the appropriate length.
+ If str2 is null, then the present hardspace character is used.
+{macsec notes}
+{BL}LPAD, along with RPAD, is useful for producing
+tabular text.
+{EL}
+{macsec examples}
+{BL}Print a line consisting of "PAGE:" and the current
+page number at the right margin:
+{Ls 1}{Center <{LPAD PAGE:{PAGENUM},@LINELENGTH}{BRK}>}
+{Ls 1}
+The LPAD causes the first argument string (e.g. "PAGE:32") to
+be prefixed with hard spaces until it is as long as one
+print line (<{LINELENGTH}>). It will thus appear flush with the
+right margin.
+{Li}Print the number in macro LISTNUM, left padded with zeros
+to 6 digits.
+{Ls 1}{Center <{LPAD @LISTNUM,6,0}>}
+{Ls 1}
+With this macro, if <{LISTNUM}> were defined as "63",
+the LPAD would return "000063".
+{El}
+{P}
+!
+! LS
+!
+{macdescr LS,Line Spacing}
+<{LS n}>
+{macsec description}
+The LS macro causes a line break and n blank lines to be
+inserted on the page. This spacing will terminate if
+it causes an ENDPAGE to occur, regardless of the value of n.
+ The value of LS is null.
+{macsec notes}
+{bl}N may not be negative.
+{LI}LS is subject to the effect induced by the value of
+BSLACK.
+{LI}<{LS~0}> is equivalent to <{BRK}>, a line break.  No blank
+lines will be printed.  Note that <{LS}> is the same
+as <{LS~0}>, as the implied null argument in the former
+will be interpreted as a numeric zero.
+{LI}LINENUM is also useful for skipping lines, read the
+description of the LINENUM macro, and particularly the
+<{SET~LINENUM,n}> form.
+{EL}
+{macsec examples}
+{BL}Skip 10 lines to leave room for a drawing:
+{Ls 1}{Center <{LS 10}>}
+{Ls 1}
+{LI}The example above isn't really very good, since skipping
+always stops at the end of a page. If the page is already
+almost full, the <{LS 10}> won't leave enough room. One way to solve
+this problem would be to run the page out and put the 10 lines
+at the top of the next page if less than 10 lines remain. This
+can be done with:
+{Ls 1}{Center <{COND {GT @LINENUM,{- @PAGELENGTH,10}},{LS 10000}}{LS 10}>}
+{Ls 1}
+The <{LS 10000}> will most certainly cause the page to run
+out (unless you have a {ul very} long page!), but notice
+that it will only occur if the value of LINENUM is past
+<{PAGELENGTH}> minus 10.
+ The LS 10 does the skipping.
+{Li *~}The example just given may not seem all that satisfactory
+to you either, since it leaves a rather big "white lake"
+at the bottom of some of the pages for no seemingly good reason.
+What we really want is to either skip the 10 lines if there is
+room, or wait and skip the 10 lines when we start the next page.
+This is fairly straightforward using NEWPAGE. As before, we
+test LINENUM, and either skip the 10 lines, or if it has gone
+too far, TSET the <{LS 10}> onto NEWPAGE.
+{Ls 1}{Nfj}
+<{COND {LE @LINENUM,{- @PAGELENGTH,10}},{LS 10},->
+  <{TSET.APPEND NEWPAGE,<{LS 10}{RESTORE NEWPAGE}>}}>
+{Ls 1}{Fj}
+The flavor of this is similar to that used with OUTDENT,
+in that the NEWPAGE "self-destructs" the <{LS 10}>
+once it has been carried out, by doing a RESTORE on itself.
+{Li}Here is a macro definition FIGURE for this, to which
+you can give the number of lines as an argument:
+{Ls 1}{Nfj}
+<{SETQ FIGURE,->
+  <{COND {LE @LINENUM,{- @PAGELENGTH,@1}},{LS @1},->
+  <,{TSET.APPEND NEWPAGE,<{LS >{1}<}{RESTORE NEWPAGE}>}}->
+<}>
+{Ls 1}{Fj}
+{EL}
+{P}
+!
+! LT
+!
+{Macdescr LT,Predicate Comparison for Less Than}
+<{LT n1,n2}>
+{Macsec Description}
+LT evaluates to null (true) if "n1" is less than "n2",
+otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See COND for uses of system predicate macros.
+{P}
+!
+! NEWLINE
+!
+{macdescr NEWLINE,Define Event For Each New Line}
+<{set NEWLINE,str}>
+<{NEWLINE}>
+<{D NEWLINE}>
+{macsec description}
+NEWLINE is an evaluated automatically
+by GPMDOC each time it is ready to print a new line.
+ Any value produced by referencing NEWLINE is discarded.
+{macsec notes}
+{BL}The <{NEWLINE}> form is not normally used. The system does
+this automatically on each newline.
+{LI}GPMDOC makes no adjustment to the margins as a result of
+any characters affixed to the line as a result of NEWLINE's
+evaluation.
+{LI}The OUTSTREAM macro can be useful in NEWLINE to alter the
+line to be printed.
+{LI}The GPMDOC uses NEWLINE for the operation of some of
+its macros (e.g. OUTDENT). It is thus not
+normally advisable to set NEWLINE directly, since it may
+already contain text (your's or GPMDOC's).
+ A
+{Ls 1}{Center <{SET.APPEND~NEWLINE,text}>}
+{Center or}
+{Center <{TSET.APPEND~NEWLINE,text}>}
+{Ls 1}
+which affixes your text to any existing text in NEWLINE is
+preferred.
+{EL}
+{macsec examples}
+(Also see OUTSTREAM macro description).
+{BL *~}OUTDENT the next line five spaces:
+{Ls 1}{Nfj}
+<{TSET.- LMG,5}->
+  <{TSET.APPEND NEWLINE,<{RESTORE LMG,NEWLINE}}>>
+{Ls 1}{Fj}
+This operation proceeds by first temporarily setting (TSET)
+the left margin out 5 spaces. Then the text
+<{RESTORE~LMG,NEWLINE}> is tacked onto the end of
+any existing NEWLINE text and temporarily set back into
+NEWLINE (TSET.APPEND).
+ Thus when the next line is printed
+the following actions occur:
+{BL}The left margin spacing is computed based on the new
+value which is the old value minus 5.
+{LI}NEWLINE is evaluated automatically by GPMDOC and this causes
+the old left margin to be restored (for succeeding lines),
+NEWLINE then restores its own old value so that the text
+appended onto it for the outdent effectively "self-destructs".
+{LS 1}
+{EL}
+This is the definition for the system OUTDENT macro.
+{el}
+{P}
+!
+! NEWPAGE
+!
+{MACDESCR NEWPAGE,Define Event For Starting a New Page}
+<{set NEWPAGE,str}> (Default: NEWPAGE=<{LS 1}->
+                     <{COND {GT @PAGENUM,1},->
+                     <{LPAD PAGE {PAGENUM},@LINELENGTH}}->
+                     <{LS 2}>
+<{NEWPAGE}>
+<{D NEWPAGE}>
+{macsec description}
+The first line to be printed after an ENDPAGE condition has
+occurred causes a NEWPAGE event.
+ Before the line is actually printed, the following actions take place:
+{BL}The line to be printed and any other assembled output text
+are put aside.
+{LI}NEWLINE is TSET to null, SPACING is TSET to one (single
+spacing). LMG is TSET to 10. RMG is TSET to 75.
+{LI}The value of LINENUM becomes one.
+{LI}"<{NEWPAGE}>" is given to the evaluator for printing.
+{LI}NEWLINE, SPACING, LMG and RMG are restored, which completes
+the NEWPAGE event.
+{EL}
+{MACSEC NOTES}
+{BL}A NEWPAGE event happens on the first line of a
+document, even though no preceeding ENDPAGE has occurred.
+{LI}If NEWLINE, SPACING, LMG or RMG are changed in NEWPAGE,
+changes will only have effect during the NEWPAGE condition, as
+they are TSET and RESTOREd.
+ If you desire a permanent effect,
+the NEWPAGE can RESTORE and re-TSET new values
+that will then be the values ultimately RESTORED at the conclusion
+of the NEWPAGE condition.
+{li}NEWPAGE and ENDPAGE conditions are inhibited while
+the NEWPAGE condition is being processed.
+{EL}
+{MACSEC EXAMPLES}
+{BL}At the top of every page, print two blank lines, the
+centered text of the user-defined macro TITLE, the page
+number then two more blank lines:
+{LS 1}{nfj}
+<{SETQ NEWPAGE,->
+  <{LS 2}{CENTER @TITLE}{T 60}PAGE:{PAGENUM}{LS 2}}>
+{FJ}
+{EL}
+{P}
+!
+! NFJ
+!
+{macdescr NFJ,No Fill or Justify}
+<{NFJ}>
+{macsec description}
+<{D NFJ}> is the string; <"{SET~FILL,FALSE}{SET~JUST,FALSE}">.
+It disables both line fill and right justification.
+ The value of NFJ is null.
+{P}
+!
+! OAB
+!
+{MACDESCR OAB,Open Angle Bracket}
+<{OAB}>
+{MACSEC DESCRIPTION}
+Evaluates to "<".
+{MACSEC NOTES}
+{BL}This macro, and its companion <{CAB}>, are used in situations
+where the quote symbols are needed without causing the effect
+of quoting, or where they appear in an unbalanced way.
+{EL}
+{MACSEC EXAMPLES}
+See the examples for CAB.
+{P}
+!
+! ODD
+!
+{Macdescr ODD,Predicate Test for Numeric Odd}
+<{ODD n}>
+{Macsec Description}
+ODD evaluates to null (true) if "n" is an odd integer,
+otherwise it evaluates to "1" (false).
+{Macsec Examples}
+See the description of COND for examples of the use of predicates.
+{P}
+!
+! OS
+!
+{macdescr OS,Overstrike Two Strings}
+<{OS str1,str2}>
+{macsec description}
+OS returns a string which, when printed, will have str1
+overprinted with str2.
+ If the two strings are not of the same length,
+the shorter is padded on the right with blanks
+before the overstrikes are computed.
+{macsec notes}
+{BL}Overstrikes are computed internally with a special
+backspace character that cannot be entered from the keyboard.
+Thus overstruck strings can be freely passed about, and joined
+with other strings.
+ The SIZE macro correctly computes the actual
+number of print positions of a string, compensating for the
+extra length caused by the presence of the backspaces.
+ For output, GPMDOC decomposes the print line containing the
+backspaces into a series of non-overstruck lines that it
+prints on top of each other.
+{LI}Overstrikes may themselves be overstruck (to any
+reasonable degree).
+ Note however, that use of overstriking
+slows down both the processing and actual printing of such text.
+{EL}
+{macsec examples}
+{BL}Overstrike pairs of characters to get interesting new
+characters from the ordinary ol' line printer:
+{ls 1}
+{nfj}
+{TSETQ OSC,<{OS >{D 1}<,>{D 2}<}  --  >{OS {1},{2}}<     >({3}){BRK}}
+{OSC c,|,cent sign}
+{OSC -,|,dagger}
+{OSC |,=,double dagger}
+{OSC /,=,not equals}
+{OSC O,-,theta}
+{OSC 0,/,computer zero}
+{OSC {oab},-,arrow}
+{OSC ),/,gamma}
+{OSC ),\,lambda}
+{OSC o,_,rising sun}
+{OSC =,-,equivalence symbol}
+{OSC \,/,X marks the spot}
+{OSC <{OS \,/}>,<{OS |,-}>,attention grabber}
+{RESTORE OSC}
+{FJ}
+{LI}Print the text "RIGHT NOW" with the "NOW" underlined:
+{ls 1}{Center RIGHT <{OS NOW,___}>}
+{Ls 1}{Fj}
+{LI *~}Define a macro UNDER that will evaluate to an underlined version
+of whatever text is given as an argument:
+{ls 1}{Center <{SETQ UNDER,{OS @1,{DUPL _,{DSIZE 1}}}}>}
+{ls 1}
+This macro has a problem in that it will underscore blanks,
+preventing them from being used as line breaks, or as
+justification points.
+ This problem can be solved by using
+REPLACE and IMAGE, which is essentially what is done by the
+system underlining macro UL.
+{LI *~}Sometimes when revising a document, it is necessary to
+show on the new version what changes have been made.
+ "Change bars" in the left margin are usually
+used to show new or changed lines.
+ Deletions, however, pose a formidable problem.
+ This example shows a way to use NEWLINE to
+overstrike print lines with hyphens to indicate that they are
+deleted without actually removing the text:
+{ls 1}{nfj}
+<{TSET.APPEND NEWLINE,->
+  <<{SET OUTSTREAM,{OS @OUTSTREAM,{DUPL -,{DSIZE OUTSTREAM}}}}>}}>
+{Ls 1}{Fj}
+{EL}
+{P}
+!
+! OUTDENT
+!
+{Macdescr OUTDENT,Outdent a Line}
+<{OUTDENT n}>
+{Macsec Description}
+OUTDENT will cause the left margin to be 'outdented' n spaces on the
+next line printed.
+ OUTDENT is defined as:
+{Ls 1}{Center <{BRK}{TSET.- LMG,@1}{TSET.APPEND NEWLINE,->}
+{Center <<{RESTORE LMG,NEWLINE}>}>}
+{Ls 1}
+{p}
+!
+! OUTOS
+!
+{Macdescr OUTOS,Output Stream Overstrike Flag}
+<{set OUTOS,pred}> (Default: OUTOS=null)
+<{OUTOS}>
+<{D OUTOS}>
+{Macsec Description}
+OUTOS is a flag which controls the formatting of overstrikes in the
+output stream.
+ When OUTOS is true (null), output files are accessed for writing
+with carriage control properties that will properly display overstruck
+text.
+ Such files may be difficult to manipulate with other system utilities.
+ If OUTOS is set false (non-null), only the primary images of output
+lines will be printed (no overstrikes), and output files will be opened
+with normal, sequential attributes.
+{Macsec Notes}
+{Bl}Changing OUTOS will only have effect
+for output files opened subsequent to the change.
+{el}
+{p}
+!
+! OUTPUT
+!
+{macdescr OUTPUT,Name of Output File}
+<{set OUTPUT,str}> (Default: OUTPUT=user's terminal device)
+<{OUTPUT}>
+<{D OUTPUT}>
+{Macsec Description}
+The value you set to OUTPUT instructs GPMDOC as to the name of the
+current file for print stream output text.
+ Setting a value for OUTPUT causes the present output stream to
+be closed out, and a new one whose name is given by "str" is
+created and opened.
+{Macsec Notes}
+The nature of OUTPUT is necessarily somewhat system-dependent.
+ These notes and examples pertain to the VAX/VMS version.
+{Bl}"Str" should be a valid device/file specification, enclosed in
+quote symbols if it contains any commas.
+{Li}If TSET is used with OUTPUT, a later RESTORE will not
+continue with the old file, but will open a new version of it.
+{El}
+{Macsec Examples}
+{Bl}Set the output stream to the terminal:
+{Ls 1}{Center <{SET OUTPUT,TT:}>}{Ls 1}
+{Li}Shut off output entirely (direct it to the null device):
+{Ls 1}{Center <{SET OUTPUT,NL:}>}{Ls 1}
+{Li}Direct further output to FILE.LST~:
+{Ls 1}{Center <{SET OUTPUT,FILE.LST}>}{Ls 1}
+You should be aware that each time OUTPUT is set, a new stream is
+created and opened.
+ This means that if you set the output stream to the same file
+repeatedly, GPMDOC will not keep appending to one file, but rather
+create multiple copies of the same file with successively higher
+version numbers.
+{el}{p}
+!
+! OUTSTREAM
+!
+{MACDESCR OUTSTREAM,The Current Output Stream}
+<{set OUTSTREAM,str}> (Default: See Description)
+<{OUTSTREAM}>
+{macsec description}
+The value of OUTSTREAM is the currently assembled output stream
+(no evaluation is done).
+ With a NEWLINE macro, the value of an OUTSTREAM reference is the
+text of the line about to be printed, excluding the left margin bias.
+{macsec notes}
+{BL}Care should be exercised when performing a SET-type operation on
+OUTSTREAM.
+ This is especially true in a NEWLINE evaluation,
+as the system will not 'recompensate' for margin or spacing
+irregularities induced by changing the OUTSTREAM.
+{EL}
+{macsec examples}
+{BL}Print every line with a "*" on the front.
+{LS 1}{CENTER <{SET.PREPEND OUTSTREAM,*}>}
+{LI *~}Temporarily change NEWLINE to cause every print line to be
+underscored until NEWLINE is RESTORED.
+{LS 1}{CENTER <{TSET.APPEND NEWLINE,<{SET.UL OUTSTREAM}>}>}
+{EL}
+{P}
+!
+! P
+!
+{macdescr P,Skip to New Page}
+<{P}>
+<{D P}>
+{macsec description}
+P is defined as <{SET LINENUM,1}>, which will cause a new
+page to be started unless printing is presently at the first
+line of a page.
+{macsec notes}
+{BL}You should read the description of LINENUM for a complete
+explanation of the effects of <{P}>.
+{el}
+{P}
+!
+! PAGELENGTH
+!
+{Macdescr PAGELENGTH,Defined Length of Page}
+<{set PAGELENGTH,n}> (Default: PAGELENGTH=55)
+<{PAGELENGTH}>
+<{D PAGELENGTH}>
+{Macsec Description}
+The value of PAGELENGTH is used by GPMDOC to determine when to signal
+an ENDPAGE condition.
+ When <{LINENUM}> exceeds <{PAGELENGTH}>, an ENDPAGE (see description)
+condition is signalled.
+{Macsec Notes}
+{Bl}The value of "n" must be positive.
+{Li}Paging is inhibited by GPMDOC during NEWPAGE/ENDPAGE conditions,
+so even if the number of lines emitted by NEWPAGE is larger than
+PAGELENGTH, no endlessly recursive paging is possible.
+{Li}Assuming that ENDPAGE causes some sort of 'page eject,'
+PAGELENGTH can be thought of as defining the number of lines on a
+page.
+{Li}Setting PAGELENGTH to a very large value will effectively inhibit
+page conditions.
+{el}
+{p}
+!
+! PAGENUM
+!
+{macdescr PAGENUM,Current Page Number}
+<{set PAGENUM,n}> (Default: PAGENUM=1)
+<{PAGENUM}>
+<{D PAGENUM}>
+{macsec description}
+PAGENUM contains its last defined value, but updated
+by one at the conclusion of each ENDPAGE condition.
+{macsec notes}
+{BL}N must be non-negative.
+{li}Setting PAGENUM has no side-effects.
+{el}
+{macsec examples}
+{bl}Print the page number at the top right-hand corner
+of every succeeding page.
+{LS 1}{CENTER <{SETQ NEWPAGE,{LPAD @PAGENUM,@LINELENGTH}}>}
+{LI}Reset page numbering to one.
+{ls 1}
+{Center <{SET PAGENUM,1}>}
+{el}
+{p}
+!
+! PARA
+!
+{macdescr PARA,Start a New Paragraph}
+<{PARA}>
+<{D PARA}>
+{Macsec Description}
+Referencing PARA will cause a line break, a single blank line and five
+hard spaces to be sent to the output stream.
+ This is what is normally used for a standard paragraph.
+{Macsec Notes}
+{bl}If you want to insure that {ul exactly} five spaces indent the
+first line of the paragraph then the text of the paragraph should
+appear immediately following the <{PARA}>.
+ If you start the text on a new logical line, then GPMDOC will
+(in fill mode) send a single space to the output stream between
+the <{PARA}> and the text on the next line.
+ This space is subject to justification and could cause thus cause
+uneven spacing of paragraph indents.
+{el}
+{p}
+!
+! PREPEND
+!
+{macdescr PREPEND,Prefix onto a String}
+<{PREPEND str1,str2}>
+{Macsec Description}
+The value of PREPEND is str2 prefixed onto str1.
+ PREPEND is the complementary macro to APPEND.
+{macsec notes}
+{Bl}The PREPEND operation is generally only useful in extended sets.
+{el}
+{macsec examples}
+{bl}Print two extra lines at the bottom of every page,
+before the page footing:
+{Ls 1}{Center <{SET.PREPEND ENDPAGE,<{LS 2}>}>}{Ls 1}
+{el}
+{p}
+!
+! QUERY
+!
+{macdescr QUERY,Get Text From The Terminal}
+<{QUERY str}>
+{macsec description}
+The value of QUERY is whatever text is typed in at the terminal
+in response to str, which is displayed first.
+{macsec notes}
+{BL}The response typed in is not evaluated by GPMDOC.
+{EL}
+{macsec examples}
+{BL}Print text containing a response that is typed in.
+{LS 1}
+{nfj}
+{CENTER <We will ship to {QUERY Country? }>}
+{fj}
+{ls 1}
+Note:  "Country?" will be displayed at your terminal.
+Following this, you should enter text (possibly null)
+terminated by a carriage return. This response becomes the
+value of the QUERY macro, and hence is effectively inserted
+in the output stream.
+{LI}Ask for an address from the terminal to be used
+later, so place it in a macro called ADDRESS.
+{ls 1}
+{Center <{SET ADDRESS,{QUERY WHAT IS THE ADDRESS? }}>}
+{ls 1}
+If text such as "#10 Downing St.<{BRK}>London, England"
+were entered, it would be placed into ADDRESS in that form,
+since GPMDOC does not evaluate QUERY input. When ADDRESS
+was used later, the <{BRK}> would be processed by GPMDOC
+at that point.
+{LI}Print an address and also put it into ADDRESS to be
+referenced later:
+{ls 1}
+{CENTER <Ship To: {SETV ADDRESS,{QUERY WHAT IS THE ADDRESS? }}>}
+{LS 1}
+Notice the use of SETV to effectively 'pass through' the value
+that was SET, in order for it to be printed.
+{EL}
+{P}
+!
+! REMDR
+!
+{Macdescr REMDR,Arithmetic Remainder}
+<{REMDR n1,n2}>
+{Macsec Description}
+The value of REMDR is the integer remainder after dividing integer
+n1 by n2.
+ The sign of the result is the same as the sign of n1.
+{Macsec Examples}
+{bl}Print a message on the terminal every 10 pages.
+{ls 1}{Center <{COND {EQ 0,{REMDR @PAGENUM,10}},{DISPLAY Working...}}>}
+{Ls 1}
+{Li *~}Here is a set of macros to compute roman numbers given a number.
+in the range from 0..99.
+ For example <{Roman~17}> will yield "xvii".
+{Ls 1}{Nfj}
+<{SETQ ROMAN,{GENROMAN {/ @1,10},x,l,c}->
+  <{GENROMAN {REMDR @1,10},i,v,x}}>
+{Ls 1}
+<{SETQ GENROMAN,{COND ->
+  <{LE @1,3},{DUPL @2,@1},->
+  <{EQ @1,4},{2}{3},->
+  <{LE @1,8},{3}{DUPL @2,{- @1,5}},->
+  <,{2}{4}}}>
+{Ls 1}{Fj}
+"Genroman" is an auxilliary macro used by Roman that will generate
+text according to the rules for roman numbers in the range
+0..9.
+ Roman makes two calls on Genroman, one for the 10s digit and one
+for the ones digit.
+ REMDR is used to extract the ones digit.
+{Ls 1}Genroman takes in the symbols ("x","l","c", etc.)
+to be used, since the rules for generating roman numbers are the same
+for both the 10s digit and the ones digit.
+{Ls 1}Note that if capital roman numbers were needed, <{CAPS~{ROMAN~n}}>
+would do the trick.
+{el}
+{P}
+!
+! REPLACE
+!
+{macdescr REPLACE,Substitute for Characters in Text}
+<{REPLACE str1,str2,str3}>
+{Macsec Description}
+The value of REPLACE is the string str1 with each of its characters
+appearing in str2 being replaced by the corresponding character from
+str3.
+{Macsec Notes}
+{bl}Str2 and str3 must be the same size, and must not be null.
+{li}Any of the argument strings can contains overstrikes, however,
+replacement occurs on the individual component characters of
+overstrikes, not on the overstruck characters as unique elements.
+{el}
+{macsec examples}
+{bl}Print the text of the macro TITLE, with all punctuation replaced
+by blanks:
+{Ls 1}{Center <{REPLACE @TITLE,<,.?":;!>,<       >}>}{Ls 1}
+{li}Print text that is typed in from the terminal, with all
+spaces replaced by hard spaces:
+{Tset Hs,<@>}
+{Ls 1}{Center <{REPLACE {QUERY Enter Text},< >,~}>}{Brk}
+{Restore Hs}{Ls 1}
+{el}
+{p}
+!
+! RESTORE
+!
+{MACDESCR RESTORE,Restore Prior Value of Macros}
+<{RESTORE mname1,mname2,...}>
+{macsec description}
+RESTORE is used to retrieve the last definition of the mnames
+that were stacked by TSET (see the description of TSET).
+ Each of the given mnames is processed in turn, starting with mname1.
+ A null mname (end of arguments) is assumed to terminate the list.
+{Ls 1}RESTORE operates exactly like a SET on mname, where the
+value to be SET comes from the top of the stack for mname.
+ RESTORE also discards this item from the stack, so that
+successive RESTORE's on the same mname retrieve successive items
+from mname's stack in inverse order from the order they
+were stacked by TSET.
+{macsec notes}
+{BL}TSET and RESTORE are typically used to save (TSET)
+and restore (RESTORE) contextual information such as
+margins, spacing and the like.
+{LI}An attempt to restore a value from a macro's stack
+when the stack is empty will result in a "NO VALUE TO RESTORE"
+error.
+{Li}A macro may issue a RESTORE on itself (see OUTDENT for example).
+ The restored definition is used in subsequent evaluations of the macro,
+the evaluation causing the restore continues undisturbed with the previous
+definition.
+{Li}Stacks for macros with the same name in different property tables
+are distinct.
+{EL}
+{macsec examples}
+Examples are shown in the description for TSET.
+{P}
+!
+! RIN
+!
+{Macdescr RIN,Indent the right margin}
+<{RIN n}>
+{Macsec Description}
+<{RIN n}> is equivalent to <{TSET.- RMG,n}>.
+ It indents the right margin an additional "n" places.
+{Macsec Notes}
+{bl}"n" can be negative to move out the right margin
+{li}Keep in mind that RIN does a TSET.
+ The right margin prior to the RIN operation is saved on the RMG stack.
+ A subsequent <{RESTORE RMG}> will reactivate it.
+{li}There is a companion LIN macro to indent the left margin.
+{EL}
+{P}
+!
+! RMG
+!
+{macdescr RMG,Right Margin}
+<{set RMG,n}> (Default: RMG=75)
+<{RMG}>
+<{D RMG}>
+{macsec description}
+The value of RMG tells GPMDOC the absolute position of the
+last printing column on the page.
+{macsec notes}
+{BL}N must be greater than or equal to <{LMG}>.
+{LI}<{RMG}> in fill mode causes lines to be assembled until
+characters overflow the right margin. Then this assembled
+line is broken off at a blank closest to the right margin, and
+printed. If no blank exists in the line, the line is broken
+at the right margin. If justification is enabled, the part
+broken off is justified before printing, such that the last
+character is flush with the right margin. The part of the
+assembled text not broken off is retained for printing on
+the next line. With line fill disabled, an automatic
+line break occurs at the end of each input line, so that <{RMG}>
+only assumes significance if single input lines exceed the
+line length.
+{LI}The LINELENGTH macro can also be used to change the right
+margin, see the description of LINELENGTH.
+{EL}
+{macsec examples}
+{BL}Set the right margin at column 60:
+{ls 1}
+{Center <{SET RMG,60}>}
+{LI}Set the right margin to 10 past the left margin:
+{ls 1}
+{Center <{SET RMG,{+ @LMG,10}}>}
+{Center or}
+{Center <{SET LINELENGTH,11}>}
+{ls 1}
+You might be tempted to set LINELENGTH to 10, but this is not
+the same. For instance, if <{LMG}> is 10 and RMG is 20 as
+a result of this example, then columns 10-20 {UL inclusive}
+are printing columns. This means there are 11 printing columns.
+<{LINELENGTH}> will always be <{RMG}> - <{LMG}> + 1.
+{EL}
+{P}
+!
+! RPAD
+!
+{macdescr RPAD,Pad a String on the Right}
+<{RPAD str1,n,str2}>
+{macsec description}
+The value of RPAD is str1 suffixed with replications of str2 to
+produce a result of length n.
+ If str1 is already as
+long or longer than n, the value of RPAD is str1.
+ The value of RPAD is also str if n is zero or negative.
+ If an uneven number of replication are necessary to get a result of
+length n, the last replication will be truncated appropriately.
+ If str2 is null, the present hardspace character is assumed for str2.
+{macsec notes}
+{BL}RPAD, along with LPAD, is useful for producing
+tabular text.
+{EL}
+{macsec examples}
+{Bl}Define a macro, TABULAR, that will print three items in
+columns ten wide:
+{Ls 1}
+{Nfj}
+<{SETQ TABULAR,->
+  <{RPAD @1,10}{RPAD @2,10}{RPAD @3,10}}>
+{FJ}
+{EL}
+{P}
+!
+! SET
+!
+{macdescr SET,Alter The Value of a Macro}
+<{SET mname,str}>
+{macsec description}
+The macro with name mname is given a definition of str.
+ Any previous definition is lost.
+ Future references to <{mname...}>
+will cause this definition to be retrieved.
+ The value of SET is always null.
+{macsec notes}
+{BL}Certain system macros may only be set to a restricted
+range of values (e.g. INPUT, LMG, RMG, LINENUM etc.).
+ An attempt to set these macros to an improper value results in a
+"BAD VALUE" error.
+{LI}All macros not explicitly SET are implicitly null when
+referenced.
+{LI}There is an additional syntax available for use with
+SET, termed "extended set".
+ It is used when an operation is
+to be applied that involves a macro, and the resulting
+value is to be SET back into that macro. (See examples below.)
+The syntax is:
+{ls 1}
+{Center <{SET.mname1 mname2,str1,str2...}>}
+{Ls 1}
+which is equivalent to:
+{Ls 1}
+{Center <{SET mname2,{mname1 @mname2,str1,str2,...}}>}
+{LS 1}
+Extended set should not be used with system macros for which
+the <{D mname}> form is not valid, since the macro's
+{ul definition} is accessed for extended set.
+{LI}The argument macros may be used within a macro's
+definition.
+ They take the form <{n}>. n is a macro whose definition
+is the nth argument string passed in a call to the
+macro where the <{n}> occurs, as in:
+<{mname arg1,arg2,...}>.
+ For instance <{1}> refers to
+arg1 of this evaluation of mname.
+ An argument macro with a
+number less than one or greater than the number of arguments
+given will evaluate to null, as will an argument macro
+appearing directly in the input text (outside of an evaluation).
+ Argument macros are, as with other system macros,
+defined in the null property table, however,
+ no form of SET should ever be issued for argument macros.
+{LI}For the above reasons users should avoid defining their
+own macros with names:
+{ls 1}
+{nfj}
+    -  Containing periods or backslashes, or
+    -  The same as system macros, or
+    -  That are numeric (with the null property table).
+{fj}
+{ls 1}
+{LI}SETting definitions uses up memory space inside GPMDOC.
+In some implementations on small machines this may be
+significant in that GPMDOC will run slower when the user has set
+a large number of definitions because its own internal processing
+memory is reduced. In extreme cases a "MEMORY OVERFLOW" error
+may occur. To avoid thses situations, macros can be set to null
+when they are no longer needed, or an entire property table
+and its definitions can be eradicated with the DELPROP macro.
+{EL}
+{macsec examples}
+{BL}Set a macro to "University of California" (saves typing):
+{LS 1}{Center <{SET UC,University of California}>}
+{LI}Move the left margin in five spaces.
+{Ls 1}{Center <{SET LMG,{+ 5,@LMG}}>}
+{Center or}
+{Center <{SET.+ LMG,5}>}
+{Center or}
+{Center <{LIN 5}>}
+{LI}Set the output file to HELP.DOC on account [1,2].
+{LS 1}
+{Center <{SET OUTPUT,<[1,2]HELP.DOC>}>}
+{LS 1}
+Note that the quotes are needed as otherwise the comma
+within the account specification would be seen as an
+argument separator, and OUTPUT would be set to
+"[1" - an error.
+{LI}Set the hardspace to a backslash:
+{LS 1}{Center <{SET HS,\}>}
+{LI}Define a macro PAGE that will skip to a new page
+when invoked:
+{LS 1}{Center <{SET PAGE,<{LS 10000}>}>}
+{LS 1}
+Note here that the quotes are required to avoid a premature
+evaluation of the LS. If the quote brackets were not
+present, when the SET was evaluated, the <{LS 10000}> would then
+be evaluated as an argument to SET
+which would immediately force a new page, and
+the value of the LS (null) would be set to PAGE. It is easier
+to do this sort of thing with SETQ (see the description of SETQ).
+{LI}Turn right justification off (set it to null).
+{LS 1}
+{Center <{SET JUST}>}
+{El}
+{P}
+!
+! SETQ
+!
+{macdescr SETQ,Quoted SET}
+<{SETQ mname,qstr}>
+{macsec description}
+SETQ functions exactly like SET in that it establishes a connection
+between mname and qstr.
+ The difference is that SETQ receives the qstr definition in
+unevaluated form.
+ The definition is thus made with all
+embedded macro calls and quotes in qstr intact.
+{macsec notes}
+{BL}SETQ is included principally to make it easier to define
+macros that consist of calls on other macros.
+ (See the examples.)
+{li}Your qstr should not contain "open" commas, that is, commas
+not contained inside quote symbols or macro braces. The reason
+is that these commas would be seen as argument separators for the
+SETQ, causing an incorrect argument scan for the SETQ.
+{EL}
+{macsec examples}
+{BL}Define a macro INMARGINS that will move the left and
+right margins in by five.
+{ls 1}{Center <{SETQ INMARGINS,{LIN 5}{RIN 5}}>}
+{ls 1}
+This example could be done with SET, it would be written as:
+{ls 1}
+{Center <{SET INMARGINS,<{LIN 5}{RIN 5}>}>}
+{LS 1}
+The SETQ allows you to eliminate the quote symbols that
+have to be used in the SET.
+{el}
+{P}
+!
+! SETV
+!
+{macdescr SETV,SET Value For Macro and Return It}
+<{SETV mname,str}>
+{macsec description}
+SETV functions identically to SET except instead of having a
+a null value, the value of SETV is the text that is set
+as the definition of mname.
+{macsec notes}
+{BL}SETV may be used in extended form as with SET.
+{EL}
+{macsec examples}
+{BL}Indent the left margin five and put the resulting value
+in the user-defined macro margin.
+{LS 1}{Center <{SET MARGIN,{SETV.+ LMG,5}}>}
+{LS 1}
+{EL}
+{P}
+!
+! SIZE
+!
+{macdescr SIZE,Number of Print Positions for Text}
+<{SIZE str}>
+{macsec description}
+The value of SIZE is the (non-negative) integer which
+gives the number of print columns that would be
+occupied by str, if it were printed.
+{macsec notes}
+{bl}SIZE includes compensation for any overstruck characters
+in str.  Thus SIZE is the number of characters in str if and
+only if str contains no overstrikes.
+{li}DSIZE is useful and more efficient for determining the
+size of a defined macro or argument.  (See the description
+of DSIZE).
+{el}
+{p}
+!
+! SKIPTEXT
+!
+{MACDESCR SKIPTEXT,Skip Input Text}
+<{SKIPTEXT str}>
+{Macsec Description}
+The SKIPTEXT macro causes succeeding lines on the currently active
+input file to be skipped until a physical line is encountered
+that exactly matches "str".
+ No evaluation or processing of any kind occurs with the skipped text.
+ Reading will continue with the line following the one matched.
+ The value of SKIPTEXT is always null.
+{Macsec Notes}
+{Bl}SKIPTEXT, as with BEGINTEXT and ENDTEXT, works with
+physical lines, not logical ones.
+ This means that comment lines can be used as SKIPTEXT markers.
+ The reason that this is usually helpful is if the text that is
+skipped is processed without the SKIPTEXT being invoked.
+ In this case, if the marker is a comment, it will not become
+part of the text processed.
+{li}The preferred marker (by convention) is "!**".
+{Li}The given termination string can be null.
+ In this case, an empty line will terminate the skipping.
+{el}
+{Macsec Examples}
+{bl}Skip some text if the value of MODE is "BRIEF":
+{Ls 1}{Center <{COND {LEQ @MODE,BRIEF},{SKIPTEXT !**}}>}{Ls 1}
+This will skip over input through the next "!**" line if the
+MODE macro has the value "BRIEF".
+ Otherwise, evaluation continues on with no effects.
+{Ls 1}This shows why the use of "!**" is helpful, since if
+MODE is not "BRIEF", then the "!**" that is encountered later
+will be 'ignored.'
+{el}
+!
+! SPACING
+!
+{MACDESCR SPACING,Set Inter-line Spacing}
+<{set SPACING,n}> (Default: SPACING=1)
+<{SPACING}>
+<{D SPACING}>
+{macsec description}
+The SPACING macro tells GPMDOC how many blank lines to
+automatically print after each text line is output. When
+SPACING is one, no extra blank lines are output. SPACING
+set to 2 means double spacing, and so forth. In general, setting
+SPACING to n is equivalent to performing an <{LS~{sub1~n}}>
+after each line is printed.
+{macsec notes}
+{BL}N must be greater than or equal to one.
+{LI}If less than n-1 lines remain on the page, the page
+is run out, and an endpage condition occurs.
+{LI}Blank lines inserted by the effect of SPACING are not subject
+to BSLACK (see the description of BSLACK).
+{LI}Blank lines emitted by <{LS~...}> will not have additional
+spacing applied (see example).
+{EL}
+{macsec examples}
+{BL}Set double spacing:
+{LS 1}{Center <{SET SPACING,2}>}
+{LI}Temporarily set single spacing for printing a quotation
+then go back to the old spacing:
+{LS 1}
+{Center <{TSET SPACING,1}{LS 2}{LIN 10}{RIN 10}>}
+{Center :}{Center Text of Quotation}{Center :}
+{Center <{RESTORE RMG,LMG,SPACING}>}
+{LI}Define a macro <{LS* n}> that will do the job
+of LS, but will take into account the value of SPACING,
+so that each blank line emitted will actually be <{SPACING}>
+blank lines:
+{LS 1}{Center <{SETQ LS*,{LS {* @1,@SPACING}}}>}
+{LS 1}
+When <{LS*~n}> is called, n is multiplied by
+the value of SPACING so that the LS actually performed is n
+times the current spacing.
+{EL}
+{P}
+!
+! SUB1
+!
+{macdescr SUB1,Subtract One From Numeric}
+<{SUB1 n}>
+{macsec description}
+The value of SUB1 is one subtracted from n.  It is
+equivalent to <{-~n,1}>.
+{macsec notes}
+{bl}SUB1 is included for convenience, as it is a frequent
+operation.
+{el}
+{macsec examples}
+{bl}Subtract one from the current page number:
+{ls 1}
+{Center <{SET.SUB1 PAGENUM}>}
+{EL}
+{P}
+!
+! SUBSTR
+!
+{macdescr SUBSTR,Compute Substring}
+<{SUBSTR str,n1,n2}>
+{Macsec Description}
+The value of SUBSTR is n2 contiguous characters of text taken from
+str, starting at character position n1.
+{Macsec Notes}
+{Bl}Both n1 and n2 should be positive, and define a region completely
+within str.
+{Li}If n2 is omitted, then the 'rest' of str is assumed by default.
+{el}
+{macsec Examples}
+{Bl}Define a macro to print text with the first character
+capitalized:
+{Ls 1}{Center <{SETQ FCC,{CAPS {SUBSTR @1,1,1}}{SUBSTR @2,2}}>}
+{El}{P}
+!
+! T
+!
+{macdescr T,Horizontal Tab}
+<{T n,str}>
+{macsec description}
+The value of T is sufficient replications of str to cause the next
+character to print in column n.
+ N is relative to left margin;
+ n=1 is the first printing column.
+ If str is null, then a hard space is assumed for str.
+{macsec notes}
+{BL}N should be less than or equal to <{LINELENGTH}>.
+ If text has
+already been assembled past column n, a line break occurs
+before the hard spaces for the tab are emitted.
+{LI}T should not be used when justification is enabled.
+Justification may insert additional spaces that will cause
+the tab to be moved to the right an unpredictable amount.
+{Li}T looks at the current output stream to determine the size of
+its result.
+ It operates under the assumption that the result of its evaluation
+is going to the output stream.
+ If T is used in some other context, such as an
+argument, then it will evaluate to the appropriate text, but obviously
+no actual tabbing will occur as a result.
+{EL}
+{macsec examples}
+{BL}Tab over to column 40 and print $1.99:
+{ls 1}
+{Center <{T 40}>$1.99}
+{LI}Print "CONTRACT" in the last 8 columns of the line:
+{ls 1}
+{Center <{T {- @LINELENGTH,7}}>CONTRACT}
+{LS 1}
+This would be easier to do with LPAD.
+{LI}Define a macro TOC that will format one line of a
+table of contents. The format is: the description, then
+periods to column 35, and then the page number. The
+description and page number will be given as arguments to TOC:
+{ls 1}{Center <{SETQ TOC,{1}{T 35,.}{2}}>}
+{Ls 1}
+This would be used as in:
+{Ls 1}
+{Center <{TOC Chapter 1,1}>}
+{Center <{TOC Chapter 2,15}>}
+{Ls 1}
+Which would appear as:
+{Ls 1}{Nfj}
+{TSETQ TOC,{1}{T 35,.}{2}}
+{TOC Chapter 1,1}
+{Toc Chapter 2,15}
+{Restore TOC}
+{Ls 1}{Fj}
+{EL}
+{P}
+!
+! TSET
+!
+{macdescr TSET,Temporary Set}
+<{TSET mname,str}>
+{macsec description}
+TSET performs identically to SET (see description), except
+that before the SET is performed, the current value of mname
+is put on top of a special stack reserved for mname. A
+<{RESTORE mname}> performed will cause this stacked value to be
+removed from the top of the stack and restored as the definition
+of mname. The TSET value (str) will then be lost. Multiple
+TSETs may be performed on the mname; the values are "unstacked"
+in reverse from the order they were originally stacked. TSETs
+performed on different mnames are totally independent. TSET,
+like SET always evaluates null.
+{macsec notes}
+{BL}TSET may be used in extended form. See the description
+of extended SET.
+{LI}TSET and RESTORE are normally used jointly.
+ The description of
+RESTORE should be read for a full understanding of TSET.
+{LI}The usual use of TSET is as a mechanism for saving, then
+changing, some part of the context of a document such as margins,
+spacing, titles, section numbers, and the like. This saved
+context can then be restored at a later point in the processing.
+For instance, GPMDOC uses TSET internally when processing
+NEWPAGE and ENDPAGE. The values of LMG, RMG, SPACING and
+NEWLINE are TSET to predefined values for processing the page
+condition, regardless of what their values might be in the body
+of the text.
+ At the conclusion of the page condition, a RESTORE
+is done on these macros which brings back the values that existed
+prior to the occurrence of the page condition.
+{Li}The TSET form for INPUT allows other TSETs to be
+incorporated.
+ See the description for INPUT.
+{EL}
+{macsec examples}
+{BL}Set the left margin to five, temporarily:
+{ls 1}{Center <{TSET LMG,5}>}
+{LS 1}
+{LI}Define a macro QUOTATION that will skip down two lines,
+indent the left and right margins 7 spaces and go to single
+spacing in order to insert a properly formatted quotation in the
+document:
+{ls 1}{Nfj}
+<{SETQ QUOTATION,{LS 2}->
+  <{LIN 7}{RIN 7}{TSET SPACING,1}}>
+{LS 1}{Fj}
+Note that at the conclusion of the quotation text, the macros
+<{RESTORE~SPACING,RMG,LMG}{LS 2}> would
+be included.
+ This could be packaged in a second macro
+ENDQUOTATION defined as:
+{ls 1}{Nfj}
+<{SETQ ENDQUOTATION,->
+  <{RESTORE LMG,RMG,SPACING}{LS 2}}>
+{LS 1}{Nfj}
+The next example, however, shows a simpler way to do this.
+{LI}Do the same thing, only use a pseudo-read.
+{ls 1}{nfj}
+<{SETQ QUOTATION,->
+  <{LS 2}{LIN 7}{RIN 7}{TSET SPACING,1}->
+  <{TSET INPUT,,ENDTEXT=!**}->
+  <{LS 2}{RESTORE LMG,RMG,SPACING}>
+{LS 1}{FJ}
+Using the pseudo-read, the way QUOTATION is used is:
+{ls 1}{nfj}
+     <{QUOTATION}>
+           :
+           :
+     text of quotation
+           :
+           :
+     !**
+{ls 1}{Fj}
+The last line terminates the pseudo-read and the QUOTATION
+macro finishes by evaluating the RESTORE that follows the READ.
+{ls 1}
+ In the above example, it is important that the <{LS 2}> precede
+the TESETs and RESTOREs. This is so that the LS can flush out
+any text (line break) before the margins are changed.
+{EL}
+{P}
+!
+! TSETQ
+!
+{macdescr TSETQ,Temporary Quoted Set}
+<{TSETQ mname,qstr}>
+{macsec description}
+TSETQ functions the same as TSET (see description), but
+the definition to be set is implicitly quoted.
+ TSETQ is thus to TSET what SETQ is to SET.
+{macsec notes}
+{Bl}TSETQ cannot be used in extended form.
+{el}
+{macsec examples}
+See the descriptions of SETQ and TSET for examples.
+{P}
+!
+! TSETV
+!
+{Macdescr TSETV,TSET Value for Macro and Return It}
+<{TSETV mname,str}>
+{macsec description}
+TSETV functions identically to TSET (see description)
+except instead of having a
+a null value, the value of TSETV is the text that is set
+as the definition of mname.
+{macsec notes}
+{BL}TSETV may be used in extended form (as with TSET).
+{EL}
+{macsec examples}
+See the descriptions of TSET and SETV for examples.
+{p}
+!
+! UL
+!
+{macdescr UL,Underline Text}
+<{UL str1,str2}>
+{macsec description}
+The UL macro uses the overstriking ability of GPMDOC
+to produce a new string consisting of the characters of str1
+overstruck with underscores. Characters in str2 will not be
+underscored in str1. If str2 is not given (null) then all
+characters of str1 except blanks will be overstruck with
+underscores in the string produced by UL.
+{macsec notes}
+{BL}Str1 may contain overstruck characters (including
+underscores).
+{LI}If it is desired to have all characters including blanks
+overstruck, str2 can be given as a single character which
+could not reasonably appear in str1 (such as a control
+character), or the OVER macro can be used to perform the
+overstriking directly (see examples for OVER).
+{EL}
+{macsec examples}
+{BL}Print the text "Three Leaf Clover", underlined:
+{LS 1}{Center <{UL Three Leaf Clover.}>}
+{Ls 1}
+This will print as:
+{Ls 1}{Center {UL Three Leaf Clover.}}
+{Ls 1}{Fj}
+{LI}Define a macro ULC that will return its text underscored
+except for lower case letters.
+{ls 1}
+{center <{SETQ ULC,{UL {D 1},abcdefghijklmnopqrstuvwxyz}}>}
+{Ls 1}This would be used as in:{Ls 1}
+{Center <{ULC Three Leaf Clover.}>}
+{Ls 1}which would print as:
+{TSETQ ULC,{UL {D 1},abcdefghijklmnopqrstuvwxyz}}
+{ULC Three Leaf Clover}
+{Restore ULC}
+{EL}
+{P}
+!
+! +
+!
+{macdescr +,Add Numerics}
+<{+ n1,n2}>
+{macsec description}
+The value of + is the sum of the two numeric strings n1 and n2.
+{macsec notes}
+{BL}For adding or subtracting one,
+the ADD1 and SUB1 macros are better.
+{LI}+ is very useful in extended SET forms for incrementing
+a numeric-valued macro (see examples).
+{EL}
+{macsec examples}
+{Bl}Add the macros PROFIT and NET, print it in column 35:
+{Ls 1}{Center <{BRK}{T 35}{+ @PROFIT,@NET}>}
+{EL}
+{P}
+!
+! -
+!
+{MACDESCR -,Subtract Numerics}
+<{- n1,n2}>
+{macsec description}
+The value of - is the difference when n2 is subtracted from n1.
+{macsec notes}
+{BL}For subtracting one from a number, the SUB1 macro is better.
+{LI}- is useful in extended SET form for decrementing a
+numeric-valued macro.
+{EL}
+{macsec examples}
+{Bl}Subtract CREDIT from BILLING and print the result in
+column 35:
+{ls 1}{Center <{BRK}{T 35}{- @BILLING,@CREDIT}>}
+{EL}
+{P}
+!
+! *
+!
+{macdescr *,Multiply Numerics}
+<{* n1,n2}>
+{Macsec Description}
+The value of * is the product of the two numeric strings n1 and n2.
+{p}
+!
+! /
+!
+{macdescr /,Divide Numerics}
+<{/ n1,n2}>
+{Macsec Description}
+The value of / is the quotient of the two numeric strings n1 and n2.
+{Macsec notes}
+{Bl}If both n1 and n2 are integers (no decimal point) then the
+value of / will also be an integer, formed by discarding any fractional
+part from the quotient.
+ If either or both of n1 or n2 contain decimals, then the division
+will produce a real (floating) result.
+{el}
+{p}
+{Exclude HELP}
+!
+!	Print the Index
+!
+{Set pagenum,1}
+{Tset input,,Spacing=1,Lmg=10,Rmg=70,Endtext=!**INDEX,Pagelength=55,-
+	Newpage=<{Ls 2}{Center Appendix A}{Center Table of Contents}{Ls 2}>,-
+	Endpage=<{Ls 1}{Center TOC-{Pagenum}}>-
+}
+{Dowhile {Lne @Toc},{Tset Toca,@Toc}{Restore Toc}}
+{Set Toc_char}
+{Dowhile {Lne @Toca},-
+  {Cond {Lne @Toc_char,{Setv Toc_char,{Substr @Toca,1,1}}},{Ls 1},,{Brk}}-
+  {D Toca}-
+  {Restore Toca}-
+}
+!
+!**INDEX
+!
+{P}
+!**
+!
+{Exclude TEXT}
+{Endsec}
+!**
+
+

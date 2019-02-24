@@ -1,0 +1,10 @@
+      REAL FUNCTION CEIL(X)
+C
+C  CEIL RETURNS CEIL(X)
+C
+      CEIL = FLOAT( INT(X) )
+      IF (X .LE. 0.0) RETURN
+      IF (CEIL .NE. X) CEIL = CEIL + 1.0
+C
+      RETURN
+      END

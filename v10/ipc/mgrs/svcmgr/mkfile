@@ -1,0 +1,32 @@
+COBJS=main.O action.O auth_act.O exec_act.O ld_act.O files.O \
+	mapping.O proc.O request.O service.O \
+	subr.O gate.O re.O
+OBJS=main.o action.o auth_act.o exec_act.o ld_act.o files.o \
+	mapping.o proc.o request.o service.o \
+	subr.o gate.o re.o
+MGR=svcmgr
+INCS=-I../../h
+CFLAGS=-g $INCS
+LIBS=../common/libcommon.a ../../libin/libin.a ../../libipc/libipc.a
+CLIBS=../common/*.O ../../libipc/*.O
+BINDIR=/usr/ipc/mgrs
+NPROC=2
+
+all:V: cyntax $MGR
+
+cyntax: $COBJS
+	cyntax -Vlogevent:1 $COBJS $CLIBS && touch cyntax
+
+$MGR: $OBJS $LIBS
+	$CC -g $OBJS -o $MGR $LIBS
+
+clean:V:
+	rm -f *.[oO] $MGR cyntax
+
+%.o: %.c ../../h/defs.h ../../h/ipc.h mgr.h
+%.O: %.c ../../h/defs.h ../../h/ipc.h mgr.h
+	cyntax -Vlogevent:1 -c -DLINT $INCS $stem.c
+
+install: all
+	rm -f $BINDIR/$MGR
+	cp $MGR $BINDIR

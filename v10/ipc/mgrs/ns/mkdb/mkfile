@@ -1,0 +1,41 @@
+SYSTEMS=`sed 's/.*/\/usr\/lib\/uucp\/&/' < /usr/lib/uucp/Sysfiles`
+
+all: network.F
+
+/etc/hosts /etc/hosts.local:
+
+/etc/networks /etc/networks.local:
+
+/usr/lib/uucp/Systems:
+/usr/lib/uucp/Systems.dk:
+/usr/lib/uucp/Systems.gen:
+/usr/lib/uucp/Systems.local:
+
+hosts.out: /etc/hosts.local /etc/hosts
+	parsehosts.sh $prereq > hosts.out
+
+systems.out: $SYSTEMS
+	parsesys.sh $prereq > systems.out
+
+networks.out: /etc/networks.local /etc/networks
+	parsenets.sh $prereq > networks.out
+
+network.dir: hosts.out networks.out systems.out
+	cat $prereq > network.dir
+
+network.ix: network.dir
+	mkindex.sh network.dir > network.ix
+
+network.F: network.ix
+	echo "Make network btree"
+	cbt creat network
+	cbt build network <network.ix
+
+install: network.F
+	cp network.[FT] network.dir /usr/ipc/lib
+
+fromsmb:
+	rcp ulysses:/etc/hosts ulysses:/etc/networks /etc
+
+clean:
+	rm -f *.out network.ix network.dir network.[FT]

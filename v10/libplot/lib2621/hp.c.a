@@ -1,0 +1,1032 @@
+!<arch>
+arc.c           423852758   41    1     100664  771       `
+#include <math.h>
+#include "hp.h"
+
+/* arc -drawing program on a grid.
+ * Finds an optimal arc centered at x0,y0 from x1,y1 to
+ * x2,y2.  If x2,y2 is not on arc, pick a nearby point.
+ * Arc excludes x2,y2.
+*/
+
+/*arc	`a`	*/
+arc(xx1, yy1, xx2, yy2, xx0, yy0, rr)
+double	xx1, yy1, xx2, yy2, xx0, yy0, rr;
+{
+	short	x1, y1, x2, y2, x0, y0, dir;
+	short r1,r2;
+	e1->copyx = xx2; 
+	e1->copyy = yy2;
+	x0 = SCX(xx0);	
+	y0 = SCY(yy0);
+	x1 = SCX(xx1);	
+	y1 = SCY(yy1);
+	x2 = SCX(xx2);	
+	y2 = SCY(yy2);
+	r1 = rr*e1->scaley;
+	r2 = rr*e1->scalex;
+	r1 = r1<0? -r1: r1;
+	r2 = r2<0? -r2: r2;
+	if(!r2){
+		line(xx0,yy1,xx0,yy2);
+		return;
+	}
+	if(!r1){
+		line(xx1,yy0,xx2,yy0);
+		return;
+	}
+	if(rr < 0)
+		elarc(x0,y0,r2,r1,x1,y1,x2,y2);
+	else
+		elarc(x0,y0,r2,r1,x2,y2,x1,y1);
+	refresh();
+}
+
+
+
+box.c           420493463   41    1     100664  175       `
+#include "hp.h"
+box(x0, y0, x1, y1) 
+double	x0, y0, x1, y1;
+{
+	move(x0, y0);
+	refflag = 0;
+	vec(x0, y1);
+	vec(x1, y1);
+	vec(x1, y0);
+	vec(x0, y0);
+	refresh();
+	refflag = 1;
+}
+
+cfill.c         420477408   41    1     100664  318       `
+#include "hp.h"
+cfill(s) 
+char	*s; 
+{
+	while (*s != NULL) {
+		switch (*s) {
+		case 'H': 
+			e1->pbrush = *(s + 1); 
+			break;
+		case 'G': 
+			e1->pgap = atoi(s + 1); 
+			break;
+		case 'A': 
+			e1->pslant = atof(s + 1) / RADIANS; 
+			break;
+		}
+		while (*++s != NULL) 
+			if (*s == '/') {
+				s++;
+				break;
+			}
+	}
+}
+circle.c        420475567   41    1     100664  141       `
+#include "hp.h"
+circle(xxc, yyc, rr) 
+double	xxc, yyc, rr;
+{
+	if (rr > 0) 
+		rr = -rr;
+	arc(xxc , yyc + rr, xxc , yyc + rr, xxc, yyc, rr);
+}
+
+closepl.c       420478708   41    1     100664  67        `
+#include "hp.h"
+closepl()
+{ 
+	cmov(23,0);
+	refresh();
+	endwin();
+}
+
+color.c         420476551   41    1     100664  51        `
+#include "hp.h"
+color(s) 
+char	*s; 
+{ 
+	pen(s); 
+}
+
+disc.c          420492037   41    1     100664  139       `
+#include "hp.h"
+disc(xxc, yyc, rr) 
+double	xxc, yyc, rr;
+{
+	if (rr > 0) 
+		rr = -rr;
+	arc(xxc , yyc + rr, xxc , yyc + rr, xxc, yyc, rr);
+}
+
+erase.c         420476797   41    1     100664  38        `
+#include "hp.h"
+erase(){
+	erasew();
+}
+fill.c          423853615   41    1     100664  4752      `
+#include <stdio.h>
+#include <math.h>
+#include "hp.h"
+#define SEGS 256
+#define ROUND(a) a>0?a+.5:a-.5
+double	sinp, cosp;
+int place();
+fill(num,ff)
+int num[];
+double	*ff[];
+{
+	register struct seg *sp;
+	register double x, y;
+	int sgap;
+	double slant;
+	char sbrush;
+	struct seg *in, *spend;
+	int	so;
+	double	 X, Y, xyt, **fp;
+	int ymin;
+	int	M, *n;
+	double	*xpp, *ypp;
+	int fx, fy, flag;
+
+	in = (struct seg *)malloc((unsigned)(SEGS*sizeof(struct seg)));
+	if(in == 0){
+		fprintf(stderr,"not enough space for fill segments\n");
+		return(1);
+	}
+	spend = in + (SEGS-2);
+	sinp = cos(e1->pslant);
+	cosp = sin(e1->pslant);
+	n = num;
+	fp = ff;
+	sp = in;
+	ymin = 4000;
+	while((M = *n++)){
+		xpp = *fp++;
+		ypp = xpp + 1;
+		x = SCX(*xpp);
+		y = SCY(*ypp);
+		if (cosp)  {
+			xyt = sinp * x - cosp * y;
+			y = cosp * x + sinp * y;
+			y = ROUND(y);
+			x = ROUND(xyt);
+		}
+		fx = x;
+		fy = y;
+		flag = 0;
+		while(--M){
+			xpp += 2;
+			ypp += 2;
+			X = SCX(*xpp);
+			Y = SCY(*ypp);
+			if (cosp)  {
+				xyt = sinp * X - cosp * Y;
+				Y = cosp * X + sinp * Y;
+				Y = ROUND(Y);
+				X = ROUND(xyt);
+			}
+	check:
+			if ( (Y > y) || (Y==y && X > x)){
+				sp->x = X;
+				sp->y = Y;
+				sp->X = x;
+				sp->Y = y;
+			}
+			else {
+				sp->x = x;
+				sp->y = y;
+				sp->X = X;
+				sp->Y = Y;
+			}
+			x=X;
+			y=Y;
+			sp->stat = 1;
+			if(Y < ymin)
+				ymin = Y;
+			if ( sp->y == sp->Y) {
+				if(sp > in){
+				if ((sp-1)->y == (sp-1)->Y && (sp-1)->y == sp->y) {
+					if (sp->x == (sp - 1)->X) {
+						(sp - 1)->X = sp->X;
+					sp--;
+					} else if (sp->X == (sp - 1)->x) {
+						(sp - 1)->x = sp->x;
+					sp--;
+					}
+				}
+				}
+			}
+			if(sp++ > spend){
+				fprintf(stderr, "Too many sides\n");
+				return(0);
+			}
+			if((M==1) && (flag == 0)){
+				X = fx;
+				Y = fy;
+				flag = 1;
+				goto check;
+			}
+		}
+	}
+	sgap = e0->pgap;
+	slant = e0->pslant;
+	sbrush = e0->ppink;
+	e0->pgap = e1->pgap;
+	e0->pslant = e1->pgap;
+	e0->ppink = e1->pbrush;
+	esave = e1;
+	e1 = e0;
+	so = sp - in;
+	realfill(so, in, ymin);
+	e0->pgap = sgap;
+	e0->pslant = slant;
+	e0->ppink = sbrush;
+	e1 = esave;
+	free(in);
+	return(1);
+}
+double	xcut();
+realfill(so, s, yymin)
+int	so, yymin;
+struct seg *s;
+{
+	register struct seg *sp, *s1, *s2, *st;
+	register int	yb;
+	struct seg *sfin;
+
+	sfin = s1 = s + so - 1;
+	for (sp = s; sp <= sfin;  sp++) {
+		if (sp->stat){
+			if (sp->y == sp->Y){
+				if (sp < sfin) {
+					s2 = sp+1;
+					while(s2<=sfin && s2->y==s2->Y){
+						if (sp->X == s2->x)
+							sp->X = s2->X;
+						else if (sp->x == s2->X)
+							sp->x = s2->x;
+						s2++->stat = 0;
+					}
+				}
+				else s2 = sp;
+				if (s1->y == sp->y &&s2->y == sp->y)
+					sp->stat = 0;
+				else if (s1->Y == sp->y && s2->Y == sp->y)
+					sp->stat = 0;
+			}
+		}
+		s1 = sp;
+	}
+
+	qsort(s, so, sizeof(struct seg), place);
+	sfin++;
+	s1 = s;
+	yb = s1->y;
+	for(sp=s; yb <= sp->y;sp++);
+	s2 = sp - 1;
+	for (; yb >= yymin; yb--) {
+		if (!(yb % e1->pgap))
+			draw(yb, s1, s2);
+		for (st = s1; st <= s2; st++) {
+			if (st->stat)
+				if (yb <= st->Y)
+					st->stat = 0;
+		}
+		if (sp >= sfin)
+			continue;
+		for (; yb <= (sp->y + 1) && sp < sfin; sp++) {
+			for (st = s1; st <= s2; st++) {
+				if (sp->y == st->Y) {
+					if (sp->x == st->X)
+						st->stat = 0;
+					else if (sp->Y == sp->y && sp->X == st->X)
+						st->stat = 0;
+				}
+			}
+		}
+
+		s2 = sp - 1;
+		while (!(s1->stat))
+			s1++;
+	}
+}
+draw(y, pr1, pr2)
+int	y;
+struct seg *pr1, *pr2;
+{
+	register struct seg *pr;
+	register double *xp;
+	double	x[32], yy, yi, yii, xi, xii, xj;
+	double *xpe;
+	for(pr=pr1, xp=x; pr <= pr2;pr++){
+		if (pr->stat)
+			if (pr->y != pr->Y){
+				*xp++ = xcut(y, pr->x, pr->y, pr->X, pr->Y);
+				if(xp > &x[31])
+					fprintf(stderr, "Too many intersections\n");
+			}
+	}
+	xpe = xp;
+	if(xpe < &x[1])
+		return;
+	do {
+		xj = 0;
+		for(xp=x+1;xp<xpe;xp++){
+			if(*(xp-1) > *xp){
+				xj = *(xp-1);
+				*(xp-1) = *xp;
+				*xp = xj;
+			}
+		}
+	} while(xj);
+	yy = y;
+	for(xp=x; xp<xpe;xp++){
+		xj = *xp++;
+		if (!cosp)
+			line(unormx(xj), unormy(yy), unormx(*xp), unormy(yy));
+		else {
+			xi = sinp * xj + cosp * yy;
+			yi = -cosp * xj + sinp * yy;
+			xii = sinp * *xp + cosp * yy;
+			yii = -cosp * *xp + sinp * yy;
+			line(unormx(xi), unormy(yi), unormx(xii), unormy(yii));
+		}
+	}
+
+}
+
+
+double	xcut(y, x1, y1, x2, y2)
+{
+	register double	dx, dy, xy, x;
+	if (y1 == y2) {
+		x = x1 > x2 ? x1 : x2;
+		return(x);
+	}
+	dy = y1 - y2;
+	dx = x1 - x2;
+	xy = (float)y1 * x2 - x1 * (float)y2;
+	x = (y * dx + xy) / dy;
+	return(x);
+}
+place(p1, p2)
+struct seg *p1, *p2;
+{
+	if(p1->y > p2->y)
+		return(-1);
+	else if(p1->y < p2->y)
+		return(1);
+	else if(p1->x > p2->x)
+		return(-1);
+	else if(p1->x < p2->x)
+		return(1);
+	else if(p1->X > p2->X)
+		return(-1);
+	else if(p1->X < p2->X)
+		return(1);
+	else if(p1->Y > p2->Y)
+		return(-1);
+	else if(p1->Y < p2->Y)
+		return(1);
+	else return(0);
+}
+frame.c         423860664   41    1     100664  554       `
+#include <stdio.h>
+#include "hp.h"
+#include <math.h>
+frame(xs, ys, xf, yf) 
+double	xs, ys, xf, yf; 
+{
+	register double	osidex, osidey;
+	osidex = e1->sidex;
+	osidey = e1->sidey;
+	e1->left = xs*(e0->left + e0->sidex);
+	e1->left *= e0->scalex;
+	e1->bottom = e0->bottom - ys*fabs(e0->sidey);
+	e1->sidex = (xf-xs)*e0->sidex;
+	e1->sidey = (yf - ys)*e0->sidey;
+	e1->scalex *= (e1->sidex / osidex);
+	e1->scaley *= (e1->sidey / osidey);
+	e1->quantum = e0->quantum/sqrt(e1->scalex*e1->scalex +
+		e1->scaley*e1->scaley);
+	if(e1->quantum < .5)
+		e1->quantum = .5;
+}
+grade.c         420477441   41    1     100664  56        `
+#include "hp.h"
+grade(x) 
+double	x;
+{
+	e1->grade = x;
+}
+line.c          423858277   41    1     100664  677       `
+#include "hp.h"
+line(x1, y1, x2, y2) 
+double	x1, y1, x2, y2; 
+{
+	short	kx1, kx2, ky1, ky2;
+	int a, b;
+	int two_a, two_b, xcrit;
+	register eps;
+	register dx,dy;
+	e1->copyx = x2;	
+	e1->copyy = y2;
+	kx1 = SCX(x1);	
+	ky1 = SCY(y1);
+	kx2 = SCX(x2);
+	ky2 = SCY(y2);
+	a = kx2 - kx1;
+	if(a < 0){
+		dx = -1;
+		a = -a;
+	}
+	else dx = 1;
+	b = ky2 - ky1;
+	if(b < 0){
+		dy = -1;
+		b = -b;
+	}
+	else dy = 1;
+	two_a = 2*a;
+	two_b = 2*b;
+	xcrit = -b + two_a;
+	eps = 0;
+	for(;;){
+		SPOT(kx1,ky1, e1->ppink);
+		if(kx1 == kx2 && ky1 == ky2)
+			break;
+		if(eps <= xcrit){
+			kx1 += dx;
+			eps += two_b;
+		}
+		if(eps >= a || a <= b){
+			ky1 += dy;
+			eps -= two_a;
+		}
+	}
+	if(refflag)
+		refresh();
+}
+
+move.c          423853557   41    1     100664  136       `
+#include "hp.h"
+move(x, y) 
+double	x, y;
+{
+	short	kx, ky;
+	kx = SCX(x); 
+	ky = SCY(y);
+	cmov(ky,kx);
+	e1->copyx = x;	
+	e1->copyy = y;
+}
+openpl.c        420478167   41    1     100664  42        `
+#include "hp.h"
+openpl()
+{ 
+	initscr();
+}
+parabola.c      420478441   41    1     100664  905       `
+#include <math.h>
+#include "hp.h"
+parabola(x0, y0, x1, y1, xb, yb) 
+double	x0, y0, x1, y1, xb, yb; 
+{
+	register double x, y, t;
+	double	c0x, c0y, c1x, c1y;
+	double	dt, d2, d1;
+	d1 = sqrt((xb - x0) * (xb - x0) + (yb - y0) * (yb - y0));
+	d2 = sqrt((xb - x1) * (xb - x1) + (yb - y1) * (yb - y1));
+	if (d1 <= e1->quantum || d2 <= e1->quantum) { 
+		line(x0, y0, x1, y1); 
+		return(0); 
+	}
+	refflag = 0;
+	c0x = x0 + x1 - 2. * xb; 
+	c1x = 2. * (xb - x0);
+	c0y = y0 + y1 - 2. * yb; 
+	c1y = 2. * (yb - y0);
+	move(x0, y0);
+	dt = e1->quantum / d1;
+	if(e1->grade != 0.)
+		dt /= e1->grade;
+	for (t = dt; t < 0.5; t += dt) {
+		x = (c0x * t + c1x) * t + x0;
+		y = (c0y * t + c1y) * t + y0;
+		vec(x, y);
+	}
+	dt = e1->quantum / d2;
+	if(e1->grade != 0.)
+		dt /= e1->grade;
+	for (; t < 1.0; t += dt) {
+		x = (c0x * t + c1x) * t + x0;
+		y = (c0y * t + c1y) * t + y0;
+		vec(x, y);
+	}
+	vec(x1, y1);
+	refresh();
+	refflag = 1;
+}
+
+pause.c         420474657   41    1     100664  46        `
+ppause()
+{ 
+	char	aa[4]; 
+	read(2, aa, 4); 
+}
+pen.c           420476663   41    1     100664  185       `
+#include "hp.h"
+pen(s) 
+char	*s; 
+{
+	while (*s != NULL) {
+		if(*s == 'H'){
+			e1->ppink = *(s + 1); 
+			break;
+		}
+		while(*++s != NULL)
+			if(*s == '/'){
+				s++;
+				break;
+			}
+	}
+}
+
+point.c         420478691   41    1     100664  72        `
+#include "hp.h"
+point(x, y) 
+double	x, y;
+{
+	move(x, y); 
+	vec(x, y);
+}
+poly.c          420480381   41    1     100664  246       `
+#include <stdio.h>
+poly(num, ff)
+int num[];
+double *ff[];
+{
+	double *xp, *yp, **fp;
+	int i, *n;
+	n = num;
+	fp = ff;
+	while((i = *n++)){
+		xp = *fp++;
+		yp = xp+1;
+		move(*xp, *yp);
+		while(--i){
+			xp += 2;
+			yp += 2;
+			vec(*xp, *yp);
+		}
+	}
+}
+prompt.c        420478749   41    1     100664  85        `
+#include "hp.h"
+prompt(s, k) 
+char	*s; 
+int	k; 
+{
+	mvaddstr(22-k,0,s);
+	refresh();
+}
+
+range.c         420737303   41    1     100664  300       `
+#include "hp.h"
+range(x0, y0, x1, y1) 
+double	x0, y0, x1, y1; 
+{
+	e1->xmin = x0;
+	e1->ymin = y0;
+	e1->scalex =  3*e1->sidex / (x1 - x0);
+	e1->scaley = e1->sidey / (y1 - y0);
+	e1->quantum = e0->quantum/sqrt(e1->scalex*e1->scalex +
+		e1->scaley*e1->scaley);
+	if(e1->quantum < .5)
+		e1->quantum = .5;
+}
+restore.c       420491215   41    1     100664  131       `
+#include "hp.h"
+restore()
+{ 
+	if(--e1 <= e0){
+		fprintf(stderr,"stack underflow\n");
+		exit(1);
+	}
+	move(e1->copyx, e1->copyy); 
+}
+
+rmove.c         420491252   41    1     100664  83        `
+#include "hp.h"
+rmove(x, y) 
+double	x, y;
+{
+	move(e1->copyx + x, e1->copyy + y);
+}
+
+rvec.c          420491279   41    1     100664  104       `
+#include "hp.h"
+rvec(x, y) 
+double	x, y;
+{
+	line(e1->copyx, e1->copyy, e1->copyx + x, e1->copyy + y);
+}
+save.c          420491341   41    1     100664  116       `
+#include "hp.h"
+save()
+{ 
+	if(++e1 > &E[8]){
+		fprintf(stderr,"stack overflow\n");
+		exit(1);
+	}
+	pcopy(e1-1,e1);
+}
+sbox.c          420773937   41    1     100664  424       `
+#include "hp.h"
+sbox(x0, y0, x1, y1) 
+double	x0, y0, x1, y1;
+{
+	register short i, j;
+	short kx0, ky0, kx1, ky1;
+	register char *s;
+	char str[80];
+	kx0 = SCX(x0); 
+	kx1 = SCX(x1); 
+	ky0 = SCY(y0);
+	ky1 = SCY(y1);
+	if(ky0 > ky1){
+		i = ky0;
+		ky0 = ky1;
+		ky1 = i;
+	}
+	i = abs(kx0 - kx1) + 1;
+	for(s=str,j=0; j<i;j++)
+		*s++ = e1->pbrush;
+	*s = '\0';
+	s = str;
+	for (i = ky0; i <= ky1; i++)
+		mvaddstr(i,kx0,s);
+	refresh();
+}
+spline.c        420480364   41    1     100664  1342      `
+/*
+Produce spline (uniform knots, second order)
+from guiding points
+*/
+
+splin(mode, num, ff) 
+int num[], mode;
+double *ff[];
+{
+	int	i,  *np, n;
+	double	xa, ya, xc, yc, *xp, *yp, *xp0, *yp0, *xpe, *ype;
+	double **fp;
+	np = num;
+	fp = ff;
+	while((n = *np++)){
+		xp = *fp++; 
+		yp = xp + 1; 
+		xp0 = xp; 
+		yp0 = yp;
+		xpe = xp0 + 2 * (n - 1); 
+		ype = yp0 + 2 * (n - 1);
+		if (n < 3) { 
+			line(*xp, *yp, *(xp + 2), *(yp + 2)); 
+			continue;
+		}
+		if (mode == 4) {	/*closed curve*/
+			xa = 0.5 * (*xpe + *(xpe - 2)); 
+			xc = 0.5 * (*xpe + *xp0);
+			ya = 0.5 * (*ype + *(ype - 2)); 
+			yc = 0.5 * (*ype + *yp0);
+			parabola(xa, ya, xc, yc, *xpe, *ype);
+			xa = 0.5 * (*xpe + *xp0); 
+			xc = 0.5 * (*(xp0 + 2) + *xp0);
+			ya = 0.5 * (*ype + *yp0); 
+			yc = 0.5 * (*(yp0 + 2) + *yp0);
+			parabola(xa, ya, xc, yc, *xp0, *yp0);
+		}
+		else {	/*open curve with multiple endpoints*/
+			if (mode % 2) /*odd mode makes first point double*/
+				line(*xp0,*yp0,0.5*(*xp0+*(xp0+2)),0.5*(*yp0+*(yp0+2)));
+		}
+		xp += 2; 
+		yp += 2;
+		for (i = 1; i < (n - 1); i++, xp += 2, yp += 2) {
+			xa = 0.5 * (*(xp - 2) + *xp); 
+			xc = 0.5 * ( *xp + *(xp + 2));
+			ya = 0.5 * (*(yp - 2) + *yp); 
+			yc = 0.5 * ( *yp + *(yp + 2));
+			parabola(xa, ya, xc, yc, *xp, *yp);
+		}
+		if(mode >= 2 && mode != 4)
+			line(0.5*(*(xpe-2)+*xpe),0.5*(*(ype-2)+*ype),*xpe,*ype);
+	}
+}
+subr.c          423853648   41    1     100664  4301      `
+#include "hp.h"
+pcopy(a,b)
+struct penvir *a,*b;
+{ 
+	b->left = a->left; 
+	b->bottom = a->bottom; 
+	b->xmin = a->xmin; 
+	b->ymin = a->ymin;
+	b->scalex = a->scalex; 
+	b->scaley = a->scaley;
+	b->sidex = a->sidex; 
+	b->sidey = a->sidey;
+	b->copyx = a->copyx; 
+	b->copyy = a->copyy;
+	b->grade = a->grade;
+	b->quantum = a->quantum;
+	b->pmode = a->pmode; 
+	b->ppink = a->ppink; 
+	b->pbrush = a->pbrush;
+}
+#define pHEIGHT 22.
+#define pWIDTH  22.
+int refflag = 1;
+int dum;
+struct penvir  E[9] = {
+{0.,pHEIGHT,0.,0.,3.,-1.,pWIDTH, -pHEIGHT, 0., 0., 1., .5, 1, 0., '-','@','O'},
+{0.,pHEIGHT,0.,0.,3.,-1.,pWIDTH, -pHEIGHT, 0., 0., 1., .5, 1, 0.,'-','@','O'},
+{0.,pHEIGHT,0.,0.,3.,-1.,pWIDTH,-pHEIGHT,0., 0., 1., .5, 1, 0.,'-', '@', 'O'},
+{ 0., 0., 0., 0., 3., 1., pWIDTH, pHEIGHT, 0., 0., 1., .5, 1, 0.,
+ '-',  '@',  'O'},
+{ 0., 0., 0., 0., 3., 1., pWIDTH, pHEIGHT, 0., 0., 1., .5, 1, 0.,
+ '-',  '@',  'O'},
+{ 0., 0., 0., 0., 3., 1., pWIDTH, pHEIGHT, 0., 0., 1., .5, 1, 0.,
+ '-',  '@',  'O'},
+{ 0., 0., 0., 0., 3., 1., pWIDTH, pHEIGHT, 0., 0., 1., .5, 1, 0.,
+ '-',  '@',  'O'},
+{ 0., 0., 0., 0., 3., 1., pWIDTH, pHEIGHT, 0., 0., 1., .5, 1, 0.,
+ '-',  '@',  'O'},
+{ 0., 0., 0., 0., 3., 1., pWIDTH, pHEIGHT, 0., 0., 1., .5, 1, 0.,
+ '-',  '@',  'O'}
+};
+
+struct penvir *e0 = E, *e1 = &E[1], *esave;
+#define HUGE 017777777777
+
+struct dist {
+	short sx, sy;
+	short mx, my;
+	long e;
+}	*p1,*p2;
+
+static
+test(x,y,p)
+short x, y;
+register struct dist *p;
+{
+	short dx = x - p->sx;
+	short dy = y - p->sy;
+	long e = (long)dx*dx+(long)dy*dy;
+	if(e <= p->e) {
+		p->mx = x;
+		p->my = y;
+		p->e = e;
+	}
+}
+
+static
+survey(x,y)
+short x, y;
+{
+	test(x,y,p1);
+	test(x,y,p2);
+}
+
+/* elarc(x0,y0,a,b,x1,y1,x2,y2) draws an arc of the ellipse
+ * centered at x0,y0 with half-axes a,b extending counterclockwise
+ * from a point near x1,y1 to a point near x2,y2
+ * args reversed because ellip1 draws clockwise 
+*/
+void pt();
+
+elarc(x0,y0,a,b,x2,y2,x1,y1)
+short x0, y0, a, b, x2, y2, x1,y1;
+{
+	struct dist d1,d2;
+	short sx1, sy1, sx2, sy2;
+	if(a==0)
+		return;
+	else if(b==0)
+		return;
+	else {
+		sx1 = sgn(d1.sx = x1-x0);
+		d1.sx *= sx1;
+		sy1 = sgn(d1.sy = y1-y0);
+		d1.sy *= sy1;
+		sx2 = sgn(d2.sx = x2-x0);
+		d2.sx *= sx2;
+		sy2 = sgn(d2.sy = y2-y0);
+		d2.sy *= sy2;
+		d1.e = d2.e = HUGE;
+		p1 = &d1;
+		p2 = &d2;
+		survey(0,b);
+		ellip1(0,0,a,b,survey,0,b,a,0);
+/*		if(d1.mx!=d2.mx || d1.my!=d2.my)
+			pt(d1.mx,d1.my);*/
+		ellip1(x0,y0,a,b,pt,
+			d1.mx*sx1,d1.my*sy1,d2.mx*sx2,d2.my*sy2);
+	}
+}
+void
+pt(x,y)
+short x, y;
+{
+	mvaddch(y,x,e1->ppink);
+}
+#define labs(x,y) if((x=y)<0) x= -x
+#define BIG 077777
+
+/* draw an ellipse centered at x0,y0 with half-axes a,b */
+
+ellipse(x0,y0,a,b)
+{
+	if(a==0 || b==0)
+		line(x0-a,y0-b,x0+a,y0+b);
+	else
+		ellip1(x0,y0,a,b,pt,0,b,0,b);
+}
+
+/* calculate b*b*x*x + a*a*y*y - a*a*b*b avoiding ovfl */
+
+ long
+resid(a,b,x,y)
+register a,b;
+{
+	long e = 0;
+	long u = b*((long)a*a - (long)x*x);
+	long v = (long)a*y*y;
+	register short q = u>BIG? HUGE/u: BIG;
+	register short r = v>BIG? HUGE/v: BIG;
+	while(a || b) {
+		if(e>=0 && b) {
+			if(q>b) q = b;
+			e -= q*u;
+			b -= q;
+		} else {
+			if(r>a) r = a;
+			e += r*v;
+			a -= r;
+		}
+	}
+	return(e);
+}
+
+/* service routine used for both elliptic arcs and ellipses 
+ * traces clockwise an ellipse centered at x0,y0 with half-axes
+ * a,b starting from the point x1,y1 and ending at x2,y2
+ * performing an action at each point
+ * x1,y1,x2,y2 are measured relative to center
+ * when x1,y1 = x2,y2 the whole ellipse is traced
+ * e is the error b^2 x^2 + a^2 y^2 - a^2 b^2
+*/
+
+ellip1(x0,y0,a,b,action,x1,y1,x2,y2)
+short x0, y0, a, b, x1, y1, x2, y2;
+void (*action)();
+{
+	short z;
+	short dx = y1>0? 1: y1<0? -1: x1>0? -1: 1;
+	short dy = x1>0? -1: x1<0? 1: y1>0? -1: 1;
+	long a2 = (long)a*a;
+	long b2 = (long)b*b;
+	long e = resid(a,b,x1,y1);
+	long dex = b2*(2*dx*x1+1);
+	long dey = a2*(2*dy*y1+1);
+	long ex, ey, exy;
+	a2 *= 2;
+	b2 *= 2;
+	do {
+		labs(ex, e+dex);
+		labs(ey, e+dey);
+		labs(exy, e+dex+dey);
+		if(exy<=ex || ey<ex) {
+			y1 += dy;
+			e += dey;
+			dey += a2;
+		}
+		if(exy<=ey || ex<ey) {
+			x1 += dx;
+			e += dex;
+			dex += b2;
+		}
+		(*action)(x0+x1,y0+y1);
+		if(x1 == 0) {
+			dy = -dy;
+			dey = -dey + a2;
+		} else if(y1 == 0) {
+			for(z=x1; abs(z+=dx)<=a; )
+				(*action)(x0+z,y0+y1);
+			dx = -dx;
+			dex = -dex + b2;
+		}
+	} while(x1!=x2 || y1!=y2);
+}
+ptype(){}
+idle(){}
+
+text.c          423860197   41    1     100664  811       `
+#include "hp.h"
+text(s) 
+char	*s; 
+{
+	register char	*p;
+	register short n;
+	short	x, y;
+	short more, newline, centered, right;
+	while(1){
+		n = centered = right = more = newline = 0;
+	for(p = s; *p != '\0'; p++){
+		if (*p == '\\') {
+			switch (*(++p)) {
+			case 'C': 
+				centered++;
+				s = p+1;
+				continue;
+			case 'R':
+				right++;
+				s = p+1;
+				continue;
+			case 'L':
+				s = p + 1;
+				continue;
+			case 'n':
+				newline++;
+				*(p-1) = '\0';
+				if(*(p+1) != '\0')more++;
+				goto output;
+			}
+		}
+	}
+output:
+	n = 0;
+	if(centered) n = (p - s)/2 ;
+	else if(right)n = p - s;
+	if(n > 0){
+		x = SCX(e1->copyx);
+		y = SCY(e1->copyy);
+		x -= n;
+		cmov(y, x);
+	}
+	addstr(s);
+	if(newline){
+		y = SCY(e1->copyy);
+		y++;
+		e1->copyy = unormy(y);
+	}
+	move(e1->copyx, e1->copyy);
+	if(!more)break;
+	s = p+1;
+	}
+}
+
+vec.c           420491421   41    1     100664  79        `
+#include "hp.h"
+vec(x, y) 
+double	x, y;
+{
+	line(e1->copyx, e1->copyy, x, y);
+}
+
+hp.h            423853433   41    1     100664  792       `
+#include <curses.h>
+#define erasew()	VOID(werase(stdscr))
+#undef erase()
+#define cmov(y, x)		VOID(wmove(stdscr, y, x))
+#undef move()
+#define SCX(x) ((dum=((x - e1->xmin)*e1->scalex  + e1->left))<0?dum-.5:dum+.5)
+#define SCY(y)  ((dum=((y - e1->ymin)*e1->scaley + e1->bottom))<0?dum-.5:dum+.5)
+#define SPOT(A,B,C) mvaddch(B,A,C);
+extern int refflag;
+extern int dum;
+extern struct penvir {
+	double left, bottom;
+	double xmin, ymin;
+	double scalex, scaley;
+	double sidex, sidey;
+	double copyx, copyy;
+	double grade, quantum;
+	int pgap;
+	double pslant;
+	char pmode, ppink, pbrush;
+} *e1, *e0, *esave, E[];
+#define RADIANS	57.3
+struct seg {
+	int x, y, X, Y;
+	char stat;
+};
+#define unormy(y)	(double)(e1->ymin+(y-e1->bottom)/e1->scaley)
+#define unormx(x)	(double)(e1->xmin+(x-e1->left)/e1->scalex)
+whoami.c        423863904   41    1     100664  34        `
+char *
+whoami(){
+	return("hp");
+}

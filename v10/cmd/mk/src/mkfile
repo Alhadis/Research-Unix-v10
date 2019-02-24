@@ -1,0 +1,41 @@
+NAMES=alloc arc bquote builtins dir expand gen glob graph job\
+	lex main makefile match mk parse quote\
+	recipe regexp rule run shprint sig symtab t_ar t_driver t_file var word
+OBJ=${NAMES:%=%.o}
+NPROC=2
+BUILTINS=
+# for profiling, use -p -DPROF
+CFLAGS=-DV9
+
+nmk:	$OBJ
+	$CC $CFLAGS -o nmk $OBJ
+
+goo:V:	nmk
+	nmk
+
+clean:V:
+	rm -f cyntax nmk *.o O/*
+
+install:V:	nmk
+	cp nmk /usr/bin/mk
+	strip /usr/bin/mk
+
+pp:V:
+	pr *.h *.c | lp -dpsu -n2
+
+%.o:	mk.h
+
+%.o:	%.c
+	$CC $CFLAGS -c $stem.c
+
+tut.out:	tut.ms
+	pic tut.ms | tbl | troff -Tpost -ms > tut.out
+
+sane:V:	nmk
+	cp nmk goo
+	rm arc.o; goo -e
+	goo -e -wjob.o
+
+poot:V:	nmk
+	echo 'pooter Any Dk,g nj/fart/whistle.uucp' >> /n/research/usr/lib/uucp/Systems.dk
+	./nmk -k -i -f /usr/lib/upas/mkfile NPROC=1 systems

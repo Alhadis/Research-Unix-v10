@@ -1,0 +1,74 @@
+\chapter{Reference values}
+\label{reference}
+References are cells whose contents may be changed after creation by
+assignment.  The \verb"ref" ``datatype'' constructor, and its
+corresponding value constructor, are almost as if defined by the declaration
+\begin{verbatim}
+datatype 'a ref = ref of 'a
+\end{verbatim}
+Thus, a reference whose initial contents are the string \verb|"abc"|
+may be created by \verb|val r = ref "abc"|.  Subsequently, the
+contents of \verb"r" may be altered by assignment: \verb|r := "def"|.
+The contents of a reference may be examined by using the \verb"ref"
+constructor in a pattern:
+\begin{verbatim}
+let val (ref s) = r
+ in print s
+end
+\end{verbatim}
+The function \verb"!" is defined to take the contents of a reference;
+that is,
+\begin{verbatim}
+fun ! (ref x) = x
+\end{verbatim}
+
+References are not fully polymorphic; see Chapter~\ref{reftype}.
+
+Formally, we say that phrases in ML are evaluated in the presence of
+an {\em environment} $E$ and a {\em store} $S$.  The effect on $E$ of
+evaluating declarations, expressions, etc.  is described in
+Chapter~\ref{eval}.  Here we summarize the effect on $S$.
+
+The store $S$ maps reference values to their contents.  Evaluation of
+an expression in the store $S$ yields, depending on the form of the
+expression,
+\begin{description}
+\item[\verb"ref" exp\hfill] exp is evaluated in $S$,
+producing a value $v$ and a store $S'$; the 
+reference value $r$ is returned with the store $S'+\{r \mapsto v\}$.
+
+\item[${\rm exp}_1$~${\rm exp}_2$\hfill]  ${\rm exp}_1$ is evaluated in $S$
+yielding the function $f_1$ and store $S'$;
+${\rm exp}_2$ is evaluated in $S'$ yielding $v_2$ and $S''$;
+finally the body of $f_1$ is evaluated with its variable bound to $v_2$,
+in the store $S''$, yielding the result $v$ and the store $S'''$.
+
+\item[\verb"op := "$({\rm exp}_1,{\rm exp}_2)$\hfill]  The expression 
+$({\rm exp}_1,{\rm exp}_2)$ is evaluated in $S$, yielding the pair
+$(r,v)$ and the store $S'$; then the unit value \{\} is returned with
+the store $S'+\{r \mapsto v\}$.
+
+\item[\protect\verb"\{" ${\rm lab}_1$ \protect\verb"=" ${\rm exp}_1$ , \underline{\ \ \ } , ${\rm lab}_n$ \protect\verb"=" ${\rm exp}_n$ \protect\verb"\}" \hfill]  
+${\rm exp}_1$ is evaluated in $S$, yielding $v_1$ and the store
+$S_1$; then each ${\rm exp}_i$ is evaluated in $S_{i-1}$, yielding $v_i$ and the store $S_i$; then the record
+$\{ {\rm lab}_1 = v_1 , ... , {\rm lab}_n = v_n \}$ is returned with
+the store $S_n$.  Note that the expressions are evaluated in the
+sequence they are written, not in alphabetical order of the labels.
+
+\item[\protect\verb"raise" exp\hfill]  exp is evaluated in $S$, returning $v$
+and $S'$; then the exception-packet $(v,S')$ is raised.
+
+\item[exp \verb"handle" match\hfill]  exp is evaluated; if exp returns a
+value $v$ with state $S'$, then $v$ is returned with $S'$.  
+If exp raises an exception-packet $(e,S'')$ then
+the match is applied to $e$ in the state $S''$.
+If the match fails, then $(e,S'')$ is raised
+(as the value of the \verb"handle" expression).  If the match
+succeeds, then the resulting value is returned.
+\end{description}
+
+Matching a pattern to a value has no effect on the store.  Evaluating
+a value binding has an effect on the store just from the evaluation of
+the constituent expressions.  Evaluation of type, datatype, or exception
+bindings has no effect on the store.
+

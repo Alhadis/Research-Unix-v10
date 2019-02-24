@@ -1,0 +1,4457 @@
+sed 's/^	//' >README <<\*-*-END-*-*
+	To compile:
+	
+	cc -o hash2.0 hash2.0.c standardSBoxes2.c
+	
+	To run:
+	
+	<inputFile hash2.0
+	
+	The inputFile is read and a hash value computed from it.  The hash
+	value is then printed on standard out.
+	
+	options:
+	
+	You can increase the number of iterations to 4 by saying:
+	
+	<inputFile hash2.0 4
+	
+	You can increase the size of the output to 256 bits by saying:
+	
+	<inputFile hash2.0 4 256
+*-*-END-*-*
+sed 's/^	//' >hash2.0.c <<\*-*-END-*-*
+	/* This is a reference implementation of Snefru. Snefru is a one-way hash
+	   function that provides authentication. It does not provide secrecy.
+	
+	Snefru is named after a Pharaoh of ancient Egypt.
+	
+	
+	
+	Copyright (c) Xerox Corporation 1989 All rights reserved.
+	
+	License to  copy and use this software is granted provided that it is
+	   identified as the 'Xerox Secure Hash Function' in all material mentioning
+	   or referencing this software or this hash function.
+	
+	License is also granted to make and use derivative works provided that such
+	   works are identified as 'derived from the Xerox Secure Hash Function' in
+	   all material mentioning or referencing the derived work.
+	
+	Xerox Corporation makes no representations concerning either the
+	   merchantability of this software or the suitability of this software for
+	   any particular purpose.  It is provided "as is" without express or implied
+	   warranty of any kind.
+	
+	These notices must be retained in any copies of any part of this software.
+	
+	
+	
+	This is version 2.0, July 31, 1989.
+	
+	Version 2.0 is algorithmically different from versions 1.4 and 1.3.
+	In particular, version 2.0 makes the following changes:
+	
+	1.)  The S-boxes in version 2.0 have been computed in accordance with a
+	   publicly known algorithm.
+	
+	2.)  The special case handling of inputs shorter than 64 bytes has been
+	   deleted.  This special case code offered little performance advantage and
+	   increased the complexity of the algorithm.  In addition, Coppersmith
+	   noticed a weakness that affected the 128-bit-input/128-bit-output version
+	   of Snefru (though not the 512-bit input/128-bit or 256-bit output version).
+	
+	3.)  The parameters p0, p1, and p2 have been eliminated.  There are several
+	   reasons for this change.  The principle reason is that they increase the
+	   complexity both of the code and the conceptual complexity of the hash
+	   function, and provide only modest improvement in security.
+	
+	4.)  Because the parameter mechanism was used to distinguish between inputs
+	   that differ only in the number of trailing 0 bits, a different mechanism
+	   has been adopted.  This new mechanism simply counts the number of bits in
+	   the input, and then places this 64-bit bit-count into the rightmost
+	   64-bits of the last block hashed.  A slightly different method of applying
+	   the hash also been adopted.
+	
+	5.)	Several people requested a larger output (to provide greater
+	   security). Because this will not always be needed, the algorithm was
+	   modified to generate either 128 bits or 256 bits of output, depending on a
+	   command line option.  Notice that 128 bits of output only provides 64
+	   "real" bits of security (because of square root attacks) and similarly 256
+	   bits of output provides only 128 "real" bits of security. Use of the
+	   higher security 256-bit output will slow down the algorithm by about 1/3
+	   (32 bytes per application of Hash512 versus 48 bytes per application of
+	   Hash512).
+	
+	6.) Other non-algorithmic changes have been made to the code, in keeping
+	   with various criticisms and comments.
+	
+	
+	
+	A 128 bit output should provide adequate security for most commercial
+	   applications (barring discovery of some unexpected weakness in the
+	   algorithm).  Where higher security is desired, the 256-bit output
+	   size can be used.
+	
+	Version 1.4 differs from Version 1.3 only in the wording of the export
+	   notice. Version 1.3 forbids export entirely.
+	
+	Version 1.3 fixes a security bug in handling short files (64 bytes or less).
+	   Such files should use the length of the file as a parameter to the hash,
+	   to prevent two files of different lengths from producing the same hash
+	   value if one file is a prefix of another.  This had been done for long
+	   files (greater than 64 bytes in length) but was overlooked for short
+	   files.
+	
+	In addition, Version 1.3 improves the way in which the parameter is mixed
+	   into the hash.  In essence, the change mixes in the parameter one more
+	   time. Although a similar effect can be achieved by increasing the security
+	   parameter by 1 (e.g., from 2 to 3) this also increases the amount of
+	   computation required by 50%.
+	
+	Version 1.3 also makes some more changes in the notices that accompany the
+	   code.
+	
+	Version 1.2 makes no changes in the code.  Only the notices that accompany
+	   the code have changed, and some changes in the comments.
+	
+	Version 1.1 added the routine 'convertBytes' to convert an array of 'char'
+	   into an array of unsigned long int.  This conversion is a no-op on the SUN
+	   and many other computers, but will have an effect on the VAX and computers
+	   with 'backwards' byte ordering.  It will also SLOW DOWN THE HASH FUNCTION,
+	   so it should be removed whenever possible if speed is an issue.
+	
+	This program reads from the standard input until EOF is reached (the first
+	   'read' that does not return a full buffer of data).  The data on the
+	   standard input is 'hashed' with a cryptographically secure one-way hash
+	   function (also known as a 'message digest', 'fingerprint', 'Manipulation
+	   Detection Code' or 'MDC').  The hash is then printed on the standard
+	   output.
+	
+	The input can be of any size.  The output is either 128 bits printed as 32
+	   characters in hex, or 256 bits printed as 64 characters in hex.
+	
+	The primary use of one-way hash functions is to determine if there have been
+	   any unauthorized, malicious, or accidental changes made to a file.  For
+	   example, if an executable program file produces the hash '209884c4
+	   2e89d967 5456ac0e 61269550', then any change to that program file will
+	   cause the hash to be changed.  Thus, the tampering can be detected by
+	   comparing the current output value with the previously computed (and
+	   presumably correct) output value.
+	
+	Hash512 is the centrol routine in this program.  It is used in this program
+	   in a linear fashion -- i.e., a sequential file is hashed down by repeated
+	   applications of Hash512.  Changing a single bit in the file would then
+	   require completely re-computing the hash from the point of change onward.
+	
+	Hash512 can be used in a tree-structured fashion to authenticate a large
+	   table of data. This would imply that changing a single bit would not force
+	   a complete re-computation of the hash value, but would instead require
+	   only log n re-computations of Hash512 to 'patch up' the changes along the
+	   path from the root to the changed leaf entry. A tree-structured
+	   application also has the advantage that any single entry in the table can
+	   subsequently be authenticated by someone who knows only the
+	   'authentication path' from the root of the tree to the leaf entry.  These
+	   concepts are discussed more thoroughly in 'Secrecy, Authentication, and
+	   Public Key Systems' by Ralph C. Merkle, UMI Research Press, 1982 (see
+	   particularly Chapter 2, 'One Way Hash Functions').  The use of a
+	   tree-structured pattern of applications of a one-way hash function is
+	   covered by U.S. Patent #4,309,569, 'Method of Providing Digital
+	   Signatures' (contact Stanford University, Office of Technology Licensing).
+	
+	
+	At the present time (July 31, 1989) the author knows of no method for
+	   'breaking' this one-way function, (i.e., finding two input files that
+	   produce the same output value). The algorithm has undergone some review
+	   for security.  Further review is expected.  Use of this algorithm for
+	   production use is not recomended at this time.  Note that we are
+	   specifically examining the security of Hash512 with a 512-bit input and a
+	   128-bit output, and Hash512 with a 512-bit input and a 256-bit output.
+	   Use of other sizes is not recomended at this time.  In particular, we
+	   recomend against the use of output sizes smaller than 128 bits, and
+	   recomend against the use of an input that is less than 2 (two) times the
+	   size of the output.  When the input size equals the output size, Snefru
+	   suffers a serious degradation in security (an observation due to
+	   Coppersmith).
+	
+	If anyone using this program finds two different inputs that produce the same
+	   output, please contact Ralph C. Merkle via E-mail (merkle@xerox.com) or
+	   via normal mail at: Xerox PARC 3333 Coyote Hill Road Palo Alto, CA 94304
+	   (415) 494-4000
+	
+	
+	See the paper 'A Software One Way Hash Function', by Ralph C. Merkle, for a
+	   more detailed explanation.
+	
+	The following test cases were taken directly from a terminal, and can be used
+	   to verify the correct functioning of an implementation of Snefru.  The
+	   first input is simply a carriage return.  The second input is '1', the
+	   third input is '12', etc.  The test sequence is repeated with security
+	   parameter "4" and with the output size set to "256".
+	
+	% hash
+	
+	 13af7619 ab98d4b5 f5e0a9e6 b26b5452
+	% hash
+	1
+	 578c83f8 8fe1f6a8 c119d2ba 3a9256c2
+	% hash
+	12
+	 255468d4 b4bd985b 696a7313 6027fc80
+	% hash
+	123
+	 f5339a52 9c4dafc5 34fe3f0d 7a66baf7
+	% hash
+	1234
+	 2645ff86 9a6c0ec6 5c49c20d d9050165
+	% hash
+	12345
+	 387d2929 8ed52ece 88e64f38 fe4fdb11
+	% hash
+	123456
+	 f29f8915 d23a0e02 838cc2e2 75f5dfe7
+	% hash
+	1234567
+	 4fb0f76e 9af16a2d 61844b9c e833e18f
+	% hash
+	12345678
+	 aacc56fc 85910fef e81fc697 6b061f4e
+	% hash
+	123456789
+	 e6997849 44ed68a1 c762ea1e 90c77967
+	
+	
+	% hash 4 256
+	
+	 6c504351 ce7f4b7a 93adb29a f9781ff9 2150f157 fee18661 eef511a3 fc83ddf
+	% hash 4 256
+	1
+	 65d657f8 85ad8b4a b35999cc 3ded8b82 7cf71fa4 25424750 35778910 d6c2e320
+	% hash 4 256
+	12
+	 7636f3d1 af139cf9 58f46f99 66221282 a444732a 7de59da5 d3481c6b bd6e7092
+	% hash 4 256
+	123
+	 cd3c7163 5b14c7c2 c24be864 4baab592 b8ab5b99 91ee5ee5 b3cf7a7f c6426ad7
+	% hash 4 256
+	1234
+	 9ba783a1 290cb21e fe196a02 3286ece5 49394c75 1ddd607e 5d67c4dc 549c62eb
+	% hash 4 256
+	12345
+	 c9680da8 ef00d2f8 4459a8e9 b50ada71 c63cae6f dcb6f774 f6998783 30a4a1f4
+	% hash 4 256
+	123456
+	 7656d389 f980bbe8 94152abe c6dc5f16 faf21c60 3b8f5098 861acf3c c059467b
+	% hash 4 256
+	1234567
+	 d96eb599 8377bb1d 74a02a2f ac9a85 3175250e 4796af36 36609747 372bba80
+	% hash 4 256
+	12345678
+	 b7818f09 2118e98a 140af09a 6cca4e6f 1eba88e7 52c20174 653637c9 d628f33f
+	% hash 4 256
+	123456789
+	 c2242249 1187baaa 94725400 8dffd5b 38f01557 9f3f2390 50969991 fdc1a810
+	% 
+	
+	
+	
+	Note that 'unsigned long int' MUST be 32 bits
+	
+	Implementor:  Ralph C. Merkle
+	
+	*/
+	
+	
+	
+	
+	#define inputFile  0		/* normally set up for standard in */
+	#define errorFile  2		/* normally set up for standard error */
+	
+	/* WARNING:  Changing the following parameter may affect security in
+	   non-obvious ways  */
+	#define inputBlockSize  16	/* size in 32-bit words of an input block to
+					   the hash routine  */
+	#define maxOutputBlockSize  8	/* size in 32-bit words of largest output
+					   block from the hash routine */
+	
+	
+	
+	#define bufferSize  3072	/* MUST be 3 * 2**n,  n > 5  */
+	#define bufferSizeInWords  768	/* MUST be bufferSize/4  */
+	#define maxSBoxCount 8
+	#define maxSBoxCountDiv2 4	/* has to equal maxSBoxCount/2, of course */
+	#define maxWordCount 16		/* maximum valid value for wordCount  */
+	
+	/* Note that the following variable should be set either to 4 or to 8.  */
+	int     outputBlockSize = 4;	/* default to normal 4 32-bit word or 128 bit
+					   output size */
+	
+	/* default to normal 48-byte chunk size. Must be
+	   inputBlockSize-outputBlockSize  */
+	int     chunkSize = 12;
+	
+	/* initialize the default value for the security parameter */
+	int     securityLevel = 2;
+	
+	int     shiftTable[4] = {16, 8, 16, 24};
+	
+	typedef unsigned long int sBox[256];
+	
+	
+	/* The standard S boxes must be defined in another file */
+	extern sBox standardSBoxes[maxSBoxCount];
+	
+	
+	/* an array needed only for the fast version of HashN -- Hash512.   It's safe
+	   to ignore this array if you don't need to understand the speeded up
+	   version.  Note that the 32-bit word specified by
+	   'rotatedRightStandardSBoxes[i][j][k]' is rotated right by i*8 bits  */
+	sBox    rotatedRightStandardSBoxes[4][maxSBoxCount];
+	
+	
+	
+	/* The following routine is a simple error exit routine  -- it prints a
+	   message and aborts */
+	void    errAbort (s)
+		char   *s;
+	{
+		int     length;
+	
+		for (length = 0; s[length] != 0; length++);
+		if (write (errorFile, s, length) != length)
+			exit (2);
+		if (write (errorFile, "\n", 1) != 1)
+			exit (2);
+		exit (1);
+	};
+	
+	
+	/* The following routine converts a byte array to an array of unsigned long
+	   int.  It is primarily intended to eliminate the byte-ordering problem.
+	   VAXes order the bytes in a character array differently than SUN's do. Note
+	   that this routine will SLOW DOWN THE HASH FUNCTION */
+	void    convertBytes (buffer, wordBuffer)
+		char    buffer[bufferSize];
+	unsigned long int wordBuffer[bufferSizeInWords];
+	
+	{
+		int     i;
+		unsigned long int t0, t1, t2, t3;
+	
+		/* buffer --        an input buffer of characters
+		
+		wordBuffer --  an output buffer of unsigned long int's
+		
+		*/
+	
+		for (i = 0; i < bufferSizeInWords; i++) {
+	
+			t0 = buffer[4 * i];
+			t1 = buffer[4 * i + 1];
+			t2 = buffer[4 * i + 2];
+			t3 = buffer[4 * i + 3];
+			t0 &= 0xff;
+			t1 &= 0xff;
+			t2 &= 0xff;
+			t3 &= 0xff;
+			wordBuffer[i] = (t0 << 24) | (t1 << 16) | (t2 << 8) | t3;
+	
+		};
+	
+	};
+	
+	
+	
+	void    HashN (output, wordCount, input, localSecurityLevel)
+		unsigned long int output[maxOutputBlockSize];
+	int     wordCount;
+	unsigned long int input[];
+	int     localSecurityLevel;
+	
+	{
+	
+		/* Note that we are computing localSecurityLevel * wordCount * 4
+		   rounds.  */
+	
+		unsigned long int mask;
+		unsigned long int block[maxWordCount];	/* holds the array of data
+							   being hashed  */
+		unsigned long int SBoxEntry;	/* just a temporary */
+		int     shift;
+		int     i;
+		int     index;
+		int     next, last;
+		int     byteInWord;
+	
+	
+		mask = wordCount - 1;	/* presumes wordCount is a power of 2  */
+	
+	
+		/* Test for various error conditions and logic problems  */
+	
+		if (localSecurityLevel * 2 > maxSBoxCount)
+			errAbort ("Too few S-boxes");
+		if (wordCount > maxWordCount)
+			errAbort ("Logic error, wordCount > maxWordCount");
+		if (wordCount != 16)
+			errAbort ("Security warning, input size not equal to 512 bits");
+		/* note that this routine will fail spectacularly on 8 byte blocks,
+		   hence the following ban. */
+		if (wordCount < 4)
+			errAbort (" wordCount too small");
+		if ((wordCount & mask) != 0)
+			errAbort ("logic error, wordCount not a power of 2");
+		if (outputBlockSize > wordCount)
+			errAbort ("logic error, outputBlockSize is too big");
+		if ((outputBlockSize != 4) & (outputBlockSize != 8))
+			errAbort ("Output size neither 128 nor 256 bits");
+	
+		/* All the error condtions have now been checked -- everything should
+		   work smoothly  */
+	
+	
+		/* initialize the block to be encrypted from the input  */
+		for (i = 0; i < wordCount; i++)
+			block[i] = input[i];
+	
+	
+	
+		for (index = 0; index < localSecurityLevel; index++) {
+	
+	
+			for (byteInWord = 0; byteInWord < 4; byteInWord++) {
+	
+	
+				for (i = 0; i < wordCount; i++) {
+					next = (i + 1) & mask;
+					last = (i + mask) & mask;	/* really last = (i-1)
+									   MOD wordCount */
+	
+					SBoxEntry = standardSBoxes[2 * index + ((i / 2) & 1)][block[i] & 0xff];
+					block[next] ^= SBoxEntry;
+					block[last] ^= SBoxEntry;
+				};
+	
+	
+				/* Rotate right all 32-bit words in the entire block
+				   at once.  */
+				shift = shiftTable[byteInWord];
+				for (i = 0; i < wordCount; i++)
+					block[i] = (block[i] >> shift) | (block[i] << (32 - shift));
+	
+	
+			};		/* end of byteInWord going from 0 to 3 */
+	
+	
+		};			/* end of index going from 0 to
+					   localSecurityLevel-1 */
+	
+	
+	
+		for (i = 0; i < outputBlockSize; i++)
+			output[i] = input[i] ^ block[mask - i];
+	
+	
+	};
+	
+	
+	
+	
+	void    Hash512 (output, input, localSecurityLevel)
+		unsigned long int output[maxOutputBlockSize];
+	unsigned long int input[];
+	int     localSecurityLevel;
+	
+	{
+	
+		/* This routine is a specialized version of HashN.  It is optimized
+		   for speed, and assumes that the input is always 16 words long
+		   It hashes 512 bits, hence its name.  */
+		/* You need not try to figure out this routine unless you wish to
+		   figure out a fast implementation of Snefru  */
+	
+		/* the following are two pointers to S-boxes  */
+		unsigned long int *SBox0;
+		unsigned long int *SBox1;
+	
+	
+		/* the array 'block' is divided into 16 distinct variables */
+		unsigned long int block0, block1, block2, block3;
+		unsigned long int block4, block5, block6, block7;
+		unsigned long int block8, block9, block10, block11;
+		unsigned long int block12, block13, block14, block15;
+	
+		unsigned long int SBoxEntry;	/* just a temporary */
+		int     index;
+	
+		if (inputBlockSize != 16)
+			errAbort ("Hash512 called with inputBlockSize != 16");
+		if ((outputBlockSize != 4) & (outputBlockSize != 8))
+			errAbort ("Hash512 called with outputBlockSize != 4 or 8");
+	
+		/* initialize the block to be encrypted from the input  */
+		/* Note that in theory block<i> should be kept in register.  Not all
+		   compilers can do this, even when there are enough registers --
+		   this will degrade performance significantly.  */
+		block0 = input[0];
+		block1 = input[1];
+		block2 = input[2];
+		block3 = input[3];
+		block4 = input[4];
+		block5 = input[5];
+		block6 = input[6];
+		block7 = input[7];
+		block8 = input[8];
+		block9 = input[9];
+		block10 = input[10];
+		block11 = input[11];
+		block12 = input[12];
+		block13 = input[13];
+		block14 = input[14];
+		block15 = input[15];
+	
+	
+	
+		for (index = 0; index < 2 * localSecurityLevel; index += 2) {
+	
+	
+			/* set up the base address for the two S-box pointers.  */
+			SBox0 = rotatedRightStandardSBoxes[0][index];
+			SBox1 = SBox0 + 256;
+	
+	
+			/* In the following unrolled code, the basic 'assembly
+			   language' block that is repeated is:
+			
+			1    temp1 = shift(block<i>, shiftConstant)
+			2    temp2 = temp1 & 0x3fc
+			3    temp3 = SBox<0 or 1> + temp2
+			4    temp4 = *temp3
+			5    block<i-1> ^= temp4
+			6    block<i+1> ^= temp4
+			
+			In step 1, we simply shift the ith 32-bit block to bring the
+			   8-bit byte into the right position.  Note that we will
+			   also build-in a left-shift by 2 bits at this stage, to
+			   eliminate the left shift required later because we are
+			   indexing into an array of 4-byte table entries.
+			
+			In step 2, we mask off the desired 8 bits.  Note that 0x3fc
+			   is simply 0xff << 2.
+			
+			In step 3, we use a normal integer add to compute the actual
+			   address of the S-box entry.  Note that one of two pointers
+			   is used, as appropriate.  Temp3 then holds the actual byte
+			   address of the desired S-box entry.
+			
+			In step 4, we load the 4-byte S-box entry.
+			
+			In steps 5 and 6, we XOR the loaded S-box entry with both the
+			   previous and the next 32-bit entries in the 'block' array.
+			
+			Typical optimizing comilers might fail to put all the
+			   block<i> variables into registers. This can result in
+			   significant performance degradation. Also, most compilers
+			   will use a separate left-shift-by-2 after masking off the
+			   needed 8 bits, but the performance degradation caused by
+			   this oversight should be modest.
+			
+			*/
+	
+			SBoxEntry = SBox0[block0 & 0xff];
+			block1 ^= SBoxEntry;
+			block15 ^= SBoxEntry;
+			SBoxEntry = SBox0[block1 & 0xff];
+			block2 ^= SBoxEntry;
+			block0 ^= SBoxEntry;
+			SBoxEntry = SBox1[block2 & 0xff];
+			block3 ^= SBoxEntry;
+			block1 ^= SBoxEntry;
+			SBoxEntry = SBox1[block3 & 0xff];
+			block4 ^= SBoxEntry;
+			block2 ^= SBoxEntry;
+			SBoxEntry = SBox0[block4 & 0xff];
+			block5 ^= SBoxEntry;
+			block3 ^= SBoxEntry;
+			SBoxEntry = SBox0[block5 & 0xff];
+			block6 ^= SBoxEntry;
+			block4 ^= SBoxEntry;
+			SBoxEntry = SBox1[block6 & 0xff];
+			block7 ^= SBoxEntry;
+			block5 ^= SBoxEntry;
+			SBoxEntry = SBox1[block7 & 0xff];
+			block8 ^= SBoxEntry;
+			block6 ^= SBoxEntry;
+			SBoxEntry = SBox0[block8 & 0xff];
+			block9 ^= SBoxEntry;
+			block7 ^= SBoxEntry;
+			SBoxEntry = SBox0[block9 & 0xff];
+			block10 ^= SBoxEntry;
+			block8 ^= SBoxEntry;
+			SBoxEntry = SBox1[block10 & 0xff];
+			block11 ^= SBoxEntry;
+			block9 ^= SBoxEntry;
+			SBoxEntry = SBox1[block11 & 0xff];
+			block12 ^= SBoxEntry;
+			block10 ^= SBoxEntry;
+			SBoxEntry = SBox0[block12 & 0xff];
+			block13 ^= SBoxEntry;
+			block11 ^= SBoxEntry;
+			SBoxEntry = SBox0[block13 & 0xff];
+			block14 ^= SBoxEntry;
+			block12 ^= SBoxEntry;
+			SBoxEntry = SBox1[block14 & 0xff];
+			block15 ^= SBoxEntry;
+			block13 ^= SBoxEntry;
+			SBoxEntry = SBox1[block15 & 0xff];
+			block0 ^= SBoxEntry;
+			block14 ^= SBoxEntry;
+	
+			/* SBox0 = rotatedRightStandardSBoxes[2][index];  */
+			SBox0 += 2 * maxSBoxCount * 256;
+			SBox1 = SBox0 + 256;
+	
+			SBoxEntry = SBox0[(block0 >> 16) & 0xff];
+			block1 ^= SBoxEntry;
+			block15 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block1 >> 16) & 0xff];
+			block2 ^= SBoxEntry;
+			block0 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block2 >> 16) & 0xff];
+			block3 ^= SBoxEntry;
+			block1 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block3 >> 16) & 0xff];
+			block4 ^= SBoxEntry;
+			block2 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block4 >> 16) & 0xff];
+			block5 ^= SBoxEntry;
+			block3 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block5 >> 16) & 0xff];
+			block6 ^= SBoxEntry;
+			block4 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block6 >> 16) & 0xff];
+			block7 ^= SBoxEntry;
+			block5 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block7 >> 16) & 0xff];
+			block8 ^= SBoxEntry;
+			block6 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block8 >> 16) & 0xff];
+			block9 ^= SBoxEntry;
+			block7 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block9 >> 16) & 0xff];
+			block10 ^= SBoxEntry;
+			block8 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block10 >> 16) & 0xff];
+			block11 ^= SBoxEntry;
+			block9 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block11 >> 16) & 0xff];
+			block12 ^= SBoxEntry;
+			block10 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block12 >> 16) & 0xff];
+			block13 ^= SBoxEntry;
+			block11 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block13 >> 16) & 0xff];
+			block14 ^= SBoxEntry;
+			block12 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block14 >> 16) & 0xff];
+			block15 ^= SBoxEntry;
+			block13 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block15 >> 16) & 0xff];
+			block0 ^= SBoxEntry;
+			block14 ^= SBoxEntry;
+	
+	
+			/* SBox0 = rotatedRightStandardSBoxes[1][index];  */
+			SBox0 -= maxSBoxCount * 256;
+			SBox1 = SBox0 + 256;
+	
+			SBoxEntry = SBox0[block0 >> 24];
+			block1 ^= SBoxEntry;
+			block15 ^= SBoxEntry;
+			SBoxEntry = SBox0[block1 >> 24];
+			block2 ^= SBoxEntry;
+			block0 ^= SBoxEntry;
+			SBoxEntry = SBox1[block2 >> 24];
+			block3 ^= SBoxEntry;
+			block1 ^= SBoxEntry;
+			SBoxEntry = SBox1[block3 >> 24];
+			block4 ^= SBoxEntry;
+			block2 ^= SBoxEntry;
+			SBoxEntry = SBox0[block4 >> 24];
+			block5 ^= SBoxEntry;
+			block3 ^= SBoxEntry;
+			SBoxEntry = SBox0[block5 >> 24];
+			block6 ^= SBoxEntry;
+			block4 ^= SBoxEntry;
+			SBoxEntry = SBox1[block6 >> 24];
+			block7 ^= SBoxEntry;
+			block5 ^= SBoxEntry;
+			SBoxEntry = SBox1[block7 >> 24];
+			block8 ^= SBoxEntry;
+			block6 ^= SBoxEntry;
+			SBoxEntry = SBox0[block8 >> 24];
+			block9 ^= SBoxEntry;
+			block7 ^= SBoxEntry;
+			SBoxEntry = SBox0[block9 >> 24];
+			block10 ^= SBoxEntry;
+			block8 ^= SBoxEntry;
+			SBoxEntry = SBox1[block10 >> 24];
+			block11 ^= SBoxEntry;
+			block9 ^= SBoxEntry;
+			SBoxEntry = SBox1[block11 >> 24];
+			block12 ^= SBoxEntry;
+			block10 ^= SBoxEntry;
+			SBoxEntry = SBox0[block12 >> 24];
+			block13 ^= SBoxEntry;
+			block11 ^= SBoxEntry;
+			SBoxEntry = SBox0[block13 >> 24];
+			block14 ^= SBoxEntry;
+			block12 ^= SBoxEntry;
+			SBoxEntry = SBox1[block14 >> 24];
+			block15 ^= SBoxEntry;
+			block13 ^= SBoxEntry;
+			SBoxEntry = SBox1[block15 >> 24];
+			block0 ^= SBoxEntry;
+			block14 ^= SBoxEntry;
+	
+	
+			/* SBox0 = rotatedRightStandardSBoxes[3][index];  */
+			SBox0 += 2 * maxSBoxCount * 256;
+			SBox1 = SBox0 + 256;
+	
+			SBoxEntry = SBox0[(block0 >> 8) & 0xff];
+			block1 ^= SBoxEntry;
+			block15 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block1 >> 8) & 0xff];
+			block2 ^= SBoxEntry;
+			block0 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block2 >> 8) & 0xff];
+			block3 ^= SBoxEntry;
+			block1 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block3 >> 8) & 0xff];
+			block4 ^= SBoxEntry;
+			block2 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block4 >> 8) & 0xff];
+			block5 ^= SBoxEntry;
+			block3 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block5 >> 8) & 0xff];
+			block6 ^= SBoxEntry;
+			block4 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block6 >> 8) & 0xff];
+			block7 ^= SBoxEntry;
+			block5 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block7 >> 8) & 0xff];
+			block8 ^= SBoxEntry;
+			block6 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block8 >> 8) & 0xff];
+			block9 ^= SBoxEntry;
+			block7 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block9 >> 8) & 0xff];
+			block10 ^= SBoxEntry;
+			block8 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block10 >> 8) & 0xff];
+			block11 ^= SBoxEntry;
+			block9 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block11 >> 8) & 0xff];
+			block12 ^= SBoxEntry;
+			block10 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block12 >> 8) & 0xff];
+			block13 ^= SBoxEntry;
+			block11 ^= SBoxEntry;
+			SBoxEntry = SBox0[(block13 >> 8) & 0xff];
+			block14 ^= SBoxEntry;
+			block12 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block14 >> 8) & 0xff];
+			block15 ^= SBoxEntry;
+			block13 ^= SBoxEntry;
+			SBoxEntry = SBox1[(block15 >> 8) & 0xff];
+			block0 ^= SBoxEntry;
+			block14 ^= SBoxEntry;
+	
+	
+	
+		};			/* end of index going from 0 to
+					   2*localSecurityLevel-2 in steps of 2 */
+	
+	
+		output[0] = input[0] ^ block15;
+		output[1] = input[1] ^ block14;
+		output[2] = input[2] ^ block13;
+		output[3] = input[3] ^ block12;
+	
+		/* generate an extra 128 bits if the output is 256 bits */
+		if (outputBlockSize == 8) {
+			output[4] = input[4] ^ block11;
+			output[5] = input[5] ^ block10;
+			output[6] = input[6] ^ block9;
+			output[7] = input[7] ^ block8;
+		};
+	
+	
+	};
+	
+	
+	/* Hash512twice does exactly that.  It hashes 512 bits using both Hash512 and
+	   HashN.  The output of the two implementations is then compared, and if
+	   they differ an error message is issued. This insures that two different
+	   quite different C routines compute the same value, and is quite
+	   helpful in catching bugs, implementation errors, etc.
+	
+	It should be particularly helpful to the implementor trying to "tune" the
+	   hash function for speed, as it provides a constant check on correctness.
+	
+	*/
+	
+	void    Hash512twice (output, input, localSecurityLevel)
+		unsigned long int output[maxOutputBlockSize];
+	unsigned long int input[];
+	int     localSecurityLevel;
+	
+	{
+		unsigned long int out1[maxOutputBlockSize];
+		unsigned long int out2[maxOutputBlockSize];
+		int     i;
+	
+		HashN (out1, inputBlockSize, input, localSecurityLevel);
+		Hash512 (out2, input, localSecurityLevel);
+		for (i = 0; i < outputBlockSize; i++)
+			if (out1[i] != out2[i])
+				errAbort (" Hash512 and HashN differ");
+		for (i = 0; i < outputBlockSize; i++)
+			output[i] = out1[i];
+	};
+	
+	
+	
+	/* The main program reads the input, hashes it, and prints the result.  Much
+	   of the logic in the main program is taken up with the trivia of buffer
+	   management, error checking, command-line parameter checking, self-tests,
+	   and the like. The actual use of the hash function occupies a modest
+	   portion of the overall program.
+	
+	The basic idea is simple.  As an example, if H is the hash function that
+	   produces either 128-bit (or 256-bit) outputs, and if we pick an input
+	   string that is 3 "chunks" long then we are computing:
+	
+	output = H( H(  H(  H(
+				0 || chunk[0])  || chunk[1])  || chunk[2]) || bit-length)
+	
+	"bit-length" is a "chunk" sized field into which has been put the length of
+	   the input, in bits, right justified.  Note that the size of a "chunk" is
+	   just the input size minus the output size.
+	
+	"0" is a vector of 0 bits of the same size (in bits) as the output of H
+	   (i.e., either 128 or 256 bits).
+	
+	"||" is the concatenation operator, and is used to concatenate the output
+	   field of the preceding computation of H with the next "chunk" of bits from
+	   the input.
+	
+	"chunk" is an array which holds the input string.  The final element of the
+	   array is left justified and zero-filled on the right.
+	
+	*/
+	
+	void    main (argc, argv)
+		int     argc;
+		char   *argv[];
+	
+	{
+	
+		int     i;
+		char    buffer[bufferSize];
+		int     hitEOF = 0;	/* 0 means we haven't hit EOF, 1 means we
+					   have */
+		unsigned long int wordBuffer[bufferSizeInWords];
+		unsigned long int hash[maxOutputBlockSize];
+		unsigned long int hashArray[inputBlockSize];
+		unsigned long int bitCount[2];	/* the 64-bit count of the number of
+						   bits in the input */
+		int     byteCount;	/* the count of the number of bytes we have
+					   in the buffer */
+		int     dataLoc;	/* the location of the next block of data we
+					   wish to hash down.  Note this is the index
+					   into an array of 32-bit elements, not
+					   bytes */
+	
+	
+	
+		/* self-test, to make sure everything is okay.  */
+		/* First, test the standard S boxes to make sure they haven't been
+		   damaged.  */
+		/* Test to make sure each column is a permutation.  */
+		for (i = 0; i < maxSBoxCount; i++) {
+			char    testArray[256];
+			int     testShift = 0;
+			int     j;
+	
+			for (testShift = 0; testShift < 32; testShift += 8) {
+				for (j = 0; j < 256; j++)
+					testArray[j] = 0;
+				for (j = 0; j < 256; j++)
+					testArray[(standardSBoxes[i][j] >> testShift) & 0xff]++;
+				for (j = 0; j < 256; j++)
+					if (testArray[j] != 1)
+						errAbort ("Table error -- the standard S box is corrupted");
+			};
+		};
+		/* Okay, the standard S-box hasn't been damaged  */
+	
+	
+	
+		/* Set up the rotated array for the fast hash routine  */
+		{
+			int     index;	/* ranges over the S box indices  */
+			int     rotation;	/* ranges over the four possible
+						   byte-rotations  */
+			int     i;	/* ranges over the 256 possible S-box entries    */
+	
+			for (index = 0; index < maxSBoxCount; index++)
+				for (rotation = 0; rotation < 4; rotation++)
+					for (i = 0; i < 256; i++)
+						rotatedRightStandardSBoxes[rotation][index][i] =
+							(standardSBoxes[index][i] >> (rotation * 8)) |
+							(standardSBoxes[index][i] << (32 - rotation * 8));
+	
+	
+		};
+	
+	
+	
+		/* Now try hashing something.  Note that we're testing both HashN and
+		   Hash512 here  */
+		{
+			unsigned long int testInput[inputBlockSize];
+			unsigned long int testOutput[maxOutputBlockSize];
+			int     j;
+			int	k;
+	
+			/* Set output size to 256 bits -- just for this test routine */
+			outputBlockSize = maxOutputBlockSize;
+			chunkSize = inputBlockSize - outputBlockSize;
+	
+			if (maxOutputBlockSize != 8)
+				errAbort ("The output block size has changed, update the self-test");
+			if (inputBlockSize != 16)
+				errAbort ("The input block size has changed, update the self-test");
+			if (maxSBoxCount != 8)
+				errAbort ("Wrong number of S boxes, update the self-test");
+	
+			for (i = 0; i < inputBlockSize; i++)
+				testInput[i] = 0;	/* zero the input */
+			k = 0;  /*  zero the pointer into the input buffer */
+			for (i = 0; i < 50; i++) {
+				Hash512twice (testOutput, testInput, 4);
+				/*	Copy the output into a new slot in the input buffer */
+				for (j = 0; j < maxOutputBlockSize; j++)
+					testInput[k+j] = testOutput[j];
+				k += maxOutputBlockSize;
+					/*	reset pointer into input buffer
+						if it might overflow next time */
+				if ( (k+maxOutputBlockSize) > inputBlockSize) k=0;
+			};
+			if ((testOutput[0] != 1967985403) || (testOutput[1] != 2688653266) ||
+			    (testOutput[2] != 3911883902) || (testOutput[3] != 1117323144) ||
+			    (testOutput[4] != 4238876879) || (testOutput[5] != 877649382) ||
+			(testOutput[6] != 1112396746) || (testOutput[7] != 324992866)
+				)
+				errAbort ("Test hash of 64 bytes of 0 failed");
+		};
+		/* Okay, we can hash at least 50  64-byte values correctly.  */
+	
+	
+	
+		outputBlockSize = 4;	/* default is 4 32-bit words, or 128 bits */
+		chunkSize = inputBlockSize - outputBlockSize;
+	
+		/* Check command line arguments */
+		if (argc == 3) {
+			/* Two arguments -- generate the Large Economy Size Output of
+			   256 bits */
+			outputBlockSize = 8;	/* 8  32-bit words */
+			chunkSize = inputBlockSize - outputBlockSize;
+			if ((argv[2][0] != '2') |
+			    (argv[2][1] != '5') |
+			    (argv[2][2] != '6'))
+				errAbort ("usage:  hash <security level> [256]");
+			argc--;
+		};
+	
+		if ((bufferSizeInWords % chunkSize) != 0)
+			errAbort ("Buffer size is fouled up");
+	
+		if (argc > 2)
+			errAbort ("usage:  hash [ <security level> [ <output size> ] ]");
+		else if (argc == 2) {
+			securityLevel = 0;
+			if (argv[1][0] == '2')
+				securityLevel = 2;
+			else if (argv[1][0] == '3')
+				securityLevel = 3;
+			else if (argv[1][0] == '4')
+				securityLevel = 4;
+	
+			if ((argv[1][1] != 0) || (securityLevel == 0))
+				errAbort ("The security level can only be 2, 3, or 4 (4 is most secure).");
+		};
+	
+	
+		/* Apply the one-way hash function to the standard input  */
+	
+	
+		bitCount[0] = 0;
+		bitCount[1] = 0;
+		byteCount = read (inputFile, buffer, bufferSize);
+		if (byteCount < 0)
+			errAbort ("Error on first read from standard input");
+		if (byteCount != bufferSize)
+			hitEOF = 1;	/* set EOF flag true if didn't fill buffer */
+	
+	
+		bitCount[1] += byteCount * 8;	/* increment the total number of bits
+						   read */
+		/* bump the upper 32 bits when the lower 32-bits wraps around */
+		if (bitCount[1] < (byteCount * 8))
+			bitCount[0] += 1;
+	
+		/* zero out rest of buffer  */
+		for (i = byteCount; i < bufferSize; i++)
+			buffer[i] = 0;
+	
+		/* following conversion required for machines with byte-ordering
+		   unlike the SUN */
+		convertBytes (buffer, wordBuffer);
+		dataLoc = 0;		/* 4-byte-word location in data input buffer */
+	
+	
+	
+		/* Now we hash it down with multiple applications of Hash512  */
+	
+		for (i = 0; i < inputBlockSize; i++)
+			hashArray[i] = 0;	/* initialize hashArray  */
+	
+		/* Hash each chunk in the input (either 48 byte chunks or 32 byte
+		   chunks)  -- and keep the result in hashArray.  Note that the first
+		   16 (32) bytes of hashArray holds the output of the previous hash
+		   computation.  */
+	
+		while (byteCount > 0) {
+			if (dataLoc + chunkSize > bufferSize)
+				errAbort ("logic error, buffer over run");
+	
+			/* Get the next chunk */
+			for (i = 0; i < chunkSize; i++)
+				hashArray[outputBlockSize + i] = wordBuffer[dataLoc + i];
+			/* and hash it in */
+			Hash512 (hashArray, hashArray, securityLevel);
+	
+			/* increment index to next 48-byte input chunk */
+			dataLoc += chunkSize;
+	
+	
+			/* decrement the number of bytes left to process */
+			/* Yes, if byteCount was less than chunkSize this might make
+			   byteCount negative. It's ok, it's caught in the following
+			   "if" statement */
+			byteCount -= chunkSize * 4;
+	
+			/* Out of data -- read some more */
+			if (byteCount <= 0) {
+				if (hitEOF == 1)
+					byteCount = 0;
+				else {
+					if (byteCount != 0)
+						errAbort ("Logic error near EOF");
+					byteCount = read (inputFile, buffer, bufferSize);
+					if (byteCount < 0)
+						errAbort ("Error while reading from input");
+					if (byteCount != bufferSize)
+						hitEOF = 1;
+				};
+	
+				bitCount[1] += byteCount * 8;	/* increment the
+								   bit-count */
+				/* bump the upper 32 bits when the lower 32-bits
+				   wraps around */
+				if (bitCount[1] < (byteCount * 8))
+					bitCount[0] += 1;
+	
+				/* zero out rest of buffer */
+				for (i = byteCount; i < bufferSize; i++)
+					buffer[i] = 0;
+	
+				convertBytes (buffer, wordBuffer);
+				dataLoc = 0;
+			};
+		};			/* end of while */
+	
+	
+		/*  Zero out the remainder of hashArray  */
+		for (i = 0; i < chunkSize; i++)
+				hashArray[outputBlockSize + i] = 0;
+	
+		/* Put the 64-bit bit-count into the final 64-bits of the block about
+		   to be hashed */
+		hashArray[inputBlockSize - 2] = bitCount[0];	/* upper 32 bits of
+								   count */
+		hashArray[inputBlockSize - 1] = bitCount[1];	/* lower 32 bits of
+								   count */
+	
+		/* Final hash down.  */
+		Hash512 (hash, hashArray, securityLevel);
+	
+		/* 'hash' now holds the hashed result, which is printed on standard
+		   output */
+		for (i = 0; i < outputBlockSize; i++)
+			printf (" %x", hash[i]);
+		printf ("\n");
+		exit (0);
+	};
+*-*-END-*-*
+sed 's/^	//' >hashComment <<\*-*-END-*-*
+	Following are the hash totals computed for the files "hash2.0.c"
+	and "standardSBoxes2.c".  The user should be aware that any change
+	in these files at all (e.g., addition of a blank at the end of any line,
+	conversion of a tab into an equivalent number of spaces, etc) will
+	result in a different value of the checksum.  However, in
+	a purely logical sense it does little good to verify the correctness
+	of the contents of a file using as a test the checksum program
+	which has just been copied from that very same file.....
+	
+	Despite this annoying circularity, I have included the checksum
+	values.  They at least serve as a guard against simple errors
+	and clumsy efforts at subversion.
+	
+	Also, if the recipient should ever manage to receive a correct copy
+	of the hash total program, then this correct version can be used
+	to verify all further updates, changes, etc.
+	
+	hash2.0.c:  a3878c2d c96c6f8e b4026ae2 9669f027
+	standardSBoxes2.c:   49b91919 1a896a dc976159 c6885587
+*-*-END-*-*
+sed 's/^	//' >stdSBoxes2.c <<\*-*-END-*-*
+	/*        This is the standard S box used by the one-way hash function Snefru.
+	           See the paper 'A Software One Way Hash Function', by Ralph C. Merkle,
+	          for a more detailed explanation.
+	
+	Version 2.0
+	
+	NOTE:  This set of tables is different from Version 1.0.
+	          Version 2.0 is recomended, Version 1.0 should not be used.
+	
+	August 1, 1989
+	
+	Copyright (c) Xerox Corporation 1989
+	All rights reserved.
+	
+	License to  copy and use this software is granted provided that it is identified
+	as the 'Tables For the Xerox Secure Hash Function' in all material mentioning
+	or referencing this software.
+	
+	License is also granted to make and use derivative works provided that such
+	works are identified as 'derived from the Tables For the Xerox Secure Hash
+	Function' in all material mentioning or referencing the derived work.
+	
+	Xerox Corporation makes no representations concerning either the
+	merchantability of this software or the suitability of this software for any
+	particular purpose.  It is provided "as is" without express or implied
+	warranty of any kind.
+	
+	
+	These notices must be retained in any copies of any part of this software.
+	
+	
+	
+	Implementor:  Ralph C. Merkle
+	
+	*/
+	
+	#define maxSBoxCount 8
+	
+	
+	
+	long int standardSBoxes[maxSBoxCount][256] = {
+	
+	{  /*  Start of S Box 0 */
+	  0x64F9001B,  /*  0  */
+	  0xFEDDCDF6,  /*  1  */
+	  0x7C8FF1E2,  /*  2  */
+	  0x11D71514,  /*  3  */
+	  0x8B8C18D3,  /*  4  */
+	  0xDDDF881E,  /*  5  */
+	  0x6EAB5056,  /*  6  */
+	  0x88CED8E1,  /*  7  */
+	  0x49148959,  /*  8  */
+	  0x69C56FD5,  /*  9  */
+	  0xB7994F03,  /*  10  */
+	  0xFBCEE3E,  /*  11  */
+	  0x3C264940,  /*  12  */
+	  0x21557E58,  /*  13  */
+	  0xE14B3FC2,  /*  14  */
+	  0x2E5CF591,  /*  15  */
+	  0xDCEFF8CE,  /*  16  */
+	  0x92A1648,  /*  17  */
+	  0xBE812936,  /*  18  */
+	  0xFF7B0C6A,  /*  19  */
+	  0xD5251037,  /*  20  */
+	  0xAFA448F1,  /*  21  */
+	  0x7DAFC95A,  /*  22  */
+	  0x1EA69C3F,  /*  23  */
+	  0xA417ABE7,  /*  24  */
+	  0x5890E423,  /*  25  */
+	  0xB0CB70C0,  /*  26  */
+	  0xC85025F7,  /*  27  */
+	  0x244D97E3,  /*  28  */
+	  0x1FF3595F,  /*  29  */
+	  0xC4EC6396,  /*  30  */
+	  0x59181E17,  /*  31  */
+	  0xE635B477,  /*  32  */
+	  0x354E7DBF,  /*  33  */
+	  0x796F7753,  /*  34  */
+	  0x66EB52CC,  /*  35  */
+	  0x77C3F995,  /*  36  */
+	  0x32E3A927,  /*  37  */
+	  0x80CCAED6,  /*  38  */
+	  0x4E2BE89D,  /*  39  */
+	  0x375BBD28,  /*  40  */
+	  0xAD1A3D05,  /*  41  */
+	  0x2B1B42B3,  /*  42  */
+	  0x16C44C71,  /*  43  */
+	  0x4D54BFA8,  /*  44  */
+	  0xE57DDC7A,  /*  45  */
+	  0xEC6D8144,  /*  46  */
+	  0x5A71046B,  /*  47  */
+	  0xD8229650,  /*  48  */
+	  0x87FC8F24,  /*  49  */
+	  0xCBC60E09,  /*  50  */
+	  0xB6390366,  /*  51  */
+	  0xD9F76092,  /*  52  */
+	  0xD393A70B,  /*  53  */
+	  0x1D31A08A,  /*  54  */
+	  0x9CD971C9,  /*  55  */
+	  0x5C1EF445,  /*  56  */
+	  0x86FAB694,  /*  57  */
+	  0xFDB44165,  /*  58  */
+	  0x8EAAFCBE,  /*  59  */
+	  0x4BCAC6EB,  /*  60  */
+	  0xFB7A94E5,  /*  61  */
+	  0x5789D04E,  /*  62  */
+	  0xFA13CF35,  /*  63  */
+	  0x236B8DA9,  /*  64  */
+	  0x4133F000,  /*  65  */
+	  0x6224261C,  /*  66  */
+	  0xF412F23B,  /*  67  */
+	  0xE75E56A4,  /*  68  */
+	  0x30022116,  /*  69  */
+	  0xBAF17F1F,  /*  70  */
+	  0xD09872F9,  /*  71  */
+	  0xC1A3699C,  /*  72  */
+	  0xF1E802AA,  /*  73  */
+	  0xDD145DC,  /*  74  */
+	  0x4FDCE093,  /*  75  */
+	  0x8D8412F0,  /*  76  */
+	  0x6CD0F376,  /*  77  */
+	  0x3DE6B73D,  /*  78  */
+	  0x84BA737F,  /*  79  */
+	  0xB43A30F2,  /*  80  */
+	  0x44569F69,  /*  81  */
+	  0xE4EACA,  /*  82  */
+	  0xB58DE3B0,  /*  83  */
+	  0x959113C8,  /*  84  */
+	  0xD62EFEE9,  /*  85  */
+	  0x90861F83,  /*  86  */
+	  0xCED69874,  /*  87  */
+	  0x2F793CEE,  /*  88  */
+	  0xE8571C30,  /*  89  */
+	  0x483665D1,  /*  90  */
+	  0xAB07B031,  /*  91  */
+	  0x914C844F,  /*  92  */
+	  0x15BF3BE8,  /*  93  */
+	  0x2C3F2A9A,  /*  94  */
+	  0x9EB95FD4,  /*  95  */
+	  0x92E7472D,  /*  96  */
+	  0x2297CC5B,  /*  97  */
+	  0xEE5F2782,  /*  98  */
+	  0x5377B562,  /*  99  */
+	  0xDB8EBBCF,  /*  100  */
+	  0xF961DEDD,  /*  101  */
+	  0xC59B5C60,  /*  102  */
+	  0x1BD3910D,  /*  103  */
+	  0x26D206AD,  /*  104  */
+	  0xB28514D8,  /*  105  */
+	  0x5ECF6B52,  /*  106  */
+	  0x7FEA78BB,  /*  107  */
+	  0x504879AC,  /*  108  */
+	  0xED34A884,  /*  109  */
+	  0x36E51D3C,  /*  110  */
+	  0x1753741D,  /*  111  */
+	  0x8C47CAED,  /*  112  */
+	  0x9D0A40EF,  /*  113  */
+	  0x3145E221,  /*  114  */
+	  0xDA27EB70,  /*  115  */
+	  0xDF730BA3,  /*  116  */
+	  0x183C8789,  /*  117  */
+	  0x739AC0A6,  /*  118  */
+	  0x9A58DFC6,  /*  119  */
+	  0x54B134C1,  /*  120  */
+	  0xAC3E242E,  /*  121  */
+	  0xCC493902,  /*  122  */
+	  0x7B2DDA99,  /*  123  */
+	  0x8F15BC01,  /*  124  */
+	  0x29FD38C7,  /*  125  */
+	  0x27D5318F,  /*  126  */
+	  0x604AAFF5,  /*  127  */
+	  0xF29C6818,  /*  128  */
+	  0xC38AA2EC,  /*  129  */
+	  0x1019D4C3,  /*  130  */
+	  0xA8FB936E,  /*  131  */
+	  0x20ED7B39,  /*  132  */
+	  0xB686119,  /*  133  */
+	  0x89A0906F,  /*  134  */
+	  0x1CC7829E,  /*  135  */
+	  0x9952EF4B,  /*  136  */
+	  0x850E9E8C,  /*  137  */
+	  0xCD063A90,  /*  138  */
+	  0x67002F8E,  /*  139  */
+	  0xCFAC8CB7,  /*  140  */
+	  0xEAA24B11,  /*  141  */
+	  0x988B4E6C,  /*  142  */
+	  0x46F066DF,  /*  143  */
+	  0xCA7EEC08,  /*  144  */
+	  0xC7BBA664,  /*  145  */
+	  0x831D17BD,  /*  146  */
+	  0x63F575E6,  /*  147  */
+	  0x9764350E,  /*  148  */
+	  0x47870D42,  /*  149  */
+	  0x26CA4A2,  /*  150  */
+	  0x8167D587,  /*  151  */
+	  0x61B6ADAB,  /*  152  */
+	  0xAA6564D2,  /*  153  */
+	  0x70DA237B,  /*  154  */
+	  0x25E1C74A,  /*  155  */
+	  0xA1C901A0,  /*  156  */
+	  0xEB0A5DA,  /*  157  */
+	  0x7670F741,  /*  158  */
+	  0x51C05AEA,  /*  159  */
+	  0x933DFA32,  /*  160  */
+	  0x759FF1A,  /*  161  */
+	  0x56010AB8,  /*  162  */
+	  0x5FDECB78,  /*  163  */
+	  0x3F32EDF8,  /*  164  */
+	  0xAEBEDBB9,  /*  165  */
+	  0x39F8326D,  /*  166  */
+	  0xD20858C5,  /*  167  */
+	  0x9B638BE4,  /*  168  */
+	  0xA572C80A,  /*  169  */
+	  0x28E0A19F,  /*  170  */
+	  0x432099FC,  /*  171  */
+	  0x3A37C3CD,  /*  172  */
+	  0xBF95C585,  /*  173  */
+	  0xB392C12A,  /*  174  */
+	  0x6AA707D7,  /*  175  */
+	  0x52F66A61,  /*  176  */
+	  0x12D483B1,  /*  177  */
+	  0x96435B5E,  /*  178  */
+	  0x3E75802B,  /*  179  */
+	  0x3BA52B33,  /*  180  */
+	  0xA99F51A5,  /*  181  */
+	  0xBDA1E157,  /*  182  */
+	  0x78C2E70C,  /*  183  */
+	  0xFCAE7CE0,  /*  184  */
+	  0xD1602267,  /*  185  */
+	  0x2AFFAC4D,  /*  186  */
+	  0x4A510947,  /*  187  */
+	  0xAB2B83A,  /*  188  */
+	  0x7A04E579,  /*  189  */
+	  0x340DFD80,  /*  190  */
+	  0xB916E922,  /*  191  */
+	  0xE29D5E9B,  /*  192  */
+	  0xF5624AF4,  /*  193  */
+	  0x4CA9D9AF,  /*  194  */
+	  0x6BBD2CFE,  /*  195  */
+	  0xE3B7F620,  /*  196  */
+	  0xC2746E07,  /*  197  */
+	  0x5B42B9B6,  /*  198  */
+	  0xA06919BC,  /*  199  */
+	  0xF0F2C40F,  /*  200  */
+	  0x72217AB5,  /*  201  */
+	  0x14C19DF3,  /*  202  */
+	  0xF3802DAE,  /*  203  */
+	  0xE094BEB4,  /*  204  */
+	  0xA2101AFF,  /*  205  */
+	  0x529575D,  /*  206  */
+	  0x55CDB27C,  /*  207  */
+	  0xA33BDDB2,  /*  208  */
+	  0x6528B37D,  /*  209  */
+	  0x740C05DB,  /*  210  */
+	  0xE96A62C4,  /*  211  */
+	  0x40782846,  /*  212  */
+	  0x6D30D706,  /*  213  */
+	  0xBBF48E2C,  /*  214  */
+	  0xBCE2D3DE,  /*  215  */
+	  0x49E37FA,  /*  216  */
+	  0x1B5E634,  /*  217  */
+	  0x2D886D8D,  /*  218  */
+	  0x7E5A2E7E,  /*  219  */
+	  0xD7412013,  /*  220  */
+	  0x6E90F97,  /*  221  */
+	  0xE45D3EBA,  /*  222  */
+	  0xB8AD3386,  /*  223  */
+	  0x13051B25,  /*  224  */
+	  0xC035354,  /*  225  */
+	  0x71C89B75,  /*  226  */
+	  0xC638FBD0,  /*  227  */
+	  0x197F11A1,  /*  228  */
+	  0xEF0F08FB,  /*  229  */
+	  0xF8448651,  /*  230  */
+	  0x38409563,  /*  231  */
+	  0x452F4443,  /*  232  */
+	  0x5D464D55,  /*  233  */
+	  0x3D8764C,  /*  234  */
+	  0xB1B8D638,  /*  235  */
+	  0xA70BBA2F,  /*  236  */
+	  0x94B3D210,  /*  237  */
+	  0xEB6692A7,  /*  238  */
+	  0xD409C2D9,  /*  239  */
+	  0x68838526,  /*  240  */
+	  0xA6DB8A15,  /*  241  */
+	  0x751F6C98,  /*  242  */
+	  0xDE769A88,  /*  243  */
+	  0xC9EE4668,  /*  244  */
+	  0x1A82A373,  /*  245  */
+	  0x896AA49,  /*  246  */
+	  0x42233681,  /*  247  */
+	  0xF62C55CB,  /*  248  */
+	  0x9F1C5404,  /*  249  */
+	  0xF74FB15C,  /*  250  */
+	  0xC06E4312,  /*  251  */
+	  0x6FFE5D72,  /*  252  */
+	  0x8AA8678B,  /*  253  */
+	  0x337CD129,  /*  254  */
+	  0x8211CEFD  /*  255  */
+	  /*  End of S Box 0  */ },
+	
+	
+	{
+	/*  Start of S Box 1 */
+	
+	0x74A1D09, /*  0  */
+	0x52A10E5A, /*  1  */
+	0x9275A3F8, /*  2  */
+	0x4B82506C, /*  3  */
+	0x37DF7E1B, /*  4  */
+	0x4C78B3C5, /*  5  */
+	0xCEFAB1DA, /*  6  */
+	0xF472267E, /*  7  */
+	0xB63045F6, /*  8  */
+	0xD66A1FC0, /*  9  */
+	0x400298E3, /*  10  */
+	0x27E60C94, /*  11  */
+	0x87D2F1B8, /*  12  */
+	0xDF9E56CC, /*  13  */
+	0x45CD1803, /*  14  */
+	0x1D35E098, /*  15  */
+	0xCCE7C736, /*  16  */
+	0x3483BF1, /*  17  */
+	0x1F7307D7, /*  18  */
+	0xC6E8F948, /*  19  */
+	0xE613C111, /*  20  */
+	0x3955C6FF, /*  21  */
+	0x1170ED7C, /*  22  */
+	0x8E95DA41, /*  23  */
+	0x99C31BF4, /*  24  */
+	0xA4DA8021, /*  25  */
+	0x7B5F94FB, /*  26  */
+	0xDD0DA51F, /*  27  */
+	0x6562AA77, /*  28  */
+	0x556BCB23, /*  29  */
+	0xDB1BACC6, /*  30  */
+	0x798040B9, /*  31  */
+	0xBFE5378F, /*  32  */
+	0x731D55E6, /*  33  */
+	0xDAA5BFEE, /*  34  */
+	0x389BBC60, /*  35  */
+	0x1B33FBA4, /*  36  */
+	0x9C567204, /*  37  */
+	0x36C26C68, /*  38  */
+	0x77EE9D69, /*  39  */
+	0x8AEB3E88, /*  40  */
+	0x2D50B5CE, /*  41  */
+	0x9579E790, /*  42  */
+	0x42B13CFC, /*  43  */
+	0x33FBD32B, /*  44  */
+	0xEE0503A7, /*  45  */
+	0xB5862824, /*  46  */
+	0x15E41EAD, /*  47  */
+	0xC8412EF7, /*  48  */
+	0x9D441275, /*  49  */
+	0x2FCEC582, /*  50  */
+	0x5FF483B7, /*  51  */
+	0x8F3931DF, /*  52  */
+	0x2E5D2A7B, /*  53  */
+	0x49467BF9, /*  54  */
+	0x653DEA9, /*  55  */
+	0x2684CE35, /*  56  */
+	0x7E655E5C, /*  57  */
+	0xF12771D8, /*  58  */
+	0xBB15CC67, /*  59  */
+	0xAB097CA1, /*  60  */
+	0x983DCF52, /*  61  */
+	0x10DDF026, /*  62  */
+	0x21267F57, /*  63  */
+	0x2C58F6B4, /*  64  */
+	0x31043265, /*  65  */
+	0xBAB8C01, /*  66  */
+	0xD5492099, /*  67  */
+	0xACAAE619, /*  68  */
+	0x944CE54A, /*  69  */
+	0xF2D13D39, /*  70  */
+	0xADD3FC32, /*  71  */
+	0xCDA08A40, /*  72  */
+	0xE2B0D451, /*  73  */
+	0x9EFE08AE, /*  74  */
+	0xB9D50FD2, /*  75  */
+	0xEA5CD7FD, /*  76  */
+	0xC9A749DD, /*  77  */
+	0x13EA2253, /*  78  */
+	0x832DEBAA, /*  79  */
+	0x24BE640F, /*  80  */
+	0xE03E926A, /*  81  */
+	0x29E01CDE, /*  82  */
+	0x8BF59F18, /*  83  */
+	0xF9D00B6, /*  84  */
+	0xE1238B46, /*  85  */
+	0x1E7D8E34, /*  86  */
+	0x93619ADB, /*  87  */
+	0x76B32F9F, /*  88  */
+	0xBD972CEC, /*  89  */
+	0xE31FA976, /*  90  */
+	0xA68FBB10, /*  91  */
+	0xFB3BA49D, /*  92  */
+	0x8587C41D, /*  93  */
+	0xA5ADD1D0, /*  94  */
+	0xF3CF84BF, /*  95  */
+	0xD4E11150, /*  96  */
+	0xD9FFA6BC, /*  97  */
+	0xC3F6018C, /*  98  */
+	0xAEF10572, /*  99  */
+	0x74A64B2F, /*  100  */
+	0xE7DC9559, /*  101  */
+	0x2AAE35D5, /*  102  */
+	0x5B6F587F, /*  103  */
+	0xA9E353FE, /*  104  */
+	0xCA4FB674, /*  105  */
+	0x4BA24A8, /*  106  */
+	0xE5C6875F, /*  107  */
+	0xDCBC6266, /*  108  */
+	0x6BC5C03F, /*  109  */
+	0x661EEF02, /*  110  */
+	0xED740BAB, /*  111  */
+	0x58E34E4, /*  112  */
+	0xB7E946CF, /*  113  */
+	0x88698125, /*  114  */
+	0x72EC48ED, /*  115  */
+	0xB11073A3, /*  116  */
+	0xA13485EB, /*  117  */
+	0xA2A2429C, /*  118  */
+	0xFA407547, /*  119  */
+	0x50B76713, /*  120  */
+	0x5418C37D, /*  121  */
+	0x96192DA5, /*  122  */
+	0x170BB04B, /*  123  */
+	0x518A021E, /*  124  */
+	0xB0AC13D1, /*  125  */
+	0x963FA2A, /*  126  */
+	0x4A6E10E1, /*  127  */
+	0x58472BDC, /*  128  */
+	0xF7F8D962, /*  129  */
+	0x979139EA, /*  130  */
+	0x8D856538, /*  131  */
+	0xC0997042, /*  132  */
+	0x48324D7A, /*  133  */
+	0x447623CB, /*  134  */
+	0x8CBBE364, /*  135  */
+	0x6E0C6B0E, /*  136  */
+	0xD36D63B0, /*  137  */
+	0x3F244C84, /*  138  */
+	0x3542C971, /*  139  */
+	0x2B228DC1, /*  140  */
+	0xCB0325BB, /*  141  */
+	0xF8C0D6E9, /*  142  */
+	0xDE11066B, /*  143  */
+	0xA8649327, /*  144  */
+	0xFC31F83E, /*  145  */
+	0x7DD80406, /*  146  */
+	0xF916DD61, /*  147  */
+	0xD89F79D3, /*  148  */
+	0x615144C2, /*  149  */
+	0xEBB45D31, /*  150  */
+	0x28002958, /*  151  */
+	0x56890A37, /*  152  */
+	0xF05B3808, /*  153  */
+	0x123AE844, /*  154  */
+	0x86839E16, /*  155  */
+	0x914B0D83, /*  156  */
+	0xC506B43C, /*  157  */
+	0xCF3CBA5E, /*  158  */
+	0x7C60F5C9, /*  159  */
+	0x22DEB2A0, /*  160  */
+	0x5D9C2715, /*  161  */
+	0xC77BA0EF, /*  162  */
+	0x4F45360B, /*  163  */
+	0xC1017D8B, /*  164  */
+	0xE45ADC29, /*  165  */
+	0xA759909B, /*  166  */
+	0x412CD293, /*  167  */
+	0xD7D796B1, /*  168  */
+	0xC8FF30, /*  169  */
+	0x23A34A80, /*  170  */
+	0x4EC15C91, /*  171  */
+	0x714E78B5, /*  172  */
+	0x47B9E42E, /*  173  */
+	0x78F3EA4D, /*  174  */
+	0x7F078F5B, /*  175  */
+	0x346C593A, /*  176  */
+	0xA3A87A1A, /*  177  */
+	0x9BCBFE12, /*  178  */
+	0x3D439963, /*  179  */
+	0xB2EF6D8E, /*  180  */
+	0xB8D46028, /*  181  */
+	0x6C2FD5CA, /*  182  */
+	0x62675256, /*  183  */
+	0x1F2A2F3, /*  184  */
+	0xBC96AE0A, /*  185  */
+	0x709A8920, /*  186  */
+	0xB4146E87, /*  187  */
+	0x6308B9E2, /*  188  */
+	0x64BDA7BA, /*  189  */
+	0xAFED6892, /*  190  */
+	0x6037F2A2, /*  191  */
+	0xF52969E0, /*  192  */
+	0xADB43A6, /*  193  */
+	0x82811400, /*  194  */
+	0x90D0BDF0, /*  195  */
+	0x19C9549E, /*  196  */
+	0x203F6A73, /*  197  */
+	0x1ACCAF4F, /*  198  */
+	0x89714E6D, /*  199  */
+	0x164D4705, /*  200  */
+	0x67665F07, /*  201  */
+	0xEC206170, /*  202  */
+	0xC2182B2, /*  203  */
+	0xA02B9C81, /*  204  */
+	0x53289722, /*  205  */
+	0xF6A97686, /*  206  */
+	0x140E4179, /*  207  */
+	0x9F778849, /*  208  */
+	0x9A88E15D, /*  209  */
+	0x25CADB54, /*  210  */
+	0xD157F36F, /*  211  */
+	0x32A421C3, /*  212  */
+	0xB368E98A, /*  213  */
+	0x5A92CD0D, /*  214  */
+	0x757AA8D4, /*  215  */
+	0xC20AC278, /*  216  */
+	0x8B551C7, /*  217  */
+	0x849491E8, /*  218  */
+	0x4DC75AD6, /*  219  */
+	0x697C33BE, /*  220  */
+	0xBAF0CA33, /*  221  */
+	0x46125B4E, /*  222  */
+	0x59D677B3, /*  223  */
+	0x30D9C8F2, /*  224  */
+	0xD0AF860C, /*  225  */
+	0x1C7FD0FA, /*  226  */
+	0xFE0FF72C, /*  227  */
+	0x5C8D6F43, /*  228  */
+	0x57FDEC3B, /*  229  */
+	0x6AB6AD97, /*  230  */
+	0xD22ADF89, /*  231  */
+	0x18171785, /*  232  */
+	0x2BFE22D, /*  233  */
+	0x6DB80917, /*  234  */
+	0x80B216AF, /*  235  */
+	0xE85E4F9A, /*  236  */
+	0x7A1C306E, /*  237  */
+	0x6FC49BF5, /*  238  */
+	0x3AF7A11C, /*  239  */
+	0x81E215E7, /*  240  */
+	0x68363FCD, /*  241  */
+	0x3E9357C8, /*  242  */
+	0xEF52FD55, /*  243  */
+	0x3B8BAB4C, /*  244  */
+	0x3C8CF495, /*  245  */
+	0xBEFCEEBD, /*  246  */
+	0xFD25B714, /*  247  */
+	0xC498D83D, /*  248  */
+	0xD2E1A8D, /*  249  */
+	0xE9F966AC, /*  250  */
+	0xE387445, /*  251  */
+	0x435419E5, /*  252  */
+	0x5E7EBEC4, /*  253  */
+	0xAA90B8D9, /*  254  */
+	0xFF1A3A96}, /*  255  */
+	
+	{
+	/*  Start of S-box 2 */
+	
+	0x4A8FE4E3, /*  0  */
+	0xF27D99CD, /*  1  */
+	0xD04A40CA, /*  2  */
+	0xCB5FF194, /*  3  */
+	0x3668275A, /*  4  */
+	0xFF4816BE, /*  5  */
+	0xA78B394C, /*  6  */
+	0x4C6BE9DB, /*  7  */
+	0x4EEC38D2, /*  8  */
+	0x4296EC80, /*  9  */
+	0xCDCE96F8, /*  10  */
+	0x888C2F38, /*  11  */
+	0xE75508F5, /*  12  */
+	0x7B916414, /*  13  */
+	0x60AA14A, /*  14  */
+	0xA214F327, /*  15  */
+	0xBE608DAF, /*  16  */
+	0x1EBBDEC2, /*  17  */
+	0x61F98CE9, /*  18  */
+	0xE92156FE, /*  19  */
+	0x4F22D7A3, /*  20  */
+	0x3F76A8D9, /*  21  */
+	0x559A4B33, /*  22  */
+	0x38AD2959, /*  23  */
+	0xF3F17E9E, /*  24  */
+	0x85E1BA91, /*  25  */
+	0xE5EBA6FB, /*  26  */
+	0x73DCD48C, /*  27  */
+	0xF5C3FF78, /*  28  */
+	0x481B6058, /*  29  */
+	0x8A3297F7, /*  30  */
+	0x8F1F3BF4, /*  31  */
+	0x93785AB2, /*  32  */
+	0x477A4A5B, /*  33  */
+	0x6334EB5D, /*  34  */
+	0x6D251B2E, /*  35  */
+	0x74A9102D, /*  36  */
+	0x7E38FFA, /*  37  */
+	0x915C9C62, /*  38  */
+	0xCCC275EA, /*  39  */
+	0x6BE273EC, /*  40  */
+	0x3EBDDD70, /*  41  */
+	0xD895796C, /*  42  */
+	0xDC54A91B, /*  43  */
+	0xC9AFDF81, /*  44  */
+	0x23633F73, /*  45  */
+	0x275119B4, /*  46  */
+	0xB19F6B67, /*  47  */
+	0x50756E22, /*  48  */
+	0x2BB152E2, /*  49  */
+	0x76EA46A2, /*  50  */
+	0xA353E232, /*  51  */
+	0x2F596AD6, /*  52  */
+	0xB1EDB0B, /*  53  */
+	0x2D3D9A4, /*  54  */
+	0x78B47843, /*  55  */
+	0x64893E90, /*  56  */
+	0x40F0CAAD, /*  57  */
+	0xF68D3AD7, /*  58  */
+	0x46FD1707, /*  59  */
+	0x1C9C67EF, /*  60  */
+	0xB5E086DE, /*  61  */
+	0x96EE6CA6, /*  62  */
+	0x9AA34774, /*  63  */
+	0x1BA4F48A, /*  64  */
+	0x8D01ABFD, /*  65  */
+	0x183EE1F6, /*  66  */
+	0x5FF8AA7A, /*  67  */
+	0x17E4FAAE, /*  68  */
+	0x303983B0, /*  69  */
+	0x6C08668B, /*  70  */
+	0xD4AC4382, /*  71  */
+	0xE6C5849F, /*  72  */
+	0x92FEFB53, /*  73  */
+	0xC1CAC4CE, /*  74  */
+	0x43501388, /*  75  */
+	0x441118CF, /*  76  */
+	0xEC4FB308, /*  77  */
+	0x53A08E86, /*  78  */
+	0x9E0FE0C5, /*  79  */
+	0xF91C1525, /*  80  */
+	0xAC45BE05, /*  81  */
+	0xD7987CB5, /*  82  */
+	0x49BA1487, /*  83  */
+	0x57938940, /*  84  */
+	0xD5877648, /*  85  */
+	0xA958727F, /*  86  */
+	0x58DFE3C3, /*  87  */
+	0xF436CF77, /*  88  */
+	0x399E4D11, /*  89  */
+	0xF0A5BFA9, /*  90  */
+	0xEF61A33B, /*  91  */
+	0xA64CAC60, /*  92  */
+	0x4A8D0BA, /*  93  */
+	0x30DD572, /*  94  */
+	0xB83D320F, /*  95  */
+	0xCAB23045, /*  96  */
+	0xE366F2F0, /*  97  */
+	0x815D008D, /*  98  */
+	0xC897A43A, /*  99  */
+	0x1D352DF3, /*  100  */
+	0xB9CC571D, /*  101  */
+	0x8BF38744, /*  102  */
+	0x72209092, /*  103  */
+	0xEBA124EB, /*  104  */
+	0xFB99CE5E, /*  105  */
+	0x3BB94293, /*  106  */
+	0x28DA549C, /*  107  */
+	0xAAB8A228, /*  108  */
+	0xA4197785, /*  109  */
+	0x33C70296, /*  110  */
+	0x25F6259B, /*  111  */
+	0x5C85DA21, /*  112  */
+	0xDF15BDEE, /*  113  */
+	0x15B7C7E8, /*  114  */
+	0xE2ABEF75, /*  115  */
+	0xFCC19BC1, /*  116  */
+	0x417FF868, /*  117  */
+	0x14884434, /*  118  */
+	0x62825179, /*  119  */
+	0xC6D5C11C, /*  120  */
+	0xE4705DC, /*  121  */
+	0x22700DE0, /*  122  */
+	0xD3D2AF18, /*  123  */
+	0x9BE822A0, /*  124  */
+	0x35B669F1, /*  125  */
+	0xC42BB55C, /*  126  */
+	0xA801252, /*  127  */
+	0x115BF0FC, /*  128  */
+	0x3CD7D856, /*  129  */
+	0xB43F5F9D, /*  130  */
+	0xC2306516, /*  131  */
+	0xA1231C47, /*  132  */
+	0xF149207E, /*  133  */
+	0x5209A795, /*  134  */
+	0x34B3CCD8, /*  135  */
+	0x67AEFE54, /*  136  */
+	0x2C83924E, /*  137  */
+	0x6662CBAC, /*  138  */
+	0x5EEDD161, /*  139  */
+	0x84E681AA, /*  140  */
+	0x5D57D26B, /*  141  */
+	0xFA465CC4, /*  142  */
+	0x7E3AC3A8, /*  143  */
+	0xBF7C0CC6, /*  144  */
+	0xE18A9AA1, /*  145  */
+	0xC32F0A6F, /*  146  */
+	0xB22CC00D, /*  147  */
+	0x3D280369, /*  148  */
+	0x994E554F, /*  149  */
+	0x68F480D3, /*  150  */
+	0xADCFF5E6, /*  151  */
+	0x3A8EB265, /*  152  */
+	0x83269831, /*  153  */
+	0xBD568A09, /*  154  */
+	0x4BC8AE6A, /*  155  */
+	0x69F56D2B, /*  156  */
+	0xF17EAC8, /*  157  */
+	0x772EB6C7, /*  158  */
+	0x9F41343C, /*  159  */
+	0xAB1D0742, /*  160  */
+	0x826A6F50, /*  161  */
+	0xFEA2097C, /*  162  */
+	0x1912C283, /*  163  */
+	0xCE185899, /*  164  */
+	0xE4444839, /*  165  */
+	0x2D8635D5, /*  166  */
+	0x65D0B1FF, /*  167  */
+	0x865A7F17, /*  168  */
+	0x326D9FB1, /*  169  */
+	0x59E52820, /*  170  */
+	0x90ADE1, /*  171  */
+	0x753C7149, /*  172  */
+	0x9DDD8B98, /*  173  */
+	0xA5A691DA, /*  174  */
+	0xD0382BB, /*  175  */
+	0x8904C930, /*  176  */
+	0x86CB000, /*  177  */
+	0x6E69D3BD, /*  178  */
+	0x24D4E7A7, /*  179  */
+	0x5244FD0, /*  180  */
+	0x101A5E0C, /*  181  */
+	0x6A947DCB, /*  182  */
+	0xE840F77B, /*  183  */
+	0x7D0C5003, /*  184  */
+	0x7C370F1F, /*  185  */
+	0x805245ED, /*  186  */
+	0xE05E3D3F, /*  187  */
+	0x7906880E, /*  188  */
+	0xBABFCD35, /*  189  */
+	0x1A7EC697, /*  190  */
+	0x8C052324, /*  191  */
+	0xC6EC8DF, /*  192  */
+	0xD129A589, /*  193  */
+	0xC7A75B02, /*  194  */
+	0x12D81DE7, /*  195  */
+	0xD9BE2A66, /*  196  */
+	0x1F4263AB, /*  197  */
+	0xDE73FDB6, /*  198  */
+	0x2A00680A, /*  199  */
+	0x56649E36, /*  200  */
+	0x3133ED55, /*  201  */
+	0x90FA0BF2, /*  202  */
+	0x2910A02A, /*  203  */
+	0x949D9D46, /*  204  */
+	0xA0D1DCDD, /*  205  */
+	0xCFC9B7D4, /*  206  */
+	0xD2677BE5, /*  207  */
+	0x95CB36B3, /*  208  */
+	0x13CD9410, /*  209  */
+	0xDBF73313, /*  210  */
+	0xB7C6E8C0, /*  211  */
+	0xF781414B, /*  212  */
+	0x510B016D, /*  213  */
+	0xB0DE1157, /*  214  */
+	0xD6B0F62C, /*  215  */
+	0xBB074ECC, /*  216  */
+	0x7F1395B7, /*  217  */
+	0xEE792CF9, /*  218  */
+	0xEA6FD63E, /*  219  */
+	0x5BD6938E, /*  220  */
+	0xAF02FC64, /*  221  */
+	0xDAB57AB8, /*  222  */
+	0x8EDB3784, /*  223  */
+	0x8716318F, /*  224  */
+	0x164D1A01, /*  225  */
+	0x26F26141, /*  226  */
+	0xB372E6B9, /*  227  */
+	0xF8FC2B06, /*  228  */
+	0x7AC00E04, /*  229  */
+	0x3727B89A, /*  230  */
+	0x97E9BCA5, /*  231  */
+	0x9C2A742F, /*  232  */
+	0xBC3B1F7D, /*  233  */
+	0x7165B471, /*  234  */
+	0x609B4C29, /*  235  */
+	0x20925351, /*  236  */
+	0x5AE72112, /*  237  */
+	0x454BE5D1, /*  238  */
+	0xC0FFB95F, /*  239  */
+	0xDD0EF919, /*  240  */
+	0x6F2D70C9, /*  241  */
+	0x974C5BF, /*  242  */
+	0x98AA6263, /*  243  */
+	0x1D91E4D, /*  244  */
+	0x2184BB6E, /*  245  */
+	0x70C43C1E, /*  246  */
+	0x4D435915, /*  247  */
+	0xAE7B8523, /*  248  */
+	0xB6FB06BC, /*  249  */
+	0x5431EE76, /*  250  */
+	0xFDBC5D26, /*  251  */
+	0xED77493D, /*  252  */
+	0xC5712EE4, /*  253  */
+	0xA8380437, /*  254  */
+	0x2EEF261A}, /*  255  */
+	
+	{
+	/*  Start of S Box 3 */
+	
+	0x5A79392B, /*  0  */
+	0xB8AF32C2, /*  1  */
+	0x41F7720A, /*  2  */
+	0x833A61EC, /*  3  */
+	0x13DFEDAC, /*  4  */
+	0xC4990BC4, /*  5  */
+	0xDC0F54BC, /*  6  */
+	0xFEDD5E88, /*  7  */
+	0x80DA1881, /*  8  */
+	0x4DEA1AFD, /*  9  */
+	0xFD402CC6, /*  10  */
+	0xAE67CC7A, /*  11  */
+	0xC5238525, /*  12  */
+	0x8EA01254, /*  13  */
+	0xB56B9BD5, /*  14  */
+	0x862FBD6D, /*  15  */
+	0xAC8575D3, /*  16  */
+	0x6FBA3714, /*  17  */
+	0xDA7EBF46, /*  18  */
+	0x59CD5238, /*  19  */
+	0x8AC9DBFE, /*  20  */
+	0x353729FC, /*  21  */
+	0xE497D7F2, /*  22  */
+	0xC3AB84E0, /*  23  */
+	0xF05A114B, /*  24  */
+	0x7B887A75, /*  25  */
+	0xEDC603DD, /*  26  */
+	0x5E6FE680, /*  27  */
+	0x2C84B399, /*  28  */
+	0x884EB1DA, /*  29  */
+	0x1CB8C8BF, /*  30  */
+	0xAA51098A, /*  31  */
+	0xC862231C, /*  32  */
+	0x8BAC2221, /*  33  */
+	0x21B387E5, /*  34  */
+	0x208A430D, /*  35  */
+	0x2A3F0F8B, /*  36  */
+	0xA5FF9CD2, /*  37  */
+	0x6012A2EA, /*  38  */
+	0x147A9EE7, /*  39  */
+	0xF62A501D, /*  40  */
+	0xB4B2E51A, /*  41  */
+	0x3EF3484C, /*  42  */
+	0xC0253C59, /*  43  */
+	0x2B82B536, /*  44  */
+	0xAA9696B, /*  45  */
+	0xBE0C109B, /*  46  */
+	0xC70B7929, /*  47  */
+	0xCE3E8A19, /*  48  */
+	0x2F66950E, /*  49  */
+	0x459F1C2C, /*  50  */
+	0xE68FB93D, /*  51  */
+	0xA3C3FF3E, /*  52  */
+	0x62B45C62, /*  53  */
+	0x300991CB, /*  54  */
+	0x1914C57, /*  55  */
+	0x7F7BC06A, /*  56  */
+	0x182831F5, /*  57  */
+	0xE7B74BCA, /*  58  */
+	0xFA50F6D0, /*  59  */
+	0x523CAA61, /*  60  */
+	0xE3A7CF05, /*  61  */
+	0xE9E41311, /*  62  */
+	0x280A21D1, /*  63  */
+	0x6A4297E1, /*  64  */
+	0xF24DC67E, /*  65  */
+	0xFC3189E6, /*  66  */
+	0xB72BF34F, /*  67  */
+	0x4B1E67AF, /*  68  */
+	0x543402CE, /*  69  */
+	0x79A59867, /*  70  */
+	0x648E02A, /*  71  */
+	0xA3AC17, /*  72  */
+	0xC6208D35, /*  73  */
+	0x6E7F5F76, /*  74  */
+	0xA45BB4BE, /*  75  */
+	0xF168FA63, /*  76  */
+	0x3F4125F3, /*  77  */
+	0xF311406F, /*  78  */
+	0x2706565, /*  79  */
+	0xBFE58022, /*  80  */
+	0xCFCFDD9, /*  81  */
+	0x735A7F7, /*  82  */
+	0x8F049092, /*  83  */
+	0xD98EDC27, /*  84  */
+	0xF5C5D55C, /*  85  */
+	0xE0F201DB, /*  86  */
+	0xDCAFC9A, /*  87  */
+	0x7727FB79, /*  88  */
+	0xAF43ABF4, /*  89  */
+	0x26E938C1, /*  90  */
+	0x401B26A6, /*  91  */
+	0x900720FA, /*  92  */
+	0x2752D97B, /*  93  */
+	0xCFF1D1B3, /*  94  */
+	0xA9D9E424, /*  95  */
+	0x42DB99AB, /*  96  */
+	0x6CF8BE5F, /*  97  */
+	0xE82CEBE3, /*  98  */
+	0x3AFB733B, /*  99  */
+	0x6B734EB6, /*  100  */
+	0x1036414A, /*  101  */
+	0x975F667C, /*  102  */
+	0x49D6377, /*  103  */
+	0xBA587C60, /*  104  */
+	0xB1D10483, /*  105  */
+	0xDE1AEFCC, /*  106  */
+	0x1129D055, /*  107  */
+	0x72051E91, /*  108  */
+	0x6946D623, /*  109  */
+	0xF9E86EA7, /*  110  */
+	0x48768C00, /*  111  */
+	0xB0166C93, /*  112  */
+	0x9956BBF0, /*  113  */
+	0x1F1F6D84, /*  114  */
+	0xFB15E18E, /*  115  */
+	0x33B495D, /*  116  */
+	0x56E3362E, /*  117  */
+	0x4F44C53C, /*  118  */
+	0x747CBA51, /*  119  */
+	0x89D37872, /*  120  */
+	0x5D9C331B, /*  121  */
+	0xD2EF9FA8, /*  122  */
+	0x254917F8, /*  123  */
+	0x1B106F47, /*  124  */
+	0x37D75553, /*  125  */
+	0xB3F053B0, /*  126  */
+	0x7DCCD8EF, /*  127  */
+	0xD30EB802, /*  128  */
+	0x5889F42D, /*  129  */
+	0x610206D7, /*  130  */
+	0x1A7D34A1, /*  131  */
+	0x92D87DD8, /*  132  */
+	0xE5F4A315, /*  133  */
+	0xD1CF0E71, /*  134  */
+	0xB22DFE45, /*  135  */
+	0xB901E8EB, /*  136  */
+	0xFC0CE5E, /*  137  */
+	0x2EFA60C9, /*  138  */
+	0x2DE74290, /*  139  */
+	0x36D0C906, /*  140  */
+	0x381C70E4, /*  141  */
+	0x4C6DA5B5, /*  142  */
+	0x3D81A682, /*  143  */
+	0x7E381F34, /*  144  */
+	0x396C4F52, /*  145  */
+	0x95AD5901, /*  146  */
+	0x1DB50C5A, /*  147  */
+	0x29982E9E, /*  148  */
+	0x1557689F, /*  149  */
+	0x3471EE42, /*  150  */
+	0xD7E2F7C0, /*  151  */
+	0x8795A1E2, /*  152  */
+	0xBC324D8D, /*  153  */
+	0xE224C3C8, /*  154  */
+	0x12837E39, /*  155  */
+	0xCDEE3D74, /*  156  */
+	0x7AD2143F, /*  157  */
+	0xE13D40C, /*  158  */
+	0x78BD4A68, /*  159  */
+	0xA2EB194D, /*  160  */
+	0xDB9451F9, /*  161  */
+	0x859B71DC, /*  162  */
+	0x5C4F5B89, /*  163  */
+	0xCA14A8A4, /*  164  */
+	0xEF92F003, /*  165  */
+	0x16741D98, /*  166  */
+	0x33AA4444, /*  167  */
+	0x9E967FBB, /*  168  */
+	0x92E3020, /*  169  */
+	0xD86A35B8, /*  170  */
+	0x8CC17B10, /*  171  */
+	0xE1BF08AE, /*  172  */
+	0x55693FC5, /*  173  */
+	0x7680AD13, /*  174  */
+	0x1E6546E8, /*  175  */
+	0x23B6E7B9, /*  176  */
+	0xEE77A4B2, /*  177  */
+	0x8ED0533, /*  178  */
+	0x44FD2895, /*  179  */
+	0xB6393B69, /*  180  */
+	0x5D6CACF, /*  181  */
+	0x9819B209, /*  182  */
+	0xECBBB72F, /*  183  */
+	0x9A75779C, /*  184  */
+	0xEAEC0749, /*  185  */
+	0x94A65AEE, /*  186  */
+	0xBDF52DC3, /*  187  */
+	0xD6A25D04, /*  188  */
+	0x82008E4E, /*  189  */
+	0xA6DE160F, /*  190  */
+	0x9B036AFB, /*  191  */
+	0x228B3A66, /*  192  */
+	0x5FB10A70, /*  193  */
+	0xCC338B58, /*  194  */
+	0x5378A9DF, /*  195  */
+	0xC908BCA9, /*  196  */
+	0x4959E25B, /*  197  */
+	0x46909A97, /*  198  */
+	0x66AE8F6E, /*  199  */
+	0xDD0683E9, /*  200  */
+	0x65F994B4, /*  201  */
+	0x6426CDA5, /*  202  */
+	0xC24B8840, /*  203  */
+	0x32539DA0, /*  204  */
+	0x63175650, /*  205  */
+	0xD0C815FF, /*  206  */
+	0x50CBC41E, /*  207  */
+	0xF7C774A3, /*  208  */
+	0x31B0C231, /*  209  */
+	0x8D0D8116, /*  210  */
+	0x24BEF16C, /*  211  */
+	0xD555D256, /*  212  */
+	0xDF47EA8C, /*  213  */
+	0x6D21ECCD, /*  214  */
+	0xA887A012, /*  215  */
+	0x84542AED, /*  216  */
+	0xA7B9C1BD, /*  217  */
+	0x914C1BB1, /*  218  */
+	0xA0D5B67D, /*  219  */
+	0x438CE937, /*  220  */
+	0x7030F873, /*  221  */
+	0x71F6B0C7, /*  222  */
+	0x574576BA, /*  223  */
+	0xF8BC4541, /*  224  */
+	0x9C61D348, /*  225  */
+	0x1960579D, /*  226  */
+	0x17C4DAAD, /*  227  */
+	0x96A4CB0B, /*  228  */
+	0xC193F2F6, /*  229  */
+	0x756EAFA2, /*  230  */
+	0x7C1D2F94, /*  231  */
+	0xF4FE2B43, /*  232  */
+	0xCB86E33A, /*  233  */
+	0xEBD4C728, /*  234  */
+	0x9D18AE64, /*  235  */
+	0x9FE13E30, /*  236  */
+	0x3CE0F5DE, /*  237  */
+	0xABA1F985, /*  238  */
+	0xADDC2718, /*  239  */
+	0x68CE6278, /*  240  */
+	0xD45E241F, /*  241  */
+	0xA15C82B7, /*  242  */
+	0x3B2293D4, /*  243  */
+	0x739EDD32, /*  244  */
+	0x674A6BF1, /*  245  */
+	0x5B5D587F, /*  246  */
+	0x4772DEAA, /*  247  */
+	0x4A63968F, /*  248  */
+	0xBE68686, /*  249  */
+	0x513D6426, /*  250  */
+	0x939A4787, /*  251  */
+	0xBBA89296, /*  252  */
+	0x4EC20007, /*  253  */
+	0x818D0D08, /*  254  */
+	0xFF64DFD6}, /*  255  */
+	
+	{
+	/*  Start of S Box 4 */
+	
+	0xCB2297CB, /*  0  */
+	0xDB48A144, /*  1  */
+	0xA16CBE4B, /*  2  */
+	0xBBEA1D6C, /*  3  */
+	0x5AF6B6B7, /*  4  */
+	0x8A8110B6, /*  5  */
+	0xF9236EF9, /*  6  */
+	0xC98F83E6, /*  7  */
+	0xF9C65B8, /*  8  */
+	0x252D4A89, /*  9  */
+	0xA497F068, /*  10  */
+	0xA5D7ED2D, /*  11  */
+	0x94C22845, /*  12  */
+	0x9DA1C8C4, /*  13  */
+	0xE27C2E2E, /*  14  */
+	0x6E8BA2B4, /*  15  */
+	0xC3DD17FB, /*  16  */
+	0x498CD482, /*  17  */
+	0xDFE6A9F, /*  18  */
+	0xB0705829, /*  19  */
+	0x9A1E6DC1, /*  20  */
+	0xF829717C, /*  21  */
+	0x7BB8E3A, /*  22  */
+	0xDA3C0B02, /*  23  */
+	0x1AF82FC7, /*  24  */
+	0x73B70955, /*  25  */
+	0x7A04379C, /*  26  */
+	0x5EE20A28, /*  27  */
+	0x83712AE5, /*  28  */
+	0xF4C47C6D, /*  29  */
+	0xDF72BA56, /*  30  */
+	0xD794858D, /*  31  */
+	0x8C0CF709, /*  32  */
+	0x18F0F390, /*  33  */
+	0xB6C69B35, /*  34  */
+	0xBF2F01DB, /*  35  */
+	0x2FA74DCA, /*  36  */
+	0xD0CD9127, /*  37  */
+	0xBDE66CEC, /*  38  */
+	0x3DEEBD46, /*  39  */
+	0x57C88FC3, /*  40  */
+	0xCEE1406F, /*  41  */
+	0x66385A, /*  42  */
+	0xF3C3444F, /*  43  */
+	0x3A79D5D5, /*  44  */
+	0x75751EB9, /*  45  */
+	0x3E7F8185, /*  46  */
+	0x521C2605, /*  47  */
+	0xE1AAAB6E, /*  48  */
+	0x38EBB80F, /*  49  */
+	0xBEE7E904, /*  50  */
+	0x61CB9647, /*  51  */
+	0xEA54904E, /*  52  */
+	0x5AE00E4, /*  53  */
+	0x2D7AC65F, /*  54  */
+	0x87751A1, /*  55  */
+	0xDCD82915, /*  56  */
+	0x921EE16, /*  57  */
+	0xDD86D33B, /*  58  */
+	0xD6BD491A, /*  59  */
+	0x40FBADF0, /*  60  */
+	0x4232CBD2, /*  61  */
+	0x33808D10, /*  62  */
+	0x39098C42, /*  63  */
+	0x193F3199, /*  64  */
+	0xBC1E47A, /*  65  */
+	0x4A82B149, /*  66  */
+	0x2B65A8A, /*  67  */
+	0x104CDC8E, /*  68  */
+	0x24A8F52C, /*  69  */
+	0x685C6077, /*  70  */
+	0xC79F95C9, /*  71  */
+	0x1D11FE50, /*  72  */
+	0xC08DAFCD, /*  73  */
+	0x7B1A9A03, /*  74  */
+	0x1C1F11D8, /*  75  */
+	0x84250E7F, /*  76  */
+	0x979DB248, /*  77  */
+	0xEBDC0501, /*  78  */
+	0xB9553395, /*  79  */
+	0xE3C05EA8, /*  80  */
+	0xB1E51C4C, /*  81  */
+	0x13B0E681, /*  82  */
+	0x3B407766, /*  83  */
+	0x36DB3087, /*  84  */
+	0xEE17C9FC, /*  85  */
+	0x6C53ECF2, /*  86  */
+	0xADCCC58F, /*  87  */
+	0xC427660B, /*  88  */
+	0xEFD5867D, /*  89  */
+	0x9B6D54A5, /*  90  */
+	0x6FF1AEFF, /*  91  */
+	0x8E787952, /*  92  */
+	0x9E2BFFE0, /*  93  */
+	0x8761D034, /*  94  */
+	0xE00BDBAD, /*  95  */
+	0xAE99A8D3, /*  96  */
+	0xCC03F6E2, /*  97  */
+	0xFD0ED807, /*  98  */
+	0xE508AE3, /*  99  */
+	0xB74182AB, /*  100  */
+	0x4349245D, /*  101  */
+	0xD120A465, /*  102  */
+	0xB246A641, /*  103  */
+	0xAF3B7AB0, /*  104  */
+	0x2A6488BB, /*  105  */
+	0x4B3A0D1F, /*  106  */
+	0xE7C7E58C, /*  107  */
+	0x3FAFF2EB, /*  108  */
+	0x90445FFD, /*  109  */
+	0xCF38C393, /*  110  */
+	0x995D07E7, /*  111  */
+	0xF24F1B36, /*  112  */
+	0x356F6891, /*  113  */
+	0x6D6EBCBE, /*  114  */
+	0x8DA9E262, /*  115  */
+	0x50FD520E, /*  116  */
+	0x5BCA9E1E, /*  117  */
+	0x37472CF3, /*  118  */
+	0x69075057, /*  119  */
+	0x7EC5FDED, /*  120  */
+	0xCAB892A, /*  121  */
+	0xFB2412BA, /*  122  */
+	0x1728DEBF, /*  123  */
+	0xA000A988, /*  124  */
+	0xD843CE79, /*  125  */
+	0x42E20DD, /*  126  */
+	0x4FE8F853, /*  127  */
+	0x56659C3C, /*  128  */
+	0x2739D119, /*  129  */
+	0xA78A6120, /*  130  */
+	0x80960375, /*  131  */
+	0x70420611, /*  132  */
+	0x85E09F78, /*  133  */
+	0xABD17E96, /*  134  */
+	0x1B513EAF, /*  135  */
+	0x1E01EB63, /*  136  */
+	0x26AD2133, /*  137  */
+	0xA890C094, /*  138  */
+	0x7613CF60, /*  139  */
+	0x817E781B, /*  140  */
+	0xA39113D7, /*  141  */
+	0xE957FA58, /*  142  */
+	0x4131B99E, /*  143  */
+	0x28B1EFDA, /*  144  */
+	0x66ACFBA7, /*  145  */
+	0xFF68944A, /*  146  */
+	0x77A44FD1, /*  147  */
+	0x7F331522, /*  148  */
+	0x59FFB3FA, /*  149  */
+	0xA6DF935B, /*  150  */
+	0xFA12D9DF, /*  151  */
+	0xC6BF6F3F, /*  152  */
+	0x89520CF6, /*  153  */
+	0x659EDD6A, /*  154  */
+	0x544DA739, /*  155  */
+	0x8B052538, /*  156  */
+	0x7C30EA21, /*  157  */
+	0xC2345525, /*  158  */
+	0x15927FB2, /*  159  */
+	0x144A436B, /*  160  */
+	0xBA107B8B, /*  161  */
+	0x1219AC97, /*  162  */
+	0x6730432, /*  163  */
+	0x31831AB3, /*  164  */
+	0xC55A5C24, /*  165  */
+	0xAA0FCD3E, /*  166  */
+	0xE5606BE8, /*  167  */
+	0x5C88F19B, /*  168  */
+	0x4C0841EE, /*  169  */
+	0x1FE37267, /*  170  */
+	0x11F9C4F4, /*  171  */
+	0x9F1B9DAE, /*  172  */
+	0x864E76D0, /*  173  */
+	0xE637C731, /*  174  */
+	0xD97D23A6, /*  175  */
+	0x32F53D5C, /*  176  */
+	0xB8161980, /*  177  */
+	0x93FA0F84, /*  178  */
+	0xCAEF0870, /*  179  */
+	0x8874487E, /*  180  */
+	0x98F2CC73, /*  181  */
+	0x645FB5C6, /*  182  */
+	0xCD853659, /*  183  */
+	0x2062470D, /*  184  */
+	0x16EDE8E9, /*  185  */
+	0x6B06DAB5, /*  186  */
+	0x78B43900, /*  187  */
+	0xFC95B786, /*  188  */
+	0x5D8E7DE1, /*  189  */
+	0x465B5954, /*  190  */
+	0xFE7BA014, /*  191  */
+	0xF7D23F7B, /*  192  */
+	0x92BC8B18, /*  193  */
+	0x3593592, /*  194  */
+	0x55CEF4F7, /*  195  */
+	0x74B27317, /*  196  */
+	0x79DE1FC2, /*  197  */
+	0xC8A0BFBD, /*  198  */
+	0x229398CC, /*  199  */
+	0x62A602CE, /*  200  */
+	0xBCB94661, /*  201  */
+	0x5336D206, /*  202  */
+	0xD2A375FE, /*  203  */
+	0x6A6AB483, /*  204  */
+	0x4702A5A4, /*  205  */
+	0xA2E9D73D, /*  206  */
+	0x23A2E0F1, /*  207  */
+	0x9189140A, /*  208  */
+	0x581D18DC, /*  209  */
+	0xB39A922B, /*  210  */
+	0x82356212, /*  211  */
+	0xD5F432A9, /*  212  */
+	0xD356C2A3, /*  213  */
+	0x5F765B4D, /*  214  */
+	0x450AFCC8, /*  215  */
+	0x4415E137, /*  216  */
+	0xE8ECDFBC, /*  217  */
+	0xED0DE3EA, /*  218  */
+	0x60D42B13, /*  219  */
+	0xF13DF971, /*  220  */
+	0x71FC5DA2, /*  221  */
+	0xC1455340, /*  222  */
+	0xF087742F, /*  223  */
+	0xF55E5751, /*  224  */
+	0x67B3C1F8, /*  225  */
+	0xAC6B8774, /*  226  */
+	0x7DCFAAAC, /*  227  */
+	0x95983BC0, /*  228  */
+	0x489BB0B1, /*  229  */
+	0x2C184223, /*  230  */
+	0x964B6726, /*  231  */
+	0x2BD3271C, /*  232  */
+	0x72266472, /*  233  */
+	0xDED64530, /*  234  */
+	0xA2AA343, /*  235  */
+	0xD4F716A0, /*  236  */
+	0xB4DAD6D9, /*  237  */
+	0x2184345E, /*  238  */
+	0x512C990C, /*  239  */
+	0x29D92D08, /*  240  */
+	0x2EBE709A, /*  241  */
+	0x1144C69, /*  242  */
+	0x34584B9D, /*  243  */
+	0xE4634ED6, /*  244  */
+	0xECC963CF, /*  245  */
+	0x3C6984AA, /*  246  */
+	0x4ED056EF, /*  247  */
+	0x9CA56976, /*  248  */
+	0x8F3E80D4, /*  249  */
+	0xB5BAE7C5, /*  250  */
+	0x30B5CAF5, /*  251  */
+	0x63F33A64, /*  252  */
+	0xA9E4BBDE, /*  253  */
+	0xF6B82298, /*  254  */
+	0x4D673C1D}, /*  255  */
+	
+	{
+	/*  Start of S Box 5 */
+	
+	0x4B4F1121, /*  0  */
+	0xBA183081, /*  1  */
+	0xC784F41F, /*  2  */
+	0xD17D0BAC, /*  3  */
+	0x83D2267, /*  4  */
+	0x37B1361E, /*  5  */
+	0x3581AD05, /*  6  */
+	0xFDA2F6BC, /*  7  */
+	0x1E892CDD, /*  8  */
+	0xB56D3C3A, /*  9  */
+	0x32140E46, /*  10  */
+	0x138D8AAB, /*  11  */
+	0xE14773D4, /*  12  */
+	0x5B0E71DF, /*  13  */
+	0x5D1FE055, /*  14  */
+	0x3FB991D3, /*  15  */
+	0xF1F46C71, /*  16  */
+	0xA325988C, /*  17  */
+	0x10F66E80, /*  18  */
+	0xB1006348, /*  19  */
+	0x726A9F60, /*  20  */
+	0x3B67F8BA, /*  21  */
+	0x4E114EF4, /*  22  */
+	0x5C52115, /*  23  */
+	0x4C5CA11C, /*  24  */
+	0x99E1EFD8, /*  25  */
+	0x471B83B3, /*  26  */
+	0xCBF7E524, /*  27  */
+	0x43AD82F5, /*  28  */
+	0x690CA93B, /*  29  */
+	0xFAA61BB2, /*  30  */
+	0x12A832B5, /*  31  */
+	0xB734F943, /*  32  */
+	0xBD22AEA7, /*  33  */
+	0x88FEC626, /*  34  */
+	0x5E80C3E7, /*  35  */
+	0xBE3EAF5E, /*  36  */
+	0x44617652, /*  37  */
+	0xA5724475, /*  38  */
+	0xBB3B9695, /*  39  */
+	0x7F3FEE8F, /*  40  */
+	0x964E7DEB, /*  41  */
+	0x518C052D, /*  42  */
+	0x2A0BBC2B, /*  43  */
+	0xC2175F5C, /*  44  */
+	0x9A7B3889, /*  45  */
+	0xA70D8D0C, /*  46  */
+	0xEACCDD29, /*  47  */
+	0xCCCD6658, /*  48  */
+	0x34BB25E6, /*  49  */
+	0xB8391090, /*  50  */
+	0xF651356F, /*  51  */
+	0x52987C9E, /*  52  */
+	0xC16C1CD, /*  53  */
+	0x8E372D3C, /*  54  */
+	0x2FC6EBBD, /*  55  */
+	0x6E5DA3E3, /*  56  */
+	0xB0E27239, /*  57  */
+	0x5F685738, /*  58  */
+	0x45411786, /*  59  */
+	0x67F65F8, /*  60  */
+	0x61778B40, /*  61  */
+	0x81AB2E65, /*  62  */
+	0x14C8F0F9, /*  63  */
+	0xA6B7B4CE, /*  64  */
+	0x4036EAEC, /*  65  */
+	0xBF62B00A, /*  66  */
+	0xECFD5E02, /*  67  */
+	0x45449A6, /*  68  */
+	0xB20AFD28, /*  69  */
+	0x2166D273, /*  70  */
+	0xD13A863, /*  71  */
+	0x89508756, /*  72  */
+	0xD51A7530, /*  73  */
+	0x2D653F7A, /*  74  */
+	0x3CDBDBC3, /*  75  */
+	0x80C9DF4F, /*  76  */
+	0x3D5812D9, /*  77  */
+	0x53FBB1F3, /*  78  */
+	0xC0F185C0, /*  79  */
+	0x7A3C3D7E, /*  80  */
+	0x68646410, /*  81  */
+	0x857607A0, /*  82  */
+	0x1D12622E, /*  83  */
+	0x97F33466, /*  84  */
+	0xDB4C9917, /*  85  */
+	0x6469607C, /*  86  */
+	0x566E043D, /*  87  */
+	0x79EF1EDB, /*  88  */
+	0x2C05898D, /*  89  */
+	0xC9578E25, /*  90  */
+	0xCD380101, /*  91  */
+	0x46E04377, /*  92  */
+	0x7D1CC7A9, /*  93  */
+	0x6552B837, /*  94  */
+	0x20192608, /*  95  */
+	0xB97500C5, /*  96  */
+	0xED296B44, /*  97  */
+	0x368648B4, /*  98  */
+	0x62995CD5, /*  99  */
+	0x82731400, /*  100  */
+	0xF9AEBD8B, /*  101  */
+	0x3844C0C7, /*  102  */
+	0x7C2DE794, /*  103  */
+	0x33A1A770, /*  104  */
+	0x8AE528C2, /*  105  */
+	0x5A2BE812, /*  106  */
+	0x1F8F4A07, /*  107  */
+	0x2B5ED7CA, /*  108  */
+	0x937EB564, /*  109  */
+	0x6FDA7E11, /*  110  */
+	0xE49B5D6C, /*  111  */
+	0xB4B3244E, /*  112  */
+	0x18AA53A4, /*  113  */
+	0x3A061334, /*  114  */
+	0x4D6067A3, /*  115  */
+	0x83BA5868, /*  116  */
+	0x9BDF4DFE, /*  117  */
+	0x7449F261, /*  118  */
+	0x709F8450, /*  119  */
+	0xCAD133CB, /*  120  */
+	0xDE941C3F, /*  121  */
+	0xF52AE484, /*  122  */
+	0x781D77ED, /*  123  */
+	0x7E4395F0, /*  124  */
+	0xAE103B59, /*  125  */
+	0x922331BB, /*  126  */
+	0x42CE50C8, /*  127  */
+	0xE6F08153, /*  128  */
+	0xE7D941D0, /*  129  */
+	0x5028ED6B, /*  130  */
+	0xB3D2C49B, /*  131  */
+	0xAD4D9C3E, /*  132  */
+	0xD201FB6E, /*  133  */
+	0xA45BD5BE, /*  134  */
+	0xFFCB7F4B, /*  135  */
+	0x579D7806, /*  136  */
+	0xF821BB5B, /*  137  */
+	0x59D592AD, /*  138  */
+	0xD0BE0C31, /*  139  */
+	0xD4E3B676, /*  140  */
+	0x107165A, /*  141  */
+	0xFE939D2, /*  142  */
+	0x49BCAAFD, /*  143  */
+	0x55FFCFE5, /*  144  */
+	0x2EC1F783, /*  145  */
+	0xF39A09A5, /*  146  */
+	0x3EB42772, /*  147  */
+	0x19B55A5D, /*  148  */
+	0x24A0679, /*  149  */
+	0x8C83B3F7, /*  150  */
+	0x8642BA1D, /*  151  */
+	0xACACD9EA, /*  152  */
+	0x87D352C4, /*  153  */
+	0x60931F45, /*  154  */
+	0xA05F97D7, /*  155  */
+	0x1CECD42C, /*  156  */
+	0xE2FCC87B, /*  157  */
+	0xB60F94E2, /*  158  */
+	0x67A34B0B, /*  159  */
+	0xFCDD40C9, /*  160  */
+	0xB150A27, /*  161  */
+	0xD3EE9E04, /*  162  */
+	0x582E29E9, /*  163  */
+	0x4AC22B41, /*  164  */
+	0x6AC4E1B8, /*  165  */
+	0xBCCAA51A, /*  166  */
+	0x237AF30E, /*  167  */
+	0xEBC3B709, /*  168  */
+	0xC4A59D19, /*  169  */
+	0x284BC98A, /*  170  */
+	0xE9D41A93, /*  171  */
+	0x6BFA2018, /*  172  */
+	0x73B2D651, /*  173  */
+	0x11F9A2FA, /*  174  */
+	0xCE09BFF1, /*  175  */
+	0x41A470AA, /*  176  */
+	0x25888F22, /*  177  */
+	0x77E754E8, /*  178  */
+	0xF7330D8E, /*  179  */
+	0x158EAB16, /*  180  */
+	0xC5D68842, /*  181  */
+	0xC685A6F6, /*  182  */
+	0xE5B82FDE, /*  183  */
+	0x9EA3A96, /*  184  */
+	0x6DDE1536, /*  185  */
+	0x4FA919DA, /*  186  */
+	0x26C0BE9F, /*  187  */
+	0x9EED6F69, /*  188  */
+	0xF05555F2, /*  189  */
+	0xE06FC285, /*  190  */
+	0x9CD76D23, /*  191  */
+	0xAF452A92, /*  192  */
+	0xEFC74CB7, /*  193  */
+	0x9D6B4732, /*  194  */
+	0x8BE408EE, /*  195  */
+	0x22401D0D, /*  196  */
+	0xEE6C459D, /*  197  */
+	0x7587CB82, /*  198  */
+	0xE8746862, /*  199  */
+	0x5CBDDE87, /*  200  */
+	0x98794278, /*  201  */
+	0x31AFB94D, /*  202  */
+	0xC11E0F2F, /*  203  */
+	0x30E8FC2A, /*  204  */
+	0xCF3261EF, /*  205  */
+	0x1A3023E1, /*  206  */
+	0xAA2F86CF, /*  207  */
+	0xF202E24A, /*  208  */
+	0x8D08DCFF, /*  209  */
+	0x764837C6, /*  210  */
+	0xA26374CC, /*  211  */
+	0x9F7C3E88, /*  212  */
+	0x949CC57D, /*  213  */
+	0xDD26A07F, /*  214  */
+	0xC39EFAB0, /*  215  */
+	0xC8F879A1, /*  216  */
+	0xDCE67BB9, /*  217  */
+	0xF4B0A435, /*  218  */
+	0x912C9AE0, /*  219  */
+	0xD85603E4, /*  220  */
+	0x953A9BBF, /*  221  */
+	0xFB8290D6, /*  222  */
+	0xAEBCD5F, /*  223  */
+	0x16206A9A, /*  224  */
+	0x6C787A14, /*  225  */
+	0xD9A0F16A, /*  226  */
+	0x29BF4F74, /*  227  */
+	0x8F8BCE91, /*  228  */
+	0xE5A9354, /*  229  */
+	0xAB038CB1, /*  230  */
+	0x1B8AD11B, /*  231  */
+	0xE327FF49, /*  232  */
+	0x53DA20, /*  233  */
+	0x90CF51DC, /*  234  */
+	0xDA92FE6D, /*  235  */
+	0x390CA47, /*  236  */
+	0xA8958097, /*  237  */
+	0xA9DC5BAF, /*  238  */
+	0x3931E3C1, /*  239  */
+	0x840446B6, /*  240  */
+	0x63D069FB, /*  241  */
+	0xD7460299, /*  242  */
+	0x7124ECD1, /*  243  */
+	0x791E613, /*  244  */
+	0x485918FC, /*  245  */
+	0xD635D04C, /*  246  */
+	0xDF96AC33, /*  247  */
+	0x66F2D303, /*  248  */
+	0x247056AE, /*  249  */
+	0xA1A7B2A8, /*  250  */
+	0x27D8CC9C, /*  251  */
+	0x17B6E998, /*  252  */
+	0x7BF5590F, /*  253  */
+	0xFE97F557, /*  254  */
+	0x5471D8A2}, /*  255  */
+	
+	{
+	/*  Start of S Box 6 */
+	
+	0x83A327A1, /*  0  */
+	0x9F379F51, /*  1  */
+	0x40A7D007, /*  2  */
+	0x11307423, /*  3  */
+	0x224587C1, /*  4  */
+	0xAC27D63B, /*  5  */
+	0x3B7E64EA, /*  6  */
+	0x2E1CBFA6, /*  7  */
+	0x9996000, /*  8  */
+	0x3BC0E2C, /*  9  */
+	0xD4C4478A, /*  10  */
+	0x4542E0AB, /*  11  */
+	0xFEDA26D4, /*  12  */
+	0xC1D10FCB, /*  13  */
+	0x8252F596, /*  14  */
+	0x4494EB5C, /*  15  */
+	0xA362F314, /*  16  */
+	0xF5BA81FD, /*  17  */
+	0x75C3A376, /*  18  */
+	0x4CA214CA, /*  19  */
+	0xE164DEDD, /*  20  */
+	0x5088FA97, /*  21  */
+	0x4B0930E0, /*  22  */
+	0x2FCFB7E8, /*  23  */
+	0x33A6F4B2, /*  24  */
+	0xC7E94211, /*  25  */
+	0x2D66C774, /*  26  */
+	0x43BE8BAE, /*  27  */
+	0xC663D445, /*  28  */
+	0x908EB130, /*  29  */
+	0xF4E3BE15, /*  30  */
+	0x63B9D566, /*  31  */
+	0x529396B5, /*  32  */
+	0x1E1BE743, /*  33  */
+	0x4D5FF63F, /*  34  */
+	0x985E4A83, /*  35  */
+	0x71AB9DF7, /*  36  */
+	0xC516C6F5, /*  37  */
+	0x85C19AB4, /*  38  */
+	0x1F4DAEE4, /*  39  */
+	0xF2973431, /*  40  */
+	0xB713DC5E, /*  41  */
+	0x3F2E159A, /*  42  */
+	0xC824DA16, /*  43  */
+	0x6BF376A, /*  44  */
+	0xB2FE23EC, /*  45  */
+	0xE39B1C22, /*  46  */
+	0xF1EECB5F, /*  47  */
+	0x8E82D52, /*  48  */
+	0x565686C2, /*  49  */
+	0xAB0AEA93, /*  50  */
+	0xFD47219F, /*  51  */
+	0xEBDBABD7, /*  52  */
+	0x2404A185, /*  53  */
+	0x8C7312B9, /*  54  */
+	0xA8F2D828, /*  55  */
+	0xC8902DA, /*  56  */
+	0x65B42B63, /*  57  */
+	0xC0BBEF62, /*  58  */
+	0x4E3E4CEF, /*  59  */
+	0x788F8018, /*  60  */
+	0xEE1EBAB7, /*  61  */
+	0x93928F9D, /*  62  */
+	0x683D2903, /*  63  */
+	0xD3B60689, /*  64  */
+	0xAFCB0DDC, /*  65  */
+	0x88A4C47A, /*  66  */
+	0xF6DD9C3D, /*  67  */
+	0x7EA5FCA0, /*  68  */
+	0x8A6D7244, /*  69  */
+	0xBE11F120, /*  70  */
+	0x4FF91B8, /*  71  */
+	0x8D2DC8C0, /*  72  */
+	0x27F97FDB, /*  73  */
+	0x7F9E1F47, /*  74  */
+	0x1734F0C7, /*  75  */
+	0x26F3ED8E, /*  76  */
+	0xDF8F2BF, /*  77  */
+	0xB0833D9E, /*  78  */
+	0xE420A4E5, /*  79  */
+	0xA423CAE6, /*  80  */
+	0x95616772, /*  81  */
+	0x9AE6C049, /*  82  */
+	0x75941F2, /*  83  */
+	0xD8E12812, /*  84  */
+	0xF6F4F, /*  85  */
+	0x3C0D6B05, /*  86  */
+	0x6CEF921C, /*  87  */
+	0xB82BC264, /*  88  */
+	0x396CB008, /*  89  */
+	0x5D608A6F, /*  90  */
+	0x6D7782C8, /*  91  */
+	0x186550AA, /*  92  */
+	0x6B6FEC09, /*  93  */
+	0x28E70B13, /*  94  */
+	0x57CE5688, /*  95  */
+	0xECD3AF84, /*  96  */
+	0x23335A95, /*  97  */
+	0x91F40CD2, /*  98  */
+	0x7B6A3B26, /*  99  */
+	0xBD32B3B6, /*  100  */
+	0x3754A6FB, /*  101  */
+	0x8ED088F0, /*  102  */
+	0xF867E87C, /*  103  */
+	0x20851746, /*  104  */
+	0x6410F9C6, /*  105  */
+	0x35380442, /*  106  */
+	0xC2CA10A7, /*  107  */
+	0x1ADEA27F, /*  108  */
+	0x76BDDD79, /*  109  */
+	0x92742CF4, /*  110  */
+	0xE98F7EE, /*  111  */
+	0x164E931D, /*  112  */
+	0xB9C835B3, /*  113  */
+	0x69060A99, /*  114  */
+	0xB44C531E, /*  115  */
+	0xFA7B66FE, /*  116  */
+	0xC98A5B53, /*  117  */
+	0x7D95AAE9, /*  118  */
+	0x302F467B, /*  119  */
+	0x74B811DE, /*  120  */
+	0xF3866ABD, /*  121  */
+	0xB5B3D32D, /*  122  */
+	0xFC3157A4, /*  123  */
+	0xD251FE19, /*  124  */
+	0xB5D8EAC, /*  125  */
+	0xDA71FFD5, /*  126  */
+	0x47EA05A3, /*  127  */
+	0x5C6A9E1, /*  128  */
+	0xCA0EE958, /*  129  */
+	0x9939034D, /*  130  */
+	0x25DC5EDF, /*  131  */
+	0x79083CB1, /*  132  */
+	0x86768450, /*  133  */
+	0xCF757D6D, /*  134  */
+	0x5972B6BC, /*  135  */
+	0xA78D59C9, /*  136  */
+	0xC4AD8D41, /*  137  */
+	0x2A362AD3, /*  138  */
+	0xD1179991, /*  139  */
+	0x601407FF, /*  140  */
+	0xDCF50917, /*  141  */
+	0x587069D0, /*  142  */
+	0xE0821ED6, /*  143  */
+	0xDBB59427, /*  144  */
+	0x73911A4B, /*  145  */
+	0x7C904FC3, /*  146  */
+	0x844AFB92, /*  147  */
+	0x6F8C955D, /*  148  */
+	0xE8C0C5BB, /*  149  */
+	0xB67AB987, /*  150  */
+	0xA529D96C, /*  151  */
+	0xF91F7181, /*  152  */
+	0x618B1B06, /*  153  */
+	0xE718BB0C, /*  154  */
+	0x8BD7615B, /*  155  */
+	0xD5A93A59, /*  156  */
+	0x54AEF81B, /*  157  */
+	0x772136E3, /*  158  */
+	0xCE44FD9C, /*  159  */
+	0x10CDA57E, /*  160  */
+	0x87D66E0B, /*  161  */
+	0x3D798967, /*  162  */
+	0x1B2C1804, /*  163  */
+	0x3EDFBD68, /*  164  */
+	0x15F6E62B, /*  165  */
+	0xEF68B854, /*  166  */
+	0x3896DB35, /*  167  */
+	0x12B7B5E2, /*  168  */
+	0xCB489029, /*  169  */
+	0x9E4F98A5, /*  170  */
+	0x62EB77A8, /*  171  */
+	0x217C24A2, /*  172  */
+	0x964152F6, /*  173  */
+	0x49B2080A, /*  174  */
+	0x53D23EE7, /*  175  */
+	0x48FB6D69, /*  176  */
+	0x1903D190, /*  177  */
+	0x9449E494, /*  178  */
+	0xBF6E7886, /*  179  */
+	0xFB356CFA, /*  180  */
+	0x3A261365, /*  181  */
+	0x424BC1EB, /*  182  */
+	0xA1192570, /*  183  */
+	0x19CA782, /*  184  */
+	0x9D3F7E0E, /*  185  */
+	0x9C127575, /*  186  */
+	0xEDF02039, /*  187  */
+	0xAD57BCCE, /*  188  */
+	0x5C153277, /*  189  */
+	0x81A84540, /*  190  */
+	0xBCAA7356, /*  191  */
+	0xCCD59B60, /*  192  */
+	0xA62A629B, /*  193  */
+	0xA25CCD10, /*  194  */
+	0x2B5B65CF, /*  195  */
+	0x1C535832, /*  196  */
+	0x55FD4E3A, /*  197  */
+	0x31D9790D, /*  198  */
+	0xF06BC37D, /*  199  */
+	0x4AFC1D71, /*  200  */
+	0xAEED5533, /*  201  */
+	0xBA461634, /*  202  */
+	0xBB694B78, /*  203  */
+	0x5F3A5C73, /*  204  */
+	0x6A3C764A, /*  205  */
+	0x8FB0CCA9, /*  206  */
+	0xF725684C, /*  207  */
+	0x4FE5382F, /*  208  */
+	0x1D0163AF, /*  209  */
+	0x5AA07A8F, /*  210  */
+	0xE205A8ED, /*  211  */
+	0xC30BAD38, /*  212  */
+	0xFF22CF1F, /*  213  */
+	0x72432E2E, /*  214  */
+	0x32C2518B, /*  215  */
+	0x3487CE4E, /*  216  */
+	0x7AE0AC02, /*  217  */
+	0x709FA098, /*  218  */
+	0xA3B395A, /*  219  */
+	0x5B4043F8, /*  220  */
+	0xA9E48C36, /*  221  */
+	0x149A8521, /*  222  */
+	0xD07DEE6B, /*  223  */
+	0x46ACD2F3, /*  224  */
+	0x8958DFFC, /*  225  */
+	0xB3A1223C, /*  226  */
+	0xB11D31C4, /*  227  */
+	0xCD7F4D3E, /*  228  */
+	0xF28E3AD, /*  229  */
+	0xE5B100BE, /*  230  */
+	0xAAC54824, /*  231  */
+	0xE9C9D7BA, /*  232  */
+	0x9BD47001, /*  233  */
+	0x80F149B0, /*  234  */
+	0x66022F0F, /*  235  */
+	0x20C4048, /*  236  */
+	0x6EFA192A, /*  237  */
+	0x67073F8D, /*  238  */
+	0x13EC7BF9, /*  239  */
+	0x3655011A, /*  240  */
+	0xE6AFE157, /*  241  */
+	0xD9845F6E, /*  242  */
+	0xDECC4425, /*  243  */
+	0x511AE2CC, /*  244  */
+	0xDF81B4D8, /*  245  */
+	0xD7809E55, /*  246  */
+	0xD6D883D9, /*  247  */
+	0x2CC7978C, /*  248  */
+	0x5E787CC5, /*  249  */
+	0xDD0033D1, /*  250  */
+	0xA050C937, /*  251  */
+	0x97F75DCD, /*  252  */
+	0x299DE580, /*  253  */
+	0x41E2B261, /*  254  */
+	0xEA5A54F1}, /*  255  */
+	
+	{
+	/*  Start of S Box 7 */
+	
+	0x7E672590, /*  0  */
+	0xBEA513BB, /*  1  */
+	0x2C906FE6, /*  2  */
+	0x86029C2B, /*  3  */
+	0x55DC4F74, /*  4  */
+	0x553398E, /*  5  */
+	0x63E09647, /*  6  */
+	0xCAFD0BAB, /*  7  */
+	0x264C37DF, /*  8  */
+	0x8272210F, /*  9  */
+	0x67AFA669, /*  10  */
+	0x12D98A5F, /*  11  */
+	0x8CAB23C4, /*  12  */
+	0x75C68BD1, /*  13  */
+	0xC3370470, /*  14  */
+	0x33F37F4E, /*  15  */
+	0x283992FF, /*  16  */
+	0xE73A3A67, /*  17  */
+	0x1032F283, /*  18  */
+	0xF5AD9FC2, /*  19  */
+	0x963F0C5D, /*  20  */
+	0x664FBC45, /*  21  */
+	0x202BA41C, /*  22  */
+	0xC7C02D80, /*  23  */
+	0x54731E84, /*  24  */
+	0x8A1085F5, /*  25  */
+	0x601D80FB, /*  26  */
+	0x2F968E55, /*  27  */
+	0x35E96812, /*  28  */
+	0xE45A8F78, /*  29  */
+	0xBD7DE662, /*  30  */
+	0x3B6E6EAD, /*  31  */
+	0x8097C5EF, /*  32  */
+	0x70B6781, /*  33  */
+	0xB1E508F3, /*  34  */
+	0x24E4FAE3, /*  35  */
+	0xB81A7805, /*  36  */
+	0xEC0FC918, /*  37  */
+	0x43C8774B, /*  38  */
+	0x9B2512A9, /*  39  */
+	0x2B05AD04, /*  40  */
+	0x32C2536F, /*  41  */
+	0xEDF236E0, /*  42  */
+	0x8BC4B0CF, /*  43  */
+	0xBACEB837, /*  44  */
+	0x4535B289, /*  45  */
+	0xD0E94C3, /*  46  */
+	0xA5A371D0, /*  47  */
+	0xAD695A58, /*  48  */
+	0x39E3437D, /*  49  */
+	0x9186BFFC, /*  50  */
+	0x21038C3B, /*  51  */
+	0xAA9DFF9, /*  52  */
+	0x5D1F06CE, /*  53  */
+	0x62DEF8A4, /*  54  */
+	0xF740A2B4, /*  55  */
+	0xA2575868, /*  56  */
+	0x682683C1, /*  57  */
+	0xDBB30FAC, /*  58  */
+	0x61FE1928, /*  59  */
+	0x468A6511, /*  60  */
+	0xC61CD5F4, /*  61  */
+	0xE54D9800, /*  62  */
+	0x6B98D7F7, /*  63  */
+	0x8418B6A5, /*  64  */
+	0x5F09A5D2, /*  65  */
+	0x90B4E80B, /*  66  */
+	0x49B2C852, /*  67  */
+	0x69F11C77, /*  68  */
+	0x17412B7E, /*  69  */
+	0x7F6FC0ED, /*  70  */
+	0x56838DCC, /*  71  */
+	0x6E9546A2, /*  72  */
+	0xD0758619, /*  73  */
+	0x87B9B9A, /*  74  */
+	0xD231A01D, /*  75  */
+	0xAF46D415, /*  76  */
+	0x97060FD, /*  77  */
+	0xD920F657, /*  78  */
+	0x882D3F9F, /*  79  */
+	0x3AE7C3C9, /*  80  */
+	0xE8A00D9B, /*  81  */
+	0x4FE67EBE, /*  82  */
+	0x2EF80EB2, /*  83  */
+	0xC1916B0C, /*  84  */
+	0xF4DFFEA0, /*  85  */
+	0xB97EB3EB, /*  86  */
+	0xFDFF84DD, /*  87  */
+	0xFF8B14F1, /*  88  */
+	0xE96B0572, /*  89  */
+	0xF64B508C, /*  90  */
+	0xAE220A6E, /*  91  */
+	0x4423AE5A, /*  92  */
+	0xC2BECE5E, /*  93  */
+	0xDE27567C, /*  94  */
+	0xFC935C63, /*  95  */
+	0x47075573, /*  96  */
+	0xE65B27F0, /*  97  */
+	0xE121FD22, /*  98  */
+	0xF2668753, /*  99  */
+	0x2DEBF5D7, /*  100  */
+	0x8347E08D, /*  101  */
+	0xAC5EDA03, /*  102  */
+	0x2A7CEBE9, /*  103  */
+	0x3FE8D92E, /*  104  */
+	0x23542FE4, /*  105  */
+	0x1FA7BD50, /*  106  */
+	0xCF9B4102, /*  107  */
+	0x9D0DBA39, /*  108  */
+	0x9CB8902A, /*  109  */
+	0xA7249D8B, /*  110  */
+	0xF6D667A, /*  111  */
+	0x5EBFA9EC, /*  112  */
+	0x6A594DF2, /*  113  */
+	0x79600938, /*  114  */
+	0x23B7591, /*  115  */
+	0xEA2C79C8, /*  116  */
+	0xC99D07EA, /*  117  */
+	0x64CB5EE1, /*  118  */
+	0x1A9CAB3D, /*  119  */
+	0x76DB9527, /*  120  */
+	0xC08E012F, /*  121  */
+	0x3DFB481A, /*  122  */
+	0x872F22E7, /*  123  */
+	0x2948D15C, /*  124  */
+	0xA4782C79, /*  125  */
+	0x6F50D232, /*  126  */
+	0x78F0728A, /*  127  */
+	0x5A87AAB1, /*  128  */
+	0xC4E2C19C, /*  129  */
+	0xEE767387, /*  130  */
+	0x1B2A1864, /*  131  */
+	0x7B8D10D3, /*  132  */
+	0xD1713161, /*  133  */
+	0xEEAC456, /*  134  */
+	0xD8799E06, /*  135  */
+	0xB645B548, /*  136  */
+	0x4043CB65, /*  137  */
+	0xA874FB29, /*  138  */
+	0x4B12D030, /*  139  */
+	0x7D687413, /*  140  */
+	0x18EF9A1F, /*  141  */
+	0xD7631D4C, /*  142  */
+	0x5829C7DA, /*  143  */
+	0xCDFA30FA, /*  144  */
+	0xC5084BB0, /*  145  */
+	0x92CD20E2, /*  146  */
+	0xD4C16940, /*  147  */
+	0x3283EC0, /*  148  */
+	0xA917813F, /*  149  */
+	0x9A587D01, /*  150  */
+	0x70041F8F, /*  151  */
+	0xDC6AB1DC, /*  152  */
+	0xDDAEE3D5, /*  153  */
+	0x31829742, /*  154  */
+	0x198C022D, /*  155  */
+	0x1C9EAFCB, /*  156  */
+	0x5BBC6C49, /*  157  */
+	0xD3D3293A, /*  158  */
+	0x16D50007, /*  159  */
+	0x4BB8820, /*  160  */
+	0x3C5C2A41, /*  161  */
+	0x37EE7AF8, /*  162  */
+	0x8EB04025, /*  163  */
+	0x9313ECBA, /*  164  */
+	0xBFFC4799, /*  165  */
+	0x8955A744, /*  166  */
+	0xEF85D633, /*  167  */
+	0x504499A7, /*  168  */
+	0xA6CA6A86, /*  169  */
+	0xBB3D3297, /*  170  */
+	0xB34A8236, /*  171  */
+	0x6DCCBE4F, /*  172  */
+	0x6143394, /*  173  */
+	0xCE19FC7B, /*  174  */
+	0xCCC3C6C6, /*  175  */
+	0xE36254AE, /*  176  */
+	0x77B7EDA1, /*  177  */
+	0xA133DD9E, /*  178  */
+	0xEBF9356A, /*  179  */
+	0x513CCF88, /*  180  */
+	0xE2A1B417, /*  181  */
+	0x972EE5BD, /*  182  */
+	0x853824CD, /*  183  */
+	0x5752F4EE, /*  184  */
+	0x6C1142E8, /*  185  */
+	0x3EA4F309, /*  186  */
+	0xB2B5934A, /*  187  */
+	0xDFD628AA, /*  188  */
+	0x59ACEA3E, /*  189  */
+	0xA01EB92C, /*  190  */
+	0x389964BC, /*  191  */
+	0xDA305DD4, /*  192  */
+	0x19A59B7, /*  193  */
+	0x11D2CA93, /*  194  */
+	0xFAA6D3B9, /*  195  */
+	0x4E772ECA, /*  196  */
+	0x72651776, /*  197  */
+	0xFB4E5B0E, /*  198  */
+	0xA38F91A8, /*  199  */
+	0x1D0663B5, /*  200  */
+	0x30F4F192, /*  201  */
+	0xB50051B6, /*  202  */
+	0xB716CCB3, /*  203  */
+	0x4ABD1B59, /*  204  */
+	0x146C5F26, /*  205  */
+	0xF134E2DE, /*  206  */
+	0xF67C6C, /*  207  */
+	0xB0E1B795, /*  208  */
+	0x98AA4EC7, /*  209  */
+	0xCC73B34, /*  210  */
+	0x654276A3, /*  211  */
+	0x8D1BA871, /*  212  */
+	0x740A5216, /*  213  */
+	0xE0D01A23, /*  214  */
+	0x9ED161D6, /*  215  */
+	0x9F36A324, /*  216  */
+	0x993EBB7F, /*  217  */
+	0xFEB9491B, /*  218  */
+	0x365DDCDB, /*  219  */
+	0x810CFFC5, /*  220  */
+	0x71EC0382, /*  221  */
+	0x2249E7BF, /*  222  */
+	0x48817046, /*  223  */
+	0xF3A24A5B, /*  224  */
+	0x4288E4D9, /*  225  */
+	0xBF5C243, /*  226  */
+	0x257FE151, /*  227  */
+	0x95B64C0D, /*  228  */
+	0x4164F066, /*  229  */
+	0xAAF7DB08, /*  230  */
+	0x73B1119D, /*  231  */
+	0x8F9F7BB8, /*  232  */
+	0xD6844596, /*  233  */
+	0xF07A34A6, /*  234  */
+	0x53943D0A, /*  235  */
+	0xF9DD166D, /*  236  */
+	0x7A8957AF, /*  237  */
+	0xF8BA3CE5, /*  238  */
+	0x27C9621E, /*  239  */
+	0x5CDAE910, /*  240  */
+	0xC8518998, /*  241  */
+	0x941538FE, /*  242  */
+	0x136115D8, /*  243  */
+	0xABA8443C, /*  244  */
+	0x4D01F931, /*  245  */
+	0x34EDF760, /*  246  */
+	0xB45F266B, /*  247  */
+	0xD5D4DE14, /*  248  */
+	0x52D8AC35, /*  249  */
+	0x15CFD885, /*  250  */
+	0xCBC5CD21, /*  251  */
+	0x4CD76D4D, /*  252  */
+	0x7C80EF54, /*  253  */
+	0xBC92EE75, /*  254  */
+	0x1E56A1F6}/*  255  */
+	
+	
+	};
+	
+	
+	
+	
+*-*-END-*-*
+sed 's/^	//' >testSBoxes.c <<\*-*-END-*-*
+	/* This program generates and tests the standard S-boxes used by Snefru,
+		the one way hash function.  It uses the RAND table of random numbers.
+	
+	
+	This is version 2.0, July 31, 1989.
+	
+	
+	
+	Copyright (c) Xerox Corporation 1989
+	All rights reserved.
+	
+	License to copy and use this software is granted.
+	
+	License is also granted to make and use derivative works.
+	
+	Xerox Corporation makes no representations concerning either the
+	merchantability of this software or the suitability of this software for any
+	particular purpose.  It is provided "as is" without express or implied
+	warranty of any kind.
+	
+	These notices must be retained in any copies of any part of this software.
+	
+	
+	
+	
+	#define inputFile 0		/* normally standard in */
+	#define outputFile 1		/* normally standard out */
+	#define errorFile 2		/* normally standard error */
+	
+	
+	#define SBoxCount 8		/* number of S boxes in the set of standard S
+					   boxes */
+	
+	
+	
+	
+	/* The random table is the first part of the random digits from the book:
+	   'A Million Random Digits with 100,000 Normal Deviates", by the RAND
+	   Corporation, published by the Free Press, 1955.  The formatting is similar
+	   to the book to allow easy inspection and verification. The random digits
+	   are also available on magnetic tape or diskettes from the RAND
+	   corporation.
+	
+	Send inquiries to: The RAND Corporation, Computer Information Systems, 1700
+	   Main St., Santa Monica California 90406;  ATTN:  Jackie McGee
+	
+	*/
+	
+	
+	/* The following two global variables are used only by 'randomDigit' */
+	
+	/* group location in the table of random digits */
+	int     locationInRANDtable = 0;
+		/* location within a 5-digit group  */
+	int     locationIn5DigitGroup = 0;
+	
+	
+	#define sizeOfRANDtableIn5DigitGroups 4810
+	char    RANDtable[sizeOfRANDtableIn5DigitGroups][5] = {
+	/* 0 */	"10097", "32533", "76520", "13586", "34673",
+				"54876", "80959", "09117", "39292", "74945",
+	/* 1 */	"37542", "04805", "64894", "74296", "24805",
+				"24037", "20636", "10402", "00822", "91665",
+	/* 2 */	"08422", "68953", "19645", "09303", "23209",
+				"02560", "15953", "34764", "35080", "33606",
+	/* 3 */	"99019", "02529", "09376", "70715", "38311",
+				"31165", "88676", "74397", "04436", "27659",
+	/* 4 */	"12807", "99970", "80157", "36147", "64032",
+				"36653", "98951", "16877", "12171", "76833",
+	/* 5 */	"66065", "74717", "34072", "76850", "36697",
+				"36170", "65813", "39885", "11199", "29170",
+	/* 6 */	"31060", "10805", "45571", "82406", "35303",
+				"42614", "86799", "07439", "23403", "09732",
+	/* 7 */	"85269", "77602", "02051", "65692", "68665",
+				"74818", "73053", "85247", "18623", "88579",
+	/* 8 */	"63573", "32135", "05325", "47048", "90553",
+				"57548", "28468", "28709", "83491", "25624",
+	/* 9 */	"73796", "45753", "03529", "64778", "35808",
+				"34282", "60935", "20344", "35273", "88435",
+	/* 10 */	"98520", "17767", "14905", "68607", "22109",
+				"40558", "60970", "93433", "50500", "73998",
+	/* 11 */	"11805", "05431", "39808", "27732", "50725",
+				"68248", "29405", "24201", "52775", "67851",
+	/* 12 */	"83452", "99634", "06288", "98083", "13746",
+				"70078", "18475", "40610", "68711", "77817",
+	/* 13 */	"88685", "40200", "86507", "58401", "36766",
+				"67951", "90364", "76493", "29609", "11062",
+	/* 14 */	"99594", "67348", "87517", "64969", "91826",
+				"08928", "93785", "61368", "23478", "34113",
+	/* 15 */	"65481", "17674", "17468", "50950", "58047",
+				"76974", "73039", "57186", "40218", "16544",
+	/* 16 */	"80124", "35635", "17727", "08015", "45318",
+				"22374", "21115", "78253", "14385", "53763",
+	/* 17 */	"74350", "99817", "77402", "77214", "43236",
+				"00210", "45521", "64237", "96286", "02655",
+	/* 18 */	"69916", "26803", "66252", "29148", "36936",
+				"87203", "76621", "13990", "94400", "56418",
+	/* 19 */	"09893", "20505", "14225", "68514", "46427",
+				"56788", "96297", "78822", "54382", "14598",
+	/* 20 */	"91499", "14523", "68479", "27686", "46162",
+				"83554", "94750", "89923", "37089", "20048",
+	/* 21 */	"80336", "94598", "26940", "36858", "70297",
+				"34135", "53140", "33340", "42050", "82341",
+	/* 22 */	"44104", "81949", "85157", "47954", "32979",
+				"26575", "57600", "40881", "22222", "06413",
+	/* 23 */	"12550", "73742", "11100", "02040", "12860",
+				"74697", "96644", "89439", "28707", "25815",
+	/* 24 */	"63606", "49329", "16505", "34484", "40219",
+				"52563", "43651", "77082", "07207", "31790",
+	/* 25 */	"61196", "90446", "26457", "47774", "51924",
+				"33729", "65394", "59593", "42582", "60527",
+	/* 26 */	"15474", "45266", "95270", "79953", "59367",
+				"83848", "82396", "10118", "33211", "59466",
+	/* 27 */	"94557", "28573", "67897", "54387", "54622",
+				"44431", "91190", "42592", "92927", "45973",
+	/* 28 */	"42481", "16213", "97344", "08721", "16868",
+				"48767", "03071", "12059", "25701", "46670",
+	/* 29 */	"23523", "78317", "73208", "89837", "68935",
+				"91416", "26252", "29663", "05522", "82562",
+	/* 30 */	"04493", "52494", "75246", "33824", "45862",
+				"51025", "61962", "79335", "65337", "12472",
+	/* 31 */	"00549", "97654", "64051", "88159", "96119",
+				"63896", "54692", "82391", "23287", "29529",
+	/* 32 */	"35963", "15307", "26898", "09354", "33351",
+				"35462", "77974", "50024", "90103", "39333",
+	/* 33 */	"59808", "08391", "45427", "26842", "83609",
+				"49700", "13021", "24892", "78565", "20106",
+	/* 34 */	"46058", "85236", "01390", "92286", "77281",
+				"44077", "93910", "83647", "70617", "42941",
+	/* 35 */	"32179", "00597", "87379", "25241", "05567",
+				"07007", "86743", "17157", "85394", "11838",
+	/* 36 */	"69234", "61406", "20117", "45204", "15956",
+				"60000", "18743", "92423", "97118", "96338",
+	/* 37 */	"19565", "41430", "01758", "75379", "40419",
+				"21585", "66674", "36806", "84962", "85207",
+	/* 38 */	"45155", "14938", "19476", "07246", "43667",
+				"94543", "59047", "90033", "20826", "69541",
+	/* 39 */	"94864", "31994", "36168", "10851", "34888",
+				"81553", "01540", "35456", "05014", "51176",
+	/* 40 */	"98086", "24826", "45240", "28404", "44999",
+				"08896", "39094", "73407", "35441", "31880",
+	/* 41 */	"33185", "16232", "41941", "50949", "89435",
+				"48581", "88695", "41994", "37548", "73043",
+	/* 42 */	"80951", "00406", "96382", "70774", "20151",
+				"23387", "25016", "25298", "94624", "61171",
+	/* 43 */	"79752", "49140", "71961", "28296", "69861",
+				"02591", "74852", "20539", "00387", "59579",
+	/* 44 */	"18633", "32537", "98145", "06571", "31010",
+				"24674", "05455", "61427", "77938", "91936",
+	/* 45 */	"74029", "43902", "77557", "32270", "97790",
+				"17119", "52527", "58021", "80814", "51748",
+	/* 46 */	"54178", "45611", "80993", "37143", "05335",
+				"12969", "56127", "19255", "36040", "90324",
+	/* 47 */	"11664", "49883", "52079", "84827", "59381",
+				"71539", "09973", "33440", "88461", "23356",
+	/* 48 */	"48324", "77928", "31249", "64710", "02295",
+				"36870", "32307", "57546", "15020", "09994",
+	/* 49 */	"69074", "94138", "87637", "91976", "35584",
+				"04401", "10518", "21615", "01848", "76938",
+	/* 50 */	"09188", "20097", "32825", "39527", "04220",
+				"86304", "83389", "87374", "64278", "58044",
+	/* 51 */	"90045", "85497", "51981", "50654", "94938",
+				"81997", "91870", "76150", "68476", "64659",
+	/* 52 */	"73189", "50207", "47677", "26269", "62290",
+				"64464", "27124", "67018", "41361", "82760",
+	/* 53 */	"75768", "76490", "20971", "87749", "90429",
+				"12272", "95375", "05871", "93823", "43178",
+	/* 54 */	"54016", "44056", "66281", "31003", "00682",
+				"27398", "20714", "53295", "07706", "17813",
+	/* 55 */	"08358", "69910", "78542", "42785", "13661",
+				"58873", "04618", "97553", "31223", "08420",
+	/* 56 */	"28306", "03264", "81333", "10591", "40510",
+				"07893", "32604", "60475", "94119", "01840",
+	/* 57 */	"53840", "86233", "81594", "13628", "51215",
+				"90290", "28466", "68795", "77762", "20791",
+	/* 58 */	"91757", "53741", "61613", "62269", "50263",
+				"90212", "55781", "76514", "83483", "47055",
+	/* 59 */	"89415", "92694", "00397", "58391", "12607",
+				"17646", "48949", "72306", "94541", "37408",
+	/* 60 */	"77513", "03820", "86864", "29901", "68414",
+				"82774", "51908", "13980", "72893", "55507",
+	/* 61 */	"19502", "37174", "69979", "20288", "55210",
+				"29773", "74287", "75251", "65344", "67415",
+	/* 62 */	"21818", "59313", "93278", "81757", "05686",
+				"73156", "07082", "85046", "31853", "38452",
+	/* 63 */	"51474", "66499", "68107", "23621", "94049",
+				"91345", "42836", "09191", "08007", "45449",
+	/* 64 */	"99559", "68331", "62535", "24170", "69777",
+				"12830", "74819", "78142", "43860", "72834",
+	/* 65 */	"33713", "48007", "93584", "72869", "51926",
+				"64721", "58303", "29822", "93174", "93972",
+	/* 66 */	"85274", "86893", "11303", "22970", "28834",
+				"34137", "73515", "90400", "71148", "43643",
+	/* 67 */	"84133", "89640", "44035", "52166", "73852",
+				"70091", "61222", "60561", "62327", "18423",
+	/* 68 */	"56732", "16234", "17395", "96131", "10123",
+				"91622", "85496", "57560", "81604", "18880",
+	/* 69 */	"65138", "56806", "87648", "85261", "34313",
+				"65861", "45875", "21069", "85644", "47277",
+	/* 70 */	"38001", "02176", "81719", "11711", "71602",
+				"92937", "74219", "64049", "65584", "49698",
+	/* 71 */	"37402", "96397", "01304", "77586", "56271",
+				"10086", "47324", "62605", "40030", "37438",
+	/* 72 */	"97125", "40348", "87083", "31417", "21815",
+				"39250", "75237", "62047", "15501", "29578",
+	/* 73 */	"21826", "41134", "47143", "34072", "64638",
+				"85902", "49139", "06441", "03856", "54552",
+	/* 74 */	"73135", "42742", "95719", "09035", "85794",
+				"74296", "08789", "88156", "64691", "19202",
+	/* 75 */	"07638", "77929", "03061", "18072", "96207",
+				"44156", "23821", "99538", "04713", "66994",
+	/* 76 */	"60528", "83441", "07954", "19814", "59175",
+				"20695", "05533", "52139", "61212", "06455",
+	/* 77 */	"83596", "35655", "06958", "92983", "05128",
+				"09719", "77433", "53783", "92301", "50498",
+	/* 78 */	"10850", "62746", "99599", "10507", "13499",
+				"06319", "53075", "71839", "06410", "19362",
+	/* 79 */	"39820", "98952", "43622", "63147", "64421",
+				"80814", "43800", "09351", "31024", "73167",
+	/* 80 */	"59580", "06478", "75569", "78800", "88835",
+				"54486", "23768", "06156", "04111", "08408",
+	/* 81 */	"38508", "07341", "23793", "48763", "90822",
+				"97022", "17719", "04207", "95954", "49953",
+	/* 82 */	"30692", "70668", "94688", "16127", "56196",
+				"80091", "82067", "63400", "05462", "69200",
+	/* 83 */	"65443", "95659", "18288", "27437", "49632",
+				"24041", "08337", "65676", "96299", "90836",
+	/* 84 */	"27267", "50264", "13192", "72294", "07477",
+				"44606", "17985", "48911", "97341", "30358",
+	/* 85 */	"91307", "06991", "19072", "24210", "36699",
+				"53728", "28825", "35793", "28976", "66252",
+	/* 86 */	"68434", "94688", "84473", "13622", "62126",
+				"98408", "12843", "82590", "09815", "93146",
+	/* 87 */	"48908", "15877", "54745", "24591", "35700",
+				"04754", "83824", "52692", "54130", "55160",
+	/* 88 */	"06913", "45197", "42672", "78601", "11883",
+				"09528", "63011", "98901", "14974", "40344",
+	/* 89 */	"10455", "16019", "14210", "33712", "91342",
+				"37821", "88325", "80851", "43667", "70883",
+	/* 90 */	"12883", "97343", "65027", "61184", "04285",
+				"01392", "17974", "15077", "90712", "26769",
+	/* 91 */	"21778", "30976", "38807", "36961", "31649",
+				"42096", "63281", "02023", "08816", "47449",
+	/* 92 */	"19523", "59515", "65122", "59659", "86283",
+				"68258", "69572", "13798", "16435", "91529",
+	/* 93 */	"67245", "52670", "35583", "16563", "79246",
+				"86686", "76463", "34222", "26655", "90802",
+	/* 94 */	"60584", "47377", "07500", "37992", "45134",
+				"26529", "26760", "83637", "41326", "44344",
+	/* 95 */	"53853", "41377", "36066", "94850", "58838",
+				"73859", "49364", "73331", "96240", "43642",
+	/* 96 */	"24637", "38736", "74384", "89342", "52623",
+				"07992", "12369", "18601", "03742", "83873",
+	/* 97 */	"83080", "12451", "38992", "22815", "07759",
+				"51777", "97377", "27585", "51972", "37867",
+	/* 98 */	"16444", "24334", "36151", "99073", "27493",
+				"70939", "85130", "32552", "54846", "54759",
+	/* 99 */	"60790", "18157", "57178", "65762", "11161",
+				"78576", "45819", "52979", "65130", "04860", 
+	/* 100 */	"03991", "10461", "93716", "16894", "66083",
+				"24653", "84609", "58232", "88618", "19161", 
+	/* 101 */	"38555", "95554", "32886", "59780", "08355",
+				"60860", "29735", "47762", "71299", "23853", 
+	/* 102 */	"17546", "73704", "92052", "46215", "55121",
+				"29281", "59076", "07936", "27954", "58909", 
+	/* 103 */	"32643", "52861", "95819", "06831", "00911",
+				"98936", "76355", "93779", "80863", "00514", 
+	/* 104 */	"69572", "68777", "39510", "35905", "14060",
+				"40619", "29549", "69616", "33564", "60780", 
+	/* 105 */	"24122", "66591", "27699", "06494", "14845",
+				"46672", "61958", "77100", "90899", "75754", 
+	/* 106 */	"61196", "30231", "92962", "61773", "41839",
+				"55382", "17267", "70943", "78038", "70267", 
+	/* 107 */	"30532", "21704", "10274", "12202", "39685",
+				"23309", "10061", "68829", "55986", "66485", 
+	/* 108 */	"03788", "97599", "75867", "20717", "74416",
+				"53166", "35208", "33374", "87539", "08823", 
+	/* 109 */	"48228", "63379", "85783", "47619", "53152",
+				"67433", "35663", "52972", "16818", "60311", 
+	/* 110 */	"60365", "94653", "35075", "33949", "42614",
+				"29297", "01918", "28316", "98953", "73231", 
+	/* 111 */	"83799", "42402", "56623", "34442", "34994",
+				"41374", "70071", "14736", "09958", "18065", 
+	/* 112 */	"32960", "07405", "36409", "83232", "99385",
+				"41600", "11133", "07586", "15917", "06253", 
+	/* 113 */	"19322", "53845", "57620", "52606", "66497",
+				"68646", "78138", "66559", "19640", "99413", 
+	/* 114 */	"11220", "94747", "07399", "37408", "48509",
+				"23929", "27482", "45476", "85244", "35159", 
+	/* 115 */	"31751", "57260", "68980", "05339", "15470",
+				"48355", "88651", "22596", "03152", "19121", 
+	/* 116 */	"88492", "99382", "14454", "04504", "20094",
+				"98977", "74843", "93413", "22109", "78508", 
+	/* 117 */	"30934", "47744", "07481", "83828", "73788",
+				"06533", "28597", "20405", "94205", "20380", 
+	/* 118 */	"22888", "48893", "27499", "98748", "60530",
+				"45128", "74022", "84617", "82037", "10268", 
+	/* 119 */	"78212", "16993", "35902", "91386", "44372",
+				"15486", "65741", "14014", "87481", "37220", 
+	/* 120 */	"41849", "84547", "46850", "52326", "34677",
+				"58300", "74910", "64345", "19325", "81549", 
+	/* 121 */	"46352", "33049", "69248", "93460", "45305",
+				"07521", "61318", "31855", "14413", "70951", 
+	/* 122 */	"11087", "96294", "14013", "31792", "59747",
+				"67277", "76503", "34513", "39663", "77544", 
+	/* 123 */	"52701", "08337", "56303", "87315", "16520",
+				"69676", "11654", "99893", "02181", "68161", 
+	/* 124 */	"57275", "36898", "81304", "48585", "68652",
+				"27376", "92852", "55866", "88448", "03584", 
+	/* 125 */	"20857", "73156", "70284", "24326", "79375",
+				"95220", "01159", "63267", "10622", "48391", 
+	/* 126 */	"15633", "84924", "90415", "93614", "33521",
+				"26665", "55823", "47641", "86225", "31704", 
+	/* 127 */	"92694", "48297", "39904", "02115", "59589",
+				"49067", "66821", "41575", "49767", "04037", 
+	/* 128 */	"77613", "19019", "88152", "00080", "20554",
+				"91409", "96277", "48257", "50816", "97616", 
+	/* 129 */	"38688", "32486", "45134", "63545", "59404",
+				"72059", "43947", "51680", "43852", "59693", 
+	/* 130 */	"25163", "01889", "70014", "15021", "41290",
+				"67312", "71857", "15957", "68971", "11403", 
+	/* 131 */	"65251", "07629", "37239", "33295", "05870",
+				"01119", "92784", "26340", "18477", "65622", 
+	/* 132 */	"36815", "43625", "18637", "37509", "82444",
+				"99005", "04921", "73701", "14707", "93997", 
+	/* 133 */	"64397", "11692", "05327", "82162", "20247",
+				"81759", "45197", "25332", "83745", "22567", 
+	/* 134 */	"04515", "25624", "95096", "67946", "48460",
+				"85558", "15191", "18782", "16930", "33361", 
+	/* 135 */	"83761", "60873", "43253", "84145", "60833",
+				"25983", "01291", "41349", "20368", "07126", 
+	/* 136 */	"14387", "06345", "80854", "09279", "43529",
+				"06318", "38384", "74761", "41196", "37480", 
+	/* 137 */	"51321", "92246", "80088", "77074", "88722",
+				"56736", "66164", "49431", "66919", "31678", 
+	/* 138 */	"72472", "00008", "80890", "18002", "94813",
+				"31900", "54155", "83436", "35352", "54131", 
+	/* 139 */	"05466", "55306", "93128", "18464", "74457",
+				"90561", "72848", "11834", "79982", "68416", 
+	/* 140 */	"39528", "72484", "82474", "25593", "48545",
+				"35247", "18619", "13674", "18611", "19241", 
+	/* 141 */	"81616", "18711", "53342", "44276", "75122",
+				"11724", "74627", "73707", "58319", "15997", 
+	/* 142 */	"07586", "16120", "82641", "22820", "92904",
+				"13141", "32392", "19763", "61199", "67940", 
+	/* 143 */	"90767", "04235", "13574", "17200", "69902",
+				"63742", "78464", "22501", "18627", "90872", 
+	/* 144 */	"40188", "28193", "29593", "88627", "94972",
+				"11598", "62095", "36787", "00441", "58997", 
+	/* 145 */	"34414", "82157", "86887", "55087", "19152",
+				"00023", "12302", "80783", "32624", "68691", 
+	/* 146 */	"63439", "75363", "44989", "16822", "36024",
+				"00867", "76378", "41605", "65961", "73488", 
+	/* 147 */	"67049", "09070", "93399", "45547", "94458",
+				"74284", "05041", "49807", "20288", "34060", 
+	/* 148 */	"79495", "04146", "52162", "90286", "54158",
+				"34243", "46978", "35482", "59362", "95938", 
+	/* 149 */	"91704", "30552", "04737", "21031", "75051",
+				"93029", "47665", "64382", "99782", "93478", 
+	/* 150 */	"94015", "46874", "32444", "48277", "59820",
+				"96163", "64654", "25843", "41145", "42820", 
+	/* 151 */	"74108", "88222", "88570", "74015", "25704",
+				"91035", "01755", "14750", "48968", "38603", 
+	/* 152 */	"62880", "87873", "95160", "59221", "22304",
+				"90314", "72877", "17334", "39283", "04149", 
+	/* 153 */	"11748", "12102", "80580", "41867", "17710",
+				"59621", "06554", "07850", "73950", "79552", 
+	/* 154 */	"17944", "05600", "60478", "03343", "25852",
+				"58905", "57216", "39618", "49856", "99326", 
+	/* 155 */	"66067", "42792", "95043", "52680", "46780",
+				"56487", "09971", "59481", "37006", "22186", 
+	/* 156 */	"54244", "91030", "45547", "70818", "59849",
+				"96169", "61459", "21647", "87417", "17198", 
+	/* 157 */	"30945", "57589", "31732", "57260", "47670",
+				"07654", "46376", "25366", "94746", "49580", 
+	/* 158 */	"69170", "37403", "86995", "90307", "94304",
+				"71803", "26825", "05511", "12459", "91314", 
+	/* 159 */	"08345", "88975", "35841", "85771", "08105",
+				"59987", "87112", "21476", "14713", "71181", 
+	/* 160 */	"27767", "43584", "85301", "88977", "29490",
+				"69714", "73035", "41207", "74699", "09310", 
+	/* 161 */	"13025", "14338", "54066", "15243", "47724",
+				"66733", "47431", "43905", "31048", "56699", 
+	/* 162 */	"80217", "36292", "98525", "24335", "24432",
+				"24896", "43277", "58874", "11466", "16082", 
+	/* 163 */	"10875", "62004", "90391", "61105", "57411",
+				"06368", "53856", "30743", "08670", "84741", 
+	/* 164 */	"54127", "57326", "26629", "19087", "24472",
+				"88779", "30540", "27886", "61732", "75454", 
+	/* 165 */	"60311", "42824", "37301", "42678", "45990",
+				"43242", "17374", "52003", "70707", "70214", 
+	/* 166 */	"49739", "71484", "92003", "98086", "76668",
+				"73209", "59202", "11973", "02902", "33250", 
+	/* 167 */	"78626", "51594", "16453", "94614", "39014",
+				"97066", "83012", "09832", "25571", "77628", 
+	/* 168 */	"66692", "13986", "99837", "00582", "81232",
+				"44987", "09504", "96412", "90193", "79568", 
+	/* 169 */	"44071", "28091", "07362", "97703", "76447",
+				"42537", "98524", "97831", "65704", "09514", 
+	/* 170 */	"41468", "85149", "49554", "17994", "14924",
+				"39650", "95294", "00556", "70481", "06905", 
+	/* 171 */	"94559", "37559", "49678", "53119", "70312",
+				"05682", "66986", "34099", "74474", "20740", 
+	/* 172 */	"41615", "70360", "64114", "58660", "90850",
+				"64618", "80620", "51790", "11436", "38072", 
+	/* 173 */	"50273", "93113", "41794", "86861", "24781",
+				"89683", "55411", "85667", "77535", "99892", 
+	/* 174 */	"41396", "80504", "90670", "08289", "40902",
+				"05069", "95083", "06783", "28102", "57816", 
+	/* 175 */	"25807", "24260", "71529", "78920", "72682",
+				"07385", "90726", "57166", "98884", "08583", 
+	/* 176 */	"06170", "97965", "88302", "98041", "21443",
+				"41808", "68984", "83620", "89747", "98882", 
+	/* 177 */	"60808", "54444", "74412", "81105", "01176",
+				"28838", "36421", "16489", "18059", "51061", 
+	/* 178 */	"80940", "44893", "10408", "36222", "80582",
+				"71944", "92638", "40333", "67054", "16067", 
+	/* 179 */	"19516", "90120", "46759", "71643", "13177",
+				"55292", "21036", "82808", "77501", "97427", 
+	/* 180 */	"49386", "54480", "23604", "23554", "21785",
+				"41101", "91178", "10174", "29420", "90438", 
+	/* 181 */	"06312", "88940", "15995", "69321", "47458",
+				"64809", "98189", "81851", "29651", "84215", 
+	/* 182 */	"60942", "00307", "11897", "92674", "40405",
+				"68032", "96717", "54244", "10701", "41393", 
+	/* 183 */	"92329", "98932", "78284", "46347", "71209",
+				"92061", "39448", "93136", "25722", "08564", 
+	/* 184 */	"77936", "63574", "31384", "51924", "85561",
+				"29671", "58137", "17820", "22751", "36518", 
+	/* 185 */	"38101", "77756", "11657", "13897", "95889",
+				"57067", "47648", "13885", "70669", "93406", 
+	/* 186 */	"39641", "69457", "91339", "22502", "92613",
+				"89719", "11947", "56203", "19324", "20504", 
+	/* 187 */	"84054", "40455", "99396", "63680", "67667",
+				"60631", "69181", "96845", "38525", "11600", 
+	/* 188 */	"47468", "03577", "57649", "63266", "24700",
+				"71594", "14004", "23153", "69249", "05747", 
+	/* 189 */	"43321", "31370", "28977", "23896", "76479",
+				"68562", "62342", "07589", "08899", "05985", 
+	/* 190 */	"64281", "61826", "18555", "64937", "13173",
+				"33365", "78851", "16499", "87064", "13075", 
+	/* 191 */	"66847", "70495", "32350", "02985", "86716",
+				"38746", "26313", "77463", "55387", "72681", 
+	/* 192 */	"72461", "33230", "21529", "53424", "92581",
+				"02262", "78438", "66276", "18396", "73538", 
+	/* 193 */	"21032", "91050", "13058", "16218", "12470",
+				"56500", "15292", "76139", "59526", "52113", 
+	/* 194 */	"95362", "67011", "06651", "16136", "01016",
+				"00857", "55018", "56374", "35824", "71708", 
+	/* 195 */	"49712", "97380", "10404", "55452", "34030",
+				"60726", "75211", "10271", "36633", "68424", 
+	/* 196 */	"58275", "61764", "97586", "54716", "50259",
+				"46345", "87195", "46092", "26787", "60939", 
+	/* 197 */	"89514", "11788", "68224", "23417", "73959",
+				"76145", "30342", "40277", "11049", "72049", 
+	/* 198 */	"15472", "50669", "48139", "36732", "46874",
+				"37088", "73465", "09819", "58869", "35220", 
+	/* 199 */	"12120", "86124", "51247", "44302", "60883",
+				"52109", "21437", "36786", "49226", "77837", 
+	/* 200 */	"19612", "78430", "11661", "94770", "77603",
+				"65669", "86868", "12665", "30012", "75989", 
+	/* 201 */	"39141", "77400", "28000", "64238", "73258",
+				"71794", "31340", "26256", "66453", "37016", 
+	/* 202 */	"64756", "80457", "08747", "12836", "03469",
+				"50678", "03274", "43423", "66677", "82556", 
+	/* 203 */	"92901", "51878", "56441", "22998", "29718",
+				"38447", "06453", "25311", "07565", "53771", 
+	/* 204 */	"03551", "90070", "09483", "94050", "45938",
+				"18135", "36908", "43321", "11073", "51803", 
+	/* 205 */	"98884", "66209", "06830", "53656", "14663",
+				"56346", "71430", "04909", "19818", "05707", 
+	/* 206 */	"27369", "86882", "53473", "07541", "53633",
+				"70863", "03748", "12822", "19360", "49088", 
+	/* 207 */	"59066", "75974", "63335", "20483", "43514",
+				"37481", "58278", "26967", "49325", "43951", 
+	/* 208 */	"91647", "93783", "64169", "49022", "98588",
+				"09495", "49829", "59068", "38831", "04838", 
+	/* 209 */	"83605", "92419", "39542", "07772", "71568",
+				"75673", "35185", "89759", "44901", "74291", 
+	/* 210 */	"24895", "88530", "70774", "35439", "46758",
+				"70472", "70207", "92675", "91623", "61275", 
+	/* 211 */	"35720", "26556", "95596", "20094", "73750",
+				"85788", "34264", "01703", "46833", "65248", 
+	/* 212 */	"14141", "53410", "38649", "06343", "57256",
+				"61342", "72709", "75318", "90379", "37562", 
+	/* 213 */	"27416", "75670", "92176", "72535", "93119",
+				"56077", "06886", "18244", "92344", "31374", 
+	/* 214 */	"82071", "07429", "81007", "47749", "40744",
+				"56974", "23336", "88821", "53841", "10536", 
+	/* 215 */	"21445", "82793", "24831", "93241", "14199",
+				"76268", "70883", "68002", "03829", "17443", 
+	/* 216 */	"72513", "76400", "52225", "92348", "62308",
+				"98481", "29744", "33165", "33141", "61020", 
+	/* 217 */	"71479", "45027", "76160", "57411", "13780",
+				"13632", "52308", "77762", "88874", "33697", 
+	/* 218 */	"83210", "51466", "09088", "50395", "26743",
+				"05306", "21706", "70001", "99439", "80767", 
+	/* 219 */	"68749", "95148", "94897", "78636", "96750",
+				"09024", "94538", "91143", "96693", "61886", 
+	/* 220 */	"05184", "75763", "47075", "88158", "05313",
+				"53439", "14908", "08830", "60096", "21551", 
+	/* 221 */	"13651", "62546", "96892", "25240", "47511",
+				"58483", "87342", "78818", "07855", "39269", 
+	/* 222 */	"00566", "21220", "00292", "24069", "25072",
+				"29519", "52548", "54091", "21282", "21296", 
+	/* 223 */	"50958", "17695", "58072", "68990", "60329",
+				"95955", "71586", "63417", "35947", "67807", 
+	/* 224 */	"57621", "64547", "46850", "37981", "38527",
+				"09037", "64756", "03324", "04986", "83666", 
+	/* 225 */	"09282", "25844", "79139", "78435", "35428",
+				"43561", "69799", "63314", "12991", "93516", 
+	/* 226 */	"23394", "94206", "93432", "37836", "94919",
+				"26846", "02555", "74410", "94915", "48199", 
+	/* 227 */	"05280", "37470", "93622", "04345", "15092",
+				"19510", "18094", "16613", "78234", "50001", 
+	/* 228 */	"95491", "97976", "38306", "32192", "82639",
+				"54624", "72434", "92606", "23191", "74693", 
+	/* 229 */	"78521", "00104", "18248", "75583", "90326",
+				"50785", "54034", "66251", "35774", "14692", 
+	/* 230 */	"96345", "44579", "85932", "44053", "75704",
+				"20840", "86583", "83944", "52456", "73766", 
+	/* 231 */	"77963", "31151", "32364", "91691", "47357",
+				"40338", "23435", "24065", "08458", "95366", 
+	/* 232 */	"07520", "11294", "23238", "01748", "41690",
+				"67328", "54814", "37777", "10057", "42332", 
+	/* 233 */	"38423", "02309", "70703", "85736", "46148",
+				"14258", "29236", "12152", "05088", "65825", 
+	/* 234 */	"02463", "65533", "21199", "60555", "33928",
+				"01817", "07396", "89215", "30722", "22102", 
+	/* 235 */	"15880", "92261", "17292", "88190", "61781",
+				"48898", "92525", "21283", "88581", "60098", 
+	/* 236 */	"71926", "00819", "59144", "00224", "30570",
+				"90194", "18329", "06999", "26857", "19238", 
+	/* 237 */	"64425", "28108", "16554", "16016", "00042",
+				"83229", "10333", "36168", "65617", "94834", 
+	/* 238 */	"79782", "23924", "49440", "30432", "81077",
+				"31543", "95216", "64865", "13658", "51081", 
+	/* 239 */	"35337", "74538", "44553", "64672", "90960",
+				"41849", "93865", "44608", "93176", "34851", 
+	/* 240 */	"05249", "29329", "19715", "94082", "14738",
+				"86667", "43708", "66354", "93692", "25527", 
+	/* 241 */	"56463", "99380", "38793", "85774", "19056",
+				"13939", "46062", "27647", "66146", "63210", 
+	/* 242 */	"96296", "33121", "54196", "34108", "75814",
+				"85986", "71171", "15102", "28992", "63165", 
+	/* 243 */	"98380", "36269", "60014", "07201", "62448",
+				"46385", "42175", "88350", "46182", "49126", 
+	/* 244 */	"52567", "64350", "16315", "53969", "80395",
+				"81114", "54358", "64578", "47269", "15747", 
+	/* 245 */	"78498", "90830", "25955", "99236", "43286",
+				"91064", "99969", "95144", "64424", "77377", 
+	/* 246 */	"49553", "24241", "08150", "89535", "08703",
+				"91041", "77323", "81079", "45127", "93686", 
+	/* 247 */	"32151", "07075", "83155", "10252", "73100",
+				"88618", "23891", "87418", "45417", "20268", 
+	/* 248 */	"11314", "50363", "26860", "27799", "49416",
+				"83534", "19187", "08059", "76677", "02110", 
+	/* 249 */	"12364", "71210", "87052", "50241", "90785",
+				"97889", "81399", "58130", "64439", "05614", 
+	/* 250 */	"59467", "58309", "87834", "57213", "37510",
+				"33689", "01259", "62486", "56320", "46265", 
+	/* 251 */	"73452", "17619", "56421", "40725", "23439",
+				"41701", "93223", "41682", "45026", "47505", 
+	/* 252 */	"27635", "56293", "91700", "04391", "67317",
+				"89604", "73020", "69853", "61517", "51207", 
+	/* 253 */	"86040", "02596", "01655", "09918", "45161",
+				"00222", "54577", "74821", "47335", "08582", 
+	/* 254 */	"52403", "94255", "26351", "46527", "68224",
+				"90183", "85057", "72310", "34963", "83462", 
+	/* 255 */	"49465", "46581", "61499", "04844", "94626",
+				"02963", "41482", "83879", "44942", "63915", 
+	/* 256 */	"94365", "92560", "12363", "30246", "02086",
+				"75036", "88620", "91088", "67691", "67762", 
+	/* 257 */	"34261", "08769", "91830", "23313", "18256",
+				"28850", "37639", "92748", "57791", "71328", 
+	/* 258 */	"37110", "66538", "39318", "15626", "44324",
+				"82827", "08782", "65960", "58167", "01305", 
+	/* 259 */	"83950", "45424", "72453", "19444", "68219",
+				"64733", "94088", "62006", "89985", "36936", 
+	/* 260 */	"61630", "97966", "76537", "46467", "30942",
+				"07479", "67971", "14558", "22458", "35148", 
+	/* 261 */	"01929", "17165", "12037", "74558", "16250",
+				"71750", "55546", "29693", "94984", "37782", 
+	/* 262 */	"41659", "39098", "23982", "29899", "71594",
+				"77979", "54477", "13764", "17315", "72893", 
+	/* 263 */	"32031", "39608", "75992", "73445", "01317",
+				"50525", "87313", "45191", "30214", "19769", 
+	/* 264 */	"90043", "93478", "58044", "06949", "31176",
+				"88370", "50274", "83987", "45316", "38551", 
+	/* 265 */	"79418", "14322", "91065", "07841", "36130",
+				"86602", "10659", "40859", "00964", "71577", 
+	/* 266 */	"85447", "61079", "96910", "72906", "07361",
+				"84338", "34114", "52096", "66715", "51091", 
+	/* 267 */	"86219", "81115", "49625", "48799", "89485",
+				"24855", "13684", "68433", "70595", "70102", 
+	/* 268 */	"71712", "88559", "92476", "32903", "68009",
+				"58417", "87962", "11787", "16644", "72964", 
+	/* 269 */	"29776", "63075", "13270", "84758", "49560",
+				"10317", "28778", "23006", "31036", "84906", 
+	/* 270 */	"81488", "17340", "74154", "42801", "27917",
+				"89792", "62604", "62234", "13124", "76471", 
+	/* 271 */	"51667", "37589", "87147", "24743", "48023",
+				"06325", "79794", "35889", "13255", "04925", 
+	/* 272 */	"99004", "70322", "60832", "76636", "56907",
+				"56534", "72615", "46288", "36788", "93196", 
+	/* 273 */	"68656", "66492", "35933", "52293", "47953",
+				"95495", "95304", "50009", "83464", "28608", 
+	/* 274 */	"38074", "74083", "09337", "07965", "65047",
+				"36871", "59015", "21769", "30398", "44855", 
+	/* 275 */	"01020", "80680", "59328", "08712", "48190",
+				"45332", "27284", "31287", "66011", "09376", 
+	/* 276 */	"86379", "74508", "33579", "77114", "92955",
+				"23085", "92824", "03054", "25242", "16322", 
+	/* 277 */	"48498", "09938", "44420", "13484", "52319",
+				"58875", "02012", "88591", "52500", "95795", 
+	/* 278 */	"41800", "95363", "54142", "17482", "32705",
+				"60564", "12505", "40954", "46174", "64130", 
+	/* 279 */	"63026", "96712", "79883", "39225", "52653",
+				"69549", "36693", "59822", "22684", "31661", 
+	/* 280 */	"88298", "15489", "16030", "42480", "15372",
+				"38781", "71995", "77438", "91161", "10192", 
+	/* 281 */	"07839", "62735", "99218", "25624", "02547",
+				"27445", "69187", "55749", "32322", "15504", 
+	/* 282 */	"73298", "51108", "48717", "92926", "75705",
+				"89787", "96114", "99902", "37749", "96305", 
+	/* 283 */	"12829", "70474", "00838", "50385", "91711",
+				"80370", "56504", "56857", "80906", "09018", 
+	/* 284 */	"76569", "61072", "48568", "36491", "22587",
+				"44363", "39592", "61546", "90181", "37348", 
+	/* 285 */	"41665", "41339", "62106", "44203", "06732",
+				"76111", "79840", "67999", "32231", "76869", 
+	/* 286 */	"58652", "49983", "01669", "27464", "79553",
+				"52855", "25988", "18087", "38052", "17529", 
+	/* 287 */	"13607", "00657", "76173", "43357", "77334",
+				"24140", "53860", "02906", "89863", "44651", 
+	/* 288 */	"55715", "26203", "65933", "51087", "98234",
+				"40625", "45545", "63563", "89148", "82581", 
+	/* 289 */	"04110", "66683", "99001", "09796", "47349",
+				"65003", "66524", "81970", "71262", "14479", 
+	/* 290 */	"31300", "08681", "58068", "44115", "40064",
+				"77879", "23965", "69019", "73985", "19453", 
+	/* 291 */	"26225", "97543", "37044", "07494", "85778",
+				"35345", "61115", "92498", "49737", "64599", 
+	/* 292 */	"07158", "82763", "25072", "38478", "57782",
+				"75291", "62155", "52056", "04786", "11585", 
+	/* 293 */	"71251", "25572", "79771", "93328", "66927",
+				"54069", "58752", "26624", "50463", "77361", 
+	/* 294 */	"29991", "96526", "02820", "91659", "12818",
+				"96356", "49499", "01507", "40223", "09171", 
+	/* 295 */	"83642", "21057", "02677", "09367", "38097",
+				"16100", "19355", "06120", "15378", "56559", 
+	/* 296 */	"69167", "30235", "06767", "66323", "78294",
+				"14916", "19124", "88044", "16673", "66102", 
+	/* 297 */	"86018", "29406", "75415", "22038", "27056",
+				"26906", "25867", "14751", "92380", "30434", 
+	/* 298 */	"44114", "06026", "79553", "55091", "95385",
+				"41212", "37882", "46864", "54717", "97038", 
+	/* 299 */	"53805", "64150", "70915", "63127", "63695",
+				"41288", "38192", "72437", "75075", "18570", 
+	/* 300 */	"52065", "08853", "30104", "79937", "66913",
+				"53200", "84570", "78079", "28970", "53859", 
+	/* 301 */	"37632", "80274", "35240", "32960", "74859",
+				"07359", "55176", "03930", "38984", "35151", 
+	/* 302 */	"82576", "82805", "94031", "12779", "90879",
+				"24109", "25367", "77861", "09541", "85739", 
+	/* 303 */	"69023", "64971", "99321", "07521", "95909",
+				"43897", "71724", "92581", "05471", "64337", 
+	/* 304 */	"98949", "03606", "78236", "78985", "29212",
+				"57369", "34857", "67757", "58019", "58872", 
+	/* 305 */	"96526", "28749", "56592", "37871", "72905",
+				"70198", "57319", "54116", "47014", "18285", 
+	/* 306 */	"33692", "72111", "60958", "96848", "17893",
+				"40993", "50445", "14186", "76877", "87867", 
+	/* 307 */	"50335", "09513", "44346", "26439", "55293",
+				"06449", "44301", "63740", "40158", "72703", 
+	/* 308 */	"88321", "85062", "57345", "66231", "15409",
+				"03451", "95261", "43561", "15673", "28956", 
+	/* 309 */	"90303", "62469", "82517", "43035", "36850",
+				"15592", "64098", "59022", "31752", "04370", 
+	/* 310 */	"50486", "11885", "23085", "41712", "80692",
+				"48492", "16495", "99721", "36912", "28267", 
+	/* 311 */	"27882", "16269", "64483", "11273", "02680",
+				"01616", "46138", "54606", "14761", "05134", 
+	/* 312 */	"45144", "63213", "49666", "27441", "86989",
+				"29884", "54334", "06740", "08368", "80051", 
+	/* 313 */	"81020", "17882", "74973", "74531", "94994",
+				"24927", "64894", "22667", "20466", "82948", 
+	/* 314 */	"66831", "47427", "76033", "31197", "59817",
+				"20064", "61135", "28556", "29695", "80179", 
+	/* 315 */	"74058", "18293", "09963", "35278", "13062",
+				"83094", "23373", "90287", "33477", "48865", 
+	/* 316 */	"30348", "70174", "11468", "25994", "25343",
+				"22317", "01587", "30682", "00001", "67814", 
+	/* 317 */	"59557", "23362", "13746", "82244", "42093",
+				"24671", "79458", "93730", "45488", "60234", 
+	/* 318 */	"67098", "09899", "25775", "00332", "36636",
+				"57594", "19958", "85564", "58977", "12247", 
+	/* 319 */	"60774", "66371", "69442", "20385", "14486",
+				"91330", "50332", "46023", "75768", "59877", 
+	/* 320 */	"60081", "92936", "72302", "75064", "85727",
+				"52987", "05750", "19384", "33684", "78859", 
+	/* 321 */	"80458", "69902", "34870", "88684", "49762",
+				"40801", "86291", "18194", "90366", "82639", 
+	/* 322 */	"53844", "96326", "65728", "48563", "26027",
+				"52692", "62406", "76294", "41848", "63010", 
+	/* 323 */	"69841", "29451", "36170", "21529", "16525",
+				"64326", "22086", "24469", "57407", "96033", 
+	/* 324 */	"37771", "31002", "18311", "93285", "31948",
+				"14331", "58335", "15977", "80336", "81667", 
+	/* 325 */	"27286", "24361", "61638", "57580", "95270",
+				"46180", "76990", "53031", "94366", "02727", 
+	/* 326 */	"49944", "19278", "05756", "51875", "53445",
+				"33342", "01965", "07937", "10054", "97712", 
+	/* 327 */	"87693", "58124", "46064", "39133", "77385",
+				"09605", "65359", "70113", "90563", "86637", 
+	/* 328 */	"94282", "12025", "31926", "24541", "23854",
+				"58407", "32131", "92845", "20714", "27898", 
+	/* 329 */	"26917", "50326", "35145", "50859", "72119",
+				"95094", "29441", "42301", "62460", "75252", 
+	/* 330 */	"94267", "38422", "73047", "24200", "85349",
+				"72049", "91723", "97802", "98496", "12734", 
+	/* 331 */	"73432", "10371", "57213", "53300", "80847",
+				"46229", "07099", "72961", "13767", "65654", 
+	/* 332 */	"31102", "82119", "96946", "65919", "81083",
+				"03819", "57888", "57908", "16849", "77111", 
+	/* 333 */	"41429", "92261", "45263", "01172", "55926",
+				"78835", "27697", "48420", "58865", "41207", 
+	/* 334 */	"21406", "08582", "10785", "36233", "12237",
+				"07866", "13706", "92551", "11021", "63813", 
+	/* 335 */	"71512", "65206", "37768", "94325", "14721",
+				"20990", "54235", "71986", "05345", "56239", 
+	/* 336 */	"52028", "01419", "07215", "55067", "11669",
+				"21738", "66605", "69621", "69827", "08537", 
+	/* 337 */	"18638", "60982", "28151", "98885", "76431",
+				"25566", "03085", "23639", "30849", "63986", 
+	/* 338 */	"73287", "26201", "36174", "14106", "54102",
+				"57041", "16141", "64174", "03591", "90024", 
+	/* 339 */	"73332", "31254", "17288", "59809", "25061",
+				"51612", "47951", "16570", "43330", "79213", 
+	/* 340 */	"11354", "55585", "19646", "99246", "37564",
+				"32660", "20632", "21124", "60597", "69315", 
+	/* 341 */	"31312", "57741", "85108", "21615", "24365",
+				"27684", "16124", "33888", "14966", "35303", 
+	/* 342 */	"69921", "15795", "04020", "67672", "86816",
+				"63027", "84470", "45605", "44887", "26222", 
+	/* 343 */	"79888", "58982", "22466", "98844", "48353",
+				"60666", "58256", "31140", "93507", "69561", 
+	/* 344 */	"06256", "88526", "18655", "00865", "75247",
+				"00264", "65957", "98261", "72706", "36396", 
+	/* 345 */	"46065", "85700", "32121", "99975", "73627",
+				"78812", "89638", "86602", "96758", "65099", 
+	/* 346 */	"52777", "46792", "13790", "55240", "52002",
+				"10313", "91933", "71231", "10053", "78416", 
+	/* 347 */	"54563", "96004", "42215", "30094", "45958",
+				"48437", "49591", "50483", "13422", "69108", 
+	/* 348 */	"59952", "27896", "40450", "79327", "31962",
+				"46456", "39260", "51479", "61882", "48181", 
+	/* 349 */	"50691", "64709", "32902", "10676", "12083",
+				"35771", "79656", "56667", "76783", "03937", 
+	/* 350 */	"99859", "10362", "57411", "40986", "35045",
+				"02838", "29255", "64230", "84418", "34988", 
+	/* 351 */	"77644", "39892", "77327", "74129", "53444",
+				"35487", "95803", "38640", "20383", "55402", 
+	/* 352 */	"25793", "14213", "87082", "42837", "95030",
+				"97198", "61608", "97723", "79390", "35290", 
+	/* 353 */	"34683", "81419", "87133", "70447", "53127",
+				"97146", "28299", "56763", "12868", "01145", 
+	/* 354 */	"12147", "58158", "92124", "60934", "18414",
+				"97510", "07056", "54488", "20719", "53743", 
+	/* 355 */	"91037", "44797", "52110", "08512", "18991",
+				"20129", "31441", "51449", "14661", "71126", 
+	/* 356 */	"23180", "68124", "18807", "70997", "21913",
+				"19594", "70355", "73637", "68266", "60775", 
+	/* 357 */	"43164", "52643", "96363", "77989", "79332",
+				"39890", "65379", "20405", "52935", "43816", 
+	/* 358 */	"92740", "95319", "04538", "60660", "28982",
+				"15328", "80475", "34690", "02293", "19646", 
+	/* 359 */	"46524", "96627", "33159", "42081", "08816",
+				"74931", "20674", "08697", "66169", "46460", 
+	/* 360 */	"46326", "39923", "60625", "28386", "22919",
+				"19415", "75766", "43668", "31626", "70301", 
+	/* 361 */	"67053", "03949", "70082", "02303", "48642",
+				"38429", "94053", "38770", "68137", "68441", 
+	/* 362 */	"52928", "70244", "91954", "17401", "92693",
+				"98342", "21451", "84988", "80487", "33807", 
+	/* 363 */	"73797", "49494", "41878", "76635", "83227",
+				"76618", "11946", "13451", "87591", "78381", 
+	/* 364 */	"21407", "90038", "72638", "69692", "51599",
+				"86413", "32019", "64856", "74730", "41531", 
+	/* 365 */	"11064", "01790", "58817", "86400", "66213",
+				"92599", "70905", "78324", "54326", "43659", 
+	/* 366 */	"34206", "63132", "38837", "40210", "96346",
+				"16967", "81619", "96503", "14881", "89405", 
+	/* 367 */	"32205", "49508", "98425", "02451", "35423",
+				"56072", "36810", "30332", "85998", "49358", 
+	/* 368 */	"92748", "84147", "79835", "94867", "41224",
+				"61794", "35066", "82220", "66684", "20096", 
+	/* 369 */	"02754", "41731", "37068", "32753", "91059",
+				"13407", "05607", "69384", "53329", "95909", 
+	/* 370 */	"44968", "11397", "92973", "50014", "92997",
+				"80968", "93761", "57598", "74703", "07768", 
+	/* 371 */	"37978", "73873", "33475", "09720", "97852",
+				"98449", "48722", "84977", "11271", "11728", 
+	/* 372 */	"68318", "22312", "78792", "87508", "88466",
+				"72976", "47099", "84126", "38595", "85124", 
+	/* 373 */	"64405", "90020", "07492", "52413", "95111",
+				"34455", "86311", "68892", "01074", "60274", 
+	/* 374 */	"28136", "19328", "38161", "57475", "13771",
+				"63562", "84207", "94121", "18901", "52768", 
+	/* 375 */	"33801", "82087", "86091", "59969", "90398",
+				"56870", "55756", "78841", "98450", "54165", 
+	/* 376 */	"55106", "50343", "70519", "14567", "36780",
+				"55450", "19606", "83749", "67562", "64765", 
+	/* 377 */	"38543", "16585", "86841", "73742", "08766",
+				"39252", "75678", "75379", "78760", "37279", 
+	/* 378 */	"15280", "13558", "95916", "89759", "76686",
+				"76467", "67147", "63110", "94008", "08037", 
+	/* 379 */	"35263", "53710", "16667", "79008", "11231",
+				"29397", "67136", "18601", "64502", "90228", 
+	/* 380 */	"89109", "72849", "22711", "65547", "34542",
+				"26686", "81678", "87765", "77654", "23664", 
+	/* 381 */	"96352", "14106", "32938", "28083", "18633",
+				"80286", "65507", "46197", "52722", "75476", 
+	/* 382 */	"77816", "47204", "34876", "45963", "79262",
+				"90181", "84041", "03745", "90041", "30780", 
+	/* 383 */	"27226", "92847", "85572", "15308", "80688",
+				"05761", "82638", "13464", "23683", "81015", 
+	/* 384 */	"54214", "64175", "43701", "86845", "15569",
+				"50687", "52679", "87696", "08285", "97444", 
+	/* 385 */	"47599", "94472", "64150", "87753", "68652",
+				"60726", "26213", "17320", "64553", "81285", 
+	/* 386 */	"98126", "12158", "52095", "64833", "00492",
+				"35817", "55571", "91300", "97812", "37507", 
+	/* 387 */	"04209", "53515", "64342", "21223", "16662",
+				"43265", "68219", "03529", "43636", "68417", 
+	/* 388 */	"53640", "95326", "93381", "37113", "80751",
+				"76469", "96677", "43054", "22937", "31954", 
+	/* 389 */	"13266", "34140", "27253", "02734", "99070",
+				"60077", "57988", "93211", "92795", "83795", 
+	/* 390 */	"57477", "03941", "39007", "14619", "38320",
+				"93449", "31336", "25279", "97030", "26245", 
+	/* 391 */	"47394", "39475", "90621", "23820", "29344",
+				"94859", "91604", "14033", "41868", "14816", 
+	/* 392 */	"04075", "66644", "87803", "97815", "99552",
+				"78666", "03942", "08175", "22345", "19983", 
+	/* 393 */	"76783", "99044", "20851", "84981", "59052",
+				"77178", "72109", "76475", "21619", "73017", 
+	/* 394 */	"06812", "56633", "50612", "55289", "04671",
+				"84419", "94072", "94446", "80603", "32188", 
+	/* 395 */	"93415", "23464", "43947", "43728", "74284",
+				"67177", "57105", "31059", "10642", "13803", 
+	/* 396 */	"69602", "46961", "66567", "19359", "84676",
+				"63918", "40650", "12923", "15974", "79732", 
+	/* 397 */	"20225", "92525", "71179", "04859", "91208",
+				"60430", "05239", "61458", "24089", "68852", 
+	/* 398 */	"60171", "29603", "42535", "86365", "93905",
+				"28237", "45317", "60718", "82001", "41679", 
+	/* 399 */	"20679", "56304", "70043", "87568", "21386",
+				"59049", "78353", "48696", "77379", "55309", 
+	/* 400 */	"23780", "28391", "05940", "55583", "81256",
+				"59418", "97521", "32846", "70761", "90115", 
+	/* 401 */	"45325", "05490", "65974", "11186", "15357",
+				"03568", "00450", "96644", "58976", "36211", 
+	/* 402 */	"88240", "92457", "89200", "94696", "11370",
+				"91157", "48487", "59501", "56983", "89795", 
+	/* 403 */	"42789", "69758", "79701", "29511", "55968",
+				"41472", "89474", "84344", "80517", "07485", 
+	/* 404 */	"97523", "17264", "82840", "59556", "37119",
+				"30985", "48866", "60605", "95719", "70417", 
+	/* 405 */	"59083", "95137", "76538", "44155", "67286",
+				"57897", "28262", "04052", "00919", "86207", 
+	/* 406 */	"79932", "44236", "10089", "44373", "65670",
+				"44285", "06903", "20834", "49701", "95735", 
+	/* 407 */	"21149", "03425", "17594", "31427", "14262",
+				"32252", "68540", "39427", "44026", "47257", 
+	/* 408 */	"45055", "95091", "08367", "28381", "57375",
+				"41562", "83883", "27715", "10122", "67745", 
+	/* 409 */	"46497", "28626", "87297", "36568", "39483",
+				"11385", "63292", "92305", "78683", "06146", 
+	/* 410 */	"81905", "15038", "38338", "51206", "65749",
+				"34119", "71516", "74068", "51094", "06665", 
+	/* 411 */	"91884", "66762", "11428", "70908", "21506",
+				"00480", "94183", "78484", "66507", "75901", 
+	/* 412 */	"25728", "52539", "86806", "69944", "65036",
+				"27882", "02530", "04918", "74351", "65737", 
+	/* 413 */	"89178", "08791", "39342", "94963", "22581",
+				"56917", "17541", "83578", "75376", "65202", 
+	/* 414 */	"30935", "79270", "91986", "99286", "45236",
+				"44720", "81915", "70881", "45886", "43213", 
+	/* 415 */	"49789", "97081", "16075", "20517", "69980",
+				"25310", "91953", "01759", "67635", "88933", 
+	/* 416 */	"54558", "18395", "73375", "62251", "58871",
+				"09870", "70538", "48936", "07757", "90374", 
+	/* 417 */	"56631", "88862", "30487", "38794", "36079",
+				"32712", "11130", "55451", "25137", "38785", 
+	/* 418 */	"83558", "31960", "69473", "45950", "18225",
+				"09871", "88502", "75179", "11551", "75664", 
+	/* 419 */	"74321", "67351", "27703", "83717", "18913",
+				"42470", "08816", "37627", "14288", "62831", 
+	/* 420 */	"44047", "67612", "72738", "26995", "50933",
+				"63758", "50003", "43693", "52661", "55852", 
+	/* 421 */	"52372", "59042", "37595", "04931", "73622",
+				"68387", "86478", "40997", "05245", "75300", 
+	/* 422 */	"24902", "59609", "35653", "15970", "37681",
+				"69365", "22236", "86374", "65550", "00343", 
+	/* 423 */	"98377", "35354", "65770", "15365", "41422",
+				"71356", "16630", "40044", "19290", "66449", 
+	/* 424 */	"53629", "79452", "71674", "30260", "97303",
+				"06487", "62789", "13005", "70152", "22501", 
+	/* 425 */	"49867", "89294", "59232", "31776", "54919",
+				"99851", "05438", "01096", "72269", "50486", 
+	/* 426 */	"16719", "06144", "82041", "38332", "64452",
+				"31840", "99287", "59928", "25503", "08407", 
+	/* 427 */	"46970", "45907", "99238", "74547", "19704",
+				"72035", "26542", "54600", "79172", "58779", 
+	/* 428 */	"35747", "78956", "11478", "41195", "58135",
+				"63856", "33037", "45753", "60159", "25193", 
+	/* 429 */	"71838", "07526", "07985", "60714", "88627",
+				"75790", "38454", "96110", "39237", "19792", 
+	/* 430 */	"34534", "70169", "24805", "63215", "38175",
+				"38784", "38855", "24826", "50917", "25147", 
+	/* 431 */	"17082", "26997", "32295", "10894", "21805",
+				"65245", "85407", "37926", "69214", "38579", 
+	/* 432 */	"84721", "23544", "88548", "65626", "75517",
+				"69737", "55626", "52175", "21697", "19453", 
+	/* 433 */	"16908", "82841", "24060", "40285", "19195",
+				"80281", "89322", "15232", "70043", "60691", 
+	/* 434 */	"86370", "91949", "19017", "83846", "77869",
+				"14321", "95102", "87073", "71467", "31305", 
+	/* 435 */	"64677", "80358", "52629", "79419", "22359",
+				"87867", "48296", "50141", "46807", "82184", 
+	/* 436 */	"95812", "84665", "74511", "59914", "04146",
+				"90417", "58508", "62875", "17630", "21868", 
+	/* 437 */	"09199", "30322", "33352", "43374", "25473",
+				"04119", "63086", "14147", "14863", "38020", 
+	/* 438 */	"44757", "98628", "57916", "22199", "11865",
+				"42911", "62651", "78290", "09392", "77294", 
+	/* 439 */	"63168", "21043", "17409", "13786", "27475",
+				"75979", "89668", "43596", "74316", "84489", 
+	/* 440 */	"54941", "95992", "45445", "41059", "55142",
+				"15214", "42903", "16799", "88254", "95984", 
+	/* 441 */	"48575", "77822", "21067", "57238", "35352",
+				"96779", "89564", "23797", "99937", "46379", 
+	/* 442 */	"27119", "16060", "30302", "95327", "12849",
+				"38111", "97090", "07598", "78473", "63079", 
+	/* 443 */	"18570", "72803", "70040", "91385", "96436",
+				"96263", "17368", "56188", "85999", "50026", 
+	/* 444 */	"36050", "73736", "13351", "48321", "28357",
+				"51718", "65636", "72903", "21584", "21060", 
+	/* 445 */	"39829", "15564", "04716", "14594", "22363",
+				"97639", "65937", "17802", "31535", "42767", 
+	/* 446 */	"98761", "30987", "57657", "33398", "63053",
+				"25926", "20944", "19306", "81727", "02695", 
+	/* 447 */	"97479", "79172", "72764", "66446", "78864",
+				"12698", "15812", "97209", "38827", "91016", 
+	/* 448 */	"91281", "57875", "45228", "49211", "69755",
+				"99224", "43999", "62879", "08879", "80015", 
+	/* 449 */	"74396", "57146", "64665", "31159", "06980",
+				"79069", "37409", "75037", "69977", "85919", 
+	/* 450 */	"42826", "06974", "61063", "97640", "13433",
+				"92528", "91311", "08440", "38840", "22362", 
+	/* 451 */	"93929", "01836", "36590", "75052", "89475",
+				"15437", "65648", "99012", "70236", "12307", 
+	/* 452 */	"83585", "00414", "62851", "48787", "28447",
+				"21702", "57033", "29633", "44760", "34165", 
+	/* 453 */	"27548", "37516", "24343", "63046", "02081",
+				"20378", "19510", "42226", "97134", "68739", 
+	/* 454 */	"32982", "56455", "53129", "77693", "25022",
+				"55534", "99375", "30086", "98001", "07432", 
+	/* 455 */	"67126", "76656", "29347", "28492", "43108",
+				"64736", "32278", "84816", "80440", "30461", 
+	/* 456 */	"00818", "09136", "01952", "48442", "91058",
+				"92590", "10443", "05195", "34009", "32141", 
+	/* 457 */	"62209", "43740", "54102", "76895", "98172",
+				"31583", "04155", "66492", "58981", "16591", 
+	/* 458 */	"11331", "06838", "03818", "77063", "12523",
+				"45570", "68970", "70055", "77751", "73743", 
+	/* 459 */	"71732", "04704", "61384", "57343", "66682",
+				"44500", "89745", "10436", "67202", "36455", 
+	/* 460 */	"42467", "88801", "91280", "01056", "27534",
+				"81619", "79004", "25824", "66362", "33280", 
+	/* 461 */	"20706", "31929", "57422", "18730", "96197",
+				"22101", "47592", "02180", "18287", "82310", 
+	/* 462 */	"60430", "59627", "26471", "07794", "60475",
+				"76713", "45427", "89654", "14370", "81674", 
+	/* 463 */	"41246", "98416", "08669", "48883", "77154",
+				"09806", "94015", "60347", "20027", "08405", 
+	/* 464 */	"33150", "27368", "53375", "70171", "59431",
+				"14534", "34018", "85665", "77797", "17944", 
+	/* 465 */	"49602", "74391", "48830", "55029", "10371",
+				"94261", "16658", "68400", "44148", "28150", 
+	/* 466 */	"40364", "90913", "73151", "64463", "50058",
+				"78191", "84439", "82478", "62398", "03113", 
+	/* 467 */	"17578", "12830", "06571", "95934", "09132",
+				"25287", "78731", "80683", "67207", "76597", 
+	/* 468 */	"42096", "34934", "76609", "52553", "47508",
+				"71561", "08038", "83011", "72577", "95790", 
+	/* 469 */	"40076", "20292", "32138", "61197", "95476",
+				"23123", "26648", "13611", "48452", "39963", 
+	/* 470 */	"85857", "04855", "27029", "01542", "72443",
+				"53688", "82635", "56264", "07977", "23090", 
+	/* 471 */	"93553", "65434", "12124", "91087", "87800",
+				"95675", "99419", "44659", "30382", "55263", 
+	/* 472 */	"82514", "86800", "16781", "65977", "65946",
+				"13033", "93895", "04056", "75895", "47878", 
+	/* 473 */	"91309", "51233", "81409", "46773", "69135",
+				"56906", "84493", "34530", "84534", "38312", 
+	/* 474 */	"54574", "92933", "77341", "20839", "36126",
+				"01143", "35356", "35459", "07959", "98335", 
+	/* 475 */	"53266", "36146", "78047", "50607", "22486",
+				"63308", "08996", "96056", "39085", "26567", 
+	/* 476 */	"06779", "62663", "30523", "47881", "41279",
+				"49864", "82248", "78333", "29466", "48151", 
+	/* 477 */	"41957", "93235", "53308", "22682", "90722",
+				"54478", "07235", "34306", "15827", "20121", 
+	/* 478 */	"96837", "06283", "80172", "66109", "92592",
+				"48238", "76428", "94546", "45430", "16288", 
+	/* 479 */	"74839", "00740", "25553", "83767", "35900",
+				"05998", "07493", "46755", "11449", "88824", 
+	/* 480 */	"44906", "33143", "07454", "56652", "34755",
+				"63992", "59674", "65131", "46358", "12799"
+				  };
+	
+	
+	
+	typedef unsigned long int sBox[256];
+	
+	
+	/* The standard S boxes are defined in another file */
+	extern sBox standardSBoxes[SBoxCount];
+	
+	
+	
+	/* The following routine is a simple error exit routine  -- it prints a
+	   message and aborts */
+	void    errAbort (s)
+		char   *s;
+	{
+		int     length;
+	
+		for (length = 0; s[length] != 0; length++);
+		if (write (errorFile, s, length) != length) exit(2);
+		if (write (errorFile, "\n", 1) != 1) exit(2);
+		exit (1);
+	};
+	
+	
+	
+	void    swapBytesInSBox (anSBox, row1, row2, column)
+		sBox    anSBox;
+		unsigned int row1, row2, column;
+	
+	/* Exchanges two bytes in a column in 'anSBox'.  row1 and row2 are integers
+	   between 0 and 255 inclusive.  'column' is either 0, 1, 2 or 3 and refers
+	   to the byte position in a 32-bit word.  0 is the left-most byte.   */
+	{
+		/* mask designates the bytes to be exchanged */
+		unsigned long int mask;
+		unsigned long int temp;
+	
+		mask = 0xFF000000;
+	
+		/* 'column' must be between 0 and 3 */
+		if (column > 3)
+			errAbort ("bad column passed to swapBytesInSBox");
+	
+		/* position the mask in the appropriate column */
+		mask >>= (column * 8);
+	
+	
+		/* Swap the bytes indicated by 'mask' */
+		temp = anSBox[row1];
+		anSBox[row1] = (anSBox[row1] & (~mask)) | (anSBox[row2] & mask);
+		anSBox[row2] = (anSBox[row2] & (~mask)) | (temp & mask);
+	}
+	
+	
+	unsigned int randomDigit ()
+	/* generate a random digit in the range from 0 to 9, inclusive.  Generate the
+	   digit simply by getting the next random digit from the RAND table of
+	   random digits */
+	{
+		if (locationIn5DigitGroup == 5) {
+			locationIn5DigitGroup = 0;
+			locationInRANDtable++;
+		};
+		if (locationInRANDtable >= sizeOfRANDtableIn5DigitGroups)
+			errAbort ("Error in randomDigit -- attempt to ask for too many random digits");
+		return (RANDtable[locationInRANDtable][locationIn5DigitGroup++] - '0');
+	};
+	
+	
+	unsigned int randomInRange (low, high)
+		unsigned int low, high;
+	
+	/* Returns a random integer in the range from low to high, inclusive */
+	/* gets random digits from RANDtable */
+	{
+		unsigned int range;	/* contains the actual range needed */
+	
+		/* the max possible random numbers given a certain number of digits */
+		unsigned int maximum;
+		unsigned int random;	/* the random number composed by appending
+					   digits */
+	
+		range = (high - low) + 1;
+		do {
+			random = 0;	/* initialize */
+			maximum = 1;	/* initialize */
+			/* loop until random has as many digits as range */
+			while (maximum < range) {
+				maximum *= 10;	/* 0-n = n+1 possible random numbers */
+				/* add another digit to the low end */
+				random = (random * 10) + randomDigit ();
+			}
+		}
+		/* if random is not evenly mappable to range, try again */
+		/* the operation (maximum/range)  TRUNCATES the result to an unsigned
+		   int */
+		while (random >= ((unsigned int) (maximum / range)) * range);
+		/* map random to the range and add  low  to stay within (low,high) */
+		return (low + (random % range));
+	}
+	
+	void    checkSBoxes ()
+	/* computes the standard S boxes from the RAND table of random digits,
+	   then compares it with standardSBoxes -- they should be equal.
+	   Uses RANDtable as the source for the random digits.  */
+	{
+		sBox    SBoxFromRand[SBoxCount];
+		int SBoxIndex;
+	
+		/* column is from the set {0, 1, 2, 3}.  0 is the leftmost byte */
+		unsigned int column, row;
+		unsigned long int longRow;
+	
+		for (SBoxIndex = 0; SBoxIndex < SBoxCount; SBoxIndex++) {
+	
+			/* Fill initial S box with a trivial permutation (0-255) */
+			for (longRow = 0; longRow < 256; longRow++)
+				SBoxFromRand[SBoxIndex][longRow] =
+					longRow | (longRow << 8) | (longRow << 16) | (longRow << 24);
+	
+			for (column = 0; column < 4; column++) {
+				for (row = 0; row < 255 /* 255 is correct */ ; row++)
+					/* exchange random rows in the column.
+						This ensures the column remains a permutation
+						of (0-255) */
+					swapBytesInSBox (SBoxFromRand[SBoxIndex],
+						row, randomInRange (row, 255), column);
+			}
+			for (row = 0; row < 256; row++)
+				if (SBoxFromRand[SBoxIndex][row] != standardSBoxes[SBoxIndex][row])
+					errAbort ("Error -- can't verify S boxes");
+	
+			printf("  Verified SBox[%d]\n",SBoxIndex);
+	    };  /*  End of for (SBoxIndex....   */
+	};
+	
+	
+	
+	void    main ()
+		
+	{	int i;
+	
+		
+		/* Test the standard S boxes to make sure they haven't been
+		   damaged. */
+		/* Test to make sure each column is a permutation.  */
+		for (i = 0; i < SBoxCount; i++) {
+			char    testArray[256];
+			int     testShift = 0;
+			int     j;
+	
+			for (testShift = 0; testShift < 32; testShift += 8) {
+				for (j = 0; j < 256; j++)
+					testArray[j] = 0;
+				for (j = 0; j < 256; j++)
+					testArray[(standardSBoxes[i][j] >> testShift) & 0xff]++;
+				for (j = 0; j < 256; j++)
+					if (testArray[j] != 1)
+						errAbort ("Table error -- the standard S box is corrupted");
+			};
+		};
+	
+		/* It looks okay.  Now check things out some more  */
+		
+		printf("  The standard S Boxes are permutations.\n");
+	
+		checkSBoxes ();
+	
+	
+		exit (0);
+	};
+*-*-END-*-*

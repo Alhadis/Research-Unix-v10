@@ -1,0 +1,28 @@
+<../conf/mkconf.$SYS
+<../conf/mkrules.$SYS
+
+BPROG=dist
+LPROG=insdist mkdist sedsubst \
+ receive transmit showq cleanq genmail \
+ qargs uargs tarc tarf tarx \
+ notify notice
+
+LIBS=../lib/lib-$O.a ../$SYS/lib-$O.a $LIBV
+
+%: %.o
+	$LD -o $target $prereq $LIBS
+
+%: %.sh
+	sed -e s:%LDIR%:$LDIR: -e s:%SDIR%:$SDIR: < $prereq > $target
+	chmod +x $target
+
+compile:V: $BPROG $LPROG
+
+install:V: compile
+	cp $BPROG $BDIR
+	cp $BPROG $LPROG $LDIR
+
+clean:V:
+	rm -f $BPROG $LPROG *.[$OS]
+
+receive transmit showq cleanq qargs uargs tarc tarf tarx: $LIBS

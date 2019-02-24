@@ -1,0 +1,1122 @@
+
+
+
+     MAP(7)                                                     MAP(7)
+
+
+
+     NAME
+          map - draw maps on various projections
+
+     SYNOPSIS
+          map _p_r_o_j_e_c_t_i_o_n [ _p_a_r_a_m ... ] [ _o_p_t_i_o_n ... ]
+
+     DESCRIPTION
+          _M_a_p prepares on the standard output a map suitable for dis-
+          play by any plotting filter described in _p_l_o_t(1).  A menu of
+          projections is produced in response to an unknown
+          _p_r_o_j_e_c_t_i_o_n.  For the meanings of _p_a_r_a_m_s pertinent to partic-
+          ular projections see _p_r_o_j(3).
+
+          The default data for _m_a_p are world shorelines.  Option -f
+          accesses the higher-resolution World Data Bank II.
+
+          -f [ _f_e_a_t_u_r_e ... ]
+               Features are ranked 1 (default) to 4 from major to
+               minor.  Higher-numbered ranks include all lower-
+               numbered ones.  Features are
+
+               shore[1-4]    seacoasts, lakes, and islands; in the
+                             absence of -m, option -f automatically
+                             includes shore1
+               ilake[1-2]    intermittent lakes
+               river[1-4]    rivers
+               iriver[1-3]   intermittent rivers
+               canal[1-3]    3=irrigation canals
+               glacier
+               iceshelf[12]
+               reef
+               saltpan[12]
+               country[1-3]  2=disputed boundaries, 3=indefinite
+                             boundaries
+               state         states and provinces (US and Canada only)
+
+          In other options coordinates are in degrees, with north lat-
+          itude and west longitude counted as positive.
+
+          -l _S _N _E _W
+               Set the southern and northern latitude and the eastern
+               and western longitude limits.  Missing arguments are
+               filled out from the list -90, 90, -180, 180.
+
+          -k _S _N _E _W
+               Set the scale as if for a map with limits -l _S _N _E _W
+               and no -w option.
+
+          -o _l_a_t _l_o_n _r_o_t
+               Orient the map in a nonstandard position.  Imagine a
+               transparent gridded sphere around the globe.  Turn the
+               overlay about the North Pole so that the Prime Meridian
+
+
+
+     Page 1                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     MAP(7)                                                     MAP(7)
+
+
+
+               (longitude 0) of the overlay coincides with meridian
+               _l_o_n on the globe.  Then tilt the North Pole of the
+               overlay along its Prime Meridian to latitude _l_a_t on the
+               globe.  Finally again turn the overlay about its `North
+               Pole' so that its Prime Meridian coincides with the
+               previous position of meridian _r_o_t.  Project the map in
+               the standard form appropriate to the overlay, but pre-
+               senting information from the underlying globe.  Missing
+               arguments are filled out from the list 90, 0, 0.  In
+               the absence of -o, the orientation is 90, 0, _m, where _m
+               is the middle of the longitude range.
+
+          -w _S _N _E _W
+               Window the map by the specified latitudes and longi-
+               tudes in the tilted, rotated coordinate system.  Miss-
+               ing arguments are filled out from the list -90, 90,
+               -180, 180.  (It is wise to give an encompassing -l
+               option with -w.  Otherwise for small windows computing
+               time varies inversely with area!)
+
+          -d _n For speed, plot only every _nth point.
+
+          -r   Reverse left and right (good for star charts and
+               inside-out views).
+          -s1
+          -s2  Superpose.  Outputs for a -s1 map (no closing) and a
+               -s2 map (no opening) may be concatenated.
+
+          -g _d_l_a_t _d_l_o_n _r_e_s
+               Grid spacings are _d_l_a_t, _d_l_o_n. Zero spacing means no
+               grid.  Missing _d_l_a_t is taken to be zero.  Missing _d_l_o_n
+               is taken the same as _d_l_a_t.  Grid lines are drawn to a
+               resolution of _r_e_s (28o9 or less by default).  In the
+               absence of -g, grid spacing is 108o9.
+
+          -p _l_a_t _l_o_n _e_x_t_e_n_t
+               Position the point _l_a_t, _l_o_n at the center of a square
+               plotting area.  Scale the map so that a side of the
+               square is _e_x_t_e_n_t times the size of one degree of lati-
+               tude at the center.  By default maps are scaled and
+               positioned to fit within the plotting area.  An _e_x_t_e_n_t
+               overrides option -k.
+
+          -c _x _y _r_o_t
+               After all other positioning and scaling operations,
+               rotate the image _r_o_t degrees counterclockwise about the
+               center and move the center to position _x, _y, of the
+               plotting area, whose nominal extent is -1_<x_<1, -1_<y_<1.
+               The map is clipped to this area.  Missing arguments are
+               taken to be 0.
+
+          -m [ _f_i_l_e ... ]
+
+
+
+     Page 2                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     MAP(7)                                                     MAP(7)
+
+
+
+               Use map data from named files.  If no files are named,
+               omit map data.  Files that cannot be found directly are
+               looked up a standard directory, which contains, in
+               addition to the data for -f,
+
+               world     World Data Bank I from CIA (default)
+               states    US map from Census Bureau
+               counties  US map from Census Bureau
+
+               The environment variables MAP and MAPDIR change the
+               default map and default directory.
+
+          -b [ _l_a_t_1 _l_o_n_1 _l_a_t_2 _l_o_n_2 ... ]
+               Suppress the drawing of the normal boundary (defined by
+               options -l and -w).  Coordinates, if present, define
+               the vertices of a polygon to which the map is clipped.
+               If only two vertices are given, they are taken to be
+               the diagonal of a rectangle.  To draw the polygon, give
+               its vertices as a -u track.
+
+          -t _f_i_l_e ...
+               The arguments name ASCII files that contain lists of
+               points, given as latitude-longitude pairs in degrees.
+               If the first file is named `-', the standard input is
+               taken instead.  The points of each list are plotted as
+               connected `tracks'.
+
+               Points in a track file may be followed by label
+               strings.  A label breaks the track.  A label may be
+               prefixed by ", `:', or `!'  and is terminated by a new-
+               line.  An unprefixed string or a string prefixed with "
+               is displayed at the designated point.  The first word
+               of a `:' or `!'  string names a special symbol (see
+               option -y).  An optional numerical second word is a
+               scale factor for the size of the symbol, 1 by default.
+               A `:' symbol is aligned with its top to the north; a
+               `!'  symbol is aligned vertically on the page.
+
+          -u _f_i_l_e ...
+               Same as -t, except the tracks are unbroken lines.  (-t
+               tracks are dot-dash lines.)
+
+          -y _f_i_l_e
+               The _f_i_l_e contains _p_l_o_t(5)-style data for `:' or `!'
+               labels in -t or -u files.  Each symbol is defined by a
+               comment :_n_a_m_e then a sequence of `m' and `v' commands.
+               Coordinates (0,0) fall on the plotting point.  Default
+               scaling is as if the nominal plotting range were `ra -1
+               -1 1 1'; `ra' commands in _f_i_l_e change the scaling.
+
+     EXAMPLES
+          map perspective 1.025 -o 40.75 74
+
+
+
+     Page 3                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     MAP(7)                                                     MAP(7)
+
+
+
+               A view looking down on New York from 100 miles (0.025
+               of the 4000-mile earth radius).  The job can be done
+               faster by limiting the map so as not to `plot' the
+               invisible part of the world: `map perspective 1.025 -o
+               40.75 74 -l 20 60 30 100'.  A circular border can be
+               forced by adding option `-w 77.33'.  (Latitude 77.338o9
+               falls just inside a polar cap of opening angle arc-
+               cos(1/1.025) = 12.68048o9.)
+
+          map mercator -o 49.25 -106 180
+               A map whose `equator' is a great circle pasing east-
+               west through New York.  The pole of the map is placed
+               908o9 away (40.75+49.25=90) on the other side of the
+               earth.  A 1808o9 twist around the pole of the map
+               arranges that the Prime Meridian of the map runs from
+               the pole of the map over the North Pole to New York
+               instead of down the back side of the earth.  The same
+               effect can be had from map mercator -o 130.75 74
+
+          map albers 28 45 -l 20 50 60 130 -m states
+               A customary curved-latitude map of the United States.
+
+          map albers 28 45 -l 20 50 60 130 -y yfile -t tfile
+               An example of tracks, labels, and symbols.  Arrows at
+               New York and Miami are 8% and 12% as long as the map is
+               wide.  The contents of `yfile' and `tfile' are
+               ra -50 -50 50 50              25.77 80.20 :arrow 12
+               :arrow                        25.77  80.20 Miami
+               m -1 0                        25.77  80.20
+               v 0 0                         35.00  74.02
+               v -.6 .3                      40.67  74.02 !arrow 8
+               m -.6 -.3                     40.67  74.02 " New York
+               v 0 0                         34.05 118.25 Los Angeles
+
+          map harrison 2 30 -l -90 90 120 240 -o 90 0 0
+               A fan view covering 608o9 on either
+               side of the Date Line, as seen from one earth radius
+               above the North Pole gazing at the
+               earth's limb, which is 308o9 off vertical.
+               Option
+               -o
+               overrides the default
+               -o 90 0 180,
+               which would rotate
+               the scene to behind the observer.
+
+     FILES
+          All files in directory $MAPDIR
+
+          [1-4]??   World Data Bank II for option -f
+          world,states,counties
+                    default and other maps for option -m
+
+
+
+     Page 4                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     MAP(7)                                                     MAP(7)
+
+
+
+          *.x       map indexes
+          map       the program proper
+
+     SEE ALSO
+          _m_a_p(5), _p_r_o_j(3), _p_l_o_t(1)
+
+     DIAGNOSTICS
+          `Map seems to be empty'-a coarse survey found zero extent
+          within the -l and -w bounds; for maps of limited extent the
+          grid resolution, _r_e_s, or the limits may have to be refined.
+
+     BUGS
+          The syntax of range specifications in -y files differs from
+          that in options.
+          Windows (option -w) cannot cross the Date Line.
+          No borders appear along edges arising from visibility lim-
+          its.
+          Segments that cross a border are dropped, not clipped.
+          Certain very long line segments are dropped on the assump-
+          tion that they were intended to go the other way around the
+          world.
+          Automatic scaling may miss the extreme points of peculiarly
+          shaped maps; use option -p to recover.
+          Although _m_a_p draws grid lines dotted and -t tracks dot-
+          dashed, many plotting filters cannot cope and make them
+          solid.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     Page 5                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PROJ(3X)                    (bowell)                     PROJ(3X)
+
+
+
+     NAME
+          orient, normalize - map projections
+
+     SYNOPSIS
+          orient(lat, lon, rot)
+          double lat, lon, rot;
+
+          normalize(p)
+          struct place *p;
+
+     DESCRIPTION
+          Users of _m_a_p(7) may skip to the description of `Projection
+          generators' below.
+
+          The functions _o_r_i_e_n_t and _n_o_r_m_a_l_i_z_e plus a collection of map
+          projection generators are loaded by option -lmap of _l_d(1).
+          Most of them calculate maps for a spherical earth.  Each map
+          projection is available in one standard form, into which
+          data must be normalized for transverse or nonpolar projec-
+          tions.
+
+          Each standard projection is displayed with the Prime Merid-
+          ian (longitude 0) being a straight vertical line, along
+          which North is up.  The orientation of nonstandard projec-
+          tions is specified by _o_r_i_e_n_t. Imagine a transparent gridded
+          sphere around the globe.  First turn the overlay about the
+          North Pole so that the Prime Meridian (longitude 0) of the
+          overlay coincides with meridian _l_o_n on the globe.  Then tilt
+          the North Pole of the overlay along its Prime Meridian to
+          latitude _l_a_t on the globe.  Finally again turn the overlay
+          about its `North Pole' so that its Prime Meridian coincides
+          with the previous position of (the overlay's) meridian _r_o_t.
+          Project the desired map in the standard form appropriate to
+          the overlay, but presenting information from the underlying
+          globe.  It is not useful to use _o_r_i_e_n_t without using
+          _n_o_r_m_a_l_i_z_e.
+
+          _N_o_r_m_a_l_i_z_e converts latitude-longitude coordinates on the
+          globe to coordinates on the overlaid grid.  The coordinates
+          and their sines and cosines are input to _n_o_r_m_a_l_i_z_e in a
+          place structure.  Transformed coordinates and their sines
+          and cosines are returned in the same structure.
+
+                  struct place {
+                          double radianlat, sinlat, coslat;
+                          double radianlon, sinlon, coslon;
+                  };
+
+          The projection generators return a pointer to a function
+          that converts normalized coordinates to _x-_y coordinates for
+          the desired map, or 0 if the required projection is not
+          available.  The returned function is exemplified by _p_r_o_j in
+
+
+
+     Page 6                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PROJ(3X)                    (bowell)                     PROJ(3X)
+
+
+
+          this example:
+
+                  struct place pt;
+                  int (*proj)() = mercator();
+                  double x, y;
+
+                  orient(45.0, 30.0, 180.0);      /* set coordinate rotation */
+
+                  . . .                           /* fill in the pt structure */
+                  normalize(&pt);                 /* rotate coordinates */
+                  if((*proj)(&pt, &x, &y) > 0)    /* project onto x,y plane */
+                          plot(x, y);
+
+          The projection function (*proj)() returns 1 for a good
+          point, 0 for a point on a wrong sheet (e.g. the back of the
+          world in a perspective projection), and -1 for a point that
+          is deemed unplottable (e.g. points near the poles on a Mer-
+          cator projection).
+
+          Scaling may be determined from the _x-_y coordinates of
+          selected points.  Latitudes and longitudes are measured in
+          degrees for ease of specification for _o_r_i_e_n_t and the projec-
+          tion generators but in radians for ease of calculation for
+          _n_o_r_m_a_l_i_z_e and _p_r_o_j. In either case latitude is measured pos-
+          itive north of the equator, and longitude positive west of
+          Greenwich.  Radian longitude should be limited to the range
+          -_p_i <= _l_o_n < _p_i.
+
+        Projection generators
+          Equatorial projections centered on the Prime Meridian (lon-
+          gitude 0).  Parallels are straight horizontal lines.
+               mercator() equally spaced straight meridians, confor-
+               mal, straight compass courses
+               sinusoidal() equally spaced parallels, equal-area, same
+               as _b_o_n_n_e(_0)
+               cylequalarea(lat0) equally spaced straight meridians,
+               equal-area, true scale on _l_a_t_0
+               cylindrical() central projection on tangent cylinder
+               rectangular(lat0) equally spaced parallels, equally
+               spaced straight meridians, true scale on _l_a_t_0
+               gall(lat0) parallels spaced stereographically on prime
+               meridian, equally spaced straight meridians, true scale
+               on _l_a_t_0
+               mollweide() (homalographic) equal-area, hemisphere is a
+               circle
+
+          Azimuthal projections centered on the North Pole.  Parallels
+          are concentric circles.  Meridians are equally spaced radial
+          lines.
+               azequidistant() equally spaced parallels, true dis-
+               tances from pole
+               azequalarea() equal-area
+
+
+
+     Page 7                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PROJ(3X)                    (bowell)                     PROJ(3X)
+
+
+
+               gnomonic() central projection on tangent plane,
+               straight great circles
+               perspective(dist) viewed along earth's axis _d_i_s_t earth
+               radii from center of earth
+               orthographic() viewed from infinity
+               stereographic() conformal, projected from opposite pole
+               laue() _r_a_d_i_u_s = tan(2x_c_o_l_a_t_i_t_u_d_e), used in xray crys-
+               tallography
+               fisheye(n) stereographic seen from just inside medium
+               with refractive index n
+               newyorker(r) _r_a_d_i_u_s = log(_c_o_l_a_t_i_t_u_d_e/_r): extreme `fish-
+               eye' view from pedestal of radius _r degrees
+
+          Polar conic projections symmetric about the Prime Meridian.
+          Parallels are segments of concentric circles.  Except in the
+          Bonne projection, meridians are equally spaced radial lines
+          orthogonal to the parallels.
+               conic(lat0) central projection on cone tangent at _l_a_t_0
+               simpleconic(lat0,lat1) equally spaced parallels, true
+               scale on _l_a_t_0 and _l_a_t_1
+               lambert(lat0,lat1) conformal, true scale on _l_a_t_0 and
+               _l_a_t_1
+               albers(lat0,lat1) equal-area, true scale on _l_a_t_0 and
+               _l_a_t_1
+               bonne(lat0) equally spaced parallels, equal-area, par-
+               allel _l_a_t_0 developed from tangent cone
+
+          Projections with bilateral symmetry about the Prime Meridian
+          and the equator.
+               polyconic() parallels developed from tangent cones,
+               equally spaced along Prime Meridian
+               aitoff() equal-area projection of globe onto 2-to-1
+               ellipse, based on _a_z_e_q_u_a_l_a_r_e_a
+               lagrange() conformal, maps whole sphere into a circle
+               bicentric(lon0) points plotted at true azimuth from two
+               centers on the equator at longitudes +__l_o_n_0, great cir-
+               cles are straight lines (a stretched gnomonic projec-
+               tion)
+               elliptic(lon0) points are plotted at true distance from
+               two centers on the equator at longitudes +__l_o_n_0
+               globular() hemisphere is circle, circular arc meridians
+               equally spaced on equator, circular arc parallels
+               equally spaced on 0- and 90-degree meridians
+               vandergrinten() sphere is circle, meridians as in
+               _g_l_o_b_u_l_a_r, circular arc parallels resemble _m_e_r_c_a_t_o_r
+
+          Doubly periodic conformal projections.
+               guyou() W and E hemispheres are square
+               square() world is square with Poles at diagonally oppo-
+               site corners
+               tetra() map on tetrahedron with edge tangent to Prime
+               Meridian at S Pole, unfolded into equilateral triangle
+
+
+
+     Page 8                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PROJ(3X)                    (bowell)                     PROJ(3X)
+
+
+
+               hex() world is hexagon centered on N Pole, N and S
+               hemispheres are equilateral triangles
+
+          Miscellaneous projections.
+               harrison(dist,angle) oblique perspective from above the
+               North Pole, _d_i_s_t earth radii from center of earth,
+               looking along the Date Line _a_n_g_l_e degrees off vertical
+               trapezoidal(lat0,lat1) equally spaced parallels,
+               straight meridians equally spaced along parallels, true
+               scale at _l_a_t_0 and _l_a_t_1 on Prime Meridian
+
+          Retroazimuthal projections.  At every point the angle
+          between vertical and a straight line to `Mecca', latitude
+          _l_a_t_0 on the prime meridian, is the true bearing of Mecca.
+               mecca(lat0) equally spaced vertical meridians
+               homing(lat0) distances to `Mecca' are true
+
+          Maps based on the spheroid.  Of geodetic quality, these pro-
+          jections do not make sense for tilted orientations.  For
+          descriptions, see corresponding maps above.
+               sp_mercator()
+               sp_albers(lat0,lat1)
+
+     SEE ALSO
+          _m_a_p(7), _m_a_p(5), _p_l_o_t(3)
+
+     BUGS
+          Only one projection and one orientation can be active at a
+          time.
+          The west-longitude-positive convention betrays Yankee chau-
+          vinism.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     Page 9                    Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     MAP(5)                                                     MAP(5)
+
+
+
+     NAME
+          map - digitized map formats
+
+     DESCRIPTION
+          Files used by _m_a_p(7) are a sequence of structures of the
+          form:
+
+          struct {
+               signed char patchlatitude;
+               signed char patchlongitude;
+               short n;
+               union {
+                    struct {
+                         short latitude;
+                         short longitude;
+                    } point[n];
+                    struct {
+                         short latitude;
+                         short longitude;
+                         struct {
+                              signed char latdiff;
+                              signed char londiff;
+                         } point[-n];
+                    } highres;
+               } segment;
+          };
+
+          Fields `patchlatitude' and `patchlongitude' tell to what
+          10-degree by 10-degree patch of the earth's surface a seg-
+          ment belongs.  Their values range from -9 to 8 and from -18
+          to 17, respectively, and indicate the coordinates of the
+          southeast corner of the patch in units of 10 degrees.
+
+          Each segment of |n| points is connected; consecutive seg-
+          ments are not necessarily related.  Latitude and longitude
+          are measured in units of 0.0001 radian.  If n is negative,
+          then differences to the first and succeeding points are mea-
+          sured in units of 0.00001 radian.  Latitude is counted posi-
+          tive to the north and longitude positive to the west.
+
+          The patches are ordered lexicographically by `patchlatitude'
+          then `patchlongitude'.  A printable index to the first seg-
+          ment of each patch in a file named _d_a_t_a is kept in an asso-
+          ciated file named _d_a_t_a.x.  Each line of an index file con-
+          tains `patchlatitude,' `patchlongitude' and the byte posi-
+          tion of the patch in the map file.  Both the map file and
+          the index file are ordered by patch latitude and longitude.
+
+          Shorts are stored in little-endian order, low byte first,
+          regardless of computer architecture.  To assure portability,
+          _m_a_p accesses them bytewise.
+
+
+
+
+     Page 10                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     MAP(5)                                                     MAP(5)
+
+
+
+     SEE ALSO
+          _m_a_p(7), _p_r_o_j(3)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     Page 11                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PLOT(5)                                                   PLOT(5)
+
+
+
+     NAME
+          plot - graphics interface
+
+     DESCRIPTION
+          Files of this format are produced by routines described in
+          _p_l_o_t(3), and are interpreted for various devices by commands
+          described in _p_l_o_t(1).  A graphics file is an ASCII stream of
+          instruction lines.  Arguments are delimited by spaces, tabs,
+          or commas.  Numbers may be floating point.  Punctuation
+          marks (except `:') , spaces, and tabs at the beginning of
+          lines are ignored.  Comments run from `:' to newline.  Extra
+          letters appended to a valid instruction are ignored.  Thus
+          `...line', `line', `li' all mean the same thing.  Arguments
+          are interpreted as follows:
+
+          1.   If an instruction requires no arguments, the rest of
+               the line is ignored.
+
+          2.   If it requires a string argument, then all the line
+               after the first field separator is passed as argument.
+               Quote marks may be used to preserve leading blanks.
+               Strings may include newlines represented as `\n'.
+
+          3.   Between numeric arguments alphabetic characters and
+               punctuation marks are ignored.  Thus line from 5 6 to 7
+               8 draws a line from (5, 6) to (7, 8).
+
+          4.   Instructions with numeric arguments remain in effect
+               until a new instruction is read.  Such commands may
+               spill over many lines. Thus the following sequence will
+               draw a polygon with vertices (4.5, 6.77), (5.8, 5.6),
+               (7.8, 4.55), and (10.0, 3.6).
+
+               move 4.5 6.77
+               vec 5.8, 5.6 7.8
+               4.55 10.0, 3.6 4.5, 6.77
+
+          The instructions are executed in order.  The last designated
+          point in a line, move, rmove, vec, rvec, arc, or point com-
+          mand becomes the `current point' (_X,_Y) for the next command.
+          Each of the following descriptions corresponds to a routine
+          in _p_l_o_t(3).
+
+        Open & Close
+          o _s_t_r_i_n_g  Open plotting device.  For _t_r_o_f_f, _s_t_r_i_n_g specifies
+                    the size of the plot (default is `6i.')
+          cl        Close plotting device.
+
+        Basic Plotting Commands
+          e         Start another frame of output or erase the screen
+                    on CRT terminals without scroll.
+          m _x _y     (move) Current point becomes _x _y.
+
+
+
+     Page 12                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PLOT(5)                                                   PLOT(5)
+
+
+
+          rm _d_x _d_y  Current point becomes _X+_d_x _Y+_d_y.
+          poi _x _y   Plot the point _x _y and make it the current point.
+          v _x _y     Draw a vector from the current point to _x _y.
+          rv _d_x _d_y  Draw vector from current point to X+dx Y+dy
+          li _x_1 _y_1 _x_2 _y_2
+                    Draw a line from _x_1 _y_1 to _x_2 _y_2. Make the current
+                    point _x_2 _y_2.
+          t _s_t_r_i_n_g  Place the _s_t_r_i_n_g so that its first character is
+                    centered on the current point (default).  If
+                    _s_t_r_i_n_g begins with `\C' (`\R'), it is centered
+                    (right-adjusted) on the current point.  A back-
+                    slash at the beginning of the string may be
+                    escaped with another backslash.
+          a _x_1 _y_1 _x_2 _y_2 _x_c _y_c _r
+                    Draw a circular arc from _x_1 _y_1 to _x_2 _y_2 with cen-
+                    ter _x_c _y_c and radius _r. If the radius is positive,
+                    the arc is drawn counterclockwise; negative,
+                    clockwise.  The starting point is exact but the
+                    ending point is approximate.
+          ci _x_c _y_c _r
+                    Draw a circle centered at _x_c _y_c with radius _r. If
+                    the range and frame parameters do not specify a
+                    square, the `circle' will be elliptical.
+          di _x_c _y_c _r
+                    Draw a disc centered at _x_c _y_c with radius _r using
+                    the filling color (see cfill below).  Only works
+                    on the 5620; on other devices is the same as
+                    circle.
+          bo _x_1 _y_1 _x_2 _y_2
+                    Draw a box with lower left corner at _x_1 _y_1 and
+                    upper right corner at _x_2 _y_2.
+          sb _x_1 _y_1 _x_2 _y_2
+                    Draw a solid box with lower left corner at _x_1 _y_1
+                    and upper right corner at _x_2 _y_2 using the filling
+                    color (see cfill below).
+          par _x_1 _y_1 _x_2 _y_2 _x_g _y_g
+                    Draw a parabola from _x_1 _y_1 to _x_2 _y_2 `guided' by _x_g
+                    _y_g. The parabola passes through the midpoint of
+                    the line joining _x_g _y_g with the midpoint of the
+                    line joining _x_1 _y_1 and _x_2 _y_2 and is tangent to the
+                    lines from _x_g _y_g to the endpoints.
+          pol { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+                    Draw polygons with vertices _x_1 _y_1 ... _x_n _y_n and _X_1
+                    _Y_1 ... _X_m _Y_m. If only one polygon is specified,
+                    the inner brackets are not needed.
+          fi { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+                    Fill a polygon.  The arguments are the same as
+                    those for pol except that the first vertex is
+                    automatically repeated to close each polygon.  The
+                    polygons do not have to be connected.  Enclosed
+                    polygons appear as holes.
+          sp { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+
+
+
+     Page 13                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PLOT(5)                                                   PLOT(5)
+
+
+
+                    Draw a parabolic spline guided by _x_1 _y_1 ... _x_n _y_n
+                    with simple endpoints.
+          fsp { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+                    Draw a parabolic spline guided by _x_1 _y_1 ... _x_n _y_n
+                    with double first endpoint.
+          lsp { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+                    Draw a parabolic spline guided by _x_1 _y_1 ... _x_n _y_n
+                    with double last endpoint.
+          dsp { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+                    Draw a parabolic spline guided by _x_1 _y_1 ... _x_n _y_n
+                    with double endpoints.
+          csp { {_x_1 _y_1 ... _x_n _y_n} ... {_X_1 _Y_1 ... _X_m _Y_m} }
+          in _f_i_l_e_n_a_m_e
+                    (include) Take commands from _f_i_l_e_n_a_m_e.
+          de _s_t_r_i_n_g { _c_o_m_m_a_n_d_s }
+                    Define _s_t_r_i_n_g as _c_o_m_m_a_n_d_s.
+          ca _s_t_r_i_n_g _s_c_a_l_e
+                    Invoke commands defined as _s_t_r_i_n_g applying _s_c_a_l_e
+                    to all coordinates.
+
+        Commands Controlling the Environment
+          co _s_t_r_i_n_g Draw lines with color _s_t_r_i_n_g. Available colors
+                    depend on the device.  _S_t_r_i_n_g may contain defini-
+                    tions for several devices separated by `/'.  Col-
+                    ors possible for the various devices are:
+                    pen  black, red, green, blue, Tblack, Tred,
+                         Tgreen, Tblue (assumes default carousel,
+                         T=thick)
+                         1-8 (pen number)
+                         S_n_u_m_b_e_r character size as % of plotting area
+                    troff
+                         F_f_o_n_t
+                         P_p_o_i_n_t _s_i_z_e
+                    2621 H_c_h_a_r_a_c_t_e_r for plotting
+
+          pe _s_t_r_i_n_g Use _s_t_r_i_n_g as the style for drawing lines.  Not
+                    all pen styles are implemented for all devices.
+                    _S_t_r_i_n_g may contain definitions for several devices
+                    separated by `/'.  The available pen styles are:
+
+                    pen  solid, dott[ed], short, long, dotd[ashed],
+                         cdash, ddash
+                    4014 solid , dott[ed], short, long, dotd[ashed],
+                         ddash
+                    troff
+                         solid, dash only straight lines will be
+                         dashed
+                    5620 B_n_u_m_b_e_r line thickness
+                    2621 H_c_h_a_r_a_c_t_e_r for plotting
+
+          cf _s_t_r_i_n_g Color for filling; may contain the definitions for
+                    several devices.  separated by `/'.  The following
+
+
+
+     Page 14                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     PLOT(5)                                                   PLOT(5)
+
+
+
+                    colors are available on the specified devices:
+
+                    pen  black, red, green, blue, Tblack, Tred,
+                         Tgreen, Tblue
+                         1-8 pen number
+                    5620 B_t_e_x_t_u_r_e string with octal numbers for tex-
+                         ture; see _t_y_p_e_s(9.5).  The 16 words of tex-
+                         ture should be followed by one word for the
+                         mode used by _t_e_x_t_u_r_e(); see _b_i_t_b_l_t(9.3).
+                    2621 H_c_h_a_r_a_c_t_e_r for filling
+                    All  /A_d_e_g_r_e_e_s slant of shading lines
+                         /G_n_u_m_b_e_r gap between shading lines (in user
+                         units)
+
+          ra _x_1 _y_1 _x_2 _y_2
+                    The data will fall between _x_1 _y_1 and _x_2 _y_2. The
+                    plot will be magnified or reduced to fit the
+                    device as closely as possible.
+
+                    Range settings that exactly fill the plotting area
+                    with unity scaling appear below for devices sup-
+                    ported by the filters of _p_l_o_t(1).  The upper limit
+                    is just outside the plotting area.  In every case
+                    the plotting area is taken to be square; points
+                    outside may be displayable on devices with non-
+                    square faces.
+
+                    4014      `range 0. 0. 3120. 3120.'
+                    troff     `range 0. 0. 6144. 6144.'
+                    2621      `range 0. 0. 22. 22.'
+                    5620      range dependent on layer size
+                    pen       range dependent on paper size
+
+          fr _p_x_1 _p_y_1 _p_x_2 _p_y_2
+                    Plot the data in the fraction of the display spec-
+                    ified by _p_x_1 _p_y_1 for lower left corner and _p_x_2 _p_y_2
+                    for upper right corner.  Thus `frame .5 0 1. .5'
+                    plots in the lower right quadrant of the display;
+                    `frame 0. 1. 1. 0.'  uses the whole display but
+                    inverts the _y coordinates.
+
+          sa        Save the current environment, and move to a new
+                    one.  The new environment inherits the old one.
+                    There are 7 levels.
+
+          re        Restore previous environment.
+
+     SEE ALSO
+          _p_l_o_t(1), _p_l_o_t(3), _g_r_a_p_h(1)
+
+
+
+
+
+
+     Page 15                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     ROUTE(1)                                                 ROUTE(1)
+
+
+
+     NAME
+          route - map orientations and great circle paths
+
+     SYNOPSIS
+          route [ -t ]
+
+     DESCRIPTION
+          _R_o_u_t_e without an option reads from the standard input a
+          sequence of points, expressed as latitude-longitude pairs.
+          For each pair of points, say A and B, _r_o_u_t_e prints on the
+          standard output
+
+          -    A _m_a_p(7) orientation, expressed as a -o option, that
+               transforms the great circle from A to B into the equa-
+               tor.  The transformed locations of A and B are located
+               on the equator at equal distances west and east of the
+               Prime Meridian.
+
+          -    The transformed coordinates of the two points.
+
+          -    The same information for a map orientation in which
+               point A appears to the east and B to the west of the
+               Prime Meridian.
+
+          Under option -t _r_o_u_t_e produces coordinates along the great
+          circle from A to B in the form of a track for use with _m_a_p
+          option -t.
+
+          Coordinates are expressed in degrees, with latitude positive
+          north of the equator and longitude positive west of Green-
+          wich.
+
+     EXAMPLES
+          echo 40.75 74 52 0 | route -t | map mercator -l 30 70 -10 80
+               -t - | plot
+               Produce a map of the North Atlantic with a great circle
+               plotted from New York to London.
+
+          route
+          40.75 74 52 0
+               Produces the output
+
+                    -o 35.8283 -157.5308 -168.6148
+                    A -0.0000 24.9943
+                    B -0.0000 -24.9943
+                    -o -35.8283 22.4692 168.6149
+                    A -0.0000 -24.9943
+                    B 0.0000 24.9943
+
+               From this we derive the following command to draw a
+               strip map 20 degrees wide along the great circle from
+               New York to London.  The -w option windows the map in
+
+
+
+     Page 16                   Tenth Edition          (printed 2/9/93)
+
+
+
+
+
+
+     ROUTE(1)                                                 ROUTE(1)
+
+
+
+               the new coordinate system, where the equator runs along
+               the great circle and the two cities sit at 25W and 25E
+               on that `equator'.  The -l option avoids surveying the
+               whole rest of the world for plottable points.
+
+               map mercator -o 35.83 -157.53 -168.61 -w -10 10 -30 30
+               -l 30 75 -10 80
+
+     SEE ALSO
+          _m_a_p(7)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     Page 17                   Tenth Edition          (printed 2/9/93)
+
+
+

@@ -1,0 +1,562 @@
+###
+### acm reference formatting style
+###
+
+BEGIN	{
+	PASS="%TWOPASS";	# only one pass thru document
+	sortflag = 1;		# reference_placement bib is sortedone
+	STYLE = "acm";
+	SKEY = "atd";
+}
+
+
+
+#######################################################
+#
+# Functions required by general awk script
+#
+#######################################################
+
+
+##
+## Set author and editor fields
+##	for reference list
+##	for citation
+##	for possible sorting
+##
+
+func setauthor(b,a) {
+
+	Afull[b,a] = LastFM();
+	Asort[b] = Asort[b] Afull[b,a] " ";
+}
+
+func seteditor(b,a) {
+	E[b,a] = FMLast();
+	Efull[b,a] = LastFM();
+	Esort[b] = Esort[b] Efull[b,a] " ";
+}
+
+
+##
+## citations
+##	print a citation list
+##	(Last, year; Last, year...)
+##
+func citations(lastpunc) {
+	seq = "no";
+	punc = "\n";
+	if(lastpunc == "\"" || lastpunc == "'") {
+		punc = lastpunc " ";
+		lastpunc = "\\ ";
+	}
+	if(lastpunc == "(") {
+		punc = lastpunc;
+		lastpunc = "";
+	}
+	for(i=1; i<=cites; i++) {
+		cn = bibptr[i]
+		seq = sequence(i,cites);
+		if (seq == "in") continue;
+		if (seq == "end") {
+			punc = "-";
+			seq = "no";
+		}
+		printf "%s[", punc;
+		if (pre_text[cn]) printf "%s ", pre_text[cn];
+		printf "%s", makemark(i);
+		if(post_text[cn]) {
+			if (is_punc(substr(post_text[cn],1,1)) == 0) print "";
+			printf "%s", post_text[cn];
+		}
+		printf "]";
+		punc = ", ";
+	}
+	printf lastpunc;
+}
+
+func is_punc(p)
+{
+	if(p == ",") return 1;
+	if(p == ".") return 1;
+	if(p == ";") return 1;
+	return 0;
+}
+
+
+##
+## makemark
+##	return citation mark: identical citations have the same number
+##
+func makemark(m) {
+	return(inverse[uniqno[bibptr[m]]]);
+}
+
+
+
+##
+## bibindex
+##	print citation mark for the bibliography;
+##	return an index for accessing rest of citation
+##
+func bibindex(i) {
+	print ".in \\w'999.\\ 'u"
+	printf ".sp .5\n.ti -\\w'%s.\\ 'u\n",i;
+	printf "%s.\\ ", i ;
+	if(sortflag) return sortorder[i];
+	else return i;
+}
+
+
+
+#############################################
+#
+# Reference types
+#
+############################################
+
+
+func book(b) {
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# italic title.
+			if(title[b])
+				printf "\\f2\\&%s\\f1\\&.\n", title[b];
+	# Vol. #.
+			if (volstr[b])
+				printf "%s.\n", volstr[b] ;
+			else if (volume[b])
+				printf "Vol. %s.\n", volume[b] ;
+	# publisher, location
+			printf "%s", issuer[b] ;
+			punc = ",\n";
+			if (city[b]) printf ", %s", city[b] ;
+	# date
+			printf punc date[b] ;
+}
+
+func editedbook(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				if(authors[b] <2)
+					printf ", Ed.\n";
+				else
+					printf ", Eds.\n";
+			}
+	# italic title.
+			if(title[b])
+				printf "\\f2\\&%s\\f1\\&.\n", title[b];
+	# Vol. #.
+			if (volstr[b])
+				printf "%s.\n", volstr[b] ;
+			else if (volume[b])
+				printf "Vol. %s.\n", volume[b] ;
+	# publisher, location
+			printf "%s", issuer[b] ;
+			if (city[b]) printf ", %s", city[b] ;
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+
+
+func incollection(b) {
+
+	# Authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# Title.
+			if(title[b])
+				printf "%s.\n", title[b] ;
+	# in italics booktitle,
+			printf "In \\f2\\&%s\\f1\\&,\n", booktitle[b];
+	# Vol. #,
+			if (volstr[b])
+				printf "%s,\n", volstr[b] ;
+			else if (volume[b])
+				printf "Vol. %s,\n", volume[b] ;
+	# editorlist Ed.
+			if (editors[b]) {
+				editorlist(b);
+				if (editors[b] == 1) printf ", Ed.\n"
+				else if (editors[b] > 1) printf ", Eds.\n"
+			}
+	# publisher, location
+			printf "%s", issuer[b] ;
+			if (city[b]) printf ", %s", city[b] ;
+	# date,
+			printf ",\n%s", date[b] ;
+	# pages,
+			if ( pages[b]) {
+				if ( pages[b] ~ /[,-]/ )
+					printf ",\npp. %s", pages[b];
+				else printf ",\np. %s", pages[b];
+			}
+}
+
+func thesis(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# italic title.
+			if(title[b])
+				printf "%s.\n", title[b];
+	# thesis, publisher, 
+			if(reftype[b] == "phdthesis")
+				printf "PhD Thesis, %s", issuer[b];
+			else if(reftype[b] == "mastersthesis")
+				printf "Master's Thesis, %s", issuer[b];
+
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+
+
+func review(b) {
+	article(b);
+}
+
+func article(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+				}
+	# title.
+			if(title[b])
+				printf "%s.\n", title[b] ;
+	# review
+			if(booktitle[b]) {
+				printf "Review of \\f2\\&%s\\f1\\&", booktitle[b];
+				if(editors[b]) {
+					printf " by "
+					editorlist(b);
+				}
+				if (issuer[b]) {
+					printf " %s", issuer[b];
+				}
+				printf ".\n";
+			}
+	# italics journal
+			printf "\\f2\\&%s\\f1\\&", journal[b];
+	# italics volume,
+			if (volstr[b])
+				printf " \\f2\\&%s\\f1\\&", volstr[b] ;
+			else if (volume[b])
+				printf " \\f2\\&%s\\f1\\&", volume[b] ;
+	# number
+			if(numstr[b])
+				printf ", %s", numstr[b];
+			else if (number[b])
+				printf ", %s", number[b] ;
+	# part
+			if(partstr[b])
+				printf ", %s", partstr[b];
+			else if (part[b])
+				printf ", Pt. %s", part[b] ;
+	# date
+			printf " (%s)", date[b] ;
+	# pages,
+			if ( pages[b]) printf ", %s", pages[b];
+}
+
+
+
+
+func inproceedings(b) {
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# Title.
+			if(title[b])
+				printf "%s.\n", title[b] ;
+	# italics Journal,
+			printf "In \\f2\\&%s\\f1\\&", journal[b];
+	# volume,
+			if (volstr[b])
+				printf ", %s", volstr[b] ;
+			else if (volume[b])
+				printf ", Vol. %s", volume[b] ;
+			if(numstr[b])
+				printf ", %s", numstr[b];
+			else if (number[b])
+				printf ", No. %s", number[b] ;
+			if(partstr[b])
+				printf ", %s", partstr[b];
+			else if (part[b])
+				printf ", Pt. %s", part[b] ;
+	# editorlist Ed.
+			if(editors[b]) {
+				printf ",\n";
+				editorlist(b);
+				if (editors[b] == 1) printf ", Ed."
+				else if (editors[b] > 1) printf ", Eds."
+			}
+	# organization,
+			if(issuer[b])
+				printf ", %s", issuer[b];
+	# location,
+			if(city[b])
+				printf ", %s", city[b];
+	# date,
+			printf ", %s", date[b];
+	# pages,
+			if ( pages[b]) {
+				if ( pages[b] ~ /[,-]/ )
+					printf ", pp. %s", pages[b];
+				else printf ", p. %s", pages[b] ;
+			}
+}
+
+func proceedings(b) {
+			punc = "";
+	# authorlist
+			if(authors[b] >0) {
+				authorlist(b);
+				punc = "\n";
+			}
+				
+	# editorlist Ed.
+			else if(editors[b] > 0) {
+				printf punc;
+				editorlist(b);
+				if (editors[b] == 1) printf ", Ed."
+				else if (editors[b] > 1) printf ", Eds."
+				punc = "\n";
+			}
+	# publisher.
+			else if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ".\n";
+			}
+	# italics(title),
+			if(title[b]) {
+				printf "%s\\f2\\&%s\\f1\\&", punc,title[b];
+				punc = ".\n";
+				if(substr(title[b],length(title[b]),1) == ".")
+					punc = "\n";
+	
+	# volume, number, part.
+				if (volstr[b])
+					printf ", %s", volstr[b] ;
+				else if (volume[b])
+					printf ", Vol. %s", volume[b] ;
+				if(numstr[b])
+					printf ", %s", numstr[b];
+				else if (number[b])
+					printf ", No. %s", number[b] ;
+				if(partstr[b])
+					printf ", %s", partstr[b];
+				else if (part[b])
+					printf ", Pt. %s", part[b] ;
+			}
+	# publisher,
+			if(issuer[b])
+				if(authors[b] || editors[b]) {
+					printf "%s%s", punc, issuer[b];
+					punc = ",\n";
+				}
+	# location,
+			if (city[b]) {
+				printf "%s%s", punc, city[b] ;
+				punc = ",\n";
+			}
+	# date
+			if (date[b])
+				printf "%s%s", punc, date[b];
+}
+
+func techreport(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# title.
+			if(title[b])
+				printf "%s.\n", title[b];
+	# report number,
+			printf report[b] 
+	# publisher,
+			if (issuer[b]) printf ",\n%s", issuer[b] ;
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+func tm(b) {
+
+	# authorlist
+			if(authors[b]) {
+				printfull(b);
+				printf "\n";
+			}
+	# title.
+			if(title[b])
+				printf "%s.\n", title[b];
+	# report number,
+			if(rp)
+				printf "AT&T Bell Laboratories internal memorandum";
+			else
+				printf tmno[b] 
+	# date
+			printf ",\n%s", date[b] ;
+}
+
+
+func manual(b) {
+			punc = "";
+	# authorlist
+			if(authors[b] >0) {
+				printfull(b);
+				punc = "\n";
+			}
+	# editorlist Ed.
+			else if(editors[b]) {
+				printf punc;
+				printedfull(b);
+				if (editors[b] == 1) printf ", Ed."
+				else if (editors[b] > 1) printf ", Eds."
+				punc = "\n";
+			}
+	# publisher
+			else if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ".\n";
+			}
+	# title,
+			if(title[b]) {
+				printf "%s\\f2\\&%s\\f1\\&" ,punc, title[b];
+				punc = ".\n";
+	# Vol. volume,
+				if (volstr[b])
+					printf ", %s", volstr[b] ;
+				else if (volume[b])
+					printf ", Vol. %s", volume[b] ;
+			}
+	# publisher
+			if(issuer[b]) {
+				if(authors[b] || editors[b]) {
+					printf "%s%s", punc, issuer[b];
+					punc = ", ";
+				}
+			}
+	# location
+			if (city[b]) {
+				printf "%s%s", punc, city[b] ;
+				punc = ", ";
+			}
+	# date
+			printf "%s%s", punc, date[b];
+}
+
+func pamphlet(b) {
+	default(b);
+}
+
+func default(b) {
+			punc = "";
+	# authorlist
+			if(authors[b] >0) {
+				printfull(b);
+				punc = "\n";
+			}
+				
+	# publisher.
+			else if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ".\n";
+			}
+	# title,
+			if (title[b]) {
+				printf "%s%s" ,punc, title[b];
+				punc = ".\n";
+			}
+	# volume,
+			if(volstr[b]) {
+				printf ", %s", volstr[b];
+			}
+			else if (volume[b]) {
+				printf ", Vol. %s", punc, volume[b] ;
+			}
+	# publisher,
+			if(issuer[b]) {
+				printf "%s%s", punc, issuer[b];
+				punc = ", ";
+			}
+	# location,
+			if (city[b]) {
+				printf "%s%s", punc, city[b] ;
+				punc = ", ";
+			}
+	# date,
+			if (date[b]) {
+				printf "%s%s", punc, date[b];
+				punc = ", ";
+			}
+	# pages
+			if (pages[b]) {
+				if ( pages[b] ~ /[,-]/ )
+					printf "%spp. %s", punc, pages[b];
+				else
+					printf "%sp. %s", punc, pages[b];
+			}
+}
+
+
+
+
+
+
+# Author, First
+# Author, First and Second Author
+# Author, First, Second Author, and Remaining Authors
+
+func printfull(b) {			
+	if ( authors[b] == 0 ) ;
+	else if ( authors[b] == 1 ) {
+		printf  Afull[b,1] ;
+		if(aetal[b]) printf ", et al.";
+	}
+	else if ( authors[b] == 2 ) printf  Afull[b,1] " and " Afull[b,2];
+	else {
+		for ( j = 1; j < authors[b]; j++ ) printf Afull[b,j] ", ";
+		printf "and " Afull[b,authors[b]];
+	}
+}
+func printedfull(b) {			
+	if ( editors[b] == 0 ) ;
+	else if ( editors[b] == 1 ) {
+		printf  Efull[b,1] ;
+		if(eetal[b]) printf ", et al.";
+	}
+	else if ( editors[b] == 2 ) printf  Efull[b,1] " and " Efull[b,2];
+	else {
+		for ( j = 1; j < editors[b]; j++ ) printf Efull[b,j] ", ";
+		printf "and " Efull[b,editors[b]];
+	}
+}
+
+func editorlist(b) {			
+ 	if ( editors[b] == 0 ) ;
+	else if ( editors[b] == 1 ) printf E[b,1] ;
+	else if ( editors[b] == 2 ) printf E[b,1] " and " E[b,2];
+	else {
+		for ( j = 1; j < editors[b]; j++ ) printf E[b,j] ", ";
+		printf "and " E[b,editors[b]];
+	}
+}

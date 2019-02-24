@@ -1,0 +1,2003 @@
+number.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+
+/* Canonicalize the number string pointed to by dp, of length
+   len.  Put the result in kp.
+
+   A field of length zero, or all blank, is regarded as 0.
+   Over/underflow is rendered as huge or zero and properly signed.
+   It happens 1e+-1022.
+
+   Canonicalized strings may be compared as strings of unsigned
+   chars.  For good measure, a canonical string has no zero bytes.
+
+   Syntax: optionally signed floating point, with optional
+   leading spaces.  A syntax deviation ends the number.
+
+   Form of output: packed in 4-bit nibbles.  First
+   3 nibbles count the number N of significant digits
+   before the decimal point.  The quantity actually stored
+   is 2048+sign(x)*(N+1024).  Further nibbles contain
+   1 decimal digit d each, stored as d+2 if x is positive
+   and as 10-d if x is negative.  Leading and trailing
+   zeros are stripped, and a trailing "digit" d = -1 
+   is appended.  (The trailing digit handled like all others,
+   so encodes as 1 or 0xb according to the sign of x.)
+   An odd number of nibbles is padded with zero.
+
+   Buglet: overflow is reported if output is exactly filled.
+
+*/
+#include "fsort.h"
+
+#define encode(x) (neg? 10-(x): (x)+2)
+#define putdig(x) (nib? (*dig=encode(x)<<4, nib=0): \
+		  (*dig++|=encode(x), nib=1))
+
+static int gflag;
+
+int
+gcode(uchar *dp, uchar*kp, int len, struct field *f)
+<60>{
+	int ret;
+	<60>gflag++;
+	<60>ret = ncode(dp, kp, len, f);
+	<60>gflag--;
+	return <60>ret;
+}
+
+int
+ncode(uchar *dp, uchar*kp, int len, struct field *f)
+<374264>{
+	uchar *dig = <374264>kp + 1;	/* byte for next digit */
+	int nib = <374264>0;	/* high nibble 1, low nibble 0 */
+	uchar *cp = <374264>dp;
+	uchar *ep = <374264>cp + len;	/* end pointer */
+	int zeros = <374264>0;	/* count zeros seen but not installed */
+	int sigdig = <374264>1024;
+	int neg = <374264>f->rflag;	/* 0 for +, 1 for - */
+	int decimal = <374264>0;
+	int n, inv;
+
+	<374264>kp[1] = 0;
+	for( <374264>; <418322>cp<ep ; <44058>cp++)	/* eat blanks */
+		if(<418322>*cp!=' ' && <374272>*cp!='\t')
+			<374264>break;
+	if(<374264>cp < ep)		/* eat sign */
+		switch(<374264>*cp) {
+		case '-':
+			<218>neg ^= 1;
+		case '+':
+			<225>cp++;
+		}
+	for( <374264>; <707527>cp<ep; <333263>cp++)	/* eat leading zeros */
+		if(<707511>*cp != '0')
+			<374248>break;
+	if(<374264>*cp=='.' && <331112>cp<ep) {	/* decimal point among lead zeros */
+		<331112>decimal++;
+		for(<331112>cp++; <367735>cp<ep; <36623>cp++) {
+			if(<367735>*cp != '0')
+				<331112>break;
+			<36623>sigdig--;
+		}
+	}
+	if(<374264>*cp>'9' || <374255>*cp<'0' || <373799>cp>=ep) {	/* no sig digit*/
+		<465>sigdig = 0;
+		<465>neg = 0;
+		<465>goto retzero;
+	}
+	for( <373799>; <2405784>cp<ep; <2031985>cp++) {
+		switch(<2071744>*cp) {
+		default:
+			<39726>goto out;
+		case '.':
+			if(<16>decimal)
+				<2>goto out;
+			<14>decimal++;
+			<14>continue;
+		case '0':
+			<132382>zeros++;
+			if(<132382>!decimal)
+				<3976>sigdig++;
+			<132382>continue;
+		case '1': case '2': case '3': case '4': case '5':
+		case '6': case '7': case '8': case '9':
+			for( <1899589>; <2027985>zeros>0; <128396>zeros--)
+				<128396>putdig<65793>(0);
+			<1899589>n = *cp - '0';
+			<1899589>putdig<929380>(n);
+			if(<1899589>!decimal)
+				<77803>sigdig++;
+			<1899589>continue;
+		case 'e':
+		case 'E':
+			if(<31>!gflag)
+				<6>goto out;
+			<25>inv = 1;
+			if(<25>cp < ep) switch(<25>*++cp) {
+			case '-':
+				<13>inv = -1;
+			case '+':
+				<15>cp++;
+			}
+			if(<25>*cp>'9' || <25>*cp<'0' || <21>cp>=ep)
+				<4>goto out;
+			for(<21>n=0; <62>cp<ep; <41>cp++) {
+				int c = <44>*cp;
+				if(<44>c<'0' || <44>c>'9')
+					<3>break;
+				if(<41>(n = 10*n+c-'0') >= 0)
+					<41>continue;
+				<0>sigdig = 2047*inv;
+				<0>goto out;
+			}
+			<21>sigdig += n*inv;
+			<21>goto out;
+		}
+	}
+out:
+	if(<373799>sigdig<0 || <373799>sigdig>=2047) {
+		<0>sigdig = sigdig<0? <0>0: <0>2047;
+		<0>warn("numeric field overflow", (char*)dp, len);
+		<0>dig = kp + 1;
+		<0>*dig = 0;
+		<0>nib = 0;
+	}
+retzero:
+	if(<374264>neg)
+		<219>sigdig = 2048 - sigdig;
+	else
+		<374045>sigdig = 2048 + sigdig;
+	<374264>kp[0] = sigdig >> 4;
+	<374264>kp[1] |= sigdig << 4;
+	<374264>putdig<37639>(-1);
+	return <374264>dig - kp + 1 - nib;
+}
+rsort.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+#include "fsort.h"
+
+/* Radix sort by bytes.  Records are chained in a list.
+   There are up to 257 bins at each recursion level.
+   The "null bin" is for short strings that have run out;
+   the rest are for byte values 0-255 */
+
+int aflag = 0;
+int uflag = 0;
+int rflag = 0;
+int sflag = 0;
+
+/* Sort the list s by distributing according to
+   digit d into an array of bins, sorting the bins
+   recursively, and re-collecting them back into the list.
+   If uflag is nonzero return only 1 representative of
+   each equivalence class.  The squeeze step noted
+   below determines what bins are in use, and squeezes
+   those into a stack frame, which is contiguous to s.
+   The null bin is handled separately to cut the span
+   of the squeeze loop.
+   Precondition: length(s) > 1 */
+
+#define tiebreak(t)					\
+	if(uflag) {					\
+		t->tail = !aflag? t->head:		\
+			  listaccum(t->head, t->tail);	\
+		t->tail->next = 0;			\
+	} else if(keyed && !sflag && t->head->next) {	\
+		rflag = fields[0].rflag;		\
+		keyed = 0;				\
+		sort(t, 0);				\
+		keyed = 1;				\
+		rflag = 0;				\
+	} else
+
+void
+sort(struct list *s, int d)
+<126745>{
+	extern int uflag;
+	struct list *t;
+	struct rec *r, *q;
+	struct list *frame = <126745>s + 1;	/* stack frame */
+	static struct list bins[257];
+#	define nullbin (bins+256)
+	int nbin;		/* number of filled bins */
+	struct list *low; /* lowest unsorted nonnull bin */
+loop:
+	<447576>r = s->head;
+	<447576>low = bins + 256;
+	<447576>nbin = 0;
+	while(<3688466>r) {
+		if(<3240890>keyed)
+			if(<1334292>r->klen > (len_t)d)
+				<1116270>t = bins + key(r)[d];
+			else
+				<218022>t = nullbin;
+		else
+			if(<1906598>r->dlen > (len_t)d)
+				<1714238>t = bins + data(r)[d];
+			else
+				<192360>t = nullbin;
+		if(<3240890>t->head == 0) {
+			if(<555902>low > t)
+				<363502>low = t;
+			<555902>t->head = r;
+			<555902>nbin++;
+		} else
+			<2684988>t->tail->next = r;	/* stable sort */
+		<3240890>t->tail = r;
+		<3240890>r = r->next;
+	}
+	<447576>t = frame;			/* t is stack top */
+	if(<447576>t+nbin > stackmax)
+		<0>fatal("stack overflow", "", 0);
+#	define push(b)		/* onto stack */	\
+		*t = *b,				\
+		t->tail->next = 0,			\
+		t++,					\
+		b->head = 0,				\
+		nbin--
+	if(<447576>nullbin->head)
+		<106517>push(nullbin);
+	for( <447576>; <1381435>nbin>0; <933859>low++)
+		if(<933859>low->head)
+			<449385>push(low);
+	if(<447576>t == frame+1) {		/* tail recursion */
+/*		debug(frame, t, d);*/
+		<427056>r = frame->head;
+		if(<427056>r->len[keyed] <= d) {
+			<106225>tiebreak(<26635>frame);
+			<106225>*s = *frame;
+			return<106225>;		/* string ran out */
+		}
+		<320831>d++;
+		<320831>goto loop;
+	}
+/*	debug(frame, t, d);*/
+	<20520>t--;
+	if(<20520>t->head->next)		/* skip 1-item list */
+		<13713>sort(t, d+1);
+	if(<20520>!rflag) {			/* forward order */
+		<15796>r = t->tail;
+		while(<112441>t > frame) {	
+			<96645>q = t->head;
+			if(<96645>(--t>frame || <15796>t->head->len[keyed]>d)
+			   && <96353>t->head->next)
+				<82209>sort(t, d+1);
+			else if(<14436>t==frame)
+				<3163>tiebreak(t);<295>
+			<96645>t->tail->next = q;	/* concatenate */
+		}
+		<15796>s->head = frame->head;
+		<15796>s->tail = r;
+	} else {			/* reverse order */
+		<4724>r = t->head;
+		while(<16405>t > frame) {	
+			<11681>q = t->tail;
+			if(<11681>(--t>frame || <4724>t->head->len[keyed]>d)
+			   && <11681>t->head->next)
+				<4070>sort(t, d+1);
+			else if(<7611>t==frame)
+				<3881>tiebreak(t);<1360>
+			<11681>q->next = t->head;	/* concatenate */
+		}
+		<4724>s->head = r;
+		<4724>s->tail = frame->tail;
+	}
+/*	printf("return\n"); debug(s,s+1,d);*/
+<20520>}
+
+/*
+debug(struct list *stack, struct list *top, int d)
+{
+	printf("----------------------level %d\n", d);
+	while(stack<top) {
+		printout(stack->head, stdout, "stdout");
+		printf("----------------------\n");
+		stack++;
+	}
+}
+*/
+merge.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+#include <stdlib.h>
+#include <string.h>
+#include "fsort.h"
+
+char *disorder = "key out of order";
+char *duplicate = "duplicate key";
+char *space = "out of space for merging";
+
+enum { IEOF, IOK };
+enum { IPRE = 01000, IFOL = 02000 }; /* see find() */
+enum { NMERGE = 16 };
+
+int nmerge = NMERGE;	/* max number of files to merge at once */
+int nextfile;
+
+struct merge {		/* current record in an open file */
+	char *name;	/* name of file (for diagnostics) */
+	FILE *file;
+	struct rec *rec; /* pointer to the data (and key) */
+	short serial;	/* file no., breaks ties for stable sort */
+	short del;	/* delete at close */
+};
+
+struct merge *mfile;	/* one struct per open file */
+struct merge **f;	/* pointers to mfile, ordered by content */
+
+static void mergephase(int, char*);
+static int find(int, int*);
+static int fillrec(struct merge*);
+static int compare(struct merge*, struct merge*);
+static void syncerr(struct merge*, char*);
+extern int link(char*, char*);
+extern int unlink(char*);
+static void recinit(int nf, int nm, int n);
+static void mv(int, int);
+
+static void
+recalloc(struct merge *m)
+<1241>{
+	if(<1241>m->rec)
+		return<784>;		/* hygiene; doesn't happen */
+	<457>m->rec = (struct rec*)malloc(MINREC);
+	if(<457>m->rec == 0)
+		<0>fatal(space, "", 0);
+	<457>m->rec->dlen = 0;
+	<457>m->rec->next = (struct rec*)((uchar*)m->rec + MINREC);
+<457>}
+
+/* misfortune : all fields are parsed and converted 
+   before comparison.  Lazy parsing might be in order,
+   but it's too hard to contemplate */
+
+/* Merge strategy, to merge N inputs in groups of at most M.
+   Numbers, like (1), are keyed to comments in code.
+   If N <= M, merge everything. (4)
+   If N > M*(M-1)+1
+   greedily merge M at a time (1) to reduce to the next case.
+   Merge x bunches of M (3) and one bunch of y (2),
+   then merge the x+1 new files (4) with the remaining z files
+   in an exactly M-way merge. Calculate x,y,z thus:
+	Mx + y + z = N	file count
+	x + 1 + z = M   final merge
+        2 <= y <= M
+	x >= 0
+	z >= 0
+   by algebra
+	(M-1)x + y = N-M+1
+        y == (N-M+1) mod (M-1),   2 <= y <= M
+        x == (n-M+1-y)/(M-1)
+   Total cost is Mx + y + N.  (Strategy due to P. McIlroy.) */
+
+/* merge n files.  the first unmerged temp file is nm (i.e.
+   nm is the number of already merged files).  the first
+   unmerged input file is nf.
+   rename temp files to keep a dense set beginning at 0
+   (It seems silly to rename 100 files after merging
+   every 1; how much time does that actually cost?) */
+void
+merge1(int nf, int nm, int n)
+<161>{
+	char *name;
+	int i, j;
+	int flag = <161>nf<nfiles;
+	<161>recinit(nf, nm, n);
+	<161>name = filename(nextfile++);
+	<161>mergephase(n, name);
+	<161>free(name);
+	if(<161>flag)
+		return<137>;
+	<24>mv(--nextfile, nm);
+	for(<24>i=nm+n, j=nm+1; <180>i<nextfile; <156>i++, j++)
+		<156>mv(i, j);
+	<24>nextfile -= n - 1;
+<24>}
+
+/* if flag = 0 merge input files; else temps only.
+   this program is specialized to two levels of merge;
+   should fix that some day. */
+
+void
+merge(int flag)
+<68>{
+	char buf[BUFSIZ];
+	FILE *input, *output;
+	int n, y;
+	char *name;
+	int nf = <68>0;		/* next input file to merge */
+	int nm = <68>0;		/* total already merged once */
+	int nt = <68>nfiles;	/* files as yet unmerged */
+	if(<68>flag) {
+		<21>nf = nfiles;
+		<21>nt = nextfile;
+	}
+	if(<68>mfile == 0)
+		<49>mfile = (struct merge*)calloc(nmerge+1,
+					      sizeof(*mfile));
+	if(<68>f == 0)
+		<49>f = (struct merge**)calloc(nmerge+1,
+					       sizeof(*f));
+	if(<68>mfile==0 || <68>f==0)
+		<0>fatal(space,"",0);
+
+	if(<68>nt > nmerge*(nmerge-1)+1) {		/* (1) */
+		for(<19>nm=0; <135>nt>0; <116>) {
+			<116>n = nt>nmerge? <97>nmerge: <19>nt;
+			<116>merge1(nf, nm, n);
+			if(<116>flag) <0>nf += n;
+			<116>nt -= n;
+			<116>nm++;
+		}
+		<19>merge(1);
+		return<19>;
+	}
+	if(<49>nt > nmerge) {			/* (2) */
+		<30>y = (nt-nmerge+1)%(nmerge-1);
+		if(<30>y <= 1) <14>y += nmerge-1;
+		<30>merge1(nf, nm, y);
+		<30>nf = nf+y>=nfiles? <18>nfiles: <12>nf+y;
+		<30>nt -= y;
+		<30>nm++;
+	}
+	while(<64>nt+nm > nmerge) {			/* (3) */
+		<15>merge1(nf, nm, nmerge);
+		<15>nf = nf+nmerge>=nfiles? <6>nfiles: <9>nf+nmerge;
+		<15>nt -= nmerge;
+		<15>nm++;
+	}
+
+	<49>n = nm+nt;				/* (4) */
+	<49>recinit(nf, 0, n);
+	if(<49>!overwrite(nf))
+		<46>name = oname;
+	else
+		<3>name = filename(nextfile++);
+	<49>mergephase(n, name);
+	if(<48>name == oname)
+		return<45>;
+	<3>input = fileopen(name, "r");
+	<3>output = fileopen(oname, "w");
+	while(<88>n = fread(buf, 1, sizeof(buf), input))
+		if(<85>fwrite(buf, 1, n, output) != n)
+			<0>fatal("error writing", oname, 0);
+	<3>fileclose(input, name);
+	<3>unlink(name);
+	<3>free(name);
+	<3>fileclose(output, oname);
+<3>}
+
+/* Initialize merge records for n files, beginning with
+   input file number nf and temp file number nm.
+
+   There are nfiles-nf input files; any files beyond that
+   number must be temporaries, which come from already
+   merged inputs.  (The only time that both kinds of
+   files are present is the very last merge, when for
+   stability, the temps are regarded as earlier.) */
+
+static void
+recinit(int nf, int nm, int n)
+<210>{
+	int i;
+	struct merge *m;
+	int last = <210>nfiles-nf + nextfile-nm == n;
+	for(<210>i=0; <1277>i<=n; <1067>i++)	/* one extra, for mergephase() */
+		<1067>recalloc(&mfile[i]);
+	for(<210>i=0; <1067>i<n; <857>i++) {
+		<857>m = &mfile[i];
+		<857>m->del = nf>=nfiles || <635>last && <126>i<nextfile;
+		<857>m->name = m->del? <243>filename(nm++): <614>files[nf++];
+		<857>m->file = fileopen(m->name, "r");
+		<857>m->serial = i;
+		<857>f[i] = m;
+	}
+	<210>f[n] = &mfile[n];
+<210>}
+
+static void
+mv(int i, int j)
+<180>{
+	char *old, *new;
+	if(<180>i == j) return<0>;	/* believed not to happen */
+	<180>old = filename(i);
+	<180>new = filename(j);
+	<180>unlink(new);
+	if(<180>link(old,new) == -1 || <180>unlink(old) == -1)
+		<0>fatal("cannot move", old, 0);
+	<180>free(old);
+	<180>free(new);
+<180>}
+
+static void
+emit(FILE *output)
+<22296>{
+	struct merge *m = <22296>f[0];
+	int n = <22296>m->rec->dlen;
+	uchar *p = <22296>data(m->rec);	/* hanky panky for speed */
+	uchar *e = <22296>p + n++;		/* use fwrite instead of */
+	int c = <22296>*e;			/* printf */
+	<22296>*e = '\n';
+	if(<22296>fwrite((char*)p, 1, n, output) != n)
+		<0>fatal("error writing", m->name, 0);
+	<22296>*e = c;
+<22296>}
+
+/* Merge files in mfile[0]..mfile[n-1]. 
+   f[0]..f[l-1] points to files in increasing order
+   of their current records.  All the current records
+   are strictly ordered, either by tie-breaking, or
+   by skipping records that compare equal under -u.
+   There are two phases: (a) initialization (reading
+   from a file when there is no record at hand) and
+   (b) continuation (reading the next record with the
+   intent of displacing the current record).
+   These conditions arise, at places numbered in comments
+   (1) the record compares equal to another, and would follow
+   that other if ties were broken
+   (2) the record compares equal to another, and would precede
+   that other if ties were broken
+   (3) the record falls between two others
+
+   At all times the keys pointed to by f[0]..f[l]
+   are distinct (perhaps due to tie-breaking), as
+   are the files they come from.  When a new key
+   is read, its proper home (in tie-broken order) 
+   is between f[j-1] and f[j].
+   The picture below shows the hardest case (2b),
+   where key a from file F is about to be emitted.
+   All keys in the sequence axby are distinct, as
+   are the files they come from.  A new key is read
+   from file F into the extra space pointed to by
+   f[i].  (Keeping one extra key allows disorder to
+   be detected almost for free.)  The
+   new key is equal to key b pointed to by f[j]
+   and file F precedes file G in stability order.
+   Thus b(F) deserves to be kept and b(G) discarded.
+    0                 j                 l=n
+   --------------------------------------------
+   | a(F) |     x    | b(G) |     y    | b(F) |
+   --------------------------------------------
+  
+   We emit the record at 0, and displace the key
+   at j, from whose file there is now no record
+   present; l decreases by one.  
+    0                 j          l      n
+   --------------------------------------------
+   |     x    | b(F) |     y    | ?(G) |      |
+   --------------------------------------------
+
+   This takes us back to initialization.  From
+   this configuration it is possible to reach
+   case (2a), like (2b) except that the key at 0
+   is not to be emitted; (2a) cannot happen during
+   the original initialization.
+*/
+
+#define moveup(a,n) memmove(a+1, a, (n)*sizeof(*a))
+#define movedown(a,n) memmove(a-1, a, (n)*sizeof(*a))
+
+static void
+mergephase(int n, char *name)
+<210>{
+	int j, flags;
+	struct merge *mp;
+	struct rec *r;
+	int l = <210>0;
+	int k = <210>-1;		/* for spotting sync errors */
+	FILE *output = fileopen(<210>name, "w");
+init:	while(<19606>l < n) {					/*(a)*/
+		<19124>mp = f[l];
+		if(<19124>fillrec(mp) == IEOF) {
+			<52>movedown(f+l+1, n-l);
+			<52>f[n--] = mp;
+			<52>continue;
+		}
+		<19072>j = find(l, &flags);
+		if(<19072>j <= k)
+			<0>syncerr(mp, disorder);
+		if(<19072>flags & IFOL) {			/*(1a)*/
+			if(<17234>!aflag || <17169>doaccum(f[j-1]->rec, mp->rec))
+				<17234>continue;
+		} else if(<1838>flags & IPRE)			/*(2a)*/
+			if(<761>!aflag || <758>doaccum(mp->rec, f[j]->rec)) {
+				<761>f[l] = f[j];
+				<761>f[j] = mp;
+				<761>k = j;
+				<761>continue;
+			}
+		<1077>moveup(f+j, l-j);			/*(3a)*/
+		<1077>f[j] = mp;
+		<1077>l++;
+	}
+	while(<24714>n > 0) {					/*(b)*/
+		<24505>mp = f[l];
+		<24505>r = mp->rec;
+		<24505>*mp = *f[0];
+		<24505>mp->rec = r;
+		if(<24505>fillrec(mp) == IEOF) {
+			<803>emit(output);
+			<803>mp = f[0];
+			<803>movedown(f+1, l);
+			<803>f[--n] = mp;
+			<803>l = n;
+			<803>continue;
+		}
+		<23702>j = find(l, &flags);
+		if(<23702>j == 0)
+			<1>syncerr(mp, disorder);
+		if(<23701>flags & IFOL) {			/*(1b)*/
+			if(<2208>!aflag || <1906>doaccum(f[j-1]->rec, mp->rec))
+				<2208>continue;
+		} else if(<21493>flags & IPRE)			/*(2b)*/
+			if(<272>!aflag || <107>doaccum(mp->rec, f[j]->rec)) {
+				<272>emit(output);
+				<272>f[l] = f[j];
+				<272>f[j] = mp;
+				<272>mp = f[0];
+				<272>movedown(f+1, l);
+				<272>f[l--] = mp;
+				<272>k = j - 1;
+				<272>goto init;
+			}
+		<21221>emit(output);				/*(3b)*/
+		<21221>mp = f[0];
+		<21221>movedown(f+1, j-1);
+		<21221>f[j-1] = f[l];
+		<21221>f[l] = mp;
+	}
+		
+	<209>fileclose(output, name);
+<209>}
+
+static int
+fillrec(struct merge *mp)
+<284696>{
+	struct rec *r = <284696>getline(mp->rec, mp->file);
+	if(<284696>r == 0)
+		return <283702>IOK;
+	if(<994>r == ENDFILE) {
+		<937>fileclose(mp->file, mp->name);
+		if(<937>mp->del)
+			<243>unlink(mp->name);
+		return <937>IEOF;
+	}
+	<57>mp->rec = r;
+	return <57>IOK;
+}
+
+/* 
+   Return the proper index for the extra record f[l]
+   to be inserted before (regardless of -u).
+   Under -u, if the extra record is a duplicate, return
+   the index flagged by IFOL or IPRE according as
+   the insertion position follows or precedes a
+   record of the same value.
+*/
+
+static int
+find(int l, int *flags)
+<42774>{
+	int i, t;
+	int bot = <42774>0;
+	int top = <42774>l;
+	while(<145791>bot < top) {
+		<123492>i = (bot+top)/2;
+		<123492>t = compare(f[l], f[i]);
+		if(<123492>t < 0)
+			<55383>top = i;
+		else if(<68109>t > 0)
+			<39369>bot = i + 1;
+		else if(<28740>uflag) {
+			if(<20475>f[l]->serial < f[i]->serial) {
+				<1033>*flags = IPRE;
+				return <1033>i;
+			} else {
+				<19442>*flags = IFOL;
+				return <19442>i + 1;
+			}
+		}
+		else if(<8265>f[l]->serial < f[i]->serial)
+			<2917>top = i;
+		else 
+			<5348>bot = i + 1;
+	}
+	<22299>*flags = 0;
+	return <22299>top;
+}	
+
+static int		
+compare(struct merge *mi, struct merge *mj)
+<364393>{
+	uchar *ip, *jp;
+	uchar *ei, *ej;
+	uchar *trans, *keep;
+	int li, lj, k;
+	if(<364393>simplekeyed) {
+		<19>trans = fields->trans;
+		<19>keep = fields->keep;
+		<19>ip = data(mi->rec);
+		<19>jp = data(mj->rec);
+		<19>ei = ip + mi->rec->dlen;
+		<19>ej = jp + mj->rec->dlen;
+		for( <19>; <13>; <13>ip++, jp++) {
+			while(<35>ip<ei && <29>!keep[*ip]) <3>ip++;
+			while(<35>jp<ej && <29>!keep[*jp]) <3>jp++;
+			if(<32>ip>=ei || <26>jp>=ej) <7>break;
+			<25>k = trans[*ip] - trans[*jp];
+			if(<25>k != 0) <12>break;
+		}
+		if(<19>ip<ei && <13>jp<ej)
+			return <12>k*signedrflag;
+		else if(<7>ip < ei)
+			return <1>signedrflag;
+		else if(<6>jp < ej)
+			return <1>-signedrflag;
+		else if(<5>sflag)
+			return <4>0;
+	} else if(<364374>keyed) {
+		<194802>ip = key(mi->rec);
+		<194802>jp = key(mj->rec);
+		<194802>li = mi->rec->klen;
+		<194802>lj = mj->rec->klen;
+		for(<194802>k=li<lj?<1091>li:<193711>lj; <901648>--k>=0; <706846>ip++, jp++)
+			if(<807963>*ip != *jp)
+				<101117>break;
+		if(<194802>k < 0) {
+			if(<93685>li != lj)
+				<0>fatal("theorem disproved","",0);
+			if(<93685>sflag)
+				return <24419>0;
+		} else
+			return <101117>*ip - *jp;
+		
+	}
+	<238839>li = mi->rec->dlen;
+	<238839>lj = mj->rec->dlen;
+	<238839>ip = data(mi->rec);
+	<238839>jp = data(mj->rec);
+	for(<238839>k=li<lj?<7726>li:<231113>lj; <1907768>--k>=0; <1668929>ip++, jp++)
+		if(<1764308>*ip != *jp)
+			<95379>break;
+	return <238839>(k<0? <143460>li-lj: <95379>*ip-*jp)*signedrflag;
+}
+
+void
+check(char *name)
+<87>{
+	int i, t;
+
+	<87>mfile = (struct merge*)calloc(2,sizeof(*mfile));
+	<87>recalloc(&mfile[0]);
+	<87>recalloc(&mfile[1]);
+	<87>mfile[0].name = mfile[1].name = name;
+	<87>mfile[0].file = mfile[1].file = fileopen(name, "r");
+	if(<87>mfile[0].file == 0)
+		<0>fatal("can't open ", name, 0);
+
+	if(<87>fillrec(&mfile[0]) == IEOF)
+		return<3>;
+	for(<84>i=1; <240980>fillrec(&mfile[i])!=IEOF; <240896>i^=1) {
+		<240901>t = compare(&mfile[i^1], &mfile[i]);
+		if(<240901>t>0)
+			<4>syncerr(&mfile[i], disorder);
+		else if(<240897>t==0 && <138849>uflag)
+			<1>syncerr(&mfile[i], duplicate);
+	}
+<79>}
+
+static void
+syncerr(struct merge *m, char *message)
+<6>{
+	int n = <6>m->rec->dlen;
+	<6>warn("trouble in file", m->name, 0);
+	<6>fatal(message, n?<6>(char*)data(m->rec):"", n);
+<0>}
+optiona.c:
+
+#include <float.h>
+#include <math.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
+#include "fsort.h"
+
+	/* portability hack for old libc's */
+#define realloc(p,q) (p?realloc(p,q):malloc(q))
+
+struct field accum[NF];
+int naccum;
+
+typedef struct {
+	uchar *e;	/* last+1st char */
+	signed char s;	/* -1 for neg, 1 for pos */
+	char c;		/* 1 if + sign, else 0 */
+	char z;		/* 1 for leading 0, else 0 */
+	char p;		/* nonzero if a decimal point */
+	int f;		/* number of digits after dec. pt. */
+} desc;
+
+#define max(a, b) ((a)>(b)?(a):(b))
+#define mod10(a) (((a)+20)%10)
+#define div10(a) (((a)+20)/10-2)
+
+/* find least significant digit and other facts about a number
+   in field beginning at a and ending just before e */
+
+desc
+lsd(uchar *a, uchar *e)
+<99690>{
+	desc d = <99690>{ 0, 1, 0, 0, 0, 0 };
+	while(<271072>a<e && <269069>(*a==' '||<97687>*a=='\t')) <171382>a++;
+	if(<99690>a >= e)
+		<2003>;
+	else if(<97687>*a == '-') {
+		<7505>d.s = -1;
+		<7505>a++;
+	} else if(<90182>*a == '+') {
+		<3>d.c = 1;
+		<3>a++;
+	}
+	if(<99690>a+1<e && <51891>*a=='0' && <13>isdigit(a[1])) d.z = 1;
+	while(<299631>a<e && <199978>isdigit(*a))
+		<199941>a++;
+	if(<99690>a<e && <37>*a=='.') {
+		<13>d.p = 1;
+		while(<38>++a<e && <25>isdigit(*a))
+			<25>d.f++;
+	}
+	<99690>d.e = a;
+	return <99690>d;
+}
+
+/* add the fields at a and b as desc-ribed,
+   putting result, with decimal point omitted,
+   right justified before re.
+   calculates in 10's complement and recomplements
+   magnitude if negative.
+   set *sgn -1 for neg, 1 for signed +, 0 for unsigned. */
+
+uchar *
+add(uchar *re, uchar *a, desc ad, uchar *b, desc bd, int *sgn)
+<49845>{
+	int d = <49845>0;
+	uchar *t;
+	uchar *r = <49845>re;
+	while(<49848>ad.f > bd.f) {
+		<3>d += (*--ad.e - '0')*ad.s;
+		<3>*--re = mod10(d);
+		<3>d = div10(d);
+		<3>ad.f--;
+	}
+	while(<49861>bd.f > ad.f) {
+		<16>d += (*--bd.e - '0')*bd.s;
+		<16>*--re = mod10(d);
+		<16>d = div10(d);
+		<16>bd.f--;
+	}
+	while(<220476>ad.e>a || <50616>bd.e>b) {
+		if(<170631>ad.f-- == 0) {
+			if(<49843>ad.p)
+				<6>ad.e--;
+			if(<49843>bd.p)
+				<7>bd.e--;
+		}
+		if(<170631>ad.e > a)
+			if(<169860>isdigit(*--ad.e))
+				<139640>d += (*ad.e - '0')*ad.s;
+			else 
+				<30220>ad.e = a;
+		if(<170631>bd.e > b)
+			if(<109780>isdigit(*--bd.e))
+				<60307>d += (*bd.e - '0')*bd.s;
+			else
+				<49473>bd.e = b;
+		<170631>*--re = mod10(d);
+		<170631>d = div10(d);
+	}
+	<49845>*sgn = ad.c | bd.c;
+	if(<49845>d > 0)
+		<1>*--re = 1;	/* happens only on overflow */
+	else if(<49844>d < 0) {
+		int x = <4997>10;
+		<4997>*sgn = -1;
+		for(<4997>t = r; <33242>--t>=re; <28245>) {
+			<28245>*t = (x - *t)%10;
+			if(<28245>*t != 0)
+				<21111>x = 9;
+		}
+		if(<4997>d < -1)
+			<0>*--re = 1; /* hygiene, can't happen */
+	}
+	while(<81359>re<r && <79328>*re==0)
+		<31514>re++;
+	return <49845>re;
+}
+
+int
+fieldaccum(uchar *a, uchar *ae, uchar *b, uchar *be)
+<49845>{
+	static uchar *r, *re;	/* not pure ansi (re-r=nil-nil=?) */
+	desc da = <49845>lsd(a, ae);
+	desc db = <49845>lsd(b, be);
+	int sgn, Sgn, f;
+	uchar *v;
+	while(<51247>re-r < max(da.e-a+db.f, db.e-b+da.f) <26>+ 1) {
+		int l = <1402>re - r + 100;
+		<1402>r = (uchar*)<1387>realloc(r, l);
+		if(<1402>r == 0)
+			<0>fatal("out of space","",0);
+		<1402>re = r + l;
+	}
+	<49845>f = max(da.f, db.f);<3>
+	<49845>v = add(re, a, da, b, db, &sgn);
+	<49845>Sgn = sgn != 0;
+	if(<49845>Sgn+max(re-v,f+1)+<46132>(da.p|<3713>db.p) > ae-a)
+		return <1>0;
+	while(<49860>re>v && <47829>--f>=0)
+		<16>*--ae = *--re + '0';
+	while(<49850>--f >= 0)
+		<6>*--ae = '0';
+	if(<49844>da.p | db.p)
+		<10>*--ae = '.';
+	if(<49844>re <= v)
+		<2031>*--ae = '0';
+	while(<188963>re > v)
+		<139119>*--ae = *--re + '0';
+	if(<49844>da.z | db.z)
+		while(<16>ae > a+Sgn)
+			<9>*--ae = '0';
+	if(<49844>sgn > 0)
+		<3>*--ae = '+';
+	else if(<49841>sgn < 0)
+		<4997>*--ae = '-';
+	if(<49844>ae<a || <49844>v<r)
+		<0>fatal("bug in accumulation","",0);
+	while(<93111>ae > a)
+		<43267>*--ae = ' ';
+	return <49844>1;
+}
+
+void
+chkaccum(struct field *field)
+<34>{
+	if(<34>field->coder == 0)
+		<34>field->coder = acode;
+	if(<34>field->coder != acode)
+		<0>goto bad;
+	if(<34>field->trans == 0)
+		<33>field->trans = ident;
+	if(<34>field->trans != ident)
+		<1>goto bad;
+	if(<33>field->keep == 0)
+		<31>field->keep = all;
+	if(<33>field->keep != all)
+		<2>goto bad;
+	if(<31>field->rflag)
+		<1>goto bad;
+	return<30>;
+bad:
+	<4>fatal("improper modifier with -a","",0);
+	return<0>;
+}
+
+/* acode is unlike other coding functions.  instead of
+   making a key in the place pointed to by op,
+   it makes a list of field locations.  it might
+   be more honest if op were declared void* */
+
+struct loc { uchar *from, *to; };
+
+int
+acode(uchar *ip, uchar *op, int len, struct field *f)
+<99690>{
+	struct loc *lp = <99690>(struct loc*)op;
+	<99690>lp->from = ip;
+	<99690>lp->to = ip + len;
+	if(<99690>!tab && <99690>!f->bflag &&
+	   <99686>f->begin.fieldno>0 && <99560>f->begin.charno==0)
+		<99556>lp->from++;
+	return <99690>sizeof(*lp);
+}
+
+int
+doaccum(struct rec *arec, struct rec *brec)
+<44842>{
+	int i;
+	struct loc aloc[NF], bloc[NF];
+	<44842>fieldcode(data(arec), (uchar*)aloc, arec->dlen,
+		(uchar*)-1, accum, naccum);
+	<44842>fieldcode(data(brec), (uchar*)bloc, brec->dlen,
+		(uchar*)-1, accum, naccum);
+	for(<44842>i=0; <94686>i<naccum; <49844>i++)
+		if(<49845>!fieldaccum(aloc[i].from, aloc[i].to,
+			       bloc[i].from, bloc[i].to)) {
+			if(<1>i==0)
+				<1>warn("sum too long; record kept: ",
+			      	     (char*)data(brec), brec->dlen);
+			else
+				<0>fatal("sum too long on adding: ",
+			      	     (char*)data(brec), brec->dlen);
+			return <1>0;
+		}
+	return <44841>1;
+}
+
+struct rec *
+listaccum(struct rec *head, struct rec *tail)
+<134>{
+	struct rec *q = <134>head;
+	struct rec *p = <134>head;
+	for(<134>;<24902>;<24902>) {
+		if(<25036>q == tail)
+			<134>break;
+		<24902>q = q->next;
+		if(<24902>doaccum(p, q))
+			<24901>p->next = q->next;
+		else
+			<1>p = q;
+	}
+	return <134>p;
+}
+fsort.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "fsort.h"
+
+int mflag = 0;
+int cflag = 0;
+int keyed = 0;
+
+extern void readin(void);
+extern void dumptotemp(void);
+extern void sealstack(struct rec *p);
+extern void filelist(int, char**);
+extern int getopt(int, char*const*, const char*);
+extern char *optarg;
+extern int optind;
+
+FILE *input;
+char *oname = "-";
+char *tname[] = { "/usr/tmp"/*substitutable*/, "/usr/tmp", "/tmp", 0 };
+
+char **files;
+int nfiles;
+char *nofiles[] = { "-", 0 };
+
+main(int argc, char **argv)
+<311>{
+	int c, n;
+	static char s[3] = { '-' };
+	for(<311>;<590>;<590>) {
+		if(<901>optind<argc && <873>argv[optind][0]=='+' &&
+		   <26>isdigit(argv[optind][1])) {
+			<26>optind += fieldarg(argv[optind],
+					   argv[optind+1]);
+			<26>continue;
+		}
+		<875>n = optind;	/* for sake of case '?' */
+		<875>c = getopt(argc,argv,"a:bcdfgik:mno:rst:uw:y:MT:");
+		switch(<875>c) {
+		case '?':
+			<16>fatal("bad option", argv[n], 0);
+		default:
+			<0>fatal("implementation error 1","",0);
+		case 'b':
+		case 'd':
+		case 'f':
+		case 'g':
+		case 'i':
+		case 'n':
+		case 'M':
+		case 'r':
+			<97>s[1] = c;
+			<97>fieldarg(s, 0);
+			<97>continue;
+		case 'c':
+			<88>cflag++;
+			<88>continue;
+		case 'm':
+			<49>mflag++;
+			<49>continue;
+		case 's':
+			<9>sflag++;
+			<9>continue;
+		case 'u':
+			<17>uflag++;
+			<17>sflag++;
+			<17>continue;
+		case 'a':
+			<35>aflag++;
+			<35>uflag++;
+			<35>sflag++;
+			<35>optionk(optarg, accum, &naccum);
+			<35>continue;
+		case 'k':
+			<181>optionk(optarg, fields, &nfields);
+			<175>continue;
+		case 'o':
+			<5>oname = optarg;
+			<5>continue;
+		case 'T':
+			<1>tname[0] = optarg;
+			<1>continue;
+		case 'w':
+			<33>nmerge = atoi(optarg);
+			if(<33>nmerge < 2)
+				<0>fatal("-w too small","",0);
+			<33>continue;
+		case 'y':
+			<5>optiony(optarg);
+			<5>continue;
+		case 't':
+			if(<51>strlen(optarg) != 1)
+				<1>fatal("bad argument for -t", "", 0);
+			<50>tab = optarg[0];
+			<50>continue;
+		case 'z':
+			<0>warn("nonstandard option -z ignored","",0);
+		case -1:
+			<288>break;
+		}
+		<288>break;
+	}
+	<288>filelist(argc, argv);
+	if(<288>cflag)
+		<88>aflag = 0;
+	<288>fieldwrapup();
+	<282>tabinit();
+	<282>setsigs(cleanup);
+
+	if(<282>cflag) {
+		if(<88>nfiles > 1)
+			<1>fatal("-c takes just one file", "", 0);
+		<87>check(files[0]);
+		return <82>0;
+	}
+	if(<194>mflag) {
+		<47>merge(0);
+		return <46>0;
+	}
+	for(<147>n=0; <820>n<nfiles; <673>n++) {
+		<676>input = fileopen(files[n], "r");
+		<674>readin();
+		<674>fileclose(input, files[n]);
+	}
+	if(<144>stack->head==0 && <12>nextfile==0) {	/* empty input */
+		if(<12>strcmp(oname,"-") != 0) 
+			<4>fileclose(fileopen(oname, "w"), oname);
+		return <12>0;
+	}
+	if(<132>stack->head && <132>stack->head->next)
+		<120>sort(stack, 0);
+	if(<132>nextfile > 0) {
+		if(<2>stack->head)
+			<2>dumptotemp();
+		<2>tabfree();
+		<2>merge(1);
+	} else {
+		FILE *f;
+		<130>f = fileopen(oname, "w");
+		<129>printout(stack->head, f, oname);
+		<129>fileclose(f, oname);
+	}
+	return <131>0;
+}
+
+void
+filelist(int argc, char **argv)
+<288>{
+	int i, j;
+	<288>files = nofiles;
+	<288>nfiles = argc - optind;
+	if(<288>nfiles != 0)
+		<260>files = argv + optind;
+	else
+		<28>nfiles = 1;
+	if(<288>strcmp(argv[optind-1], "--") == 0)
+		return<2>;
+	for(<286>i=j=0; <1673>i<nfiles; <1387>i++) {
+		if(<1387>strncmp(files[i], "-o", 2) == 0) {
+			if(<6>files[i][2] != 0)
+				<1>oname = files[i] + 2;
+			else if(<5>i < argc-1)
+				<5>oname = files[++i];
+			else
+				<0>fatal("incomplete -o", "", 0);
+		} else
+			<1381>files[j++] = files[i];
+	}
+	<286>files[j] = 0;
+	<286>nfiles = j;
+<286>}
+
+void
+readin(void)
+<674>{
+	int n;
+	struct rec *new;
+	struct rec *p = <674>stack->tail;
+	struct rec *r = <674>p? <529>succ(p): buffer;
+
+	for(<674>;<342230>;<342230>) {
+		if(<342904>bufmax-(uchar*)r < MINREC) {
+			<78>sealstack(p);
+			<78>dumptotemp();
+			<78>p = 0;
+			<78>r = buffer;
+		}
+		<342904>r->next = (struct rec*)bufmax;
+		<342904>new = getline(r, input);
+	recenter:
+		if(<342906>new == 0) {
+			<342230>r->next = 0;
+			if(<342230>p)
+				<342017>p->next = r;
+			<342230>p = r;
+			<342230>r = succ(r);
+		} else if(<676>new == ENDFILE) {
+			<674>sealstack(p);
+			return<674>;
+		} else {
+			<2>sealstack(p);
+			<2>dumptotemp();
+			<2>p = 0;
+			<2>r = buffer;
+			<2>n = data(new)-(uchar*)new+new->dlen+new->klen;
+			if(<2>(uchar*)r+n > bufmax)
+				<0>fatal("monster record", "", 0);
+			<2>memmove(r, new, n);
+			<2>free(new);
+			<2>new = 0;
+			<2>goto recenter;
+		}
+	}
+}
+
+void
+sealstack(struct rec *p)
+<754>{
+	if(<754>p == 0)
+		return<12>;
+	<742>p->next = 0;
+	if(<742>stack->head == 0)
+		<213>stack->head = buffer;
+	<742>stack->tail = p;
+<742>}
+
+void
+printout(struct rec *r, FILE *f, char *name)
+<211>{
+	int c, n;
+	uchar *dp, *ep;
+	for( <211>; <248661>r; <248450>r=r->next) {
+		<248450>dp = data(r);
+		<248450>n = r->dlen;
+		<248450>ep = dp + n++;
+		<248450>c = *ep;
+		<248450>*ep = '\n';
+		if(<248450>fwrite((char*)dp, 1, n, f) != n)
+			<0>fatal("error writing", name, 0);
+		<248450>*ep = c;
+	}
+<211>}
+
+void
+dumptotemp()
+<82>{
+	char *tempfile = <82>filename(nextfile++);
+	FILE *temp = fileopen(<82>tempfile,"w");
+
+	if(<82>stack->head == 0)
+		<0>fatal("monster record", "", 0);
+	<82>stack->tail->next = 0;		/* for good measure */
+	<82>sort(stack, 0);
+	<82>printout(stack->head, temp, tempfile);
+	<82>fileclose(temp, tempfile);
+	<82>free(tempfile);
+	<82>stack->head = stack->tail = 0;
+	return<82>;
+}
+field.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+#include <stdlib.h>
+#include <ctype.h>
+#include "fsort.h"
+
+
+
+static char *modifiers(struct field*, char*, int);
+static char *keyspec(struct pos*, char*);
+static void globalmods(struct field*);
+static void chkfieldno(struct field*);
+
+struct field fields[NF] = {
+	{ 0, 0, 0, 0, 0, 0, 0, { 0, 0 }, { NP, 0 } }
+};
+int nfields = 0;
+
+int tab;
+int signedrflag;
+int simplekeyed;
+
+#define blank(p) (*(p)==' ' || *(p)=='\t')
+
+enum { OLD, NEW };
+
+	/* interpret 1 or 2 arguments and return how many */
+int
+fieldarg(char *argv1, char *argv2)
+<123>{
+	char *av1 = <123>argv1;
+	char *av2 = <123>argv2;
+	struct field *field;
+
+	if(<123>av1[0] == '+' && <26>isdigit(av1[1])) {
+		if(<26>++nfields >= NF)
+			<0>fatal("too many fields", argv1, 0);
+		<26>field = &fields[nfields];
+		<26>field->end.fieldno = NP+1;
+		<26>field->style = OLD;
+
+		<26>av1 = keyspec(&field->begin, av1+1);
+		if(<26>*modifiers(field, av1, 0))
+			<0>goto bad;
+
+		if(<26>av2==0 || <25>av2[0]!='-' || <12>!isdigit(av2[1]))
+			return <14>1;
+		<12>av2 = keyspec(&field->end, av2+1);
+		<12>argv1 = argv2;	/* in case of diagnostic */
+		if(<12>*modifiers(field, av2, 1))
+			<0>goto bad;
+		return <12>2;
+	} else if(<97>*modifiers(fields, av1+1, -1))
+		<0>goto bad;	/* believed not to happen */
+	return <97>1;
+bad:
+	<0>fatal("bad field specification", argv1, 0);
+	return <0>0;	/* dummy */
+}
+
+void
+optionk(char *arg, struct field *fields, int *nfields)
+<216>{
+	char *a = <216>arg;
+	struct field *field;
+	if(<216>++*nfields >= NF)
+		<0>fatal("too many fields", arg, 0);
+	<216>field = &fields[*nfields];
+	<216>field->begin.charno = 1;
+	<216>field->end.fieldno = NP+1;
+	<216>field->style = NEW;
+
+	<216>a = keyspec(&field->begin, a);
+	<213>a = modifiers(field, a, 0);
+	if(<213>*a == ',') {
+		<116>a = keyspec(&field->end, a+1);
+		<115>a = modifiers(field, a, 1);
+	}
+	if(<212>*a == 0)
+		return<210>;
+bad:
+	<2>fatal("bad -k specification", arg, 0);
+<0>}
+
+static char *
+keyspec(struct pos *p, char *arg)
+<370>{
+	if(<370>!isdigit(*arg))
+		<3>fatal("missing field number", "", 0);
+	<367>p->fieldno = strtoul(arg, &arg, 10);
+	if(<367>*arg == '.')
+		if(<69>!isdigit(*++arg))
+			<1>fatal("missing character number", "", 0);
+		else
+			<68>p->charno = strtoul(arg, &arg, 10);
+	return <366>arg;
+}
+
+/* keyed = 1 if there are fields present (+ options) or if
+   numeric (-ng), translation (-f) or deletion (-idb) options
+   are present.  In these cases, a separate key is constructed
+   for rsort.  The key, however is not carried on 
+   intermediate files.  (It would be interesting to try.)
+   It must be reconstructed for the merge phase, and that
+   may be expensive, since relatively few comparisons
+   happen in that phase.  simplekeyed = 1 if there are options,
+   so that pure ascii comparison won't work, but no fields, no
+   months, no numerics. */
+
+void
+fieldwrapup(void)
+<288>{
+	int i;
+	if(<288>nfields==0 && <145>aflag)
+		<1>fatal("-a without -k", "", 0);
+	if(<287>fields->coder == 0) <262>fields->coder = tcode;
+	if(<287>fields->trans == 0) <270>fields->trans = ident;
+	if(<287>fields->keep == 0) <269>fields->keep = all;
+	for(<287>i=1; <487>i<=nfields; <200>i++) {
+		<201>globalmods(&fields[i]);
+		<201>chkfieldno(&fields[i]);
+	}
+	for(<286>i=1; <316>i<=naccum; <30>i++) {
+		<34>chkaccum(&accum[i]);
+		<30>chkfieldno(&accum[i]);
+	}
+	<282>signedrflag = fields->rflag? <24>-1: <258>1; /* used only by merge.c*/
+	<282>simplekeyed = nfields==0 && <144>fields->coder==tcode 
+		      && <119>(fields->trans!=ident || <112>fields->keep!=all);
+	if(<282>nfields==0 && <144>!keyed)	/* used only by rsort.c */
+		<109>rflag = fields->rflag;
+	if(<282>nfields > 0)
+		<138>keyed = 1;
+<282>}
+
+static void
+conflict(void)
+<4>{
+	<4>warn("conflicting key types", "", 0);
+<4>}
+
+static void
+dupla(uchar **oldp, uchar *new)
+<48>{
+	if(<48>*oldp != 0 && <1>*oldp != new)
+		<1>conflict();
+	<48>*oldp = new;
+<48>}
+
+static void
+duplb(int (**oldp)(uchar*,uchar*,int,struct field*), int (*new)(uchar*,uchar*,int,struct field*))
+<56>{
+	if(<56>*oldp != 0 && <2>*oldp != new)
+		<2>conflict();
+	<56>*oldp = new;
+<56>}
+
+/* eflag=-1 global flags, =0 field start, =1 field end */
+
+static char *
+modifiers(struct field *field, char *argv1, int eflag)
+<463>{
+	for( <463>; <629>*argv1; <166>argv1++) {
+		switch(<284>*argv1) {
+		case 'b': if(<22>eflag==1) <6>field->eflag = 1;
+			  else <16>field->bflag = 1; <22>goto ckglob;
+		case 'r': <40>field->rflag = 1; <40>goto ckglob;
+		case 'f': <23>dupla(&field->trans, fold); <23>break;
+		case 'd': <20>dupla(&field->keep, dict); <20>break;
+		case 'i': <5>dupla(&field->keep, ascii); <5>break;
+		case 'g': <10>duplb(&field->coder, gcode); <10>break;
+		case 'n': <38>duplb(&field->coder, ncode); <38>break;
+		case 'M': <8>duplb(&field->coder, Mcode); <8>break;
+		default:
+			<118>goto done;
+		}
+		<104>keyed = 1;
+	ckglob:
+		if(<166>field==fields && <97>nfields>0)
+			<2>warn("field spec precedes global option",argv1,1);
+	}
+done:
+	if(<463>field->coder==ncode && <40>field->keep)
+		<1>conflict();
+	return <463>argv1;
+}
+
+static void
+globalmods(struct field *field)
+<201>{
+	int flagged = <201>field->bflag | field->eflag | field->rflag;
+	if(<201>!field->coder) <172>field->coder = tcode;
+	else <29>flagged++;
+	if(<201>!field->trans) <196>field->trans = ident;
+	else <5>flagged++;
+	if(<201>!field->keep) <197>field->keep = all;
+	else <4>flagged++;
+	if(<201>!flagged) {
+		<146>field->coder = fields->coder;
+		<146>field->trans = fields->trans;
+		<146>field->keep = fields->keep;
+		<146>field->rflag = fields->rflag;
+		<146>field->bflag = fields->bflag;
+		if(<146>field->style == NEW)
+			<126>field->eflag = fields->bflag;
+	}
+<201>}
+
+/* convert field representation from numbers given in arguments
+   to a 0-origin first,last+1 representation, with a negative
+   quantity for a character offset to the end of this field */
+
+static void
+chkfieldno(struct field *field)
+<231>{
+	if(<231>field->style == NEW) {
+		if(<205>--field->begin.fieldno < 0 ||
+		   <204>--field->begin.charno < 0 ||
+		   <204>--field->end.fieldno < 0)
+			<1>fatal("improper 0 in field specifier", "", 0);
+		if(<204>field->end.charno == 0)
+			<180>field->end.charno--;
+	} else if(<26>field->end.charno==0 && <22>field->end.fieldno>0) {
+		if(<22>tab && <8>field->eflag)
+			<0>fatal("skipping blanks right after tab char"
+			      " is ill-defined", "", 0);
+		<22>field->end.fieldno--;
+		<22>field->end.charno--;
+	}
+	if(<230>field->begin.fieldno > NP)
+		<0>field->begin.fieldno = NP;
+	if(<230>field->end.fieldno > NP)
+		<0>field->end.fieldno = NP;
+/*	fprintf(stderr,"%d %d.%d,%d.%d\n",field-fields,field->begin.fieldno, field->begin.charno,field->end.fieldno, field->end.charno);*/
+<230>}
+
+int
+fieldcode(uchar *dp, uchar *kp, int len, uchar *b, struct field *fields, int nfields)
+<474734>{
+	uchar *posns[NP+1];	/* field start positions */
+	uchar *cp;
+	struct field *field;
+	uchar *op = <474734>kp;
+	uchar *ep;
+	uchar *bound = <474734>kp + MAXREC;
+	int i;
+	int np;
+	if(<474734>bound > b)
+		<155959>bound = b;
+	<474734>posns[0] = dp;
+	if(<474734>tab)
+		for(<304>np=1, i=len, cp=dp; <6355>i>0 && <6051>np<NP; i-<6051>-) {
+			if(<6051>*cp++ != tab)
+				<4411>continue;
+			<1640>posns[np++] = cp;
+		}
+	else
+		for(<474430>np=1, i=len, cp=dp; <1110378>i>0 && <635948>np<NP; ) <635948>{
+			while(<1228760>blank(cp) && i><636001>0)
+				<592812>cp++, i--;
+			while(<3943779>!blank(cp) && i><3782124>0)
+				<3307831>cp++, i--;
+			<635948>posns[np++] = cp;
+		}
+
+	if(<474734>nfields > 0)
+		<143100>field = &fields[1];
+	else
+		<331634>field = &fields[0];
+	<474734>i = nfields;
+	do {
+		int t = <486184>field->begin.fieldno;
+		uchar *xp = <486184>dp + len;
+		if(<486184>t < np) {
+			<486176>cp = posns[t];
+			if(<486176>field->bflag && <144>nfields)
+				while(<454>cp<xp && <454>blank(cp))
+					<316>cp++;
+			<486176>cp += field->begin.charno;
+			if(<486176>cp > xp)
+				<12>cp = xp;
+		} else
+			<8>cp = xp;
+		<486184>t = field->end.fieldno;
+		if(<486184>t < np) {
+			if(<112104>field->end.charno < 0) {
+				if(<111816>t >= np-1)
+					<25>ep = xp;
+				else {
+					<111791>ep = posns[t+1];
+					if(<111791>tab) <22>ep--;
+				}
+			} else {
+				<288>ep = posns[t];
+				if(<288>field->eflag)
+					while(<262>ep<xp && <262>blank(ep))
+						<186>ep++;
+				<288>ep += field->end.charno;
+			}
+			if(<112104>ep > xp)
+				<28>ep = xp;
+			else if(<112076>ep < cp)
+				<10>ep = cp;
+		} else
+			<374080>ep = xp;
+		<486184>t = ep - cp;
+		if(<486184>field->coder != acode && <386494>op+room(t) > bound)
+			return <17>-1;
+		<486167>op += (*field->coder)(cp, op, ep-cp, field);
+		<486167>field++;
+	} while(<486167>--i > 0);
+	return <474717>op - kp;
+}
+
+	/* Encode text field subject to options -r -fdi -b.
+	   Fields are separated by 0 (or 255 if rflag is set)
+           the anti-ambiguity stuff prevents such codes from
+	   happening otherwise by coding real zeros and ones
+	   as 0x0101 and 0x0102, and similarly for complements */
+
+int
+tcode(uchar *dp, uchar *kp, int len, struct field *f)
+<12156>{
+	uchar *cp = <12156>kp;
+	int c;
+	uchar *keep = <12156>f->keep;
+	uchar *trans = <12156>f->trans;
+	int reverse = <12156>f->rflag? <106>~0: <12050>0;
+	while(<211231>--len >= 0) {
+		<199075>c = *dp++;
+		if(<199075>keep[c]) {
+			<198337>c = trans[c];
+			if(<198337>c <= 1) {	/* anti-ambiguity */
+				<4>*cp++ = 1^reverse;
+				<4>c++;
+			} else if(<198333>c >= 254) {
+				<4>*cp++ = 255^reverse;
+				<4>c--;
+			}
+			<198337>*cp++ = c^reverse;
+		}
+	}
+	<12156>*cp++ = reverse;
+	return <12156>cp - kp;
+}
+
+static char *month[] = { "jan", "feb", "mar", "apr", "may", 
+	         "jun", "jul", "aug", "sep", "oct", "nov", "dec" };
+
+int
+Mcode(uchar *dp, uchar *kp, int len, struct field *f)
+<57>{
+	int j = <57>-1;
+	int i;
+	uchar *cp;
+	for( <57>; <69>len>0; <12>dp++, len--) {
+		if(<69>*dp!=' ' && <57>*dp!='\t')
+			<57>break;
+	}
+	if(<57>len >= 3)
+		while(<294>++j < 12) {
+			<292>cp = (uchar*)month[j];
+			for(<292>i=0; <166>i<3; <166>i++)
+				if(<410>(dp[i]|('a'-'A')) != *cp++)
+					<244>break;
+			if(<292>i >= 3)
+				<48>break;
+		}
+	<57>*kp = j>=12? <2>0: <55>j+1;
+	if(<57>f->rflag)
+		<8>*kp ^= ~0;
+	return <57>1;
+}
+tables.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "fsort.h"
+
+/* STACK=1000 makes lots of room under normal conditions.
+   But it can be broken.  40 cycles like this will do it:
+	a,b,...z,za,zb,...zz,zza,zzb,...,zzz,zzza,...
+   Minor changes to rsort() would allow the stack to be
+   extended discontiguously.  Pity we don't have alloca any more.
+*/
+
+#define BUFFER 6000000
+#define MINBUF 10000	/* not worth trying */
+#define STACK 1000
+
+uchar *bufmax;
+struct rec *buffer;
+unsigned long bufsiz = BUFFER;
+struct rec endfile;
+struct list *stack;
+struct list *stackmax;
+
+uchar ident[256];	/* identity transform */
+uchar fold[256];	/* fold upper case to lower */
+
+uchar all[256];		/* all chars significant */
+uchar dict[256];	/* sig chars for dictionary order */
+uchar ascii[256];	/* ascii graphics significant */
+
+void
+tabinit(void)
+<282>{
+	int i;
+	<282>memset((char*)all,1,256);
+
+	<282>memset((char*)(dict+'0'),1,10);
+	<282>memset((char*)(dict+'A'),1,26);
+	<282>memset((char*)(dict+'a'),1,26);
+	<282>dict[' '] = dict['\t'] = 1;
+
+	<282>memset((char*)(ascii+040),1,0137); /* 040-0176 */
+
+	for(<282>i=0; <72192>i<256; <72192>i++)
+		<72192>fold[i] = ident[i] = i;
+	for(<282>i='a'; <7332>i<='z'; <7332>i++)
+		<7332>fold[i] += 'A' - 'a';
+
+	<282>stack = (struct list*)malloc(STACK*sizeof(*stack));
+	do {
+		if(<282>(buffer=(struct rec*)malloc(bufsiz)) != 0)
+			<282>break;
+	} while(<0>(bufsiz/=2) > MINBUF);
+	if(<282>buffer==0 || <282>stack==0)
+		<0>fatal("can't get working space", "", 0);
+	<282>bufmax = (uchar*)buffer + bufsiz - 2*sizeof(*buffer);
+	<282>stack->head = stack->tail = 0;
+	<282>stackmax = stack + STACK;
+<282>}
+
+void
+tabfree(void)
+<2>{
+	<2>free(stack);
+	<2>free(buffer);
+<2>}
+
+void
+optiony(char *s)
+<5>{
+	long size = <5>atol(s);
+	if(<5>!isdigit(s[0]))
+		<0>fatal("no size for -y","",0);
+	if(<5>size >= MINBUF/10)	/* tiny helps debugging */
+		<5>bufsiz = size;
+	else if(<0>size == 0)
+		<0>bufsiz = 10L*BUFFER;
+	else <0>fatal("-y too small", "", 0);
+<5>}
+cfiles.c:
+
+/* Copyright 1990, AT&T Bell Labs */
+#include "fsort.h"
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#define SIGHUP 1
+#define SIGINT 2
+#define SIGQUIT 3
+#define SIGPIPE 13
+#define SIGTERM 15
+
+extern int getpid(void);
+extern int access(char*, int);
+extern int unlink(char*);
+extern int stat(const char*, struct stat *);
+extern int cgets(char*, int, FILE*);
+
+FILE *
+fileopen(char *name, char *mode)
+<2052>{
+	FILE *f;
+	if(<2052>strcmp(name,"-") == 0)
+		if(<199>strcmp(mode, "r") == 0)
+			<27>f = stdin;
+		else {
+			<172>setbuf(stdout,malloc(BUFSIZ));
+			<172>f = stdout;
+		}
+	else {
+		if(<1853>strcmp(mode, "w") == 0 &&
+		   <257>strcmp(name, oname) == 0 &&
+		   <11>overwrite(0))
+			<4>setsigs(SIG_IGN);
+		<1853>f = fopen(name, mode);
+	}
+	if(<2052>f == 0)
+		<3>fatal("can't open", name, 0);
+	return <2049>f;
+}
+
+void
+fileclose(FILE *f, char *name)
+<2041>{
+	if(<2041>fclose(f)==EOF && <1>name!=0)
+		<1>fatal("error on", name, 0);
+<2040>}
+
+/* file name strings accumulate as garbage */
+
+char *
+filename(int number)
+<849>{
+	char name[50];
+	char *s;
+	int i;
+	for(<849>i=0; <849>(s=tname[i])!=0; <0>i++)
+		if(<849>access(s, 03) != -1)
+			<849>break;
+	if(<849>s == 0)
+		<0>fatal("no accessible temp directory", "", 0);
+	<849>sprintf(name, "%s/stm%.5d.%.4d", s, getpid(), number);
+	<849>s = malloc(strlen(name) + 1);
+	if(<849>s == 0)
+		<0>fatal("out of space", "", 0);
+	<849>strcpy(s, name);
+	return <849>s;
+}
+
+/* if there is enough room in record r, getline puts
+   a line of data there and returns 0; otherwise it
+   returns a pointer to a new record.  The record
+   may be grown in stages; intermediate stages can
+   be discarded, but the original cannot. */
+
+static struct rec *
+newrec(struct rec *r, struct rec *retval)
+<83>{
+	int n = <83>(uchar*)r->next - data(r);
+	int len = <83>(uchar*)r->next - (uchar*)r;
+	struct rec *new = <83>(struct rec*)malloc(len + n);
+	if(<83>new == 0)
+		<0>fatal("no space for record", "", 0);
+	<83>memmove(new, r, len);
+	<83>new->next = (struct rec*)((uchar*)new + len + n);
+	if(<83>retval)
+		<24>free(retval);
+	return <83>new;
+}
+
+struct rec*
+getline(struct rec *r, FILE *f)
+<627600>{
+	int n = <627600>0;
+	int m;
+	uchar *cp, *dp;
+	struct rec *retval = <627600>0;
+
+	if(<627600>feof(f))		/* in case newline was appended */
+		return <1>ENDFILE;
+	for(<627599>;<133>;<133>) {		/* usually executed once */
+		<627732>dp = data(r);
+		<627732>cp = dp + n;
+		<627732>m = (uchar*)r->next - cp;
+		if(<627732>m <= 1) 
+			<66>retval = r = newrec(r, retval);
+		else {
+			<627666>m = cgets((char*)cp, m, f);
+			if(<627666>m == 0) {
+				if(<1611>n == 0)
+					return <1610>ENDFILE;
+				<1>warn("newline appended", "", 0);
+				<1>break;
+			}
+			<626055>n += m;
+			if(<626055>dp[n-1] == '\n') {
+				<625988>n--;
+				<625988>break;
+			}
+		}
+	}
+
+	<625989>r->dlen = n;
+	if(<625989>n > MAXREC)
+		<0>fatal("monster record", "", 0);
+	if(<625989>!keyed) {
+		<240956>r->klen = 0;	/* hygiene */
+		return <240956>retval;
+	}
+	while(<385050>(n = fieldcode(data(r),key(r), r->dlen,
+		(uchar*)r->next, fields, nfields)) < 0)
+		<17>retval = r = newrec(r, retval);	/* rare event */
+	if(<385033>n > MAXREC)
+		<0>fatal("monster key", "", 0);
+	<385033>r->klen = n;
+	return <385033>retval;
+}
+
+static char *level = "warning";
+
+void
+warn(char *m, char *s, int l)
+<54>{
+	<54>fprintf(stderr, "sort: %s: %s %.*s\n",
+		level, m, l==0?<45>strlen(s):<9>l, s);
+<54>}
+
+void
+fatal(char *m, char *s, int l)
+<40>{
+	<40>level = "error";
+	<40>warn(m, s, l);
+	if(<40>errno)
+		<3>perror("");
+	<40>cleanup(1);
+<0>}
+
+int
+overwrite(int j)
+<60>{
+	struct stat sb1, sb2;
+	if(<60>strcmp(oname, "-") == 0)
+		return <46>0;
+	if(<14>stat(oname, &sb1) == -1)
+		return <4>0;
+	for( <10>; <29>j<nfiles; <19>j++) {
+		if(<26>strcmp(files[j], "-") == 0)
+			<2>continue;
+		if(<24>stat(files[j], &sb2) == -1)
+			<0>fatal("cannot locate", files[j], 0);
+		if(<24>sb1.st_dev==sb2.st_dev && <24>sb1.st_ino==sb2.st_ino)
+			return <7>1;
+	}
+	return <3>0;
+}
+
+static int siglist[] = { SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGTERM };
+
+void
+setsigs(void(*f)(int))
+<326>{
+	int i;
+	for(<326>i=0; <1956>i<sizeof(siglist)/sizeof(*siglist); <1630>i++)
+		if(<1630>signal(siglist[i], f) == SIG_IGN)
+			<0>signal(siglist[i], SIG_IGN);
+<326>}
+
+void
+cleanup(int i)
+<40>{
+	char *name;
+	<40>setsigs(SIG_IGN);
+	while(<40>--nextfile >= 0) {
+		<0>name = filename(nextfile);
+		<0>unlink(name);
+		<0>free(name);
+	}
+	<40>exit(i);
+<0>}
+cgets.c:
+
+/* Copyright AT&T Bell Laboratories, 1993 */
+#include	<stdio.h>
+
+/* same as fgets, but returns a char count instead of first arg.
+*  robust against null bytes in input */
+
+int
+cgets(char *ptr, int n, FILE *iop)
+<627666>{
+	int l;
+	char *s = <627666>ptr;
+	unsigned char *t;
+	while(<631159>--n > 0) {
+		<631159>l = iop->_cnt;
+		if(<631159>l > 0) {
+			if(<627758>l > n) <277838>l = n;
+			<627758>t = iop->_ptr;
+			while(<8783600>--l >= 0 && <8781637>(*s++ = *t++) != '\n')
+				<8155842>continue;
+			<627758>l = t - iop->_ptr;
+			<627758>iop->_ptr = t;
+			<627758>iop->_cnt -= l;
+			if(<627758>t[-1] == '\n' || <1963>(n -= l) <= 0)
+				<625861>break;
+		}
+		<5298>l = getc(iop);
+		if(<5298>l == EOF)
+			<1612>break;
+		<3686>*s++ = l;
+		if(<3686>l == '\n')
+			<193>break;
+	}
+	<627666>*s = 0;
+	return <627666>s - ptr;
+}

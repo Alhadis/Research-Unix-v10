@@ -1,0 +1,36 @@
+# This file contains contains a collection of tests for the "index"
+# command in Tcl.  If everything is OK then it finishes silently.
+# If a problem is detected then it generates a Tcl error with a
+# cryptic message.  To trace the error you'll have to read through
+# the commands in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/index.test,v 1.1 90/03/21 14:05:41 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {Index error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+check [index {a b c} 0] a 1.1
+check [index {a {b c d} x} 1] {b c d} 1.2
+check [index {a b\ c\ d x} 1] {b c d} 1.3
+check [index {a b c} 3] {} 1.4
+check [catch {index {a b c} -1} msg] 1 1.5
+check $msg {bad index "-1"} 1.6
+
+check [index abcde 0 chars] a 2.1
+check [index abcde 4 c] e 2.2
+check [index abcde 5 chars] {} 2.3
+check [catch {index abcde -10 chars} msg] 1 2.4
+check $msg {bad index "-10"} 2.5
+
+check [catch index msg] 1 3.1
+check $msg {wrong # args:  should be "index value index [chars]"} 3.2
+check [catch {index 1 2 3 4} msg] 1 3.3
+check $msg {wrong # args:  should be "index value index [chars]"} 3.4
+check [catch {index 1 2 foo} msg] 1 3.5
+check $msg {bad argument "foo":  must be "chars"} 3.6
+check [catch "index \"a b {c\" 2" msg] 1 3.7
+check $msg {unmatched open brace in list} 3.8
+check [catch "index \"a b {c}d e\" 2" msg] 1 3.9
+check $msg {list element in braces followed by "d" instead of space} 3.10

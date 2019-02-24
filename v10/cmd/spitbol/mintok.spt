@@ -1,0 +1,438 @@
+-IN80
+-TITLE MINTOK: PHASE 1 TRANSLATION FROM MINIMAL TO TOKENS
+-STITL INTRODUCTIONS
+*
+*       This program takes MINIMAL statements and busts them up into
+*       individual pieces.
+*
+-STITL Initialization
+*
+*       Keyword initialization
+*
+	&ANCHOR = 1;	&STLIMIT = -1;	&TRIM	= 1
+*
+*       Useful constants
+*
+        MINLETS = 'ABCDEFGHIJKLMNOPQRSTUVWXY$'
+        NOS     = '0123456789'
+	TAB	= SUBSTR( &ALPHABET,10,1 )
+        REGNAME = ('X' ANY('LSTR')) | ('W' ANY('ABC')) | 'IA' | 'RA' | 'CP'
+*
+*       Zero the counts
+*
+        LABCNT = NOUTLINES = NLINES = NSTMTS = NTARGET = NERRORS = 0
+*
+*       Get file name
+*
+        FILENAMI = INPUT
+	TERMINAL = 'Input MINIMAL file: ' FILENAMI
+        TERMINAL =
+        FILENAMO = INPUT
+	TERMINAL = 'Output TOKEN file: ' FILENAMO
+        TERMINAL =
+        FLCFLAG  = REPLACE( INPUT,'y','Y' )
+	TERMINAL = 'Full line comments passed to TOKEN file? ' FLCFLAG
+*
+*       No page ejects without full line comments
+*
+        TERMINAL = DIFFER(FLCFLAG,'N')
+        EJCFLAG  = REPLACE( (DIFFER(FLCFLAG,'N') INPUT, 'N'),'y','Y' )
+	TERMINAL = 'EJCs passed to TOKEN file? ' EJCFLAG
+-STITL XFER FUNCTIONS
+*       CRACK parses STMT into a STMT data plex and returns it.
+*       It fails if there is a syntax error.
+*
+        DEFINE('CRACK(LINE)LABEL,OPCODE,OPERANDS,COMMENT,OPERAND,CHAR')
+*
+*       STMT is the common data plex used to hold the components of
+*       a statement (either Minimal or VAX) during processing.
+*
+        DATA('STMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)')
+*
+*       MINLABEL is a pattern matching a valid Minimal Source Label.
+*
+        MINLABEL = ANY(MINLETS) ANY(MINLETS) ANY(MINLETS NOS)
++                  ANY(MINLETS NOS) ANY(MINLETS NOS)
+*
+*       CSPARSE parses out the components of the input line in STMT,
+*       and puts them into the locals: LABEL, OPCODE, OPERANDS, COMMENT
+*
+        CSPARSE = (((MINLABEL . LABEL) | ('     '  '' . LABEL)) '  '
++                  LEN(3) . OPCODE
++                  (('  ' (BREAK(' ') | RTAB(0)) . OPERANDS
++                   (SPAN(' ') | '') RTAB(0) . COMMENT)  |
++                   (RPOS(0) . OPERANDS . COMMENT)))  |
++                 ('.'  '' . LABEL  MINCOND . OPCODE
++                  ((TAB(7)  '.'  LEN(4) . OPERANDS) | (RPOS(0) . OPERANDS))
++                  '' . COMMENT)
+*
+*       CSOPERAND breaks out the next operand in the OPERANDS string.
+*
+        CSOPERAND = (BREAK(',') . OPERAND  ',')  |  ((LEN(1) RTAB(0)) . OPERAND)
+*
+*       CSDTC is a pattern that handles the special case of the Minimal DTC op
+*
+        CSDTC   = ((MINLABEL . LABEL)  |  ('     '  '' . LABEL))
++                 LEN(7) (LEN(1) $ CHAR  BREAK(*CHAR)  LEN(1)) . OPERAND
++                 (SPAN(' ') | '')  RTAB(0) . COMMENT
+*
+*	equ.rip is a pattern that parses out the components of an EQU
+*	expression.
+*
+	equ.rip  = ( span(nos) . num1 | minlabel . sym1 )
++		   ( any('+-') . oprtr | '' )
++		   ( span(nos) . num2 | minlabel . sym2 | '' )
++		   rpos(0)
+-EJECT
+*       DOSTMT is the driver routine that causes processing of the
+*       statement plex in THISSTMT.
+*
+        DEFINE('DOSTMT()LABEL,OPCODE,OP1,OP2,OP3,COMMENT,T')
+-SPACE 3
+*
+        DEFINE('TINIT(STR)POS,CNT,INDEX,VAL,LASTVAL')
+        H_EQU.DEFS = TINIT(
++               'CFP$A[256]CFP$B[4]CFP$C[4]CFP$F[8]'
++               'CFP$I[1]CFP$M[^X7FFFFFFF]CFP$N[32]'
++               'NSTMX[10]CFP$R[1]CFP$S[6]CFP$X[2]'
++		'CFP$U[128]'
++               'E$SRS[50]E$STS[512]E$CBS[512]E$HNB[253]'
++               'E$HNW[3]E$FSP[20]'
++               'CH$LA[065]CH$LB[066]CH$LC[067]CH$LD[068]'
++               'CH$LE[069]CH$LF[070]CH$LG[071]CH$LH[072]'
++               'CH$LI[073]CH$LJ[074]CH$LK[075]CH$LL[076]'
++               'CH$LM[077]CH$LN[078]CH$LO[079]CH$LP[080]'
++               'CH$LQ[081]CH$LR[082]CH$LS[083]CH$LT[084]'
++               'CH$LU[085]CH$LV[086]CH$LW[087]CH$LX[088]'
++               'CH$LY[089]CH$L$[090]'
++               'CH$D0[048]CH$D1[049]CH$D2[050]CH$D3[051]'
++               'CH$D4[052]CH$D5[053]CH$D6[054]CH$D7[055]'
++               'CH$D8[056]CH$D9[057]'
++               'CH$$A[097]CH$$B[098]CH$$C[099]CH$$D[100]'
++               'CH$$E[101]CH$$F[102]CH$$G[103]CH$$H[104]'
++               'CH$$I[105]CH$$J[106]CH$$K[107]CH$$L[108]'
++               'CH$$M[109]CH$$N[110]CH$$O[111]CH$$P[112]'
++               'CH$$Q[113]CH$$R[114]CH$$S[115]CH$$T[116]'
++               'CH$$U[117]CH$$V[118]CH$$W[119]CH$$X[120]'
++               'CH$$Y[121]CH$$$[122]'
++               'CH$AM[038]CH$AS[042]CH$AT[064]CH$BB[060]'
++               'CH$BL[032]CH$BR[124]CH$CL[058]CH$CM[044]'
++               'CH$DL[036]CH$DT[046]CH$DQ[034]CH$EQ[061]'
++               'CH$EX[033]CH$MN[045]CH$NM[035]CH$NT[126]'
++               'CH$PC[037]CH$PL[043]CH$PP[040]CH$RB[062]'
++               'CH$RP[041]CH$QU[063]CH$SL[047]CH$SM[059]'
++               'CH$SQ[039]CH$UN[095]CH$OB[091]CH$CB[093]'
++               'CH$HT[009]CH$VT[012]IODEL[000]')
+*
+*       EQUATES is used by H_EQU and XOP.  It contains a directory of
+*       all labels that were defined by EQU instructions.  This allows
+*       XOP to properly translate operands of the DLBL(X) category.
+*
+        EQUATES = TABLE(257)
+-space 3
+*	BSW is a flag that indicates whether or not a BSW...ESW range
+*	is being processed.
+*
+	bsw	= 0
+-EJECT
+*       Error is used to report an error for THISSTMT
+*
+        DEFINE('ERROR(TEXT)')
+-SPACE 3
+*       OUTSTMT is used to send a target statement to the target code
+*       output file (OUTFILE <=> LU2)
+*
+        DEFINE('OUTSTMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)T,STMTOUT')
+*
+*       Associate output file
+*
+        OUTPUT(.OUTFILE,2,(IDENT(FILENAMO) '', FILENAMO))
+*       READLINE is called to return the next non-comment line from
+*       the Minimal input file (INFILE <=> LU1).   Note that it will
+*       not fail on EOF, but it will return a Minimal END statement
+*
+        DEFINE('READLINE()')
+*
+*       Associate input file to LU1
+*
+        INPUT(.INFILE,1,(IDENT(FILENAMI) '', FILENAMI))
+-EJECT
+*       XOP is called to translate a Minimal Operand to a VAX Macro Operand.
+*
+        DEFINE('XOP(XOP)VAL,PREFIX')
+*
+*       XOP.REGS is a pattern to match out register names for translation.
+*
+        XOP.REGS = (*REGNAME . VAL  RPOS(0) . PREFIX)  |
++                  (BREAK('(') LEN(1)) . PREFIX   LEN(2) . VAL
+*
+*       XOP.XREGS is a table with register translations
+*
+        XOP.XREGS = TINIT('IA[R5]RA[R2]CP[R3]WA[R6]WB[R7]WC[R8]XR[R9]'
++                   'XL[R10]XT[R10]XS[SP]')
+*
+*       XPINTX is a pattern that will match the INT(X) type operand
+*
+        XPINTX  = SPAN(NOS) . VAL  '('
+*
+*       XPDLBLX is a pattern that will match the DLBL(X) type operand
+*
+        XPDLBLX = MINLABEL . VAL  '('
+-STITL MAIN PROGRAM
+*       Here follows the driver code for the "main" program.
+-SPACE 3
+*
+*       Loop until program exits via H_END
+*
+MN03    DOSTMT()                                        :(MN03)
+-STITL CRACK(LINE)
+*       CRACK is called to create a STMT plex containing the various
+*       entrails of the Minimal Source statement in LINE.  For
+*       conditional assembly ops, the opcode is the op, and OP1
+*       is the symbol.  Note that DTC is handled as a special case to
+*       assure that the decomposition is correct.
+*
+*       CRACK will print an error and fail if a syntax error occurs.
+*
+CRACK   NSTMTS  = NSTMTS + 1
+        LINE    CSPARSE                                 :F(CS03)
+        CRACK   = STMT(LABEL,OPCODE,,,,COMMENT)
+        IDENT(OPCODE,'DTC')                             :S(CS02)
+*
+*	Now pick out operands until none left
+*
+	OPERANDS  CSOPERAND = 				:F(CS01)
+	OP1(CRACK) = XOP(OPERAND)
+	OPERANDS  CSOPERAND = 				:F(CS01)
+	OP2(CRACK) = XOP(OPERAND)
+	OPERANDS  CSOPERAND				:F(CS01)
+	OP3(CRACK) = XOP(OPERAND)
+*
+*	Operands all parsed out.  That's all folks.
+*
+CS01	:(RETURN)
+*
+*	DTC - Special case
+*
+CS02	LINE	CSDTC					:F(CS03)
+	OP1(CRACK) = OPERAND
+	COMMENT(CRACK) = COMMENT			:(CS01)
+*
+*	Here on syntax error
+*
+CS03	ERROR('SOURCE LINE SYNTAX ERROR')		:(FRETURN)
+-STITL DOSTMT()
+*       DOSTMT is invoked to initiate processing of the next line from
+*       READLINE.  For efficient access
+*       DOSTMT puts name values corresponding to the components in
+*       variables with the same names (LABEL, OPCODE, OP1,OP2,OP3 and
+*       COMMENT) which allows the various handlers to $var to store/fetch
+*       the values of the statment.
+*
+*       After doing this, DOSTMT branches to the handler routine indicated
+*       for this opcode in the HANDLER table (there must be an entry or
+*       an error results).  The handlers all have entry points beginning
+*       with "H_", and can be considered a logical extension of the
+*       DOSTMT routine.  The handlers have the choice of branching back
+*       to DSGEN to cause the THISSTMT plex to be sent to OUTSTMT, or
+*       of RETURNing themselves, in which case the handler must output
+*       all needed code itself.
+*
+*       The handlers are listed in a separate section below.
+*
+DOSTMT  THISLINE = READLINE()
+        THISSTMT = CRACK(THISLINE)              :F(DOSTMT)
+        LABEL   = .LABEL(THISSTMT)
+        OPCODE  = .OPCODE(THISSTMT)
+        OP1     = .OP1(THISSTMT)
+        OP2     = .OP2(THISSTMT)
+        OP3     = .OP3(THISSTMT)
+        COMMENT = .COMMENT(THISSTMT)
+*
+*	ONLY NEED TO PROCESS 5 INSTRUCTIONS:
+*
+*	BSW,END,EQU,ESW,IFF
+*
+        LEQ( $OPCODE,'EQU' )                    :s(h_equ)
+	leq( $opcode,'IFF' )			:s(h_iff)
+	leq( $opcode,'BSW' )			:s(h_bsw)
+	leq( $opcode,'ESW' )			:s(h_esw)
+	leq( $opcode,'END' )			:s(h_end)
+*
+*       GENERATE TOKENS.
+*
+DSGEN   OUTSTMT($LABEL,$OPCODE,$OP1,$OP2,$OP3,$COMMENT) :(RETURN)
+-STITL ERROR(TEXT)
+*       This module handles reporting of errors with the offending
+*       statement text in THISLINE.  Comments explaining
+*       the error are written to the listing (including error chain), and
+*       the appropriate counts are updated.
+*
+ERROR   OUTFILE = '* *???* ' THISLINE
+        OUTFILE = '*       ' TEXT
++                 (IDENT(LASTERROR),'. LAST ERROR WAS LINE ' LASTERROR)
+        LASTERROR = NOUTLINES
+        NOUTLINES = NOUTLINES + 2
+        NERRORS = NERRORS + 1
++                       :(RETURN)
+-STITL OUTSTMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)
+*       This module writes the components of the VAX MACRO statement
+*       passed in the argument list to the formatted .MAR file
+*
+OUTSTMT
+*
+*       Send text to OUTFILE
+*
+        OUTFILE = '{' LABEL '{' OPCODE '{' OP1 '{' OP2 '{' OP3 '{' COMMENT
+        NTARGET = NTARGET + 1
+        NOUTLINES = NOUTLINES + 1
++                       :(RETURN)
+-STITL READLINE()
+*       This routine returns the next statement line in the input file
+*       to the caller.  It never fails.  If there is no more input,
+*       then a Minimal END statement is returned.
+*       Comments are passed through to the output file directly.
+*
+*
+READLINE READLINE = INFILE                      :F(RL02)
+        NLINES  = NLINES + 1
+	ident( readline )			:s(readline)
+        LEQ( SUBSTR( READLINE,1,1 ),'*' )       :F(RL01)
+*
+*       Only print comment if requested.
+*
+        OUTFILE = IDENT(FLCFLAG,'Y') READLINE   :F(READLINE)
+        NOUTLINES = NOUTLINES + 1               :(READLINE)
+*
+*       Here if not a comment line
+*
+RL01    :(RETURN)
+*
+*       Here on EOF
+*
+RL02    READLINE = '       END'
+                        :(RL01)
+-STITL TINIT(STR)
+*       This routine is called to initialize a table from a string of
+*       index/value pairs.
+*
+TINIT   POS     = 0
+*
+*       Count the number of "[" symbols to get an assessment of the table
+*       size we need.
+*
+TIN01   STR     (TAB(*POS) '[' BREAK(']') *?(CNT = CNT + 1) @POS)
++                                       :S(TIN01)
+*
+*       Allocate the table, and then fill it. Note that a small memory
+*       optimisation is attempted here by trying to re-use the previous
+*       value string if it is the same as the present one.
+*
+        TINIT   = TABLE(CNT)
+TIN02   STR     (BREAK('[') $ INDEX LEN(1) BREAK(']') $ VAL LEN(1)) =
++                                       :F(RETURN)
+        VAL     = CONVERT( VAL,'INTEGER' )
+        VAL     = IDENT(VAL,LASTVAL) LASTVAL
+        LASTVAL = VAL
+        TINIT[INDEX] = VAL              :(TIN02)
+-STITL XOP(OPERAND)
+*       XOP is called to Translate a Minimal Source Operand into
+*       a semantically equivalent VAX/Macro Operand.  Most of the
+*       Minimal Operands are basically OK,  the following transformations
+*       must be applied:
+*
+*               - All operands beginning with "=" have the "=" changed
+*                 to a VAX immediate mode beginning with "#"
+*               - Byte immediate "*..." is changed to "#4*..."
+*               - INT(X) is changed to "4*INT(X)"
+*               - DLBL(X) is changed to "4*DLBL(X)"
+*               - CLBL(X) and WLBL(X) are changed to L^XLBL(X)
+*
+*
+*       Check for immediate mode
+*
+XOP     XOP  '='        = '#'                   :S(XP01)
+*
+*       Else check for byte immediate
+*
+        XOP  ('*'  LEN(1) . VAL)  =  '#4*' VAL  :S(XP01)
+*
+*       Else check for INT(X)
+*
+        XOP  XPINTX  =  (IDENT(VAL,'0'), '4*' VAL) '('  :S(XP01)
+*
+*       Else check for DLBL(X), CLBL(X) or WLBL(X)
+*
+        XOP  XPDLBLX  =  (DIFFER(EQUATES[VAL]) '4*', 'L^') VAL '('
+*
+*       Merge here with XOP containing syntax fixes.  Now map registers
+*
+XP01    XOP     XOP.REGS        = PREFIX XOP.XREGS[VAL]         :(RETURN)
+-stitl Handle instructions
+*
+*	BSW processing begins by building an array that can hold all
+*	IFF operands and comments.
+*
+h_bsw	ub = ( integer( $op2 ) $op2, equates[$op2] )
+	iffar = integer( ub )
++		array( '0:' ub - 1,'{{' )		:f(error)
+	dplbl = $op3
+	bsw   = 1					:(dsgen)
+-space 3
+*
+*	IFF processing sets the iffar[] element to the current
+*	value, plbl, and comment.
+*
+h_iff	eq( bsw )					:s(error)
+	iffval = ( integer( $op1 ) $op1, equates[$op1] )
+	iffar[iffval] = integer( iffval ) 
++		$op1 '{' $op2 '{' $comment		:f(error)s(return)
+*
+*	In order to support translation of MINIMAL operands and
+*	BSW/IFF/ESW preprocessing, all EQU expressions must be
+* 	evaluated and kept in a symbol table.
+*
+h_equ	equates[$label] = ident($op1,'*')
++			h_equ.defs[$label]		:s(dsgen)
+*
+	num1 = num2 = sym1 = sym2 = oprtr = 
+	$op1 equ.rip					:f(error)
+	num1    = differ(sym1) equates[sym1]
+	num2    = differ(sym2) equates[sym2]
+	val     = eval( num1 ' ' oprtr ' ' num2 )		:f(error)
+	equates[$label] = val				:(dsgen)
+-space 3
+*
+*	ESW processing generates an IFF for every value in the
+*	BSW range.
+*
+h_esw	eq( bsw)					:s(error)
+	iffindx = 0
+h_esw1	iffar[iffindx] break('{') $ val len(1)
++		break( '{' ) $ plbl len(1)
++		rem $ cmnt
++							:f(h_esw2)
+	val = ident( val ) 'DUMMY'
+	plbl = ident( plbl ) dplbl
+	outstmt(,'IFF',val,plbl,,cmnt)
+	iffindx = iffindx + 1				:(h_esw1)
+h_esw2  iffar =						:(dsgen)
+-SPACE 3
+*       END prints statistics on terminal then exits program
+*
+H_END   OUTSTMT(,'END',,,,$COMMENT)
+        TERMINAL = '*** TRANSLATION COMPLETE ***'
+        TERMINAL = NLINES ' LINES READ.'
+        TERMINAL = NSTMTS ' STATEMENTS PROCESSED.'
+        TERMINAL = NTARGET ' TARGET CODE LINES PRODUCED.'
+        TERMINAL = NERRORS ' ERRORS OCCURRED.'
+        TERMINAL = DIFFER(LASTERROR) 'THE LAST ERROR WAS IN LINE ' LASTERROR
+        &CODE   = NE(NERRORS) 2001
+	terminal = collect() ' free words'
+        :(END)
+*
+END
+spitv35.ppmin
+spitv35.tok
+y
+y

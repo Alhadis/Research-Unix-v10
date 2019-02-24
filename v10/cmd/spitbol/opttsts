@@ -1,0 +1,445 @@
+		movl	initr,r8	# terminal flag
+#--->		tstl	r8		# skip if no terminal
+		beqlu	ini13		# skip if no terminal
+
+		addl2	cswex,noxeq	# add -noexecute flag
+#--->		tstl	noxeq		# jump if execution suppressed
+		bnequ	inix2		# jump if execution suppressed
+
+		movl	4*icval(r10),r5	# load exponent
+#--->		tstl	r5		# error if negative exponent
+		bgeq	0f		# error if negative exponent
+
+		subl2	4*1(sp),r6	# minus final cursor = total length
+#--->		tstl	r6		# jump if result is null
+		bnequ	0f		# jump if result is null
+
+		movl	4*sclen(r10),r6	# load length
+#--->		tstl	r6		# jump if null replacement
+		beqlu	orpl2		# jump if null replacement
+
+		subl2	r8,r6		# minus final cursor = part 3 length
+#--->		tstl	r6		# jump to assign if part 3 is null
+		bnequ	0f		# jump to assign if part 3 is null
+
+	labo1:	movl	kvert,r6	# load error code
+#--->		tstl	r6		# jump if no error has occured
+		beqlu	labo2		# jump if no error has occured
+
+	lcnt1:	movl	r$cnt,r9	# load continuation code block ptr
+#--->		tstl	r9		# jump if no previous error
+		beqlu	lcnt2		# jump if no previous error
+
+		movl	4*efrsl(r10),r7	# get result type id
+#--->		tstl	r7		# branch if not unconverted
+		bnequ	befa8		# branch if not unconverted
+
+		movl	4*ffnxt(r9),r9	# else link to next ffblk on chain
+#--->		tstl	r9		# loop back if another entry to check
+		bnequ	bffc1		# loop back if another entry to check
+
+		movl	4*pfnlo(r10),r6	# load number of locals
+#--->		tstl	r6		# jump if no locals
+		beqlu	bpf07		# jump if no locals
+
+		addl2	kvftr,r6	# add ftrace value
+#--->		tstl	r6		# jump if tracing possible
+		bnequ	bpf09		# jump if tracing possible
+
+		bicl2	r11,r6
+#--->		tstl	r6		# fail if no match
+		bnequ	0f		# fail if no match
+
+		decl	r8		# else decrement level counter
+#--->		tstl	r8		# loop back if not at outer level
+		bnequ	pbal2		# loop back if not at outer level
+
+		subl2	r7,r8		# get number of characters left
+#--->		tstl	r8		# fail if no characters left
+		bnequ	0f		# fail if no characters left
+
+		subl2	r7,r8		# get number of characters left
+#--->		tstl	r8		# fail if no characters left
+		bnequ	0f		# fail if no characters left
+
+		bicl2	r11,r6
+#--->		tstl	r6		# succeed if break character found
+		beqlu	0f		# succeed if break character found
+
+		bicl2	r11,r6
+#--->		tstl	r6		# fail if character is matched
+		beqlu	0f		# fail if character is matched
+
+		subl2	r7,r8		# calculate number of characters left
+#--->		tstl	r8		# fail if no characters left
+		bnequ	0f		# fail if no characters left
+
+		bicl2	r11,r6
+#--->		tstl	r6		# jump if no match
+		beqlu	pspn3		# jump if no match
+
+		subl2	r7,r8		# calculate number of characters left
+#--->		tstl	r8		# fail if no characters left
+		bnequ	0f		# fail if no characters left
+
+		movl	4*icval(r9),r5	# load integer value
+#--->		tstl	r5		# jump if zero or neg (bad dimension)
+		bgtr	0f		# jump if zero or neg (bad dimension)
+
+		movl	arptr,r10	# load offset (also pass indicator)
+#--->		tstl	r10		# jump if first pass
+		beqlu	sar05		# jump if first pass
+
+		movl	4*icval(r9),r5	# get value
+#--->		tstl	r5		# branch if negative or zero
+		bleq	sbf01		# branch if negative or zero
+
+	sclr4:	movl	4*vrnxt(r9),r9	# point to next vrblk on chain
+#--->		tstl	r9		# jump for next bucket if chain end
+		beqlu	sclr3		# jump for next bucket if chain end
+
+	scv02:	movl	(r10)+,r9	# load next table entry, bump pointer
+#--->		tstl	r9		# fail if zero marking end of list
+		bnequ	0f		# fail if zero marking end of list
+
+		subl2	intv2,r5	# subtract 2 to compare
+#--->		tstl	r5		# fail if dim2 not 2
+		beql	0f		# fail if dim2 not 2
+
+		movl	4*1(r10),r6	# load length for sbstr
+#--->		tstl	r6		# return null if length is zero
+		bnequ	0f		# return null if length is zero
+
+		decl	(sp)		# count down
+#--->		tstl	(sp)		# loop
+		bnequ	sdup5		# loop
+
+		movl	4*2(r10),r10	# get next link
+#--->		tstl	r10		# stop if chain end
+		beqlu	senf4		# stop if chain end
+
+	senf4:	movl	enfch,r10	# get chain head
+#--->		tstl	r10		# finished if chain end
+		bnequ	0f		# finished if chain end
+
+		movl	r$rpt,r9	# point to current table (if any)
+#--->		tstl	r9		# jump if we already have a table
+		bnequ	srpl2		# jump if we already have a table
+
+		movl	r9,r7		# save second argument
+#--->		tstl	r7		# jump if second argument zero
+		bnequ	0f		# jump if second argument zero
+
+	ssubb:	movl	sbssv,r8	# reload third argument
+#--->		tstl	r8		# skip if third arg given
+		bnequ	ssub1		# skip if third arg given
+
+	acs05:	movl	4*trtyp(r9),r7	# load trap type code
+#--->		tstl	r7		# jump if not input association
+		beqlu	0f		# jump if not input association
+
+		movl	4*trfpt(r9),r10	# get file ctrl blk ptr or zero
+#--->		tstl	r10		# jump if not standard input file
+		bnequ	acs06		# jump if not standard input file
+
+	acmp3:	movl	4*icval(r10),r5	# load second argument
+#--->		tstl	r5		# gt if negative
+		blss	acmp1		# gt if negative
+
+		subl2	aldyn,r5	# subtract from scaled up free store
+#--->		tstl	r5		# jump if sufficient free store
+		bgtr	aloc5		# jump if sufficient free store
+
+	asg11:	movl	4*trfpt(r10),r6	# fcblk ptr
+#--->		tstl	r6		# jump if standard output file
+		beqlu	asg13		# jump if standard output file
+
+		bicl2	r11,r6
+#--->		tstl	r6		# jump if constant keyword
+		bnequ	cgv00		# jump if constant keyword
+
+		bicl2	r11,r6
+#--->		tstl	r6		# jump if not
+		beqlu	cgv12		# jump if not
+
+		bicl2	r11,r6
+#--->		tstl	r6		# jump if preevaluation permitted
+		bnequ	cgv08		# jump if preevaluation permitted
+
+		bicl2	r11,r6
+#--->		tstl	r6		# ordinary binop if not
+		bnequ	0f		# ordinary binop if not
+
+		bicl2	r11,r6
+#--->		tstl	r6		# go gen if not constant
+		bnequ	0f		# go gen if not constant
+
+	cdwd1:	movl	r$ccb,r9	# load ptr to ccblk being built
+#--->		tstl	r9		# jump if block allocated
+		bnequ	cdwd2		# jump if block allocated
+
+		subl2	r7,r6		# get length of label
+#--->		tstl	r6		# skip if label length zero
+		bnequ	0f		# skip if label length zero
+
+		bisl2	4*cmcgo(sp),r8	# check if conditional goto
+#--->		tstl	r8		# jump if -nofail and no cond. goto
+		beqlu	cmpse		# jump if -nofail and no cond. goto
+
+		movl	4*cmlbl(sp),r10	# get possible label pointer
+#--->		tstl	r10		# skip if no label
+		beqlu	cmp26		# skip if no label
+
+	cmp27:	movl	4*cmsop(sp),r6	# load success offset
+#--->		tstl	r6		# jump if no fill in required
+		beqlu	cmp28		# jump if no fill in required
+
+		bisl2	4*cmsgo(sp),r7	# or in success goto
+#--->		tstl	r7		# ok if non-null field
+		beqlu	0f		# ok if non-null field
+
+		bicl2	r11,r7
+#--->		tstl	r7		# redef ok if not
+		beqlu	dffn3		# redef ok if not
+
+		movl	4*trtrf(r10),r10# point to trtrf trap block
+#--->		tstl	r10		# jump if no iochn
+		beqlu	dtch5		# jump if no iochn
+
+		movl	4*trtrf(r10),r10# point to next link
+#--->		tstl	r10		# jump if end of chain
+		beqlu	dtch5		# jump if end of chain
+
+	dmp01:	movl	4*vrnxt(r9),r9	# point to next vrblk on chain
+#--->		tstl	r9		# jump if end of this hash chain
+		bnequ	0f		# jump if end of this hash chain
+
+		movl	(r10),r9	# load pointer to next entry
+#--->		tstl	r9		# jump if end of chain to insert
+		bnequ	0f		# jump if end of chain to insert
+
+	dmp10:	movl	dmvch,r9	# load pointer to next entry on chain
+#--->		tstl	r9		# jump if end of chain
+		beqlu	dmp11		# jump if end of chain
+
+	dmp12:	movl	(r10)+,r9	# load next svblk ptr from table
+#--->		tstl	r9		# jump if end of list
+		beqlu	dmp13		# jump if end of list
+
+		movl	4*bclen(r9),r8	# load defined length
+#--->		tstl	r8		# skip characters if none
+		beqlu	dmp32		# skip characters if none
+
+		movl	4*sclen(r9),r6	# get length of string
+#--->		tstl	r6		# jump if null
+		beqlu	ert02		# jump if null
+
+	gbc02:	movl	(r10),r9	# load ptr to next vrblk
+#--->		tstl	r9		# jump if end of chain
+		beqlu	gbc03		# jump if end of chain
+
+	gbc11:	movl	gbcnm,r10	# point to next move block
+#--->		tstl	r10		# jump if end of chain
+		beqlu	gbc12		# jump if end of chain
+
+		movl	gbsvb,r7	# reload move offset
+#--->		tstl	r7		# jump if no move required
+		beqlu	gbc13		# jump if no move required
+
+		movl	(sp)+,r8	# restore block pointer
+#--->		tstl	r8		# continue loop unless outer levl
+		bnequ	gpf02		# continue loop unless outer levl
+
+		movl	4*vrnxt(r10),r10# point to next vrblk on chain
+#--->		tstl	r10		# jump if end of chain
+		beqlu	gnv08		# jump if end of chain
+
+		bicl2	r11,r7
+#--->		tstl	r7		# jump if not present
+		beqlu	gnv13		# jump if not present
+
+		bicl2	r11,r8
+#--->		tstl	r8		# jump if no keyword number
+		beqlu	gnv17		# jump if no keyword number
+
+		bicl2	r11,r8
+#--->		tstl	r8		# skip if no system function
+		beqlu	gnv18		# skip if no system function
+
+		bicl2	r11,r8
+#--->		tstl	r8		# jump if bit is off (no system labl)
+		beqlu	gnv19		# jump if bit is off (no system labl)
+
+		bicl2	r11,r8
+#--->		tstl	r8		# all done if no value
+		bnequ	0f		# all done if no value
+
+		movl	4*sclen(r10),r6	# load length
+#--->		tstl	r6		# jump if not system variable
+		bnequ	gts04		# jump if not system variable
+
+		decl	r10		# decrement counter
+#--->		tstl	r10		# loop back if more to go
+		bnequ	gts25		# loop back if more to go
+
+		movl	4*bclen(r10),r6	# get size to allocate
+#--->		tstl	r6		# if null then return null
+		beqlu	gts33		# if null then return null
+
+		subl2	r8,r6		# subtract to get remainder
+#--->		tstl	r6		# no pad if already even boundary
+		bnequ	0f		# no pad if already even boundary
+
+		movl	r$iot,r9	# get 0 or trtrf ptr
+#--->		tstl	r9		# jump if trtrf block exists
+		beqlu	0f		# jump if trtrf block exists
+
+	iop20:	movl	4*trtrf(r9),r9	# next link of chain
+#--->		tstl	r9		# not found
+		beqlu	iop21		# not found
+
+		bicl2	r11,r6
+#--->		tstl	r6		# error if no keyword association
+		beqlu	kwnm1		# error if no keyword association
+
+		movl	lstsn,r9	# load statement number
+#--->		tstl	r9		# jump if no statement number
+		beqlu	list2		# jump if no statement number
+
+		movl	r$stl,r9	# load pointer to sub-title
+#--->		tstl	r9		# jump if no sub-title
+		beqlu	lstt1		# jump if no sub-title
+
+		movl	r$cim,r9	# point to image
+#--->		tstl	r9		# jump if no image
+		beqlu	nxts2		# jump if no image
+
+		movl	4*sclen(r10),r7	# load string length
+#--->		tstl	r7		# jump if null string case
+		beqlu	pats6		# jump if null string case
+
+		movl	(r9),r5		# load nr of executions
+#--->		tstl	r5		# no printing if zero
+		beql	prfl3		# no printing if zero
+
+		movl	prlen,r7	# get prior length if any
+#--->		tstl	r7		# skip if no length
+		beqlu	prpa2		# skip if no length
+
+		bicl2	r11,r7
+#--->		tstl	r7		# skip if clear
+		beqlu	prpa4		# skip if clear
+
+		bicl2	r11,r8
+#--->		tstl	r8		# jump if terminal required
+		beqlu	0f		# jump if terminal required
+
+	prn07:	movl	r9,r8		# copy vrblk pointer
+#--->		tstl	r8		# jump if chain end (or prnmv zero)
+		beqlu	prn09		# jump if chain end (or prnmv zero)
+
+		subl2	r7,r6		# subtract count of chars already out
+#--->		tstl	r6		# jump to exit if none left
+		bnequ	0f		# jump to exit if none left
+
+		subl2	profs,r9	# get chars left in print buffer
+#--->		tstl	r9		# skip if room left on this line
+		bnequ	prst2		# skip if room left on this line
+
+		movl	r$cni,r9	# get ptr to next image
+#--->		tstl	r9		# exit if already read
+		bnequ	read3		# exit if already read
+
+		subl2	4*ardm2(r10),r5	# check against dimension
+#--->		tstl	r5		# fail if too large
+		blss	0f		# fail if too large
+
+		subl2	$4,r8		# i = i - 1
+#--->		tstl	r8		# loop if i gt 0
+		bnequ	srt10		# loop if i gt 0
+
+	srt11:	subl2	$4,r8		# i = i - 1 (n - 1 initially)
+#--->		tstl	r8		# jump if done
+		beqlu	srt12		# jump if done
+
+		decl	srtnr		# decrement row count
+#--->		tstl	srtnr		# repeat till all rows done
+		bnequ	srt13		# repeat till all rows done
+
+		movl	srtfd,r9	# get possible former dfblk ptr
+#--->		tstl	r9		# jump if not
+		beqlu	srtf4		# jump if not
+
+	tfn02:	movl	4*1(r9),r5	# load value as hash source
+#--->		tstl	r5		# ok if positive or zero
+		bgeq	tfn06		# ok if positive or zero
+
+		movl	4*2(sp),r7	# restore name/value indicator
+#--->		tstl	r7		# jump if called by name
+		bnequ	tfn09		# jump if called by name
+
+		movl	4*2(sp),r7	# load name/value indicator
+#--->		tstl	r7		# exit with default if value call
+		beqlu	tfn09		# exit with default if value call
+
+		movl	(sp)+,r7	# get trblk ptr again
+#--->		tstl	r7		# jump if stoptr case
+		beqlu	trc05		# jump if stoptr case
+
+		movl	4*sclen(r9),r6	# load string length
+#--->		tstl	r6		# jump if null input
+		beqlu	trim2		# jump if null input
+
+	trim1:	decl	r6		# else decrement character count
+#--->		tstl	r6		# loop back if more to check
+		bnequ	trim0		# loop back if more to check
+
+		subl2	r7,r6		# get number of remaining characters
+#--->		tstl	r6		# jump if no characters left
+		beqlu	xscn2		# jump if no characters left
+
+		decl	r6		# decrement count of chars left
+#--->		tstl	r6		# loop back if more chars to go
+		bnequ	xscn1		# loop back if more chars to go
+
+		subl2	4*ardim(r9),r5	# subtract dimension
+#--->		tstl	r5		# out of range fail if too large
+		blss	0f		# out of range fail if too large
+
+		addl2	kvftr,r7	# add ftrace
+#--->		tstl	r7		# jump if no tracing possible
+		bnequ	0f		# jump if no tracing possible
+
+		movl	4*pfrtr(r9),r9	# else load return trace trblk ptr
+#--->		tstl	r9		# jump if not return traced
+		beqlu	rtn02		# jump if not return traced
+
+		movl	(sp)+,r10	# pop saved pointer
+#--->		tstl	r10		# no action if none
+		beqlu	rtn7c		# no action if none
+
+		addl2	4*pfnlo(r9),r7	# add number of locals
+#--->		tstl	r7		# jump if no args/locals
+		beqlu	rtn10		# jump if no args/locals
+
+		movl	kvstc,r5	# get stmt count
+#--->		tstl	r5		# omit counting if negative
+		bgeq	0f		# omit counting if negative
+
+		movl	kvstl,r5	# get statement limit
+#--->		tstl	r5		# skip if negative
+		blss	stpr2		# skip if negative
+
+		movl	scnse,r6	# load scan element offset
+#--->		tstl	r6		# skip if not set
+		beqlu	err02		# skip if not set
+
+		movl	r$sxc,r9	# load setexit cdblk pointer
+#--->		tstl	r9		# continue if no setexit trap
+		bnequ	0f		# continue if no setexit trap
+
+	err08:	movl	dmvch,r9	# chain head for affected vrblks
+#--->		tstl	r9		# done if zero
+		beqlu	err06		# done if zero
+
+111 redundant TSTL instructions removed

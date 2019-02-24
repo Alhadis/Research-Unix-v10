@@ -1,0 +1,478 @@
+*** /tmp/,RCSt1a12477	Tue Nov  7 09:42:18 1989
+--- /tmp/,RCSt2a12477	Tue Nov  7 09:42:22 1989
+***************
+*** 2,8 ****
+  /*ident	"@(#)ctrans:src/expr3.c	1.3.5.29" */
+  /*
+  	$Source: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr3.c,v $ $RCSfile: expr3.c,v $
+! 	$Revision: 1.8 $		$Date: 89/10/16 08:15:27 $
+  	$Author: benson $		$Locker:  $
+  	$State: Exp $
+  */
+--- 2,8 ----
+  /*ident	"@(#)ctrans:src/expr3.c	1.3.5.29" */
+  /*
+  	$Source: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr3.c,v $ $RCSfile: expr3.c,v $
+! 	$Revision: 1.9 $		$Date: 89/10/20 14:30:34 $
+  	$Author: benson $		$Locker:  $
+  	$State: Exp $
+  */
+***************
+*** 24,29 ****
+--- 24,30 ----
+  
+  #include "cfront.h"
+  #include "size.h"
++ #include "extended_error.h"
+  
+  int pr_dominate(Ptype t1, Ptype t2)
+  /*
+***************
+*** 246,252 ****
+  
+  Pname Ntmp;
+  
+! static refd;	// initialization routine called by ref_init, do not apply itor
+  extern loc no_where;
+  
+  Pname make_tmp(char c, Ptype t, Ptable tbl)
+--- 247,253 ----
+  
+  Pname Ntmp;
+  
+! int refd;	// initialization routine called by ref_init, do not apply itor
+  extern loc no_where;
+  
+  Pname make_tmp(char c, Ptype t, Ptable tbl)
+***************
+*** 889,900 ****
+  
+  }
+  
+- extern int type_indexable (Ptype, int);
+  extern Pname indexable_member_reference (Pexpr, int);
+  
+  void const_err (Ptype t, Pexpr ob, Pname fn)
+  {
+!     int tpindexable = type_indexable(t, 1);
+      int topindex = (indexable_member_reference(ob, 0) != 0);
+      if(!tpindexable)
+  	error(strict_opt?0:'w',"non-constMF%n called for constO",fn);
+--- 890,901 ----
+  
+  }
+  
+  extern Pname indexable_member_reference (Pexpr, int);
+  
+  void const_err (Ptype t, Pexpr ob, Pname fn)
+  {
+!     int tpindexable = t->tconst(const_idx) && !t->tconst(const_not_idx);
+! 
+      int topindex = (indexable_member_reference(ob, 0) != 0);
+      if(!tpindexable)
+  	error(strict_opt?0:'w',"non-constMF%n called for constO",fn);
+***************
+*** 911,917 ****
+--- 912,983 ----
+  }
+  
+  
++ class call_fct_eei {
++   public:
++     int valid; /* not on until we are processing some argument or another */
++     Pname fname;
++     Pname cur_formal;
++     Pexpr cur_actual;
++     int argx;
++     call_fct_eei () {
++ 	valid = 0;
++ 	argx = 0;
++ 	fname = 0;
++ 	cur_formal = 0;
++ 	cur_actual = 0;
++     };
++ };
++ 
++ int unprintable_expression_p (Pexpr e);
++ char * print_expression (Pexpr e, int flags, int& err);
++ 
++ void call_fct_extended_error (void * info, FILE * of)
++ {
++     call_fct_eei& cfe = *(call_fct_eei *) info;
++ 
++     if(!cfe.valid) return;
++     if(cfe.fname) fprintf(of, "Calling %s; ", err::name_string (cfe.fname));
++     if(cfe.cur_actual) {
++ 	int perr = 0;
++ 	char * msg;
++ 	if(!unprintable_expression_p(cfe.cur_actual))
++ 	    msg = print_expression (cfe.cur_actual, 0, perr);
++ 	else perr = 1;
++ 	if(perr)
++ 	    fprintf(of, "Passing an expression ");
++ 	else fprintf(of, "Passing %s ", msg);
++ 	if(msg) free (msg);
++     }
++     if(cfe.cur_formal) {
++ 	if(cfe.cur_formal->string)
++ 	    fprintf(of, "to %s ", err::name_string(cfe.cur_formal));
++ 	else fprintf(of, "to type %s ", err::type_string(cfe.cur_formal->tp));
++     }
++     fprintf(of, "\n");
++ }
++ 
++ class call_fct_undo : public basic_undo {
++   public:
++     extended_error_state * ees;
++     call_fct_eei cfei;
++     call_fct_undo () {
++ 	ees = extended_error_state::push (call_fct_extended_error, (void *) &cfei);
++     };
++     virtual ~call_fct_undo () {
++ 	extended_error_state::pop ();
++       };
++ };
++ 
++ 
+  Ptype expr::call_fct(Ptable tbl)
++ {
++     call_fct_undo Undo;
++ 
++     return call_fct0(tbl, (void *)&Undo.cfei);
++ }
++ 
++ 
++ Ptype expr::call_fct0(Ptable tbl, void * eei)
+  /*
+  	check "this" call:
+  		 e1(e2)
+***************
+*** 935,940 ****
+--- 1001,1008 ----
+  				// found without use of find_name()
+  	int const_obj = 0;
+  
++ 	call_fct_eei& cfei = *(call_fct_eei*)eei;
++ 
+  	if (t1 == any_type) return any_type;
+  
+  	switch (base) {
+***************
+*** 1304,1316 ****
+--- 1372,1393 ----
+  	e = arg;
+  	if (k == 0) goto rlab;
+  
++ 	if(fct_name && fct_name->base == NAME)
++ 	    cfei.fname = fct_name;
++ 
+  	for (nn=f->argtype, argno=1; e||nn; nn=nn->n_list, e=etail->e2, argno++) {
+  		Pexpr a;
+  
++ 		cfei.valid = 1;
++ 		cfei.argx = argno;
++ 		cfei.cur_formal = nn;
++ 
+  		if (e) {
+  			a = e->e1;
+  			etail = e;
+  
++ 			cfei.cur_actual = a;
++ 
+  			if (nn) {	/* type check */
+  				Ptype t1 = nn->tp;
+  //error('d',"argtp %t etp %t a %k",t1,a->tp,a->base);
+***************
+*** 1538,1546 ****
+  	are handled correctly.
+  */
+  {
+! 	register Ptype it = init->tp;
+! 	Pptr px = p;
+! 	while (px->base == TYPE) px = Pptr(Pbase(px)->b_name->tp);
+  	Ptype p1 = px->typ;
+  	Pname c1 = p1->is_cl_obj();
+  //error('d',"ref_init: p %t, p1 %t, px %t, init->tp %t",p,p1,px,it);
+--- 1615,1626 ----
+  	are handled correctly.
+  */
+  {
+!         /* p, the reference, has to to of a type reference-to-something.
+! 	   consts of the form K & const are ignored for this purpose
+! 	   while K const & aren't. this is ok, they don't mean anything.
+! 	   Note that K & volatile and such are also ignored. --benson */
+! 
+! 	Pptr px = Pptr(Ptype(p)->underlying_type());
+  	Ptype p1 = px->typ;
+  	Pname c1 = p1->is_cl_obj();
+  //error('d',"ref_init: p %t, p1 %t, px %t, init->tp %t",p,p1,px,it);
+***************
+*** 1552,1566 ****
+  	&& init->tp->base==FLOAT)
+  		error('w',"initializing a float& with floatA is non-portable");
+  
+! rloop:
+! 	switch (it->base) {
+! 	case TYPE:
+! 		it = Pbase(it)->b_name->tp; goto rloop;
+! 	default:
+! 		{	Ptype tt = it->addrof();
+  			px->base = PTR;	// allow &x for y& when y : public x
+  					// but not &char for int&
+  			int x = px->check(tt,COERCE);
+  
+  			if (x == 0) {	//CCC type is fine check for constness:
+  				if (init->tp->tconst()
+--- 1632,1642 ----
+  	&& init->tp->base==FLOAT)
+  		error('w',"initializing a float& with floatA is non-portable");
+  
+! 		{	Ptype tt = init->tp->underlying_type()->addrof();
+  			px->base = PTR;	// allow &x for y& when y : public x
+  					// but not &char for int&
+  			int x = px->check(tt,COERCE);
++ 			if(const_problem) x = 0; /* we deal with const ourself */
+  
+  			if (x == 0) {	//CCC type is fine check for constness:
+  				if (init->tp->tconst()
+***************
+*** 1568,1574 ****
+  				&& fct_const==0) {
+  					// not ``it''
+  					if (init->base == ELIST) init = init->e1;
+! 					if (px->typ->tconst() == 0) error("R to constO");
+  					px->base = RPTR;
+  					// if we have a const lvalue we can still pass its address
+  extern ignore_const;
+--- 1644,1656 ----
+  				&& fct_const==0) {
+  					// not ``it''
+  					if (init->base == ELIST) init = init->e1;
+! 					if (px->typ->tconst() == 0) {
+! 					    if(init->tp->tconst (const_idx))
+! 						err::signal(malformed_expr,
+! 							    "Non-constant reference to indexable object.");
+! 						err::signal(malformed_expr,
+! 							    "Non-constant reference to constant object.");
+! 					}
+  					px->base = RPTR;
+  					// if we have a const lvalue we can still pass its address
+  extern ignore_const;
+***************
+*** 1580,1585 ****
+--- 1662,1673 ----
+  						return ptr_init(px,init->address(),tbl);//return init->address();
+  					}
+  					ignore_const--;
++ 					/* going to xxx implies that we are going
++ 					   to try to concoct a temp. Not permissible in
++ 					   the indexable case. */
++ 					if(init->tp->tconst(const_idx))
++ 					    err::signal(malformed_expr,
++ 							"Non-constant reference to indexable object.");
+  					goto xxx;
+  				}
+  				px->base = RPTR;
+***************
+*** 1593,1599 ****
+  
+  			px->base = RPTR;
+  		}
+- 	}
+  
+  //error('d',"c1 %n",c1);
+  	if (c1) {	// assigning to a const X & is fine
+--- 1681,1686 ----
+***************
+*** 1604,1616 ****
+  			init = x;
+  			goto xxx;
+  		}
+! 		while (p1->base==TYPE) p1 = Pbase(p1)->b_name->tp;
+! 		int bc = Pbase(p1)->b_const;
+! 		Pbase(p1)->b_const = 0;
+! 		refd = 1;	/* disable itor */
+  		Pexpr a = class_init(0,p1,init,tbl);
+! 		Pbase(p1)->b_const = bc;
+! 		refd = 0;
+  		if (a==init && init->tp!=any_type) goto xxx;
+  //error('d',"ri a %d %k",a->base,a->base);
+  		switch (a->base) {
+--- 1691,1716 ----
+  			init = x;
+  			goto xxx;
+  		}
+! /* This stretch of code is pretty surprising.
+!    what about consts on typedefs on p1?
+!    This is trying to turn const off for long enough to run class_init
+!    and then turn it on again. If p1 is a class type, which seems
+!    to be indicated by c1, then the typedefs can "only" carry const
+!    and volatile. Since volatile isn't here yet, this is harmless. --benson */
+! 
+! 		if(Pclass(c1->tp)->c_abstract)
+! 		    err::signal(malformed_expr, 
+! 				"A temporary is needed for a parameter, but the argument type is abstract class %s.",
+! 				err::type_string(c1->tp));
+! 				
+! 
+! 		Ptype p1u = p1->underlying_type ();
+! 		int bc = Pbase(p1u)->b_const;
+! 		Pbase(p1u)->b_const = 0;
+! 		refd ++;	/* disable itor */
+  		Pexpr a = class_init(0,p1,init,tbl);
+! 		Pbase(p1u)->b_const = bc;
+! 		refd --;
+  		if (a==init && init->tp!=any_type) goto xxx;
+  //error('d',"ri a %d %k",a->base,a->base);
+  		switch (a->base) {
+***************
+*** 1628,1637 ****
+  //		return ptr_init(px,a->address(),tbl);//a->address();
+  	}
+  
+! //error('d',"p1 %t it %t",p1,it);
+! 	if (p1->check(it,0)) {
+  
+! 		if (p1->check(it,ASSIGN) == 0) {
+  		//	if (p1->is_ptr())  // check for base* = derived*
+  		//		goto xxx;
+  
+--- 1728,1743 ----
+  //		return ptr_init(px,a->address(),tbl);//a->address();
+  	}
+  
+! //error('d',"p1 %t it %t",p1,init->tp);
+  
+! /* NOTE: in this region, several uses of "it" were converted to uses 
+!    if init->tp rather than to init->tp->underlying_type(). Since 
+!    these are type checks, it seems nonsensical to ignore signed/unsigned
+!    and related items. --benson */
+! 
+! 	if (p1->check(init->tp,0)) {
+! 
+! 		if (p1->check(init->tp,ASSIGN) == 0) {
+  		//	if (p1->is_ptr())  // check for base* = derived*
+  		//		goto xxx;
+  
+***************
+*** 1649,1655 ****
+  			goto def;
+  		}
+  
+! 		error("badIrT:%t (%tX)",it,p);
+  		if (init->base != NAME) init->tp = any_type;
+  		return init;
+  	}
+--- 1755,1761 ----
+  			goto def;
+  		}
+  
+! 		error("badIrT:%t (%tX)",init->tp,p);
+  		if (init->base != NAME) init->tp = any_type;
+  		return init;
+  	}
+***************
+*** 1668,1674 ****
+  	case DEREF:
+  	case REF:
+  	case DOT:			// init => &init
+! 		if (it->tconst() && vec_const==0 && fct_const==0) goto def;
+  		init->lval(ADDROF);
+  		if (vec_const) return init;
+  		if (fct_const && p1->is_ptr()) goto def;	// fptr& = fct
+--- 1774,1780 ----
+  	case DEREF:
+  	case REF:
+  	case DOT:			// init => &init
+! 		if (init->tp->tconst() && vec_const==0 && fct_const==0) goto def;
+  		init->lval(ADDROF);
+  		if (vec_const) return init;
+  		if (fct_const && p1->is_ptr()) goto def;	// fptr& = fct
+***************
+*** 1681,1686 ****
+--- 1787,1799 ----
+  	{
+  //error('d',"def: init->tp %t p1 %t",init->tp,p1);	
+  		if (tbl == gtbl) error("Ir for staticR not an lvalue");
++ 
++ 		Pname tcl = p1->is_cl_obj ();
++                 if(tcl && Pclass(tcl->tp)->c_abstract)
++ 		    err::signal(malformed_expr, 
++ 				"A temporary is needed for a parameter, but the argument type is abstract class %s.",
++ 				err::type_string(tcl->tp));
++ 				
+  		Pname n = make_tmp('I',p1,tbl);
+  		Pexpr a;
+  		Pname ic = init->tp->is_cl_obj();
+***************
+*** 1687,1705 ****
+  
+  		if (p1->tconst()==0
+  		&& (init->tp->tconst() && vec_const==0 && fct_const==0)
+! 		&& p1->check(it,ASSIGN)==0)
+! 			error('w',"constIr: temporary used toI reference");
+! 
+  		switch (p1->base) {
+  		case INT:
+  		case CHAR:
+  		case SHORT:
+! 			switch (it->base) {
+  			case LONG:
+  			case FLOAT:
+  			case DOUBLE:
+  			case LDOUBLE:
+! 				error('w',"%t assigned to %t inRIr",it,p1);
+  			}
+  		}
+  
+--- 1800,1821 ----
+  
+  		if (p1->tconst()==0
+  		&& (init->tp->tconst() && vec_const==0 && fct_const==0)
+! 		&& p1->check(init->tp,ASSIGN)==0) {
+! 		    if(init->tp->tconst(const_idx))
+! 		       err::signal(malformed_expr,
+! 				   "Temporary copy of indexable item would be needed to initialize non-constant reference.");
+! 		       error('w',"constIr: temporary used toI reference");
+! 		    }
+  		switch (p1->base) {
+  		case INT:
+  		case CHAR:
+  		case SHORT:
+! 			switch (init->tp->underlying_type()->base) {
+  			case LONG:
+  			case FLOAT:
+  			case DOUBLE:
+  			case LDOUBLE:
+! 				error('w',"%t assigned to %t inRIr",init->tp,p1);
+  			}
+  		}
+  
+***************
+*** 2249,2258 ****
+  		return c;
+  	}
+  }
+! static char rcsinfo[] = "$Header: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr3.c,v 1.8 89/10/16 08:15:27 benson Exp $";
+  
+  
+  /* $Log:	expr3.c,v $
+   * Revision 1.8  89/10/16  08:15:27  benson
+   * distinguish indedxable from const in argument passing.
+   * 
+--- 2365,2379 ----
+  		return c;
+  	}
+  }
+! static char rcsinfo[] = "$Header: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr3.c,v 1.9 89/10/20 14:30:34 benson Exp $";
+  
+  
+  /* $Log:	expr3.c,v $
++  * Revision 1.9  89/10/20  14:30:34  benson
++  * fixes to typ handling in function calls to eliminate some strange
++  * temps. Also catch indexable explicitly here. Also make error context
++  * for any arg-related error message.
++  * 
+   * Revision 1.8  89/10/16  08:15:27  benson
+   * distinguish indedxable from const in argument passing.
+   * 

@@ -1,0 +1,827 @@
+#	@(#)fulltext:docsubmit	1.18
+
+# THis routine was originally written by Lorinda Cherry - it gathers up
+# all the files connected with a documents, and transmits them via
+# uucp to   mhuxd!~/full.text/
+#
+# It bundles all the files involved together into one cpio file
+# called <1st 5 chars of machine name><process id>.cp
+
+# Finding a good awk is a pain - set it here if you want
+AWK=""
+if test -z "${AWK}"
+then
+    if ans=`sh -c 'logdir exptools' 2>&1` ; then
+	:
+    else
+	ans=`grep '^exptools:' /etc/passwd | sed "s/^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:\([^:]*\).*/\1/"`
+	fi
+    if test -r ${ans}/bin/nawk
+    then
+	AWK=${ans}/bin/nawk
+	fi
+    fi
+if test -z "${AWK}"
+then
+    if test -r /usr/local/bin/awk
+    then
+	AWK=/usr/local/bin/awk
+	fi
+    fi
+if test -z "${AWK}"
+then
+    AWK=awk
+    fi
+
+# Get machine nodename - swiped from rn build routine Configure
+if ans=`sh -c hostname 2>&1` ; then
+    MACH=$ans
+elif ans=`sh -c 'uuname -l' 2>&1` ; then
+	MACH=$ans
+elif ans=`sh -c 'uname -n' 2>&1` ; then
+	MACH=$ans
+else
+	MACH=failedget
+	fi
+# Get the users LOGNAME
+if ans=`sh -c logname 2>&1` ; then
+    LOGNAME=$ans
+else
+    LOGNAME=`echo $HOME|sed 's/.*\///'`
+    fi
+
+T=/tmp
+AWKTEMP=/tmp/Doc.Awk.$$
+OUTP="junk"
+COVER="junk"
+DOCNUM="junk"
+REF=""
+# cut the machine name down to a max of 5 characters
+DIR=`echo ${MACH} | sed 's/\(.....\).*/\1/'`$$
+NAME=$DIR
+DIR=$T/$DIR
+trap 'rm -f ${AWKTEMP} $DIR/* $T/$NAME.cp ; rmdir $DIR 2>>/dev/null; trap 0;exit' 0 1 2 15
+if test $# -eq 0
+then
+	echo "docsubmit -C -c file.cover -N number -r ref_file -t  file(s)"
+	echo "   -C if document complete without coversheet, else -c file.cover"
+	echo "   -N number   if document number not included in the files"
+	echo "   -r to include a refer file"
+	echo "   -t if source is Knuths TeX instead of troff/nroff\n"
+	echo "  Two examples, first with cover sheet, second without:"
+	echo "    docsubmit -c mydoc.cover mydoc.text mydoc.append"
+	echo "    docsubmit -C -N 79111-880324-01 mydoc.text"
+	exit 0
+fi
+for i in $*
+do case $i in
+    -r) shift; REF=$1; shift; continue;;
+    -c) shift; COVER=$1; shift; continue;;
+    -C) shift; COVER=$$; continue;;
+    -t) shift; TEX="yes"; ARG=$1; shift; continue;;
+    -N) shift; DOCNUM=$1; shift; continue;;
+    -*) echo docsubmit unknown flag $i; exit 1;;
+    esac
+    done
+ARGS=$*
+if test "$COVER" = "junk" 
+then
+    echo "You must include the coversheet file for the paper to be submitted"
+    echo "If the coversheet is in the files (or the files are the complete document),"
+    echo "       indicate this by using the -C flag"
+    echo "Use the flag  -N number   if document number not included in the files"
+    echo "     ===> Full text of document not sent <==="
+    exit 1
+    fi
+
+# check the entered document number
+if test ${DOCNUM} != "junk"
+then
+    x=`expr "${DOCNUM}" : '^[a-zA-Z0-9]*-[89][0-9]*-[0-9][0-9]'`
+    if test $x -lt 2
+    then
+	echo "\nDocument numbers must be of form  OrgNum-Date-seq"
+	echo "   Where Date is usually YYMMDD (e.g. 881224) [always starts with a year]"
+	echo "   and the sequence number is always 2 digits (e.g. 03)"
+	echo "     ===> Full text of document not sent <==="
+	exit 1
+	fi
+    fi
+OUTP=$DIR/$NAME
+mkdir $DIR
+if test $TEX
+then
+	case $OUTP in
+	*.*) echo "the name for a TeX paper cannot contain . tex gets confused"
+		echo "	use _ or - instead"
+		exit 1
+	esac
+	BBL=$OUTP.bbl
+	OUTP=$OUTP.tex
+	echo "%...\\\"" `date` >$OUTP
+	echo "%...\\\"" EmailAddress ${MACH}"!"${LOGNAME} >>$OUTP
+	if test "${DOCNUM}" != "junk"
+	then
+	    echo "%...\\\" DocNum ${DOCNUM}" >>$OUTP
+	    fi
+	echo "%...\\\"" `pwd` >>$OUTP
+	# THis was doinput.awk - put it inline for exptools ease
+	# NOTE - ends with line   END doinput.awk
+cat >${AWKTEMP} <<!
+BEGIN	{
+	if(texinp != "")
+		ninputs = split(texinp, texinputs, ":")
+	else {
+		ninputs = 1
+		texinputs[1] = "."
+	}
+	idef=0
+	}
+/\\\\newcommand/	{
+	ckdef(0, \$0, 1)
+	next
+	}
+/\\\\def[^a-z]/	{
+	ckdef(0, \$0, 0)
+	next
+	}
+/\\\\(input|include)[{ ]/	{
+	getfile()
+	next
+	}
+/\\\\bibliography[{ ]/	{
+	n = substr(\$0, index(\$0,"{")+1, index(\$0,"}")-index(\$0,"{")-1)
+	if(n ~ ","){
+		num=split(n, b, ",")
+		for(i=1;i<=num;i++)
+			system("cp " b[i] ".bbl " dir)
+			close("cp " b[i] ".bbl " dir)
+	}
+	else{
+		system("cp " n ".bbl " dir)
+		close("cp " n ".bbl " dir)
+	}
+	}
+/^\\\\includepicture/	{
+	n=index(\$0,"{")+1
+	fname=substr(\$0,n,index(\$0,"}")-n)
+	system ("cp " fname ".t " dir )
+	close ("cp " fname ".t " dir )
+	system ("cp " fname ".tex " dir )
+	close ("cp " fname ".tex " dir )
+	}
+/\\\\special/	{
+	getpost(\$0)
+	next
+	}
+/\\\\/	{
+	isdef(\$0)
+	next
+	}
+/.*/	{
+	print \$0
+	}
+function getfile(	saveline, n, bname, tname, j, name, flag){
+	saveline = \$0
+	if(\$0 ~ /\\\\input/)n = index(\$0,"\\\\input")+7
+	else n=index(\$0,"\\\\include")+9
+	bname = substr(\$0,n)
+	gsub(/^[ {]*/,"",bname)
+	gsub(/[ }].*/,"",bname)
+	gsub(/[ }]\$/,"",bname)
+	tname = bname ".tex"
+	for(j=1; j<= ninputs; j++){
+		name = texinputs[j] "/" tname
+		if((getline <name) >=0)break
+		name = texinputs[j] "/" bname
+		if((getline <name) >=0)break
+		name = ""
+	}
+	if(name == ""){
+		print "cannot open file " bname " or " tname | "cat 1>&2"
+		return
+	}
+	if(name ~ /\\/usr\\/lib\\/tex\\/macros/){
+		print saveline
+		return
+	}
+	flag=0
+	while(1){
+		if(flag)if((getline <name)<1)break
+		flag=1
+		if(\$0 ~ /\\\\newcommand/){
+			ckdef(name, \$0, 1)
+			continue
+		}
+		if(\$0 ~ /\\\\def[^a-z]/){
+			ckdef(name, \$0, 0)
+			continue
+		}
+		if(\$0 ~ /\\\\(input|include)[{ ]/){
+			getfile()
+		}
+		else if(\$0 ~ /\\\\special/)getpost(\$0)
+		else if(\$0 ~ /\\\\/){
+			isdef(\$0)
+		}
+		else print \$0
+	}
+	close(name)
+}
+function getpost(str){
+	if(str ~ /psfile/){
+		n=substr(str,index(str,"psfile"))
+		if(n ~ / /)sub(/ .*/, "", n)
+		if(n ~ /\\=/)sub(/.*=/, "", n)
+		if(n ~ /,$/)sub(/,/, "", n)
+		if(n ~ /,.*/)sub(/,.*/, "", n)
+		system( "cp " n " " dir)
+		close( "cp " n " " dir)
+		if(n ~ /\\//){
+			num = split(n, xa, /\\//)
+			sub(n, xa[num], str)
+		}
+		print str
+	}
+	else print str
+	}
+function ckdef(file, first,new){
+	print first
+	if(new){
+		n=index(first,"{")+1
+		name=substr(first,n,index(first,"}")-n)
+		name = "\\\\" name
+		n=index(first,"[")+1
+		if(n > 1)
+			args=substr(first,n,index(first,"]")-n)+0
+		else args=0
+	}
+	else {
+		sub(/\\\\def\\\\/,"")
+		savs = first
+		if(first ~ /^[A-Za-z]/){
+			abc=first
+			sub(/[^A-Za-z]/,"{",abc)
+			name = "\\\\\\\\" substr(first,0,index(abc,"{")-1)
+		}
+		else name = "\\\\\\\\" substr(first,0,1)
+		if(savs ~ /#/){
+			if(savs ~ "{")gsub(/{.*/, "",savs)
+			n=split(savs, z, "#")
+			args = n-1
+		}
+		else args=0
+		xdef=1
+	}
+	if(first ~ "%"){
+		n=split(first, z, "%")
+		save = z[1]
+		left=gsub(/{/,":",z[1])
+		right=gsub(/}/,";",z[1])
+	}
+	else{
+		save = \$0
+		left=gsub(/{/,":")
+		right=gsub(/}/,";")
+	}
+	psav = isav = 0 
+	if(\$0 ~ /special/){
+		getpattern(file, save)
+		psav++
+	}
+	while(left != right || (left == 1 && !xdef)){
+		if(file== 0){
+			if((getline) <1){
+				print "ran out of file in newcommand"|"cat 1>&2"
+				exit
+			}
+		}
+		else if((getline<file) < 1){
+				print "ran out of file in newcommand"|"cat 1>&2"
+				exit
+			}
+		save=\$0
+		left +=gsub(/{/,":")
+		right+=gsub(/}/,";")
+		if(\$0 ~ /special/){
+			getpattern(file, save)
+			psav++
+		}
+		if(\$0 ~ /(input|include)/){
+			getpattern(file, save)
+			isav++
+		}
+		else print save
+	}
+	if(psav||isav){
+		argct[idef] = args
+		if(psave)post[idef] = psav
+		else inp[idef]=isav
+		def[idef++] = name
+	}
+
+}
+function getpattern(file, command){
+	save = command
+	if(command ~ /psfile/){
+		n=substr(command, index(command, "psfile"))
+		sub(/.*=[ \\t]*/,"",n)
+		sub(/}*\$/,"",n)
+		sub(/ .*/,"",n)
+		ckargs(n,save)
+	}
+	if(command ~ /(input|include)/){
+		if(command ~ /\\\\input/)n = index(command,"\\\\input")+7
+		else n=index(command,"\\\\include")+9
+		bname = substr(command,n)
+		gsub(/^[ ]*/,"",bname)
+		gsub(/[ }].*/,"",bname)
+		gsub(/[ }]\$/,"",bname)
+		ckargs(bname,save)
+	}
+}
+function ckargs(pat,command){
+	if(pat ~ /#/)
+		num = substr(pat,index(pat,"#")+1,1)
+	else num = 0
+	pattern[idef,num] = pat
+	if(command ~ /\\//){
+		num = split(pat, xa, /\\//)
+		sub(n, xa[num], command)
+	}
+	print command
+}
+function cpfile(name, pat){
+	if(name ~ "}")
+		sub(/}.*/,"", name)
+	sub(/#./,name,pat)
+	system("cp " pat " " dir)
+	close("cp " pat " " dir)
+	if(name ~ /\\//){
+		num = split(name, xa, /\\//)
+		sub(name, xa[num],string)
+	}
+}
+function isdef(string,	i, gotarg, a, x, j, l, r){
+	if(idef){
+		for(i=0;i<idef;i++){
+			if(string !~ def[i])continue
+			if((i,0) in pattern){
+				system("cp " pattern[idef,0] " " dir)
+				close("cp " pattern[idef,0] " " dir)
+				break
+			}
+			gotarg=0
+			a=string
+			while(gotarg<argct[i]){
+				x=0
+				if(j=index(a,"{")){
+					x++
+					a = substr(a,j+1)
+					if((i,gotarg+1) in pattern)
+						cpfile(a, pattern[i,gotarg+1])
+					while(x){
+						l=index(a,"{")
+						r=index(a,"}")
+						if(!l && !r){
+							getline
+							string = string "\\n" \$0
+							a=\$0
+							continue
+						}
+						if(l<r && l>0){
+							x++
+							a=substr(a,l+1)
+						}
+						else{
+							a=substr(a,r+1)
+							x--
+						}
+					}
+					gotarg++
+				}
+				else {
+					getline
+					string = string "\\n" \$0
+					a = \$0
+				}
+			}
+			break
+		}
+	}
+	print string
+}
+!
+	${AWK} -f ${AWKTEMP} dir=$DIR texinp=$TEXINPUTS $ARG.tex >>$OUTP
+	# NOTE - END of doinput.awk
+	# Check that it ended okay
+	if test $? -ne 0
+	then
+	    echo "Sorry - couldnt collect together the full text of your document."
+	    echo "No full text was sent! Contact the docsubmit provider with questions."
+	    exit 1 
+	    fi
+
+	if test -s $ARG.bbl
+	then
+		cp $ARG.bbl $BBL
+	else if test \( -s $ARG.bib \) -a \( ! -s $DIR/$ARG.bib \)
+	then
+		cp $ARG.bib $BIB
+	fi
+	fi
+else
+	echo "...\\\"" `date` >$OUTP
+	echo "...\\\"" EmailAddress ${MACH}"!"${LOGNAME} >>$OUTP
+	if test "${DOCNUM}" != "junk"
+	then
+	    echo "...\\\" DocNum ${DOCNUM}" >>$OUTP
+	    fi
+	echo "...\\\"" `pwd` >>$OUTP
+	if test $REF
+	then
+	cat >>$OUTP <<x
+...\"refer first
+x
+	fi
+	if test $COVER = $$
+	then
+		PARMS="$ARGS"
+	else
+		PARMS="$COVER $ARGS"
+	fi
+	# THis use to invoke subso.awk
+	# Note ends with ENOD of subso.awk
+cat >${AWKTEMP} <<!
+BEGIN	{seen[""] = 0
+	picoutput = "This paper appears to have pic output included.\\n"
+	picoutput = picoutput "We do not accept papers with pic output.\\n"
+	picoutput = picoutput "Please resubmit it with the pic input instead.\\n"
+	picoutput = picoutput "If the pic input is in separate files, you can include it by saying:\\n"
+	picoutput = picoutput "	.PS <picfile"
+	tbloutput = "This paper appears to have tbl output included.\\n"
+	tbloutput = tbloutput "We do not accept papers with tbl output.\\n"
+	tbloutput = tbloutput "Please resubmit it with the tbl input instead.\\n"
+	tpedoutput = "This paper appears to have tped output included.\\n"
+	tpedoutput = tpedoutput "We do not accept papers with tped output.\\n"
+	tpedoutput = tpedoutput "Please resubmit it with the tped input instead.\\n"
+	intbl = ineq = tped = 0
+	}
+#			macro include picture macro, guess that it's arg2
+/^\\./	{
+	if((\$1 in incmacro) && (NF > 1)){
+		havecopy(\$1, \$2, 2)
+		next
+	}
+	}
+#			.so - get input file
+#			or .de that includes .so - try to get file as arg2
+/^\\.so/ || \$1 in hasso	{
+	getfile(\$2)
+	next
+	}
+#			bwk macro
+/^\\.ge/	{
+	system( "trget " NF " " \$2 " " \$3 " " \$4 " " \$5 )
+	close( "trget " NF " " \$2 " " \$3 " " \$4 " " \$5 )
+	next
+	}
+#			bwk macro
+/^\\.ru/	{
+	system( \$2 " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8 " " \$9 )
+	close( \$2 " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8 " " \$9 )
+	next
+	}
+#			inline .sy - execute
+/^\\.sy/	{
+	system( \$2 " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8 " " \$9 )
+	close( \$2 " " \$3 " " \$4 " " \$5 " " \$6 " " \$7 " " \$8 " " \$9 )
+	next
+	}
+/^\\.bm/	{
+	next
+	}
+#			switch in and out of eqn
+/^\\.EQ/	{ ineq = 1 }
+/^\\.EN/	{ ineq = 0 }
+#			switch in and out of tbl
+/^\\.TS/	{ intbl = 1 }
+/^\\.TE/	{ intbl = 0 }
+#			all tbl output has this - unlikely otherwise - reject
+/^\\.de 35/	{
+	if(intbl){
+		print tbloutput|"cat 1>&2"
+		exit 1
+	}
+	}
+#			save eqn delimiters - # bad for tbl, pic - warn
+/^[ ]*delim[ ]*/	{
+	if(ineq){
+		if(\$2 ~ /#/)
+			print "eqn delimiters in " \$0 " will break tbl, pic etc"|"cat 1>&2"
+		delim = \$0
+	}
+	}
+#			macro definition - check for embedded picture macros
+#			bitmaps, or .so
+/^\\.de/	{
+	if(\$0 ~ /IS/)
+		print ".IS is defined in " file " check it for ideal"|"cat 1>&2"
+	print \$0
+	xname = \$2
+	while((getline) > 0){
+		if(\$0 ~ /^\\.\\./)break
+		if(\$0 ~ /^\\.BM/)incmacro["." xname]=1
+		if(\$0 ~ /^\\.BP/)incmacro["." xname]=1
+		if(\$0 ~ /^\\.PI/)incmacro["." xname]=1
+		if(\$0 ~ /^\\.so/){
+			hasso["." xname] = 1
+			print "The .so embedded in macro " xname " will cause files not to be shipped " | "cat 1>&2"
+			defso = 1
+		}
+		print \$0
+	}
+	}
+#			.PS <file
+#			check if file contains .PS
+#			replace .PS <file with file (and .PS in needed)
+#			copy other files if copy thru included
+/^\\.PS[ \\t]*</	{
+	gsub(/ /,"")
+	a=substr(\$0,index(\$0,"<")+1)
+	if((getline<a) >0){
+		if(\$0 ~ /^\\./){
+			print \$0
+			pflag=1
+			if(\$0 !~ /^\\.PS/){
+				while(getline<a > 0){
+					if(\$0 !~ /^\\./)break
+					print \$0
+					if(\$0 ~ /^\\.PS/)pflag=0
+				}
+				if(pflag)print ".PS"
+			}
+		}
+		else print ".PS"
+		flag=0
+		pflag = 1
+		while(1){
+			if(flag)if((getline<a)<=0)break
+			flag=1
+			if(\$0 ~ /^\\.P[EF]/)pflag=0
+			if(\$0 ~ /(copy|include)/){
+				for(i=1;i<NF;i++)
+					if(\$i ~ /(copy|include)/)break
+				i++
+				if ((\$i !~ "thru") && (\$i !~ "through")) {
+					havecopy(\$1, \$i, i);
+				}
+				else print \$0
+			}
+			else print \$0
+		}
+		if(pflag)print ".PE"
+		close(a)
+	}
+	else {
+		print "couldn't open pic file:" a|"cat 1>&2"
+		print "from line: " \$0|"cat 1>&2"
+		exit 1
+	}
+	next
+	}
+#			tped .GS may name file to include
+#			if so, copy file; replace full path with file name
+#			else toggle tped flag
+/^\\.GS/	{
+	if(NF > 1){
+		for(t=2; t<=NF;t++){
+			if(\$t !~ "-" && \$t !~ "="){
+				system( "cp " \$t " " dir )
+				close( "cp " \$t " " dir )
+				if(\$0 ~ "/"){
+					nstat=split(\$0,stat,"/")
+					cmd = ""
+					for(xx=1;xx<t;xx++)
+						cmd= cmd \$xx " "
+					print cmd stat[nstat]
+				}
+				else print \$0
+				next
+			}
+		}
+	}
+	intped=1
+	}
+/^\\.GE/	{
+	intped=0
+	}
+#			.sp -1 clue of included tped output
+/^\\.sp -1/	{
+	if(intped){
+		print tpedout|"cat 1>&2"
+		exit 1
+	}
+	}
+#			grap/pic may include file
+/^\\.(G1|PS)/	{
+	print \$0
+	while(getline > 0){
+		if(\$0 ~ /(copy|include)/){
+			for(i=1;i<NF;i++)
+				if(\$i ~ /(copy|include)/)break
+			i++
+			if ((\$i !~ "thru") && (\$i !~ "through")) {
+				havecopy(\$1, \$i, i);
+			}
+			else print \$0
+		}
+		else if(\$0 ~ /^\\.(G2|PE)/){
+			print \$0
+			break
+		}
+		else if(\$0 ~ /^\\.sp -1/){	#sign in pic output included
+				print picoutput|"cat 1>&2"
+				exit 1
+		}
+		else print \$0
+	}
+	next
+	}
+#			ideal - may include file
+/^\\.IS/	{
+	print \$0
+	while(getline){
+		if(\$0 ~ /^\\.I[EF]/){
+			print \$0
+			next
+		}
+		else if(\$0 ~ /^[\\.]+include/)
+			doinclude(\$1, \$2, 0)
+		else print \$0
+	}
+	}
+#			postscript pictures - get file
+/^\\.(BM|BP|PI)/	{
+	if(NF > 1)havecopy(\$1,\$2,2)
+	else print \$0
+	next
+	}
+#			macro called that includes .so probably not included
+/^\\./	{
+	if(\$1 in hasso)
+		print \$2 | "cat 1>&2"
+	}
+/.*/	{
+	print \$0
+	}
+function havecopy(cmd, file, i){
+	if(file ~ /"/){
+		quotes=1
+		n = split(file, name, "\\"")
+		if(n>1)rname = name[2]
+	}
+	else {
+		rname = file
+		quotes=0
+	}
+	system( "cp " rname " " dir )
+	close( "cp " rname " " dir )
+	if(rname ~ "/"){
+		n = split(rname,nn, "/")
+		NAME=nn[n]
+	}
+	else NAME=rname
+	if(i > 2)for(j=2;j<i;j++)cmd = cmd " " \$j
+	if(quotes)cmd = cmd " \\"" NAME "\\""
+	else cmd = cmd " " NAME
+	if(NF >= i+1)
+		for(j=i+1; j<=NF; j++)cmd = cmd " " \$j
+	print cmd
+}
+function getfile(file,	File, eflag,first,indef,xname,fintbl,finpic){
+	if(file ~ /\\/usr\\/lib\\//|| file ~ /\\/exptools\\//){
+		print \$0
+		return
+	}
+	if((getline <file) > 0){
+		if(\$0 ~ /^\\.lf/){
+			File=\$NF
+			saveline=\$0
+			if((getline <File)<=0){
+			print "This paper contains preprocessor output evidenced by  " saveline| "cat 1>&2"
+			print "and I can't find the source file " File|"cat 1>&2"
+			while((getline < file) >0 && \$0 ~ /^\\.lf/)
+				print \$0| "cat 1>&2"
+			print "paper not submitted" | "cat 1>&2"
+			exit 1
+			}
+		}
+		else File = file
+	}
+	else {
+		print "cannot open file " file | "cat 1>&2"
+		return
+	}
+	if(File in seen){
+		close(File)
+		return
+	}
+	if(delim != ""){
+		print ".EQ\\ndelim off\\n.EN"
+		eflag=1
+	}
+	seen[File] = 1
+	first=1
+	while(1){
+		if(first==0)if((getline <File)<=0)break
+		first = 0
+		if(\$0 ~ /^\\.(de|am)/){
+			if(fintbl && \$0 ~ /^\\.de 35/){
+				print tbloutput|"cat 1>&2"
+		print "The tbl output is in the .so file named:" File|"cat 1>&2"
+				exit 1
+			}
+			indef=1
+			xname = \$2
+		}
+		if(indef && \$0 ~ /^\\.BM/)incmacro["." xname]=1
+		if(indef && \$0 ~ /^\\.BP/)incmacro["." xname]=1
+		if(indef && \$0 ~ /^\\.PI/)incmacro["." xname]=1
+		if(\$0 ~ /^\\.\\.\$/)indef=0
+		if(\$0 ~ /^\\.sy/ && indef == 0){
+	print "the .sy commands in this paper will not be handled" indef|"cat 1>&2"
+			if(debug ~ /-d/){
+				print \$0
+				continue
+			}
+			print "paper not submitted" | "cat 1>&2"
+			exit 1
+		}
+		if(\$0 ~ /^\\.TS/)fintbl=1
+		if(\$0 ~ /^\\.TE/)fintbl=0
+		if(\$0 ~ /^\\.PS/)finpic=1
+		if(\$0 ~ /^\\.PE/)finpic=0
+		if(finpic && \$0 ~ /^\\.sp -1/){
+			print picoutput|"cat 1>&2"
+		print "The pic output is in the .so file named:" File|"cat 1>&2"
+			exit 1
+		}
+		if((\$1 in incmacro)&& (NF > 1))
+			havecopy(\$1, \$2, 2)
+		else if(!indef && \$0 ~ /^\\.so/)
+			getfile(\$2)
+		else print \$0
+	}
+	close(File)
+	if(eflag){
+		print ".EQ\\n" delim "\\n.EN"
+		eflat = 0
+	}
+}
+function doinclude(cmd, fname, fileflag, file){
+	if(fname ~ "/"){
+		n=split(fname,name,"/")
+		if(fileflag)print cmd " " name[n] >(dir "/" file)
+		else print cmd " " name[n]
+	}
+	else if(fileflag)print cmd " " fname >(dir "/" file)
+	else print cmd " " fname
+	while((getline<fname)>0){
+		if(\$0 ~ /^[\\.]+include/)
+			doinclude(\$1, \$2, 1, fname)
+		else print \$0 >(dir "/" fname)
+	}
+	close(fname)
+}
+!
+	${AWK} -f ${AWKTEMP} dir=$DIR $PARMS >>$OUTP
+	# NOTE: END of subso.awk
+	# Check that it ended okay
+	if test $? -ne 0
+	then
+	    echo "Sorry - couldnt collect together the full text of your document."
+	    echo "No full text was sent! Contact the docsubmit provider with questions."
+	    exit 1 
+	    fi
+
+	if test $REF
+	then
+	cat >>$OUTP <<x
+...\"refer begin
+x
+	cat $REF >>$OUTP
+	cat >>$OUTP <<x
+...\"refer end
+x
+	fi
+fi
+cd $T
+ls $NAME/*|cpio -oc >$NAME.cp
+chmod 0644 $NAME.cp
+uucp -C $NAME.cp mhuxd!~/full.text/
+echo "
+The full text of your document has been sent to the Library Network.
+Please note that an official paper copy MUST still be filed.
+"
+exit 0

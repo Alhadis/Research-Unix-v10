@@ -1,0 +1,87 @@
+#! /bin/sh
+#	@(#)cflow.sh	1.6	83/10/05
+#	3.0 SID #	1.2
+INVFLG=
+DFLAG=
+IFLAG=
+DIR=/usr/lib
+CC=/bin/cc
+LINT1=/usr/lib/lint/lint1
+TMP=/usr/tmp/cf.${$}
+TMPG=${TMP}.g
+trap "rm -f ${TMP}*; kill ${$}" 1 2 3
+echo "" >${TMP}.g
+while [ -n "${1}" ]
+do
+	case "${1}" in
+	-r)
+		INVFLG=1
+		;;
+	-d*)
+		DFLAG=${1}
+		;;
+	-i*)
+		IFLAG="${IFLAG} ${1}"
+		;;
+	-f)
+		cat ${2} </dev/null >>${TMPG}
+		shift
+		;;
+	-g)
+		TMPG=${2}
+		if [ -z "${TMPG}" ]
+		then
+			TMPG=${TMP}.g
+		fi
+		shift
+		;;
+	-[IDU]*)
+		o="${o} ${1}"
+		;;
+	*.y)
+		yacc ${1}
+		sed -e "/^# line/d" y.tab.c > ${1}.c
+		${CC} -E ${o} ${1}.c | ${LINT1} -S${TMP}.j 2>/dev/null ${1}.c\
+			| ${DIR}/lpfx ${IFLAG} >>${TMPG}
+		rm y.tab.c ${1}.c
+		;;
+	*.l)
+		lex ${1}
+		sed -e "/^# line/d" lex.yy.c > ${1}.c
+		${CC} -E ${o} ${1}.c | ${LINT1} -S${TMP}.j 2>/dev/null ${1}.c\
+			| ${DIR}/lpfx ${IFLAG} >>${TMPG}
+		rm lex.yy.c ${1}.c
+		;;
+	*.c)
+		${CC} -E ${o} ${1} >${TMP}X
+		${LINT1} -S${TMP}.j <${1} 2>/dev/null ${TMP}X \
+			| ${DIR}/lpfx ${IFLAG} >>${TMPG}
+		;;
+	*.i)
+		name=`basename ${1} .c`
+		${LINT1} -S${TMP}.j 2>/dev/null <${1} | ${DIR}/lpfx >>${TMPG} ${name}.c
+		;;
+	*.s)
+		a=`basename ${1} .s`
+		as -o ${TMP}.o ${1}
+		nm -he ${TMP}.o | sort -t'|' -n +1 -2 | ${DIR}/nmf ${a} ${a}.s >>${TMPG}
+		;;
+	*.o)
+		a=`basename ${1} .o`
+		nm -he ${1} | sort -t'|' -n +1 -2 | ${DIR}/nmf ${a} ${a}.o >>${TMPG}
+		;;
+	*)
+		echo ${1} "-- cflow can't process - file skipped"
+		;;
+	esac
+	shift
+done
+if [ -n "${INVFLG}" ]
+then
+	grep "=" ${TMPG} >${TMP}.q
+	grep ":" ${TMPG} | ${DIR}/flip >>${TMP}.q
+	sort <${TMP}.q >${TMPG}
+	rm ${TMP}.q
+fi
+${DIR}/dag ${DFLAG} <${TMPG}
+rm -f ${TMP}*

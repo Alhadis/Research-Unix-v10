@@ -1,0 +1,177 @@
+The following note by Andrew Appel points out a number of serious problems
+with the standard environment as defined in "Definition of Standard ML,
+Version 2", and proposes changes that would correct these problems.  These
+problems with the standard environment have come to our attention through
+using and implementing the language.  Unfortunately, the environment
+described in the Definition was (in our opinion, prematurely) frozen before
+the proposal was tested against "reality", but we hope that there is still
+enough flexibility within the ML community to allow us to make corrections to
+deal with these problems.  We hope that this note will bring these issues to
+the attention of the community. [DBM]
+
+
+			     PROPOSED CHANGES
+
+Andrew Appel proposes the following changes to the initial static environment
+in the "official" Definition of Standard ML.  These have not all been
+implemented, but we would like to implement them if no one objects.
+
+1.  input
+
+input(f,n) returns a string of length k <= n
+
+Current semantics:  if k<n then end-of-stream has been reached.
+New semantics: 
+    If no characters available, input blocks (as it does now).
+    If j>0 is the number of characters available, then k = min(j,n).
+    If (and only if)  end of stream is reached, the empty string is returned.
+
+The reason I suggest this change is that:
+
+A.  this primitive is much closer to the one provided by the operating system
+B.  the old primitive can be defined in terms of this one, but not the reverse
+C.  users often need this primitive and not the old one
+
+The old definition of input can be implemented using the new definition:
+
+fun old_input(f,n) =
+ case input(f,n)
+  of "" => ""
+   | s => if size(s) < n then s ^ old_input(f,n-size(s)) else s
+
+
+2.  Inequality operators for strings
+
+The operators < <= > >= should be supported for strings.  Even though
+they could be defined by users using the existing string primitives, it
+would be impossible for ordinary users to get them overloaded properly
+with the integer and real comparison operators.  There are many functions
+not in the standard that I would like in my environment, but I can simply
+define them; I am unable to define new overloadings, however.
+
+
+3.  Arithmetic exceptions
+
+The current set of arithmetic exceptions is unrealistic because it does
+not correspond with what is available in the hardware.  To correctly
+implement the current standard would add a very substantial overhead
+to each execution of an arithmetic operator.  Therefore, I propose:
+
+exception Div         for integer div and mod with a dividend of 0
+exception Overflow    for all integer operators with an out-of-range result
+
+exception Real of string   for all real operators with an out-of-range or
+                                other error result
+
+for floating point division by 0, I propose the use of the Div exception,
+although a separate exception could be defined for this if anyone cares.
+
+The exceptions Floor and Sqrt and Exp and Ln can be left as is.
+
+
+4.  div and mod
+
+The current language definition has perfectly reasonable definitions of
+div and mod.  The problem is that no machine supports these definitions;
+all that is supported is an integer divide (which I'll call div' )
+that always rounds towards zero. From this it is easy to synthesize modulus:
+
+fun a mod' b = a - b * (a div' b)
+
+These div and mod operators are not the ones in the language definition.
+However, it is possible to implement div and mod as defined in the standard:
+
+fun a div b = if a<0 then ... else if b<0 then ... else a div' b
+fun a mod b = a - b * (a div b)
+
+This is, of course, very slow.  However, any compiler that implements
+these directly will have to generate exactly the same (slow) code!
+The poor user who just wants to do div and mod on positive integers will pay
+a penalty.  And consider the hard-luck case who actually needs rounding
+towards zero; he would have to implement div'' and mod'' as:
+
+fun a div'' b = if a<0 then ... else if b<0 then ... else a div b
+
+That is, he'll have to insert tests that undo the test that the 
+standard-library functions are doing; no wonder he'll think that functional
+languages are slow.
+
+Therefore, I propose:
+
+div always rounds towards zero
+mod is just    fun a mod b = a - b * (a div b)
+
+If a user wants the current versions of div and mod, he can implement them;
+and his implementation will be no worse in performance
+than what happens now in the standard library functions!
+
+And remember, I don't make this proposal because it's more elegant than
+the current definition, just because it's what the machines actually do,
+and users can easily synthesize the functions they really want from
+the primitives.
+
+
+5.  Interrupt
+
+Consider the following:
+
+   fun f() = (process(input(std_in, 10)); f())  handle Interrupt => f()
+
+This is intended to be an Interrupt-proof loop (just like the "toplevel"
+of an interactive ML system).  However, if two interrupts arrive in very
+close succession, then the second will arrive in the exception handler
+and will cause execution to terminate.  The only safe way to handle this
+is to disable the interrupt button as soon as an Interrupt arrives,
+with an explicit re-enabling of interrupts at the discretion of the program.
+This requires the function:
+
+enable_interrupt : unit -> unit
+
+with (just for symmetry) a corresponding
+
+disable_interrupt : unit -> unit
+
+Then the function f() above can be written as
+
+   fun f() = (enable_interrupt();
+              process(input(std_in, 10)); f())  handle Interrupt => f()
+
+
+6.  Arrays
+
+I get tired of people telling me "ML doesn't have arrays, so I can't do X".
+Then I have to explain that every ML compiler has arrays, even though
+the language definition doesn't.  Perhaps it would be simpler to put them
+in the language definition.
+
+
+7.  Io exception
+
+The current Io exception carries a string approximately of the form
+"Cannot open s" where s is a filename. This is objectionable for two reasons.
+
+First, it's not possible to pattern-match on substrings;  if the strings
+are to be standardized, a datatype should be used.
+
+Second, there's no indication of why a file cannot be opened (or written,
+read, etc.).  Most operating systems are perfectly happy to provide a string
+explaining what failed, e.g. "No such file or directory" or 
+"Interrupted system call".  Therefore, I propose something like the following:
+
+exception Io of {operation : string, filename : string, reason : string}
+
+where operation is one of "open_in", "input", etc., filename is the
+name of the stream (given to open_in or open_out) and reason is an
+operating-system dependent explanation of what happened.
+
+Now it's much easier to pattern-match on Io failures, and the reasons for
+failures are explained.
+
+
+8.  curried input and output
+
+All of the first 7 proposals are in some sense fundamental; there's no way
+that a user can get the right effect by defining functions in his own
+environment.  Proposal #8 is just cosmetic:  we propose that the 
+input and output functions be curried.  We circulated this proposal about
+a year ago and got no response.  Is anyone listening out there?

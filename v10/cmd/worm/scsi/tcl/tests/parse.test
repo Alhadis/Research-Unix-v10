@@ -1,0 +1,157 @@
+# This file contains contains a collection of tests for the basic
+# command-parsing mechanisms of Tcl (such as how braces and brackets
+# and variable substitutions are handled)..  If everything is OK
+# then it finishes silently.  If a problem is detected then it
+# generates a Tcl error with a cryptic message.  To trace the error
+# you'll have to read through the commands in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/parse.test,v 1.1 90/03/21 13:27:48 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {Parse error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+proc fourArgs {a b c d} {
+    global arg1 arg2 arg3 arg4
+    set arg1 $a
+    set arg2 $b
+    set arg3 $c
+    set arg4 $d
+}
+
+proc getArgs args {
+    global argv
+    set argv $args
+}
+
+# Basic argument parsing.
+
+fourArgs a b	c 		 d
+check $arg1 a 1.1
+check $arg2 b 1.2
+check $arg3 c 1.3
+check $arg4 d 1.4
+
+# Quotes.
+
+getArgs "a b c" d
+check $argv {{a b c} d} 2.1
+set a 101
+getArgs "a$a b c"
+check $argv {{a101 b c}} 2.2
+set argv "xy[format xabc]"
+check $argv {xyxabc} 2.3
+set argv "xy\t"
+check $argv xy\t 2.4
+set argv "a b	c
+d e f"
+check $argv a\ b\tc\nd\ e\ f 2.5
+set argv a"bcd"e
+check $argv {a"bcd"e} 2.6
+
+# Braces.
+
+getArgs {a b c} d
+check $argv "{a b c} d" 3.1
+set a 101
+set argv {a$a b c}
+set b [index $argv 1 chars]
+check $b {$} 3.2
+set argv {a[format xyz] b}
+check [length $argv chars] 15 3.3
+set argv {a\nb\}}
+check [length $argv chars] 6 3.4
+set argv {{{{}}}}
+check $argv "{{{}}}" 3.5
+set argv a{{}}b
+check $argv "a{{}}b" 3.6
+
+# Command substitution.
+
+set a [format xyz]
+check $a xyz 4.1
+set a a[format xyz]b[format q]
+check $a axyzbq 4.2
+set a a[
+format
+xyz
+]b
+check $a axyzb 4.3
+
+# Variable substitution.
+
+set a 123
+set _123z xx
+check $a 123 5.1
+check x$a.b x123.b 5.2
+check $_123z^ xx^ 5.3
+check a${a}b a123b 5.4
+check [catch {$_non_existent_} msg] 1 5.5
+check $msg {couldn't find variable "_non_existent_"} 5.6
+
+# Backslash substitution.
+
+proc bsCheck {char num errNum} {
+    scan $char %c value
+    if {$value != $num} {
+	error [format {History error %s: wanted "%s", got "%s"}
+		$errNum $num $value]
+    }
+}
+
+bsCheck \b	0x8	6.1
+bsCheck \e	0x1b	6.2
+bsCheck \n	0xa	6.3
+bsCheck \r	0xd	6.4
+bsCheck \t	0x9	6.5
+bsCheck \{	0x7b	6.6
+bsCheck \}	0x7d	6.7
+bsCheck \[	0x5b	6.8
+bsCheck \]	0x5d	6.9
+bsCheck \$	0x24	6.10
+bsCheck \ 	0x20	6.11
+bsCheck \;	0x3b	6.12
+bsCheck \\	0x5c	6.13
+bsCheck \Ca	0x1	6.14
+bsCheck \Ma	0xe1	6.15
+bsCheck \CMa	0x81	6.16
+bsCheck \14	0xc	6.17
+bsCheck \x	0x5c	6.18
+set a "\a\c\n\]\}"
+check [length $a chars] 7 6.19
+set a {\a\c\n\]\}}
+check [length $a chars] 10 6.20
+
+# Semi-colon.
+
+set b 0
+getArgs a;set b 2
+check $argv a 7.1
+check $b 2 7.2
+getArgs a b ; set b 1
+check $argv {a b} 7.3
+check $b 1 7.4
+
+# The following checks are to ensure that the interpreter's result
+# gets re-initialized by Tcl_Eval in all the right places.
+
+check [concat abc] abc 8.1
+check [concat abc; set a 2] {} 8.2
+check [concat abc; set a $a] {} 8.3
+check [set a [concat abc]] {} 8.4
+
+# Syntax errors.
+
+check [catch "set a {bcd" msg] 1 9.1
+check $msg "unmatched brace: 'set a  => {bcd'" 9.2
+check [catch {set a "bcd} msg] 1 9.3
+check $msg {unmatched quote: 'set a  => "bcd'} 9.4
+check [catch {set a "bcd"xy} msg] 1 9.5
+check $msg {extra characters after close-quote: 'set a "bcd => "xy'} 9.6
+check [catch "set a {bcd}xy" msg] 1 9.7
+check $msg "extra characters after close-brace: 'set a {bcd => }xy'" 9.8
+check [catch {set a [format abc} msg] 1 9.9
+check $msg "missing close-bracket: ' => format abc'" 9.10
+check [catch gorp-a-lot msg] 1 9.11
+check $msg {"gorp-a-lot" is an invalid command name or ambiguous abbreviation} 9.12

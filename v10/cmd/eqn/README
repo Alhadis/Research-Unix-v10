@@ -1,0 +1,138 @@
+Jun 18, 1991:
+
+Lower | to match parens.
+
+Dec, 1990:
+
+Converted to ANSI C.  Alea iacta est.
+
+Nov 11, 1989:
+
+Print diacriticals in font 1 regardless.
+
+Apr 28, 1989:
+
+Made some of the float tuning parameters accessible
+through define. (Subbase & Supshift).  Not very systematic
+naming or direction conventions.
+
+Added version identification output via -d.
+
+Apr 20, 1989:
+
+Fixed bug that caused excess inter-character spaces
+in bold xxx, etc.
+
+Re-did sqrt to generate radical with a more accurate size.
+(i hope -- tuned for postscript.)
+
+Mar 89:
+
+Lots of fiddling to get detailed character spacing better,
+assuming times roman on postscript printers.  a digram
+class table in text.c does most of it;  more fiddles in
+eqnbox.c and shift.c.  Not much attempt to make this stuff
+independent of typesetter, so it may break on other output
+devices.
+
+Tab is now just another white space character.  This rescinds
+the original botch that made it something to be printed.
+
+Preliminary steps taken to getting rid of neqn;  "ndefine" is
+now the only vestige in the code, for compatibility.
+
+
+Sept 88:
+
+Default TYPESETTER is post.
+
+Changed positioning rules for sqrts to be a lot
+better for postscript.
+
+Changed positioning rules for built-up brackets:
+if the enclosed thing has a base that's more than
+1/2 em away from its center, the thing is just
+centered, rather than lined up.
+
+More tuning parameters added.
+
+Fixed up to go through cyntax without substantive complaint.
+
+Apr 87:
+
+Made some of the tuning parameters visible as
+defined strings:
+	hat_def:	string to draw the hat in x hat
+	also	vec, tilde, dot, dotdot, utilde
+		sum, prod, inter, union, int
+
+moved a bunch of fixed values out into tuning.c
+as compile-time parameters.
+
+Dec 85:
+
+The following is a quick synopsis of changes
+to eqn since the last version.
+Most of these changes owe thanks to Mary Carter,
+whose efforts during the summer of 1984 provided
+the impetus to start thinking about eqn again.
+
+1.  Fixed long-standing bug involving nested
+from-to constructs.
+
+2.  Output guaranteed to preserve font that was
+in effect upon entry (if there are no font changes
+within quoted strings).
+
+3.  The right delimiter is no longer significant
+within display equations.
+
+4.  Macros with arguments, as in grap and pic.
+Parentheses are treated somewhat differently:
+If an embedded left paren is found in a token,
+then the characters to its left are checked to
+see if they are a macro name.  If they are, the
+paren is assumed to mark the beginning of the 
+argument list.  Otherwise, the token is treated
+just like any other.
+
+5.  File inclusion:  include (or copy) "filename"
+is replaced by contents of file.  .EQ and .EN are
+ignored within inclusions.  Filename "-" is a synonym for
+standard input on the command line.
+
+6.  Font names can be given as strings, as in
+	font CW { ... } or gfont CW
+
+7.  Checks environment variable TYPESETTER;  default
+is still 202.
+
+8.  An optional separation distance can be specified
+for a pile or col:  lcol 33 {... above ...} adds 33/100 em
+of separation between the elements instead of the default;
+negative values permitted.
+pile, etc., have become synonyms for col, etc.
+
+9.  Eqn attempts to print appropriately for current size,
+obviating the need for most uses of size {...} and gsize.
+It won't always be right, but it will be close for documents
+printed in the usual range of sizes.
+
+10. A fair amount of fiddling has been done to details of
+positioning;  the output seems to be better looking.
+
+11. ifdef whatever / is replaced by this if defined /
+The proper TYPESETTER name is defined already.
+
+12. Error messages are somewhat better as well.  Errors
+passed on to troff will be identified by source file and
+line number in the eqn input.
+
+13. Tunable parameters have been (mostly) collected into
+a single file, tuning.c, to make it easier to adapt eqn
+to a new typesetter.
+
+14. As an interim fix, "lowbar" and "highbar" are synonymous
+with "bar", but force the bar to be either low (as over x)
+or high (as over X) regardless of the apparent height of
+the object.  This copes with {x sub 1} bar.

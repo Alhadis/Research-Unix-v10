@@ -1,0 +1,15 @@
+#!/bin/sh
+lockdir=/usr/spool/uucp
+cd /usr/spool/uucp
+locklink=$lockdir/LCK.rmdir
+echo $$ | awk '{printf("%10d\n", $1)}' > $locklink
+for i in [a-zS]*; do
+	lockfile=$lockdir/`echo LCK..$i|cut -c1-14`
+	ln $locklink $lockfile && ( rmdir $i; rm -f $lockfile )
+done
+rm -f $locklink
+cd .Status
+for i in `grep -l SUCCESSFUL *`; do
+	test -f ../LCK..$i || rm $i
+done
+exit 0

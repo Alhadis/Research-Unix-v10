@@ -1,0 +1,478 @@
+\documentstyle[11pt,titlepage]{article}
+% style
+\setlength{\textwidth}{15cm}
+\setlength{\oddsidemargin}{4.6mm} % 30 mm vasen marginaali
+\setlength{\evensidemargin}{\oddsidemargin}
+\setlength{\textheight}{22cm}
+\setlength{\topmargin}{-8mm}
+\newcommand{\mltwig}{ML-Twig }
+
+\title{Preliminary Version of \mltwig User Manual}
+\author{Jussi Rintanen \\ Helsinki University of Technology}
+\date{June 10, 1989}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+\section{Introduction}
+
+\mltwig is the Standard ML counterpart of Twig
+\cite{ahoganapathitjiang,tjiang}, a general tree manipulation program
+implemented in C by S. W. K. Tjiang, which can be used for various purposes,
+especially for writing code generators \cite{appel}.
+\mltwig is not a clone of Twig, but a similar tool adjusted to fit
+the Standard ML environment.
+The user writes a specification of a tree manipulation program,
+which is then compiled by \mltwig to an ordinary Standard ML program.
+
+A specification defines a representation for the trees to be manipulated,
+and a set of tree translation rules called a tree translation scheme.
+The rules of the tree translation scheme can be seen as tree rewriting
+rules, by means of which a tree can be reduced bottom-up to a single node.
+Often, a tree translation scheme is redundant, and the reduction can
+proceed using different rules. This redundancy can be taken
+advantage of by associating a cost with each rule. The reduction chosen
+by \mltwig is the cheapest. In the determination of the cheapest
+reduction, a tree pattern matching algorithm and a dynamic programming
+algorithm are used \cite{ahojohnson,hoffmannodonnell}.
+
+During the tree reduction process, the program produced by \mltwig maps
+the user tree to a result value. The result value may be a new tree of
+the same type as the original tree, or more generally, any Standard ML value.
+A behaviour facilitating side-effects is also supported by means of
+a top-down execution mechanism, which is similar to that of Twig.
+The efficiency of \mltwig compiler is acceptable, but the run-time system
+could be more efficient. Therefore we currently regard \mltwig as
+an experimental tool.
+
+\section{\mltwig Specifications}
+\subsection{Syntax}
+
+The syntax of \mltwig specifications is presented below.
+
+\newenvironment{grammar}{\goodbreak\medskip\obeylines\parskip=1pt}{\medskip\goodbreak}
+\newcommand{\NT}[1]{ {\em #1} }
+\newcommand{\TE}[1]{ {\tt #1} }
+\newcommand{\RW}[1]{ {\tt\bf #1} }
+\newcommand{\IS}{ $\Rightarrow$ }
+\newcommand{\OR}{ $|$ }
+\newcommand{\EMPTY}{ $\epsilon$ }
+\newcommand{\TAB}{ \hskip8mm }
+\newcommand{\VTAB}{ \vskip3mm }
+\newcommand{\LPA}{ {\bf (} }
+\newcommand{\RPA}{ {\bf )} }
+\newcommand{\COM}{ {\bf ,} }
+\newcommand{\RBR}{ ${\bf ]}$ }
+\newcommand{\LBR}{ ${\bf [}$ }
+\newcommand{\SEC}{ {\bf ;} }
+\newcommand{\COL}{ {\bf :} }
+\newcommand{\EQ} { {\bf =} }
+
+\begin{grammar}
+\VTAB
+\NT{specification}\IS\NT{head}\NT{body}
+        
+\NT{head}\IS\NT{head-declaration}\OR\NT{head-declaration}\NT{head}
+        
+\NT{head-declaration}\IS\RW{prologue}\LPA\NT{ml-code}\RPA\SEC
+\TAB\OR\RW{default\_cost}\LPA \NT{ml-code}\RPA \SEC
+\TAB\OR\RW{structure\_name}\TE{id} \SEC
+\TAB\OR\RW{label}\NT{label-list}\SEC
+\TAB\OR\RW{node}\NT{node-list}\SEC
+        
+\NT{body}\IS\NT{bodyd}\OR\NT{bodyd}\NT{body} 
+        
+\NT{bodyd}\IS\NT{rule}\OR\RW{REWRITE}\NT{rule}\OR\RW{TOPDOWN}\NT{rule}\OR\RW{insert}\LPA\NT{ml-code}\RPA\SEC
+
+\VTAB
+
+\NT{node-list}\IS\NT{node}\OR\NT{node-list}\COM\NT{node}
+
+\NT{node}\IS\TE{nodeid}(\TE{int}) 
+
+\NT{label-list}\IS\TE{label}\OR\NT{label-list}\TE{label}
+
+\NT{label}\IS\TE{labelid}\RW{of}\NT{ml-code}
+
+\VTAB
+        
+\NT{rule}\IS\TE{labelid}\NT{tree-pattern}\NT{cost}\NT{action}\SEC
+
+\VTAB
+
+\NT{cost}\IS\COL(\NT{ml-code})\OR\EMPTY
+  
+\NT{action}\IS\EQ(\NT{ml-code})
+
+\NT{ml-code}\IS\TE{mltoken}\OR\NT{ml-code}\TE{mltoken}
+
+\NT{tree-pattern}\IS\TE{labelid}\OR\TE{nodeid}\OR\TE{nodeid}\LPA\NT{tree-list} \RPA 
+   
+\NT{tree-list}\IS\NT{tree-pattern}\OR\NT{tree-list}\COM\NT{tree-pattern}
+
+\VTAB
+\end{grammar}
+
+The prologue, the node and label declarations, and the rules
+are obligatory. The prologue must precede the inserts.
+The node and label declarations must precede the rules.
+
+White space, new lines and comments can be used in all parts of a
+specification. The lexical analyzer of \mltwig is basically the same
+as that of Standard ML. Symbolic identifiers beginning with a \$
+should be used with caution because of presence of the special tree reference
+tokens, see Section \ref{rules} for details.
+The following words are reserved, and may not be used as label or node symbols.
+
+\begin{verbatim}
+   default_cost   insert   label   node   prologue
+   REWRITE   TOPDOWN   structure_name
+\end{verbatim}
+
+\subsection{Label and Node Declarations}
+
+\mltwig sees the user tree abstractly as a simple tree, where each node
+and leaf is annotated with a symbol.
+The symbols are declared in the node declaration.
+The declaration begins with the word {\tt node}, which is followed
+by a comma-separated list of node symbols with the arity of the symbol
+in parentheses. The arity of a leaf node is 0.
+The user may not use reserved words of Standard ML as node symbols.
+The type {\tt symbol} is generated by \mltwig from the {\tt node} declaration.
+It contains nullary data constructors named after the node symbols.
+E.g. for the node declaration
+\begin{verbatim}
+   node PLUS(2), MINUS(2), MUL(2), DIV(2), CONST(0);
+\end{verbatim}
+the following nullary constructors are available for the user to be
+used by the function {\tt node\_value}, see Section \ref{prologue}.
+\begin{verbatim}
+     PLUS MINUS MUL DIV CONST
+\end{verbatim}
+
+During the construction of the optimal cover, matched subtrees are labeled with
+the replacement labels of the matching rules. The replacement
+labels are declared in the label declaration. For each label, there
+is an associated type. The declaration is of the form
+\begin{verbatim}
+     label lab1 of ty1 | lab2 of ty2 | ... ;
+\end{verbatim}
+An example label declaration is
+\begin{verbatim}
+     label Name of string | Const of int | Fb of foo -> bar list;
+\end{verbatim}
+The expression in the action part of a rule is of the same type as
+the replacement label of the rule. The value of the expression may
+be used in the rules matching at the parent nodes of the user tree.
+
+\subsection{Prologue}\label{prologue}
+In the prologue part the user writes the values for interfacing the
+user tree and cost representations to the \mltwig run time system:
+\begin{verbatim}
+  type cost
+  val cost_less : cost * cost -> bool
+
+  type tree
+  val get_subtrees : tree -> tree list
+  val node_value : tree -> symbol
+\end{verbatim}
+
+The costs of the rules are represented by the type {\tt cost}.
+The only operation for this type used by \mltwig is
+the comparison function {\tt cost\_less}, which returns true, if
+the first argument cost is smaller than the second.
+
+The type {\tt tree} is the type of the trees to be fed to the tree manipulator
+program produced by \mltwig. The tree processor accesses the tree type
+only with the functions {\tt get\_subtrees} and {\tt node\_value}.
+{\tt Get\_subtrees} returns the list of subtrees of a tree. If there are
+no subtrees, it returns the empty list. {\tt Node\_value} returns the
+symbol associated with the root node of a tree.
+
+\subsection{Default Values}
+A default cost may be defined to be used for the rules without an
+explicit cost expression.
+The syntax of the default cost declaration is
+\begin{verbatim}
+     default_cost ( ... );
+\end{verbatim}
+
+The default cost is represented as a function of type {\tt cost list -> cost},
+where the argument {\tt cost list} contains the costs of the children.
+The values defined in the prologue and the inserts may be used
+in defining the default cost.
+
+The user may name the structure produced my \mltwig by providing
+a structure name declaration. The syntax is simply
+\begin{quote}
+  {\tt structure\_name} {\em id} {\tt ;}
+\end{quote}
+
+\subsection{Inserts and Rules}\label{rules}
+The body of an \mltwig specification consists of a set of rules,
+possibly interleaved with inserts. An insert is a sequence of
+Standard ML code in the same as the prologue. The syntax is similarly
+\begin{verbatim}
+     insert ( ... );
+\end{verbatim}
+There are three kinds of rules in \mltwig: ordinary, rewrite and
+topdown. Rewrite rules are used for replacing a subtree
+with another during the selection of an optimal cover. Topdown
+rules are used in conjunction with side-effects, when it is
+essential to execute the action parts of the parent and the children
+in a certain order.
+
+The three kinds of rules correspond the different match modes of Twig.
+Our scheme is more restricted, but we think it suits better
+to the implementation and parent language Standard ML.
+
+The same syntax is used for all kinds of rules, except that rewrite and
+topdown rules are prefixed with the identifiers {\tt REWRITE} and {\tt TOPDOWN},
+respectively. The syntax of rules is
+\begin{verbatim}
+     replacement tree-pattern { : ( cost-expr ) } = ( action-expr );
+\end{verbatim}
+
+A rule matches at a node of the user tree, if the root symbol of the
+tree pattern is the same as the symbol in the node of the user tree,
+and the subtrees of the tree pattern match the subtrees of the user tree.
+If the tree pattern is a label, it matches the user tree at a node,
+if a rule with the same label as replacement has matched at the node.
+
+The cost expression is the price of matching a rule. The action expression
+is primarily evaluated for a value, but it could also have side-effects.
+A cover of a user tree is a set of rules, using which the tree can be
+reduced to a single node.
+The most inexpensive cover of a user tree is the cover with the least
+cost rule matching at the root node.
+
+\mltwig selectes the most inexpensive cover, and executes the
+actions associated with the rules constituting the cover. During
+the selection phase, if the least cost rule matching at a node is
+a rewrite rule, the action expression of the rule is evaluated for a new
+tree to be used in place of the original subtree.
+
+\subsubsection{Tree Patterns}
+
+The tree patterns are in prefix notation, i.e. the root symbol
+of a tree pattern is followed by parenthesized subpatterns.
+A leaf node is not followed by parentheses.
+An example of a tree pattern:
+\begin{verbatim}
+  OP(PLUS,exp,OP(binop,exp,exp))
+\end{verbatim}
+Obviously, the {\tt OP} symbol is a node symbol of arity 3.
+The symbols {\tt PLUS}, {\tt binop} and {\tt exp} could be either
+node symbols of arity 0 or labels, that depends on the node and
+label declarations of the specification.
+
+\subsubsection{Costs}
+The cost expression of a rule must be of type {\tt cost}. The costs
+of the rules which matched at the nodes corresponding the labeled
+leafs of the tree pattern may be accessed using identifiers named
+after the following convention. If a label occurs only once
+in the tree pattern, the identifier used to access the cost is the
+label itself. If a label occurs two or more times, the different
+occurences are indexed with a number. For example, in the tree
+pattern (labels are in lower case)
+\begin{verbatim}
+  MOVE(reg,OP(binop,exp,exp))
+\end{verbatim}
+the cost of the rule matching at the node corresponding the {\tt reg}
+node could be accessed with the identifier {\tt reg}, and the rest of
+the labels with the identifiers {\tt binop}, {\tt exp1} and {\tt exp2},
+in that order. If a name is ambiguous, the user is responsible to rename
+the labels. An example of an ambiguity can be seen in the following
+tree pattern.
+\begin{verbatim}
+  N(a,a1,a)
+\end{verbatim}
+The names of the labels would be {\tt a1}, {\tt a1} and {\tt a2}.
+
+All values defined in the prologue and the inserts can also be used.
+A subtree of the current node can be accessed by a special token
+by writing a period-separated list of subtree numbers between a
+pair of \$'s. For example, the third subtree of the second subtree
+of the current node can be accessed using \$2.3\$. As a special case,
+the current node can be accessed using \$\$. The default cost,
+as specified in the default cost declaration, can be referenced
+with the identifier DC. A rule can be rejected by calling
+the function {\tt ABORT} with the argument {\tt ()}.
+
+\subsubsection{Actions}
+There are some values available for all three kinds of rules:
+the values defined in the prologue and in the inserts,
+as well as the tree reference tokens described in the previous section.
+
+The ordinary and topdown rules return a value of the same type as the
+replacement label of the rule. Rewrite rules return a value of type {\tt tree}.
+
+In ordinary rules, the values of the action expressions of
+the rules matching at the nodes corresponding the labeled leafs of
+the tree pattern can be accessed in the same way as costs in the
+cost expression. The types of the values are the types of the labels
+as described in the label declaration.
+
+When evaluating the action expression of a topdown rule, the action
+expression of the children rules have not yet been evaluated. Instead,
+there are available funtions for evaluating the children expressions,
+which the user can apply in any order she wishes. The functions are
+named the same in way as the cost expressions of the children and the
+action expression of the children in ordinary rules, except that they
+are prefixed with the string ''{\tt DO}''. For example, if the
+label {\tt stm} is of type {\tt string list}, then in the action
+expression of a rule with the tree pattern
+\begin{verbatim}
+    SEQ(stm,stm)
+\end{verbatim}
+the following functions can be used:
+\begin{verbatim}
+     DOstm1 : unit -> string list
+     DOstm2 : unit -> string list
+\end{verbatim}
+For rewrite rules, only the common values are available.
+
+\subsubsection{Unit Rules}
+An \mltwig specification often contains rules with a tree pattern
+consisting of just one label, i.e. unit rules. The problem with
+unit rules is that they can form cycles. For example, if rules {\em a b},
+{\em b c} and {\em c a} were present, and a rule with the replacement
+{\em b} had matched, the tree pattern matcher would match the first
+rule, then the third, the second, the first and so on.
+
+In \mltwig, the unit rule cycles are cut, when the initial label is
+encountered the second time. Another possibility would be to cut, when
+the first matched unit rule is encountered the second time.
+
+\section{How to Run \mltwig and a Program Produced by It}
+The current implementation of \mltwig has been written with
+Standard ML of New Jersey 0.33 in mind. However, it should
+be fairly easy to port it to other implementations of Standard ML.
+
+There are two ways to use \mltwig. The first way is to compile it
+with the batch compiler, and use it
+independently of the interactive system. For this purpose, there is
+a simple ''user interface'', which prints a title and asks the user
+for the name of the specification file.
+The second way is to load \mltwig into the interactive system, and call
+the function {\tt Main.main} with a file name as the argument.
+
+\mltwig reads the specification file, and produces a new file containing
+the tree processor program. The name of the new file is the name of
+the specification file suffixed with ''.sml''. 
+The resulting file contains a structure of the form
+\begin{verbatim}
+        structure NNN =
+          struct
+            structure User =
+              struct
+                ...
+              end
+            exception NoCover
+            exception InternalError of string
+            val translate : User.tree -> User.result = ...
+        end;
+\end{verbatim}
+The name of the structure ({\tt NNN}) is the name specified in the
+structure\_name declaration, or the default name {\tt TreeProcessor}.
+The substructure {\tt User} contains all the code of the prologue and
+the inserts, and the definition of the type {\tt symbol}.
+The function {\tt translate} is the actual function, which
+is applied to a user tree. If no cover was found, the exception
+{\tt NoCover} is raised. If an internal error occurs in the function
+{\tt translate}, the exception {\tt InternalError} is raised.
+The value returned by {\tt translate} is the value returned by
+the rule matched at the root node of the user tree. It is tagged
+with a data constructor, which is the replacement label of the
+rule at the root node of the least cost cover prefixed with ''\_''.
+The structure described above is not self-contained, and a functor
+located in a separate file must be loaded before it.
+
+%\section{A Short Implementation Description}
+\section{An Example \mltwig Specification}
+
+Our example is a specification of a simple ''code generator'', which
+compiles arithmetic expressions to instructions for a simple stack machine.
+The instruction set of the machine is redundant: in addition to the simple
+arithmetic instructions, it has a combined addition--multiplication
+instruction, which is cheaper than the separate instructions
+performing the same calculation.
+\newpage
+\begin{verbatim}
+   (* Example of a complete ML-Twig specification:        *)
+   (* Evaluation of expressions                           *)
+
+   node   Plus(2), Minus(2), Mul(2);
+   node   Const(0);
+
+   prologue (
+   
+   (* The type and function definitions                   *)
+
+      datatype tree = Tree of (tree * symbol * tree) | Leaf of int
+      type cost = int
+
+      fun get_subtrees(Leaf _) = []
+        | get_subtrees(Tree (t1,_,t2)) = [t1,t2]
+      fun node_value(Tree(_,ope,_))  = ope
+        | node_value (Leaf _) = Const
+      val cost_less : int * int -> bool = (op <)
+
+      fun constValue (Leaf i) = i
+      datatype instr = PUSH of int | PLUS | MINUS | MUL | PLUSMUL
+   );
+
+   label Expr of instr list;
+   
+   default_cost( fn subexprcost => fold (op +) subexprcost 0);
+
+   (* Rules                                               *)
+
+   Expr Const            =([PUSH (constValue $$)]);
+   
+   Expr Plus(Expr,Expr) :   (2+Expr1+Expr2) =(Expr1@Expr2@[PLUS]);
+   
+   Expr Minus(Expr,Expr) :  (2+Expr1+Expr2) =(Expr1@Expr2@[MINUS]);
+   
+   Expr Mul(Expr,Expr) :    (2+DC)          =(Expr1@Expr2@[MUL]);
+
+   Expr Mul(Expr,Plus(Expr,Expr)) : (3+DC)  =(Expr1@Expr2@Expr3@[PLUSMUL]);
+
+   REWRITE Expr Mul(Plus(Expr,Expr),Expr) : (0)  =(Tree($2$,Mul,$1$));
+   
+   (* End                                                 *)
+\end{verbatim}   
+\newpage   
+\begin{thebibliography}{99}
+
+\bibitem{ahocorasick} {\sc A. V. Aho and M. J. Corasick},
+{\em Efficient String Pattern Matching: An Aid to Bibliographic Search}.
+Communications of The ACM, 18(June 1975), pp. 333-340.
+
+\bibitem{ahoganapathitjiang} {\sc A. V. Aho, M. Ganapathi and S. W. K.
+Tjiang}, {\em Code Generation Using Tree Matching and Dynamic Programming},
+AT\&T Bell Laboratories, 600 Mountain Avenue, NJ 07974, 1986.
+
+\bibitem{ahojohnson} {\sc A. V. Aho and S. C. Johnson}, {\em Optimal Code
+Generation for Expression Trees}, Journal of The ACM, 23(July 1975),
+pp. 488-501.
+
+\bibitem{appel} {\sc A. W. Appel}, {\em Concise Specifications of Locally
+Optimal Code Generators}, Technical Report CS-TR-080-87, Princeton
+University, Department of Computer Science, February 1987.
+
+\bibitem{harpermacqueenmilner} {\sc R. Harper, D. MacQueen and R. Milner},
+{\em Standard ML}, Laboratory of Foundations of Computer Science,
+University of Edinburgh, Technical Report ECS-LFCS-82-2 (1986).
+
+\bibitem{hoffmannodonnell} {\sc C. M. Hoffmann and M. J. O'Donnell},
+{\em Pattern Matching in Trees}, Journal of The ACM, 29(January 1982),
+pp. 68-95.
+
+\bibitem{tjiang} {\sc Tjiang, S. W. K.}, {\em Twig Reference Manual},
+Technical Report, AT\&T Bell Laboratories, 1986.
+
+\end{thebibliography}
+
+\end{document}

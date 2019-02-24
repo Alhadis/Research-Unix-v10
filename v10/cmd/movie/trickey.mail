@@ -1,0 +1,24 @@
+From trickey Wed Nov 18 13:03 EST 1987
+to: bwk jlb
+
+/usr/trickey/anim on coma has files changed/renamed and added
+to jlb/anim/Export, in order to make an X11 distribution.
+
+I renamed blitterm.c -> term.c, with a few ifdefs to make
+the same code work under X11 when loaded with a supplied libj.c.
+Besides initialization, there's an extra "wait(MOUSE)" at the
+top of the main loop, since otherwise anim hogs the whole machine
+under X.  It seems like you could use that code on the blit with no harm.
+
+Also there was a bug fix in checkmouse() [sometimes it did
+a strlen of garbage, crashing animterm on the sun].
+
+You can get rid of sun.make and sunterm.c, since Sun will soon
+supply an X server with their regular release (I'll hold onto
+them until then).
+
+Unfortunately, the timings for the ozone example with
+suntools, x10, and x11 versions of animterm are
+12, 23, and 34 respectively.  We're all eagerly awaiting
+a better x11 server implementation.
+

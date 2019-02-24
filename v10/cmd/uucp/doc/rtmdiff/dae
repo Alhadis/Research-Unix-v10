@@ -1,0 +1,328 @@
+.Bh
+Daemons
+.Sh
+Data transfer
+.PP
+The communication daemon
+is
+.I uucico ,
+rather than
+.I uuci
+and
+.I uuco .
+If called with no arguments,
+.I uucico
+starts in slave mode
+(like
+the old
+.I uuci );
+if given the flag
+.B \-r1 ,
+it starts in master mode,
+and tries to call out
+to the system named
+in a
+.B \-s system
+argument
+(like
+.I uuco ).
+Unlike
+.I uuco ,
+.I uucico
+insists that
+a system be specified.
+A new program,
+.I uusched ,
+searches the spool directory
+and calls
+.I uucico
+once for each system
+that has work
+(like
+.I uuco
+without arguments).
+Hence,
+to call a particular system,
+use
+`\c
+.B "uucico \-r1 \-s" sysname;'
+to call out to all systems with work queued,
+`\c
+.B uusched .'
+.PP
+Logins used for incoming traffic
+should have
+.I /usr/lib/uucp/uucico
+as shell,
+rather than
+.I uuci .
+.PP
+As a compatibility hack,
+.I uucico
+is linked to
+.I uuci
+and
+.I uusched
+is linked to
+.I uuco.
+Don't depend on this forever;
+programs
+(and password files)
+which call
+.I uuci
+or
+.I uuco
+should be fixed.
+.Sh
+Remote execution
+.PP
+Remote commands
+called by
+.I uuxqt
+are invoked somewhat differently.
+The old
+.I uuxqt
+passed an environment
+(\c
+.I environ (7))
+containing only the definition
+.B RHOST ,
+set to the name of the remote system.
+The command was
+.I exec ed
+directly,
+without involving the shell.
+The program name argument
+(\c
+.I argv [0])
+was the remote command name
+given to
+.I uux ;
+.I e.g.,
+.I rmail
+was invoked with the name
+.I rmail ,
+even though it was run
+with the specific path
+.I /bin/rmail .
+The file creation mask
+(\c
+.I umask (2))
+was inherited unchanged from
+.I uuxqt .
+.PP
+In the new system,
+the remote command
+inherits environment variables
+from
+.I uuxqt ,
+with four additions:
+.B PATH
+is set to
+.B /bin:/usr/bin ;
+.B USER
+to
+.B uucp ;
+.B UU_MACHINE
+to the name of the remote system;
+.B UU_USER
+to the login name
+of the remote user requesting the command.
+Execution consists of calling
+.B "/bin/sh \-c
+with appropriate arguments
+to set the environment
+and call the command.
+For example,
+if user
+.I rhino
+on machine
+.I hippo
+sends remote mail
+to
+.I sheep ,
+.I uuxqt
+might invoke
+.IP
+.B
+sh \-c
+"PATH=/bin:/usr/bin
+USER=uucp
+UU_MACHINE=hippo
+UU_USER=rhino
+export PATH UU_MACHINE UU_USER;
+/bin/rmail sheep"
+.R
+.PP
+.B USER
+is not exported (why not?).
+The file creation mask
+is set to 0.
+.PP
+If an explicit pathname for the command
+is specified in
+.I Permissions ,
+that name is fed to the shell,
+and becomes
+.I argv [0].
+.PP
+Commands which depend on the
+.I umask
+or
+the value of
+.B PATH ,
+or which examine
+.B RHOST ,
+will need to be changed.
+.Sh
+Periodic maintenance
+.PP
+.I Uusched
+and
+.I uuxqt
+should be started up periodically,
+say hourly.
+.PP
+.I Uudemon.cleanu *
+.FS
+*
+A victim of V8's refusal to
+allow filenames
+even to be expressed in
+more than 14 characters.
+.FE
+cleans up the spool directory.
+It summarizes the current logfiles,
+and stores them away.
+By default,
+one back copy
+(yesterday's logs)
+is kept;
+more can be saved by
+specifying the number of days
+as an argument.
+Logs are scanned for interesting items,
+such as failed requests
+and attempts to steal the password file;
+anything exciting
+is mailed to a system administrator.
+.I Uudemon.cleanu
+also cleans up dead bodies
+in the spooling directory;
+much of this work is done
+by calling
+.I uucleanup ,
+which takes the place
+of the old
+.I uuclean .
+.PP
+Both
+.I uudemon.cleanu
+and
+.I uudemon.admin
+look in the environment variable
+.B mailto
+for a list of
+people to grace with mail.
+If
+.B mailto
+is not set,
+messages are sent
+to
+.B uucp .
+.PP
+.I Uucrap
+removes status files
+which record nothing but the time
+of the last successful call,
+and empty spooling directories.
+This isn't essential,
+but keeps things cleaner
+and makes
+.I uustat
+less noisy.
+.PP
+If a remote machine
+needs to be polled regularly,
+it should be entered in
+.I /usr/lib/uucp/Poll ,
+and
+.I uudemon.poll
+should be run hourly,
+before
+.I uusched .
+This script sets up
+a dummy command
+for the system to be polled,
+so that the next
+.I uusched
+will call it.
+The
+.I Poll
+file allows specific hours
+to be given
+for the call.
+.PP
+A plausible script to be run every hour
+(usually called
+.I uudemon.hr )
+might be
+.DS
+.B
+/usr/lib/uucp/uudemon.poll
+/usr/lib/uucp/uucrap
+/usr/lib/uucp/uusched &
+/usr/lib/uucp/uuxqt &
+.R
+.DE
+.PP
+A sensible daily script
+(\c
+.I uudemon.day )
+might be
+.DS
+.B
+mailto="fee foe fum" export mailto
+cd /usr/lib/uucp
+\&./uudemon.cleanu 7	# save a week's worth of logfiles
+.R
+.DE
+.PP
+Feel free to customize the maintenance scripts.
+In particular,
+.I uudemon.cleanu
+shoud be fiddled with
+if you don't care to receive
+all the junk mail.
+(They've already been customized a bit;
+the original
+.I uudemon.cleanu
+didn't take arguments.)
+.Sh
+Miscellany
+.PP
+The shell script
+.I remote.unknown
+is invoked
+when an unknown system calls.
+The first argument is the system name.
+The distributed version
+records the name in
+.I spool/.Admin/Foreign .
+If
+.I remote.unknown
+doesn't exist
+or has no execute permissions,
+calls from unknown systems
+are accepted.
+.PP
+.I IHfix
+culls out unwanted entries
+from the NAC distribution.
+To install a new NAC
+.I L.sys ,
+do
+.IP
+.B "IHfix Systems NACstuff >Systems.gen
+.LP
+You probably don't need to worry about this.

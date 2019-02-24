@@ -1,0 +1,127 @@
+.data
+.globl _x
+.align 2; _x:.long 1
+.byte 2
+.space 3
+.byte 3
+.byte 64
+.space 2
+.byte 80
+.byte 6
+.space 2
+.globl _i
+.align 2; _i:.long 16
+.globl _y
+.align 2; _y:.byte 35
+.space 3
+.byte 9
+.byte 0
+.byte 0
+.byte 0
+.text
+.globl _main
+.align 1
+_main:.word 0x0
+cvtbl _x+13,-(sp)
+ashl $25,_x+12,r5
+ashl $-29,r5,-(sp)
+ashl $16,_x+8,r5
+ashl $-28,r5,-(sp)
+ashl $20,_x+8,r5
+ashl $-20,r5,-(sp)
+cvtbl _x+4,-(sp)
+pushl _x
+pushal L3
+calls $28/4,_printf
+pushl _y+4
+movl _y,r5
+ashl $26,r5,r4
+extzv $28,$32-28,r4,-(sp)
+ashl $30,r5,r5
+extzv $30,$32-30,r5,-(sp)
+pushal L9
+calls $16/4,_printf
+bicl3 $0xf000,_x+8,r5
+ashl $28,_i,r4
+ashl $-28,r4,r4
+ashl $12,r4,r4
+bicl2 $0xffff0fff,r4
+bisl3 r4,r5,_x+8
+bicl2 $112,_x+12
+cvtbl _x+13,-(sp)
+ashl $25,_x+12,r5
+ashl $-29,r5,-(sp)
+ashl $16,_x+8,r5
+ashl $-28,r5,-(sp)
+ashl $20,_x+8,r5
+ashl $-20,r5,-(sp)
+cvtbl _x+4,-(sp)
+pushl _x
+pushal L3
+calls $28/4,_printf
+bicl3 $3,_y,r5
+bisl3 $2,r5,_y
+movl _i,_y+4
+pushl _y+4
+movl _y,r5
+ashl $26,r5,r4
+extzv $28,$32-28,r4,-(sp)
+ashl $30,r5,r5
+extzv $30,$32-30,r5,-(sp)
+pushal L9
+calls $16/4,_printf
+pushal _x
+calls $4/4,_f2
+ret
+.globl _f1
+.align 1
+_f1:.word 0x800
+movl 4(ap),r11
+bicl2 $60,(r11)
+bicl3 $3,(r11),r5
+bicl3 $0xfffffffc,$0,r4
+bicl2 $0xfffffffc,r4
+bisl3 r4,r5,(r11)
+bicl3 $0xffffffc3,(r11),r5
+jeql L20
+pushal L22
+calls $4/4,_printf
+L20:
+bisl2 $3,(r11)
+bisl2 $60,(r11)
+movl (r11),r5
+ashl $26,r5,r4
+extzv $28,$32-28,r4,-(sp)
+ashl $30,r5,r5
+extzv $30,$32-30,r5,-(sp)
+pushal L23
+calls $12/4,_printf
+ret
+.globl _f2
+.align 1
+_f2:.word 0xc00
+movl 4(ap),r11
+tstl _i
+jneq L25
+movl $1,r10
+jbr L26
+L25:
+clrl r10
+L26:
+bicl3 $3,(r11),r5
+bicl3 $0xfffffffc,r10,r4
+bicl2 $0xfffffffc,r4
+bisl3 r4,r5,(r11)
+pushl r11
+calls $4/4,_f1
+bicl3 $60,(r11),r5
+bicl3 $0xfffffff0,$0,r4
+moval 0[r4],r4
+bicl2 $0xffffffc3,r4
+bisl3 r4,r5,(r11)
+ret
+.text 1
+L23:.ascii "p->a = 0x%x, p->b = 0x%x\012\000"
+L22:.ascii "p->b != 0!\012\000"
+L9:.ascii "y = %d %d %d\012\000"
+L3:.ascii "x = %d %d %d %d %d %d\012\000"

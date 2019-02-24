@@ -1,0 +1,171 @@
+.text
+.globl _addpoint
+.align 1
+_addpoint:.word 0x0
+subl2 $4,sp
+movl r1,-4(fp)
+addl2 12(ap),4(ap)
+addl2 16(ap),8(ap)
+movq 4(ap),*-4(fp)
+ret
+.globl _canonrect
+.align 1
+_canonrect:.word 0xc00
+subl2 $20,sp
+movl r1,-4(fp)
+cmpl 4(ap),12(ap)
+jgeq L8
+movl 4(ap),r11
+jbr L9
+L8:
+movl 12(ap),r11
+L9:
+movl r11,-20(fp)
+cmpl 8(ap),16(ap)
+jgeq L18
+movl 8(ap),r10
+jbr L19
+L18:
+movl 16(ap),r10
+L19:
+movl r10,-16(fp)
+cmpl 4(ap),12(ap)
+jleq L24
+movl 4(ap),r11
+jbr L25
+L24:
+movl 12(ap),r11
+L25:
+movl r11,-12(fp)
+cmpl 8(ap),16(ap)
+jleq L35
+movl 8(ap),r11
+jbr L36
+L35:
+movl 16(ap),r11
+L36:
+movl r11,-8(fp)
+movc3 $16,-20(fp),*-4(fp)
+ret
+.globl _makepoint
+.align 1
+_makepoint:.word 0x0
+subl2 $12,sp
+movl r1,-4(fp)
+movl 4(ap),-12(fp)
+movl 8(ap),-8(fp)
+movq -12(fp),*-4(fp)
+ret
+.globl _makerect
+.align 1
+_makerect:.word 0x0
+subl2 $20,sp
+movl r1,-4(fp)
+movq 4(ap),-20(fp)
+movq 12(ap),-12(fp)
+subl2 $(16+3)&-4,sp
+movc3 $16,-20(fp),(sp)
+movl -4(fp),r1
+calls $16/4,_canonrect
+ret
+.globl _ptinrect
+.align 1
+_ptinrect:.word 0x0
+movl 4(ap),r5
+cmpl r5,12(ap)
+jlss L49
+cmpl r5,20(ap)
+jgeq L49
+cmpl 8(ap),16(ap)
+jlss L49
+cmpl 8(ap),24(ap)
+jgeq L49
+movl $1,r4
+jbr L50
+L49:
+clrl r4
+L50:
+movl r4,r0
+ret
+.text 1
+.align 2; L51:.long 0
+.long 0
+.align 2; L52:.long 320
+.long 320
+.align 2; L53:.long -1
+.long -1
+.long 1
+.long 1
+.long 20
+.long 300
+.long 500
+.long 400
+.text
+.globl _main
+.align 1
+_main:.word 0x800
+subl2 $104,sp
+movq L51,-64(fp)
+movq L52,-72(fp)
+movc3 $32,L53,-32(fp)
+pushl $-10
+pushl $-10
+moval -80(fp),r1
+calls $8/4,_makepoint
+movq -80(fp),-(sp)
+movq -72(fp),-(sp)
+moval -88(fp),r1
+calls $16/4,_addpoint
+pushl $10
+pushl $10
+moval -96(fp),r1
+calls $8/4,_makepoint
+movq -96(fp),-(sp)
+movq -64(fp),-(sp)
+moval -104(fp),r1
+calls $16/4,_addpoint
+movq -104(fp),-(sp)
+movq -88(fp),-(sp)
+moval -48(fp),r1
+calls $16/4,_makerect
+clrl r11
+jbr L62
+L59:
+movad -28(fp)[r11],r5
+pushl (r5)
+movad -32(fp)[r11],r5
+pushl (r5)
+moval -56(fp),r1
+calls $8/4,_makepoint
+pushl -52(fp)
+movad -32(fp)[r11],r5
+pushl (r5)
+pushal L63
+calls $12/4,_printf
+subl2 $(16+3)&-4,sp
+movc3 $16,-48(fp),(sp)
+movq -56(fp),-(sp)
+calls $24/4,_ptinrect
+tstl r0
+jneq L67
+pushal L69
+calls $4/4,_printf
+L67:
+pushl -36(fp)
+pushl -40(fp)
+pushl -44(fp)
+pushl -48(fp)
+pushal L70
+calls $20/4,_printf
+L60:
+incl r11
+L62:
+cmpl r11,$4
+jlssu L59
+clrl -(sp)
+calls $4/4,_exit
+ret
+.text 1
+L70:.ascii "within [%d,%d; %d,%d]\012\000"
+L69:.ascii "not \000"
+L63:.ascii "(%d,%d) is \000"

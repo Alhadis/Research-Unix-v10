@@ -1,0 +1,133 @@
+.TH LCOMP 1
+.SH NAME
+lcomp, lprint \(mi line-by-line profiler
+.SH SYNOPSIS
+.B lcomp
+[ option ... ] file ...
+.PP
+.B lprint
+[ option ] [ file ... ]
+.SH DESCRIPTION
+.I Lcomp
+is used in place of
+.I cc (1)
+or
+.I f77 (1)
+to insert instruction-counting code into programs.
+It recognizes options whose initial letters are taken from the string
+.LR CwpDUIRdlNnz ,
+and accepts files whose names end in
+.LR .c ,
+.LR .f ,
+.LR .s ,
+or
+.LR .o .
+From each source file it derives a 
+.L .o
+file and a
+.L .sL
+file which
+.I lprint
+uses to correlate source lines with basic blocks.
+.PP
+Option
+.B -C
+declares that
+.L .c
+files (and
+.L .o
+files, if no source files are named)
+are C++ files.
+If the
+.B -c
+option is not present
+.I lcomp
+creates
+.FR a.out .
+Each time
+.F a.out
+is run statistics are added
+to a profiling file
+.FR prof.out .
+.PP
+.I Lprint
+produces on the standard output a listing (in the style of
+.IR pr (1))
+of the programs compiled by
+.I lcomp.
+Without arguments or files,
+each line of the listing is preceded by the number of times it was executed,
+as determined from the data in
+.FR prof.out .
+.I Lprint
+interprets the following options.
+.TP
+.B -a
+Detailed listing of every machine instruction and how often it was executed.
+.TP
+.B -b
+How often each basic block was executed.
+.TP
+.B -c
+Compress the
+.F prof.out
+file, which otherwise grows with every execution of
+.LR a.out .
+.TP
+.B -f
+Print summary information by function: instruction executions, number of
+invocations, source instructions, and number of instructions never executed.
+.TP
+.B -i
+Before each line of source print the number of machine instructions executed.
+.TP
+.B -p
+Before each line of source print the number of times the first basic block
+in that line was executed.
+.TP
+.B -s
+Summarize the counts by source file: instruction exectuions, source
+instructions, instructions never executed, basic block executions, total
+number of source basic blocks, and how many were never executed.
+.PP
+If any file names are given, the arguments
+.L abip
+apply only to them.
+If no options are given,
+.L -p
+is assumed.
+Any combination of options is allowed.
+.SH FILES
+.TF /usr/lib/nexit.o	
+.TP
+.F prof.out
+counts
+.TP
+.F *.sL
+for correlating with source
+.TP
+.F /usr/lib/bb
+for finding basic blocks and inserting counting code
+.TP
+.F /usr/lib/nexit.o
+for printing counts when
+.L a.out
+exits
+.SH "SEE ALSO"
+cc(1), f77(1)
+.SH BUGS
+A line in the source file may be in zero, one, or more basic
+blocks;
+the count given in the listing corresponds to some particular
+choice of the basic block to associate with the line.
+.br
+Processing the output of
+.IR yacc (1)
+without removing
+.L #line
+directives will produce unsatisfactory results.
+.br
+Option
+.B -C
+masks an option of
+.IR cc (1).

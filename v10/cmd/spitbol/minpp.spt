@@ -1,0 +1,149 @@
+-IN80
+-TITLE minpp: minimal conditional assenbly preprocessor
+*
+*      This program processes MINIMAL conditional assembly directives.
+*      Its existence is required because none of the assemblers for
+*      VAX/UN*X support conditional assembly.  The C-preprocessor
+*      could be used instead.  However, the MINIMAL conditional assembly
+*      commands would have to be translated first and this hinders
+*      development work at non-UN*X sites.
+*
+       &anchor  = 1
+       &stlimit = 1000000000
+*
+*      Obtain file information.
+*
+       infile = input
+       input( .in,0,infile )
+       terminal = 'Input file: ' infile
+       outfile = input
+       output( .out,1,outfile )
+       terminal = 'Output file: ' outfile
+*
+*      XFERVEC is the transfer vector for routing control to handlers
+*      for conditional assembly directives.
+*
+       xfervec = table( 11,,.badop )
+       xfervec['.DEF']   = .defop
+       xfervec['.UNDEF'] = .undefop
+       xfervec['.IF']    = .ifop
+       xfervec['.THEN']  = .thenop
+       xfervec['.ELSE']  = .elseop
+       xfervec['.FI']    = .fiop
+*
+*      SYMTBL tracks defined conditional symbols.  (Undefined symbols
+*      are assigned null values in SYMTBL.)
+*
+       symtbl      = table( 11 )
+*
+*      STATESTK maintains all state information while processing conditional
+*      statements.  LEVEL indexes the top entry.  Another variable, TOP,
+*      has a copy of SAVESTK[LEVEL].
+*
+       statestk    = array( 30 )
+       level       = 0
+       top         =
+*
+*      Each STATE entry in STATESTK contains state information about
+*      the processing for each active .IF.  The state is maintained
+*      as 2 fields:
+*
+*           result    the result of the .IF expression evaluation-
+*                     TRUE, FALSE, or BYPASS
+*
+*           mode      whether processing THEN or ELSE portion of .IF
+*
+       data( 'state(result,mode)' )
+       false    = 0
+       true     = 1
+       bypass   = 2
+       else     = 0
+       then     = 1
+*
+*      PROCESSREC is indexed by the current RESULT and MODE to determine
+*      whether or not a statement should be processed and written to the
+*      output file.
+*
+       processrec    = array( false ':' bypass ',' else ':' then,0 )
+       processrec[true,then]  = 1
+       processrec[false,else] = 1
+*
+*      RIP breaks up conditional assembly directives.
+*
+       sep      = ' '
+       rip      = ( break(sep) | rem ) . condcmd
++                 ( span(sep) | '' )
++                 ( break(sep) | rem ) . condvar
+*
+*      Main loop:  read a record and transfer control to appropriate
+*      conditional assembly directive handler or other statement handler.
+*
+loop   line     = in                                      :f(done)
+       incnt    = incnt + 1
+       leq( substr( line,1,1 ),'.' )                      :f(other)
+       line     ? rip                              :s( $xfervec[condcmd] )
+*
+*      Syntax error handler.
+*
+synerr terminal = incnt '(syntax error):' line            :(loop)
+*
+*      Process define
+*
+defop  ident( condvar )                                   :s(synerr)
+       eq( level )                                        :s(defok)
+       eq( processrec[result(top),mode(top)] )            :s(loop)
+defok  symtbl[condvar] = 1                                :(loop)
+*
+*      process undefine
+*
+undefop
+       ident( condvar )                                   :s(synerr)
+       eq( level )                                        :s(undok)
+       eq( processrec[result(top),mode(top)] )            :s(loop)
+undok  symtbl[condvar] =                                  :(loop)
+*
+*      process if
+*
+ifop   ident( condvar )                                   :s(synerr)
+       eq( level )                                        :s(ifok)
+*
+*      Here for .IF encountered during bypass state.
+*
+       ne( processrec[result(top),mode(top)] )            :s(ifok)
+       level    = level + 1
+       top      = statestk[level] = state(bypass,then)    :(loop)
+*
+*      Here for .IF to be processed normally.
+*
+ifok   level    = level + 1
+       top      = statestk[level] = state(
++                    ( differ( symtbl[condvar] ) true,false ),
++                    then )                               :(loop)
+*
+*      process .then
+*
+thenop eq(level)                                     :s(synerr)f(loop)
+*
+*      process .else
+*
+elseop mode(top) = ne( level ) else                   :s(loop)f(synerr)
+*
+*      process .fi
+*
+fiop   level = ne( level ) level - 1                  :f(synerr)
+       top   = ( ne( level ) statestk[level],'' )     :(loop)
+*
+*      process statements other than consitional directives.
+*
+other  eq( level )                                     :s(outit)
+       eq( processrec[result(top),mode(top)] )         :s(loop)
+outit  out    = line
+       outcnt = outcnt + 1                             :(loop)
+*
+*      finished - print out statistics.
+*
+done   terminal = lpad( incnt,6 ) ' input records.'
+       terminal = lpad( outcnt,6 ) ' output records.'
+end
+spitv35.min
+spitv35.ppmin

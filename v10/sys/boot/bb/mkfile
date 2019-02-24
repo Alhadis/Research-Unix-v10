@@ -1,0 +1,27 @@
+#
+# device-independent boot blocks
+# 1kb for 1K filesystems, 4kb for 4K filesystems
+# 512 bytes long, expected to live in sector 0
+#
+
+all:V:1kb 4kb
+
+%b: bbs %.t
+	./bbs <$stem.t >$target
+
+%.t: %.s bblock.s
+	as -d2 -o $target $stem.s bblock.s
+	size $target
+	nm -u $target | sed 's/^/Undefined: /'
+bbs: bbs.c
+	cc -o bbs bbs.c
+
+#
+# plan 9 hackery
+#
+k:	k.out bbs
+	bbs <k.out > k
+k.out:	bnot.s 4k.s
+	as -o k.out -d2 4k.s bnot.s
+	size k.out
+	nm -u k.out

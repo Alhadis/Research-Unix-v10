@@ -1,0 +1,7 @@
+      SUBROUTINE COMPIL(FLAG)
+C
+      LOGICAL FLAG
+C
+      RETURN
+C
+      END

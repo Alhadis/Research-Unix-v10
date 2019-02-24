@@ -1,0 +1,29 @@
+umask 022
+spool=`/usr/lib/asd/mkspool`
+T=`date -n`
+H=/tmp/h$$
+trap 'rm -f $H' 0 1 2 3 15
+mkpkg $* >$spool/$T.d
+rm -f $H
+>$H
+/etc/chown bin,bin $H
+chmod o-w,o+r,g+rw $H
+echo "# spitbol" >$spool/temp
+for i in `cat destinations`
+do	echo $i >>$spool/temp
+	mach=`echo $i | sed 's/.*\///'`
+	case $mach in
+	alice)
+		echo VAX-11/780-5:Unix 10th Edition:$mach ;;
+	bowell|pipe|coma)	echo VAX-11/8550:Unix 10th Edition:$mach ;;
+	balin|europa)	echo Microvax-II:Unix 10th Edition:$mach ;;
+	bartok)		echo Microvax-3200:Unix 10th Edition:$mach ;;
+	*)	echo VAX-11/750:Unix 10th Edition:$mach ;;
+	esac >$H
+	mkpkg -D$H=/usr/lib/spithost $H >$spool/$mach.d
+	echo $i >$spool/$mach.t
+	mv $spool/$mach.t $spool/$mach.s
+done
+rm -f $spool/dummy
+mv $spool/temp $spool/$T.s
+/usr/lib/asd/udaemon </dev/null >/dev/null 2>/dev/null 3>/dev/null&

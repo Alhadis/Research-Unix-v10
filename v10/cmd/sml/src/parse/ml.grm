@@ -1,0 +1,448 @@
+(* Copyright 1989 by AT&T Bell Laboratories *)
+open ErrorMsg Symbol PrintUtil 
+open Access Basics BasicTypes TypesUtil Absyn
+open Env
+open EnvAccess
+open ModUtil
+open SigMatch
+open Misc
+open CoreLang
+open Signs
+open Strs
+%%
+%term
+    EOF | ID of Symbol.symbol | IDDOT of Symbol.symbol | TYVAR of Symbol.symbol
+  | INT of int | REAL of string | STRING of string | ABSTRACTION | ABSTYPE | AND
+  | ARROW | AS | BAR | CASE | DATATYPE | DOTDOTDOT | ELSE | END | EQUAL
+  | EQTYPE | EXCEPTION | DO | DARROW | FN | FUN | FUNCTOR | HANDLE | HASH
+  | IF | IN | INCLUDE | INFIX | INFIXR | LET | LOCAL | NONFIX | OF | OP
+  | OPEN | OVERLOAD | QUERY | RAISE | REC | SHARING | SIG | SIGNATURE | STRUCT
+  | STRUCTURE | THEN | TYPE | VAL | WHILE | WILD | WITH | WITHTYPE | ASTERISK
+  | COLON | COMMA | LBRACE | LBRACKET | LPAREN | RBRACE | RBRACKET | RPAREN |
+    SEMICOLON | ORELSE | ANDALSO | IMPORT
+
+%nonterm  ident of symbol
+	| optional_op of unit
+	| opid of symbol 
+	| qid of symbol list 
+	| selector of symbol 
+	| tycon of symbol list
+	| tlabel of (symbol * ty) susp
+	| tlabels  of (symbol * ty) list susp
+	| ty' of ty susp
+	| tuple_ty of ty list susp
+	| ty of ty susp
+	| ty0_pc of ty list susp
+	| match of rule list stamped
+	| rule of rule stamped
+	| elabel of (symbol * exp) stamped 
+	| elabels of (symbol * exp) list stamped
+	| exp_ps of exp list stamped 
+	| exp of exp stamped 
+	| app_exp of exp precStack stamped
+	| aexp of exp stamped
+	| bexp of exp stamped
+	| cexp of exp stamped
+	| dexp of exp stamped
+	| exp_list of exp list stamped
+	| exp_2c  of exp list stamped
+	| pat of pat susp
+	| app_pat of appat precStack susp
+	| apat  of pat susp
+	| plabel of (symbol * pat) susp
+	| plabels of ((symbol * pat) list * bool) susp
+	| pat_2c of pat list susp
+	| pat_list of pat list susp
+	| vb of vb list stamped
+	| constraint of ty option susp
+	| rvb of rawrvb list susp
+	| fb' of rawclause list susp
+	| fb of rawclause list list susp
+	| clause of rawclause susp
+	| tb of bool -> tb list pathstamped
+	| tyvars of tyvar list
+	| tyvar_pc of tyvar list
+	| db of tycon ref list pathstamped
+	| db' of tycon ref pathstamped
+	| constrs of ty -> (symbol * bool * ty) list
+	| constr of ty -> symbol * bool * ty
+	| eb of eb list susp
+	| qid_p of structureVar list susp
+	| fixity of fixity
+	| ldec of dec pathstamped
+	| exp_pa of exp list stamped
+	| ldecs of dec pathstamped
+	| ops of symbol list
+	| spec_s of spectype
+	| spec of spectype
+	| strspec of spectype
+	| tyspec of bool3 -> spectype
+	| valspec of spectype
+	| exnspec of spectype
+	| sharespec of spectype
+	| patheqn of symbol list list
+	| sign of signtype
+	| sigconstraint_op of Structure option susp
+	| sigb of signatureVar list susp
+	| str of strArg -> strexp * Structure * thinning
+	| sdecs of dec list pathstamped
+	| sdec of dec pathstamped
+	| strb of bool -> (symbol*structureVar*strb) list pathstamped
+	| fparam of (symbol * access * Structure * bool) susp
+	| fctb of (symbol * functorVar * fctb) list susp
+	| importdec of string list
+	| interdec of dec susp
+
+%verbose
+%pure
+%start interdec
+%eop EOF SEMICOLON
+
+%nonassoc WITHTYPE
+%right AND
+%right ARROW
+%right AS
+%right HANDLE
+%right BAR
+%left ORELSE
+%left ANDALSO
+%left COLON
+
+%name ML
+
+%keyword ABSTRACTION ABSTYPE AND AS CASE DATATYPE DOTDOTDOT ELSE END 
+  EQTYPE EXCEPTION  DO  DARROW  FN  FUN  FUNCTOR  HANDLE
+  IF IN INCLUDE  INFIX  INFIXR  LET  LOCAL  NONFIX  OF  OP
+  OPEN OVERLOAD  RAISE  REC  SHARING  SIG  SIGNATURE  STRUCT
+  STRUCTURE THEN TYPE VAL WHILE WITH WITHTYPE
+  ORELSE ANDALSO IMPORT
+
+%subst EQUAL for DARROW | DARROW for EQUAL | ANDALSO for AND
+
+%prefer VAL THEN ELSE 
+%header (structure MLLrValues)
+%%
+
+ident	: ID 		(ID)
+	| ASTERISK	(ASTERISKsym)
+	| EQUAL		(EQUALsym)
+
+optional_op : OP	(warn "unnecessary `op' in datatype or exception declaration")
+	    | 		()
+
+opid	: ID		(ID)
+	| ASTERISK	(ASTERISKsym)
+	| OP ident	(ident)
+
+qid	: IDDOT qid	(IDDOT :: qid)
+	| ident		([ident])
+
+selector: ID		(ID)
+	| INT		(let val s = makestring INT
+		          in if INT < 1
+			      then complain ("nonpositive integer label in \
+					     \selector, found " ^ s)
+			      else ();
+			     Symbol.symbol s
+		         end)
+
+tycon   : IDDOT tycon		(IDDOT :: tycon)
+	| ID			([ID])
+
+tlabel	: selector COLON ty	(fn()=>(selector, ty()))
+
+tlabels : tlabel COMMA tlabels	(fn()=>tlabel()::tlabels())
+	| tlabel		(fn()=>[tlabel()])
+
+ty'	: TYVAR			(fn()=>VARty(lookTyvar TYVAR))
+	| LBRACE tlabels RBRACE (fn()=>make_recordTy(tlabels()))
+	| LBRACE RBRACE		(fn()=>make_recordTy nil)
+	| LPAREN ty0_pc 
+             RPAREN tycon	(fn()=>let val ts = ty0_pc()
+				  in CONty(!lookPathArTYC(tycon,length ts),ts)
+				 end)
+	| LPAREN ty RPAREN	(ty)
+	| ty' tycon		(fn()=>CONty(lookArTYCp(tycon,1),[ty'()]))
+	| tycon			(fn()=>CONty(lookArTYCp(tycon,0),[]))
+
+tuple_ty : ty' ASTERISK tuple_ty (fn()=> ty'() :: tuple_ty())
+	 | ty' ASTERISK ty'	 (fn()=>[ty'1(),ty'2()])
+
+ty	: tuple_ty		(fn()=>tupleTy(tuple_ty()))
+	| ty ARROW ty		(fn()=>CONty(arrowTycon, [ty1(),ty2()]))
+	| ty' 			(ty')
+	
+ty0_pc	: ty COMMA ty		(fn() => [ty1(),ty2()])
+	| ty COMMA ty0_pc 	(fn() => ty()::ty0_pc())
+
+match	: rule			(fn st => [rule st])
+	| rule BAR match	(fn st => rule st :: match st)
+
+rule	: pat DARROW exp	(makeRULE(pat,exp))
+
+elabel	: selector EQUAL exp	(fn st => (selector,exp st))
+
+elabels : elabel COMMA elabels	(fn st => (elabel st :: elabels st))
+	| elabel		(fn st => [elabel st])
+
+exp_ps	: exp			(fn st => [exp st])
+	| exp SEMICOLON exp_ps	(fn st => exp st :: exp_ps st)
+
+exp	: app_exp bexp		(fn st => exp_finish(exp_parse(app_exp st, 
+						bexp st, NONfix)))
+	| bexp			(bexp)
+	| cexp			(cexp)
+
+bexp	: FN match		(fn st=> FNexp(match st))
+	| CASE exp OF match	(fn st=> CASEexp(exp st, match st))
+	| WHILE exp DO exp	(fn st=> WHILEexp(exp1 st, exp2 st))
+	| IF exp THEN exp 
+		 ELSE exp 	(fn st=> IFexp(exp1 st, exp2 st, exp3 st))
+
+cexp 	: cexp HANDLE match	(fn st=> HANDLEexp(cexp st,
+						HANDLER(FNexp(match st))))
+	| RAISE exp		(fn st=> RAISEexp(exp st))
+	| dexp			(dexp)
+
+dexp	: app_exp		(fn st=> exp_finish(app_exp st))
+	| dexp COLON ty		(fn st=> CONSTRAINTexp(dexp st, ty()))
+	| dexp ANDALSO dexp	(fn st=> ANDALSOexp(dexp1 st, dexp2 st))
+	| dexp ORELSE dexp	(fn st=> ORELSEexp(dexp1 st, dexp2 st))
+
+app_exp	: aexp 		(fn st => exp_start(aexp st, NONfix))
+        | ident		(fn st => exp_start(lookID ident, lookFIX ident))
+	| app_exp aexp	(fn st => exp_parse(app_exp st, aexp st, NONfix))
+	| app_exp ident	(fn st => exp_parse(app_exp st, lookID ident, 
+								lookFIX ident))
+
+aexp	: OP ident			(fn st=> lookID ident)
+	| IDDOT qid			(fn st=> lookPath(IDDOT::qid,lookIDinStr))
+	| INT				(fn st => INTexp INT)
+	| REAL				(fn st => REALexp REAL)
+	| STRING			(fn st => STRINGexp STRING)
+	| HASH selector			(fn st => SELECTORexp selector)
+	| LBRACE elabels RBRACE		(fn st=> makeRECORDexp(elabels st))
+	| LBRACE RBRACE			(fn st=> RECORDexp nil)
+	| LPAREN RPAREN			(fn st=> unitExp)
+	| LPAREN exp_ps RPAREN		(fn st=> SEQexp(exp_ps st))
+	| LPAREN exp_2c RPAREN		(fn st=> TUPLEexp(exp_2c st))
+	| LBRACKET exp_list RBRACKET	(fn st=> LISTexp(exp_list st))
+	| LBRACKET RBRACKET		(fn st=> LISTexp nil)
+	| LET ldecs IN exp_ps END	(fn st=> protect(protectScope,fn()=>
+						 LETexp(ldecs([],st),
+							SEQexp(exp_ps st))))
+
+exp_2c	: exp COMMA exp_2c	(fn st=> exp st :: exp_2c st)
+	| exp COMMA exp		(fn st=> [exp1 st, exp2 st])
+
+exp_list : exp			(fn st=> [exp st])
+	 | exp COMMA exp_list	(fn st=> exp st :: exp_list st)
+
+pat	: pat AS pat		(fn()=> layered(pat1(), pat2()))
+	| app_pat		(fn()=> pat_finish(app_pat()))
+	| app_pat COLON ty	(fn()=> CONSTRAINTpat(pat_finish(app_pat()),ty()))
+
+app_pat	: apat 			(fn()=> pat_start(apat(), NONfix))
+	| app_pat apat 		(fn()=> pat_parse(app_pat(),apat(), NONfix))
+	| ID			(pat_start_id ID)
+	| ASTERISK		(pat_start_id ASTERISKsym)
+	| app_pat ID 		(pat_parse_id(app_pat,ID))
+	| app_pat ASTERISK 	(pat_parse_id(app_pat,ASTERISKsym))
+
+apat	: OP ident			(pat_id ident)
+	| IDDOT qid			(fn()=>qid_pat(IDDOT::qid))
+	| INT				(fn()=>INTpat INT)
+	| REAL				(fn()=>REALpat REAL)
+	| STRING			(fn()=>STRINGpat STRING)
+	| WILD				(fn()=>WILDpat)
+	| LPAREN RPAREN			(fn()=>unitPat)
+	| LPAREN pat RPAREN		(pat)
+	| LPAREN pat_2c RPAREN		(fn()=>TUPLEpat(pat_2c()))
+	| LBRACKET RBRACKET		(fn()=>LISTpat nil)
+	| LBRACKET pat_list RBRACKET	(fn()=>LISTpat(pat_list()))
+	| LBRACE RBRACE			(fn()=>makeRECORDpat(nil,false))
+	| LBRACE plabels RBRACE		(fn()=>makeRECORDpat(plabels()))
+
+plabel	: selector EQUAL pat	(fn()=> (selector,pat()))
+	| ID			(fn()=> (ID, pat_id ID ()))
+	| ID AS pat		(fn()=> (ID, LAYEREDpat(pat_id ID (), pat())))
+	| ID COLON ty		(fn()=> (ID, CONSTRAINTpat(pat_id ID(), ty())))
+	| ID COLON ty AS pat	(fn()=> (ID, LAYEREDpat(CONSTRAINTpat(pat_id ID(), ty()),pat())))
+
+plabels : plabel COMMA plabels	(fn()=>let val (a,(b,fx))=(plabel(),plabels())
+					in (a::b, fx)
+				       end)
+	| plabel		(fn()=> ([plabel()],false))
+	| DOTDOTDOT		(fn()=> (nil, true))
+
+pat_2c	: pat COMMA pat_2c	(fn()=> pat() :: pat_2c())
+	| pat COMMA pat		(fn()=>[pat1(), pat2()])
+
+pat_list: pat			(fn()=> [pat()])
+	| pat COMMA pat_list	(fn()=> pat() :: pat_list())
+
+vb	: vb AND vb		(fn st=> vb1 st @ vb2 st)
+	| pat EQUAL exp		(fn st=> protect(protectTyvars NONE, fn()=>
+				     [valbind(pat(),exp st,currentTyvars())]))
+
+constraint :	 		(fn()=>NONE)
+	   | COLON ty	 	(fn()=>SOME(ty()))
+
+rvb	: opid constraint 
+		EQUAL FN match	(fn()=>[{name=opid,ty=constraint(),match=match}])
+	| rvb AND rvb		(fn()=> rvb1() @ rvb2())
+
+
+fb'	: clause		(fn()=>[clause()])
+	| clause BAR fb'	(fn()=>clause()::fb'())
+        
+fb	: fb'			(fn() => [checkFB(fb'())])
+	| fb' AND fb		(fn() => checkFB(fb'()) :: fb())
+
+clause	: app_pat constraint EQUAL exp	(makeCLAUSE(app_pat,constraint,exp))
+
+tb	: tyvars ident EQUAL ty		(makeTB(tyvars,ident,ty))
+	| tb AND tb			(fn nw => fn $ => tb1 nw $ @ tb2 nw $)
+
+tyvars	: TYVAR				([mkTyvar(mkUBOUND TYVAR)])
+	| LPAREN tyvar_pc RPAREN	(tyvar_pc)
+	|				(nil)
+
+tyvar_pc: TYVAR				([mkTyvar(mkUBOUND TYVAR)])
+	| TYVAR COMMA tyvar_pc		(mkTyvar(mkUBOUND TYVAR) :: tyvar_pc)
+
+db	: db' AND db			(fn $ => db' $ :: db $)
+	| db'				(fn $ => [db' $])
+
+db'	: tyvars ident EQUAL constrs	(makeDB'(tyvars,ident,constrs))
+
+constrs : constr			(fn t => [constr t])
+	| constr BAR constrs		(fn t => constr t :: constrs t)
+
+constr	: optional_op ident		(fn t=> (ident,true,t))
+	| optional_op ident OF ty	(fn t=> (ident,false,
+						 CONty(arrowTycon,[ty(),t])))
+
+eb	: optional_op ident		(makeEB ident)
+	| optional_op ident OF ty	(makeEBof(ident,ty))
+	| optional_op ident EQUAL qid	(makeEBeq(ident,qid))
+	| eb AND eb			(fn()=> eb1() @ eb2())
+
+qid_p	: qid				(fn()=> [getSTRpath qid])
+	| qid qid_p			(fn()=> getSTRpath qid :: qid_p())
+
+
+fixity	: INFIX				(infixleft 0)
+	| INFIX INT			(infixleft INT)
+	| INFIXR			(infixright 0)
+	| INFIXR INT			(infixright INT)
+	| NONFIX			(NONfix)
+
+ldec	: VAL vb			(makeVALdec vb)
+	| VAL REC rvb			(makeVALRECdec rvb)
+	| FUN fb			(makeFUNdec fb)
+	| TYPE tb			(fn ps => TYPEdec(tb true ps))
+	| DATATYPE db			(makeDB(db, fn _ => fn _ => nil))
+ 	| DATATYPE db WITHTYPE tb	(makeDB(db, tb))
+	| ABSTYPE db WITH ldecs END	(makeABSTYPEdec(db,ldecs))
+	| EXCEPTION eb			(fn ps => EXCEPTIONdec(eb()))
+	| OPEN qid_p			(makeOPENdec qid_p)
+	| fixity ops			(makeFIXdec(fixity,ops))
+	| OVERLOAD ident 
+		COLON ty AS exp_pa	(makeOVERLOADdec(ident,ty,exp_pa))
+
+exp_pa	: exp				(fn st => [exp st])
+	| exp AND exp_pa		(fn st => exp st :: exp_pa st)
+
+ldecs	: 				(fn $ => SEQdec nil)
+	| ldec ldecs			(makeSEQdec(ldec,ldecs))
+	| ldec SEMICOLON ldecs		(fn $ => SEQdec nil)
+	| LOCAL ldecs IN ldecs END ldecs (makeSEQdec(
+					   makeLOCALdec(ldecs1,ldecs2),ldecs3))
+
+ops	: ident				([ident])
+	| ident ops 			(ident::ops)
+
+spec_s	: 				(fn $ => nil)
+	| spec spec_s			(fn $ => spec $ @ spec_s $)
+	| spec SEMICOLON spec_s		(fn $ => spec $ @ spec_s $)
+
+spec	: STRUCTURE strspec		(strspec)
+	| DATATYPE db			(make_dtyspec db)
+	| TYPE tyspec			(tyspec NO)
+	| EQTYPE tyspec			(tyspec YES)
+	| VAL valspec			(valspec)
+	| EXCEPTION exnspec		(exnspec)
+	| fixity ops			(make_fixityspec(fixity,ops))
+	| SHARING sharespec		(sharespec)
+	| INCLUDE ident			(make_includespec ident)
+
+strspec	: strspec AND strspec		(fn $ => strspec1 $ @ strspec2 $)
+	| ident COLON sign		(make_strspec(ident,sign))
+
+tyspec	: tyspec AND tyspec		(fn eq => fn $ => 
+					    tyspec1 eq $ @ tyspec2 eq $)
+	| tyvars ident			(fn eq => make_tyspec(eq,tyvars,ident))
+
+valspec	: valspec AND valspec		(fn $ => valspec1 $ @ valspec2 $)
+	| opid COLON ty			(make_valspec(opid,ty))
+
+exnspec : exnspec AND exnspec		(fn $ => exnspec1 $ @ exnspec2 $)
+	| ident				(make_exnspec ident)
+	| ident OF ty			(make_exnspecOF (ident,ty))
+
+sharespec: sharespec AND sharespec	(fn $ => sharespec1 $ @ sharespec2 $)
+	| TYPE patheqn			(make_type_sharespec patheqn)
+	| patheqn			(make_str_sharespec patheqn)
+	
+patheqn:  qid EQUAL qid			([qid1,qid2])
+	| qid EQUAL patheqn		(qid :: patheqn)
+
+sign	: ID				(makeSIGid ID)
+	| SIG spec_s END		(makeSIG spec_s)
+
+sigconstraint_op :			(fn()=>NONE)
+	| COLON sign			(fn()=>SOME(sign(1,Stampset.newStampsets())))
+
+sigb	: sigb AND sigb			(fn()=> sigb1() @ sigb2())
+	| ident EQUAL sign		(make_sigb(ident,sign))
+
+str	: qid				(make_str_qid qid)
+	| STRUCT sdecs END		(make_str_struct sdecs)
+	| ID LPAREN sdecs RPAREN	(make_str_app(ID,spread_args sdecs))
+	| ID LPAREN str RPAREN		(make_str_app(ID,single_arg str))
+	| LET sdecs IN str END		(make_str_let(sdecs,str))
+
+sdecs	: sdec sdecs			(fn $ => sdec $ :: sdecs $)
+	| sdec SEMICOLON sdecs		(fn $ => sdec $ :: sdecs $)
+	| LOCAL sdecs IN sdecs 
+		END sdecs 		(fn $ =>makeLOCALsdecs(sdecs1,sdecs2) $
+							@ sdecs $)
+	|				(fn $ => nil)
+
+sdec	: STRUCTURE strb	(makeSTRBs(strb false))
+	| ABSTRACTION strb	(makeSTRBs(strb true))
+	| SIGNATURE sigb	(makeSIGdec sigb)
+	| FUNCTOR fctb		(makeFCTdec fctb)
+	| ldec			(fn (pa,_,st)=>
+				 let val dec = ldec(pa,st)
+			          in Typecheck.decType dec; dec
+				 end)
+
+strb	: ident sigconstraint_op 
+		EQUAL str	(makeSTRB(ident,sigconstraint_op,str))
+	| strb AND strb		(fn a => fn $ => strb1 a $ @ strb2 a $)
+
+fparam	: ID COLON sign			(single_formal(ID,sign))
+	| spec_s			(spread_formal spec_s)
+
+fctb	: ident LPAREN fparam RPAREN
+	   sigconstraint_op EQUAL str	(makeFCTB(ident,fparam,sigconstraint_op,str))
+	| fctb AND fctb			(fn $ => fctb1 $ @ fctb2 $)
+
+importdec: STRING			([STRING])
+	| STRING importdec		(STRING :: importdec)
+
+interdec: sdec				(fn()=> sdec([],Stampset.globalStamps))
+	| IMPORT importdec		(fn()=>IMPORTdec importdec)
+	| exp				(fn()=>toplevelexp exp)

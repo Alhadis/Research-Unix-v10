@@ -1,0 +1,75 @@
+	    PDP11 utilities package for the VAX (Non-portable Parts)
+		Release 3	13 may 1981	Steve Hartwell
+
+Step 1:
+To set this up, you need two tapes: this one, and the tape which has the
+pdp11 c compiler, assembler, archiver, and various portable utilities.
+Install the contents of that tape on top of the contents of this tape;
+don't worry, no overlap occurs.  When you have done that, come back and
+pick up at step 2.
+
+Step 2:
+Type "make init".  This will rename the files on the other tape to 11*.c,
+which will be the naming convention of all pdp11 utilities on the VAX.
+One directory included with the pdp11 tape called "crt" is untouched;
+you may rm -r crt if you wish;  you may want to keep it if you are
+building libraries and want to be sure of having the bug-free versions
+of these all-important c interface routines.
+
+Step 3:
+If your system archiver (in /bin or /usr/bin) is the character format archiver
+distributed with V7 systems, you don't need "car.c" (and probably not "carcv.c"
+either).  USG version 4.0 systems still use the binary format archiver on the
+VAX.  If this is true, you will have to use "car" instead of "ar" for making
+libraries for 11ld to use. ("car" stands for "character format archiver").
+If you do have the char format archiver, then you can get rid of these files.
+Type "make rmcar" to remove the files, and it will also edit the Makefile
+to no longer care about car.c, ar.h, carcv.c. (Do this instead of removing
+the files yourself, please).
+
+Step 4:
+This tape contains the software directory for the floating-point preprocessor
+"fpp" written by R. H. Hardin in 1202 B.C.  It is used for producing code
+which does floating point arithmetic for PDP11/03's which don't have any
+or have nonstandard floating point instructions that the 11 c compiler doesn't
+know about.  If you have one of these beasties, you will need to use the
+-F option in 11cc to get floating point stuff coded right.  It will use fpp
+to massage your c text into subroutine calls using a special library fpp
+supplies.  Chdir to fpp, and read the README before continuing to step 5.
+If you only have LSI/23's or better, then you don't need fpp.  Type
+"make rmfpp" which will get rid of the files, and also edit the Makefile.
+As above, do not attempt to do this manually.
+
+Step 5:
+Edit the Makefile in this directory.  Change BINDIR = /where/you/want/it
+and LIBDIR = /like/wise.  Optionally goto subdirectories 11as, 11c, fpp
+and do the same.  This should be all that you have to do.  BINDIR and
+LIBDIR should exist, and probably should ALREADY be in your PATH, since
+make probably needs them.
+To do everything, type:
+make install
+If you are cautious, type
+make all
+and then test things out in the current directory.  Once satisfied,
+type:
+make install
+
+To clean up .o's, type "make clean"
+To blast to the bare sources, type "make clobber"
+To print all sources, type "make print" (warning--this is a lot)
+
+Comments:
+This makefile, and the ones in subdirectories, are ugly and complicated.
+With exception to BINDIR and LIBDIR, they should be considered:
+		"NO USER-SERVICABLE PARTS INSIDE!!"
+They do, however, work reasonably well, and have been tested quite a bit.
+DO NOT GOTO SUBDIRECTORIES to make stuff, like 11c or 11as, since the
+parent Makefile (this one) carries down parameters different from the
+defaults in the subdirectory Makefiles.  This is for portability reasons.
+(You DO want to keep up-to-date, don't you?)
+For those interested, the makefile conventions are:
+make <object> such as make 11cc will make that one thing;
+make inst<object> such as make inst11cc will make & install that one thing.
+
+Have fun.  Problems with installing things, or with software on this tape,
+should be forwarded to research!god.

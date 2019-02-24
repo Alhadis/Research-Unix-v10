@@ -1,0 +1,142 @@
+
+		anim -- Algorithm Animation
+
+		Jon Bentley (research!jlb)
+		Brian Kernighan (research!bwk)
+
+
+EXECUTIVE SUMMARY
+
+Create a description of an animation in the language
+described in script.def, using whatever tools you like
+(e.g., awk programs, C programs).
+Show the movie on a 5620 or X11 system with movie.
+(Suntools support has been withdrawn as of 12/87.)
+(AT&T 630 terminal support added, somewhat incompletely, 5/88.)
+Print selected frames through pic and troff with stills.
+
+LANGUAGE
+
+The language is defined but not explained much in script.def.
+The awk program isort.gen can be run to give an example of
+data in the script language, then processed subsequently
+to make a movie or a set of stills.  This uses a newish
+(circa 1985) version of awk.
+
+DOCUMENTATION
+
+"A System for Algorithm Animation -- Tutorial and User Manual"
+Computing Science Tech Report 132, January, 1987.
+
+PRIMARY PROGRAMS
+
+movie
+	shell script
+	"movie file.s" develops file.s if necessary to make file.i,
+	then displays it on the terminal (5620, 630 or X-windows only)
+	using anim.
+
+stills
+	shell script, invoking giant awk program stills.awk.
+	A troff preprocessor that creates pic pictures of
+	selected frames.  Input language defined in stills.def
+
+develop
+	shell script, called by movie and stills.
+	Input language defined in script.def, output language
+		("intermediate") defined in int.def.
+	Uses fdevelop (C program) to do the work; code in
+		fdevelop.h, fdevelop.c, fdsymbol.c, fdutil.c
+
+anim
+	Host program converts output of develop into format
+	suitable for 5620/blit, 630 or X window system.
+	On the 5620 or 630, downloads terminal process;
+	under X11, creates a new window for the movie.
+
+	Try
+		isort.gen >dev.s (an example in this directory)
+		movie dev.s (equivalent to develop dev.s; anim dev.i)
+
+	The files test.s and test.i can be used for experimenting
+	with the host and terminal programs before worrying about
+	develop.
+
+animterm
+	The terminal program, invoked only by anim.
+	Talks to the mouse after the data has been loaded.
+
+
+SUPPORT PROGRAMS
+
+show.clicks	make a new view to count clicks
+view.clicks	print summary of views and clicks
+newer.c		tests file ages;  install if needed
+		(used in develop)
+
+INSTALLATION
+
+	You will have to change some directory names and other parameters in
+		movie
+		stills
+		develop
+		makefile
+		x11.make or blit.make or 630.make
+
+	BIN = directory where movie and stills are (e.g., /usr/bin)
+	LIB = directory where develop, fdevelop, stills.awk, anim, animterm
+		are (e.g., /usr/lib).
+	TERM = blit or 630 or x11 (yes, lower case)
+	DMDCC = dmdcc or 3cc or m32cc or ..., depending on the local name
+		for the compiler for the terminal
+	TERMLD = 32ld or dmdld or ..., depending on the program that
+		downloads 5620 or 630 terminals
+	V9  only if you are running the version 9 code (mux)
+	SYS_V  if you are running SystemV layers code
+
+	Then
+		make
+
+PROBLEMS
+
+	The locations of compilers, downloaders, and similar things
+	vary wildly from system to system.  Although we have tried
+	to parameterize these in the makefiles, you will almost certainly
+	have to fiddle with file names and perhaps defined constants
+	in the makefiles.
+
+	The 630 implementation is not really solid.  In particular,
+	term.c needs some work to deal better with the fact that int's
+	are only 16 bits.  Memory allocation ought to be done better
+	(by calling lalloc instead of alloc) but that stumbles across
+	some bugs in the 630 compiler, so for the moment you are limited
+	to somewhat smaller pictures than might be possible.
+
+	As a by-product, the default memory allocation is set
+	to 65000 bytes on the blit and 630.  This can be set
+	higher by recompiling host.c on the blit, or by using the
+	-m option on anim.
+
+
+APPLICATIONS, not provided here
+
+bp	bin packing
+grammar	generate random sentences; rec desc parser for arithmetic
+heaps	heaps, heapsort, etc.
+malloc	profile malloc
+misc	miscellaneous -- hanoi, nls data
+mst	minimum spanning trees
+sort	sort algorithms
+stars	galaxy simulation
+trees	random binary search trees
+
+
+ACKNOWLEDGEMENT
+
+	The code for the animation system owes an enormous debt to
+	Howard Trickey, who first figured out how to deal with
+	the egregious Suntools window system, and then wrote the
+	X11 version included here.
+
+	The Suntools code is still included, in sunterm.c, sunhost.c,
+	and sun.make, but is not maintained.

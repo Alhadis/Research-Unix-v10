@@ -1,0 +1,187 @@
+/* defs 4.2 85/10/28 */
+#include <stdio.h>
+#include <sys/param.h>
+#include <ctype.h>
+#ifdef VERSION8
+#	include <ndir.h>
+#else
+#	include <sys/dir.h>
+#endif
+
+
+#define SHELLCOM "/bin/sh"
+
+typedef char flag;	/* represent a few bit flag */
+typedef long int TIMETYPE;
+
+#ifdef unix
+/*  to install metering, add a statement like */
+#define METERFILE "/usr/sif/make/Meter"
+/* to turn metering on, set external variable meteron to 1 */
+#endif
+
+/* define FSTATIC to be static on systems with C compilers
+   supporting file-static; otherwise define it to be null
+*/
+#define FSTATIC static
+
+#define NO	0
+#define YES	1
+
+#define equal(a,b)	(! strcmp(a,b))
+#define HASHSIZE	1021
+#define NLEFTS	512
+#define NCHARS	500
+#define NINTS	250
+#define INMAX	5000
+#define OUTMAX	5000
+#define QBUFMAX	5000
+#define MAXDIR	10
+#define MAXPROC	100
+#define MAXINCLUDE	17
+#define PROCLIMIT	3
+
+#define ALLDEPS	1
+#define SOMEDEPS	2
+
+#define META	01
+#define TERMINAL	02
+extern char funny[128];
+
+
+#define ALLOC(x) (struct x *) ckalloc(sizeof(struct x))
+#define CHNULL	(char *) NULL
+
+extern int sigivalue;
+extern int sigqvalue;
+extern int dbgflag;
+extern int prtrflag;
+extern int silflag;
+extern int noexflag;
+extern int keepgoing;
+extern int noruleflag;
+extern int touchflag;
+extern int questflag;
+extern int oldflag;
+extern int ndocoms;
+extern int ignerr;
+extern int okdel;
+extern int forceshell;
+extern int inarglist;
+extern char **envpp;	/* points to slot in environment vector */
+extern char *prompt;
+extern int nopdir;
+
+typedef struct nameblock *nameblkp;
+typedef struct depblock *depblkp;
+typedef struct lineblock *lineblkp;
+typedef struct chain *chainp;
+
+struct nameblock
+	{
+	nameblkp nxtnameblock;
+	char *namep;
+	lineblkp linep;
+	flag done;
+	flag septype;
+	flag isarch;
+	flag isdir;
+	TIMETYPE modtime;
+	};
+
+extern nameblkp mainname;
+extern nameblkp firstname;
+extern nameblkp *hashtab;
+extern int nhashed;
+extern int hashsize;
+extern int hashthresh;
+
+struct lineblock
+	{
+	lineblkp nxtlineblock;
+	struct depblock *depp;
+	struct shblock *shp;
+	};
+extern lineblkp sufflist;
+
+struct depblock
+	{
+	depblkp nxtdepblock;
+	nameblkp depname;
+	char nowait;
+	} ;
+
+struct shblock
+	{
+	struct shblock *nxtshblock;
+	char *shbp;
+	};
+
+struct varblock
+	{
+	struct varblock *nxtvarblock;
+	char *varname;
+	char *varval;
+	char **export;
+	flag noreset;
+	flag used;
+	};
+extern struct varblock *firstvar;
+
+struct pattern
+	{
+	struct pattern *nxtpattern;
+	char *patval;
+	};
+extern struct pattern *firstpat;
+
+struct dirhd
+	{
+	struct dirhd *nxtdirhd;
+	TIMETYPE dirtime;
+	int dirok;
+	DIR * dirfc;
+	char *dirn;
+	};
+extern struct dirhd *firstod;
+
+
+struct chain
+	{
+	chainp nextp;
+	char *datap;
+	};
+
+struct wild
+	{
+	struct wild *next;
+	lineblkp linep;
+	char *left;
+	char *right;
+	int llen;
+	int rlen;
+	int totlen;
+	};
+
+typedef struct wild *wildp;
+extern wildp firstwild;
+extern wildp lastwild;
+
+
+/* date for processes */
+extern int proclimit;	/* maximum spawned processes allowed alive at one time */
+extern int proclive;	/* number of spawned processes awaited */
+extern int nproc;	/* next slot in process stack to use */
+extern struct process
+	{
+	int pid;
+	flag nohalt;
+	flag nowait;
+	flag done;
+	} procstack[ ];
+
+
+char *copys(), *concat(), *subst();
+int *ckalloc();
+nameblkp srchname(), makename();
+TIMETYPE exists();

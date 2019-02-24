@@ -1,0 +1,23 @@
+LIB=${LIB-/usr/lib/btree}
+if test $# = 0
+then
+	echo 'cbt add|build|cat|creat|delete|look|report|squash'
+	exit 1
+fi
+x=$1
+shift
+case $x in
+add|build|delete)	case $1 in
+	-*)	shift
+		$LIB/bt$x $* ;;
+	*)	$LIB/btran | $LIB/bt$x $* ;;
+	esac ;;
+cat|creat|look|report)	$LIB/bt$x $* ;;
+squash)	if test $# != 1 -a $# != 2
+	then
+		echo usage cbt squash [ -odest ] file-name
+		exit 1
+	fi
+	$LIB/btsquash $1 $2 ;;
+*)	echo 1>&2 unknown command $x
+esac

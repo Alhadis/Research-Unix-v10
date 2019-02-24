@@ -1,0 +1,37 @@
+Posix P1003.2-compatible sort utility from Unix research v10 system.
+
+To build it:
+	make sort
+To test it:
+	make test
+
+sort.1 is manual source; sort.man is the formatted version of it
+
+Typical problems:
+	On some systems the ANSI standard functions memmove.c
+	and strtoul.c are slow or absent.  Code for these
+	functions is included; use it if you have to
+	(see Makefile).
+
+	The sorttest suite uses awk as described in the
+	Aho/Kernighan/Weinberger book.  Older versions of awk
+	will fail, possibly even dumping core.  It tries awk
+	and nawk and gawk before giving up.
+
+	ANSI header files are assumed, but because headers
+	vary among systems, you may have to do some clever
+	rearrangement of #include directives.
+
+Notes on "make fast":
+	Standard IO is used for portability, despite the cost in
+	speed.  The make file tries "make fast", and if that fails
+	does "make slow".  Make fast uses a private addition
+	to the classic System V stdio, not universally portable.
+	In extreme cases (very long records in nearly sorted
+	order) it can run 40% faster than the "make slow" version.
+
+Report troubles to:
+	Doug McIlroy
+	908 582 6050
+	research!doug
+	doug@research.att.com

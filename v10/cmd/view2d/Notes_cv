@@ -1,0 +1,45 @@
+****************
+* frame buffer *     swift  /dev/cv0
+****************
+
+coordinate system:
+  lower left of screen = (0,0),  upper right = (511,511)
+
+cvinit(1);     at start of each program.      0 for warm start.
+
+cvflush();   flush i/o buffer.
+
+image(data,x0,y0,x1,y1,bank)  write 8-bit image
+  data   char[x1-x0+1][y1-y0+1]
+    stored as if a Fortran array with d(i,j) at x=i, y=j,
+       (scan rows left to right, starting with bottom row)
+    maximum image size is 128^2.
+  x0,y0,x1,y1  coordinates of lower left and upper right of window
+  bank  3-bit value  (red,green,blue)  indicating banks to be written
+
+lutrte(bank)  set which bank drives the display
+  bank  0x0   each bank indexes its own color table
+        0x7E  red drives all
+        0x75  green drives all
+        0x53  blue drives all
+
+cvmap(map,maxi,zero)
+  char *map;   /* string describing kind of map */
+  int maxi;    /* indices from 0 through maxi */
+  int zero;    /* currently unused */
+ map=ffile   read triples from file
+     r       blue-to-red  (for 8 bit in; gamma corrected)
+     s       spectrum     (for 8 bit in; gamma corrected)
+     n       normal map (for 24 bin in; not gamma corrected)
+     g       normal map (for 24 bin in; gamma corrected)
+     i       like g, but inverse video
+
+cvload(n,x,y);   load coordinate register n.     0<=n<=63
+   creg 4  coordinates of center of screen    (useful for panning)
+zoom(fact)
+  fact = 1, 2, 4, or 8    (to see 512, 256, 128, or 64 -size images)
+
+cvvalue(r,g,b)    set current color
+
+cvflood()     erase screen
+ 

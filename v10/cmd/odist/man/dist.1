@@ -1,0 +1,84 @@
+.TH DIST 1
+.SH NAME
+dist \(mi distribute files to remote systems
+.SH SYNOPSIS
+.\".BI "dist [ " system " | -[Ff] " file " ] [ -n ] " files
+.BI "dist [ " system " | -[Ff] " file " ] " files
+.PP
+.B "dist -q ["
+.I system
+.B "| -[Ff]"
+.I file
+.B "]"
+.PP
+.B "dist -r ["
+.I system
+.B "| -[Ff]"
+.I file
+.B "]"
+.SH DESCRIPTION
+.I Dist
+distributes files to other systems, where they are installed
+under the same names.
+.I Dist
+operates by packaging the files with
+.IR mkpkg (1),
+and queuing the resulting package in a spool directory to be
+picked up by the remote systems.
+.PP
+The remote systems' names are given as a single argument, containing
+the system names (in the format of
+.IR ipc (3))
+separated by white space; alternatively, the
+.B -f
+option may be used to specify a file containing a list of system names.
+The
+.B -F
+option is identical to
+.B -f
+except
+.I dist
+looks for the file in a standard directory.
+.PP
+The
+.I dist
+command has two forms of use.  In the first form,
+.I dist
+packages a group of files and queues them for transmission.
+.\"If the
+.\".B -n
+.\"option is specified, the remote systems are notified that the package
+.\"is available.
+The
+.I file
+arguments may be either file names or options for
+.IR mkpkg (1).
+.PP
+When 
+.B -q
+is given,
+.I dist
+queries the named systems and displays the contents of their transmission
+queues; if no systems are given the local queue is displayed
+by default.
+.PP
+When
+.B -r
+is given,
+.I dist
+calls the named system and installs any packages it has queued for
+the local system.
+.SH EXAMPLES
+Distribute a new binary for grep to all vaxes:
+.IP
+.B "dist -F vaxes /bin/grep"
+.SH FILES
+.B /usr/lib/dist/*
+.br
+.B /usr/lib/dist/destinations/*
+.br
+.B /usr/spool/dist/*
+.SH "SEE ALSO"
+.IR mkpkg (1),
+.IR dist (5),
+.IR dist (8)

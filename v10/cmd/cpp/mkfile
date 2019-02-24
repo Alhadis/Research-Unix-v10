@@ -1,0 +1,31 @@
+CFLAGS= -O -DPRAGMA
+OBJECTS	= cpp.o cpy.o rodata.o yylex.o
+
+cpp:	$OBJECTS
+	cc $CFLAGS $OBJECTS -o cpp
+
+cpp.o: cpp.c
+	cc $CFLAGS -DFLEXNAMES -DPD_MACH=D_vax -DPD_SYS=D_unix -c cpp.c
+
+y.tab.h cpy.c rodata.c: cpy.y
+	yacc -d cpy.y
+	sh :yyfix >rodata.c
+	mv y.tab.c cpy.c
+
+cpy.o: cpy.c
+	cc $CFLAGS -c cpy.c
+
+yylex.o: yylex.c y.tab.h
+	cc $CFLAGS -c -I. -DFLEXNAMES yylex.c
+
+rodata.o: rodata.c
+	cc $CFLAGS -S rodata.c
+	sh :rofix rodata.s
+	cc -c rodata.s
+
+install:	cpp
+	cp cpp /lib
+	strip /lib/cpp
+
+clean:
+	rm -f cpp y.tab.c y.tab.h cpy.c rodata* *.o

@@ -1,0 +1,93 @@
+'\"macro stdmacro
+.if n .pH g1.mailalias %W% of %G%
+.nr X
+.if \nX=0 .ds x} mailalias 1 "" "\&"
+.if \nX=1 .ds x} mailalias 1 ""
+.if \nX=2 .ds x} mailalias 1 "" "\&"
+.if \nX=3 .ds x} mailalias "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4mailalias\f1 \- translate mail alias names
+.SH SYNOPSIS
+\f4mailalias\f1 [ \f4\-s\f1 ] [ \f4\-v\f1 ]
+.I name
+\&...
+.SH DESCRIPTION
+\f4mailalias\fP
+is called by
+\f4mail\fP.
+It places on the standard output a list of mail addresses corresponding to
+.IR name .
+The mail addresses are found by performing the following steps:
+.TP 4
+1.
+Look for the file \f4/var/mail/\f2name\f1.
+If found, print
+.I name
+and exit.
+.TP 4
+2.
+Look for a match in the user's local alias file
+\f4$HOME/lib/names\f1.
+If a line is found beginning with the word
+.IR name ,
+print the rest of the line on standard output and exit.
+.TP 4
+3.
+Look for a match in the system-wide alias files,
+which are listed in the master path file
+\f4/etc/mail/namefiles\f1.
+If a line is found beginning with the word
+.IR name ,
+print the rest of the line on standard output and exit.
+.P
+If an alias file is a directory name \f2dir\fP, then search the file
+\f2dir\fP/\f2name\fP.
+By default, the file \f4/etc/mail/namefiles\fP lists 
+the directory \f4/etc/mail/lists\fP
+and 
+the file \f4/etc/mail/names\f1.
+.TP 4
+4.
+Otherwise print
+.I name
+and exit.
+.PP
+The alias files may contain comments (lines beginning with
+\f4#\f1)
+and information lines of the form:
+.IP
+.I "name\0list-of-addresses"
+.PP
+Tokens on these lines are separated by white-space.
+Lines may be continued by placing a backslash (\e) at the end of the line.
+.PP
+If the
+\f4-s\f1
+option is not specified and more than one name is being translated, each line
+of output will be prefixed with the name being translated.
+.PP
+The
+\f4-v\f1
+option causes debugging information to be written to standard output.
+.SH FILES
+.PD 0
+.TP 30n
+\f4$HOME/lib/names\f1
+private aliases
+.TP
+\f4/etc/mail/namefiles\f1
+list of files to search
+.TP
+\f4/etc/mail/names\f1
+standard file to search
+.PD
+.SH "SEE ALSO"
+\f4uucp\fP(1), 
+\f4mail\fP(1).
+.br
+\f4smtp\fP(1M),
+\f4smtpd\fP(1M),
+\f4smtpqer\fP(1M),
+\f4smtpsched\fP(1M),
+\f4tosmtp\fP(1M) in the \f2System Administrator's Reference Manual\f1.

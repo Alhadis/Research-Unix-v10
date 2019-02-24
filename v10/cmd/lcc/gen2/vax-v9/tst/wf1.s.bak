@@ -1,0 +1,205 @@
+.text
+.globl _main
+.align 1
+_main:.word 0x0
+subl2 $24,sp
+clrl -24(fp)
+clrl _next
+jbr L2
+L1:
+pushal -24(fp)
+pushal -20(fp)
+calls $8/4,_lookup
+movl r0,r5
+incl (r5)
+L2:
+pushal -20(fp)
+calls $4/4,_getword
+tstl r0
+jneq L1
+pushl -24(fp)
+calls $4/4,_tprint
+clrl r0
+ret
+.globl _err
+.align 1
+_err:.word 0x0
+pushl 4(ap)
+pushal L4
+calls $8/4,_printf
+pushl $1
+calls $4/4,_exit
+ret
+.globl _getword
+.align 1
+_getword:.word 0xc00
+L5:
+L6:
+calls $0/4,_getchar
+movl r0,r11
+cmpl r0,$-1
+jeql L8
+pushl r11
+calls $4/4,_isletter
+tstl r0
+jeql L5
+L8:
+movl 4(ap),r10
+jbr L12
+L9:
+movb r11,(r10)+
+L10:
+calls $0/4,_getchar
+movl r0,r11
+L12:
+pushl r11
+calls $4/4,_isletter
+movl r0,r11
+jneq L9
+clrb (r10)
+cmpl r10,4(ap)
+jlequ L13
+movl $1,r0
+ret
+L13:
+clrl r0
+ret
+.globl _isletter
+.align 1
+_isletter:.word 0x0
+movl 4(ap),r5
+cmpl r5,$65
+jlss L15
+cmpl r5,$90
+jgtr L15
+addl2 $32,r5
+L15:
+cmpl r5,$97
+jlss L17
+cmpl r5,$122
+jgtr L17
+movl r5,r0
+ret
+L17:
+clrl r0
+ret
+.globl _lookup
+.align 1
+_lookup:.word 0x800
+subl2 $4,sp
+movl 8(ap),r11
+tstl (r11)
+jeql L19
+movl (r11),r5
+pushl 12(r5)
+pushl 4(ap)
+calls $8/4,_strcmp
+movl r0,-4(fp)
+tstl -4(fp)
+jgeq L21
+movl (r11),r5
+pushal 4(r5)
+pushl 4(ap)
+calls $8/4,_lookup
+ret
+L21:
+tstl -4(fp)
+jleq L23
+movl (r11),r5
+pushal 8(r5)
+pushl 4(ap)
+calls $8/4,_lookup
+ret
+L23:
+movl (r11),r0
+ret
+L19:
+cmpl _next,$2000
+jlss L25
+pushal L27
+calls $4/4,_err
+L25:
+ashl $4,_next,r5
+clrl _words(r5)
+ashl $4,_next,r5
+clrl _words+8(r5)
+clrl _words+4(r5)
+pushl 4(ap)
+calls $4/4,_strlen
+pushal 1(r0)
+calls $4/4,_malloc
+ashl $4,_next,r5
+movl r0,_words+12(r5)
+ashl $4,_next,r5
+tstl _words+12(r5)
+jneq L31
+pushal L34
+calls $4/4,_err
+L31:
+pushl 4(ap)
+ashl $4,_next,r5
+pushl _words+12(r5)
+calls $8/4,_strcpy
+movl _next,r5
+incl _next
+ashl $4,r5,r5
+addl2 $_words,r5
+movl r5,(r11)
+movl r5,r0
+ret
+.globl _tprint
+.align 1
+_tprint:.word 0x800
+movl 4(ap),r11
+tstl r11
+jeql L36
+pushl 4(r11)
+calls $4/4,_tprint
+pushl 12(r11)
+pushl (r11)
+pushal L38
+calls $12/4,_printf
+pushl 8(r11)
+calls $4/4,_tprint
+L36:
+ret
+.globl _strcmp
+.align 1
+_strcmp:.word 0x0
+movl 4(ap),r2
+movl 8(ap),r3
+jbr L40
+L39:
+tstb (r2)+
+jneq L42
+clrl r0
+ret
+L42:
+incl r3
+L40:
+cmpb (r2),(r3)
+jeql L39
+tstb (r2)
+jneq L44
+movl $-1,r0
+ret
+L44:
+tstb (r3)
+jneq L46
+movl $1,r0
+ret
+L46:
+cvtbl (r2),r5
+cvtbl (r3),r4
+subl3 r4,r5,r0
+ret
+.data
+.globl _next
+.comm _next,4
+.globl _words
+.comm _words,32000
+.text 1
+L38:.ascii "%d\011%s\012\000"
+L34:.ascii "out of word storage\000"
+L27:.ascii "out of node storage\000"
+L4:.ascii "? %s\012\000"

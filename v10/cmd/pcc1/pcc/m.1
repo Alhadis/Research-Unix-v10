@@ -1,0 +1,126 @@
+rm -fr testdir
+mkdir testdir
+cp /lib/cpp /lib/c2 testdir
+make clean
+rm -f *.o comp fort cgram.c rodata.c
+make comp
+yacc ../mip/cgram.y
+
+conflicts: 7 shift/reduce
+rm -f rodata.c
+./:yyfix yyexca yyact yypact yypgo yyr1 yyr2 yychk yydef
+mv y.tab.c cgram.c
+cc -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -S rodata.c
+./:rofix rodata.s
+2137
+2137
+as -o rodata.o rodata.s
+rm -f rodata.s
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. cgram.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/xdefs.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/scan.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/pftn.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I.  ../mip/trees.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/optim.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. code.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. local.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/reader.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. local2.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. order.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/match.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/allo.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/comm1.c
+cc -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -S -I../mip -I. table.c
+./:rofix table.s
+19120
+19120
+as -o table.o table.s
+rm -f table.s
+cc  -z rodata.o cgram.o xdefs.o scan.o pftn.o trees.o  optim.o code.o local.o reader.o local2.o order.o match.o  allo.o comm1.o table.o -o ./comp
+cp comp testdir/ccom
+make clean
+rm -f *.o comp fort cgram.c rodata.c
+make CFLAGS="-DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/" comp
+yacc ../mip/cgram.y
+
+conflicts: 7 shift/reduce
+rm -f rodata.c
+./:yyfix yyexca yyact yypact yypgo yyr1 yyr2 yychk yydef
+mv y.tab.c cgram.c
+cc -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -S rodata.c
+./:rofix rodata.s
+2137
+2137
+as -o rodata.o rodata.s
+rm -f rodata.s
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. cgram.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/xdefs.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/scan.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/pftn.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I.  ../mip/trees.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/optim.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. code.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. local.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/reader.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. local2.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. order.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/match.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/allo.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/comm1.c
+cc -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -S -I../mip -I. table.c
+./:rofix table.s
+19120
+19120
+as -o table.o table.s
+rm -f table.s
+cc  -z rodata.o cgram.o xdefs.o scan.o pftn.o trees.o  optim.o code.o local.o reader.o local2.o order.o match.o  allo.o comm1.o table.o -o ./comp
+cp comp testdir/ccom
+make clean
+rm -f *.o comp fort cgram.c rodata.c
+make CFLAGS="-DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/" comp
+yacc ../mip/cgram.y
+
+conflicts: 7 shift/reduce
+rm -f rodata.c
+./:yyfix yyexca yyact yypact yypgo yyr1 yyr2 yychk yydef
+mv y.tab.c cgram.c
+cc -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -S rodata.c
+./:rofix rodata.s
+2137
+2137
+as -o rodata.o rodata.s
+rm -f rodata.s
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. cgram.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/xdefs.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/scan.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/pftn.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I.  ../mip/trees.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/optim.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. code.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. local.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/reader.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. local2.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. order.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/match.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/allo.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -I../mip -I. ../mip/comm1.c
+cc -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -Btestdir/ -S -I../mip -I. table.c
+./:rofix table.s
+19120
+19120
+as -o table.o table.s
+rm -f table.s
+cc  -z rodata.o cgram.o xdefs.o scan.o pftn.o trees.o  optim.o code.o local.o reader.o local2.o order.o match.o  allo.o comm1.o table.o -o ./comp
+cmp comp testdir/ccom
+rm -fr testdir
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/fort.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/freader.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/fallo.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/fmatch.c
+cc -c -R -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -DFORT -I../mip -I. UCtable.c
+mv UCtable.o ftable.o
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/forder.c
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -DFORT -I../mip -I. UClocal2.c
+mv UClocal2.o flocal2.o
+cc -c -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O -I../mip -I. ../mip/fcomm2.c
+cc -z -DASSTRINGS -DSTABDOT -DLCOMM -DBUFSTDERR -DFLEXNAMES -O fort.o freader.o fallo.o fmatch.o ftable.o  forder.o flocal2.o fcomm2.o -o ./fort

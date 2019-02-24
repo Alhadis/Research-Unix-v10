@@ -1,0 +1,122 @@
+\chapter{Lexical analysis}
+\section{Reserved words}
+The following are reserved words.   They may not be used as
+identifiers.  In this document the alphabetic reserved words are always
+shown in boldface.
+\begin{quote}
+\raggedright
+\tt
+abstraction abstype and andalso
+as case datatype else end exception do fn fun functor handle if in 
+infix infixr let local nonfix of op open overload 
+raise rec sharing sig signature
+struct structure then type val while with withtype orelse
+
+\verb"{  }  [  ]  ,  ;  (  )  ->  *  |  :  ...  =  =>  #  _"
+\end{quote}
+\section{Special constants}
+An integer constant is any non-empty sequence of digits, possibly preceded
+by a negation symbol (\verb|~|).
+
+A real constant is an integer constant, possibly followed by a point (.)
+and one or more digits, possibly followed by an exponent symbol(E) and
+an integer constant; at least one of the optional parts must occur,
+hence no integer constant is a real constant.  Examples: \verb|0.7| ,
+\verb|~3.32E5| , \verb|3E~7| .  Non-examples: \verb|23| , \verb|.3| ,
+\verb|4.E5| , \verb|1E2.0| .
+
+A string constant is a sequence, between quotes (\verb|"|), of zero or more
+printable characters, spaces, or escape sequences.  Each escape sequence
+is introduced by the escape character \verb|\|, and stands for a character
+sequence.  The allowed escape sequences are as follows (all other
+uses of \verb|\| being incorrect):
+\begin{tabular}{l p{3.9in}}
+\verb|\n| & A single character interpreted by the system as end-of-line.\\
+\verb|\t| & Tab. \\
+\verb|\^c| & The control character c, for any appropriate c.\\
+\verb|\ddd| &  The single character with ASCII code ddd (3 decimal digits).\\
+\verb|\"| & The double-quote character (\verb'"'). \\
+\verb|\\| &  The backslash character (\verb"\").\\
+\verb|\f___f\| & This sequence is ignored, where f\_\_\_f stands for a
+sequence of one or more formatting characters (a subset of the
+non-printable characters including at least space, tab, newline,
+formfeed).  This allows one to write long strings on more than one
+line, by writing \verb"\" at the end of one line and at the start of the
+next.
+\end{tabular}
+
+\section{Identifiers}
+
+An identifier is either {\em alphanumeric}: any sequence of letters,
+digits, primes (\verb"'"), and underbars (\verb"_") starting with a letter or a
+prime, or {\em symbolic}: any sequence of the following symbols
+\begin{quote}
+\verb"! % & $ + - / : < = > ? @ \ ~ \^ | # * `"
+\end{quote}
+In either case, however, reserved words are excluded.  This means
+that for example \verb"_" and \verb"|" are not identifiers, but
+\verb"also_ran" and \verb"|=|" are identifiers.
+
+Identifiers are used to stand for 9 different classes of objects,
+which occupy 6 different name spaces, as follows:
+\begin{enumerate}
+\item value variables ({\it var}), value constructors ({\it con}), \\
+exception constructors ({\it exncon})
+\item type variables ({\it tyvar})
+\item type constructors ({\it tycon})
+\item record labels ({\it lab})
+\item structures ({\it str}), functors ({\it fct})
+\item signatures ({\it sgn})
+\end{enumerate}
+Thus, an identifier could not in the same scope stand for both a
+value variable and a constructor, but an identifier can
+be bound simultaneously to a type constructor and a signature.
+
+To remove some ambiguity, it is recommended that constructors start
+with an uppercase letter, and variables start with a lowercase
+letter; but this is a convention, not an enforced rule  (it is
+confounded, for example, by symbolic identifiers).
+
+A type variable ({\it tyvar}) may be any alphanumeric identifier starting
+with a prime.  The other eight classes ({\it var, con, tycon, ...})
+are represented by identifiers not starting with a prime.  The class
+lab is also extended to include the numeric labels 1, 2, 3, ... .
+
+Type variables are therefore disjoint from the other classes.
+Otherwise, the class of an occurrence of an identifier is determined
+from context.
+
+Spaces or parentheses are sometimes needed 
+to separate symbolic identifiers and reserved words.  Two examples are
+
+\begin{tabular}{c c c c c}
+\verb"a:= !b" &or& \verb"a:=(!b)" &but not& \verb"a:=!b"\\
+\verb"~ :int->int" &or& \verb"(~):int->int" &but not& \verb"~:int->int"
+\end{tabular}
+
+These punctuation characters cannot be constituents of identifiers
+and therefore never need spaces around them:
+\begin{quotation}
+\verb| " ( ) , . ; [ ] { } |
+\end{quotation}
+
+\section{Comments}
+A comment is a character sequence (outside of a string)
+within comment brackets (* *) in which comment brackets are properly
+nested.
+
+\section{The bare syntax}
+The Standard ML bare language is obtained by stripping the full
+language of any {\em derived} forms (those that may be defined in
+terms of other constructs in the language), and of any constructs
+related to the module system.  The bare language will be explained
+in Chapters \ref{eval} and \ref{types},
+and successive chapters describe augmentations
+of it that yield the full language.
+
+Figure~\ref{bare} shows the syntax of the bare language.  The notation
+\begin{quotation}
+phrase x \rep{k} x phrase
+\end{quotation}
+indicates the repetition of the {\em phrase} at least $k$  times,
+separated by the punctuation character $x$.

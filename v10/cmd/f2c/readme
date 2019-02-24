@@ -1,0 +1,421 @@
+
+====== old index for f2c, now "readme from f2c" ============
+
+FILES:
+
+f2c.h	Include file necessary for compiling output of the converter.
+	See the second NOTE below.
+
+f2c.1	Man page for f2c.
+
+f2c.1t	Source for f2c.1 (to be processed by troff -man or nroff -man).
+
+libf77	Library of non I/O support routines the generated C may need.
+	Fortran main programs result in a C function named MAIN__ that
+	is meant to be invoked by the main() in libf77.
+
+libi77	Library of Fortran I/O routines the generated C may need.
+	Note that some vendors (e.g., BSD, Sun and MIPS) provide a
+	libF77 and libI77 that are incompatible with f2c -- they
+	provide some differently named routines or routines with the
+	names that f2c expects, but with different calling sequences.
+	On such systems, the recommended procedure is to merge
+	libf77 and libi77 into a single library, say libf2c, to install
+	it where you can access it by specifying -lf2c , and to adjust
+	the definition of link_msg in sysdep.c appropriately.
+
+f2c.ps	Postscript for a technical report on f2c.  After you strip the
+	mail header, the first line should be "%!PS".
+
+fixes	The complete change log, reporting bug fixes and other changes.
+	(Some recent change-log entries are given below).
+
+fc	A shell script that uses f2c and imitates much of the behavior
+	of commonly found f77 commands.  You will almost certainly
+	need to adjust some of the shell-variable assignments to make
+	this script work on your system.
+
+
+SUBDIRECTORY:
+
+f2c/src	Source for the converter itself, including a file of checksums
+	and source for a program to compute the checksums (to verify
+	correct transmission of the source), is available: ask netlib to
+		send all from f2c/src
+	If the checksums show damage to just a few source files, or if
+	the change log file (see "fixes" below) reports corrections to
+	some source files, you can request those files individually
+	"from f2c/src".  For example, to get defs.h and xsum0.out, you
+	would ask netlib to
+		send defs.h xsum0.out from f2c/src
+	"all from f2c/src" is 654329 bytes long.
+
+	Tip: if asked to send over 99,000 bytes in one request, netlib
+	breaks the shipment into 1000 line pieces and sends each piece
+	separately (since otherwise some mailers might gag).  To avoid
+	the hassle of reassembling the pieces, try to keep each request
+	under 99,000 bytes long.  The final number in each line of
+	xsum0.out gives the length of each file in f2c/src.  For
+	example,
+		send exec.c expr.c from f2c/src
+		send format.c format_data.c from f2c/src
+	will give you slightly less hassle than
+		send exec.c expr.c format.c format_data.c from f2c/src
+	Alternatively, if all the mailers in your return path allow
+	long messages, you can supply an appropriate mailsize line in
+	your netlib request, e.g.
+		mailsize 200k
+		send exec.c expr.c format.c format_data.c from f2c/src
+
+	If you have trouble generating gram.c, you can ask netlib to
+		send gram.c from f2c/src
+	Then `xsum gram.c` should report
+		gram.c	e2eca42c	57277
+NOTE:	For now, you may exercise f2c by sending netlib a message whose
+	first line is "execute f2c" and whose remaining lines are
+	the Fortran 77 source that you wish to have converted.
+	Return mail brings you the resulting C, with f2c's error
+	messages between #ifdef uNdEfInEd and #endif at the end.
+	(To understand line numbers in the error messages, regard
+	the "execute f2c" line as line 0.  It is stripped away by
+	the netlib software before f2c sees your Fortran input.)
+	Options described in the man page may be transmitted to
+	netlib by having the first line of input be a comment
+	whose first 6 characters are "c$f2c " and whose remaining
+	characters are the desired options, e.g., "c$f2c -R -u".
+	This scheme may change -- ask netlib to
+               send index from f2c
+        if you do not get the behavior you expect.
+
+	During the initial experimental period, incoming Fortran
+	will be saved in a file.  Don't send any secrets!
+
+
+BUGS:	Please send bug reports (including the shortest example
+	you can find that illustrates the bug) to research!dmg
+	or dmg@research.att.com .  You might first check whether
+	the bug goes away when you turn optimization off.
+
+
+NOTE:	f2c.h defines several types, e.g., real, integer, doublereal.
+	The definitions in f2c.h are suitable for most machines, but if
+	your machine has sizeof(double) > 2*sizeof(long), you may need
+	to adjust f2c.h appropriately.  f2c assumes
+		sizeof(doublecomplex) = 2*sizeof(doublereal)
+		sizeof(doublereal) = sizeof(complex)
+		sizeof(doublereal) = 2*sizeof(real)
+		sizeof(real) = sizeof(integer)
+		sizeof(real) = sizeof(logical)
+		sizeof(real) = 2*sizeof(shortint)
+	EQUIVALENCEs may not be translated correctly if these
+	assumptions are violated.
+
+	There exists a C compiler that objects to the lines
+		typedef VOID C_f;	/* complex function */
+		typedef VOID H_f;	/* character function */
+		typedef VOID Z_f;	/* double complex function */
+	in f2c.h .  If yours is such a compiler, do two things:
+	1. Complain to your vendor about this compiler bug.
+	2. Find the line
+		#define VOID void
+	   in f2c.h and change it to
+		#define VOID int
+	(For readability, the f2c.h lines shown above have had two
+	tabs inserted before their first character.)
+
+FTP:	All the material described above is now available by ftp from
+	research.att.com (login: netlib; Password: your E-mail address;
+	cd f2c).  You must uncompress the .Z files once you have a
+	copy of them, e.g., by
+		uncompress *.Z
+
+-----------------
+Recent change log (partial)
+-----------------
+
+Tue Oct 15 10:25:49 EDT 1991:
+  Minor tweaks that make some PC compilers happier: insert some
+casts, add args to signal functions.
+  Change -g to emit uncommented #line lines -- and to emit more of them;
+update fc, f2c.1, f2c.1t, f2c.ps to reflect this.
+
+Thu Oct 17 09:22:05 EDT 1991:
+  libi77: README, fio.h, sue.c, uio.c changed so the length field
+in unformatted sequential records has type long rather than int
+(unless UIOLEN_int is #defined).  This is for systems where sizeof(int)
+can vary, depending on the compiler or compiler options.
+
+Thu Oct 17 13:42:59 EDT 1991:
+  libi77: inquire.c: when MSDOS is defined, don't strcmp units[i].ufnm
+when it is NULL.
+
+Tue Oct 22 18:12:56 EDT 1991:
+  Fix memory fault when a character*(*) argument is used (illegally)
+as a dummy variable in the definition of a statement function.  (The
+memory fault occurred when the statement function was invoked.)
+  Complain about implicit character*(*).
+
+Thu Nov 14 08:50:42 EST 1991:
+  libi77: change uint to Uint in fmt.h, rdfmt.c, wrtfmt.c; this change
+should be invisible unless you're running a brain-damaged system.
+
+Mon Nov 25 19:04:40 EST 1991:
+  libi77: correct botches introduced 17 Oct. 1991 and 14 Nov. 1991
+(change uint to Uint in lwrite.c; other changes that only matter if
+sizeof(int) != sizeof(long)).
+  Add a more meaningful error message when bailing out due to an attempt
+to invoke a COMMON variable as a function.
+
+Sun Dec  1 19:29:24 EST 1991:
+  libi77: uio.c: add test for read failure (seq. unformatted reads);
+adjust an error return from EOF to off end of record.
+
+Tue Dec 10 17:42:28 EST 1991:
+  Add tests to prevent memory faults with bad uses of character*(*).
+
+Thu Dec 12 11:24:41 EST 1991:
+  libi77: fix bug with internal list input that caused the last
+character of each record to be ignored; adjust error message in
+internal formatted input from "end-of-file" to "off end of record"
+if the format specifies more characters than the record contains.
+
+Wed Dec 18 17:48:11 EST 1991:
+  Fix bug in translating nonsensical ichar invocations involving
+concatenations.
+  Fix bug in passing intrinsics lle, llt, lge, lgt as arguments;
+hl_le was being passed rather than l_le, etc.
+  libf77: adjust length parameters from long to ftnlen, for
+compiling with f2c_i2 defined.
+
+Sat Dec 21 15:30:57 EST 1991:
+  Allow DO nnn ... to end with an END DO statement labeled nnn.
+
+Tue Dec 31 13:53:47 EST 1991:
+  Fix bug in handling dimension a(n**3,2) -- pow_ii was called
+incorrectly.
+  Fix bug in translating
+	subroutine x(abc,n)
+	character abc(n)
+	write(abc,'(i10)') 123
+	end
+(omitted declaration and initialiation of abc_dim1).
+
+Fri Jan 17 11:54:20 EST 1992:
+  Diagnose some illegal uses of main program name (rather than
+memory faulting).
+  libi77:  (1) In list and namelist input, treat "r* ," and "r*,"
+alike (where r is a positive integer constant), and fix a bug in
+handling null values following items with repeat counts (e.g.,
+2*1,,3).  (2) For namelist reading of a numeric array, allow a new
+name-value subsequence to terminate the current one (as though the
+current one ended with the right number of null values).
+(3) [lio.h, lwrite.c]:  omit insignificant zeros in list and namelist
+output.  (Compile with -DOld_list_output to get the old behavior.)
+
+Sat Jan 18 15:58:01 EST 1992:
+  libi77:  make list output consistent with F format by printing .1
+rather than 0.1 (introduced yesterday).
+
+Wed Jan 22 08:32:43 EST 1992:
+  libi77:  add comment to README pointing out preconnection of
+Fortran units 5, 6, 0 to stdin, stdout, stderr (respectively).
+
+Mon Feb  3 11:57:53 EST 1992:
+  libi77:  fix namelist read bug that caused the character following
+a comma to be ignored.
+
+Fri Feb 28 01:04:26 EST 1992:
+  libf77:  fix buggy z_sqrt.c (double precision square root), which
+misbehaved for arguments in the southwest quadrant.
+
+Thu Mar 19 15:05:18 EST 1992:
+  Fix bug (introduced 17 Jan 1992) in handling multiple entry points
+of differing types (with implicitly typed entries appearing after
+the first executable statement).
+  Fix memory fault in the following illegal Fortran:
+        double precision foo(i)
+*	illegal: above should be "double precision function foo(i)"
+        foo = i * 3.2
+        entry moo(i)
+        end
+  Note about ANSI_Libraries (relevant, e.g., to IRIX 4.0.1 and AIX)
+added to README.
+  Abort zero divides during constant simplification.
+
+Sat Mar 21 01:27:09 EST 1992:
+  Tweak ckalloc (misc.c) for systems where malloc(0) = 0; this matters
+for subroutines with multiple entry points but no arguments.
+  Add "struct memblock;" to init.c (irrelevant to most compilers).
+
+Wed Mar 25 13:31:05 EST 1992:
+  Fix bug with IMPLICIT INTEGER*4(...): under -i2 or -I2, the *4 was
+ignored.
+
+Tue May  5 09:53:55 EDT 1992:
+  Tweaks to README; e.g., ANSI_LIbraries changed to ANSI_Libraries .
+
+Wed May  6 23:49:07 EDT 1992
+  Under -A and -C++, have subroutines return 0 (even if they have
+no * arguments).
+  Adjust libi77 (rsne.c and lread.c) for systems where ungetc is
+a macro.  Tweak lib[FI]77/makefile to use unique intermediate file
+names (for parallel makes).
+
+Tue May 19 09:03:05 EDT 1992:
+  Adjust libI77 to make err= work with internal list and formatted I/O.
+
+Sat May 23 18:17:42 EDT 1992:
+  Under -A and -C++, supply "return 0;" after the code generated for
+a STOP statement -- the C compiler doesn't know that s_stop won't
+return.
+  New (mutually exclusive) options:
+	-f	treats all input lines as free-format lines,
+		honoring text that appears after column 72
+		and not padding lines shorter than 72 characters
+		with blanks (which matters if a character string
+		is continued across 2 or more lines).
+	-72	treats text appearing after column 72 as an error.
+
+Sun May 24 09:45:37 EDT 1992:
+  Tweak description of -f in f2c.1 and f2c.1t; update f2c.ps .
+
+Fri May 29 01:17:15 EDT 1992:
+  Complain about externals used as variables.  Example
+	subroutine foo(a,b)
+	external b
+	a = a*b		! illegal use of b; perhaps should be b()
+	end
+
+Mon Jun 15 11:15:27 EDT 1992:
+  Fix bug in handling namelists with names that have underscores.
+
+Sat Jun 27 17:30:59 EDT 1992:
+  Under -A and -C++, end Main program aliases with "return 0;".
+  Under -A and -C++, use .P files and usage in previous subprograms
+in the current file to give prototypes for functions declared EXTERNAL
+but not invoked.
+  Fix memory fault under -d1 -P .
+  Under -A and -C++, cast arguments to the right types in calling
+a function that has been defined in the current file or in a .P file.
+  Fix bug in handling multi-dimensional arrays with array references
+in their leading dimensions.
+  Fix bug in the intrinsic cmplx function when the first argument
+involves an expression for which f2c generates temporary variables,
+e.g. cmplx(abs(real(a)),1.) .
+
+Sat Jul 18 07:36:58 EDT 1992:
+  Fix buglet with -e1c (invisible on most systems) temporary file
+f2c_functions was unlinked before being closed.
+  libf77: fix bugs in evaluating m**n for integer n < 0 and m an
+integer different from 1 or a real or double precision 0.
+Catch SIGTRAP (to print "Trace trap" before aborting).  Programs
+that previously erroneously computed 1 for 0**-1 may now fault.
+Relevant routines: main.c pow_di.c pow_hh.c pow_ii.c pow_ri.c .
+
+Sat Jul 18 08:40:10 EDT 1992:
+  libi77: allow namelist input to end with & (e.g. &end).
+
+Thu Jul 23 00:14:43 EDT 1992:
+  Append two underscores rather than one to C keywords used as
+local variables to avoid conflicts with similarly named COMMON blocks.
+
+Thu Jul 23 11:20:55 EDT 1992:
+  libf77, libi77 updated to assume ANSI prototypes unless KR_headers
+is #defined.
+  libi77 now recognizes a Z format item as in Fortran 90;
+the implementation assumes 8-bit bytes and botches character strings
+on little-endian machines (by printing their bytes from right to
+left): expect this bug to persist; fixing it would require a
+change to the I/O calling sequences.
+
+Tue Jul 28 15:18:33 EDT 1992:
+  libi77: insert missed "#ifdef KR_headers" lines around getnum
+header in rsne.c.  Version not updated.
+
+Thu Aug  6 14:19:22 EDT 1992:
+  Update "names.c from f2c/src", which missed being updated on 23 July.
+
+Fri Aug 14 08:07:09 EDT 1992:
+  libi77: tweak wrt_E in wref.c to avoid signing NaNs.
+
+Sun Aug 23 19:05:22 EDT 1992:
+  fc: supply : after O in getopt invocation (for -O1 -O2 -O3).
+
+Mon Aug 24 18:37:59 EDT 1992:
+  Recant above tweak to fc: getopt is dumber than I thought;
+it's necessary to say -O 1 (etc.).
+  libF77/README: add comments about ABORT, ERF, DERF, ERFC, DERFC,
+GETARG, GETENV, IARGC, SIGNAL, and SYSTEM.
+
+Tue Oct 27 01:57:42 EST 1992:
+  libf77, libi77:
+    1.  Fix botched indirection in signal_.c.
+    2.  Supply missing l_eof = 0 assignment to s_rsne() in rsne.c (so
+end-of-file on other files won't confuse namelist reads of external
+files).
+    3.  Prepend f__ to external names that are only of internal
+interest to lib[FI]77. 
+
+Current timestamps of files in "all from f2c/src", sorted by time,
+appear below (mm/dd/year hh:mm:ss).  To bring your source up to date,
+obtain source files with a timestamp later than the time shown in your
+version.c.  Note that the time shown in the current version.c is the
+timestamp of the source module that immediately follows version.c below:
+
+ 7/23/1992   0:03:19  xsum0.out
+ 7/22/1992  22:54:58  version.c
+ 7/22/1992  22:54:52  misc.c
+ 7/18/1992   0:41:22  names.c
+ 6/27/1992  14:50:07  vax.c
+ 6/27/1992  14:17:39  expr.c
+ 6/20/1992  13:36:37  output.c
+ 6/20/1992  11:41:38  pread.c
+ 6/20/1992  11:06:07  putpcc.c
+ 6/20/1992  10:58:23  proc.c
+ 6/20/1992   8:14:11  format.c
+ 6/20/1992   8:03:20  defs.h
+ 6/20/1992   5:34:05  sysdep.c
+ 6/19/1992   7:15:28  main.c
+ 5/24/1992   9:44:46  f2c.1
+ 5/24/1992   8:57:16  f2c.1t
+ 5/23/1992  14:18:33  lex.c
+ 5/22/1992  23:09:57  gram.exec
+ 5/05/1992   9:44:35  README
+ 3/25/1992  12:58:56  init.c
+ 1/17/1992  10:56:46  Notice
+12/30/1991  17:17:44  io.c
+12/21/1991  15:24:34  exec.c
+12/18/1991  16:11:29  intr.c
+12/18/1991  15:32:02  put.c
+10/15/1991   9:09:35  niceprintf.c
+10/15/1991   1:27:37  formatdata.c
+10/15/1991   1:26:39  sysdep.h
+10/14/1991  12:30:48  p1output.c
+10/11/1991  18:59:37  defines.h
+ 9/09/1991  23:15:17  xsum.c
+ 8/28/1991   0:07:01  gram.dcl
+ 6/17/1991  16:43:01  gram.head
+ 6/06/1991   0:41:56  makefile
+ 4/25/1991  12:56:19  f2c.h
+ 4/05/1991   7:43:45  mem.c
+ 2/08/1991  11:29:18  malloc.c
+ 1/15/1991   1:21:00  equiv.c
+11/30/1990   9:47:48  data.c
+ 7/26/1990  10:54:47  parse_args.c
+ 7/26/1990  10:44:26  parse.h
+ 5/11/1990  14:17:04  error.c
+ 4/18/1990  12:25:18  cds.c
+ 4/06/1990   0:00:57  gram.io
+ 4/05/1990  23:40:09  gram.expr
+ 3/27/1990  16:39:18  names.h
+ 3/27/1990  10:05:15  p1defs.h
+ 2/16/1990  10:37:27  tokens
+ 2/14/1990   2:00:20  format.h
+ 2/14/1990   1:38:46  output.h
+ 2/14/1990   0:54:06  iob.h
+ 2/03/1990   0:58:26  niceprintf.h
+ 1/29/1990  13:26:52  memset.c
+ 1/11/1990  18:02:51  ftypes.h
+ 1/07/1990   1:20:01  usignal.h
+11/27/1989   8:27:37  machdefs.h
+ 7/01/1989  11:59:44  pccdefs.h

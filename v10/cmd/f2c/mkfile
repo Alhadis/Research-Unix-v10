@@ -1,0 +1,162 @@
+#	mkfile for f2c, a Fortran 77 to C converter
+
+g = -g
+CFLAGS = $g
+
+DESTDIR =
+
+OBJECTSd = main.o init.o gram.o lex.o proc.o equiv.o data.o format.o \
+	  expr.o exec.o intr.o io.o misc.o error.o mem.o names.o \
+	  output.o p1output.o pread.o put.o putpcc.o vax.o formatdata.o \
+	  parse_args.o niceprintf.o cds.o sysdep.o version.o
+OBJECTS = $OBJECTSd malloc.o
+
+f2c: $OBJECTS
+	$CC $LDFLAGS $OBJECTS -o f2c
+
+gram.c:	gram.head gram.dcl gram.expr gram.exec gram.io defs.h tokdefs.h
+	( sed <tokdefs.h "s/#define/%token/" ;\
+		cat gram.head gram.dcl gram.expr gram.exec gram.io ) >gram.in
+	$YACC $YFLAGS gram.in
+	echo "(expect 4 shift/reduce)"
+	sed 's/^# line.*/\/* & *\//' y.tab.c >gram.c
+	rm gram.in y.tab.c
+
+$OBJECTSd: defs.h ftypes.h defines.h machdefs.h sysdep.h
+
+tokdefs.h: tokens
+	grep -n . <tokens | sed "s/\([^:]*\):\(.*\)/#define \2 \1/" >tokdefs.h
+
+cds.o: sysdep.h
+exec.o: p1defs.h names.h
+expr.o: names.h niceprintf.h output.h
+format.o: p1defs.h format.h niceprintf.h output.h names.h iob.h
+formatdata.o: format.h niceprintf.h output.h names.h
+gram.o: p1defs.h
+init.o: niceprintf.h output.h iob.h
+intr.o: names.h
+io.o: names.h iob.h
+lex.o : tokdefs.h p1defs.h
+main.o: parse.h usignal.h
+mem.o: iob.h
+names.o: iob.h names.h niceprintf.h output.h
+niceprintf.o: defs.h names.h niceprintf.h output.h
+output.o: niceprintf.h output.h names.h
+p1output.o: p1defs.h niceprintf.h output.h names.h
+parse_args.o: parse.h
+proc.o: tokdefs.h names.h niceprintf.h output.h p1defs.h
+put.o: names.h pccdefs.h p1defs.h
+putpcc.o: names.h
+vax.o: defs.h niceprintf.h output.h pccdefs.h
+
+put.o putpcc.o: pccdefs.h
+
+f2c.t: f2c.1t
+	troff -man f2c.1t >f2c.t
+
+f2c.1: f2c.1t
+	nroff -man f2c.1t | col -b | uniq >f2c.1
+
+clean:
+	rm -f gram.c *.o f2c tokdefs.h compiler f2c.t
+
+B = cds.c data.c defines.h defs.h equiv.c error.c exec.c expr.c \
+	format.c format.h formatdata.c ftypes.h \
+	gram.dcl gram.exec gram.expr gram.head gram.io \
+	init.c intr.c io.c iob.h lex.c machdefs.h main.c \
+	malloc.c mem.c memset.c misc.c names.c names.h niceprintf.c \
+	niceprintf.h output.c output.h p1defs.h p1output.c \
+	parse.h parse_args.c pccdefs.h pread.c proc.c put.c \
+	putpcc.c sysdep.c sysdep.h tokens usignal.h vax.c
+bx = f2c.1 f2c.1t f2c.h makefile mkfile version.c xsum.c xsum0.out Notice README
+
+version.c: $B
+	x=`Dt -d -t $B`
+	echo -e "char F2C_version[] = \"$x\";\nchar xxxvers[] = \"\\\\n@(#) FORTRAN 77 to C Translator, VERSION $x\\\\n\";" >version.c
+
+bundle:V: /tmp/t/f2c.st
+/tmp/t/f2c.st: $B $bx
+	stree $prereq >/tmp/t/f2c.st
+
+b1 = cds.c data.c defines.h defs.h f2c.h format.c format.h
+b2 = equiv.c error.c exec.c expr.c
+b3 = formatdata.c ftypes.h gram.dcl gram.exec gram.expr gram.head gram.io intr.c io.c
+b4 = lex.c machdefs.h main.c sysdep.c sysdep.h malloc.c misc.c names.c names.h pread.c
+b5 = init.c output.c output.h p1defs.h p1output.c parse.h parse_args.c pccdefs.h
+b6 = proc.c put.c putpcc.c tokens usignal.h vax.c mkfile
+b7 = f2c.1 f2c.1t gram.c iob.h makefile mem.c niceprintf.c niceprintf.h version.c
+
+U = -u
+
+/tmp/t/f2c: $B
+	mkdir /tmp/t/f2c
+	stree $U $b1 >/tmp/t/f2c/b1
+	stree $U $b2 >/tmp/t/f2c/b2
+	stree $U $b3 >/tmp/t/f2c/b3
+	stree $U $b4 >/tmp/t/f2c/b4
+	stree $U $b5 >/tmp/t/f2c/b5
+	stree $U $b6 >/tmp/t/f2c/b6
+	stree $U $b7 >/tmp/t/f2c/b7
+
+ls:
+	ls -l $B
+
+/tmp/f2c.tar: $B
+	tar cf - $B >/tmp/f2c.tar
+
+tape: /tmp/f2c.tar
+	for j in 1 2; do
+		for i in /tmp/f2c.tar $B; do
+			dd if=$i bs=10k of=/dev/nrmt1
+			done
+		done
+	mt offl
+
+# read the tape and unpack via
+#	dd if=/dev/rmt1 bs=10k of=foo
+#	tar xf foo
+#(in an empty directory).
+
+b = Notice README cds.c data.c defines.h defs.h equiv.c error.c \
+	exec.c expr.c f2c.1 f2c.1t f2c.h format.c format.h formatdata.c \
+	ftypes.h gram.dcl gram.exec gram.expr gram.head gram.io \
+	init.c intr.c io.c iob.h lex.c machdefs.h main.c makefile \
+	malloc.c mem.c memset.c misc.c names.c names.h niceprintf.c \
+	niceprintf.h output.c output.h p1defs.h p1output.c \
+	parse.h parse_args.c pccdefs.h pread.c proc.c put.c putpcc.c \
+	sysdep.c sysdep.h tokens usignal.h vax.c version.c xsum.c
+
+all: $b xsum0.out
+	stree -u $b xsum0.out >/tmp/t/all
+
+lt:	$b xsum0.out
+	Dt -x `ls -t $b xsum0.out` | awk '{printf "%10s  %8s  %s\n",$1,$2,$4}' >lt
+
+xsum: xsum.c
+	$CC -o xsum xsum.c
+
+xsum.out: $b
+	xsum $b >xsum.out
+	cmp xsum0.out xsum.out || diff xsum0.out xsum.out
+
+z=
+/tmp/t/t:
+	mkdir /tmp/t/t
+
+zap: xsum.out /tmp/t/t
+	cmp xsum.out xsum0.out
+	for i in pyxis/usr tempel/u;do stree $z xsum0.out version.c >/n/$i/dmg/zap;done
+	cp $z xsum0.out version.c /tmp/t/t
+
+bletch: xsum.out
+	cmp xsum0.out xsum.out || { diff xsum0.out xsum.out |\
+	 awk 'BEGIN {printf "cp xsum.out xsum0.out;mk zap z='"'"'";sp = ""}
+	/version\.c/ {next}
+	/^> / {printf "%s%s", sp, $2; sp = " "}
+	END {printf "'"'"'\n"}' }
+
+/n/pyxis/usr/dmg/f2c/mkfile: mkfile
+	sed '/^CFLAGS =/s/$/ -DANSI_Libraries/' $prereq >$target
+
+/n/pyxis/netlib/f2c/readme: readme
+	for i in pyxis inet; do cp readme fixes /n/$i/netlib/f2c; done

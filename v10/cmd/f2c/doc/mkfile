@@ -1,0 +1,125 @@
+BUILTINS =
+b = body appA
+p = /usr/dmg/pubs/gen
+pre = pre.release
+# /z7/nlsw7/f77.c/doc/tm
+c = dot.c
+
+all:V: r.t f2c.t cover.t
+
+f2c.ps: cover.t r.t f2c.t
+	dpost -e2 -F/y7/dmg/font -x0 -y0 -c1 -m1 -n1 -P "" -pp $prereq >$target
+
+cover.t: cover
+	troff cover >cover.t
+
+r.t: $b $c
+	Dt -m'.DA ' $b cover | refer -sA+DT -p $p /dev/null - $b |\
+		tbl | eqn | troff -mpm >r.t
+
+d.t: $b $c
+	Dt -m'.ds LF DRAFT
+	.DA ' -t'
+	.ds RF ' $b |\
+		refer -sA+DT -p $p /dev/null - $b |\
+		tbl | eqn | troff -mpm >d.t
+
+f2c.t: ../f2c.1t mkfile
+	Dt ../f2c.1t | awk -F/ '
+	{printf ".nr mo %s\n.nr dy %s\n.nr yr %d\n",$1,$2,$3-1900}' >zap.$$
+	sed '21s/$/ "Appendix B"/
+	22i\
+	.nr % 24
+	' ../f2c.1t | troff zap.$$ /usr/lib/tmac/tmac.an - >$target
+	rm zap.$$
+
+tmf2c.t: ../f2c.1t mkfile
+	sed '21s/$/ "Appendix B"/
+	22i\
+	.nr % 26
+	' ../f2c.1t | troff -man >$target
+
+tm.t: $b $c ../f2c.1t tmcover
+	tc=/tmp/tc$$
+	tt=/tmp/t/tc$$
+	trap "rm -f $tc; exit" 0 1 2 3 4 13
+	sed -n '/^\.TL/q;p' body >$tc
+	cat tmcover >>$tc
+	sed '1,/^\.AE/d' body >>$tc
+	refer -sA+DT -p $p $tc appA >$tt
+	x=`Dt -f $b ../f2c.1t`; cpt $x $tt
+	echo docsubmit input = $tt
+	tbl $tt | eqn | troff -ms >tm.t
+	cat ../f2c.1t >>$tt
+	cpt $x $tt
+
+%.c: %.f /usr/bin/f2c
+	f2c $stem.f
+
+%.t: %
+	Dt -m'.ds LF DRAFT
+	.nr PS 12
+	.nr VS 15
+	.DA ' -t'
+	.ds RF ' $prereq |\
+		refer -sA+DT -p $p /dev/null - $prereq |\
+		tbl | eqn -d'$$' | troff -ms >$prereq.t
+
+pred.t: $pre
+	Dt -m'.ds LF DRAFT
+	.ce
+	\s24### DRAFT ###\s0
+	.DA ' -t'
+	.ds RF ' $pre | troff -ms - $pre >pred.t
+
+pre.t: $pre
+	Dt -d'.DA ' $pre | troff -ms - $pre >pre.t
+
+st.t: st
+	Dt -m'.ds LF \s8DRAFT\s0
+	.DA \s8' -t'\s0
+	.ds RF \s8' -x'\s0' $prereq | tbl - $prereq | eqn | troff -ms >$target
+	
+p.t: proto
+	Dt -m'.ds LF DRAFT
+	.DA ' -t'
+	.ds RF ' $prereq | tbl - $prereq | eqn -d'$$' | troff -ms >$target
+
+cstr.x: $b $c
+	Dt -m'.DA ' $b | refer -sA+DT -p $p /dev/null - $b |\
+		awk '
+	/^\.so/ { f = $2; while((getline<f) > 0) print $0; next }
+	{print}' >$target
+
+appB.x: ../f2c.1t
+	sed '21s/$/ "Appendix B"/
+	22i\
+	.nr % 25
+	' ../f2c.1t >$target
+
+/tmp/t/sif.u: cstr.x appB.x makefile
+	stree -u $prereq >$target
+
+sn.t: sn
+	Dt -m'.DA ' $prereq |\
+		refer -sA+DT -p $p /dev/null - $prereq |\
+		eqn | troff -mpm >sn.t
+
+dsn.t: sn
+	Dt -m'.ds LF DRAFT
+	.DA ' -t'
+	.ds RF ' $prereq |\
+		refer -sA+DT -p $p /dev/null - $prereq |\
+		eqn | troff -mpm >dsn.t
+
+sn.x: sn
+	Dt -m'.ds LF DRAFT
+	.DA ' -t'
+	.ds RF ' $prereq |\
+		refer -sA+DT -p $p /dev/null - $prereq | awk '
+	/^\.so/ { f = $2; while((getline<f) > 0) print $0; next }
+	{print}' >$target
+
+
+/tmp/t/sifsn.u: sn.x makefile
+	stree -u $prereq >$target

@@ -1,0 +1,100 @@
+BUILTINS	=
+CC		= ../etc/a.out
+GEN		= gen2
+LANG		= lang.o c31.o c32.o c33a.o c33b.o c33c.o c34.o c35.o c35b.o c36.o c37.o c38.o
+LD		= $CC
+LFLAGS		= -lm
+OS		= iris
+PREC1		= prec1.o prec1a.o prec1b.o prec1c.o
+PREC2		= prec2.o prec2a.o prec2b.o prec2c.o
+TARGET		= mips
+TRIGRAPHS	= -Wp-T
+
+CFLAGS		= -N -I../include/${TARGET}_${OS} -I/usr/include $TRIGRAPHS -Uunix -Uvax -UUNIX -UVAX -B../$GEN/$TARGET-$OS/ -Wftarget=$TARGET
+
+%.o:		%.c $CC ../$GEN/$TARGET-$OS/rcc
+		$CC -c -w $CFLAGS $stem.c
+
+%.2:Q:		%.c $CC ../$GEN/$TARGET-$OS/rcc
+		$CC -S $CFLAGS $stem.c 2>&1 | grep -v 'not ref' >$stem.2 || exit 0
+
+%.z:		%.o util.o $LD
+		$LD -o $stem.z $stem.o util.o $LFLAGS; $stem.z
+
+all:V:		test err
+
+test:V:		capacity environ lang prec1 prec2 expr
+
+clean:V:
+		rm -f capacity environ lang prec1 prec2 *.[osz2]
+
+capacity:	capacity.o
+		$LD -o $target $prereq $LFLAGS; $target
+
+environ:	environ.o util.o
+		$LD -o $target $prereq $LFLAGS; $target 1
+
+lang:		$LANG util.o
+		$LD -o $target $prereq $LFLAGS; $target
+
+prec1:		$PREC1 util.o
+		$LD -o $target $prereq $LFLAGS; $target
+
+prec2:		$PREC2 util.o
+		$LD -o $target $prereq $LFLAGS; $target
+
+err:		m31001.2 m31002.2 m31003.2 m31004.2 m31005.2 m31006.2 m31007.2 m31008.2 \
+		m31009.2 m31010.2 m31011.2 m31012.2 m31013.2 m31014.2 m31015.2 m31016.2 \
+		m31017.2 m31018.2 m31019.2 m31020.2 m31021.2 m31022.2 m31023.2 m31024.2 \
+		m31025.2 m31026.2 m31027.2 m31028.2 m31029.2 m31030.2 m31031.2 m31032.2 \
+		m33001.2 m33002.2 m33003.2 m33004.2 m33005.2 m33006.2 m33007.2 m33008.2 \
+		m33009.2 m33010.2 m33011.2 m33012.2 m33013.2 m33014.2 m33015.2 m33016.2 \
+		m33017.2 m33018.2 m33019.2 m33020.2 m33021.2 m33022.2 m33023.2 m33024.2 \
+		m33025.2 m33026.2 m33027.2 m33028.2 m33029.2 m33030.2 m33031.2 m33032.2 \
+		m33033.2 m33034.2 m33035.2 m33036.2 m33037.2 m33038.2 m33039.2 m33040.2 \
+		m33041.2 m33042.2 m33043.2 m33044.2 m33045.2 m33046.2 m33047.2 m33048.2 \
+		m33049.2 m33050.2 m33051.2 m33052.2 m33053.2 m33054.2 m33055.2 m33056.2 \
+		m33057.2 m33058.2 m33059.2 m33060.2 m33061.2 m33062.2 m33063.2 m33064.2 \
+		m33065.2 m33066.2 m33067.2 m33068.2 m33069.2 m34001.2 m34002.2 m34003.2 \
+		m34004.2 m34005.2 m35001.2 m35002.2 m35003.2 m35004.2 m35005.2 m35006.2 \
+		m35007.2 m35008.2 m35009.2 m35010.2 m35011.2 m35012.2 m35013.2 m35014.2 \
+		m35015.2 m35016.2 m35017.2 m35018.2 m35019.2 m35020.2 m35021.2 m35022.2 \
+		m35023.2 m35024.2 m35025.2 m35026.2 m35027.2 m35028.2 m35029.2 m35030.2 \
+		m35031.2 m35032.2 m35033.2 m35034.2 m35035.2 m35036.2 m35037.2 m35038.2 \
+		m35039.2 m35040.2 m35041.2 m35042.2 m35043.2 m35044.2 m35045.2 m35046.2 \
+		m35047.2 m35048.2 m35049.2 m35050.2 m35051.2 m35052.2 m35053.2 m35054.2 \
+		m35055.2 m35056.2 m35057.2 m35058.2 m35059.2 m35060.2 m35061.2 m35062.2 \
+		m35063.2 m35064.2 m35065.2 m35066.2 m35067.2 m35068.2 m35069.2 m35070.2 \
+		m35071.2 m35072.2 m35073.2 m35074.2 m35075.2 m35076.2 m35077.2 m36001.2 \
+		m36002.2 m36003.2 m36004.2 m36005.2 m36006.2 m36007.2 m36008.2 m36009.2 \
+		m36010.2 m36011.2 m36012.2 m36013.2 m36014.2 m36015.2 m36016.2 m36017.2 \
+		m36018.2 m36019.2 m36020.2 m36021.2 m36022.2 m36023.2 m36024.2 m37001.2 \
+		m37002.2 m37003.2 m37004.2 m37005.2 m37006.2 m37007.2 m37008.2 m37009.2 \
+		m37010.2 m37011.2 m37012.2 m37013.2 m37014.2 m37015.2 m37016.2 m37017.2 \
+		m38001.2 m38002.2 m38003.2 m38004.2 m38005.2 m38006.2 m38007.2 m38008.2 \
+		m38009.2 m38010.2 m38011.2 m38012.2 m38013.2 m38014.2 m38015.2 m38016.2 \
+		m38017.2 m38018.2 m38019.2 m38020.2 m38021.2 m38022.2 m38023.2 m38024.2 \
+		m38025.2 m38026.2 m38027.2 m38028.2 m38029.2 m38030.2 m38031.2 m38032.2 \
+		m38033.2 m38034.2 m38035.2 m38036.2 m38037.2 m38038.2 m38039.2
+		wc $prereq | grep ' 0 '
+
+expr:V:		andif.z assign.z band.z bandeq.z cast.z compl.z div.z diveq1.z diveq2.z \
+		diveq3.z diveq4.z eq.z ge.z gt.z int1.z int10.z int11.z int12.z int13.z \
+ 		int2.z int3.z int4.z int5.z int6.z int7.z int8.z int9.z le.z lsh.z \
+ 		lsheq.z lt.z mineq1.z mineq2.z mineq3.z mineq4.z minus.z mix1.z mix10.z \
+ 		mix11.z mix12.z mix13.z mix2.z mix3.z mix4.z mix5.z mix6.z mix7.z \
+ 		mix8.z mix9.z ne.z not.z or.z orelse.z oreq.z plueq1.z plueq2.z \
+ 		plueq3.z plueq4.z plus.z postdec.z preinc.z quest.z real1.z real10.z \
+ 		real11.z real12.z real13.z real2.z real3.z real4.z real5.z real6.z \
+ 		real7.z real8.z real9.z remain.z remeq.z rsh.z rsheq.z timeq1.z \
+ 		timeq2.z timeq3.z timeq4.z timesop.z uminus.z xor.z xoreq.z
+
+util.o:		defs.h compil.h machin.h sdutil.h
+
+environ.o:	defs.h compil.h machin.h b2.h
+
+$LANG:		defs.h compil.h machin.h
+
+$PREC1:		defs.h compil.h machin.h
+
+$PREC2:		defs.h compil.h machin.h

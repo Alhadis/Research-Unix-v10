@@ -1,0 +1,590 @@
+Standard ML of New Jersey version 0.44, 4 December 1989
+
+New release:
+
+Starting with this release, the compiler source code is covered by an AT&T
+copyright notice, which is included in each source code file.  The file
+doc/COPYRIGHT contains the official copyright notice, license, and
+disclaimer.  The file doc/release-form contains a release form that our
+lawyer would like you to sign if you contribute software or modifications
+that are included in the distribution.  Whether you sign it as an
+individual or get your institution to sign it is your decision, but it is
+undoubtedly quicker and simpler to sign as an individual.  The release form
+is not necessary for simple bug fixes.
+
+Mailing list:
+
+There is now a Standard ML mailing list for messages and queries of general
+interest to the ML community.  You can join by sending a request to
+sml-request@cs.cmu.edu, and you can send a message to the list by mailing
+to sml@cs.cmu.edu.  This mailing list will be the main vehicle for
+distributing announcements about Standard ML of New Jersey.
+
+Modules:
+
+All known major bugs in the module system have been fixed, so please report
+any new bugs or old bugs we missed.  The full module syntax from the
+Definition, Version 3 is now implemented with minor limitations or
+extensions, including let structure expressions and local and open
+signature specs (see comments in doc/localspec).  Include specs work
+properly once again.
+
+Local and open specs:
+
+David MacQueen has some comments about "local" and "open" specifications
+in signatures; see doc/localspec.
+
+Weak type variable syntax:
+
+Standard ML of New Jersey has a more precise system for weak typing
+(i.e. typechecking of programs that use semi-polymorphic reference
+variables).  Other compilers denote weak type variables with an underscore,
+i.e. '_abc, while ours uses an initial integer to denote level of weakness,
+i.e. '2abc.  See doc/weak-types for a fuller explanation.  However,
+for compatibility:
+  The notation for weak type variables using an initial underscore is now
+supported for input and output.  A weak type variable of the form '_a
+is equivalent to the numeric form '1a.  On output, weak type variables
+are printed using an initial integer.  However, if the ref variable 
+System.Control.weakUnderscore is set to true, then weak type variables
+of all levels are printed with an underscore.
+
+Equality types:
+
+Equality types are still broken.  Fixing these is the next order of business.
+
+Import:
+
+Nested imports do not work reliably in this version.
+
+Optimizing compiler:
+
+Hints on making your programs run faster are in doc/optimize.
+
+Miscellaneous:
+
+The SPARC code generator has been completely rewritten by John Reppy.
+
+Bruce Duba continues to make improvements to the CPS code generator.
+
+Andrew Appel is re-writing the parser to use David Tarditi's newest
+version of the ML parser generator; this re-write is not complete but
+the source files are included (along with the working recursive descent
+parser) in src/parse/.
+
+Linkdata:
+
+The "linkdata" program, used for making a sharable version of the ML
+compiler by putting all the .mo files into the text segment, did not work
+on all operating systems.  There is a more portable, albeit much less
+efficient, version of linkdata called "slinkdata".  Look in "src/makeml" to
+see how it is used for the NeXT operating system, and you can use it that
+way for your operating system too.  (Admittedly, this is very minimal
+documentation!)
+
+Bug fixes:
+
+See latest doc/bugs file for remaining bugs.  This has been brought more or
+less up to date.  We appreciate your bug reports and hope you will be 
+patient as we work our way through them.  There is a new version of the
+bug report format file (doc/bug.form), including a new "Severity:" field
+that you should use to indicate how serious the bug is from your point of
+view.  We get a lot of bug reports (which is good!) but we may not assign
+the right priority to them without your help.
+
+Version 1 plan:
+
+Our tentative schedule calls for the release of version 1 of the compiler in
+mid-January 1990.  There will probably be one more beta release between now
+and then.  This is a more or less arbitrary deadline, and we will try to fix
+as many bugs as possible before version 1 is released.  Development of the
+compiler will continue as usual following this milestone, and major, widely
+publicized releases will occur on a more regular and less frequent schedule,
+e.g. perhaps three times a year.  Interim developmental versions can be made
+available to those who have a special need for them.
+
+------------------------------------------------------------------------------
+Standard ML of New Jersey version 0.42, 27 October 1989
+
+Release notes by Andrew Appel, covering changes since version 0.39.
+
+Bug fixes:
+
+Large floating point literals do the right thing now, at least on the Vax.
+
+Duplicate constructor names and field names are again detected.
+
+Printing of records like {1="abc"} works correctly.
+
+Reading 1025 bytes from standard input works.
+
+Large list expressions of the form [(0,0),(0,0),(0,0), ..... (0,0)] no longer
+   cause the compiler to blow up.
+
+Previous versions have run on Sun-3s with Mach, this version might work
+on Vaxes with Mach.  The next version should run on anything with Mach.
+
+Compile-time processing of functors has been extensively rewritten,
+and should be more robust.  There are still some remaining bugs, however,
+which should now be easy to iron out.
+
+The Io exception now carries a much more useful string value, containing
+all sorts of information.
+
+Other changes since version 0.39 are mostly of interest to implementors.
+VALvars and STRvars now have qualids instead of ids, lexer interface
+parametrized more cleanly.  Page-faulting is no longer used to detect
+end-of-memory on most machines.
+
+---------------------------------------------------------------------------
+Standard ML of New Jersey version 0.39, 8 September 1989
+
+This notes overlap with the 0.36 release notes, since 0.36 was not
+widely distributed [neither were 0.37 or 0.38].
+
+Release notes by Andrew Appel.
+
+Changes since version 0.33:
+
+1.  Support for Sun-4 (SPARC) thanks to John Reppy at Cornell;
+    Encore (NS32032), NeXT (also Mach on other 68020 machines), and 
+    Sony NEWS (68020-based workstation), thanks to James O'Toole at MIT.
+
+2.  An interpreter for faster compilation (4x) but slower execution (18x).
+    Set System.Control.interp := true to enable this mode.  Use the -i
+    or -ionly to makeml to set this option as the default.
+
+3.  Delay and Force primitives (meant for internal use only) for research
+    in lazy evaluation.
+
+4.  Bug fixes:   reading 2049-byte files works now.  Separate compilation
+    shouldn't dump core.  Miscellaneous others.
+
+5.  A code generator generator implemented by Johan Lilius,
+    Jari Porra, & Jussi Rintanen of Helsinki University of Technology 
+    is include in the Standard ML Software Library: see lib/twig.
+
+6.  Various internal efficiency improvements; the CMACHINE signature was
+    simplified a bit; the format of generational-gc update lists was changed;
+    the CPS optimizer was beefed up.
+
+7.  Separate compilation has been improved.  The compiled version of a 
+    separately compiled file has the extension ".bin", and internally
+    identifies the version of SML-NJ and also the machine type it 
+    runs on.  The command "head -1 foo.bin" will print this information.
+
+8.  Many functor bugs have been fixed.
+
+9.  An improved version of ML-Yacc by David Tarditi at Princeton is provided,
+    more efficient and with a better interface, and with sophisticated syntax
+    error recovery.
+
+Forthcoming in future releases:
+
+- Mach support for Vax and other machines.
+
+- Some work has been done on a MacIntosh II port, and we are hoping for
+volunteers to continue this work.
+
+- Our MIPS code generator almost works now (thanks to Norman Ramsey at
+Princeton).
+
+-----------------------------------------------------------------------------
+What's new in SML of NJ Version 0.33, 1 April 1989
+
+1. CPS code generator
+
+This version uses a new CPS (Continuation Passing Style) code
+generator.  The CPS code generator differs from the older code
+generator in the following ways:
+
+   (i) The code produced is about 50% faster.
+
+   (ii) The compiler generates code about half as quickly (this should
+gradually improve with future releases).
+
+   (iii) the new code generator does not use a stack.  This makes it easier
+to support experimental features like callcc and multiple processes.
+It also makes efficient garbage collection even more critical.
+
+   (iv) The cps code generator tends to build larger intermediate
+representations, so tuning of the runtime system becomes more
+important.  See the discussion of memory management in doc/INSTALL.
+
+
+2. The runtime system
+
+The runtime system has been extensively rewritten and cleaned up.  The
+amount of assembly code has been reduced (only 220 lines for the Vax,
+385 for the Sun), and the system call interface has been simplified.  The
+mechanism for initiating garbage collection has been made more robust.
+In the m68 version (for Sun 3), exhaustion of free space is detected
+by an explicit comparison rather than by trapping a segmentation fault.
+This finally eliminates persistent flakiness caused by the way the 68020
+recovers from segmentation faults.
+
+LaTeX source for a new paper describing the runtime system can be
+found in doc/papers/runtime.  This is still an early draft, but it should
+be helpful in understanding internals of the run time system.
+
+
+3. The pervasive environment
+
+The initial environment has been reorganized to make it possible to
+build a system whose pervasives (i.e., built-in bindings) correspond
+closely to those described in "The Definition of Standard ML, Version
+2" by R. Harper, R. Milner, and M. Tofte (ECS-LFCS-88-62, August 1988,
+hereafter referred to as the "Definition").  Note that in our humble
+opinion the "standard" environment is somewhat brain-damaged and is
+missing many important features (like arrays, bytearrays, etc).  See
+the file doc/environ for discussion of specific deficiencies of the
+environment described in the Definition and our proposed fixes, some
+of which are incorporated in the "New Jersey" environment.
+
+The default initial environment set up by the bootstrapping process is
+the richer, and more efficient, New Jersey environment.  However,
+loading the source file src/lib/standard.sml defines a structure named
+Standard that provides a close approximation to the "standard"
+environment.  Opening the structure Standard at the top level replaces
+any nonstandard bindings in the New Jersey environment.  The New
+Jersey environment is still there in the background, so any New Jersey
+bindings not rebound in Standard will still be visible.  In the future
+we may provide a mechanism (e.g. a function switchEnv: string -> unit)
+for completely replacing the base environment with a different version
+specified by a structure.  For example, `switchEnv "Standard"' would
+replace the existing base environment with the contents of Standard.
+
+The initial environment also contains:
+
+(1) The signatures ARRAY, BASICIO, BITS, BOOL, BYTEARRAY, GENERAL, IO,
+    INTEGER, LIST, REF, STRING, and REAL as defined in src/boot/perv.sig, 
+    and the signature SYSTEM as defined in src/boot/system.sig
+
+(2) The structures Array : ARRAY, BasicIO : BASICIO, Bits : BITS, etc.
+    These contain the New Jersey versions of bindings.
+
+(3) The structure NewJersey, which contains the complete New Jersey initial
+    environment except for the signatures in (1) above and the structure
+    NewJersey itself.
+
+It follows that even if Standard has been defined and opened, all New Jersey
+bindings are available via the structure NewJersey, or alternatively via
+the structures Array, IO, etc.
+
+Here are some differences between the New Jersey and Standard environments:
+
+  a.  The functions +, /, *, -, div, mod are an order of magnitude 
+      slower in Standard than in the New Jersey environment.  This is
+      because they are required to raise distinct exceptions (according
+      to the Definition), and because the treatment of negative arguments
+      of div and mod doesn't match what the hardware provides; that
+      complicates their implementation.  The NewJersey functions all raise
+      Overflow on results that won't fit in 31 bits (and Div on zero divisor
+      for div and mod).
+
+  b.  The functions div and mod return different results.
+
+  c.  input and output are curried in NewJersey (and in the IO structure),
+      but not in Standard.
+
+  d.  The New Jersey environment has many more functions in it, as described
+      in the appendix of our reference manual or the signatures in the files
+      src/boot/perv.sig and src/boot/system.sig.
+
+The New Jersey environment has changed slightly from previous releases,
+mostly to make the it more compatible with the Definition [IMPORTANT --
+THESE CHANGES MAY BREAK SOME PROGRAMS]:
+
+  a.  The exception Io_failure has been renamed Io for consistency
+      with the Definition.
+
+  b.  The exception Float has been renamed Real.  Float is still defined
+      as a synonym for Real.
+
+  c.  The identifier "length" is no longer overloaded: use "size" or
+      "String.size" for string lengths, "length" or "List.length" for
+      list lengths, and "Array.length" for array lengths.
+
+  d.  The functions "cd" and "system" are now components of the
+      System structure.
+
+  e.  Various components of the System structure have been moved
+      into the System.Unsafe substructure, and are not recommended for
+      casual use.
+
+  f.  The print functions (Integer.print, Real.print, String.print,
+      and the overloaded print), now return unit rather than their
+      argument.  This is because we found that in our code virtually
+      every call of print was followed by "; ()".
+
+We plan to provide a definition of the NewJersey structure in terms of
+the "standard" environment (analogous to the definition of Standard in
+lib/src/standard.sml).  This structure would enable any Standard ML
+system to run programs based on the New Jersey environment.  Such
+programs should not reference the System structure, of course.
+
+4. Command line arguments and Shell environment
+
+System.argv : unit -> string list
+System.environ : unit -> string list
+ 
+are new functions that return the list of command line arguments and
+the Unix shell environment, respectively.
+
+5. First-class continuations: callcc, throw, and cont (experimental)
+
+These are new experimental primitives to allow one to capture and use
+"first-class continuations".  See the file doc/callcc for
+documentation of these new facilities.
+
+6. Separate compilation (experimental)
+
+We have integrated code written by Nick Rothwell and Mads Tofte of
+Edinburgh that provides a preliminary, experimental form of secure (type
+checked) separate compilation.  There is a special declaration form:
+
+   import "filename"
+
+where "filename" is a string literal designating either a source file
+filename.sml or a binary file filename.bin.  If only the source file
+exists in the current directory, then it is compiled and the binary
+version is created.  If the binary version exists, it is loaded
+instead of the source file.
+
+As a consequence of adding this new facility, the identifier "import"
+has become a reserved word.  This may cause incompatibilities with
+existing code.
+
+7. mlyacc
+
+The new directory src/lib/mlyacc contains a yacc-like parser generator
+written in ML, with documentation.  The parser generator is used much
+like the Unix yacc utility, and the grammar specification language is
+essentially that of yacc.  The parser generator was written by David
+Tarditi of Princeton, based on an earlier effort by Nick Rothwell.
+Other, more sophisticated, interfaces to the parser generator will
+probably be provided in future releases.  As before, the directory
+src/lib/lexgen contains a lexical analyzer generator.
+
+8. Fixes
+
+A number of things that have been broken are now fixed.  This includes
+the garbage collector for the Sun 3, floating point operations on the
+Sun 3, exportFn, sqrt, and execute.  Unfortunately, many old bugs
+remain and the error messages are just as bad as ever.  We expect the
+next release to fix many of these problems.  Bug reports are welcome as
+ever, as are bug fixes.
+
+9. Things to come
+
+John Reppy has ported SML of NJ to the Sun 4 (SPARC) architecture and
+his code generator will be included in the next release.  A port to
+the MIPS architecture (DECstation 3100 under Ultrix) is in the works
+at Princeton, and a NeXT port is likely.  A port to the Mac II under
+the native Mac OS may also appear soon.
+
+We are working on a new licensing scheme similar to that used by the
+Free Software Foundation.  We hope to have this approved within three
+months, and we will keep you informed of new developments.
+
+------------------------------------------------------------------------------
+New features of SML of NJ Version 0.24 (November 22, 1988)
+
+1. Profiler
+
+A call-count and statistical profiler has been implemented.  See
+operating instructions in the README file, and the paper provided in
+src/doc/papers/profiling.
+
+
+2. Runtime reorganization
+
+The runtime system has been reorganized to reduce the need for assembly
+language and provide a standard interface for Unix system calls and
+C code.  It should become possible to add special purpose C code to
+the runtime system, for instance to provide an X windows interface.
+Many of the assembly language functions have been replaced by more
+portible C implementations and uses of the system call interface.
+See src/doc/VERSION.24 for some more details.
+
+
+3. Memory Management tuning
+
+The variable
+
+  System.Control.Runtime.ratio : int ref
+
+can be used to control the garbage collection behavior to some extent,
+in conjunction with the Unix limit variable (in the csh).  See the
+discussion in README.
+
+
+4. Simple gnu emacs sml mode
+
+A simple gnu emacs sml mode was contributed by Mitch Wand.  It can be
+found in src/lib/sml.el.  If you have a better mode or make improvements
+on this version, please send them in to macqueen@research.att.com for
+inclusion in future releases.
+--------------------------------------------------------------------------
+New features of SML of NJ Version 0.22 (October 10, 1988)
+
+This file describes the most notable changes since version 0.20.  (Version 0.21
+was a local version that was not distributed.)
+
+
+1. Bugs
+
+A few bugs have been fixed; exportFn works again; the system runs under the
+latest version (4.0) of Sun Unix on a Sun-3.  See src/doc/bugs for the
+remaining known bugs.  The next release with many more bug fixes will
+probably follow fairly shortly.
+
+
+2. Sharable text segments
+
+We now have an option to run sml with the compiler read-only and sharable
+(in the Unix text segment).  This should help on systems where several
+people are running sml at once, and also improves garbage-collector performance.
+See src/doc/INSTALL for more info.
+
+
+3. CPS code generator
+
+We are including the source code for the new cps code generator with
+this release for those who would like an early look at it.  This code
+generator is still under development and works only on Vaxes at this
+point.
+
+
+4. Installation
+
+The maker script for building the interactive image has been reorganized
+and new scripts maker.batch and maker.run have been added to simplify
+making batch systems and compiling the runtime system.  See src/doc/INSTALL
+and src/doc/BATCHINSTALL for details.
+
+
+5. Lexer generator
+
+The directory src/lib is a new directory for contributed software.
+The programs included here do not come under the terms of the AT&T
+license.  The first contributed software is a lexical analyzer
+generator similar to the Unix lex utility.  It is in src/lib/lexgen.
+lexgen has been used to generate a new lexical analyzer for the
+compiler.  The specification is in src/lex/ml.lex.
+
+
+----------------------------------------------------------------------------
+New features of SML of NJ Version 0.20
+
+This file describes the most notable changes since version 0.18.  (Version 0.19
+was a local version that was not distributed.)
+
+1. Bugs
+
+Quite a few bugs have been fixed, mostly relating to type checking and modules.
+See src/doc/bugs for the remaining known bugs.  
+
+
+2. Reference types
+
+The typing of references and arrays is less restrictive.  For
+instance, the following is now permitted, whereas it used to cause an
+error message:
+
+   let val r = ref [] in r := [1]; !r end;
+
+Thus locally declared reference variables like r in this example do not
+need to be explicitly constrained to have a monotype.
+
+
+3. Equality types
+
+Equality types are now implemented.  Equality types are those
+"hereditarily concrete" types whose values admit structural equality.
+The implementation of equality types involves the new signature
+specification keyword "eqtype" indicating that the specified type
+constructor admits equality, and special equality type variables
+starting with double single quotes (e.g. ''a) that are restricted to
+range over equality types.  
+
+An equality type is one containing only type constructors that "support
+equality".  The following type constructors support equality:
+
+   int, string, real
+   
+   any datatype whose constuctor argument types are equality types
+   (disregarding parameter type variables)
+
+   record type constructors
+
+   type constructors from functor parameters that are specified as eqtypes
+
+In addition, any reference or array type is an equality type.
+
+Abstract type constructors, "->", and exn do not support equality.
+
+
+4. Include specifications in signatures
+
+Include specifications allow one to include the specifications of a previously
+defined signature in a new signature.  The syntax is 
+
+   include SIG
+
+where SIG is the name of a signature.  For example, given the declaration
+
+   signature AA =
+   sig 
+     type t
+     val x : t
+   end
+
+the declaration 
+
+   signature BB =
+   sig
+     include AA
+     val y : t -> int
+   end
+
+is equivalent to
+
+   signature BB =
+   sig
+     type t
+     val x : t
+     val y : t -> int
+   end
+
+
+5. Free identifiers in signatures and structures
+
+Structure definitions can now contain free identifiers of any sort
+(values, constructors, exceptions, types), not just free signatures,
+structures and functors.  Signature definitions can contain free
+structure and type identifiers, as well as free signature identifiers.
+
+
+6. Printing of signatures and structures
+
+Signatures defined at top level are printed.  Structures defined at
+top level have their signatures printed (currently in full -- in the
+future only the name of the signature will be printed if it has one).
+Printing of signatures can be turned off by setting the flag
+System.Control.Print.signatures to false.
+
+
+7. Memory management improvements
+
+The runtime system manages memory better.  The system automatically
+resizes the heap on startup and during collections, allowing the
+system to perform more gracefully on systems with limited memory.
+
+The behavior and type of the flag controlling gc messages has changed:
+
+  System.Control.Runtime.gcmessages: int ref
+    when 0, no messages are printed
+    when 1, only major collections are reported
+    when 2, major collections and heap resizings are reported
+    when 3, minor and major collections and heap resizings are reported

@@ -1,0 +1,460 @@
+!
+! This is a GPMDOC6 version of the MACRO SPITBOL Manual for VAX/VMS.
+! It is substantially modified translation of the Runoff version
+! produced by Dave Shields for the PDP11 Runoff.  It produces everything
+! including an index, table of contents and a .HLP Help file.
+!
+!
+! Revision history:
+! -----------------
+!
+{Set Versionid,BCAB-2132}
+{Set Revid,G}
+!
+! Rev. G: 17-APR-1982 [SGD]:
+! o Add description of CHAR (new function).
+! o Clarify &ABEND and &DUMP (above 2) descriptions.
+!
+! Rev. F: 11-MAR-1982 [SGD]:
+! o Changes to reflect new stack handling procedure
+! o Changes to reflect BUFFER type
+! o Miscellaneous edits to formats, eliminated some section headings that
+!   caused excessive help nesting.
+!
+! Rev. E: 25-FEB-1982 [SGD]:
+! o Enhanced description of &CODE
+!
+! Rev. D: 08-AUG-1981 [SGD]:
+! o Fixed description of /LIST /NOLIST /OUTPUT and /NOOUTPUT to
+!   conform to new semantics.  LOADSTACK message removed as no longer
+!   in existance. /CRC and /NOCRC documented.
+!
+! Rev. C: 30-JUL-1981 [SGD]:
+! o Changed description of recommended link to reflect ABAA-4521 patch
+!   which avoids need for /NOTRACE.
+!
+! Rev. B: 19-JUL-1981 [SGD]:
+! o Fixed manual to reflect that delivery no longer includes SPITBOL image.
+!   This image is built during delivery.
+! o Added {Revid} macro to provide manual revision level.
+!
+! Definitions and Macros:
+! -----------------------
+!
+! Define the names of the files involved.
+!
+{Set Textfile,SYS$LIBRARY:Spittext.Gpm}
+{Set Outfile,Spitbol.Man}
+{Set Helpfile,SYS$HELP:Spitbol.Hlp}
+!
+! These macros will generate roman numerals ({Roman n}) from 0..99.
+!
+{Setq Roman,{Cond {Gt @1,10},{Genroman {/ @1,10},x,l,c}}-
+  {Genroman {Remdr @1,10},i,v,x}-
+}
+{Setq Genroman,{Cond -
+  {Le @1,3},{Dupl @2,@1},-
+  {Eq @1,4},{2}{3},-
+  {Le @1,8},{3}{Dupl @2,{- @1,5}},-
+  ,{2}{4}-
+}}
+!
+! We skip generating the manual if it isn't wanted.
+!
+{Cond {Leq N,{Substr {Caps {Query Do you want to generate the manual? }},-
+    1,1}},-
+  {Tset input,,Begintext=!MANDONE,Endtext=!HELPSTART}}
+{Set output,@Outfile}
+!
+!
+! Define the sections as numbers (in the help pass we will define them
+! as names)
+!
+{Set Sec_Func,Section 5}
+{Set Sec_Impl,Section 12}
+!
+! The Hl macro substitutes for the "Header Level" business of Runoff.
+! HL is given status as a property and the level <-> value associations
+! are stuffed there.  Hlval is the current level number.  Hlid is set to
+! the current level string (n.m form).
+!
+! The number,title and page is entered on the TOC1 stack for the table of
+! content printing at the end.  A level of 1 forces a new page with a
+! spiffy title block. Level 2 stuff is nicely underlined.
+! Lower level stuff is left to troglodytes.
+!
+{Creprop HL}
+{Setq Hlval,0}
+{Setq Hl,-
+  {Brk}-
+  {Cond {Gt @1,@Hlval},{Set {1}\HL,0}}-
+  {Set Hlval,@1}-
+  {Set.Add1 {1}\HL}-
+  {Set Hlid,-
+    {Doprop HL,-
+      {Cond {Le @1,@Hlval},{2}{Cond {Lt @1,@Hlval},.}},-
+    UP}-
+  }-
+  {Cond {Gt @Linenum,50},{p},,{Ls 2}}-
+  {Cond {Eq @1,1},-
+      {Center *------{Dupl -,{Dsize 2}}-*}-
+      {Center |~{Dbl {Rpad [{Hlid}],5}{2}}~|}-
+      {Center *------{Dupl -,{Dsize 2}}-*}-
+      {Tset Toc1,~},-
+    {Eq @1,2},-
+      {Outdent 3}{Ul {Dbl {Hlid}~~{2}}}{Brk},-
+    ,-
+      {Outdent 3}{Dbl {Hlid}~~{2}}{Brk}-
+  }-
+  {Tset Toc1,-
+    {Rpad -
+      {Rpad -
+        {Hlid},-
+        {+ 7,{* 2,@1}}-
+      }~{Cond {Eq @1,1},{Dbl @2},,@2},-
+      64}-
+    {Pagenum}-
+  }-
+}
+!
+! These list macros are used to generate numbered lists.  Some of the
+! Listelem references in the text may contain an argument to {Listelem},
+! any such argument is ignored by this version of the Listelem macro, but
+! it is used by a redefined version when producing the Help file (see below).
+!
+{Setq List,{Brk}{Lin 5}{Ls 1}-
+	{Set Listval,0}}
+{Setq Listelem,{Ls 1}{Outdent 5}{Lpad {Setv.Add1 Listval}.~~,5}}
+{Setq Endlist,{Ls 1}{Restore Lmg}}
+!
+! The index macros do their business on the INDEX property tables
+!
+{Creprop INDEX}
+{Setq Index,-
+  {Set.append {D 1}\INDEX,<, >{Pagenum}}-
+}
+!
+!  Here we begin production of the actual manual
+!
+!  Produce the Title Page
+!
+{set bslack,3}
+{Set lmg,5}{set rmg,70}
+{set pagelength,60}
+{setq newpage,{Ls 3}}
+{Set Linenum,5}{Center *~~~~~~*~~~~~~*}
+{Ls 5}{Center {Dbl M A C R O   S P I T B O L}}
+{Ls 1}{Center      -------------------------}
+{Ls 3}{Center PROGRAM REFERENCE MANUAL (Rev. {Revid})}
+{LS 1}{CENTER --------------------------------{Dupl -,{Dsize Revid}}}
+{Ls 3}{Center VAX/VMS Version 3.5 ({Versionid})}
+{LS 1}{Center ----------------------{Dupl -,{Dsize Versionid}}}
+{LS 2}{April 1980}
+{Ls 3}{Tset Lmg,19}{Tset Rmg,55}{fj}
+Copyright (c) 1980 by DEWAR INFORMATION SYSTEMS CORPORATION.
+ This manual may be reporduced provided that this
+Dewar Information Systems Copyright Notice is
+incorporated.
+{Ls 3}VAX, VMS, DECwriter and PDP are registered trademarks
+of the Digital Equipment Corporation.
+{Set Linenum,50}{Restore Lmg}{Restore Rmg}{Nfj}
+{Center DEWAR INFORMATION SYSTEMS CORPORATION}
+{Center 221 West Lake Street}
+{Center <Oak Park, Illinois USA  60302>}
+{Ls 1}{Center (312) 524-1644}
+{p}
+{Set Linenum,30}
+{Center {Dbl Please replace this page with the Table of Contents}}
+{Center {Dbl (At the end)}}
+{p}
+!
+!  Produce the preamble
+!
+{Fj}
+This report is parallel to the University of Leeds Technical Report
+Number 94, "Macro Spitbol - Decsystem 10 Version," McCann, Holden and
+Dewar, Dec. 1976.
+ Differences will be found primarily in {SEC_IMPL}.
+{Ls 2}
+{nfj}
+{center {Ul Revision History}}
+{Ls 1}
+{nfj}
+This document has been revised as follows :
+{Ls 1}
+Dec 1976        to correspond with        SPITBOL Version 3.0
+Mar 1978        to correspond with        SPITBOL Version 3.3
+Sep 1978        to correspond with        SPITBOL Version 3.4
+Feb 1979        to correspond with        SPITBOL Version 3.5
+{fj}
+{Ls 3}VAX/VMS MACRO SPITBOL Version {Versionid} is designed to
+operate on the VAX 11/780 and VAX 11/750 computers running the
+VMS operating system version 2.0, 2.1, 2.2, 2.3 or 2.4.
+{Set Pagenum,0}
+{Setq Newpage,{Title}{T 42}PAGE~{Pagenum}~-~[{Hlid}]{Brk}{Subtitle}{Ls 1}-
+  {Display Page {Pagenum} - {Subtitle}}-
+}
+{Set title,MACRO~SPITBOL V3.5}
+{Set Subtitle,Introduction}
+{p}
+!
+!  Read the text
+!
+{Tset input,@textfile}
+!
+! Produce the index.  All that is required is to dump the INDEX property
+! in sorted order in a suitable format, and then snuff the property and
+! the definition since it isn't used in generating the help library.
+!
+{Display}
+{Display Generating the index and table of contents.}
+{Display This is hard.  Please be patient.}
+{Display}
+!
+{Tset Hs,\}
+{Delprop INDEXA}
+{Set linenum,1}{Set pagenum,1}{Set pagelength,55}
+{Set Lmg,45}{Set Rmg,72}{Nfj}
+{Setq newpage,{Ls 3}}
+{Setq endpage,{Ls 2}{Center Index - {Roman @Pagenum}}{eject}}
+{Doprop INDEX,-
+  {Brk}-
+  {Outdent 40}-
+  {Rpad {D 1}\,40,.}-
+  {Substr @{D 1}\INDEX,2}-
+  {Cond {Eq {Remdr @Linenum,6},3},{Ls 1}}-
+  ,UP}
+{Brk}{Restore Hs}
+{Delprop INDEX}
+{Setq Index}
+{Set Lmg,5}
+!
+! Now dump out the table of contents.  Since the TOC1 stack is in inverted
+! order, we pop it over to another stack, then pop that stack successively
+! to print it out.
+!
+{p}
+{Set Pagenum,1}
+{Setq newpage,-
+  {Center {Ul TABLE OF CONTENTS {Cond {Gt @Pagenum,1},(CON'T)}}}-
+  {Ls 2}-
+  Section                        Title                           Page-
+  {Ls 1}-
+}
+{Setq endpage,{Ls 2}{Center {Roman @Pagenum}}{eject}}
+{Ls 1}
+{Dowhile {Differ @Toc1},{Tset Toc2,@Toc1}{Restore Toc1}}
+{Dowhile {Differ @Toc2},{Toc2}{Brk}{Restore Toc2}}
+{P}
+!
+!MANDONE
+!HELPSTART
+!
+! We skip generating the help file if it isn't wanted.
+!
+{Cond {Leq N,{Substr {Caps {Query Do you want to make the .HLP help file? }},-
+    1,1}},-
+  {Tset input,,Begintext=!HELPDONE,Endtext=!MANDONE}}
+!
+! Now generate the manual text in on-line help form
+!
+{Set Sec_Func,the help for functions}
+{Set Sec_Impl,the help for implementation information}
+!
+{Set Outos,FALSE}
+{Set output,@Helpfile}
+!
+{Display}{Display ...Starting to generate the on-line help file}
+{Display}
+!
+{Setq Os,{D 1}}{Setq Ul,{D 1}}{Setq Dbl,{D 1}}
+{Setq Hl,{Brk}{Tset Lmg,1}{Setv Hlval,{Add1 @1}} -
+   {Replace {Cond {Eq @1,1}{Gt {Dsize 2},31},{Substr @2,1,31},,@2},<~ >,__}-
+   {Brk}{Restore Lmg}{Display {Hlval} - {D 2}}-
+}
+{Set Pagelength,66}{Set lmg,2}{Set Rmg,60}{Fj}
+{Set P}{Set Newpage}{Set Endpage}
+{Setq List,{Brk}{Lin 5}{Ls 1}-
+	{Set Listval,0}}
+{Setq Listelem,-
+   {Cond {Leq @1},{Ls 1}{Outdent 5}{Lpad {Setv.Add1 Listval}.~~,5},,-
+     {Hl @Hlval,@1}{Set.Sub1 Hlval}}-
+}
+{Setq Endlist,{Ls 1}{Restore Lmg}}
+{set bslack,0}
+{tset lmg,1}
+1 SPITBOL{brk}
+{Tset.Add1 Lmg}
+{Nfj}
+Invokes the MACRO SPITBOL (SNOBOL4) interpreter.
+
+Format:
+
+        SPITBOL  file-spec
+
+{Brk}{Restore Lmg}
+{Fj}
+2 Parameters{Brk}
+file-spec{brk}
+{Tset.Add1 Lmg}
+A legal file specification designating the input file for SPITBOL without
+wild cards.
+ Only one file can be designated for file-spec.
+ No logical concatenation via "+" or successive processing via "," is
+supported.
+{Brk}{restore Lmg}
+2 Qualifiers{Brk}
+/CRC (D){Brk}
+/NOCRC{Brk}
+{Tset.Add1 Lmg}
+This switch is only meaningful on a /LOAD=... operation, where the
+specification of /NOCRC will bypass the cyclic reducdancy check of
+the SPITBOL code region.
+ The purpose of this check is to insure that the version of SPITBOL
+being used is the same as the version under which the exit module was
+saved.
+ As SPITBOL also checks version identification data and other parameters,
+the overhead for this check may be considered unnecessary for frequently
+used load modules.
+ In such cases, /NOCRC can be profitably specified.
+{Brk}{Restore Lmg}
+/CSTATS (D){Brk}
+/NOCSTATS{Brk}
+{Tset.Add1 Lmg}
+This switch will enable/disable the printing of compilation
+statistics on the output file.
+ If /NOLIST has been specified, the default is /NOCSTATS.
+{Brk}{Restore Lmg}
+/ESTATS (D){Brk}
+/NOESTATS{Brk}
+{Tset.Add1 Lmg}
+This switch will suppress the printing of execution
+statistics on the output file.
+ If /NOLIST has been specified, then the default is /NOESTATS.
+{Brk}{Restore Lmg}
+/EXECUTE (D){Brk}
+/NOEXECUTE{Brk}
+{Tset.Add1 Lmg}
+This switch has the same logical effect as a
+-NOEXECUTE control card in the source program.
+ SPITBOL will process the source program, and then exit with a
+message that Execution Was Suppressed.
+{Brk}{Restore Lmg}
+/LIST[=filename] (/LIST=Inputfile.LIS (D)){Brk}
+/NOLIST{Brk}
+{Tset.Add1 Lmg}
+The /LIST switch allows specification of the filename for the
+standard output channel.
+ If a terminal device is specified for the /LIST switch,
+then form feeds in the program listing will be suppressed.
+ The default device and account for this file is the same as that under
+which SPITBOL is being run.
+ The default name for the output file is the input file's name, and
+the default extension is ".LIS".
+ The program listing and compilation statistics are sent to this file.
+ If neither of /OUTPUT=... or /NOOUTPUT are also specified on the command
+line, then execution output is also directed to this file.
+ This includes OUTPUT assigned text and TRACE and DUMP output.
+{Ls 1}The /NOLIST switch indicates that source listing is not to be generated.
+/NOLIST also causes an implicit /NOESTATS and /NOCSTATS.
+ Note that the appearance of /NOLIST does not mean that
+no output will be sent to the standard output channel.
+ However, if the program makes no reference to the standard output channel,
+then if /NOLIST is specified, this channel will never be opened.
+{Ls 1}/LIST with no filename inverts the effect of a previous /NOLIST spec.
+ That is, enables source listing and compilation statistics.
+{Brk}{Restore Lmg}
+!
+/MINC=nnn (MINC=20 (D)){brk}
+{Brk}{Tset.Add1 Lmg}
+This switch controls the number of pages by which
+SPITBOL's working store is expanded when it becomes exhausted.
+ Under normal circumstances, it should not be necessary to specify
+this switch, however, "/MINC=0" will prevent any additional allocation
+to SPITBOL past the MINT allocation, and may thus be useful in
+preventing the unrestrained growth of the interpreter.
+{Brk}{Restore Lmg}
+!
+/MINT=nnn (MINT=200 (D)){Brk}
+{Tset.Add1 Lmg}
+This switch controls the amount of virtual memory
+(in 512 Byte pages) that will be initally allocated for SPITBOL's
+working storage areas.
+ The SPITBOL VMS interface is designed to permit these working storage
+areas to grow indefinitely, as long as the region remains contiguous,
+and there are pages available in the process' virtual quota.
+ However, SPITBOL will not request additional memory from VMS unless
+it cannot get enough by regenerating its existing store.
+ So, this switch may be useful in some situations
+to avoid garbage collector thrashing.
+{Ls 1}The default for this switch is "/MINT=200" which is equivalent to
+about 100K bytes, or 25,000 SPITBOL 'words' (VAX Longwords).
+ Stack space is not included in the MINT allocation, instead,
+stack is allocated by SPITBOL as needed.
+{Brk}{Restore Lmg}
+!
+/OUTPUT[=Filename] (/OUTPUT (D)){brk}
+/NOOUTPUT{Brk}
+{Tset.Add1 Lmg}
+ The /OUTPUT=filename switch requests an alternate file for the
+standard output channel at execution time.  If this switch is not specified,
+then execution output is directed at the same file as the source listing
+(/LIST=filename).
+ This file is not opened until execution begins.
+ If at that time the channel cannot be opened, SPITBOL exits with a
+fatal status.
+{Ls 1}/NOOUTPUT directs any execution-time references to the standard
+output channel to the null device (NL:)
+{Ls 1}/OUTPUT with no filename restores the default condition.
+ That is, execution output is appended to the listing output.
+{Ls 1}Note that /OUTPUT and /LIST are not synonymous.
+{Brk}{Restore Lmg}
+!
+/PAGE (D){Brk}
+/NOPAGE{brk}
+{Tset.Add1 Lmg}
+If this switch is specified, page separators in
+the source listing and statistics will be a few blank lines, instead of
+form feeds.
+ "/PAGE" is the default, unless the standard output channel
+is a terminal, in which case "/NOPAGE" is the default.
+{Brk}{Restore Lmg}
+!
+/WARN (D){Brk}
+/NOWARN{Brk}
+{Tset.Add1 Lmg}
+When /NOWARN is indicated on the command line, only errors and severe
+errors in the VMS interface logic will be reported on SYS$ERROR.
+ This can be useful to suppress messages regarding source line truncation,
+exit module saves and similar messages.
+/WARN, the default, causes reporting of such conditions.
+{Ls 1}This switch does not affect in any way SPITBOL's handling of errors with
+respect to the program.
+{Brk}{Restore Lmg}
+/WIDTH=nnn{brk}
+{Tset.Add1 Lmg}
+SPITBOL attempts to compute a proper width for the standard output file.
+ The switch "/WIDTH=n" can be used to override any default.
+ Otherwise, if the output device is record-oriented (including
+spooled files), the default is the buffer for the device as
+indicated by VMS.
+ If the buffer size cannot be obtained, or is outside the range
+[0..255], then a final default of 132 (decimal) is applied.
+{Brk}{Restore Lmg}
+{Restore Lmg}
+{Tset Input,@Textfile}
+!HELPDONE
+!MANDONE
+
+
+
+
+
+
+
+
+
+
+
+
+

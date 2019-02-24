@@ -1,0 +1,982 @@
+-IN80
+-TITLE TOKUNX: TRANSLATE FROM TOKENS TO UNIX ASSEMBLER
+-STITL REVISION HISTORY
+*
+*  12-AUG-82 (REG):
+*       Read tokenized input and remove EQUATES processing
+* 09-MAR-82 (SGD):
+*       CHK is back - better than ever...
+*       Copy .INI file to start of .MAR file
+* 10-SEP-81 (SGD):
+*       Read in problem label table from filename.PLB
+* 01-AUG-81 (SGD):
+*       Better encoding of CTB,CTW,BTW and WTB
+* 13-MAY-81 (SGD):
+*       Added logic in XOP to put a longword type displacement on displacement
+*       operands as VMS assembler assumes a word displacement. (Phhhhaaa - ed)
+* 15-MAR-81 (SGD):
+*       Made CHK a comment, as now handled as exception.
+* 10-SEP-80 (SGD):
+*       Made revisions to make XFER reflect VAX SBL capabilities.  Note that
+*       this version of XFER is no longer capable of running on PDP-11, since
+*       it will be too big.  [Major change was to substitute tables for LOOKUP
+*       strings, and corresponding addition of TINIT].
+* 02-AUG-80 (SGD):
+*       Altered translation of conditional branches to emit conditional
+*       branch directly.  Those which cause problems are listed in a
+*       table that inhibits the direct translation.
+* 18-MAY-80 (SGD):
+*       Fixed translation of vertical tab (CH$VT) from ASCII 011 to ASCII 012
+*       to conform to SOS Editor standard.
+*
+-STITL INTRODUCTION
+*
+*               ________________________________
+*
+*			  Coded by:
+*			Steven G. Duff
+*		   1345-M16 Cabrillo Park Dr.
+*		   Santa Ana, California 96701
+*			(714) 541-9619
+*
+*	This is a Macro Spitbol program for translation of the Macro
+*	Spitbol Minimal Source to Vax 11/780 Macro Source.  The program
+*	is fairly simple in order that it be able to run in the limited
+*	address space of a PDP-11.  As a consequence, certain of the
+*	Minimal Opcodes are left untranslated, to be expanded as macros
+*	at assembly time.  These macros are:
+*
+*		AOV, BSW, CMC, CVD, CVM, ESW,
+*		IFF, LSX, MCB, MFI, MVC, MVW, MWB, RMI, SEC, TRC.
+*
+*	There are two principal parts of Minimal that make translation
+*	tricky vis-a-vis VAX MACRO-32:
+*
+*
+*	Tricky #1: BSW,IFF and ESW normally require buffering, sorting
+*		etc.  These can (and are) handled by macros though.  BSW
+*		emits a CASEL and a word table containing the default
+*		value.  IFF re-biases the location counter during assembly
+*		and overwrites the default word.  ESW resets the location
+*               counter back.  XFER is not capable of handling the needed
+*               computation without more working store.
+*
+*       VVVVVVVVV  NOW HANDLED BY TOKENIZER
+*       Tricky #2: Minimal operands of the form DLBL(X) must be translated
+*               to 4*DLBL(X) as called for by the language spec.  This
+*               requires that XFER be able to distinguish DLBLs from other
+*               stuff.  This in turn means that a record of all EQU labels
+*               must be kept.  This eats up a lot of working store, but
+*               can't be helped.
+*
+*       The other macro-ops are simple enough, and are omitted purely to
+*       avoid using up dynamic unnecessarily.
+-EJECT
+*       This program works with four files, with the same name, and
+*       different extensions.  Name.MIN is used as the source input
+*       file.  Name.MAR is created and becomes the source output file.
+*       Name.ERR is created, and is where the ERR and ERB messages and
+*       numbers are written.  Name.INI is a prefix (MACRO32) file
+*       that is read as input and copied to Name.MAR before translation
+*       begins.
+*
+*       The VAX assembler does not permit an equate to a register symbol
+*       for the purpose of creating symbolic register names.
+*       Thus this translator maps registers from Minimal to Vax thusly:
+*
+*                       RA  <=>  R2
+*                       CP  <=>  R3
+*                       IA  <=>  R5
+*			WA  <=>  R6
+*			WB  <=>  R7
+*			WC  <=>  R8
+*			XR  <=>  R9
+*			XL  <=>  R10  (XT ALSO)
+*			XS  <=>  SP   (R14)
+*
+*	Additionally, there are two other 'phantom' registers assumed
+*	by the translator - a scratch register (SR) which is used by
+*	a few instructions and by some of the character macros for
+*	holding temps, and EXI for returns.  For remaindering,
+*	a register (IA2) is presumed to be available immediately below IA.
+*	The mappings of these registers are:
+*
+*			IA2 <=>  R4
+*			SR  <=>  R11
+*
+*	Changes to this mapping are ill-advised and difficult.
+*
+*
+*	XFER aint got much smarts (it cant afford them).  Except for cursory
+*	syntax and opcode checks, almost anything will get through, so it
+*	should be said that it expects valid Minimal Source.  Simple errors
+*	are flagged on the listing (with a traceback) and a count given at
+*	the end, so they should not be too hard to find.
+-STITL INITIALIZATION
+*                       WARNING - POST NO LABELS!!!!!
+*                       -----------------------------
+*       No labels should appear in this initializing code that would prevent
+*       the code from being garbage-collected by SPITBOL.
+-SPACE 3
+*       Keyword initialization
+*
+        &ANCHOR = 1;    &TRIM = 1;      &STLIMIT = -1
+*
+*       Useful constants
+*
+        MINLETS = 'ABCDEFGHIJKLMNOPQRSTUVWXY$'
+	ucase	= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	lcase	= 'abcdefghijklmnopqrstuvwxyz'
+        NOS     = '0123456789'
+        TAB     = SUBSTR( &ALPHABET,10,1 )
+        REGNAME = ('X' ANY('LSTR')) | ('W' ANY('ABC')) | 'IA' | 'RA' | 'CP'
+*
+*       Zero the counts
+*
+        LABCNT = NOUTLINES = NLINES = NSTMTS = NTARGET = NERRORS = 0
+*
+*       Get file name
+*
+        FILENAMI = INPUT
+	TERMINAL = 'TOKEN file: ' FILENAMI
+        TERMINAL =
+        FILENAMP = INPUT
+	TERMINAL = 'Problem label file: ' FILENAMP
+        TERMINAL =
+        FILENAMO = INPUT
+	TERMINAL = 'ASSEMBLER file: ' FILENAMO
+        TERMINAL =
+
+        FLCFLAG  = REPLACE( INPUT,'y','Y' )
+	TERMINAL = 'Full line comments passed? ' FLCFLAG
+*
+*       No page ejects without full line comments
+*
+        TERMINAL = DIFFER(FLCFLAG,'N')
+        EJCFLAG  = REPLACE( (DIFFER(FLCFLAG,'N') INPUT, 'N'),'y','Y' )
+	TERMINAL = 'EJCs passed? ' EJCFLAG
+-STITL XFER FUNCTIONS
+*       TINIT is used during initialization to take a string of the
+*       form  "index1[value1]index2[value2]...indexn[valuen]" and
+*       stuff the index/value pairs into a table which it returns.
+*
+	DEFINE('TINIT(STR)POS,CNT,INDEX,VAL,LASTVAL')
+*	CRACK parses STMT into a STMT data plex and returns it.
+*	It fails if there is a syntax error.
+*
+	DEFINE('CRACK(LINE)LABEL,OPCODE,OPERANDS,COMMENT,OPERAND,CHAR')
+*
+*	STMT is the common data plex used to hold the components of
+*	a statement (either Minimal or VAX) during processing.
+*
+	DATA('STMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)')
+*
+*	MINLABEL is a pattern matching a valid Minimal Source Label.
+*
+	MINLABEL = ANY(MINLETS) ANY(MINLETS) ANY(MINLETS NOS)
++		   ANY(MINLETS NOS) ANY(MINLETS NOS)
+*
+*	MINCOND is a pattern that matches Minimal Conditional assembly ops
+*
+	MINCOND	= 'IF' | 'THEN' | 'ELSE' | 'FI' | 'DEF' | 'UNDEF'
+*
+-EJECT
+*       DOSTMT is the driver routine that causes processing of the
+*       statement plex in THISSTMT.
+*
+        DEFINE('DOSTMT()LABEL,OPCODE,OP1,OP2,OP3,COMMENT,T')
+*
+*       HANDLER is a table providing the name of the processing appendage
+*       for every Minimal Op-Code.  The name in this table is prefixed with
+*       "H_" to get the string name of the appendage.  Every op must be
+*       in this string, including conditional ops.
+*
+        HANDLER = TINIT(
++               'ADD[H]ADI[ADD2]ADR[ADD2]ANB[ANB]'
++               'AOV[AOV]BCT[H]BEQ[BCMP]BGE[BCMP]'
++               'BGT[BCMP]BHI[BCMP]BLE[BCMP]BLO[BCMP]'
++               'BLT[BCMP]BNE[BCMP]BRN[H]BRI[BRI]'
++               'BNZ[BTST]'
++               'BSW[BSW]BTW[BTW]BZE[BTST]CEQ[BCMP]'
++               'CHK[SBCALL]CMB[CMB]CMC[CMC]CNE[BCMP]'
++               'CSC[NOOP]CTB[CTX]CTW[CTX]CVD[CVD]'
++               'CVM[CVM]DAC[H]DBC[H]DCA[NEW1]'
++               'DCV[H]DEF[ZZZ]DIC[DXC]DRC[DXC]'
++               'DTC[DTC]DVI[ADD2]DVR[ADD2]EJC[EJC]'
++               'ELSE[ZZZ]END[END]ENP[NOOP]ENT[ENT]'
++               'EQU[EQU]ERB[ERX]ERR[ERX]ESW[NOOP]'
++               'EXI[EXI]EXP[GBLS]FI[ZZZ]FLC[FLC]ICA[NEW1]'
++               'ICP[ICP]ICV[H]IEQ[ATST]IF[ZZZ]'
++               'IFF[IFF]IGE[ATST]IGT[ATST]ILE[ATST]'
++               'ILT[ATST]INE[ATST]INO[OVF]INP[GBLS]'
++               'INR[GBLS]IOV[OVF]ITR[ITR]JSR[H]'
++               'LCH[SWP12]LCT[LCT]LCP[ADD2]LCW[NEW1]'
++               'LDI[ADD2]LDR[ADD2]LEI[LEI]LSH[XSH]'
++               'LSX[H]MCB[SBCALL]MFI[MFI]MLI[ADD2]MLR[ADD2]'
++               'MNZ[NEW1]MOV[H]MTI[ADD2]MVC[SBCALL]'
++               'MVW[SBCALL]MWB[SBCALL]NGI[NGX]NGR[NGX]'
++               'NZB[BTST]ORB[H]PLC[PXC]PPM[PPM]'
++               'PRC[PRC]PSC[PXC]REQ[ATST]RGE[ATST]'
++               'RGT[ATST]RLE[ATST]RLT[ATST]RMI[RMI]'
++               'RNE[ATST]RNO[OVF]ROV[OVF]RSH[XSH]'
++               'RSX[H]RTI[RTI]RTN[NOOP]SBI[ADD2]'
++               'SBR[ADD2]SCH[H]SCP[NEW1]SEC[SEC]'
++               'SSL[NOOP]SSS[NOOP]STI[STX]STR[STX]'
++               'SUB[H]THEN[ZZZ]TRC[SBCALL]TTL[TTL]'
++               'ZZZ[UNDEF]WTB[WTB]XOB[H]'
++               'ZER[H]ZGB[NOOP]ZRB[BTST]')
+*
+*       H_ADD2.OPS is used by the H_ADD2 appendage to find
+*       the operand it is to insert.
+*
+        H_ADD2.OPS = TINIT(
++               'ADI[R5]ADR[R2]DVI[R5]DVR[R2]LCP[R3]LDI[R5]'
++               'LDR[R2]MLI[R5]MLR[R2]MTI[R5]SBI[R5]SBR[R2]')
+-EJECT
+*       H_BNCH.OPCS provides opcode translations for branch-type
+*       instructions.  Branches are emitted directly, unless they are
+*       in the H_BNCH.PLAB problem label table, in which case an inverted
+*       branch/jump combination is emitted.
+*
+        H_BNCH.OPCS = TINIT('BEQ[BEQLU]BGE[BGEQU]BGT[BGTRU]BHI[BGEQU]'
++               'BLE[BLEQU]BLO[BLEQU]BLT[BLSSU]BNE[BNEQU]'
++               'BNZ[BNEQU]BZE[BEQLU]CEQ[BEQLU]'
++               'CNE[BNEQU]IEQ[BEQL]IGE[BGEQ]IGT[BGTR]'
++               'ILE[BLEQ]ILT[BLSS]INE[BNEQ]INO[BVC]'
++               'IOV[BVS]NZB[BNEQU]'
++               'REQ[BEQL]RGE[BGEQ]RGT[BGTR]RLE[BLEQ]'
++               'RLT[BLSS]RNE[BNEQ]RNO[BVC]ROV[BVS]'
++               'ZRB[BEQLU]')
+*
+*       H_BNCH.PLAB is a list of problem labels which for which 'short'
+*       conditional jumps cannot be issued, because one or more instructions
+*       in the code cause range trouble.  Inverted branches are emitted
+*       instead.
+*
+        H_BNCH.PLAB = TABLE(101)
+*
+*       H_BNCH.IOCS is a translate list for the inverted branches needed
+*       for problem labels.
+*
+        H_BNCH.IOCS = TINIT('BEQ[BNEQU]BGE[BLSSU]BGT[BLEQU]BHI[BLSSU]'
++               'BLE[BGTRU]BLO[BGTRU]BLT[BGEQU]BNE[BEQLU]'
++               'BNZ[BEQLU]BZE[BNEQU]CEQ[BNEQU]'
++               'CNE[BEQLU]IEQ[BNEQ]IGE[BLSS]IGT[BLEQ]'
++               'ILE[BGTR]ILT[BGEQ]INE[BEQL]INO[BVS]'
++               'IOV[BVC]NZB[BEQLU]'
++               'REQ[BNEQ]RGE[BLSS]RGT[BLEQ]RLE[BGTR]'
++               'RLT[BGEQ]RNE[BEQL]RNO[BVS]ROV[BVC]'
++               'ZRB[BNEQU]')
+*
+*       H_EQU.DEFS is used by H_EQU to insert the fluid EQU
+*       definitions (...EQU *).
+*
+        H_EQU.DEFS = TINIT(
++               'CFP$A[256]CFP$B[4]CFP$C[4]CFP$F[8]'
++               'CFP$I[1]CFP$M[0X7FFFFFFF]CFP$N[32]'
++		'NSTMX[10]CFP$R[1]CFP$S[6]CFP$X[2]'
++		'CFP$U[128]'
++		'E$SRS[50]E$STS[512]E$CBS[512]E$HNB[253]'
++		'E$HNW[3]E$FSP[20]'
++		'CH$LA[065]CH$LB[066]CH$LC[067]CH$LD[068]'
++               'CH$LE[069]CH$LF[070]CH$LG[071]CH$LH[072]'
++               'CH$LI[073]CH$LJ[074]CH$LK[075]CH$LL[076]'
++               'CH$LM[077]CH$LN[078]CH$LO[079]CH$LP[080]'
++               'CH$LQ[081]CH$LR[082]CH$LS[083]CH$LT[084]'
++               'CH$LU[085]CH$LV[086]CH$LW[087]CH$LX[088]'
++               'CH$LY[089]CH$L$[090]'
++               'CH$D0[048]CH$D1[049]CH$D2[050]CH$D3[051]'
++               'CH$D4[052]CH$D5[053]CH$D6[054]CH$D7[055]'
++               'CH$D8[056]CH$D9[057]'
++               'CH$$A[097]CH$$B[098]CH$$C[099]CH$$D[100]'
++               'CH$$E[101]CH$$F[102]CH$$G[103]CH$$H[104]'
++               'CH$$I[105]CH$$J[106]CH$$K[107]CH$$L[108]'
++               'CH$$M[109]CH$$N[110]CH$$O[111]CH$$P[112]'
++               'CH$$Q[113]CH$$R[114]CH$$S[115]CH$$T[116]'
++               'CH$$U[117]CH$$V[118]CH$$W[119]CH$$X[120]'
++               'CH$$Y[121]CH$$$[122]'
++               'CH$AM[038]CH$AS[042]CH$AT[064]CH$BB[060]'
++               'CH$BL[032]CH$BR[124]CH$CL[058]CH$CM[044]'
++               'CH$DL[036]CH$DT[046]CH$DQ[034]CH$EQ[061]'
++               'CH$EX[033]CH$MN[045]CH$NM[035]CH$NT[126]'
++               'CH$PC[037]CH$PL[043]CH$PP[040]CH$RB[062]'
++               'CH$RP[041]CH$QU[063]CH$SL[047]CH$SM[059]'
++               'CH$SQ[039]CH$UN[095]CH$OB[091]CH$CB[093]'
++               'CH$HT[009]CH$VT[012]IODEL[000]')
+-EJECT
+*       H_H.XOPS is a table that encodes opcode translation
+*       for H_H.
+*
+        H_H.XOPS =  TINIT(
++               'ADD[ADDL2]ADI[ADDL2]ADR[ADDF2]ANB[BICL2]'
++               'BCT[SOBGTR]'
++               'BRN[JMP]'
++               'CMB[MCOML]'
++               'CTB[BICL2]CTW[ASHL]'
++               'DAC[.LONG]DBC[.LONG]'
++               'DCA[SUBL2]DCV[DECL]DIC[.LONG]DRC[.FLOAT]'
++               'DVI[DIVL2]DVR[DIVF2]EJC[#PAGE]'
++               'ERB[JMP]'
++               'ERR[.LONG]'
++               'ICA[ADDL2]ICP[TSTL]ICV[INCL]'
++               'ITR[CVTLF]JSR[JSB]'
++               'LCH[MOVZBL]LCT[MOVL]LCP[MOVL]LCW[MOVL]'
++               'LDI[MOVL]LDR[MOVF]LEI[MOVZWL]LSH[ASHL]'
++               'MLI[MULL2]MLR[MULF2]'
++               'MNZ[MOVL]MOV[MOVL]MTI[MOVL]'
++               'NGI[MNEGL]NGR[MNEGF]'
++               'ORB[BISL2]PPM[.LONG]'
++               'RSH[ASHL]'
++               'SBI[SUBL2]'
++               'SBR[SUBF2]SCH[MOVB]SCP[MOVL]'
++		'SEC[#SEC]'
++               'STI[MOVL]STR[MOVF]'
++               'SUB[SUBL2]'
++               'TTL[#TITLE]'
++               'XOB[XORL2]ZER[CLRL]')
+*
+*       H_NEW1.OPS is a table used by the H_NEW1 appendage to find
+*       the operand to insert.  It is indexed by opcode.
+*
+        H_NEW1.OPS = TINIT(
++               'ICA[$4]DCA[$4]'
++               'LCW[(R3)+]MNZ[SP]SCP[R3]')
+*
+*       Associate file for ERB,ERR messages in H_ERX
+*
+        OUTPUT(.ERRFILE,4,(IDENT(FILENAMO) '',  'min.err'))
+-EJECT
+*       Error is used to report an error for THISSTMT
+*
+        DEFINE('ERROR(TEXT)')
+-SPACE 3
+*       OUTSTMT is used to send a target statement to the target code
+*       output file (OUTFILE <=> LU2)
+*
+        DEFINE('OUTSTMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)T,STMTOUT')
+*
+*       Associate output file
+*
+        OUTPUT(.OUTFILE,2,(IDENT(FILENAMO) '', FILENAMO))
+*
+*       OS.LLS is used by OUTSTMT to recognise local labels
+*
+        OS.LLS  = SPAN(NOS) '$' RPOS(0)
+*
+*       READLINE is called to return the next non-comment line from
+*       the Minimal input file (INFILE <=> LU1).   Note that it will
+*       not fail on EOF, but it will return a Minimal END statement
+*
+        DEFINE('READLINE()')
+*
+*       Associate input file to LU1
+*
+        INPUT(.INFILE,1,(IDENT(FILENAMI) '', FILENAMI))
+-EJECT
+*
+*       XOP.REGS is a pattern to match out register names for translation.
+*
+        XOP.REGS = (*REGNAME . VAL  RPOS(0) . PREFIX)  |
++                  (BREAK('(') LEN(1)) . PREFIX   LEN(2) . VAL
+*
+*       XOP.XREGS is a table with register translations
+*
+        XOP.XREGS = TINIT('IA[R5]RA[R2]CP[R3]WA[R6]WB[R7]WC[R8]XR[R9]'
++                   'XL[R10]XT[R10]XS[SP]')
+*
+*       XPINTX is a pattern that will match the INT(X) type operand
+*
+        XPINTX  = SPAN(NOS) . VAL  '('
+*
+*       XPDLBLX is a pattern that will match the DLBL(X) type operand
+*
+        XPDLBLX = MINLABEL . VAL  '('
+-STITL MAIN PROGRAM
+*       Here follows the driver code for the "main" program.
+-SPACE 3
+*       Read the problem label table
+*
+        INPUT(.PLTAB,.PLTAB,DIFFER(FILENAMP) FILENAMP)  :F(MN02)
+MN01    H_BNCH.PLAB[PLTAB] = 1                        :S(MN01)
+        ENDFILE(.PLTAB)
+MN02
+*
+*       Loop until program exits via H_END
+*
+MN04    DOSTMT()                                        :(MN04)
+-STITL CRACK(LINE)
+*       CRACK is called to create a STMT plex containing the various
+*       entrails of the Minimal Source statement in LINE.  For
+*       conditional assembly ops, the opcode is the op, and OP1
+*       is the symbol.  Note that DTC is handled as a special case to
+*       assure that the decomposition is correct.
+*
+*       CRACK will print an error and fail if a syntax error occurs.
+*
+CRACK   NSTMTS  = NSTMTS + 1
+        LINE    '{' BREAK( '{' ) . LABEL
++               '{' BREAK( '{' ) . OPCODE
++               '{' BREAK( '{' ) . OP1
++               '{' BREAK( '{' ) . OP2
++               '{' BREAK( '{' ) . OP3
++               '{' REM          . COMMENT              :F(CS03)
+        IDENT(OPCODE,'DTC')                             :S(CS00)
+        OP1 ANY('@') = '*'
+        OP1 ANY('#') = '$'
+        OP2 ANY('@') = '*'
+        OP2 ANY('#') = '$'
+CS00    CRACK   = STMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)
+*
+*       Operands all parsed out.  That's all folks.
+*
+CS01    :(RETURN)
+*
+*       Here on syntax error
+*
+CS03    ERROR('SOURCE LINE SYNTAX ERROR')               :(FRETURN)
+-STITL DOSTMT()
+*       DOSTMT is invoked to initiate processing of the next line from
+*       READLINE.  For efficient access
+*       DOSTMT puts name values corresponding to the components in
+*       variables with the same names (LABEL, OPCODE, OP1,OP2,OP3 and
+*       COMMENT) which allows the various handlers to $var to store/fetch
+*       the values of the statment.
+*
+*       After doing this, DOSTMT branches to the handler routine indicated
+*       for this opcode in the HANDLER table (there must be an entry or
+*       an error results).  The handlers all have entry points beginning
+*       with "H_", and can be considered a logical extension of the
+*       DOSTMT routine.  The handlers have the choice of branching back
+*       to DSGEN to cause the THISSTMT plex to be sent to OUTSTMT, or
+*       of RETURNing themselves, in which case the handler must output
+*       all needed code itself.
+*
+*       The handlers are listed in a separate section below.
+*
+DOSTMT  THISLINE = READLINE()
+        THISSTMT = CRACK(THISLINE)              :F(DOSTMT)
+        LABEL   = .LABEL(THISSTMT)
+        OPCODE  = .OPCODE(THISSTMT)
+	MINOP	= $OPCODE
+	OP1	= .OP1(THISSTMT)
+	OP2	= .OP2(THISSTMT)
+	OP3	= .OP3(THISSTMT)
+	COMMENT	= .COMMENT(THISSTMT)
+*
+*	Get handler entry point (less "H_" prefix)
+*
+	DIFFER(T = HANDLER[$OPCODE])			:F(DS01)
+*
+*	Jump to handler
+*
+	:($('H_' T))
+*
+*	Here if bad OpCode
+*
+DS01	ERROR('BAD OP-CODE')				:(RETURN)
+*
+*	Handlers can come back here to cause code generation of THISSTMT
+*
+DSGEN	OUTSTMT($LABEL,$OPCODE,$OP1,$OP2,$OP3,$COMMENT)	:(RETURN)
+-STITL ERROR(TEXT)
+*       This module handles reporting of errors with the offending
+*       statement text in THISLINE.  Comments explaining
+*       the error are written to the listing (including error chain), and
+*       the appropriate counts are updated.
+*
+ERROR   OUTFILE = '# *???* ' THISLINE
+        OUTFILE = '#       ' TEXT
++                 (IDENT(LASTERROR),'. LAST ERROR WAS LINE ' LASTERROR)
+        LASTERROR = NOUTLINES
+        NOUTLINES = NOUTLINES + 2
+        NERRORS = NERRORS + 1
++                       :(RETURN)
+-STITL OUTSTMT(LABEL,OPCODE,OP1,OP2,OP3,COMMENT)
+*       This module writes the components of the VAX MACRO statement
+*       passed in the argument list to the formatted .MAR file
+*
+OUTSTMT STMTOUT = (IDENT(LABEL) TAB,
++                       LABEL ':'  TAB)
++                 OPCODE  (GT(SIZE(OPCODE),7) ' ', TAB)
++                 (IDENT(OP1), OP1
++                       (IDENT(OP2), ',' OP2
++                               (IDENT(OP3), ',' OP3)))
++                 (IDENT(COMMENT),
++                       (GT(T = SIZE(OP1 OP2 OP3), 16) ' ',
++                               DUPL(TAB, (22 - T) / 8))
++                       '# ' COMMENT)
+*
+*	Translate everything but string constants to lower case.
+*
+	stmtout	= differ( opcode,'.ASCII' )
++		  replace( stmtout,ucase,lcase )
+	stmtout  ident( opcode,'.ASCII' )
++		 ( break(*tab) *tab break(*tab) ) $ t =
++		 replace( t,ucase,lcase )
+*
+*       Send text to OUTFILE
+*
+        OUTFILE = STMTOUT
+        NTARGET = NTARGET + 1
+        NOUTLINES = NOUTLINES + 1
++                       :(RETURN)
+-STITL READLINE()
+*       This routine returns the next statement line in the input file
+*       to the caller.  It never fails.  If there is no more input,
+*       then a Minimal END statement is returned.
+*       Comments are passed through to the output file directly.
+*
+*
+READLINE READLINE = INFILE                      :F(RL02)
+        NLINES  = NLINES + 1
+        READLINE  ANY('*') = '#'                :F(RL01)
+*
+*       Only print comment if requested.
+*
+        OUTFILE = IDENT(FLCFLAG,'Y') READLINE   :F(READLINE)
+        NOUTLINES = NOUTLINES + 1               :(READLINE)
+*
+*       Here if not a comment line
+*
+RL01    :(RETURN)
+*
+*       Here on EOF
+*
+RL02    READLINE = '       END'
+                        :(RL01)
+-STITL TINIT(STR)
+*       This routine is called to initialize a table from a string of
+*       index/value pairs.
+*
+TINIT   POS     = 0
+*
+*       Count the number of "[" symbols to get an assessment of the table
+*       size we need.
+*
+TIN01   STR     (TAB(*POS) '[' BREAK(']') *?(CNT = CNT + 1) @POS)
++                                       :S(TIN01)
+*
+*       Allocate the table, and then fill it. Note that a small memory
+*       optimisation is attempted here by trying to re-use the previous
+*       value string if it is the same as the present one.
+*
+        TINIT   = TABLE(CNT)
+TIN02   STR     (BREAK('[') $ INDEX LEN(1) BREAK(']') $ VAL LEN(1)) =
++                                       :F(RETURN)
+        VAL     = CONVERT(VAL,'INTEGER')
+        VAL     = IDENT(VAL,LASTVAL) LASTVAL
+        LASTVAL = VAL
+        TINIT[INDEX] = VAL              :(TIN02)
+-STITL OPCODE HANDLER APPENDAGES
+*       Ops that need a second operand (get from table).
+*
+H_ADD2  $OP2    = H_ADD2.OPS[$OPCODE]           :(H_H)
+-SPACE 3
+*       Do ANB opcode
+*
+H_ANB   OUTSTMT($LABEL,'MCOML',$OP1,'R11',,$COMMENT)
+        $OP1    = 'R11'
+        $LABEL  = $COMMENT =                    :(H_H)
+-SPACE 3
+*       DO AOV
+*
+H_AOV   OUTSTMT($LABEL,'ADDL2',$OP1,$OP2,,$COMMENT)
+        OUTSTMT(,'BVC','0F')
+        OUTSTMT(,'JMP',$OP3)
+        OUTSTMT('0')                            :(RETURN)
+-SPACE 3
+*       Real and Integer Branch tests
+*       CHANGE CALL OF XOP TO XOP.XREGS LOOKUP
+*
+H_ATST  OUTSTMT($LABEL,'TST' (IDENT(SUBSTR($OPCODE,1,1),'R') 'F', 'L'),
++               XOP.XREGS[SUBSTR($OPCODE,1,1) 'A'],,,$COMMENT)
+        $OP2    = $OP1                          :(H_BNCH)
+-SPACE 3
+*       Comparison branches - emit a CMPL
+*
+H_BCMP  OUTSTMT($LABEL,'CMPL',$OP1,$OP2,,$COMMENT)
+        $OP2    = $OP3                          :(H_BNCH)
+-SPACE 3
+*       Entered via various handlers to generate conditional branch code
+*
+H_BNCH  DIFFER(H_BNCH.PLAB[$OP2])       :S(H_BNCH01)
+        OUTSTMT(,H_BNCH.OPCS[$OPCODE],$OP2)     :(RETURN)
+H_BNCH01 OUTSTMT(,H_BNCH.IOCS[$OPCODE],'0F')
+        OUTSTMT(,'JMP',$OP2)
+        OUTSTMT('0')                            :(RETURN)
+-SPACE 3
+*       Handle BRI instruction with indirection
+*
+H_BRI   OUTSTMT($LABEL,'MOVL',$OP1,'R11',,$COMMENT)
+        OUTSTMT(,'JMP','(R11)')                 :(RETURN)
+-EJECT
+*
+*	BSW generates a CASEL and a label for .WORD references.
+*
+h_bsw	outstmt( $label,'CASEL',$OP1,'$0','$' $OP2,$COMMENT )
+	outstmt( '5' )				:(return)
+-SPACE 3
+*       Zero branch comparisons
+*
+H_BTST  OUTSTMT($LABEL,'TSTL',$OP1,,,$COMMENT)
++                                               :(H_BNCH)
+-EJECT
+*       BTW opcode
+*
+H_BTW   OUTSTMT($LABEL,'ASHL','$-2',$OP1,$OP1,$COMMENT) :(RETURN)
+-SPACE 3
+*       Do CMB instruction by duping operand for MCOML
+*
+H_CMB   $OP2    = $OP1                          :(H_H)
+-SPACE 3
+*       DO CMC INSTRUCTION BY SUBROUTINE CALL
+*
+H_CMC   OUTSTMT($LABEL,'JSB','SBCMC',,,$COMMENT)
+        OUTSTMT(,'.LONG',$OP1)
+        OUTSTMT(,'.LONG',$OP2)                  :(RETURN)
+-SPACE 3
+*       Do CTB and CTW
+*
+H_CTX   OUTSTMT($LABEL,'MOVAB','3+(4*' $OP2 ')(' $OP1 ')',$OP1,,$COMMENT)
+        $LABEL  = $COMMENT =
+        $OP2    = $OP1
+        $OP1    = (IDENT($OPCODE,'CTB') '$3','$-2')
+        $OP3    = IDENT($OPCODE,'CTW') $OP2             :(H_H)
+-SPACE 3
+*       DO CVD
+*
+H_CVD   OUTSTMT($LABEL,'ASHQ','$-32','R4','R4',$COMMENT)
+        OUTSTMT(,'EDIV','$10','R4,R5,R6')
+        OUTSTMT(,'MNEGL','R6','R6')
+        OUTSTMT(,'BISB2','$0X30','R6')                  :(RETURN)
+-SPACE 3
+*       DO CVM
+*
+H_CVM   OUTSTMT($LABEL,'MULL2','$10','R5',,$COMMENT)
+        OUTSTMT(,'BVC','0F')
+        OUTSTMT(,'JMP',$OP1)
+        OUTSTMT('0','BICL2','$0XFFFFFFF0','R7')
+        OUTSTMT(,'SUBL2','R7','R5')
+        OUTSTMT(,'BVC','1F')
+        OUTSTMT(,'JMP',$OP1)
+        OUTSTMT('1')                                   :(RETURN)
+-SPACE 3
+*	Handle DIC and DRC by stripping leading plus (UNIX as does not
+*	support unary plus) and placing "0f" in front of single
+*	precision floating point constants.
+*
+h_dxc	$op1 '+' =
+	$op1 = ident( $opcode,'DRC' ) '0f' $op1	:(h_h)
+-SPACE 3
+*       Handle DTC by emitting .ASCII and then alignment order
+*
+H_DTC   $OP1    = '"' SUBSTR($OP1,2,SIZE($OP1) - 2) '"'
+        OUTSTMT($LABEL,'.ASCII',$OP1,,,$COMMENT)
+        OUTSTMT(,'.ALIGN','2',)                  :(RETURN)
+-SPACE 3
+*       EJC checks to see if page feeds are to be passed.
+*
+H_EJC   IDENT(EJCFLAG,'Y')                      :S(H_H)F(RETURN)
+-SPACE 3
+*       END prints statistics on terminal then exits program
+*
+H_END   OUTSTMT(,'#END',,,,$COMMENT)
+        TERMINAL = '*** TRANSLATION COMPLETE ***'
+        TERMINAL = NLINES ' LINES READ.'
+        TERMINAL = NSTMTS ' STATEMENTS PROCESSED.'
+        TERMINAL = NTARGET ' TARGET CODE LINES PRODUCED.'
+        TERMINAL = NERRORS ' ERRORS OCCURRED.'
+        TERMINAL = DIFFER(LASTERROR) 'THE LAST ERROR WAS IN LINE ' LASTERROR
+        &CODE   = NE(NERRORS) 2001
+        :(END)
+-EJECT
+*       ENT emits the word ID (if needed) and the entry label
+*
+H_ENT   IDENT($OP1)                     :S(H_ENT01)
+        OUTSTMT(,'.ALIGN','2')
+        OUTSTMT(,'.WORD',$OP1)
+*
+*       Merge here to emit label entry point
+*
+H_ENT01 OUTSTMT($LABEL,,,,,$COMMENT)    :(RETURN)
+*       Handle EQU by substituting '*' operands from definitions table
+*       if necessary
+*
+H_EQU   $OP2    = $OP1
+        $OPCODE = '.SET'
+        $OP1    = $LABEL
+        $OP2    = IDENT($OP2,'*') H_EQU.DEFS[$LABEL]
+        $LABEL  =                                       :(DSGEN)
+-SPACE 3
+*       Handle ERB and ERR in essentially the same way.  First, send
+*       the message to the auxilliary .ERR file.  Then make sure to
+*       note if this is the highest error # seen so far, so branch
+*       table can be properly emitted (see SEC).  Then set OP1 to
+*       be "ERROR_" concatenated with the error number.  This label
+*       refers to a label in the jump table that will load this error
+*       code in WA and jump to ERROR$.
+*
+H_ERX   ERRFILE = LPAD($OP1,3,0) ($COMMENT = (IDENT($OP2), $OP2 ' ')
++                       $COMMENT)
+        MAXERR  = GT($OP1,MAXERR) $OP1
+        $OP1    = 'ER_' LPAD($OP1,3,0)
+        $OP2    =                               :(H_H)
+-EJECT
+*       There are 8 cases to EXI, partitioned along 3 binary dimensions.
+*       These are: 1. OP1 given/not given,  2. PTYPE is R/E or N,
+*       3. OP1=1 (or #Ppms=0 if OP1 not given).  Each possibility generates
+*       slightly different code.
+*
+H_EXI   IDENT($OP1)                             :S(H_EXI00)
+        T       = (IDENT(PTYPE,'N') PNAME '_S','(SP)+')
+        (EQ($OP1,1) OUTSTMT($LABEL,'MOVL',T,'R11',,$COMMENT),
++                OUTSTMT($LABEL,'ADDL3','$4*' $OP1 - 1,T,'R11',$COMMENT))
+        OUTSTMT(,'JMP','*(R11)+')               :(H_EXI04)
+*
+*       Here if EXI has no OP1 given (normal exit)
+*
+H_EXI00 EQ(PPMS,0)                              :S(H_EXI02)
+        IDENT(PTYPE,'N')                        :S(H_EXI01)
+*
+*       No OP1, #PPMs>0 and R/E-type
+*
+        OUTSTMT($LABEL,'ADDL2','$4*' PPMS,'(SP)',,$COMMENT)
+        OUTSTMT(,'RSB')                 :(H_EXI04)
+*
+*       Here if N-type PRC with no OP1 given & #PPMs > 0
+*
+H_EXI01 OUTSTMT($LABEL,'ADDL3','$4*' PPMS,PNAME '_S','R11',$COMMENT)
+        OUTSTMT(,'JMP','(R11)')         :(H_EXI04)
+*
+*       Here if no OP1, & #PPMs = 0
+*
+H_EXI02 IDENT(PTYPE,'N')                        :S(H_EXI03)
+*
+*       No OP1, #PPMs=0 and R/E-type
+*
+        OUTSTMT($LABEL,'RSB',,,,$COMMENT)       :(H_EXI04)
+*
+*       No OP1, #PPMs=0 and N-type
+*
+H_EXI03 OUTSTMT($LABEL,'JMP','*' PNAME '_S',,,$COMMENT)
+*
+*       Merge to exit
+*
+H_EXI04 :(RETURN)
+-EJECT
+*	FLC folds a lower case character to upper case.
+*
+H_FLC	OUTSTMT( $LABEL,'BICL2','$CH$BL',$OP1,,$COMMENT )	:(RETURN)
+*
+*	GBLS is entered to produce global directives for important
+*	routines internal and external to the compiler.
+*
+h_gbls	outstmt( ,'.GLOBL',$LABEL,,,$COMMENT )		:(return)
+-SPACE 3
+*       H is entered directly by some opcodes, and eventually by
+*       most others.  It performs an opcode translation if an entry exists
+*       for it (non-null) in the H_H.XOPS table and then goes to DSGEN to
+*       dump the statement.
+*
+H_H     $OPCODE = DIFFER(TEMP = H_H.XOPS[$OPCODE]) TEMP         :(DSGEN)
+-SPACE 3
+*       Handle ICP opcode with a TSTL on (CP)+
+*
+H_ICP   $OP1    = '(R3)+'                       :(H_H)
+-SPACE 3
+*	Handle IFF by generating a word with the proper offset.
+*
+h_iff	outstmt( ,'.WORD',$OP2 '-5B',,,$COMMENT )	:(return)
+-SPACE 3
+*       Handle ITR with a MOVLF on IA to RA
+*
+H_ITR   $OP1    = 'R5'
+        $OP2    = 'R2'                          :(H_H)
+-SPACE 3
+*       LCT does not emit if both operands are the same
+*
+H_LCT   DIFFER($OP1,$OP2)                               :S(H_SWP12)
+        OUTSTMT($LABEL,,,,,$COMMENT)                    :(RETURN)
+-SPACE 3
+*       LEI uses MOVZWL on the word just prior to the entry point
+*
+H_LEI   $OP2    = $OP1
+        $OP1    = '-2(' $OP1 ')'                        :(H_H)
+-EJECT
+*       DO MFI
+*
+H_MFI   OUTSTMT($LABEL,'MOVL','R5',$OP1,,$COMMENT)
+        IDENT($OP2)                                     :S(RETURN)
+        OUTSTMT(,'BGEQ','0F')
+        OUTSTMT(,'JMP',$OP2)
+        OUTSTMT('0')                                    :(RETURN)
+*       Make operand 1 operand 2, and put in a new operand 1 according
+*       to the table.
+*
+H_NEW1  $OP2    = $OP1
+        $OP1    = H_NEW1.OPS[$OPCODE]   :(H_H)
+-SPACE 3
+*       No-op instructions.  Comment out the opcode
+*
+H_NOOP  (IDENT($OPCODE,'INP'), IDENT($OPCODE,'INR'), IDENT($OPCODE,'EXP'))
++                                                       :S(RETURN)
+        $OPCODE = '#' $OPCODE                           :(DSGEN)
+-SPACE 3
+*       Do arithmetic negate ops
+*       CHANGE CALL OF XOP TO LOOKUP IN XOP.XREGS
+*
+H_NGX   $OP1    = $OP2 = XOP.XREGS[SUBSTR($OPCODE,3,1) 'A']
++                                                       :(H_H)
+-SPACE 3
+*       Handle arithmetic overflow tests [IOV,INO,ROV,RNO]
+*
+H_OVF   $OP2    = $OP1
+        $OP1    =                                       :(H_BNCH)
+-SPACE 3
+*       Insert dummy PPM branch point if none given
+*
+H_PPM   $OP1    = IDENT($OP1) 'INVALID$'                :(H_H)
+-SPACE 3
+*       PRC notes the operands for later EXIs in global variables, and
+*       emits save area code if N-type.
+*
+H_PRC   PTYPE   = $OP1
+        PPMS    = $OP2
+        PNAME   = $LABEL
+*
+*       If N-type, then we need a save area word
+*
+        DIFFER(PTYPE,'N')                       :S(H_PRC01)
+        OUTSTMT(,'.DATA','1')
+        OUTSTMT(PNAME '_S','.LONG','0')
+        OUTSTMT(,'.TEXT','0')
+        OUTSTMT($LABEL,'MOVL','(SP)+',PNAME '_S',,$COMMENT)
+        :(H_PRC02)
+*
+*       Here if R/E type
+*
+H_PRC01 OUTSTMT($LABEL,'#PRC',,,,$COMMENT)
+*
+*       Merge to exit
+*
+H_PRC02 :(RETURN)
+-EJECT
+*       Do PLC, PSC ops
+*
+H_PXC   (IDENT($OP2) OUTSTMT($LABEL,'MOVAB','CFP$F(' $OP1 ')',$OP1,,$COMMENT))
++                                               :S(RETURN)
+        $OP2 ((('R' ANY(NOS) (ANY(NOS) | '')) | 'SP') RPOS(0))  :S(H_PXC1)
+        OUTSTMT($LABEL,'MOVL',$OP2,'R11',,'[GET IN SCRATCH REGISTER]')
+        $LABEL  =
+        $OP2    = 'R11'
+H_PXC1  OUTSTMT($LABEL,'MOVAB','CFP$F(' $OP1 ')[' $OP2 ']',$OP1,,$COMMENT)
++                                               :(RETURN)
+-SPACE 3
+*       DO RMI
+*
+H_RMI   OUTSTMT($LABEL,'ASHQ','$-32','R4','R4',$COMMENT)
+        OUTSTMT(,'EDIV',$OP1,'R4,R11,R5')       :(RETURN)
+-SPACE 3
+*       Handle RTI with CVTFL and then BVS if PLBL present
+*
+H_RTI   OUTSTMT($LABEL,'CVTFL','R2','R5',,$COMMENT)
+        (DIFFER($OP1) OUTSTMT(,'BVS',$OP1))     :(RETURN)
+-SPACE 3
+*       SBCALL GENERATES A JSB TO THE LABEL 'SB' CONCATENTATED WITH
+*       THE MINIMAL INSTRUCTION NAME.
+*
+H_SBCALL
+        $OP1    = 'SB' $OPCODE
+        $OPCODE = 'JSB'                         :(DSGEN)
+*
+*       SEC does various things depending on the current section
+*
+H_SEC   H_SEC.CNT = H_SEC.CNT + 1
+*
+*	Generate appropriate .text and .data directives:
+*
+*	all instructions	.text 0
+*	all constants		.data 0
+*	all working storage	.data 1
+*
+*	procedures sec		-------
+*	definitions sec		-------
+*	constants sec		.data 0
+*	working storage sec	.data 1
+*	program sec		.text 0
+*	stack overflow sec	-------
+*	error section		-------
+*
+	( eq( h_sec.cnt,3 ) outstmt( ,'.DATA','0' ),
++	  eq( h_sec.cnt,4 ) outstmt( ,'.DATA','1' ),
++	  eq( h_sec.cnt,5 ) outstmt( ,'.TEXT','0' ),
++       )
+*
+*       Get rid of the extrinsic defs. if past defs. section (saves space)
+*
+        H_EQU.DEFS = EQ(H_SEC.CNT,3)
+*
+*	Be sure to generate label for program sec.
+*
+	eq( h_sec.cnt,5 )				:f(h_sec00)
+	outstmt( ,'.GLOBL','SEC04' )
+	outstmt( 'SEC04' )				:(h_sec02)
+*
+*       If we have reached the Stack Ovfl. sect. then dump the ERR list
+*
+H_SEC00  NE(H_SEC.CNT,6)                                 :S(H_SEC02)
+        T       = 0
+*
+*       Loop here to emit code for saved up ERR objects.
+*
+H_SEC01 T       = LT(T,MAXERR) T + 1            :F(H_SEC01X)
+        OUTSTMT('ER_' LPAD(T,3,'0'), 'MOVZWL', '$' T, 'R6')
+        OUTSTMT(,'JMP','ERROR')             :(H_SEC01)
+*
+H_SEC01X
+	outstmt( ,'.GLOBL','SEC05' )
+	outstmt( 'SEC05' )
+*
+*       Merged when finished with ERRs list.
+*
+H_SEC02 :(H_H)
+-EJECT
+*       Arithmetic store ops (STI,STR)
+*       CHANGE CALL OF XOP TO LOOKUP OF XOP.XREGS
+*
+H_STX   $OP2    = $OP1
+        $OP1    = XOP.XREGS[SUBSTR($OPCODE,3,1) 'A']    :(H_H)
+-SPACE 3
+*       Ops that need to have op1 and op2 switched.
+*
+H_SWP12 T = $OP1
+        $OP1    = $OP2
+        $OP2    = T                                     :(H_H)
+-SPACE 3
+*
+*       TTL restores the title text from OP1 and COMMENT
+*
+H_TTL   $OP1    = (IDENT($OP1), $OP1 ' ') $COMMENT
+        $COMMENT =                                      :(H_H)
+-SPACE 3
+*       Immediate mode shifts
+*
+H_XSH   $OP3    = $OP1
+        $OP1    = '$' (IDENT($OPCODE,'LSH'),'-') $OP2
+        $OP2    = $OP3                                  :(H_H)
+-SPACE 3
+*       WTB opcode
+H_WTB   OUTSTMT($LABEL,'MOVAL','0[' $OP1 ']',$OP1,,$COMMENT) :(RETURN)
+-SPACE 3
+*	come here if an opcode is found that should have been procesed
+*	by a previous preprocessor.
+*
+h_zzz	terminal = 'Invalid opcode detected in line '
++			lpad( nlines,5 ) ': ' $opcode	:(error)
+-EJECT
+END
+spitv35.tok
+spitv35.plb
+spitv35.src
+y
+y

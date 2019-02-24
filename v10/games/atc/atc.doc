@@ -1,0 +1,722 @@
+                               -1-
+
+
+                      AIR TRAFFIC CONTROL SIMULATION
+
+                             James J. Gillogly
+
+
+1_. Introduction____________
+
+     ATC is a real-time simulation game running under UNIX on the VAX and
+
+PDP-11/45 at Rand.  The user, as an air traffic controller, manages the
+
+area around one or more airports.  He must issue commands to the twenty-six
+
+airplanes that appear during the course of the game, guiding each to the
+
+destination listed on its flight plan, while maintaining a high level of
+
+safety (i.e., observing all the relevant FAA regulations).  The airspace
+
+includes airways linking entry/exit fixes at the edges of the screen,
+
+airports, and navaids (navigational aids, radio beacons).  ATC simulates
+
+the controller's radar terminal on the Ann Arbor screen, using cursor
+
+positioning to move the planes.  ATC is based on a game by David Mannering,
+
+a former air traffic controller.  This version benefitted from design
+
+decisions and helpful suggestions by Bob Wesson (project leader), Keith
+
+Wescourt, Stockton Gaines, and others in the Air Traffic Control project.
+
+
+2_. Usage_____
+
+     To start ATC from the UNIX command level, give the command
+
+        % atc
+
+This will bring the simulated radar display to the screen.  ATC prompts for
+
+the game time with:
+
+        <  >
+
+     Enter the time in minutes -- the value must be between 16 and 99.  In
+
+a 99-minute game the planes will be spaced out rather well; a 30-minute
+
+game is difficult, even for an experienced player.  ATC continually
+
+displays the amount of time remaining.
+
+
+
+
+                               -2-
+
+
+     Several options are available as flags on the "atc" command.
+
+
+        -u=<string>    :  Use the file specified by the string to find
+                          the airspace, which is either specified with
+                          -a (below) or defaulted.  The default file is
+                          ~jim/atc/airspaces on the VAX, and
+                          /mnt/jim/atc/airspaces on the PDP-11/45.
+
+        -a=<string>    :  Use the airspace identified by the string.
+                          (The default airspace is called "Apple1"
+                          and corresponds to the first airspace in
+                          Mannering's version of ATC.)
+
+        -s=<seed>      :  The seed is a string of digits (32 bits worth)
+                          to start the random number generator.  If it isn't
+                          supplied the program uses the number of seconds
+                          since 1970.
+
+        -t=<time>      :  Mainly useful for program control - sets the
+                          game time to the specified number of minutes.
+                          If it isn't provided the program will prompt in
+                          the usual way for the time.
+
+
+3_. Reading_______ the___ radar_____
+
+     The initial display of a typical airspace looks like this:
+
+
+              . 0 . . . . . . 1 . . . . . . . . . . . . . .
+              . . , . . . . . , . . . . . . . . . . . . . .
+              . . . , . . . . , . . . . . . . . . . . . . 2
+              . . . . , . . . , . . . . . . . . . . . . , .
+              . . . . . , . . , . . . . . . . . . . . , . .
+              . . . . . . , . , . . . . . . . . . . , . . .
+              . . . . . . . , , . . . . . . . . . , . . . .
+              6 , , , , , , , * , , , , , , , , , , , , , 3
+              . . . . . . . . , , . . . . . . , . . . . . .
+              . . . . . . . . , . , . . . . , . . . . . . .
+              . . . . . . . . , . . , . . % . . . . . . . .
+              . . . . . . . . , . . . , , . . . . . . . . .
+              . . . . . . . . , . . . , , . . . . . . . . .
+              . . . . . . . . , . . , . . , . . . . . . . .
+              . . . . . . . . , . , . . . . , . . . . . . .
+              . . . . . . . . , , . . . . . . , . . . . . .
+              4 , , , , , , , * , , , , , # , , , , , , , 5
+              . . . . . . . , , . . . . . . . . . , . . . .
+              . . . . . . , . , . . . . . . . . . . , . . .
+              . . . . . , . . , . . . . . . . . . . . , . .
+              . . . . , . . . , . . . . . . . . . . . . , .
+              . . . , . . . . , . . . . . . . . . . . . . 9
+              . . 7 . . . . . 8 . . . . . . . . . . . . . .
+
+
+
+
+                               -3-
+
+
+% and # indicate the airports.  Navaids are indicated with an "*", and
+
+airways show up as lines of commas with entry/exit fixes on each end
+
+indicated by the digits 0-9.  In this example the numbers on the ends of
+
+each airway are 9's complements, to make them easier to locate, but the
+
+airspace designer need not observe this convention.  The distance between
+
+adjacent dots is one mile -- horizontally, vertically, or diagonally.
+
+     Airplanes are indicated by the call letter of the plane (A through Z)
+
+followed by its altitude in thousands of feet.  For example, the symbol
+
+"X3" on the screen means that airplane X is in the location shown, and is
+
+flying at 3000 feet.  Two airplanes in the same horizontal location obscure
+
+each other, so that only one appears on the radar screen - be careful!
+
+
+4_. Airplane________ Types_____
+
+     There are two kinds of planes: jets and props (light propeller
+
+planes).  Jets travel at 240 knots (i.e., one mile every 15 real seconds)
+
+and props travel at 120 knots.  A jet turns at the rate of three degrees
+
+per second.  Since the screen updates every 15 seconds, it will turn 45
+
+degrees each tick.  Props turn half as fast, so that they also turn 45
+
+degrees each time they are updated (a prop takes 30 seconds to move one
+
+mile).  Each has sufficient fuel to get to any destination: jets have fuel
+
+for 15 minutes of real time, and props have 21 minutes of fuel.  Note,
+
+however, that a plane sitting on the runway burns fuel at the same rate as
+
+a plane in the air.
+
+
+5_. Object______ of__ the___ Game____
+
+     To complete his shift successfully, the controller must handle all 26
+
+airplanes without running out of time, violating FAA regulations, letting
+
+any plane run out of fuel, or sending any plane out the wrong destination
+
+
+
+
+                               -4-
+
+
+or at the wrong altitude.  This means either landing each plane at its
+
+desired airport, or sending it out the desired fix in the right direction
+
+(i.e., along the airway) at 5000 feet.
+
+     The FAA requires planes to be separated either by three miles
+
+horizontal distance or 1000 feet of altitude.  If they come closer it is
+
+logged as a "system error", which is serious trouble.  NOTE that a plane
+
+changing altitude is considered (by FAA regs) to be at both its old and new
+
+altitudes; thus two planes may be 2000 feet apart, but still cause a system
+
+error because they were at the same altitude on the previous tick, where
+
+one was climbing and the other descending.
+
+     Allowing a plane to run out of fuel, either on the runway or in the
+
+air, is a serious error.  Planes on the runway burn fuel at the same rate
+
+as when they are airborne.
+
+     A "boundary error" is serious, but not as likely to be fatal. It
+
+occurs when a plane is sent out at the wrong fix, the wrong altitude, or in
+
+the wrong direction.  A plane must be headed out the correct exit fix in
+
+the direction opposite to that fix's entry direction.  This will be along
+
+the airway to that exit fix.  All planes must leave the airspace at 5000
+
+feet, so controllers of neighboring airspaces will know what to expect.
+
+
+6_. Basic_____ Flight______ Plans_____
+
+     The right side of the screen is reserved for flight plans.  A typical
+
+flight plan looks like:
+
+        Fj 7->3  4  NE     +
+
+The first letter is the aircraft ID, which can be any letter from A through
+
+Z.  The next letter is the airplane type: either "j" for jet or "p" for
+
+propeller.
+
+     The next field (e.g. 7->3) gives the plane's intentions: this one is
+
+
+
+                               -5-
+
+
+entering at (or is now at) fix 7 and leaving at fix 3.  A plane enters the
+
+airspace at any fix and continues along the airway until given other
+
+instructions.  The controller may need to give course corrections (below)
+
+to enable the plane to leave at the desired fix.  Either the origin or
+
+destination (or both) can be the symbol for an airport, indicating that
+
+this plane will be taking off or landing.  The "origin" character is the
+
+entry fix if the plane has not yet entered the airspace; otherwise it is a
+
+symbol for the plane's location on the screen: "*" if it is over a beacon,
+
+"." if it is in some random location, "," if it is on an airway, or the
+
+appropriate airport symbol if it is flying over an airport.
+
+     Next is the altitude in thousands of feet.  Plane F in this example is
+
+at 4000 feet.
+
+     The bearing is given as a compass direction: N, S, E, W, NE, NW, SE,
+
+or SW, with north at the top of the radar screen.  The plane in the example
+
+above is headed northeast.
+
+     The final character is the amount of fuel left.  If it is a "+", as
+
+here, the plane has more than 10 minutes of fuel left; otherwise it shows
+
+the number of minutes of fuel remaining.
+
+     The flight plans are separated into two groups: the top group previews
+
+the planes that will become active within the next minute, and the bottom
+
+group is for planes that are already active.  Flight strips in the preview
+
+area are preceded by a digit from 0 to 4, indicating how many "ticks"
+
+(15-second intervals) before the plane enters the airspace.  Planes may be
+
+cleared for takeoff as soon as they appear in the preview area.
+
+
+7_.  Airplane________ Commands________
+
+     In order to maintain safety and route the planes to their designated
+
+goals, the controller issues commands telling the pilots to turn, change
+
+
+
+                               -6-
+
+
+altitude, take off, and land.  Each command is terminated by a <RETURN>.
+
+<BACK SPACE> may be used to correct errors on the command line.  Either
+
+upper or lower case is allowed.  The radar screen is updated every 15
+
+seconds; if the update occurs while a command is being typed, a beep will
+
+indicate that the command may no longer be timely.
+
+
+7_.1_ Command_______ Summary_______
+
+     The following kinds of commands can be issued.  Each is described in
+
+more detail below.
+
+
+    $        End the game and exit to UNIX
+    W        Print flight strip for airplane W
+    XA3      X will change altitude to 3000 feet
+    QA0      Q will land (go to 0 feet altitude)
+    HRE      H will turn right until it is heading east
+    ALNW     A will turn left until it is heading northwest
+    CTS      C will turn south through the smallest angle
+    T*7      T will take exit bearing for fix 7 at next navaid
+    P*W      P will take landing bearing for White at next navaid
+    DH       D will circle (hold) at next navaid
+    MR0      Aborts pending hold, clearance, or turn for plane M
+    <SPACE>  Speed up the game by advancing 15 seconds
+
+7_.2_ Terminating___________ the___ Game____
+
+     The command "$" terminates the game and restores the terminal to its
+
+normal state (mainly leaving raw mode).  The game will also terminate when
+
+the shift is over (i.e., time runs out or all traffic has been handled).
+
+
+7_.3_ Information___________
+
+     Individual planes may be selected from the flight strips by typing the
+
+ID of the plane followed by a <RETURN>.  The command "g<RETURN>" will print
+
+the flight strip for plane G under the command line.
+
+
+7_.4_ Changing________ Altitude________
+
+     Airplanes normally enter the airspace at 6000 feet.  If two or more
+
+planes are entering from a fix in a short period, they will be separated by
+
+
+
+                               -7-
+
+
+1000 feet, and all will be at 6000 feet or above.  Airplanes taking off
+
+from an airport are at 0 feet.  Planes will stay in level flight unless
+
+told to change altitude.  They climb or descend at the rate of 1000 feet
+
+per mile.
+
+     To change altitude, give the plane's ID followed by the letter "a"
+
+followed by the desired new altitude.  For example,
+
+        <18> Command: XA5
+
+tells plane X to go to 5000 feet.
+
+     Taking off and landing are special cases of the altitude command.  If
+
+the plane is waiting to take off, its altitude is 0.  Giving it any change
+
+of altitude will cause it to take off in the normal direction for that
+
+airport.  The takeoff/landing direction is shown for each airport in the
+
+bottom right section of the screen at the beginning of the game; it is also
+
+shown in the flight strip for planes taking off.
+
+     To land a plane, make sure it is (or will be) heading toward the
+
+correct airport in the correct direction, then send it to altitude 0.  This
+
+is the last command that can be given to the airplane, since it passes
+
+control to the airport tower.  To land, the plane must be at 0 altitude one
+
+mile before the airport.  If the plane flies over the airport at altitude 0
+
+from the wrong direction, it will go back up to 1000 feet and give the
+
+controller another chance to land it.  This is logged as a "go-around"
+
+error.
+
+     The flight strip reflects changing altitude.  For example,
+
+        Dp :->2  7v3  S     9
+
+indicates that plane D is now at altitude 7000 feet and is descending to
+
+3000.
+
+
+
+
+
+
+                               -8-
+
+
+7_.5_ Turning_______
+
+     Turning planes will turn at the rate of 45 degrees per mile.  To turn
+
+a plane, give the plane's ID, the direction of turn, and the new bearing.
+
+The direction of turn is one of the letters "l", "r", or "t".  "l" and "r"
+
+specify a turn to the pilot's left or right, and "t" means to turn through
+
+the minimum angle to reach the specified bearing.  ("t" is useful for
+
+people who have trouble with left and right.) For example,
+
+        <47> Command: ULNE
+
+tells the pilot of plane U to turn to his left until he is heading
+
+northeast.  If plane Y is heading north, the command
+
+        <47> Command: YTE
+
+will cause the plane to turn right 90 degrees; if it is heading south the
+
+same command will cause it to turn left 90 degrees.
+
+     Changes of direction are indicated in the flight strip.  For example,
+
+        Nj :->5  5  S r W   +
+
+indicates that jet N is heading south, and will turn 90 degrees to the
+
+right.
+
+     To cancel the remaining part of a turn, give the command (for plane
+
+N):
+
+        <23> Command: NR0
+
+The Ann Arbor keypad used for +/- PAGE, cursor motion, etc., may be used to
+
+supply the new bearing.  The usual N/S/E/W correspondence is used:
+
+
+                          ----------------
+                          |-PAG|HOME|+PAG|
+                          | NW | N  | NE |
+                          |----+----+----|
+                          |-SCH| UP |+SCH|
+                          |  W |STRT|  E |
+                          |----+----+----|
+                          |LEFT|DOWN|RGHT|
+                          | SW |  S | SE |
+
+
+
+                               -9-
+
+
+                          ----------------
+
+7_.6_ Using_____ Navaids_______
+
+     Navaids (navigational aids, VORs, or radio beacons) are very useful
+
+for giving longer-range plans to the pilot.  All incoming planes are on
+
+airways that will intersect one or more navaids.  The navaids may be used
+
+to tell the plane where to "hold", or to vector it toward an airport or an
+
+exit fix.  "Holding" means continuously making left turns, which will cause
+
+the plane to pass over the navaid every eight updates until it is given a
+
+direction or runs out of fuel.
+
+     Any plane can be told to hold at the next navaid it encounters by
+
+giving it the command (for airplane A):
+
+        <18> Command: AH
+
+This will show up on the flight strip as
+
+        Ap :->2  5  S *    7
+
+     After beginning to hold, the "*" will change to an "h" and the
+
+direction of turn will be indicated.  To override the automatic hold give
+
+the command (for plane N)
+
+        <23> Command: NR0
+
+This is the same command used to cancel a turn.
+
+     Every incoming plane that will be landing automatically holds at a
+
+navaid unless the controller gives it other instructions.
+
+     An airplane can be told to proceed toward any known fix when it
+
+reaches the next navaid.  This is called "clearing" the plane.  To clear
+
+plane X for the approach to # Airport, give the command
+
+        <18> Command: X*#
+
+Use % for % Airport, or the symbol of an exit fix to vector the plane in
+
+that direction.  A plane cleared to turn at a navaid will turn sharply.
+
+
+
+
+                              -10-
+
+
+     If a plane is cleared through a navaid, it will show up with an
+
+asterisk on the flight strip.  For example,
+
+        Hj .->2  5  S *5    +
+
+indicates that plane H will head in the exit direction for fix 5 when it
+
+encounters a navaid.  Note that H must encounter a navaid for the command
+
+to take effect.
+
+     A holding aircraft given a clearance will continue around to the
+
+navaid, then immediately assume the specified bearing.  If a cleared
+
+aircraft is given a turn, any clearance or hold is immediately cancelled.
+
+
+7_.7_ Speeding________ up__ the___ clock_____
+
+     During quiet spells when everything is under control, typing a space
+
+followed by return advances the clock to the next 15-second tick.
+
+
+8_. Designing_________ new___ airspaces_________
+
+     The system airspaces are stored in /usr/rand/jim/atc/airspaces on the
+
+VAX, and /mnt/jim/atc/airspaces on the PDP-11/45.  Users may define their
+
+own airspaces and use them (Section 2), or have them included at the end of
+
+the system airspace file.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              -11-
+
+
+The coordinate system for an MxN screen is:
+
+
+                     ---------------------
+                     |0,0             M,0|
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |                   |
+                     |0,N             M,N|
+                     ---------------------
+
+
+
+The different objects on the screen are defined as follows:
+
+Apple1
+        size: 15x24
+        airway: 1=(0,13) SE 8=(10,23)
+        airway: 0=(4,0) S 9=(4,23)
+        airway: 2=(14,15) NW 7=(0,1)
+        airway: 3=(0,9) NE 6=(9,0)
+        airway: 4=(14,7) SW 5=(0,21)
+        airport: %=(4,11) S
+        airport: #=(10,11) NE
+        navaid: *=(4,5)
+        navaid: *=(4,17)
+
+The size field is restricted only by the size of the Ann Arbor screen.  The
+
+direction on an airway is the entry direction from the first fix; the
+
+designer must ensure that each airway connects two entry/exit fixes, and
+
+that each entry/exit fix is on an airway.  If more than 20 entry/exit
+
+fixes, 5 airports, or 5 navaids are desired, the program must be recompiled
+
+after the change to EMAX, AMAX, or NMAX respectively in the source file
+
+"ahdr.h".
+
+
+9_. Things______ to__ come____
+
+     Several additions are planned to the ATC simulation in the near
+
+future.  The most important is definition of the "Clearance Directive
+
+
+
+                              -12-
+
+
+List," a list of absolute locations on the screen and actions to take at
+
+the location.  The user will use this feature to establish plans for
+
+airplanes without having to monitor for completion of each part.
+
+     Another major modification will enable ATC to be run by another
+
+program, using a data transfer protocol designed to minimize the
+
+communication requirements.
+
+     These features will be documented as they are implemented.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

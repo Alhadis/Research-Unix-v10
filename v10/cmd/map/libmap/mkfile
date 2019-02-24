@@ -1,0 +1,57 @@
+CC=lcc
+CFLAGS=-O -A -A 
+LIBMAP=../libmap.a
+
+$LIBMAP: \
+	$LIBMAP(aitoff.o) \
+	$LIBMAP(albers.o) \
+	$LIBMAP(azequalarea.o) \
+	$LIBMAP(azequidist.o) \
+	$LIBMAP(bicentric.o) \
+	$LIBMAP(bonne.o) \
+	$LIBMAP(ccubrt.o) \
+	$LIBMAP(complex.o) \
+	$LIBMAP(conic.o) \
+	$LIBMAP(cubrt.o) \
+	$LIBMAP(cuts.o) \
+	$LIBMAP(cylequalarea.o) \
+	$LIBMAP(cylindrical.o) \
+	$LIBMAP(elco2.o) \
+	$LIBMAP(elliptic.o) \
+	$LIBMAP(fisheye.o) \
+	$LIBMAP(gall.o) \
+	$LIBMAP(guyou.o) \
+	$LIBMAP(harrison.o) \
+	$LIBMAP(hex.o) \
+	$LIBMAP(homing.o) \
+	$LIBMAP(lagrange.o) \
+	$LIBMAP(lambert.o) \
+	$LIBMAP(laue.o) \
+	$LIBMAP(mercator.o) \
+	$LIBMAP(mollweide.o) \
+	$LIBMAP(newyorker.o) \
+	$LIBMAP(orthographic.o) \
+	$LIBMAP(perspective.o) \
+	$LIBMAP(polyconic.o) \
+	$LIBMAP(rectangular.o) \
+	$LIBMAP(simpleconic.o) \
+	$LIBMAP(sinusoidal.o) \
+	$LIBMAP(tan.o) \
+	$LIBMAP(tetra.o) \
+	$LIBMAP(trapezoidal.o) \
+	$LIBMAP(twocirc.o) \
+	$LIBMAP(zcoord.o)
+	names=`membername $newprereq`
+	ar r $LIBMAP $names && rm $names
+	ld -u tan -lm >/dev/null && ar d $LIBMAP tan.o # tan from libm if there
+	rm -f a.out
+	ranlib $LIBMAP
+
+$LIBMAP(%.o): ../map.h %.o
+	:
+
+%.o:	%.c
+	$CC -c $CFLAGS -I.. $stem.c
+
+clean:
+	rm -f *.o map.h

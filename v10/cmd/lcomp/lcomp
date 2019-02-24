@@ -1,0 +1,86 @@
+# lcomp recognizes the following arguments to cc: c, w, p, D, U, I g.
+# lcomp recognizes the following arguments to f77: c, w, p.
+# it does not accept ratfor or efl
+# lcomp recognizes the following argument to as: R
+# lcomp recognizes the following arguments to ld: d, l, N, n, z
+# the output from -c is .o plus .sL
+DIR=/usr/lib
+COMP=${COMP-cc}
+PATH=/bin:/usr/bin
+for i in $*
+do
+	case $i in
+	-c)	compflag=1
+		;;
+	*.c)	clist="$clist $i"
+		u=`basename $i | sed 's/c$//'`
+		bblist="$bblist "$u"s"
+		rmlist="$rmlist "$u"s"
+		slist="$slist "X$u"s"
+		llist="$llist "$u"o"
+		;;
+	-D*|-I*|-U*)
+		clist="$clist $i"
+		;;
+	*.f)	flist="$flist "$i
+		u=`basename $i | sed 's/f$//'`
+		bblist="$bblist "$u"s"
+		rmlist="$rmlist "$u"s"
+		slist="$slist "X$u"s"
+		llist="$llist "$u"o"
+		;;
+	*.s)	bblist="$bblist "$i
+		u=`basename $i | sed 's/s$//'`
+		slist="$slist "X$u"s"
+		llist="$llist "$u"o"
+		;;
+	-w|-p|-R|-d|-l*|-N|-n|-t|-z|*.o|*.a)
+		llist="$llist "$i
+		;;
+	*)	echo incomprehensible argument $i ignored
+		;;
+	-g)
+		;;
+	esac
+done
+# get .s files
+if test "$flist"
+then
+	f77 -g -S $flist
+fi
+if test "$clist"
+then
+	$COMP -g -S $clist
+fi
+# create X*.s and *.sL files
+if test "$bblist"
+then
+	$DIR/bb $bblist
+fi
+# create X*.o files
+if test "$flist"
+then
+	f77 -g -c $slist
+elif test "$clist"
+then
+	$COMP -g -c $slist
+fi
+# make them into real .o files
+if test "$rmlist"
+then
+	for i in X*.o
+		do
+		mv $i `echo $i | sed s/X//`
+	done
+fi
+rm -f X*.s $rmlist prof.out
+
+if test $compflag
+then	exit 0
+fi
+if test "$flist"
+then
+	f77 -g $DIR/nexit.o $llist
+else
+	$COMP -g $DIR/nexit.o $llist $lC
+fi

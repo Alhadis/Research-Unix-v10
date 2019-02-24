@@ -1,0 +1,55 @@
+# This file contains contains a collection of tests for the "glob"
+# command in Tcl.  If everything is OK then it finishes silently.
+# If a problem is detected then it generates a Tcl error with a
+# cryptic message.  To trace the error you'll have to read through
+# the commands in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/glob.test,v 1.4 90/04/19 15:18:20 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {Glob error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+# First, create some subdirectories to use for testing.
+
+exec rm -rf globTest
+exec mkdir globTest globTest/a1 globTest/a2 globTest/a3
+exec mkdir globTest/a1/b1 globTest/a1/b2 globTest/a2/b3
+print abc globTest/x1.c
+print abc globTest/y1.c
+print abc globTest/z1.c
+print abc globTest/.1
+print abc globTest/a1/b1/x2.c
+print abc globTest/a1/b2/y2.c
+
+check [glob a] a 1.1
+check [glob aaa bbb ccc] "aaa bbb ccc" 1.2
+
+check [glob "{a1,a2}"] "a1 a2" 2.1
+check [glob a/{x,y}{123,456}/z] "a/x123/z a/x456/z a/y123/z a/y456/z" 2.2
+
+check [glob g*/*.c] "globTest/x1.c globTest/y1.c globTest/z1.c" 3.1
+check [glob globTest/?1.c] "globTest/x1.c globTest/y1.c globTest/z1.c" 3.2
+check [glob */*/*/*.c] "globTest/a1/b1/x2.c globTest/a1/b2/y2.c" 3.3
+check [glob globTest/*] "globTest/a1 globTest/a2 globTest/a3 globTest/x1.c globTest/y1.c globTest/z1.c" 3.4
+check [glob globTest/.*] "globTest/. globTest/.. globTest/.1" 3.5
+check [glob globTest/*/*] "globTest/a1/b1 globTest/a1/b2 globTest/a2/b3" 3.6
+check [glob {globTest/[xy]1.*}] "globTest/x1.c globTest/y1.c" 3.7
+
+set myHome [file ~ tail]
+if [string compare $myHome ouster] {
+    check [glob ~/.csh*] "/users/ouster/.cshrc" 4.1
+    check [glob ~ouster] "/users/ouster" 4.2
+}
+
+check [catch {glob} msg] 1 5.1
+check $msg "no files matched glob pattern(s)" 5.2
+check [catch {glob a/{b,c,d}/\{} msg] 1 5.3
+check $msg "unmatched open-brace in file name" 5.4
+check [catch {glob goo/*} msg] 1 5.5
+check $msg {no files matched glob pattern(s)} 5.6
+check [catch {glob ~no-one} msg] 1 5.7
+check $msg {user "no-one" doesn't exist} 5.8
+
+exec rm -rf globTest

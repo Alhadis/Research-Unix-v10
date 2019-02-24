@@ -1,0 +1,89 @@
+.text
+.globl _main
+.align 1
+_main:.word 0x800
+clrl r11
+L1:
+movl $1,_down[r11]
+movl $1,_up[r11]
+L2:
+incl r11
+cmpl r11,$15
+jlss L1
+clrl r11
+L5:
+movl $1,_rows[r11]
+L6:
+incl r11
+cmpl r11,$8
+jlss L5
+clrl -(sp)
+calls $4/4,_queens
+clrl r0
+ret
+.globl _queens
+.align 1
+_queens:.word 0xc00
+movl 4(ap),r11
+clrl r10
+L9:
+tstl _rows[r10]
+jeql L13
+subl3 r11,r10,r5
+tstl _up+28[r5]
+jeql L13
+addl3 r11,r10,r5
+tstl _down[r5]
+jeql L13
+addl3 r11,r10,r5
+clrl _down[r5]
+subl3 r11,r10,r5
+clrl _up+28[r5]
+clrl _rows[r10]
+movl r10,_x[r11]
+cmpl r11,$7
+jneq L17
+calls $0/4,_print
+jbr L18
+L17:
+pushal 1(r11)
+calls $4/4,_queens
+L18:
+addl3 r11,r10,r5
+movl $1,_down[r5]
+subl3 r11,r10,r5
+movl $1,_up+28[r5]
+movl $1,_rows[r10]
+L13:
+L10:
+incl r10
+cmpl r10,$8
+jlss L9
+ret
+.globl _print
+.align 1
+_print:.word 0x800
+clrl r11
+L20:
+addl3 $49,_x[r11],-(sp)
+pushal L24
+calls $8/4,_printf
+L21:
+incl r11
+cmpl r11,$8
+jlss L20
+pushal L25
+calls $4/4,_printf
+ret
+.data
+.globl _x
+.comm _x,32
+.globl _rows
+.comm _rows,32
+.globl _down
+.comm _down,60
+.globl _up
+.comm _up,60
+.text 1
+L25:.byte 10,0
+L24:.ascii "%c \000"

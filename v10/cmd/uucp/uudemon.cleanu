@@ -1,0 +1,90 @@
+#!/bin/sh
+MAILTO=${mailto:-uucp}
+PATH=/bin:/usr/bin:/usr/lib/uucp
+export PATH
+TMP=/tmp/uu$$
+WISDOM=/tmp/uv$$
+>$WISDOM; chmod 0700 $WISDOM
+SPOOL=/usr/spool/uucp
+CORRUPT=/usr/spool/uucp/.Corrupt
+OLD=/usr/spool/uucp/.Old
+O_LOGS=$OLD/Old-Log
+
+cd $SPOOL/.Admin
+mv xferstats audit errors Foreign $OLD
+>xferstats; >audit; >errors; >Foreign
+cd ..
+#
+# shuffle old log files back in name
+# $max controls the number kept
+# then catenate all the existing logfiles into a new old one
+#
+max=${1:-1}
+noisy=$2		# default not noisy
+case $noisy in
+"")	DOUBTFUL=/dev/null ;;
+*)	DOUBTFUL=$WISDOM ;;
+esac
+for i in `seq $max -1 2`
+do
+	j=`expr $i - 1`
+	mv ${O_LOGS}-$j ${O_LOGS}-$i
+done
+> ${O_LOGS}-1
+for i in uucico uucp uux uuxqt
+do
+	cd $SPOOL/.Log/$i
+	for j in *
+	do
+		case $j in
+		"*")
+			break;;
+		esac
+		echo "********** $j **********" >> ${O_LOGS}-1
+		cat $j >> ${O_LOGS}-1
+		rm -f $j
+	done
+done
+cd $SPOOL
+uucleanup -D7 -C7 -X7 -o2 -W7
+mv .Admin/uucleanup $OLD/uucleanup
+if [ -s $OLD/uucleanup ]
+then
+	(echo "cleanup:"; cat $OLD/uucleanup) >>$DOUBTFUL
+fi
+>.Admin/uucleanup
+/usr/lib/uucp/uucrap		# remove empty directories, boring status
+find /usr/spool/uucppublic -type f -mtime +30 -exec rm -f "{}" \;
+find .Sequence -mtime +30 -exec rm -f "{}" \;
+find .Workspace .Status .Corrupt -type f -mtime +7 -exec rm -f "{}" \;
+
+#
+# invent some status chatter
+#
+grep passwd ${O_LOGS}-1 > $TMP
+if [ -s $TMP ]
+then
+	(echo "passwd requests:"; cat $TMP) >>$WISDOM
+fi
+
+awk '/(DENIED)/	{print prev; print $0}
+		{prev = $0}' ${O_LOGS}-1 > $TMP
+if [ -s $TMP ]
+then
+	(echo "denied:"; cat $TMP) >>$WISDOM
+fi
+ls .Corrupt > $TMP
+if [ -s $TMP ]
+then
+	(echo ".Corrupt:"; cat $TMP) >>$WISDOM
+fi
+tail $OLD/errors 2>/dev/null > $TMP
+tail $OLD/Foreign 2>/dev/null >> $TMP
+if [ -s $TMP ]
+then
+	(echo "Admin stuff:"; cat $TMP) >>$WISDOM
+fi
+if [ -s $WISDOM ]; then
+	mail $MAILTO <$WISDOM
+fi
+rm -f $WISDOM $TMP

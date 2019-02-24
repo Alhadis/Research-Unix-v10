@@ -1,0 +1,102 @@
+SYS=research
+< $SYS.mk
+JL=juke.a
+X=allocate cold getstatus ioshelves iodr_sh lib load nlun warm
+JLIB=${X:%=$JL(%.o)}
+JSRC=${X:%=%.c}
+
+SL=scsi.a
+X=s_$IO ge_sense s_volid s_pperror s_fixedstr s_longat s_xd
+SLIB=${X:%=$SL(%.o)}
+
+SHL=scsish.a
+GENERIC=ge_dev ge_inq ge_stop ge_start ge_capacity ge_display\
+	ge_reset ge_tur ge_scsi ge_readt ge_copy # ge_sense in $SL
+SONY=so_dev so_inq so_alt so_config so_status so_eject so_rel so_set\
+	so_shelfside so_diskid so_internal so_media so_readid so_copy\
+	so_i0.tab so_i1.tab so_scsi.tab so_sense so_nesd.tab
+WREN=wr_dev wr_inq wr_rmode wr_wmode wr_diag
+X=$GENERIC $SONY $WREN
+SHLIB=${X:%=$SHL(%.o)}
+
+all:V:	jukebox scsish
+
+both:V:	../jukebox ../scsish
+
+../%:	%
+	cp $prereq $target
+
+jukebox:	jukebox.o $JL $SHL $SL
+	$CC $CFLAGS -o $target $prereq $LDFLAGS
+
+scsish:	scsish.o $SHL $SL
+	$CC $CFLAGS -o $target $prereq $LDFLAGS
+
+jpp:V:
+	pr mkfile juke.h scsi.h jukebox.c $JSRC | lp -ddp -n2
+
+poot:V:	scsish
+ 	echo 'dev scsi
+ 	copy 4 0 10 5 0 1' | scsish
+
+scsi.cpio:V:	inc/scsi.h
+	find * -print | sed -e '/\.[oa]$/d' -e '/\.cpio$/d' | cpio -oc > $target
+inc/scsi.h:Pcmp -s:	/usr/include/scsi.h
+	cp $prereq $target
+
+
+# below is just magic; believe it.
+
+$JL(%.o):N:	%.o
+$JL:Q:	$JLIB
+	names=`membername $newprereq`
+	ar rv $JL $names && rm $names
+	$RANLIB $JL
+
+$SL(%.o):N:	%.o
+$SL:Q:	$SLIB
+	names=`membername $newprereq`
+	ar rv $SL $names && rm $names
+	$RANLIB $SL
+
+$SHL(%.o):N:	%.o
+$SHL:Q:	$SHLIB
+	names=`membername $newprereq`
+	ar rv $SHL $names && rm $names
+	$RANLIB $SHL
+
+s_%.o:	scsi/%.c
+	cd scsi; $CC $CFLAGS -c $stem.c && mv $stem.o ../$target
+so_%.o:	sony/%.c
+	cd sony; $CC $CFLAGS -c $stem.c && mv $stem.o ../$target
+so_%.o:	sony/fns.h
+ge_%.o:	generic/%.c
+	cd generic; $CC $CFLAGS -c $stem.c && mv $stem.o ../$target
+ge_%.o:	generic/fns.h
+wr_%.o:	wren/%.c
+	cd wren; $CC $CFLAGS -c $stem.c && mv $stem.o ../$target
+wr_%.o:	wren/fns.h
+so_%.o wr_%.o ge_%.o:	scsish.h scsi.h
+
+so_%.tab.o:Q:	sony/%.tab
+	cd sony
+	echo generating $target
+	p=$stem.tab
+	awk -F'	' '
+	BEGIN	{ h["0"]=0;h["1"]=1;h["2"]=2;h["3"]=3;h["4"]=4;h["5"]=5;h["6"]=6;h["7"]=7;
+		h["8"]=8;h["9"]=9;h["a"]=10;h["b"]=11;h["c"]=12;h["d"]=13;h["e"]=14;h["f"]=15;
+		}
+	function done(	i){
+		for(i = 0; i < 256; i++) if(x[i]){
+				print "\t\"" x[i] "\","
+				x[i] = ""
+			} else printf "\t\"<#%x>\",\n", i
+		print "};"
+	}
+	function hex(n,	i){
+		return(h[substr(n, 1, 1)]*16+h[substr(n, 2, 1)]);
+	}
+	NF == 1	{ if(NR > 1) done(); print "char *" $1 "[] = {" }
+	NF > 1	{ x[hex($1)] = $2; }
+	END	{ done(); }' < $p > $p.c && $CC $CFLAGS -c $p.c && mv $p.o ../$target
+	rm $p.c

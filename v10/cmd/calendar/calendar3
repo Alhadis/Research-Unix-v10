@@ -1,0 +1,19 @@
+ND=$1
+T=/tmp/cal$$
+trap "rm -f /tmp/cal$$*; exit" 0 1 2 13 15
+
+sed "s/.*!//
+     w ${T}1
+     s/ .*//
+" | /usr/lib/calendar4 >${T}3
+: T1 = calpath uid, for every possible calendar
+: T3 = calpath, for every real calendar
+
+join ${T}3 ${T}1 >${T}4; mv ${T}4 ${T}1
+: T1 = calpath uid, for every real calendar
+
+/usr/lib/calendar2 $ND >${T}2
+: T2 = egrep pattern for dates of interest
+
+egrep -i -f ${T}2 '' `cat ${T}3` 
+: result = calpath:entry, for every calendar consulted

@@ -1,0 +1,35 @@
+#
+# mkfile for assembly language stuff
+# this should produce one .o per cpu type,
+# containing both generic and cpu-specific stuff
+# don't bother with lo*.s; it has to be done specially
+# with the scb put out by mkconf
+#
+L=../lib
+GEN=	param.s traplist.s start.s boot.s icode.s access.s copy.s setjmp.s \
+	swtch.s trap.s misc.s udiv.s urem.s
+
+BVAX=	clockparm.s trapbvax.s
+UVAX=	clockparm.s trapmflow.s
+
+all:V: $L/asstar.o $L/ascomet.o $L/asnaut.o \
+	$L/asuvemul.o $L/asmflow.o $L/asmfair.o
+
+traplist.s: ../sys/trap.h
+	grep ^#define $prereq | sed 's/#define[ 	]*\([^ 	]*\)[ 	]*\([^ 	]*\).*/	.set	\1,\2/' >$target
+
+clockparm.s: ../sys/clock.h
+	grep ^#define $prereq | grep CLK | sed 's/#define[ 	]*\([^ 	]*\)[ 	]*\([^ 	]*\).*/	.set	\1,\2/' >$target
+
+$L/asstar.o: $GEN $BVAX trapdw780.s trapstar.s
+	as -o $target $prereq
+$L/ascomet.o: $GEN $BVAX trapcomet.s
+	as -o $target $prereq
+$L/asnaut.o: $GEN $BVAX trapnaut.s
+	as -o $target $prereq
+$L/asuvemul.o: emulate.s
+	/lib/cpp $prereq | as -o $target
+$L/asmflow.o: $GEN $UVAX
+	as -o $target $prereq
+$L/asmfair.o: $GEN $UVAX trapmfair.s
+	as -o $target $prereq

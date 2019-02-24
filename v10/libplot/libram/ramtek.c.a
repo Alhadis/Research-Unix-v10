@@ -1,0 +1,947 @@
+!<arch>
+arc.c           422205529   41    1     100664  980       `
+#include <stdio.h>
+#include <math.h>
+#include "ram.h"
+/*		arc plotting routine		*/
+/*		from x1,y1 to x2,y2		*/
+/*	with center xc,yc and radius rr	*/
+/*	integrates difference equation		*/
+/*	negative rr draws counterclockwise	*/
+#define PI4 0.7854
+arc(x1, y1, x2, y2, xc, yc, rr)
+double	x1, x2, y1, y2, xc, yc, rr;
+{
+	register double dx, dy, a, b;
+	double	ph, dph, rd, xnext;
+	register int	n;
+	dx = x1 - xc;
+	dy = y1 - yc;
+	rd = sqrt(dx * dx + dy * dy);
+	if (rd / e1->quantum < 1.0) { 
+		move(xc, yc); 
+		vec(xc, yc); 
+		return;
+	}
+	dph = acos(1.0 - (e1->quantum / rd));
+	if (dph > PI4) 
+		dph = PI4;
+	ph=atan2((y2-yc),(x2 - xc)) - atan2(dy, dx);
+	if (ph < 0) 
+		ph += 6.2832; 
+	if (rr < 0) 
+		ph = 6.2832 - ph;
+	if (ph < dph) 
+		line(x1, y1, x2, y2);
+	else {
+		n = ph / dph; 
+		a = cos(dph); 
+		b = sin(dph); 
+		if (rr < 0) 
+			b = -b;
+		move(x1, y1);
+		while ((n--) >= 0) {
+			xnext = dx * a - dy * b; 
+			dy = dx * b + dy * a; 
+			dx = xnext;
+			vec(dx + xc, dy + yc);
+		}
+	}
+}
+box.c           422205529   41    1     100664  155       `
+#include <stdio.h>
+#include "ram.h"
+box(x0, y0, x1, y1) 
+double	x0, y0, x1, y1;
+{
+	move(x0, y0);
+	vec(x0, y1);
+	vec(x1, y1);
+	vec(x1, y0);
+	vec(x0, y0);
+}
+
+cfill.c         422205530   41    1     100664  236       `
+#include <stdio.h>
+#include "ram.h"
+cfill(s) 
+char	*s; 
+{
+	register int	k;
+	register short *p;
+	if ((k = bcolor(s)) >= 0) {
+		e1->backgr = k;
+		p = buf;
+		*p++ = SET;
+		*p++ = FORE;
+		*p++ = e1->backgr;
+		write(Rfd, buf, FOREARG);
+	}
+}
+circle.c        422205530   41    1     100664  141       `
+#include <stdio.h>
+#include "ram.h"
+circle(xc, yc, r) 
+double	xc, yc, r;
+{
+	if (r > 0) 
+		r = -r;
+	arc(xc + r, yc, xc + r, yc, xc, yc, r);
+}
+
+closepl.c       422205530   41    1     100664  64        `
+#include <stdio.h>
+#include "ram.h"
+closepl()
+{ 
+	close(Rfd);
+}
+color.c         422205530   41    1     100664  236       `
+#include <stdio.h>
+#include "ram.h"
+color(s) 
+char	*s; 
+{
+	register int	k;
+	register short *p;
+	if ((k = bcolor(s)) >= 0) {
+		e1->foregr = k;
+		p = buf;
+		*p++ = SET;
+		*p++ = FORE;
+		*p++ = e1->foregr;
+		write(Rfd, buf, FOREARG);
+	}
+}
+disc.c          422205533   41    1     100664  139       `
+#include <stdio.h>
+#include "ram.h"
+disc(xc, yc, r) 
+double	xc, yc, r;
+{
+	if (r > 0) 
+		r = -r;
+	arc(xc + r, yc, xc + r, yc, xc, yc, r);
+}
+
+erase.c         422205530   41    1     100664  87        `
+#include <stdio.h>
+#include "ram.h"
+erase()
+{ 
+	buf[0] = RESET;
+	write(Rfd, buf, 2);
+}
+
+fill.c          422208281   41    1     100664  4486      `
+#include <stdio.h>
+#include <math.h>
+#include "ram.h"
+#define SEGS 256
+#define ROUND(a) a>0?a+.5:a-.5
+double	sinp, cosp;
+int place();
+fill(num,ff)
+int num[];
+double	*ff[];
+{
+	register struct seg *sp;
+	register double x, y;
+	struct seg *in, *spend;
+	int	so;
+	double	 X, Y, xyt, **fp;
+	int ymin;
+	int	M, *n;
+	double	*xpp, *ypp;
+	int fx, fy, flag;
+
+	in = (struct seg *)malloc((unsigned)(SEGS*sizeof(struct seg)));
+	if(in == 0){
+		fprintf(stderr,"not enough space for fill segments\n");
+		return(1);
+	}
+	spend = in + (SEGS-2);
+	sinp = cos(e1->pslant);
+	cosp = sin(e1->pslant);
+	n = num;
+	fp = ff;
+	sp = in;
+	ymin = 4000;
+	while((M = *n++)){
+		xpp = *fp++;
+		ypp = xpp + 1;
+		x = SCX(*xpp);
+		y = SCY(*ypp);
+		if (cosp)  {
+			xyt = sinp * x - cosp * y;
+			y = cosp * x + sinp * y;
+			y = ROUND(y);
+			x = ROUND(xyt);
+		}
+		fx = x;
+		fy = y;
+		flag = 0;
+		while(--M){
+			xpp += 2;
+			ypp += 2;
+			X = SCX(*xpp);
+			Y = SCY(*ypp);
+			if (cosp)  {
+				xyt = sinp * X - cosp * Y;
+				Y = cosp * X + sinp * Y;
+				Y = ROUND(Y);
+				X = ROUND(xyt);
+			}
+	check:
+			if ( (Y > y) || (Y==y && X > x)){
+				sp->x = X;
+				sp->y = Y;
+				sp->X = x;
+				sp->Y = y;
+			}
+			else {
+				sp->x = x;
+				sp->y = y;
+				sp->X = X;
+				sp->Y = Y;
+			}
+			x=X;
+			y=Y;
+			sp->stat = 1;
+			if(Y < ymin)
+				ymin = Y;
+			if ( sp->y == sp->Y) {
+				if(sp > in){
+				if ((sp-1)->y == (sp-1)->Y && (sp-1)->y == sp->y) {
+					if (sp->x == (sp - 1)->X) {
+						(sp - 1)->X = sp->X;
+					sp--;
+					} else if (sp->X == (sp - 1)->x) {
+						(sp - 1)->x = sp->x;
+					sp--;
+					}
+				}
+				}
+			}
+			if(sp++ > spend){
+				fprintf(stderr, "Too many sides\n");
+				return(0);
+			}
+			if((M==1) && (flag == 0)){
+				X = fx;
+				Y = fy;
+				flag = 1;
+				goto check;
+			}
+		}
+	}
+	esave = e1;
+	e1 = e0;
+	so = sp - in;
+	realfill(so, in, ymin);
+	e1 = esave;
+	free(in);
+	return(1);
+}
+double	xcut();
+realfill(so, s, yymin)
+int	so, yymin;
+struct seg *s;
+{
+	register struct seg *sp, *s1, *s2, *st;
+	register int	yb;
+	struct seg *sfin;
+
+	sfin = s1 = s + so - 1;
+	for (sp = s; sp <= sfin;  sp++) {
+		if (sp->stat){
+			if (sp->y == sp->Y){
+				if (sp < sfin) {
+					s2 = sp+1;
+					while(s2<=sfin && s2->y==s2->Y){
+						if (sp->X == s2->x)
+							sp->X = s2->X;
+						else if (sp->x == s2->X)
+							sp->x = s2->x;
+						s2++->stat = 0;
+					}
+				}
+				else s2 = sp;
+				if (s1->y == sp->y &&s2->y == sp->y)
+					sp->stat = 0;
+				else if (s1->Y == sp->y && s2->Y == sp->y)
+					sp->stat = 0;
+			}
+		}
+		s1 = sp;
+	}
+
+	qsort(s, so, sizeof(struct seg), place);
+	sfin++;
+	s1 = s;
+	yb = s1->y;
+	for(sp=s; yb <= sp->y;sp++);
+	s2 = sp - 1;
+	for (; yb >= yymin; yb--) {
+		if (!(yb % e1->pgap))
+			draw(yb, s1, s2);
+		for (st = s1; st <= s2; st++) {
+			if (st->stat)
+				if (yb <= st->Y)
+					st->stat = 0;
+		}
+		if (sp >= sfin)
+			continue;
+		for (; yb <= (sp->y + 1) && sp < sfin; sp++) {
+			for (st = s1; st <= s2; st++) {
+				if (sp->y == st->Y) {
+					if (sp->x == st->X)
+						st->stat = 0;
+					else if (sp->Y == sp->y && sp->X == st->X)
+						st->stat = 0;
+				}
+			}
+		}
+
+		s2 = sp - 1;
+		while (!(s1->stat))
+			s1++;
+	}
+}
+draw(y, pr1, pr2)
+int	y;
+struct seg *pr1, *pr2;
+{
+	register struct seg *pr;
+	register double *xp;
+	double	x[32], yy, yi, yii, xi, xii, xj;
+	double *xpe;
+	for(pr=pr1, xp=x; pr <= pr2;pr++){
+		if (pr->stat)
+			if (pr->y != pr->Y){
+				*xp++ = xcut(y, pr->x, pr->y, pr->X, pr->Y);
+				if(xp > &x[31])
+					fprintf(stderr, "Too many intersections\n");
+			}
+	}
+	xpe = xp;
+	if(xpe < &x[1])
+		return;
+	do {
+		xj = 0;
+		for(xp=x+1;xp<xpe;xp++){
+			if(*(xp-1) > *xp){
+				xj = *(xp-1);
+				*(xp-1) = *xp;
+				*xp = xj;
+			}
+		}
+	} while(xj);
+	yy = y;
+	for(xp=x; xp<xpe;xp++){
+		xj = *xp++;
+		if (!cosp)
+			line(xj, unorm(yy), *xp, unorm(yy));
+		else {
+			xi = sinp * xj + cosp * yy;
+			yi = -cosp * xj + sinp * yy;
+			xii = sinp * *xp + cosp * yy;
+			yii = -cosp * *xp + sinp * yy;
+			line(xi, unorm(yi), xii, unorm(yii));
+		}
+	}
+
+}
+
+
+double	xcut(y, x1, y1, x2, y2)
+{
+	register double	dx, dy, xy, x;
+	if (y1 == y2) {
+		x = x1 > x2 ? x1 : x2;
+		return(x);
+	}
+	dy = y1 - y2;
+	dx = x1 - x2;
+	xy = (float)y1 * x2 - x1 * (float)y2;
+	x = (y * dx + xy) / dy;
+	return(x);
+}
+place(p1, p2)
+struct seg *p1, *p2;
+{
+	if(p1->y > p2->y)
+		return(-1);
+	else if(p1->y < p2->y)
+		return(1);
+	else if(p1->x > p2->x)
+		return(-1);
+	else if(p1->x < p2->x)
+		return(1);
+	else if(p1->X > p2->X)
+		return(-1);
+	else if(p1->X < p2->X)
+		return(1);
+	else if(p1->Y > p2->Y)
+		return(-1);
+	else if(p1->Y < p2->Y)
+		return(1);
+	else return(0);
+}
+frame.c         422205530   41    1     100664  535       `
+#include <stdio.h>
+#include <math.h>
+#include "ram.h"
+frame(xs, ys, xf, yf) 
+double	xs, ys, xf, yf; 
+{
+	register double	osidex, osidey;
+	osidex = e1->sidex;
+	osidey = e1->sidey;
+	e1->left = xs * (e0->left + e0->sidex);
+	e1->bottom = e0->bottom - ys * fabs( e0->sidey);
+	e1->sidex = (xf-xs)*e0->sidex;
+	e1->sidey = (yf - ys)*e0->sidey;
+	e1->scalex *= (e1->sidex / osidex);
+	e1->scaley *= (e1->sidey / osidey);
+	e1->quantum=e0->quantum/sqrt(e1->scalex*e1->scalex +
+		e1->scaley*e1->scaley);
+	if(e1->quantum < .01)
+		e1->quantum = .01;
+}
+
+grade.c         422205530   41    1     100664  76        `
+#include <stdio.h>
+#include "ram.h"
+grade(x) 
+double	x;
+{
+	e1->grade = x;
+}
+line.c          422205530   41    1     100664  115       `
+#include <stdio.h>
+#include "ram.h"
+line(x0, y0, x1, y1) 
+double	x0, y0, x1, y1; 
+{
+	move(x0, y0);
+	vec(x1, y1);
+}
+
+move.c          422205530   41    1     100664  222       `
+#include <stdio.h>
+#include "ram.h"
+move(xx, yy) 
+double	xx, yy; 
+{
+	register short *p;
+	e1->copyx = xx;	
+	e1->copyy = yy;
+	p = buf;
+	*p++ = SET;
+	*p++ = STRT;
+	*p++ = SCX(xx);	
+	*p = SCY(yy);
+	write(Rfd, buf, STRTARG);
+}
+openpl.c        422205530   41    1     100664  534       `
+#include <stdio.h>
+#include "ram.h"
+#define red 07400
+#define green 0360
+#define blue 017
+openpl()
+{
+	Rfd = open(RAMTEK,2);
+	if(Rfd < 0){
+		fprintf(stderr,"Can't open ramtek\n");
+		exit(1);
+	}
+	cmap(red, green, blue);
+	move(0., 0.);
+}
+cmap(c1, c2, c3)
+{
+	register short *p;
+	register int i;
+	p=buf;
+	*p++ = LAM;
+	*p++ = 0;
+	*p++ = 1024;
+	for(i=0;i<512;i++,p++){
+		*p = 0;
+		if(i&01)*p |= c1;
+		if(i&02)*p |= c2;
+		if(i&04)*p |= c3;
+	}
+	write(Rfd, buf, 1024+6);
+	p=buf;
+	*(++p) = 1023;
+	*(++p) = 2;
+	*(++p) = 0;
+	write(Rfd, buf, 8);
+}
+parabola.c      422205531   41    1     100664  838       `
+#include <stdio.h>
+#include <math.h>
+#include "ram.h"
+parabola(x0, y0, x1, y1, xb, yb) 
+double	x0, y0, x1, y1, xb, yb; 
+{
+	register double x, y, t;
+	double	c0x, c0y, c1x, c1y;
+	double	dt, d2, d1;
+	d1 = sqrt((xb - x0) * (xb - x0) + (yb - y0) * (yb - y0));
+	d2 = sqrt((xb - x1) * (xb - x1) + (yb - y1) * (yb - y1));
+	if (d1 <= e1->quantum || d2 <= e1->quantum) { 
+		line(x0, y0, x1, y1); 
+		return; 
+	}
+	c0x = x0 + x1 - 2. * xb; 
+	c1x = 2. * (xb - x0);
+	c0y = y0 + y1 - 2. * yb; 
+	c1y = 2. * (yb - y0);
+	move(x0, y0);
+	dt = e1->quantum / d1;
+	dt /= e1->grade;
+	for (t = dt; t < 0.5; t += dt) {
+		x = (c0x * t + c1x) * t + x0;
+		y = (c0y * t + c1y) * t + y0;
+		vec(x, y);
+	}
+	dt = e1->quantum / d2;
+	dt /= e1->grade;
+	for (; t < 1.0; t += dt) {
+		x = (c0x * t + c1x) * t + x0;
+		y = (c0y * t + c1y) * t + y0;
+		vec(x, y);
+	}
+	vec(x1, y1);
+}
+pen.c           422205531   41    1     100664  71        `
+#include <stdio.h>
+#include "ram.h"
+pen(s) 
+char	*s; 
+{ 
+	color(s); 
+}
+
+point.c         422205531   41    1     100664  91        `
+#include <stdio.h>
+#include "ram.h"
+point(x, y) 
+double	x, y;
+{
+	move(x, y);
+	vec(x, y);
+}
+
+poly.c          422205532   41    1     100664  246       `
+#include <stdio.h>
+poly(num, ff)
+int num[];
+double *ff[];
+{
+	double *xp, *yp, **fp;
+	int i, *n;
+	n = num;
+	fp = ff;
+	while((i = *n++)){
+		xp = *fp++;
+		yp = xp+1;
+		move(*xp, *yp);
+		while(--i){
+			xp += 2;
+			yp += 2;
+			vec(*xp, *yp);
+		}
+	}
+}
+ppause.c        422205531   41    1     100664  112       `
+#include <stdio.h>
+#include "ram.h"
+ppause()
+{ 
+	char	aa[4]; 
+	fflush(stdout); 
+	read(2, aa, 4);  
+	erase(); 
+}
+pprompt.c       422205531   41    1     100664  74        `
+#include <stdio.h>
+#include "ram.h"
+pprompt() 
+{
+	fprintf(stderr, ":");
+}
+range.c         422294570   41    1     100664  319       `
+#include <stdio.h>
+#include "ram.h"
+range(x0, y0, x1, y1) 
+double	x0, y0, x1, y1; 
+{
+	e1->xmin = x0;
+	e1->ymin = y0;
+	e1->scalex = e1->sidex / (x1 - x0 );
+	e1->scaley = e1->sidey / (y1 - y0 );
+	e1->quantum=e0->quantum/sqrt(e1->scalex*e1->scalex +
+		e1->scaley*e1->scaley);
+	if(e1->quantum < .01)
+		e1->quantum = .01;
+}
+
+restore.c       422205531   41    1     100664  245       `
+#include <stdio.h>
+#include "ram.h"
+restore()
+{
+	register short *p;
+	e1--;
+	p = buf;
+	*p++ = SET;
+	*p++ = FORE;
+	*p++ = e1->foregr;
+	*p++ = SET;
+	*p++ = BACK;
+	*p++ = e1->backgr;
+	write(Rfd, buf, FOREARG+BACKARG);
+	move(e1->copyx, e1->copyy);
+}
+
+rmove.c         422205531   41    1     100664  136       `
+#include <stdio.h>
+#include "ram.h"
+rmove(xx, yy) 
+double	xx, yy; 
+{
+	e1->copyx += xx;
+	e1->copyy += yy;
+	move(e1->copyx, e1->copyy);
+}
+rvec.c          422205531   41    1     100664  134       `
+#include <stdio.h>
+#include "ram.h"
+rvec(xx, yy) 
+double	xx, yy; 
+{
+	e1->copyx += xx;
+	e1->copyy += yy;
+	vec(e1->copyx, e1->copyy);
+}
+save.c          422205532   41    1     100664  77        `
+#include <stdio.h>
+#include "ram.h"
+save()
+{ 
+	sscpy(e1, e1 + 1); 
+	e1++; 
+}
+
+sbox.c          422205532   41    1     100664  258       `
+#include <stdio.h>
+#include "ram.h"
+sbox(x0, y0, x1, y1) 
+double	x0, y0, x1, y1;
+{
+	register short *p;
+	p = buf;
+	*p++ = FILL;
+	*p++ = FILL2;
+	*p++ = e1->backgr;
+	*p++ = SCX(x0);	
+	*p++ = SCY(y1);
+	*p++ = SCX(x1);	
+	*p++ = SCY(y0);
+	write(Rfd, buf, FOUT);
+}
+spline.c        422205533   41    1     100664  1342      `
+/*
+Produce spline (uniform knots, second order)
+from guiding points
+*/
+
+splin(mode, num, ff) 
+int num[], mode;
+double *ff[];
+{
+	int	i,  *np, n;
+	double	xa, ya, xc, yc, *xp, *yp, *xp0, *yp0, *xpe, *ype;
+	double **fp;
+	np = num;
+	fp = ff;
+	while((n = *np++)){
+		xp = *fp++; 
+		yp = xp + 1; 
+		xp0 = xp; 
+		yp0 = yp;
+		xpe = xp0 + 2 * (n - 1); 
+		ype = yp0 + 2 * (n - 1);
+		if (n < 3) { 
+			line(*xp, *yp, *(xp + 2), *(yp + 2)); 
+			continue;
+		}
+		if (mode == 4) {	/*closed curve*/
+			xa = 0.5 * (*xpe + *(xpe - 2)); 
+			xc = 0.5 * (*xpe + *xp0);
+			ya = 0.5 * (*ype + *(ype - 2)); 
+			yc = 0.5 * (*ype + *yp0);
+			parabola(xa, ya, xc, yc, *xpe, *ype);
+			xa = 0.5 * (*xpe + *xp0); 
+			xc = 0.5 * (*(xp0 + 2) + *xp0);
+			ya = 0.5 * (*ype + *yp0); 
+			yc = 0.5 * (*(yp0 + 2) + *yp0);
+			parabola(xa, ya, xc, yc, *xp0, *yp0);
+		}
+		else {	/*open curve with multiple endpoints*/
+			if (mode % 2) /*odd mode makes first point double*/
+				line(*xp0,*yp0,0.5*(*xp0+*(xp0+2)),0.5*(*yp0+*(yp0+2)));
+		}
+		xp += 2; 
+		yp += 2;
+		for (i = 1; i < (n - 1); i++, xp += 2, yp += 2) {
+			xa = 0.5 * (*(xp - 2) + *xp); 
+			xc = 0.5 * ( *xp + *(xp + 2));
+			ya = 0.5 * (*(yp - 2) + *yp); 
+			yc = 0.5 * ( *yp + *(yp + 2));
+			parabola(xa, ya, xc, yc, *xp, *yp);
+		}
+		if(mode >= 2 && mode != 4)
+			line(0.5*(*(xpe-2)+*xpe),0.5*(*(ype-2)+*ype),*xpe,*ype);
+	}
+}
+subr.c          422208222   41    1     100664  1901      `
+#include <stdio.h>
+#include "ram.h"
+#define pHEIGHT 512.
+#define pWIDTH  512.
+#define pSMALL    0.5
+short buf[256];
+struct penvir  E[9] = {
+{ 0., pHEIGHT-1., 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT-1., 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT, 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT, 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT, 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT, 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT, 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0},
+{ 0., pHEIGHT, 0., 0., 1., -1.,pWIDTH, -pHEIGHT, 0., 0., 	
+pSMALL, 1., 1, 0.,1, 255, 0}
+};
+struct penvir *e0 = E, *e1 = &E[1], *esave;
+bcolor(s) 
+char	*s; 
+{
+	while (*s != NULL) {
+		switch (*s) {
+		case 'z': 
+			return(ZERO);
+		case 'r': 
+			return(RED);
+		case 'g': 
+			return(GREEN);
+		case 'b': 
+			return(BLUE);
+		case 'm': 
+			return(MAGENTA);
+		case 'y': 
+			return(YELLOW);
+		case 'c': 
+			return(CYAN);
+		case 'w': 
+			return(WHITE);
+		case 'R': 
+			return(atoi(s + 1));
+		case 'G': 
+			e1->pgap = atof(s + 1); 
+			return(-1);
+		case 'A': 
+			e1->pslant = (180. - atof(s + 1)) / RADIAN; 
+			return(-1);
+		}
+		while (*++s != NULL) 
+			if (*s == '/') {
+				s++;
+				break;
+			}
+	}
+	return(-1);
+}
+sscpy(a, b) 
+struct penvir *a, *b; 
+{ /* copy 'a' onto 'b' */
+	b->left = a->left; 
+	b->bottom = a->bottom; 
+	b->xmin = a->xmin; 
+	b->ymin = a->ymin;
+	b->scalex = a->scalex; 
+	b->scaley = a->scaley;
+	b->sidex = a->sidex; 
+	b->sidey = a->sidey;
+	b->copyx = a->copyx; 
+	b->copyy = a->copyy;
+	b->quantum = a->quantum;
+	b->grade = a->grade;
+	b->pmode = a->pmode; 
+	b->foregr = a->foregr; 
+	b->backgr = a->backgr;
+}
+idle(){}
+
+ptype(){}
+
+text.c          422550343   41    1     100664  1196      `
+#include <stdio.h>
+#include "ram.h"
+text(s) 
+char	*s; 
+{
+	register int	kx, ky;
+	int centered, right, newline, more;
+	register char *pc;
+	register short *p;
+	short *sp, *ct;
+	char *sc, *ss;
+	int n, kn;
+	kx = SCX(e1->copyx);
+	ky = SCY(e1->copyy);
+	p = buf;
+	*p++ = WT;
+	*p++ = WIN;
+	sp = p++;
+	*(++p) = MAXX;
+	*(++p) = MAXY;
+	ct = ++p;
+	while(1){
+	pc = sc = (char *)(p+1);
+	centered = right = newline = more = 0;
+	for(ss=s;*ss != '\0';ss++){
+		if (*ss == '\\') {
+			switch (*(++ss)) {
+			case 'C': 
+				centered++;
+				s = ss+1;
+				continue;
+			case 'R':
+				s = ss+1;
+				right++;
+				continue;
+			case 'L':
+				s = ss+1;
+				continue;
+			case 'n':
+				newline++;
+				*(ss-1) =  '\0';
+				if(*(ss+1) !=  '\0')more++;
+				goto output;
+			}
+		}
+		else if(*ss < ' ')*pc++ = ' ';
+		else *pc++ = *ss;
+	}
+output:
+	n = ss - s;
+	kn = n*7;
+	kx = SCX(e1->copyx);
+	ky = SCY(e1->copyy);
+	if(centered)kx -= kn/2 + 1;
+	else if(right)kx -= kn + 1;
+	*sp = kx;
+	*(sp+1) = ky;
+	if(n & 01){
+		n++;
+		*pc = ' ';
+	}
+	*ct = n;
+	write(Rfd,buf,*p + TBASE);
+	if(newline){
+		ky += 9;
+		e1->copyy = ( (double)(ky) - e1->bottom)/e1->scaley + e1->ymin + .5;
+	}
+	move(e1->copyx, e1->copyy);
+	if(!more)break;
+	s = ss + 1;
+	}
+}
+vec.c           422207974   41    1     100664  215       `
+#include <stdio.h>
+#include "ram.h"
+vec(xx, yy) 
+double	xx, yy; 
+{
+	register short *p;
+	e1->copyx = xx; 
+	e1->copyy = yy;
+	p = buf;
+	*p++ = WV;
+	*p++ = 4;
+	*p++ = SCX(xx);
+	*p++ = SCY(yy);
+	write(Rfd, buf, VOUT);
+}
+
+ram.h           422208309   41    1     100644  997       `
+#define SCX(A) ((A - e1->xmin)*e1->scalex  + e1->left)+.5
+#define SCY(A) ((A - e1->ymin)*e1->scaley + e1->bottom)+.5
+#define unorm(y)	(double)(e1->sidey - y)
+extern struct penvir {
+	double left, bottom;
+	double xmin, ymin;
+	double scalex, scaley;
+	double sidex, sidey;
+	double copyx, copyy;
+	double quantum;
+	double grade;
+	int pgap;
+	double pslant;
+	int pmode, foregr, backgr;
+} *e0, *e1, *esave;
+#define RADIAN 57.3
+#define ZERO 0
+#define RED 1
+#define GREEN 2
+#define YELLOW 3
+#define BLUE 4
+#define MAGENTA 5
+#define CYAN 6
+#define WHITE 7
+double atof();
+#define FORE  02
+#define FOREARG 6
+#define STRT	0100000
+#define STRTARG 8
+#define BACK 04
+#define BACKARG 6
+#define RESET 02400
+#define SET 04002
+#define WT	06013
+#define WV	07001
+#define WIN	0100
+#define MAXX	619
+#define MAXY	511
+#define VOUT 8
+#define TBASE 14
+#define FILL 04402
+#define FILL2 0104
+#define LAM 01400
+#define FOUT 14
+#define RAMTEK "/dev/ramtek"
+int Rfd;
+extern short buf[];
+struct seg {
+	int x, y, X, Y;
+	char stat;
+};
+
+whoami.c        423869917   41    1     100664  38        `
+char *
+whoami(){
+	return("ramtek");
+}

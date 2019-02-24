@@ -1,0 +1,83 @@
+"Automatic Software Distribution and the Tower of Bable"
+	(really the Tower of Babble, or more accurately, the Network of Babble)
+### slide: chopped down version of this outline
+* motivation and history
+	* consistency across a network of machines
+	* first publicly described for unix by Koenig (ship)
+	* rdist (Berkeley)
+	* coda (Rich $alz, BBN)
+* previous work
+	* samples of ship, rdist, and coda
+	### slide: samples of ship, rdist, and coda
+		* simple ship command, command options
+		* rdist Distfile
+		* coda Codafile
+	* differences between ship rdist and Coda
+		* ship is command-oriented
+		* rdist and coda work from a configuration file
+		* ship and rdist work from master machines to slave machines
+		* coda provides a service--client machines in control
+	* problems with previous designs
+		* ship and rdist have too much control
+		* ship usage is strange
+		* rdist and coda config files are hard to use for simple things
+		* config files do not interact well with the rest of the system
+		* rdist and coda are monolithic
+		* ship, rdist, and coda are network dependent
+* the design of dist
+	* problems to solve
+		* distribution on a heterogeneous network of heterogenous machines
+		* cascaded redistribution
+		### slide: picture of cascaded redistribution
+	* completing the square
+	### slide: square containing ship, rdist, dist, and coda
+		* dist is command-line driven
+		* dist provides a service machine for client machines
+		* example of dist usage
+		* dist operates on multiple networks
+	* implementation
+	### slide: picture of distribution crossing a network
+		* cleanly dividing along functional lines
+		* packaging
+		* queueing and transmission
+		* unpackaging
+		* packaging is decoupled from transmission
+		* written mostly as a collection of shell programs
+* problems and their solutions
+	* problem: whining about networks
+	### slide: sample v10 & Berkeley network code, sample machine names
+		* network programming interfaces
+		* incompatible naming conventions
+	* solutions: isolate network dependencies
+		* we want reliable byte streams but don't care how
+		* isolate network dialers from the rest of the program
+		* provide easily-replaced heuristics to make sense of names
+	* problem: atomic installation
+		* hypothetical case study of partial installation
+		* want dist to succeed completely or fail completely
+	* solution: install package script in the unix style
+	### slide: excerpt from insdist shell script
+		* build a backup copy of stuff to be replaced
+		* install new stuff
+		* remove any remaining old stuff not replaced by new stuff
+	* problem: writing bulletproof programs
+		* bulletproof is necessary for security
+		* funny names confuse people and are insecure
+		* funny names confuse programs and are insecure
+	* solution: new shell utilities
+		* qargs and uargs
+		* serendepitous interaction with xargs
+* conclusions and lessons learned
+	* problem decomposition wins again
+		* dist is smaller than ship
+		* network pain is isolated and easily replaced with future upgrades
+		* security issues are isolated and hence more easily controlled
+		* careful use of existing tools allowed atomic installation to be
+		  coded and tested within an hour
+	* shell programs are a tremendous benefit
+		* they aid and in fact encourage clean problem decomposition
+		* contrary to popular belief, can easily be made bulletproof
+		* shell programs are very easy to make portable
+* future work
+	* demonstrate cascaded redistribution (use dist to maintain itself)
+	* focus on the notifier (isolate security/policy dependencies here)

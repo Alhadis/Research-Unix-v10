@@ -1,0 +1,74 @@
+# This file contains contains a collection of tests for the "uplevel"
+# command in Tcl.  If everything is OK then it finishes silently.
+# If a problem is detected then it generates a Tcl error with a cryptic
+# message.  To trace the error you'll have to read through the commands
+# in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/uplevel.test,v 1.3 90/03/21 10:29:44 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {Uplevel error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+proc a {x y} {
+    newset z [expr $x+$y]
+    return $z
+}
+proc newset {name value} {
+    uplevel set $name $value
+    uplevel 1 {uplevel 1 {set xyz 22}}
+}
+set xyz 0
+set x [a 22 33]
+check $x 55 1
+check $xyz 22 2
+
+proc a1 {} {
+    b1
+    global a a1
+    set a $x
+    set a1 $y
+}
+proc b1 {} {
+    c1
+    global b b1
+    set b $x
+    set b1 $y
+}
+proc c1 {} {
+    uplevel 1 set x 111
+    uplevel #2 set y 222
+    uplevel 2 set x 333
+    uplevel #1 set y 444
+    uplevel 3 set x 555
+    uplevel #0 set y 666
+}
+a1
+check $a 333 3
+check $a1 444 4
+check $b 111 5
+check $b1 222 6
+check $x 555 7
+check $y 666 8
+
+check [catch c1 foo] 1 9
+check $foo {bad level "#2"} 10
+check [catch {uplevel gorp}] 1 11
+check [catch {uplevel 1 gorp} foo] 1 12
+check $foo {bad level "1"} 13
+
+proc a2 {} {
+    uplevel a3
+}
+proc a3 {} {
+    global x y
+    set x [info level]
+    set y [info level 1]
+}
+a2
+check $x 1 14
+check $y a3 15
+
+check [catch uplevel foo] 1 16
+check $foo {too few args:  should be "uplevel [level] command ..."} 17

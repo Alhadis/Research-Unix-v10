@@ -1,0 +1,26 @@
+case $# in
+0)	echo 'specmakefont widthfile Name internal# ...'; exit ;;
+esac
+
+arch=$1
+shift
+
+echo "# $*
+name $1
+internalname $2" >$1
+awk '
+BEGIN {
+	OFS = "	"
+	print "charset"
+}
+
+# read width file to get char number and width
+# output is 
+#	--- width 0 number
+
+$1 ~ /^C[0-9][0-9][0-9]/ {
+	if ($2 > 100)
+		$2 = substr($2,1,2)
+	n = substr($1,2) + 0
+	print "---", $2, 0, n
+} ' $arch >>$1

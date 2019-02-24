@@ -1,0 +1,256 @@
+\chapter{Modules}
+ML provides a powerful module system, which can be used to partition
+programs along clean interfaces.
+
+\section{Structures}
+
+In its simplest form, a module is
+(syntactically) just a collection of declarations viewed as a unit,
+or (semantically) the environment defined by those definitions.
+This is one form  of a {\em structure--expression}:
+\verb"struct"~dec~\verb"end".  For example, the following structure--expression represents an implementation of stacks:
+\begin{verbatim}
+struct
+   datatype 'a stack = Empty | Push of 'a * 'a stack
+   exception Pop and Top
+   fun empty(Empty) = true | empty _ = false
+   val push = Push
+   fun pop(Push(v,s)) = s | pop(Empty) = raise Pop
+   fun top(Push(v,s)) = v | top(Empty) = raise Top
+end
+\end{verbatim}
+Structure--expressions and ordinary expressions are distinct classes;
+structure--expressions may be bound using the \verb"structure"
+keyword to structure--names, while ordinary expressions are
+bound using \verb"val" to value--variables.
+The form of a \verb"structure" binding is as follows:
+\begin{quote}
+\verb"structure" name \verb"=" structure--expression
+\end{quote}
+Thus, we might make a structure Stack using the structure--expression
+shown above:
+\begin{verbatim}
+structure Stack = struct
+                    datatype . . .
+                    exception . . .
+                     . . .
+                  end
+\end{verbatim}
+
+The environment $E$ that binds the identifiers \verb"stack",
+\verb"Pop", \verb"empty", etc. is now itself bound to the
+structure--identifier \verb"Stack".  To refer to names in $E$, {\em
+qualified identifiers} must be used.  A qualified identifier consists
+of a structure--name, a dot, and the name of a structure component,
+e.g. \verb"Stack.empty" (a value), \verb"Stack.stack" (a type),
+\verb"Stack.Pop" (an exception), etc.
+
+{\bf Structure closure:}  In order to isolate the interface between a
+structure and its context, a \verb"struct" phrase is not allowed to
+contain global references to types, values, or exceptions, except for
+pervasive primitives of the language like \verb"int", \verb"nil",
+etc.  It can, however, contain global references to other structures,
+signatures, and functors, including qualified names referring to
+compenents (values, types, etc.) of other structures.
+
+There are three forms of structure-expression:
+\begin{enumerate}
+\item An environment enclosed in \verb"struct" ... \verb"end" (as
+above),
+
+\item An identifer that has been previously bound in a
+\verb"structure" declaration, and
+
+\item A functor application \verb"F("{\it str}\verb")", where
+\verb"F" is the name of a functor and {\it str} is a structure
+expression.
+\end{enumerate}
+Thus, the declaration \verb"structure~Pushdown~=~Stack" binds the
+name \verb"Pushdown" to the same structure that \verb"Stack" is bound
+to; here, \verb"Stack" is an example of the second kind of structure
+expression.
+
+\subsection{Accessing structure components}
+The bindings making up a structure define named {\em components} of
+the structure, as in a record.  To refer to such components we use
+qualified names, which are formed by appending a period followed by a
+component name to the name of a structure.  For instance,
+\verb"Stack.empty" refers to the function \verb"empty" defined in the
+structure \verb"Stack".  If the qualified name designates a
+substructure of a structure, then it too has components; {\em e.g.}
+\verb"A.B.x" denotes the component \verb"x" of the substructure
+\verb"B" of a structure \verb"A".
+
+Qualifiers can be attached only to names; they do not apply to other
+forms of structure expressions.  Qualified names are treated as
+single lexical units; the dot is not an infix operator.
+
+Direct access to the bindings of a structure is provided by the
+\verb"open" declaration, which is analagous to the ``with'' clause of
+Pascal.  For example, in the scope (determined in the usual way) of
+the declaration
+\begin{quote}
+\verb"open Stack"
+\end{quote}
+the names \verb"stack", \verb"empty", \verb"pop", etc. refer to the
+corresponding components of the \verb"Stack" structure.  It is as
+though the body of the structure definition had been inserted in the
+program at that point, except that the bindings are not recreated,
+but are instead simply ``borrowed'' from the opened structure.
+\verb"open" declarations follow the usual rules for visibility, so
+that if \verb"A" and \verb"B" are two structures containing a binding
+for \verb"x" (of the same flavor, of course), then after opening both
+\verb"A" and \verb"B" with the declaration
+\begin{quote}
+\verb"open A" \\
+\verb"open B"
+\end{quote}
+the unqualified identifier \verb"x"  will be equivalent to
+\verb"B.x".  The \verb"x" component of \verb"A" can still be referred
+to as \verb"A.x", unless \verb"B" also contains a substructure named
+\verb"A".
+
+Qualified identifiers do not have infix status.  If \verb"+" is
+declared infix in a structure \verb"A", the qualified identifier
+\verb"A.+" is not an infix identifier.  However, when an identifier
+is made visible by opening a structure, it retains its infix status,
+if any.  AMBIGUOUS.
+
+The declaration \verb"open A B C" is equivalent to \verb"open A; open
+B; open C".
+
+\subsection{Evaluating structure expressions}
+The evaluation of a structure expression {\em str} depends on its
+form, and assumes a current structure environment $SE$ that binds
+structures and functors to names.  Informally, evaluation proceeds as
+follows:
+\begin{enumerate}
+\item If {\em str} is an encapsulated declaration ({\it i.e.}
+\verb"struct"...\verb"end"), then the body declarations are evaluated
+relative to $SE$ and the {\em pervasive} value, exception, and type
+environments of ML (that is, the environments binding the built-in
+primitives of the language).  The resulting environment is packaged
+as a structure and returned.  The evaluation of value bindings may
+have an effect on the store (the mapping of references to contents);
+the new store is returned as well, to be used in subsequent
+expression evaluations.
+
+\item If {\em str} is a simple name, then its binding in $SE$ is
+returned.  If it is qualified name, then it is used as an access path
+starting with $SE$ and the designated substructure is returned.
+
+\item If {\em str} is a functor application
+\verb"F("~$str'$~\verb")", where the functor \verb"F" is declared
+by \verb"functor F ( A ) = "~$body$,
+the parameter structure $str'$ is
+evaluated in $SE$ yielding structure $s_1$; then the ``body'' of the
+definition of \verb"M", which is a structure expression, is evaluated
+in $SE+\{A \mapsto s_1 \}$.  In other words, functor applications are
+evaluated in a conventional call-by-value fashion.
+\end{enumerate}
+
+\subsection{Evaluating structure declarations}
+To evaluate  a simple structure declaration, one evaluates the
+defining structure expression in the current environment $SE$ and
+returns the binding of the name of the left hand side to the
+resulting structure.  If evaluation of a structure expression raises
+an (untrapped) exception, then the declaration has no effect.
+
+\subsection{Structure equivalence}
+For certain purposes, such as checking sharing constraints
+(Section~\ref{sharing}) we must be able to determine whether two
+(references to) structures are equal or ``the same.''  Here
+structures are treated somewhat like datatypes; each evaluation of an
+encapsulated declaration or functor application creates a distinct
+new structure, and all references to this structure are considered
+equal.  Thus after the following declarations:
+\begin{verbatim}
+structure S1 = struct ... end
+structure S2 = S1
+structure S3 = struct val x = 4 end
+structure S4 = struct val x = 4 end
+\end{verbatim}
+the names \verb"S1" and \verb"S2" refer to the same structure and are
+``equal,'' whereas \verb"S3" and \verb"S4" are different structures
+and are not equal, even though the right-hand-sides are identical.
+
+\section{Signatures}
+It is often useful to explicitly constrain a structure binding to
+limit the visibility of its fields.  This is done with a {\em
+signature}, which is to a structure binding as a type constraint is to a
+value binding.  For example, we might write a signature for the
+\verb"Stack" module as
+\begin{verbatim}
+   sig type 'a stack
+       exception Pop and Top
+       val Empty : 'a stack
+       val push : 'a * 'a stack -> 'a stack
+       val empty : 'a stack -> bool
+       val pop : 'a stack -> 'a stack
+       val top : 'a stack -> 'a
+   end
+\end{verbatim}
+The signature mentions the structure components that will be visible
+outside the structure.
+
+Signatures may be bound to identifiers by a signature declaration,
+\begin{quote}
+\verb"signature" {\it sig-Id} \verb"=" {\it sig-expr}
+\end{quote}
+where {\it sig-Id} is an identifier and {\it sig-expr} is a signature
+expression---either a \verb"sig"...\verb"end" phrase or a previously
+bound signature identifier.  Thus, the signature above could be bound
+to the identifier \verb"STACK" by the declaration
+\begin{verbatim}
+signature STACK =
+   sig type 'a stack
+       exception Pop and Top
+	. . .
+   end
+\end{verbatim}
+
+A signature can be used to constrain a structure by including it in a
+structure declaration:
+\begin{quote}
+\verb"structure" {\it str-id} \verb":" {\it sig-expr} \verb"=" {\it str}
+\end{quote}
+For example, we could write
+\begin{verbatim}
+structure Stack1 : STACK = Stack
+\end{verbatim}
+Now the constructor \verb"Push" is not a visible component of the
+\verb"Stack1" structure, since it doesn't appear in the signature;
+the qualified identifier \verb"Stack1.Push" is erroneous.
+Furthermore, since \verb"stack" is mentioned in the signature only as
+a \verb"type" constructor and not as a \verb"datatype" constructor,
+the identifier \verb"Stack1.stack" is usable as a type but not a datatype.
+Finally, since the constructor \verb"Empty" is mentioned as a
+\verb"val" in the signature, but not as a constructor ({\it i.e.} as
+part of a datatype specification), then \verb"Stack1.Empty" may be
+applied as a function but not matched in a pattern.
+
+There are many signatures that can match the structure \verb"Stack".
+One of the ``broadest'' is
+\begin{verbatim}
+structure Stack2 : sig
+		       datatype 'a stack = Empty | Push of 'a * 'a stack
+		       exception Pop and Top
+		       val empty : 'a stack -> bool
+		       val push : 'a * 'a stack -> 'a stack
+		       val pop : 'a stack -> 'a stack
+		       val top : 'a stack -> 'a
+		   end
+		= Stack
+\end{verbatim}
+and the ``narrowest'' is
+\begin{verbatim}
+structure Stack3 : sig end = Stack
+\end{verbatim}
+Now, the structure \verb"Stack2" is equivalent to \verb"Stack"; it is
+the ``same'' structure, and all the same fields are visible.  The
+structure \verb"Stack3" has no components; there are no qualified
+identifiers beginning with \verb"Stack3."  However, \verb"Stack3" is
+the ``same'' for structure-equivalence purposes as \verb"Stack",
+\verb"Stack1", and \verb"Stack2"; signature constraints do not change
+the identity of a structure, just which fields are visible.
+

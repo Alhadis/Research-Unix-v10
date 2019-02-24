@@ -1,0 +1,185 @@
+From research!vax135!jsd Fri Feb 27 21:15:49 1987
+Message-Id: <8702280215.AA20817@vax135.UUCP>
+Received: by nexus.UUCP (3.2/4.7)
+	id AA00714; Fri, 27 Feb 87 21:15:43 PST
+Date: Fri, 27 Feb 87 21:15:43 PST
+From: vax135!jsd (John Denker)
+To: research!bwk
+
+Dear Brian:
+
+A status report.
+
+I got your package and unbundled it.
+Set up some directories.
+The make went just fine.
+The demo/example "isort.gen" failed, since the awk
+we have around here has never heard of functions.
+Can you send a less complicated example? Or a more complicated awk?
+
+I made up the following example script, and tried it and subsets thereof.
+It seemed to develop OK, but anim just sat there, apparently doing nothing.
+
+////////////////////////////////////////
+  clear
+t: text 3 4 Hi there
+a: line 1 2 3 4
+b: box 10 11 12 13
+c: circle 5 6 2
+////////////////////////////////////////
+ 
+Perhaps you could provide a similarly trivial (correct)
+example, and perhaps its developed version, to facilitate
+testing, and to facilitate creating others by analogy.
+
+
+Other constructive suggestions, to help the next customer:
+
+1) Assume that the distribution is unbundled into a directory called XXX.
+The makefile should move from XXX to LIB all the files that belong there,
+and set the permissions (chmod a+rx ...).  Perhaps this could be done
+as a "make install" or something.
+
+2) Also, the makefile should compile newer.c.
+
+From research!vax135!bsw Tue Mar  3 01:46:42 1987
+Message-Id: <8703030601.AA19940@vax135.UUCP>
+Received: by nexus.UUCP (3.2/4.7)
+	id AA04984; Tue, 3 Mar 87 01:00:55 PST
+Date: Tue, 3 Mar 87 01:00:55 PST
+From: vax135!bsw (Ben S. Wittner)
+To: research!bwk
+
+Jon & Brian --
+
+Here are a list of (bugs / suggestions / queries) concerning
+your animation stuff:
+
+1) (bug)  Anim seems pretty confused about what to do if you proceed
+after the end of the script.  It leaves up the last
+frame, and can't clear it.  I conjecture that it has
+forgotten about what's up, so it thinks the screen is blank,
+and doesn't bother even to try clearing it.
+
+2) (query / request) You indicated that the hooks exist
+for implementing gray scales and colors.... How hard is that?
+Is anybody at your end working on it?  If not, do we stand
+a chance of doing it here?  It sure would be sweet.
+
+3)  My naive mind would have expected a "circle 1 1 1"
+to be nicely inscribed in a "box 0 0 2 2", but that is not
+the case.  We noticed that boxes change their shape so as
+to be a fixed fraction of the display window, but circles
+are special.  I am NOT convinced that this is a feature.
+If this is really what you intended, it will require
+some very delicate documentation.  I suggest that the other
+possibilities be provided also:  circles that scale and/or
+boxes that don't.
+
+4) (Suggestion)  Could you extend the language so that
+the script can initialize some of the menu items?  I find
+it awkward that I must EACH TIME use the mouse to set up
+"click x, click y, slow 32, step 1, again".
+
+5) (Related suggestion)  It seems particularly awkward
+that getting to "slow 32" requires 5 mouse operations.
+Entering numbers is a perennial unsolved problem in 
+mouseology, and I don't have a really good solution,
+but perhaps you clever people can come up with something....
+Possible (weak) constructive suggestion:  a submenu
+with a bunch of numbers on it, sorta like a scroll bar.
+
+6) (Related suggestion)  Several of the main menu items
+are diametrically NOT self-documenting.  For instance,
+1-step is displayed only if you are NOT in 1-step mode;
+xor    ..	..	..	..  NOT ..   xor  ..;
+backward	..	..	..  NOT .. backward ....
+
+Possible constructive suggestion:  on categories where
+there are only two or three options, you could show ALL
+of them, with N-1 of them SHADED OUT.
+
+7) (Possible bug)
+(( I have certain personal standards about turning in
+"high-quality" bug reports, and this DOESN'T meet them.
+I haven't done enough checking for dumb mistakes.
+Feel free to ignore this, unless you can easily see
+what the problem is....))
+
+I had fdevelop blow up on me, on line 10164 of
+a huge script.  I looked at and near the "offending"
+line, and didn't see anything unusual.  I also extracted
+the relevant lines with 
+	head -10300 blot.s > xxyy
+	tail -300 xxyy > yy.s
+and there were no problems with yy.s!  Are there
+any internal limits in fdevelop that were exceeded?
+
+/usr/anim/lib/fdevelop: x value not a number
+ source line number 10164
+/usr/anim/lib/fdevelop: x value not a number
+ source line number 10364
+/usr/anim/lib/fdevelop: y value not a number
+ source line number 10364
+/usr/anim/lib/fdevelop: unrecognized command
+ source line number 10564
+/usr/anim/lib/fdevelop: garbage at end of line
+ source line number 10564
+/usr/anim/lib/fdevelop: garbage at end of line
+ source line number 10763
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 10962
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 10962
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 10962
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 10962
+/usr/anim/lib/fdevelop: garbage at end of line
+ source line number 10962
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 11161
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 11161
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 11161
+/usr/anim/lib/fdevelop: string too long -- truncated
+ source line number 11161
+
+(( and on and on and on.....))
+
+**********************************************************************
+**********************************************************************
+**********************************************************************
+
+I also observed that anim hung up on big .i files.
+Hmmm.....
+
+
+Anyway, thanks again for sending us the stuff.
+It has already taught us a lot about our simulations.
+
+-- jsd
+
+From research!vax135!jsd Tue Mar  3 19:48:42 1987
+Message-Id: <8703040048.AA08820@vax135.UUCP>
+Received: by cassandra.UUCP (4.12/4.7)
+	id AA04793; Tue, 3 Mar 87 19:45:15 est
+Date: Tue, 3 Mar 87 19:45:15 est
+From: vax135!jsd (John Denker)
+To: research!bwk
+
+Perhaps I should clarify what I mean by proceeding from the end 
+of the script:
+For example, run your sorting demo (isort).
+When it gets to the end, CLICK THE LEFT MOUSE BUTTON.
+Anim will leave up the last display (and forget about it)
+and restart the script, resulting in a fairly weird display.
+It ends, of course, with the second result XORing the first
+result into oblivion -- i.e. a blank screen.  This is 100%
+reproducible on our Suns -- we thought it was a strange feature
+at first.  If it doesn't reproduce on your systems, then it
+is even stranger than I thought!
+
+-- jsd
+

@@ -1,0 +1,52 @@
+-IN80
+-TITLE OPTIMISE OUT REDUNDANT MOV OPS FROM MACRO SOURCE
+-STITL PREAMBLE
+*
+*	This Spitbol program is a quick&dirty pass over the
+*	translated Minimal source (MACRO-32) to remove the
+*	unneeded MOVL instructions.  The unneeded MOVL instructions are
+*	those which move into a register or memory location, and are
+*	immediately followed by an unlabelled opcode ***L2 that can
+*	be converted into ***L3 form, that is operating on the same register
+*
+*	This is not recommended, as the ***L3 form seems to be slower!
+*
+*	Steve Duff August 1980
+*
+-STITL	INITIALIZATION
+	&STLIMIT = 10000000; &TRIM = 1; &ANCHOR = 1
+	ARITHOPCODES = 'ADDL2' | 'SUBL2' | 'MULL2' | 'DIVL2' |
++			'BISL2' | 'BICL2' | 'XORL2'
+	OPTRANS = TABLE(19)
+	OPTRANS['ADDL2'] = 'ADDL3'; OPTRANS['SUBL2'] = 'SUBL3'
+	OPTRANS['MULL2'] = 'MULL3'; OPTRANS['DIVL2'] = 'DIVL3'
+	OPTRANS['BISL2'] = 'BISL3'; OPTRANS['BICL2'] = 'BICL3'
+	OPTRANS['XORL2'] = 'XORL3'
+	SB	= SPAN('	 ')
+	LABEL	= LEN(5) '::'
+	OPTPATT	= ((LABEL | '') SB) . LAB 'MOVL' SB BREAK(',') . OP1 LEN(1)
++			(BREAK(' 	') | REM) . OP2
+	ARITHPATT = SB ARITHOPCODES . OPCODE SB BREAK(',') . OP1A LEN(1)
++			*OP2 ((SB | RPOS(0)) REM) . COMMENT
+	TERMINAL = 'Enter name of file (including extension).'
+	FILENAME = TERMINAL
+	INPUT(.INFILE,1,FILENAME)	:F(END)
+	OUTPUT(.OUTFILE,2,FILENAME)
+LOOP
+	CARD1	= INFILE		:F(EXIT)
+	CARD1	ANY(';')		:S(FLUSH1)
+	CARD1	OPTPATT			:F(FLUSH1)
+	CARD2	= INFILE		:F(HUH)
+	CARD2	ARITHPATT		:F(FLUSH2)
+	OP2	('-' | (RTAB(1) '+'))	:S(FLUSH2)
+	TERMINAL = CARD1; TERMINAL = CARD2
+	OUTFILE = LAB OPTRANS[OPCODE] '	' OP1A ',' OP1 ',' OP2 COMMENT
+	TERMINAL = OUTFILE
+	TERMINAL =
+	COUNT = COUNT + 1
+	:(LOOP)
+FLUSH1	OUTFILE = CARD1			:(LOOP)
+FLUSH2	OUTFILE = CARD1
+	OUTFILE = CARD2			:(LOOP)
+EXIT	TERMINAL = COUNT + 0 ' MOVL OPCODES REMOVED.'
+END

@@ -1,0 +1,84 @@
+-title VAXPO1: VAX Peephole Optimizer 1 - Eliminate Redundant TSTLs
+-in80
+*
+*	VAXPO1 removes redundant TSTL instructions of an operand
+*	modified by the previous instruction.
+*
+	&anchor	= 1
+	&stlimit = 10000000
+*
+*	Set up patterns to rip apart statements.
+*
+	tab	= substr( &alphabet,10,1 )
+	sep	= tab ' '
+	letters	= 'abcdefghijklmnopqrstuvwxyz23'
+	label	= break( ':' ) ':' | ''
+	eos	= span( sep ) | '#' | rpos( 0 )
+	fmtop	= label span( sep ) 
++			span( letters ) . op  span( sep )
++			( break( sep '#' ) | rem ) . dst  eos
+	tstpat	= span( sep ) 'tstl' span( sep ) *dst 
++			(eos rem) . cmnt
+*
+*	Read in opcodes of instructions that set the condition codes
+*
+	optbl	= table()
+oploop	line	= input
+	line	? '+'				:s(oploopx)
+	line	? break( sep ) . op span( sep ) rem . n
+	optbl[op] = +n				:(oploop)
+oploopx
+*
+*	Set up i/o associations.
+*
+	infile	= input
+	input( .in,0,infile )
+	terminal = 'Input file: ' infile
+	terminal =
+	outfile	= input
+	output( .out,1,outfile )
+	terminal = 'Output file ' outfile
+	terminal =
+	logfile	= input
+	output( .output,2,logfile )
+	terminal = 'Log file: ' logfile
+*
+*	Check next line for possibly preceding a redunant TSTL.
+*
+optloop	line	= in				:f(eof)
+	leq( substr( line,1,1 ),'#' )		:s(write)
+optl1	line	? fmtop				:f(write)
+	differ( n = optbl[op] )			:f(write)
+	dst	? *eq( n,2 ) break( ',' ) len( 1 ) =
+	dst	? *eq( n,3 ) break( ',' ) len( 1 ) =
+	out	= line
+*
+*	Dst contains destination operand from previous instruction.
+*	So, check now for a TSTL of that operand.
+*
+	line	= in				:f(eof)
+	line	? tstpat			:f(optl1)
+	output	= tab out
+	opt	= opt + 1
+	output	= '#--->' tab line
+	line	= in cmnt
+	output	= tab line
+	output	=
+*
+write	out	= line				:(optloop)
+*
+eof	output	= opt ' redundant TSTL instructions removed'
+end
+addl2	2
+ashl	3
+bicl2	2
+bisl2	2
+decl	1
+incl	1
+movl	2
+subl2	2
+xorl2	2
++
+spitv35.src
+spitv35.serr
+opttsts

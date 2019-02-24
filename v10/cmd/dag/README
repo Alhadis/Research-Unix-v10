@@ -1,0 +1,166 @@
+DAG is written in C++.  You need a C++ compiler, Version 1.2 or newer.
+You can get C++ from Valerie Monroe (ulysses!kaiser!vjm, 8-243-4406,
+LC 4N-E13).  Send her your name, address to send paper documentation,
+department number, name or short description of project, unix mail
+address, machine type, and version of C++ you are requesting (generally
+you want the most recent).
+
+1.  Decide where you are going to put the DAG shape libraries,
+	and edit the first line of paths.h accordingly.
+	Change DAG_LIB_SUBDIR only if you are installing under EXPTOOLS.
+
+2.  'makefile' is for old make ("make").
+	'Makefile' is for new make ("nmake").
+	Decide which you are using, and remove the unneeded file.
+
+3.  Edit C flags in the makefile.
+	If you have System V, add "-DSYSV".
+	If you have Ninth Edition Unix, add "-DV9".
+	If you are installing DAG under EXPTOOLS, add "-DEXPTOOLS".
+	If you are using C++ 2.0 or later, add -DMICC.
+	If qsort() is declared in the local C++ header file "libc.h"
+	add "-DQSORTDCL".  No known release of C++ up to C++ 2.0 beta 5
+	declares qsort() but eventually it will.
+
+	DAG makes heavy use of floating point arithmetic.  The Sun C compiler 
+	and others have command line flags that generate object code for
+	optional floating point hardware.  Find out which options are appropriate
+	for your computer, and add them to C flags in the makefile.
+
+4.  Run make or nmake.
+
+5.  Since C++ does not have a standard compilation environment,
+	problems with header files are common.  Please contact us or
+	Liberty Corner for help.
+
+6.  Install the executable "dag" and the libraries "daglib.*" where
+	they belong, and try some of the files in the directory "examples".
+
+7.  If dag dumps core (usually with the message "Bad level assignment")
+	check that static constructors in C++ are not working.  We can give
+	you a trivial program that checks this if you need it.
+
+		Stephen C North
+		201 582 7392
+		ulysses!north
+
+
+2/3/88:
+	We changed the default node shape to Ellipse.  Edge statements may
+now be "ordered": this means that the head nodes are placed on the same
+rank and are ordered left to right (by automatic creation of invisible
+flat edges).  For instance:
+
+	ordered edge from root to c1, c2, c3;
+
+Nodes have a "label" attribute to make it convenient to create many nodes
+sharing a common label.  For example you might specify part of the drawing
+of a directory hierarchy this way:
+
+	draw "/usr/include/sys/h" label "h";
+	draw "/usr/local/include/sys/h" label "h";
+
+The interface to "<shape>_clip" functions in PostScript has been changed.
+The clip function now takes two points off the stack and returns an
+optional point and a boolean.  The two points define a ray.  If the ray
+intersects the shape (placed at the origin) then the clip function pushes
+the point and the boolean value true; otherwise it pushes the boolean
+value false.  We made this change because we don't always aim edges at
+the centers of nodes.  We do ensure that the ray will intersect the
+bounding box of the shape in the same quadrant (w.r.t. the node center)
+as the ray's origin.
+
+3/8/88:
+The front end was rewritten.  We added a color attribute for nodes and edges,
+and generalized the notion labels for nodes and edges.  Any label may be
+either a string, or drawing code in curly braces.  The PostScript code
+generator knows about colors; see the user guide for details or else
+as usual READ THE CODE.
+
+We added an option to "fill" the bounding box of the drawing.  For instance:
+
+	.GS 6 8 fill
+
+will make a drawing that exactly fills a 6X8 box. 
+
+To get node labels to work correctly in Pic, label parameters to shape macros
+are now quoted.  Thus the shape macro body should NOT say "$1".  This change
+is NOT backward compatible.
+
+The back end has been improved considerably, especially the heuristics
+for X coordinate assignment.  Because of the quadratic complexity,
+the time it takes to run the -O option is tolerable only on small graphs,
+and since the heuristic does nearly as well, we may eventually remove
+this command line option altogether.  The back end does a better job of
+centering nodes over their descendants (yields better drawings of trees)
+and also takes less time on graphs with many hundreds of nodes.
+
+You can make the documentation by saying:
+
+	pic dag.doc | tbl | eqn | troff -mm
+
+Because of subtleties in the figures of this document, you need a Kernighan
+pic to print it.  If you have trouble, ask us for a paper copy.
+
+4/18/88:
+The "-Tcip" option is back.  Run "dag -Tcip" to generate pic code that
+can be edited with cip.  The issue is that cip does not allow macro
+definitions, so you can't use it with custom shape macros.
+
+4/21/88:
+Fixed some little bugs including: pic syntax error in nodes defined
+with graphics code between curly braces introduced by -Tcip option;
+coding error in a call to realloc(), failure to find DAG libraries
+when $TOOLS is set.  
+
+5/17/88:
+The node positioning heuristics try to create "local symmetry."
+This makes subtrees, chains, and similar structures look more like
+drawings made by hand.  Zero weight edges are now ignored when
+finding node placement.  The -Tsimple driver was modified to use
+tabs as delimiters between fields, and to not use tabs within node
+labels, for ease of writing filters using old awk which is not
+able to do a good job with quoted strings.
+
+6/3/88:
+Fixed PS line style for dotted edges (had args reversed).
+Fixed stupidity in .GR x y fill that caused wrong size layout.
+
+6/20/88:
+In daglib.ps, corrected Diamond_clip and Square procedures.
+Crude benchmarks show that 50% of the Laserwriter time
+goes to drawing ellipses, 25% to drawing splines, and 25% to
+drawing node labels. 
+
+11/17/88:
+Fixed qsort declaration for use with so-called "Fifth Beta Release of C++ 2.0".
+Some other bug fixes were merged into this version.
+
+12/05/88:
+Try another qsort declaration and take triegen out of makefiles.
+
+12/28/88:
+Fix bug involving wrong height and width with .GR and nodes labeled
+with graphics code.  Exchange makefile,Makefile to agree with what
+old,new-make already expect.
+
+3/28/89:
+Improved man page, responding to chronic complaints.
+PostScript pagination now built into dag, bypassing the inefficient
+Poster program (from CIA).  To paginate into 8-1/2 x 11 pages, say:
+
+	dag -Tps -p8.5x11
+
+Margins are half an inch but can be reset in the -p option.
+To set 1 inch margins:
+
+	dag -Tps -p8.5x11,1x1
+
+Laserwriters have a hard margin so there's no way to make a
+seamless mosaic, unfortunately.
+
+The script dagpsjobs (for new awk) breaks a dag PostScript output
+file into multiple print jobs.  (Read the script to see how the
+options work-- it's a trivial program.)  The awk script gprof2dag.awk
+converts gprof output to dag input that draws colored Ellipses and edges
+in PostScript.

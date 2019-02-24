@@ -1,0 +1,281 @@
+ /*
+ * ENCODE BASIC COMMAND
+ */
+/*	"@(#) encode.c: V 2.34 10/25/83"	*/
+#include <stdio.h>
+#include <termio.h>
+#include "bas.h"
+
+extern struct termio	oldterm;
+
+extern char	OLDAOUT[],
+		NEWAOUT[],
+		LDOUT[],
+		IFILE[];
+
+/*
+ *
+ * //////// BASIC INTERPRETER COMMAND TABLE ////////
+ *
+ */
+
+int	autnum(),	/* start auto line numbering */
+	bload(),	/* process BLOAD command */
+	bsys(),		/* "!" command for system calls */
+	call(),		/* process CALL command */
+	chain(),	/* process CHAIN command */
+	clearbreak(),	/* clear a list of breakpoints */
+	clearproc(),	/* process CLEAR statement */
+	_closef(),	/* CLOSE FILE */
+	_common(),	/* COMMON command */
+	con(),		/* continue from single step */
+	copy(),		/* copy a group of lines */
+	corleft(),	/* returns amount of core bytes remaining in decimal */
+	delete(),	/* delete specified line number(s) */
+	def(),		/* processes user-def fct definition */
+	defdbl(),	/* processes DEFDLB statement */
+	defint(),	/* processes DEFINT statement */
+	defsng(),	/* processes DEFSNG statement */
+	defstr(),	/* processes DEFSTR statement */
+	dim(),		/* processes DIM */
+	_else(),	/* ELSE command for structured "if" */
+	__end(),	/* define end of program */
+	_endif(),	/* Structured "if" terminator */
+	erase(),	/* ERASE processor */
+	errorproc(),	/* processes ERROR statement */
+	f(),		/* print current filename */
+	field(),	/* FIELD statement */
+	_for(),		/* initialize and/or test "for" loop */
+	__get(),	/* GET statement */
+	goaway(),	/* "bye" command exits the interpreter */
+	gosub(),	/* goto subroutine, return to next statement */
+	glob(),		/* global search command for editing */
+	__goto(),	/* goto specified statement number */
+	__if(),		/* if/then/goto test */
+	__input(),	/* accept input from stdio dev */
+	linput(),	/* LINE INPUT command */
+	load(),		/* clear user core, the read in BASIC prog */
+	let(),		/* execute assignment */
+	list(),		/* reverse translate, then list */
+	merge(),	/*read in basic file in full ascii text form*/
+	midstmt(),	/* MID$ statement processor */
+	mov(),		/* move a group of lines */
+	new(),		/* clean out BASIC program txtbuf */
+	next(),		/* terminate last "for" statement */
+	no_op(),	/* ignore this statemtnt */
+	on(),		/* on goto, on gosub */
+	openf(),	/* OPEN file(s) for reading */
+	option(),	/* processes OPTION */
+	__print(),	/* print string and/or variables */
+	__put(),		/* PUT statement */
+	_random(),	/* plant random "seed" for "rnd" cmd */
+	__read(),	/* initialized data */
+	renum(),	/* renumber line numbers */
+	restore(),	/* restore initialized data area pointer */
+	resume(),	/* processes RESUME statement */
+	__return(),	/* return from subroutine called by gosub */
+	run(),		/* run or load and run a BASIC core image */
+	save(),		/*save basic program full ascii text form*/
+	setbreak(),	/* set a list of breakpoints */
+	sing(),		/* single step execution */
+	stop(),		/* halt program execution and re-init */
+	sub(),		/* substitute command for editing */
+	swap(),		/* SWAP statement processor */
+	syscd(),	/* changedir command */
+	sysls(),	/* direct call to ls */
+	sysmv(),	/* direct call to mv for NAME command */
+	sysrm(),	/* direct call to rm */
+	troff(),	/* turn off program execution trace */
+	tron(),		/* turn on program execution trace */
+	undo(),		/* undoes the last substite command */
+	wend(),		/* WEND loop end command */
+	__while(),	/* WHILE loop command */
+	width(),	/* WIDTH command */
+	bwrite();	/* WRITE command */
+
+
+/*
+ *
+ * This is the BASIC interpreter command string and routine
+ * dispatch table.
+ * This table is used for forward translation of a BASIC text
+ * file to it's core image form and is also used in the reverse
+ * translation process.
+ * In loadin the basic text file (.b) the table is searched
+ * for each command encountered in the file and is used to replace
+ * the command with a "PSEUDO CODE" or the relative position of the
+ * code in the table. This process also occurs when an input line is typed
+ * before it is stored for a run.
+ * When a run command is executed the table need-NOT be searched
+ * as the offset is already "compiled" in the code.
+ * The basic execution routine is then executed by an indirect,
+ * indexed jump through this table.
+ * The format of a line in a BASIC core image is as follows:
+ *	first two bytes represent the integer value of the line number.
+ *	Second two bytes represent the PSEUDO code or table offset.
+ *	Then the rest of the line is in it's original TEXT form,
+ *		terminated by a NULL.
+ *
+ *
+ */
+
+#define CMDTBLSIZE	84
+
+/*
+ * each entry contains the text for the BASIC command
+ * in question and the address of the routine which sevices it
+ * It is IMPERATIVE that this table remain sorted, because the
+ * lookup algorithm is a binary search.  CMDTBLSIZE (size of 
+ * cmdtbl) must be changed when adding new commands to the 
+ * command table.
+ */
+
+
+struct COMMAND cmdtbl[CMDTBLSIZE] = {
+	{"",		no_op},
+	{"\010",	let},
+	{"!",		bsys},
+	{"'",		no_op},
+	{"?",		__print},
+	{"auto",	autnum},
+	{"bload",	bload},
+	{"call",	call},
+	{"cb",		clearbreak},
+	{"cd",		syscd},
+	{"cf",		f},
+	{"chain",	chain},
+	{"clear",	clearproc},
+	{"close",	_closef},
+	{"common",	_common},
+	{"cont",	con},
+	{"copy",	copy},
+	{"data",	no_op},
+	{"def",		def},
+	{"defdbl",	defdbl},
+	{"defint",	defint},
+	{"defsng",	defsng},
+	{"defstr",	defstr},
+	{"delete",	delete},
+	{"dim",		dim},
+	{"else",	_else},
+	{"end",		__end},
+	{"endif",	_endif},
+	{"erase",	erase},
+	{"error",	errorproc},
+	{"field",	field},
+	{"files",	sysls},
+	{"for",		_for},
+	{"get",		__get},
+	{"global",	glob},
+	{"gosub",	gosub},
+	{"goto",	__goto},
+	{"if",		__if},
+	{"input",	__input},
+	{"input#",	__input},
+	{"kill",	sysrm},
+	{"let",		let},
+	{"line",	linput},
+	{"list",	list},
+	{"llist",	list},
+	{"load",	load},
+	{"lset",	let},
+	{"merge",	merge},
+	{"mid$",	midstmt},
+	{"move",	mov},
+	{"name",	sysmv},
+	{"new",		new},
+	{"next",	next},
+	{"on",		on},
+	{"open",	openf},
+	{"option",	option},
+	{"print",	__print},
+	{"print#",	__print},
+	{"put",		__put},
+	{"quit",	goaway},
+	{"randomize",	_random},
+	{"read",	__read},
+	{"rem",		no_op},
+	{"renum",	renum},
+	{"restore",	restore},
+	{"resume",	resume},
+	{"return",	__return},
+	{"rset",	let},
+	{"run",		run},
+	{"save",	save},
+	{"sb",		setbreak},
+	{"sing",	sing},
+	{"size",	corleft},
+	{"stop",	stop},
+	{"sub",		sub},
+	{"swap",	swap},
+	{"system",	goaway},
+	{"troff",	troff},
+	{"tron",	tron},
+	{"undo",	undo},
+	{"wend",	wend},
+	{"while",	__while},
+	{"width",	width},
+	{"write",	bwrite},
+	};
+
+
+goaway()
+{
+	clall();
+	ioctl(fileno(stdin),TCSETA, &oldterm);
+	unlink(OLDAOUT);
+	unlink(NEWAOUT);
+	unlink(IFILE);
+	unlink(LDOUT);
+	exit(0);
+}
+
+
+
+/*
+ *
+ * calling format:
+ *	code = encode(string);
+ *
+ *	where: code = integer returned as opcode (table offset)
+ *			-1 (minus one) returned if search failed
+ *	       string = pointer to string containing code text
+ *			to be translated or encoded (null terminated)
+ */
+
+
+/*
+ * compare each string in table with s
+ * when match is found, return index (OPCODE)
+ * if no match, return -1
+ *
+ */
+encode(s)
+char	s[];
+{
+	register int	m,
+			l,
+			u,
+			n;
+
+	l = 0;
+	u = CMDTBLSIZE - 1;
+	while (l <= u)
+	{
+		m = (l + u) / 2;
+		if ((n = strcmp(s, cmdtbl[m].cmdtxt)) > 0)
+			l = m + 1;
+		else if (n == 0)
+			return(m);
+		else
+			u = m - 1;
+	}
+	return(-1);
+}
+
+
+
+no_op()
+{
+	return(0);
+}

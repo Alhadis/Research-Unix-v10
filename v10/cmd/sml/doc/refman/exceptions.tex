@@ -1,0 +1,172 @@
+\chapter{Exceptions}
+\label{exception}
+The rough and ready rule for understanding how exceptions are handled
+is as follows.  If an exception is raised by a \verb"raise"
+expression
+\begin{quote}
+\verb"raise" $E$ \verb"(" {\it exp} \verb")"
+\end{quote}
+which lies in the textual scope of a declaration of the exception
+constructor $E$, then it may be handled by a handling rule
+\begin{quote}
+\verb"handle" $E$ \verb"(" {\it pat} \verb") =>" {\it exp'}
+\end{quote}
+but only if this handler is in the textual scope of the same
+declaration.
+
+Any exception, regardless of scope, is handled by a wildcard or
+variable pattern, as
+\begin{quote}
+\verb"handle _ =>" {\it exp'}
+\end{quote}
+This rule is perfectly adequate for exceptions declared at top level;
+some examples in Section~\ref{pathexn} below illustrate what may occur in other
+cases.
+
+\section{An example}
+To illustrate the generality of exception handling,  suppose we have
+declared some exceptions as follows:
+\begin{verbatim}
+exception    Oddlist of int    and   Oddstring of string
+\end{verbatim}
+and that a certain expression  exp:int  may raise either of these
+exceptions and also runs the risk of dividing by zero.  The handler
+in the following \verb"handle" expression would deal with these
+expressions:
+\begin{verbatim}
+exp handle Oddlist []  => 0
+         | Oddlist [x] => 2*x
+         | Oddlist (x::y::_) => x div y
+         | Oddstring "" => 0
+         | Oddstring s => size(s)-1
+         | Div => 10000
+\end{verbatim}
+Note that the whole expression is well-typed because in each handling
+rule the type of the match-pattern is \verb"exn", and because the
+result type of the match is \verb"int", the same as the type of exp.
+
+Note also that the last handling rule will handle \verb"Div"
+exceptions raised by exp, but will not handle the \verb"Div"
+exception that may be raised by \verb"x div y" in the third handling
+rule.  Finally, note that a universal handling rule
+\begin{verbatim}
+         | _ => 50000
+\end{verbatim}
+at the end would deal with all other exceptions raised by  exp.
+
+\section{Exception constructors}
+For an exception constructor E, the expression
+\begin{quote}
+$E$ \verb"(" {\it exp} \verb")"
+\end{quote}
+evaluates the expression {\it exp}, producing value $v$,
+and then applies the constructor $E$ to it, yielding the value
+$E(v)$, whose type is \verb"exn".
+
+The \verb"raise" keyword may be applied to any expression of type
+\verb"exn", and has the effect of ``raising'' that exception value.
+The innermost (dynamically) enclosing expression 
+$e = e_1~\verb"handle"~m_1$ is found; all further evaluation of the
+expression $e_1$ (and its subphrases) is aborted; and the match $m_1$
+is applied to the exception value, yielding  the result of the
+expression $e$.  
+
+If the match in a handler fails, then the exception value is
+\label{reraise}
+re-raised, and another enclosing handler is found.
+
+Exception constructors may be nullary (have no associated value), in
+which case the {\it exp} and {\it pat} in the previous discussion are
+omitted.
+
+Exceptions may be constructed independently of raising them:
+\begin{verbatim}
+  exception A of int
+  val e = A 6
+  val x = raise e
+\end{verbatim}
+Handlers may be abstracted from the \verb"handle" keyword:
+\begin{verbatim}
+   val h = fn E 0 => "zero"
+            | E _ => "nonzero"
+            | v => raise v
+
+   f(x)  handle  e => h e
+\end{verbatim}
+Note that it is advisable in this case to have a default clause in
+the function \verb"h", since the default for a \verb"handle" match
+(re-raising the exception) is different from the default for a \verb"fn" or
+\verb"case" match (raising the \verb"Match" exception).
+
+The ordinary wildcard pattern 
+\verb"_" will handle any exception when it is used in a pattern, as
+will any pattern consisting solely of a variable.  These should be
+used with some care, bearing in mind that they will even handle
+interrupts.
+
+Nullary exception names, when misspelled, appear to the compiler to be
+variables; these will then match any exception.  For this reason we
+recommend the convention that exception names (and other
+constructors) be written beginning with an uppercase character, and
+variables be written beginning with a lowercase character.  The
+compiler may remind the programmer of this convention when it is
+violated.
+
+\section{Some pathological examples}
+\label{pathexn}
+We now consider some possible misuses of exception handling, which
+may arise from the fact that exception declarations have scope, and
+that each evaluation of a generative exception binding creates a
+distinct exception.  Consider a simple example:
+\begin{verbatim}
+exception  E of bool
+fun f(x) = 
+     let exception E of int
+      in if x > 100 then raise E(x) else x+1
+     end
+val z = f(200) handle E(true) => 500 | E(false) => 1000
+\end{verbatim}
+The program is  well-typed, but useless.  The exception bound to the
+outer \verb"E" is distinct from that bound to the inner \verb"E";
+thus the exception raised by \verb"f(200)", with excepted value 200,
+could only be handled by a handler within the scope of the inner
+exception declaration---it will not be handled by the handler in the
+program, which expects a boolean value.  So this exception will be
+reported at top level.  This would apply even if the outer exception
+declaration were also of type int; the two exceptions bound to
+\verb"E" would be distinct.
+
+On the other hand, if the last line of the program is changed to
+\begin{verbatim}
+f(200) handle _ => 500
+\end{verbatim}
+then the exception will be caught, and the value 500 returned.  A
+universal handling rule (i.e. \verb"_" or a variable-identifier)
+catches any exception---even one exported from the scope of the
+declaration of the associated exception name---but cannot examine the
+excepted value carried by the exception constructor, since the type
+of this value cannot be statically determined.
+
+Even a single textual exception binding---if for example it is
+declared within a recursively defined function---may bind distinct
+exceptions to the same identifier.  Consider another useless program:
+\begin{verbatim}
+fun f(x) =
+     let exception E
+      in if p(x) then a(x)
+                 else if q(x) then f(b(x)) handle E => c(x)
+                              else raise E
+     end
+val z = f v
+\end{verbatim}
+Now if p(v) is false but q(v) is true, the recursive call will
+evaluate f(b(v)).  Then if both p(b(v) and q(b(v)) are false, this
+evaluation will raise \verb"E".  But this exception will not be
+handled, since the exception raised is that which is bound to
+\verb"E" by the inner---not outer---evaluation of the exception
+declaration.
+
+These pathological examples should not leave the impression that
+exceptions are hard to use or to understand.  The rough and ready
+rule of Section~\ref{exception} will almost always  give the correct
+understanding.

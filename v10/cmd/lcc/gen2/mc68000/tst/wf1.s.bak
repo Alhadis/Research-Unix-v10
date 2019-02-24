@@ -1,0 +1,239 @@
+.text
+.globl _main
+.align 2
+_main:link a6,#-36
+movm.l #0x400,-28(a6)
+clr.l -24($a6)
+clr.l _next
+jra L3
+L2:
+lea -20($a6),$a2
+mov.l $a2,($sp)
+lea -24($a6),$a2
+mov.l $a2,4($sp)
+jbsr _lookup
+mov.l $d0,$a2
+addq.l &1,($a2)
+L3:
+lea -20($a6),$a2
+mov.l $a2,($sp)
+jbsr _getword
+tst.l $d0; jne L2
+mov.l -24($a6),($sp)
+jbsr _tprint
+clr.l $d0
+L1:
+movm.l -28(a6),#0x400
+unlk a6
+rts
+.globl _err
+.align 2
+_err:link a6,#-8
+mov.l &_6,($sp)
+mov.l 8($a6),4($sp)
+jbsr _printf
+mov.l &1,($sp)
+jbsr _exit
+L5:
+unlk a6
+rts
+.globl _getword
+.align 2
+_getword:link a6,#-20
+movm.l #0x2490,-16(a6)
+L8:
+L9:
+jbsr _getchar
+mov.l $d0,$d7
+cmp.l &-1,$d0; jeq L11
+mov.l $d7,($sp)
+jbsr _isletter
+tst.l $d0; jeq L8
+L11:
+mov.l 8($a6),$a5
+jra L15
+L12:
+mov.l $a5,$a2
+lea 1($a2),$a5
+mov.b $d7,($a2)
+L13:
+jbsr _getchar
+mov.l $d0,$d7
+L15:
+mov.l $d7,($sp)
+jbsr _isletter
+mov.l $d0,$d7
+tst.l $d0; jne L12
+clr.b ($a5)
+mov.l $a5,$d4
+cmp.l 8($a6),$d4; jls L16
+mov.l &1,$d0
+jra L7
+L16:
+clr.l $d0
+L7:
+movm.l -16(a6),#0x2490
+unlk a6
+rts
+.globl _isletter
+.align 2
+_isletter:link a6,#-0
+mov.l 8($a6),$d1
+cmp.l &65,$d1; jlt L19
+cmp.l &90,$d1; jgt L19
+add.l &32,$d1
+L19:
+cmp.l &97,$d1; jlt L21
+cmp.l &122,$d1; jgt L21
+mov.l $d1,$d0
+jra L18
+L21:
+clr.l $d0
+L18:
+unlk a6
+rts
+.globl _lookup
+.align 2
+_lookup:link a6,#-28
+movm.l #0x2418,-20(a6)
+mov.l 12($a6),$a5
+tst.l ($a5); jeq L24
+mov.l 8($a6),($sp)
+mov.l ($a5),$a2
+mov.l 12($a2),4($sp)
+jbsr _strcmp
+mov.l $d0,-4($a6)
+tst.l -4($a6); jge L26
+mov.l 8($a6),($sp)
+mov.l ($a5),$a2
+lea 4($a2),$a2
+mov.l $a2,4($sp)
+jbsr _lookup
+mov.l $d0,$d0
+jra L23
+L26:
+tst.l -4($a6); jle L28
+mov.l 8($a6),($sp)
+mov.l ($a5),$a2
+lea 8($a2),$a2
+mov.l $a2,4($sp)
+jbsr _lookup
+mov.l $d0,$d0
+jra L23
+L28:
+mov.l ($a5),$d0
+jra L23
+L24:
+cmp.l &2000,_next; jlt L30
+mov.l &_32,($sp)
+jbsr _err
+L30:
+lea _words,$a2
+mov.l _next,$d4
+asl.l &4,$d4
+mov.l &0,0($a2,$d4.l)
+lea _words+8,$a2
+mov.l _next,$d4
+asl.l &4,$d4
+mov.l &0,0($a2,$d4.l)
+lea _words+4,$a2
+mov.l &0,0($a2,$d4.l)
+mov.l 8($a6),($sp)
+jbsr _strlen
+mov.l $d0,$d4; addq.l &1,$d4
+mov.l $d4,($sp)
+jbsr _malloc
+lea _words+12,$a2
+mov.l _next,$d4
+asl.l &4,$d4
+mov.l $d0,0($a2,$d4.l)
+lea _words+12,$a2
+mov.l _next,$d4
+asl.l &4,$d4
+mov.l 0($a2,$d4.l),$d4
+tst.l $d4; jne L36
+mov.l &_39,($sp)
+jbsr _err
+L36:
+lea _words+12,$a2
+mov.l _next,$d4
+asl.l &4,$d4
+mov.l 0($a2,$d4.l),($sp)
+mov.l 8($a6),4($sp)
+jbsr _strcpy
+mov.l _next,$d4
+mov.l $d4,$d3; addq.l &1,$d3
+mov.l $d3,_next
+lea _words,$a2
+asl.l &4,$d4
+lea 0($a2,$d4.l),$a2
+mov.l $a2,($a5)
+mov.l $a2,$d0
+L23:
+movm.l -20(a6),#0x2418
+unlk a6
+rts
+.globl _tprint
+.align 2
+_tprint:link a6,#-16
+movm.l #0x2000,-4(a6)
+mov.l 8($a6),$a5
+cmp.l &0,$a5; jeq L42
+mov.l 4($a5),($sp)
+jbsr _tprint
+mov.l &_44,($sp)
+mov.l ($a5),4($sp)
+mov.l 12($a5),8($sp)
+jbsr _printf
+mov.l 8($a5),($sp)
+jbsr _tprint
+L42:
+L41:
+movm.l -4(a6),#0x2000
+unlk a6
+rts
+.globl _strcmp
+.align 2
+_strcmp:link a6,#-12
+movm.l #0x418,-12(a6)
+mov.l 8($a6),$a0
+mov.l 12($a6),$a1
+jra L47
+L46:
+mov.l $a0,$a2
+lea 1($a2),$a0
+tst.b ($a2); jne L49
+clr.l $d0
+jra L45
+L49:
+addq.l &1,$a1
+L47:
+mov.b ($a0),$d4
+cmp.b ($a1),$d4; jeq L46
+tst.b ($a0); jne L51
+mov.l &-1,$d0
+jra L45
+L51:
+tst.b ($a1); jne L53
+mov.l &1,$d0
+jra L45
+L53:
+mov.b ($a0),$d4
+ext.w $d4; ext.l $d4
+mov.b ($a1),$d3
+ext.w $d3; ext.l $d3
+mov.l $d4,$d0; sub.l $d3,$d0
+L45:
+movm.l -12(a6),#0x418
+unlk a6
+rts
+.bss
+.globl _next
+comm _next,4
+.globl _words
+comm _words,32000
+.text
+.align 2; _44:.ascii "%d\011%s\012\000"
+.align 2; _39:.ascii "out of word storage\000"
+.align 2; _32:.ascii "out of node storage\000"
+.align 2; _6:.ascii "? %s\012\000"

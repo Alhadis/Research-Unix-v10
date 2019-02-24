@@ -1,0 +1,28 @@
+#!/bin/sh
+PATH=/bin:/usr/bin:/usr/lib/upas
+sender=$1;shift
+system=$1;shift
+sys=`hostname`
+
+# massage the destination
+temp=
+for i in $*; do temp="$temp $system!$i"; done
+
+# first try immediate smtp
+cat > /tmp/ur$$
+tosmtp "$sys!$sender" "$system" $temp < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+
+# didn't work: queue it
+/usr/lib/upas/smtpqer "$sys!$sender" "$system" $temp < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+
+# didn't work: get gateway system
+gateway=`cat /usr/lib/upas/gateway`
+case $gateway in
+"") gateway=research ;;
+esac
+
+# let the gateway figure it out
+tosmtp "$sys!$sender" $gateway $temp < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+/usr/lib/upas/smtpqer "$sys!$sender" $gateway $temp < /tmp/ur$$rv=$?
+rm -f /tmp/ur$$
+exit $rv

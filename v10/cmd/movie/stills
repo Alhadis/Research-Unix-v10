@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# stills: filter to convert stills language to pic
+#	typical troff preprocessor:
+#	stills statements are bracketed by .begin stills/.end
+
+LIB=${LIB-/usr/lib/movie}
+
+for i in $*	# quicker than compiling a big awk program
+do
+	if [ ! -r $i ]
+	then
+		echo "stills: can't open file $i" 1>&2; exit 1
+	fi
+done
+
+awk -f $LIB/stills.awk develop=$LIB/develop $*

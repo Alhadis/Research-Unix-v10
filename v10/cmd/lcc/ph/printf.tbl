@@ -1,0 +1,285 @@
+				printf format string decision tree
+				------ ------ ------ -------- ----
+
+d,i		flags:
+			-	left justified in field
+				default is right justified
+			+	always show sign
+				default is only show sign for negative
+			' '	if non-negative or no characters, prefix with space 
+			 	ignore if with +
+			#	UNDEFINED
+			0	pad to field width with zeros after any sign
+				ignore if with '-' flag
+			 	ignore if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			minimum number of digits
+			if prec > digits, pad with 0
+			default is 1
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+			0 value with 0 precision writes no characters
+		conversion:
+			signed decimal number
+			pad to precision with leading 0s
+		following conversion spec:
+			h	value is short
+			l	value is long
+			L	UNDEFINED
+
+o		flags:
+			-	left justified in field
+				default is right justified
+			+	UNDEFINED
+			' '	UNDEFINED
+			#	increase precision to make first digit be 0
+			0	pad to field width with zeros
+				ignore if with '-' flag
+			 	ignore if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			minimum number of digits
+			default is 1
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+			0 value with 0 precision writes no characters
+		conversion:
+			unsigned octal
+			pad to precision with leading 0s			
+		following conversion spec:
+			h	value is unsigned short
+			l	value is unsigned long
+			L	UNDEFINED
+
+u		flags:
+			-	left justified in field
+				default is right justified
+			+	UNDEFINED
+			' '	UNDEFINED
+			#	UNDEFINED
+			0	pad to field width with zeros
+				ignore if with '-' flag
+			 	ignore if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			minimum number of digits
+			default is 1
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+			0 value with 0 precision writes no characters
+		conversion:
+			unsigned decimal
+			pad to precision with leading 0s			
+		following conversion spec:
+			h	value is unsigned short
+			l	value is unsigned long
+			L	UNDEFINED
+
+x,X		flags:
+			-	left justified in field
+				default is right justified
+			+	UNDEFINED
+			' '	UNDEFINED
+			#	non-zero result has 0x or 0X prefix
+			0	pad to field width with zeros
+				ignore if with '-' flag
+			 	ignore if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			minimum number of digits
+			default is 1
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+			0 value with 0 precision prints no characters
+		conversion:
+			unsigned hex
+			x uses lowercase, X uses upper case
+			pad to precision with leading 0s			
+		following conversion spec:
+			h	value is unsigned short
+			l	value is unsigned long
+			L	UNDEFINED
+
+f		flags:
+			-	left justified in field
+				default is right justified
+			+	always show sign
+				default is only show sign if negative
+			' '	if non-negative or no characters, prefix with space 
+			 	ignore if with +
+			#	always print a decimal point
+				default is to print decimal only if digits follow
+			0	pad to field width with zeros after sign
+				ignore if with '-' flag
+			 	UNDEFINED if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			maximum number of digits after the decimal point
+			default is 6
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+		conversion:
+			double of form ddd.ddd
+			if precision is 0 and no '#' flag, supress decimal point
+			if decimal point is printed, at least one character precedes
+			value is rounded to appropriate number of digits
+		following conversion spec:
+			h	UNDEFINED
+			l	UNDEFINED
+			L	value is long double
+
+e,E		flags:
+			-	left justified in field
+				default is right justified
+			+	always show sign
+				default is only show sign on negative
+			' '	if non-negative or no characters, prefix with space 
+			 	ignore if with +
+			#	always print a decimal point
+				default is to print decimal only if digits follow
+			0	pad to field width with zeros after sign
+				ignore if with '-' flag
+			 	UNDEFINED if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			maximum number of digits after the decimal point
+			default is 6
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+		conversion:
+			d.dddde+/-ddd
+			one non-zero digit before decimal (if value is not 0)
+			0 precision and no '#' flag suppresses decimal
+			value rounded to appropriate number of digits
+			E gives 'E' as exponent indicator, e gives 'e'
+			exponent is at least 2 digits
+			zero value guves 0 exponent			
+		following conversion spec:
+			h	UNDEFINED
+			l	UNDEFINED
+			L	value is long double
+
+g,G		flags:
+			-	left justified in field
+				default is right justified
+			+	always show sign
+				default is only show sign on negative
+			' '	if non-negative or no characters, prefix with space 
+			 	ignore if with +
+			#	always print a decimal point, do not remove trailing zeros
+				default is to print decimal only if digits follow
+				default is to strip trailing 0s after decimal point
+			0	pad to field width with zeros after sign
+				ignore if with '-' flag
+			 	UNDEFINED if with precision
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			maximum number of significant digits
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+			missing or zero precision means 1
+		conversion:
+			if exponent < -4 or >= precision use e(E) format
+			otherwise use f format
+			trailing 0's removed if no '#' flag
+			decimal point suppressed if no character and no '#' flag
+		following conversion spec:
+			h	UNDEFINED
+			l	UNDEFINED
+			L	value is long double
+
+c		flags:
+			-	left justified in field
+				default is right justified
+			+	UNDEFINED
+			' '	UNDEFINED
+			#	UNDEFINED
+			0	UNDEFINED
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision
+			UNDEFINED
+		conversion
+			write the character
+		following conversion spec:
+			h	UNDEFINED
+			l	UNDEFINED
+			L	UNDEFINED
+
+s		flags:
+			-	left justified in field
+				default is right justified
+			+	UNDEFINED
+			' '	UNDEFINED
+			# 	UNDEFINED
+			0	UNDEFINED
+		width:
+			if conv value has < width chars, pad field with spaces left/right
+			* means read next input int, negative means '-' flag
+		precision:
+			maximum number of characters written
+			. without digit means ".0"
+			.* reads next input int, negative number means ignore
+		conversion:
+			write to end of string or (if specified) precision number of chars
+			if no precision or precision > size of string, must be NUL term.
+		following conversion spec:
+			h	UNDEFINED
+			l	UNDEFINED
+			L	UNDEFINED
+
+p		flags:
+			-	left justified in field
+				default is right justified
+			+	UNDEFINED
+			' '	UNDEFINED
+			#	UNDEFINED
+			0	UNDEFINED
+		width:
+			if conv value has < width chars, pad field according to flag
+			* means read next input int, negative means '-' flag
+		precision:
+			UNDEFINED
+		conversion:
+			implementation defined pointer
+		following conversion spec:
+			h	UNDEFINED
+			l	UNDEFINED
+			L	UNDEFINED
+
+n		flags:
+				all flags are undefined
+		width:
+				UNDEFINED
+		precision:
+				UNDEFINED
+		conversion:
+			write number of characters written so far
+		following conversion specifier:
+			h	pointer is to a short int
+			l	pointer is to a long int
+			L	UNDEFINED
+
+
+misc:
+	%% is escapefor printing percent character
+	all other conversion specifiers have UNDEFINED behaviour
+	nonexistant or small field gets expanded to hold value
+	returns number of characters written, or negative number on output error
+

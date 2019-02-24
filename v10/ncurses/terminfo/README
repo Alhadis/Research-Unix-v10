@@ -1,0 +1,41 @@
+@(#)README	1.3
+
+The files in this directory with the .ti suffix are terminfo sources.
+They should be compiled (separately or by catting them together into
+terminfo.src) with tic, placing the results in /usr/lib/terminfo/?/*.
+
+The cvt files are useful tools for converting termcap to terminfo.
+They are not 100% accurate, but do most of the conversion for you.
+cvt.ex is an ex script to convert a termcap description into a
+terminfo description.  Note that it will not convert padding specifications,
+so they must be done by hand.  Note also that typical termcap entries
+do not give as much information as terminfo, so the resulting terminfo
+entry is often incomplete (e.g. won't tell you the terminal uses
+xon/xoff handshaking, or what extra function keys send).  You are
+urged to read the list of terminfo capabilities and augment your
+terminfo descriptions accordingly.
+
+The cvt.h file is useful for a quick hack at converting termcap programs
+which use uppercase 2 letter names for capabilities to use terminfo.
+Since tget* are provided anyway, this is of questionable value unless
+your program barely fits on a pdp-11.
+
+The cvt.sed script is useful for actually editing the source of the same
+class of programs.  It requires a sed that understands \< and \>, the
+mod is trivial to make if you look at the corresponding code in ex or
+grep.
+
+There are other incompatibilities at the user level between termcap and
+terminfo.  A program which creates a termcap description and then
+passes it to tgetent (e.g. vi used to do this if no TERM was set) or
+which puts such a description in the environment for a child cannot
+possibly work, since terminfo puts the parser into the compiler, not
+the user program.  If you want to give a child a smaller window, set
+up the LINES and COLUMNS environment variables or implement the JWINSIZE
+ioctl.
+
+If you want to edit your own personal terminfo descriptions (and are not
+a super user on your system) the method is different.  Set
+TERMINFO=$HOME/terminfo (or wherever you put the compiled tree) in your
+environment, then compile your source with tic.  Tic and user programs
+will check in $TERMINFO before looking in /usr/lib/terminfo.

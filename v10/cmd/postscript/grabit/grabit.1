@@ -1,0 +1,86 @@
+.ds dQ /usr/lib/postscript
+.TH GRABIT 1 "DWB 3.2"
+.SH NAME
+.B grabit
+\- recover the text representation of PostScript objects
+.SH SYNOPSIS
+\*(mBgrabit\f1
+.OP "" options []
+.OP "" object
+\&...
+.SH DESCRIPTION
+.B Grabit
+builds a PostScript program that generates a text representation
+of one or more PostScript
+.IR object s.
+The program is written on the standard output.
+The following
+.I options
+are understood:
+.TP 1.0i
+.OP \-d
+Do not automatically dump the contents of unrecognized dictionary
+objects found in PostScript arrays.
+.TP 1.0i
+.OP \-C file
+Copy
+.I file
+into the PostScript program.
+.I file
+must contain legitimate PostScript.
+.TP 1.0i
+.OP \-L file
+Use
+.I file
+as the PostScript prologue.
+.br
+The default is
+.MR \*(dQ/grabit.ps .
+.PP
+When the program built by
+.B grabit
+is sent to a PostScript printer the text representation of each
+.I object
+is normally returned to the host computer over the printer's serial port.
+Use
+.BR hardcopy (1)
+if you do not have access to the port.
+.PP
+Each argument should be a PostScript
+.I object
+or commands that generate a PostScript
+.IR object .
+The program built by
+.B grabit
+produces results that are often close to legitimate PostScript that
+can be successfully sent through an interpreter.
+.SH EXAMPLES
+.PP
+If you can read and write 
+.MW /dev/tty00
+and there is a PostScript printer on
+the other end, then
+recover the readable portions of the
+.MW userdict
+and
+.MW statusdict
+dictionaries:
+.EX
+grabit userdict statusdict | postio -l/dev/tty00 -t
+.EE
+Otherwise get a printout of the dictionaries:
+.EX
+grabit userdict statusdict | hardcopy | lp ...
+.EE
+Arguments should be PostScript code that leaves an object on the stack.
+Dump the contents of Adobe's
+.MW internaldict
+dictionary:
+.EX
+grabit "1183615869 internaldict" | postio -l/dev/tty00 -t
+.EE
+.SH FILES
+.MW \*(dQ/grabit.ps
+.SH SEE ALSO
+.BR hardcopy (1),
+.BR postio (1)

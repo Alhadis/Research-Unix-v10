@@ -1,0 +1,113 @@
+References and weak polymorphism
+
+The type checker in this version of the compiler uses weak type variables
+to support secure use of references and arrays and other objects like
+hash tables implemented in terms of references and arrays.  The following
+is a very brief and preliminary explanation of how they work, but you should
+try some experiments to become familiar with the behavior of weak polymorphism.
+
+As has been known for some time, mutable objects like references can
+be the source of type failures not detected by static type checking, if the
+reference primitives are treated as ordinary polymorphic values.  A standard
+example is
+
+   let val x = ref(fn x => x)
+    in x := (fn x => x+1)
+       !x true
+   end
+
+The basic principle we use to avoid such errors is that the contents
+of an "actual" reference must have monomorphic type.  Therefore,
+declarations such as
+
+   val x = ref []
+
+are now illegal and will cause an error message.   A function, like ref,
+that directly or indirectly creates references can have a polymorphic type,
+but of a special kind.  Thus the type of the ref constructor itself is now
+
+   ref: '1a -> '1a ref
+
+where the type variable '1a is a "weak type variable of degree 1".
+Basically, this type indicates that when the function ref is applied,
+its instantiation must be given a ground type.  But the notion of ground type
+must be interpreted relative to the context, e.g. bound type variables can
+be treated as type constants within the scope of their binding.  For example,
+
+   fun f(x:'1a) = ref [x]
+
+is ok, even though the type of the embedded ref expression is '1a list ref,
+because '1a is a bound type variable in this context.  The type of the
+function f is '1a -> '1a list ref.
+
+The degree of weakness (or perhaps strength is a better term) of a
+type variable reflects the number of lambda abstractions that have to
+be applied before the reference object is actually created and that
+type variable must be monomorphically instantiated.  Ordinary type
+variables can be considered to have strength infinity.  Each application
+weakens the operand type another step, and when the strength of a type
+variable becomes 0 it must be eliminated by instantiation to a ground
+type [weak type variables of degree zero are not allowed in a top-level type].
+Conversely, each surrounding lambda abstraction strengthens type
+variables.
+
+For example,
+
+   - val g = (fn x => (fn y => (ref x, ref(x,y))));
+   > val g = fn : '2a -> '2b -> ('2a ref * ('2a *'2b) ref)
+
+   - val h = g(nil);
+   > val h = fn :  '1a -> ('1b list ref * ('1b list * '1a) ref)
+
+   - h true;
+   Error: can't generalize weak type variable
+   ('0aA list ref*('0aA list*bool) ref)
+
+but
+
+   - (h true) : int list ref * (int list * bool) ref;
+   val it = (ref nil,ref ([],true)) : (int list ref*(int list*bool) ref)
+
+The type constraint is necessary to instantiate the weak type variable '1c
+when h is applied.
+
+If a component of a structure has a weak polymorphic type, then the
+corresponding signature specification should have at least as weak a
+type (the weaker-than relation between types should be fairly
+obvious).
+
+
+Weak variables and exceptions
+
+If the declared argument type of an exception constructor contains a
+type variable, then that type variable is bound in the appropriate
+surrounding context according to the usual rules (its binding scope is
+the rhs of the innermost let-binding containing the occurence of the
+type variable).  Furthermore, the type variable must be a weak
+variable of the same degree as it would have were it associated with
+a ref argument at that point (i.e. its weakness must agree with the 
+abstraction degree at the point of the exception declaration.)  This
+is because the creation of an exception constructor is conceptually
+similar to the creation of a reference value -- both can be used to
+transmit values between two textually unrelated points in the program.
+
+It is best if the type variable occurring in the exception declaration
+had already been introduced by appearance in a type constraint on a lambda
+binding.
+
+Here is an example:
+
+   fun f(l: '1a list, p: '1a -> bool) = 
+       let exception E of '1a list
+	   fun search(x::r) = if p x then raise E r else search r
+	     | search [] = []
+        in search r handle E l => l
+       end
+
+As an exercise, show how this rule prevents the usual type insecurity
+example associated with "polymorphic" references:
+
+   let val (r,h) = 
+       let exception E of 'a
+        in ((fn x => raise x), (fn f => f() handle E y => y))
+       end

@@ -1,0 +1,85 @@
+CFLAGS=-g -I.
+CC=cc
+LIB=worm.a
+BIN=/usr/lib/worm
+L=io inode vlink flink sym getopt mapdev btree LL in timenow
+OBJ=${L:%=$LIB(%.o)}
+NPROC=2
+# remember to change /usr/bin/worm if you add programs
+ALL=wmkfs wstat wwrite wread wls woffline wcat wbtree wrm\
+	wdir wreset wmv wtmpdir wmount wcopy jukebox scsish
+BALL=${ALL:%=$BIN/%}
+
+all:V:	$ALL
+
+scsish jukebox:Pexit 1:	/unix
+	cd scsi; mk both
+
+$LIB:Q:	$OBJ
+	names=`membername $newprereq`
+	ar rv $LIB $names && rm $names
+	ranlib $LIB
+
+'^(w[^.]*)$':R:	\\1.o $LIB #O/\\1
+	$CC $CFLAGS -o $target $stem1.o $LIB -lcbt
+
+'^(poot)$':R:	\\1.o $LIB #O/\\1
+	$CC $CFLAGS -o $target $stem1.o $LIB -lcbt
+
+'^(O/w[^.]*)$':R:	\\1.O $COBJ
+	cyntax $prereq && > $target
+
+$BIN/'(w[^.]*)$':R:	\\1
+	cp $stem1 $target && strip $target; chmod 775 $target
+$BIN/'(scsish|jukebox)':R:	\\1
+	cp $stem1 $target && strip $target; chmod 775 $target
+
+sym.o wtree.o thing.o:	sym.h
+wtree.o thing.o:	thing.h
+
+$LIB(%.o):N:	%.o
+%.o:	worm.h
+O/%.O:	%.c
+	cyntax -c $stem.c && mv $stem.O O
+O/%.O:	worm.h
+
+pp:
+	smallpr mkfile worm.h *.c
+
+clean:V:
+	rm -f *.o *.a $ALL core O/*
+
+install:V:	$BALL
+
+ship:V:	shipped
+shipped:	$BALL /usr/bin/worm
+	ship $newprereq && touch $target
+
+goo:V:	wmv wls wwrite wmkfs
+	set +e
+	> temp
+	wmkfs -ftemp testa
+	wwrite -ftemp testa w*.[ch]
+	wls -ftemp -l wreset.c; wls -ftemp -b wreset.c
+	wmv -ftemp testa wreset.c xxx
+	wls -ftemp -l wreset.c xxx; wls -ftemp -b xxx
+
+wild:	$BALL
+	dest=wild ship $newprereq && touch $target
+
+poot:V:	wcopy wls wstat wmkfs
+	> temp1
+	wmkfs -ftemp1 -n300 test7a; wstat -v -ftemp1
+	wls -ftemp | wcopy -ftemp -v -m0 testa temp1 test7a
+	wstat -v -ftemp; wls -ftemp -b | sort | mc
+	wstat -v -ftemp1; wls -ftemp1 -b | sort | mc
+	#wstat -v -ftemp; wstat -v -ftemp1
+	wls -ftemp | wcopy -ftemp -v -m0 testa temp1 test7a
+	wstat -v -ftemp1; wls -ftemp1 -b | sort | mc
+	set +e;(wls -ftemp; echo; wls -ftemp; echo; wls -ftemp)| tee temp2 | wcopy -ftemp -v -m100 testa temp1 test7a
+	wstat -v -ftemp1; wls -ftemp1 -b | sort | mc
+
+goop:V:	wmkfs wstat wwrite
+	> temp
+	wmkfs -ftemp -n1000 testa; wstat -vftemp
+	wmkfs -n666 -ftemp testa; wstat -vftemp

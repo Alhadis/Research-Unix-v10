@@ -1,0 +1,40 @@
+# case conversion for postmaster
+pOsTmAsTeR		alias		postmaster
+
+# local mail
+[^!@%]+			translate	"exec translate '&'"
+local!([^!@]+)		>>		/usr/spool/mail/\1
+\l!(.+)			alias		\1
+
+# convert @ format to ! format
+([^!]+)@([^!@]+)	alias	\2!\1
+
+# convert % addresses for us only.
+([^!]+)%([^!%]+)	alias	\2!\1
+
+# domain names meaning att or uucp
+lc\.att\.com\.?!(.+)					alias	trevor!\1
+([^!.]+)\.lc\.att\.com\.?!(.+)				alias	\1!\2
+(([^!])+\.)?garage\.att\.com!(.+)			alias	garage!&
+([^!.]+)\.(att\.com|uucp)!(.+)				alias	\1!\3
+([^!.]+)\.(mercury|astro|phone|research)(\.nj)?\.att\.com\.?!(.+) alias	\1!\4
+# tmp until mercury get their sendmails together
+([^!.]+)\.research\.mercury(\.nj)?\.att\.com\.?!(.+) 	alias	\1!\3
+([^!.]+)\.research!(.+) 				alias	\1!\2
+#teni\.(.+)						alias	\1
+
+# network gateways
+(csnet|bitnet)!(.+)	alias	inet!&
+uucp!(.+)		alias	\1
+uunet!(.+)		alias	uunet.uu.net!\1
+mcvax!(.+)		alias	uunet.uu.net!&
+[!^]+\.oz!.+		alias	uunet.uu.net!&
+
+# real networks
+#([^!]+wisc\.edu)!(.+)	|	"exec /usr/lib/upas/route.xunet '\s' '\1'" "'\2'"
+#([^!]+uiuc\.edu)!(.+)	|	"exec /usr/lib/upas/route.xunet '\s' '\1'" "'\2'"
+#(pyxis|pyxis.att.com)!(.+)	|	" exec /usr/lib/upas/route.pyxis '\s'" "'\2'"
+\[([^!]+)\]!(.+)	|	"exec /usr/lib/upas/route.ip '\s' '\1'" "'\2'"
+([^!]+\.att\.com)!(.+)	|	"exec /usr/lib/upas/route '\s' '\1'" "'\2'"
+[^!]+\..*		|	"exec /usr/lib/upas/route '\s' inet" "'&'"
+([^!]+)!(.+)		|	"exec /usr/lib/upas/route '\s' '\1'" "'\2'"

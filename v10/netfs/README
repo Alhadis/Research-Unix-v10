@@ -1,0 +1,118 @@
+This is the source to various network file system pieces.
+There are protocol-specific parts (interface libraries and support
+programs), and there are servers.
+
+serv/* are server sources.  In principal, they may be compiled
+with any protocol library; in practice, serv/makefile uses -lnetb,
+so by default the servers speak that protocol.
+Some of the servers are
+zarf	present the local file system
+ffs	interpret a 4BSD file system
+f6	interpret a Fifth or Sixth Edition Unix file system
+f7	interpret a Seventh Edition Unix file system
+d7	interpret a Seventh Edition dump tape (present as a file system)
+f11	interpret a DEC FILES-11 ODS 1 version 2 file system
+All but zarf are read-only file systems for now.
+Only zarf is known to be portable; some of the others were written as
+quick hacks, and need some tidying up.
+
+libnetb/* makes /usr/lib/libnetb.a, the protocol library for
+netb (the Research Unix file system protocol).  There are two
+ancillary programs: runfs starts a server by hand, mounted
+on some local file and connected through a pipe; setup is the
+daemon that maintains a handful of file systems, restarting them
+when they break.  Both runfs and setup are specific to Research
+Unix; the library is meant to run anywhere.
+
+Some of the files in libnetb aren't really netb-specific.  Some
+day, when there are more protocols supported, there will be a
+separate directory with the protocol-independent parts, and life
+will be considerably more confusing.
+
+Here are some hints on making things work on a new system:
+
+Bring along libnetb/*.[ch] libnetb/makefile serv/*.[ch] serv/makefile
+(You probably don't want all the servers; to take just the ordinary
+file system server, bring zarf.c except.c *dir.c zarf.h)
+Deposit them somewhere in directories libnetb and serv.
+serv/makefile and the server programs expect to find <rf.h> in /usr/include
+and libnetb in /usr/lib.  If you aren't planning to install them there,
+add -I../libnetb to CFLAGS in serv/makefile, and change L from -lnetb
+to ../libnetb/libnetb.a (or wherever you put those files).
+You probably also want to edit serv/makefile to make only zarf,
+and libnetb/makefile to make only libnetb.a; deleting the `all'
+lines should suffice.
+
+Whenever possible, adjust things by changing the makefile to use different
+source files, rather than by editing the sources themselves.  There are
+almost no #ifdefs in the programs, and even those shouldn't be.  Generally
+there are different source files containing routines that vary among systems:
+a couple of directory-reading routines, for example.
+
+You should have to adjust two particular things (and no others, I hope):
+The routine that reads directories, and the routine that determines who called.
+The former is mandatory; the latter can be put off unless you grant different
+rights to different clients.
+
+Directories:
+As shipped, zarf reads directories using a research-specific system
+call; this probably isn't what you want.  To use the standard `portable'
+directory-reading routines, change resdir.o to libdir.o in serv/makefile.
+If you're on a 4BSD system, you probably want bsdlibdir.o instead, which
+differs only in a couple of names.  If the directory routines are in a
+separate library, add the library to the line that makes zarf.
+
+If you think (or measure) that the library routines are too slow, write
+your own, but it probably isn't worth the bother.
+
+Who called:
+As shipped, libnetb uses a routine that cracks one of a couple of
+environment variables set up by present and historic research connection
+servers and Datakit managers.  zarf cares who called so it can print it
+in the logfile, and to compare with entries in the except file.  If you
+don't care, leave it be; at worst it will leave the caller's name empty.
+If you do care, edit libnetb/makefile as follows:
+
+If you're on a 4BSD-socket-like system, use bsdwhocalled.o and bsdgetpeer.o
+instead of reswhocalled.o and callsource.o.
+
+If you're on a system with 4BSD sockets for TCP/IP and the research connection
+server for Datakit, use mixwhocalled.o instead of reswhocalled.o, keep
+callsource.o, and add bsdwhocalled.o.
+
+Certain System-V-with-Berkeley-extensions systems have sockets but put
+Berkeley headers and libraries in funny places.  If bsdgetpeer.c won't
+compile, add -I/usr/include/bsd (or whatever) to CFLAGS in the makefile;
+if zarf won't load because getpeername is missing, add -lbsd (or whatever)
+to the makefile line that makes zarf.
+
+Miscellany:
+If the target system doesn't have makedir and rmdir system calls, add
+makedir.o to the line that makes zarf in serv/makefile.
+If the C library on the target doesn't have strchr and strrchr, it
+probably has index and rindex instead; add `-Dstrchr=index -Dstrrchr=rindex'
+to CFLAGS in both makefiles.
+
+There is one #if hack: on 64-bit machines, the size of a file is often
+64 bits long, but the netb protocol only allows 32-bit sizes.  There is
+a little compensating code in libnetb/funcs.c.
+
+
+Once you have all the makefiles right,
+cd libnetb; make
+cd ../serv; make zarf
+
+Unlike earlier programs of the same name, zarf has no built-in filenames.
+It prints logging info on the standard error file; it expects arguments
+of the form `-e except' to point it at the except file.  Arrange for
+network calls to invoke zarf with output redirected and with the appropriate
+arguments.  If necessary, write a shell script, or perhaps a tiny C program,
+that does the setup.  On research machines there is a shell script; see
+serv/zarf.go.  Edit it to your taste.
+
+For zarf to offer full permissions to the client, it must run as the super-
+user.  It is probably a bad idea to make it set-userid to root; use network
+services instead.  On TCP/IP server machines, the preferred way is to put
+zarf.go in a known place, and arrange for TCP port 400 to invoke zarf.go
+as the super-user, e.g. with the following line in /etc/inetd.conf:
+zarf	stream	tcp	nowait	root	/usr/netb/zarf.go	/usr/netb/zarf.go

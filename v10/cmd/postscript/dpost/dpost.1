@@ -1,0 +1,310 @@
+.ds dF /usr/lib/font
+.ds dQ /usr/lib/postscript
+.TH DPOST 1 "DWB 3.2"
+.SH NAME
+.B dpost
+\-
+.B troff
+postprocessor for PostScript printers
+.SH SYNOPSIS
+\*(mBdpost\f1
+.OP "" options []
+.OP "" files []
+.SH DESCRIPTION
+.B dpost
+translates
+.I files
+created by
+.BR troff (1)
+into PostScript and writes the results on the
+standard output.
+If no
+.I files
+are specified, or if
+.OP \-
+is one of the input
+.IR files ,
+the standard input is read.
+The following
+.I options
+are understood:
+.TP 0.75i
+.OP \-c num
+Print
+.I num
+copies of each page.
+By default only one copy is printed.
+.TP
+.OP \-m num
+Magnify each logical page by the factor
+.IR num
+(default is 1.0).
+Pages are scaled uniformly about the origin,
+which is located near the upper left corner of
+each page.
+.TP
+.OP \-n num
+Print
+.I num
+logical pages on each piece of paper,
+where
+.I num
+can be any positive integer.
+By default,
+.I num
+is set to 1.
+.TP
+.OP \-o list
+Print pages whose numbers are given in the comma-separated
+.IR list .
+The list contains single numbers
+.I N
+and ranges
+.IR N1\-\|N2 .
+A missing
+.I N1
+means the lowest numbered page, a missing
+.I N2
+means the highest.
+.TP
+.OP \-p mode
+Print
+.I files
+in either \*(mBportrait\fP or \*(mBlandscape\fP mode.
+Only the first character of
+.I mode
+is significant.
+The default
+.I mode
+is \*(mBportrait\fP.
+.TP
+.OP \-w num
+Set the line width used to implement
+.B troff
+graphics commands to
+.I num
+points, where a point is approximately 1/72
+of an inch.
+By default
+.I num
+is set to 0.3 points.
+.TP
+.OP \-x num
+Translate the origin
+.I num
+inches along the positive x axis.
+The default
+coordinate system has the origin fixed near the
+upper left corner of the page, with positive
+x to the right and positive y down the page.
+Positive
+.I num
+moves everything right.
+The default offset is 0 inches.
+.TP
+.OP \-y num
+Translate the origin
+.I num
+inches along the positive y axis.
+Positive
+.I num
+moves text down the page.
+The default offset is 0.
+.TP
+.OP \-B
+Include
+.MW %%BoundingBox
+comments in the output file.
+Should only be used when the comments are needed
+for picture inclusion.
+Output is forced onto an 8.5\(mu11-inch page.
+.TP
+.OP \-E name
+Set the character encoding for text fonts to
+.IR name .
+Requesting
+.I name
+means include file
+.MI \*(dQ/ name .enc \f1.
+A nonexistent encoding file is silently ignored.
+There is no default.
+.TP
+.OP \-F dir
+Use
+.I dir
+as the font directory.
+The default
+.I dir
+is
+.MR \*(dF ,
+and
+.B dpost
+reads
+.SM ASCII
+font files from directory
+.MR \*(dF/devpost .
+.TP
+.OP \-H dir
+Use
+.I dir
+as the host-resident font directory.
+A file in
+.I dir
+that matches the name of the
+.B troff
+font is assumed to be a host resident font program
+and is included in
+.B dpost
+output.
+There is no default.
+.TP
+.OP \-L \^file
+Use
+.I file
+as the PostScript prologue.
+The default is
+.MR \*(dQ/dpost.ps .
+.TP
+.OP \-T name
+Use font files for device
+.I name
+as the best description of available PostScript fonts.
+By default,
+.I name
+is
+\*(mBpost\fP
+and
+.B dpost
+reads
+.SM ASCII
+files from
+.MR \*(dF/devpost .
+.br
+.ne 1i
+.PP
+Three options allow insertion of arbitrary PostScript
+at controlled points in the translation process:
+.TP 0.75i
+.OP \-C \^file
+Copy
+.I file
+to the output file;
+.I file
+must contain legitimate PostScript.
+.TP
+.OP \-P string
+Include
+.I string
+in the output file;
+.I string
+must be legitimate PostScript.
+.TP
+.OP \-R action
+Requests special
+.I action
+(e.g.,
+.MR manualfeed )
+on a per page or global basis.
+The
+.I action
+string can be given as
+.IR request \|,
+.IM request : page\f1\|,
+or
+.IM request : page : file\f1\|.
+If
+.I page
+is omitted or given as 0 the request
+applies to all pages.
+If
+.I file
+is omitted the request
+lookup is done in
+.MR \*(dQ/ps.requests .
+.PP
+All
+.I files
+should be prepared by
+.B troff
+for the same device.
+Device tables that describe real PostScript fonts that can be
+used by
+.B dpost
+should include
+.EX
+PDL PostScript
+.EE
+in their
+.SM DESC
+file.
+Tables that depend on a non-standard character set encoding indicate
+that fact by an
+.MW Encoding
+entry in their
+.SM DESC
+file.
+For example,
+.EX
+Encoding Latin1
+.EE
+means include file
+.MR \*(dQ/Latin1.enc .
+The
+.OP \-E
+option overrides the
+.SM DESC
+setting.
+.SH EXAMPLES
+.PP
+A typical command line might be:
+.EX
+pic  \f2files\fP | tbl | eqn | troff -mm | dpost
+.EE
+.SH DIAGNOSTICS
+A 0 exit status is returned if
+.I files
+were successfully translated,
+while 2 often indicates a syntax error in the input
+.IR files .
+.SH WARNINGS
+.PP
+.B dpost
+output does not usually conform to Adobe's file-structuring conventions.
+Send the output through
+.B postreverse
+to produce a minimally conforming PostScript file.
+.PP
+Emulation is expensive and does not always produce satisfactory results.
+No attempt has been made to implement the character sets or fonts available
+on all devices supported by
+.BR troff .
+Missing characters are replaced by white space, and unrecognized
+fonts default to one of the Times fonts (e.g.,
+.MR R ,
+.MR I ,
+.MR B ,
+or
+.MR BI ).
+.SH FILES
+.MW \*(dF/devpost/*
+.br
+.MW \*(dF/devpost/charlib/*
+.br
+.MW \*(dQ/dpost.ps
+.br
+.MW \*(dQ/color.ps
+.br
+.MW \*(dQ/draw.ps
+.br
+.MW \*(dQ/forms.ps
+.br
+.MW \*(dQ/ps.requests
+.SH SEE ALSO
+.BR buildtables (1),
+.BR postio (1),
+.BR postprint (1),
+.BR postreverse (1),
+.BR psencoding (1),
+.BR troff (1),
+.BR font (5),
+.BR troff (5)

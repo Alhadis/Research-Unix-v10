@@ -1,0 +1,11 @@
+#	@(#):fix	1.4
+for i do
+	$CC $CFLAGS -S -c $i.c
+	ed - <<\! $i.s 
+	g/^[ 	]*\.data/s/data/text/
+	w
+	q
+!
+	$AS -o $i.o $i.s
+	rm $i.s
+done

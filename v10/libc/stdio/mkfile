@@ -1,0 +1,29 @@
+BUILTINS =
+CC = lcc
+%.o: %.c
+	$CC -c -N -I/usr/include/lcc -I/usr/include/libc -I/usr/include -DV10 $stem.c
+
+o = \
+fprintf.o \
+fscanf.o \
+printf.o \
+scanf.o \
+snprintf.o \
+sprintf.o \
+sscanf.o \
+vfprintf.o \
+vfscanf.o \
+vprintf.o \
+strtod.o \
+atof.o \
+_dtoa.o \
+_fconv.o
+
+nstdio.a: $o
+	ar ruv $target $newprereq
+	ranlib $target
+
+_dtoa.o _fconv.o strtod.o: fconv.h
+
+clean:
+	rm -f *.o nstdio.a

@@ -1,0 +1,94 @@
+CFLAGS=-g -I. -I../worm
+UBIN=/usr/lib/backup
+ABIN=/usr/backup/bin
+USR=bpush bgrep fetch iprint fcheck stats wormy wormserver wfetch\
+	jukeserver absolute remnotdone blog startmunge
+ADM=sweep rcv dbupdate notdone copies conv bcp verify\
+	block fileupd wormupd mklock logtrim logger startclient
+ALL=$USR $ADM
+SUSR=recover act
+SADM=toworm bkdb bumpvolmap stopmunge munge volidmap wormdb
+UALL=`echo $USR | sed -e 's:[^ ][^ ]*:$UBIN/&:g'` `echo $SUSR | sed -e 's:[^ ][^ ]*:$UBIN/&:g'`
+AALL=`echo $ADM | sed -e 's:[^ ][^ ]*:$ABIN/&:g'` `echo $SADM | sed -e 's:[^ ][^ ]*:$ABIN/&:g'`
+CYN=`echo $ADM $USR | sed -e 's:[^ ][^ ]*:O/&:g'`
+F=../worm
+LIB=bdir lock sum logprint fail rx fakeargv relay
+OLIB=`echo $LIB | sed -e 's:[^ ][^ ]*:lib.a(&.o):g'`
+CLIB=`echo $LIB | sed -e 's:[^ ][^ ]*:O/&.O:g'`
+NPROC=2
+BMACH=`dkname wild sweet gauss`
+
+all:V:	$ALL
+cyntax:	$CYN
+	touch cyntax
+
+^(copies)\$:R:	\\1.o lib.a
+	$CC $CFLAGS -o $target $prereq -lcbt
+
+^(rcv|bpush|block|wfetch|wormserver|jukeserver|remnotdone|blog|logger|logtrim|startclient|mklock|startmunge)\$:R:	\\1.o lib.a
+	$CC $CFLAGS -o $target $prereq -lipc
+
+^(notdone|dbupdate|bgrep|sweep)\$:R:	\\1.o lib.a
+	$CC $CFLAGS -o $target $prereq -lcbt -lipc
+
+^(trim|verify|conv|fileupd|fetch)\$:R:	\\1.o lib.a
+	$CC $CFLAGS -o $target $prereq
+
+^(bcp|iprint|fcheck|absolute)\$:R:	\\1.c
+	$CC $CFLAGS -o $target $prereq
+
+^(wormupd|wormy|stats)\$:R:	\\1.o $F/worm.a lib.a
+	$CC $CFLAGS -o $target $prereq -lcbt -lipc
+
+njukeserver:	juke0.o juke1.o juke2.o lib.a
+	$CC $CFLAGS -o $target $prereq -lipc
+'juke.\.o':R:	juke.h
+
+O/%:	O/%.O $CLIB
+	cyntax $CFLAGS $prereq && touch $target
+O/%.O:	%.c
+	cyntax -c $CFLAGS $stem.c && mv $stem.O O
+O/logprint.O:	logprint.c
+	cyntax -c $CFLAGS -Vlogprint:1 logprint.c && mv logprint.O O
+
+clean:V:
+	rm -f $ALL *.o
+
+ship:V:	ship.usr ship.adm
+ship.usr:	$UALL /usr/bin/backup
+	ship $newprereq && touch $target
+ship.adm:	$AALL
+	dest="$BMACH" ship $newprereq && touch $target
+
+install:V:	$AALL $UALL /usr/bin/backup
+
+/usr/bin/backup:	backup.sh
+	cp $prereq $target; chmod 775 $target
+
+$UBIN/%:	%.sh
+	cp $prereq $target; chmod 775 $target
+$UBIN/%:	%
+	cp $prereq $target; strip $target; chmod 775 $target; rm $prereq
+$ABIN/%:	%.sh
+	cp $prereq $target; chmod 775 $target
+$ABIN/%:	%
+	cp $prereq $target; strip $target; chmod 775 $target; rm $prereq
+$ABIN/stopmunge:	$ABIN/munge
+	rm -f $target; ln $prereq $target
+
+%.o:	backup.h
+
+pp:V:
+	pp -fPO -t"Backup" mkfile *.h *.c | dcan
+
+lib.a(%.o):N:	%.o
+lib.a:Q:	$OLIB
+	n=`membername $newprereq`
+	ar rv lib.a $n && rm $n
+	ranlib lib.a
+
+shipwild:	wormy wormserver
+	push wild $newprereq /usr/lib/backup && touch $target
+
+poot:	jukeserver wormy
+	push wild $newprereq /usr/lib/backup && touch $target

@@ -1,0 +1,14 @@
+#!/bin/sh
+# setown: change owner to $1 and group to bin, portably
+
+f=$1
+shift
+if [ -f /etc/chown ]
+then	if [ -f /bin/chgrp ]
+	then	/etc/chown $f "$*"
+		chgrp bin "$*"
+	else	/etc/chown $f,bin "$*"
+	fi
+else	chown $f "$*"
+	chgrp bin "$*"
+fi

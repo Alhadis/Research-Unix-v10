@@ -1,0 +1,45 @@
+'\"macro stdmacro
+.if n .pH g1a.fromsmtp %W% of %G%
+.nr X
+.if \nX=0 .ds x} fromsmtp 1M "" "\&"
+.if \nX=1 .ds x} fromsmtp 1M ""
+.if \nX=2 .ds x} fromsmtp 1M "" "\&"
+.if \nX=3 .ds x} fromsmtp "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4fromsmtp\fP \- receive RFC822 mail from \s-1SMTP\s+1
+.SH SYNOPSIS
+\f4fromsmtp\f1 [ \f4\-d\f1 ] [ \f4\-h\f2 host \f1] [ \f4\-s\f2 sender \f1]\f2 to ...\f1
+.SH DESCRIPTION
+\f4fromsmtp\fP reads an RFC822 message from its standard input, does some
+conversion of the message to make it acceptable to
+.SM UNIX
+System
+mail, and pipes the result to \f4rmail\fP.
+The \f2to\fP arguments are passed as arguments to \f4rmail\fP.
+\f4fromsmtp\fP is normally invoked by \f4smtpd\fP to deliver
+incoming mail messages.
+.P
+The \f4\-d\fP option may be used for debugging \f4fromsmtp\fP.
+It will cause the command line for \f4rmail\fP to be echoed to standard
+output, as well as the results of the message (after conversion).
+The message will not be given to \f4rmail\fP when this option is used.
+.P
+The \f4\-h\f2 host\f1 option may be used to prepend a host or network name to
+the front of the sender path in the \f4From\fP line at the beginning of the
+message.
+This is useful if you need to identify which of several possible networks a
+message was received from (for possible use in replying).
+.P
+The \f4\-s\f2 sender\f1 option is used to give a default sender name, in case
+\f4fromsmtp\fP cannot determine the name of the sender from the message it
+reads.
+If this option is not used, the default sender name \f4unknown\fP will be
+used.
+.SH FILES
+.TP
+/usr/bin/rmail		where converted mail is piped to
+.SH "SEE ALSO"
+\f4rmail\fP(1M), \f4smtpd\fP(1M)
+.br
+RFC822 \- Standard for the Format of \s-1ARPA\s+1 Internet Text Messages

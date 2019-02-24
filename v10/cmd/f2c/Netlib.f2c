@@ -1,0 +1,12 @@
+#!/v/bin/sh
+PATH=/v/bin:/bin:/usr/bin
+#   executed by netlib, via /n/pyxis/netlib/f2c/F2C
+args=
+t=/netlib/f2c/tmp/$$
+for i do case $i in -*) args="$args $i";; esac; done
+nice -10 /v/bin/f2c -!I -T/netlib/f2c/tmp $args 2>$t
+echo '#ifdef uNdEfInEd' 2>&1
+echo 'comments from the converter:  (stderr from f2c'$args')' 2>&1
+cat $t
+echo '#endif' 2>&1
+rm -f $t

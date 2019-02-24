@@ -1,0 +1,268 @@
+.EQ
+define f2c % "f\|2c" %
+define F2c % "F\^2c" %
+define libF77 % "libF77" %
+define libI77 % "libI77" %
+.EN
+.SH
+Suggested rewordings...
+
+Bottom of p. 4:
+.PP
+A Fortran routine containing $n$ \f(CWentry\fR statements
+is turned into $n^+^2$ C functions, a big one containing
+the translation of everything but the \f(CWentry\fR statements,
+and $n^+^1$ little ones that invoke the big one.  Each little
+one passes a different integer to the big one to tell
+it where to begin; the big one starts with a switch
+that branches to the code for the appropriate entry.
+The Fortran program
+
+.SH
+Add to end of \(sc3:
+.PP
+$F2c$ assumes the services of the support libraries $libF77$ and $libI77$.
+Among other things, libF77 contains a C main routine that arranges
+for files to be closed automatically when the Fortran program stops
+and arranges for an error message to be printed if a floating-point
+exception occurs.  The C main routine invokes the Fortran main program,
+which is called
+.CW MAIN_\|_ .
+
+
+.SH
+Revision of \(sc 4:
+
+
+.SH
+4. MAINTENANCE and PORTABILITY
+.PP
+Although we have tried to make $f2c$'s output reasonably readable,
+our goal of strict compatibility with $f77$ implies some nasty
+looking conversions.  Input/output statements, in particular,
+generally get expanded into
+a series of calls on routines in $libI77$, $f77$'s I/O library.
+Thus the C output of $f2c$ would probably be something of a nightmare
+to maintain as C; it would be much more sensible to maintain the original
+Fortran, translating it anew each time it changed.  Some commercial
+vendors seek to perform translations yielding C that one
+might reasonably maintain directly; these translations generally
+require some manual intervention.
+. \"Appendix B lists the vendors
+. \"of whom we are aware; omitted vendors are invited to inform us of
+. \"their existence, so we may include them in updated versions of
+. \"Appendix B.
+.PP
+The Pfort Verifier
+.[ [
+Ryder 1974
+.]]
+was a useful tool for catching errors in calling sequences
+of Fortran 66 programs.  $F2c$ combined with $cyntax(1)$ or $lint(1)$
+.[ [
+UNIX ninth edition manual
+.]]
+provides a similar capability for Fortran 77 programs.
+.PP
+There are two portability issues in using $f2c$:
+the portability of the converter $f2c$ itself
+and that of the C programs it creates.
+.PP
+The converter itself is reasonably portable and has run successfully on Apollo,
+Cray, IBM, MIPS, SGI, Sun and DEC VAX equipment.
+However, we shall see that the C it produces may not be portable due to
+subtle storage management issues in Fortran 77.
+In any case, the C output of $f2c$ will run fine, at least if
+the \f(CW\(miW\fIn\fR option (see the Appendix) is used to set the
+number of characters per word correctly, and if C
+.CW double
+values may fall on an odd-word boundary.
+.PP
+The Fortran 77 standard says that \f(CWComplex\fP and \f(CWDouble Precision\fP
+objects occupy two ``units'' of space while other non-character data types
+occupy one ``unit.''
+It may be necessary to edit the header file
+.CW f2c.h
+to make these assumptions hold, if possible.
+On the Cray, for example,
+.CW float
+and
+.CW double
+are the same C types, and Fortran double precision, if
+available, would correspond to the C type
+.CW "long double" .
+In this case, changing the definition of
+.CW doublereal
+in
+.CW f2c.h
+from
+.P1
+typedef double doublereal;
+.P2
+to
+.P1
+typedef long double doublereal;
+.P2
+would be appropriate.  For the Think C compiler on the
+Macintosh, on the other hand, this line would need to become
+.P1
+typedef short double doublereal;
+.P2
+.PP
+If your C compiler predefines symbols that could clash with
+translated Fortran variable names, then you should also
+add appropriate
+.CW #undef
+lines to
+.CW f2c.h .
+The current default
+.CW f2c.h
+provides the following
+.CW #undef
+lines:
+.P1
+#undef cray
+#undef gcos
+#undef mc68010
+#undef mc68020
+#undef mips
+#undef pdp11
+#undef sgi
+#undef sparc
+#undef sun
+#undef sun2
+#undef sun3
+#undef sun4
+#undef u370
+#undef u3b
+#undef u3b2
+#undef u3b5
+#undef unix
+#undef vax
+.P2
+.PP
+As an extension to the Fortran 77 Standard, $f2c$
+allows noncharacter variables to be initialized with character
+data.  This extension is inherently nonportable, as the number
+of characters storable per ``unit'' varies from machine to machine.
+Since 32 bit machines are the most plentiful, $f2c$
+assumes 4 characters per Fortran ``unit'', but this assumption
+can be overridden by the \f(CW\(miW\fIn\fR command-line option.
+For example,
+.CW \(miW8
+is appropriate for C that is to be run on Cray computers,
+since Crays store 8 characters per word.
+An example is helpful here:  the Fortran
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/data.holl.f
+.P2
+turns into
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/data.holl.c
+.P2
+(Some use of
+.CW i ,
+e.g. ``\(CWi=1\fR'', is necessary or $f2c$
+will see that
+.CW i
+is not used and will not initialize it.)  If the target
+machine were a Cray and the string were
+.CW 'abcdefgh'
+or \f(CW"abcdefhg"\fR,
+then the Fortran would run fine, but the C produced by $f2c$ would only
+store \f(CW"abcd"\fR
+in i, $4$ being the default number of characters per word.
+The $f2c$ command-line option
+.CW \(miW8
+gives the correct initialization for a Cray.
+.PP
+The initialization above is clumsy, using $4$ separate characters.
+Using the option
+.CW -A ,
+for ANSI, produces
+.CW "abcd" ;
+see the Appendix.
+.PP
+The above examples explain why the Fortran 77 standard excludes
+Hollerith data statements: the number of characters per word is
+not specified and hence such code is not portable even in Fortran.
+(Fortran that conservatively assumes only $1$ or $2$ characters per word is
+portable but messy).
+.PP
+Some systems require that C values of type
+.CW double
+be aligned on a double-word boundary.  Fortran
+.CW common
+and
+.CW equivalence
+statements may require some C
+.CW double
+values to be aligned on an odd-word boundary.
+On systems where double-word alignment is required,
+C compilers pad structures, if necessary, to arrange
+for the right alignment.  Often such padding has no effect on
+the validity of $f2c$'s
+translation, but using
+.CW common
+or
+.CW equivalence ,
+it is easy to contrive examples in which
+the translated C works incorrectly.
+$F2c$ issues a warning message when double-word alignment may
+cause trouble, but it makes no attempt to circumvent this trouble.
+.PP
+Long decimal strings in \f(CWdata\fP statements are passed to C unaltered.
+However, expressions involving long decimal strings are rounded
+in a machine dependent manner.
+The Fortran
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/longpow.f
+.P2
+yields the C
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/longpow.c
+.P2
+when $f2c$ runs on a VAX 8550.
+.PP
+ANSI C compilers require that all but one instance of any entity with external scope,
+such as the \f(CWstruct\fPs into which $f2c$ translates \f(CWcommon\fP,
+be declared \f(CWextern\fP and that exactly one declaration should define the entity,
+i.e., not be declared \f(CWextern\fP.
+Older C compilers have no such restriction.
+To be compatible with ANSI usage, the $f2c$
+command-line option
+.CW -ec
+causes the \f(CWstruct\fP corresponding
+to an uninitialized \f(CWcommon\fP region to be declared \f(CWextern\fP
+and makes a
+.CW union
+of all successive declarations of that
+\f(CWcommon\fP region into a defining declaration placed in a file with the
+name \f(CWcname_com.c\fR, where
+.CW cname
+is the name of the \f(CWcommon\fP region.
+For example, the Fortran
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/mainsam.f
+.P2
+when converted by \f(CWf2c -ec\fP produces
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/mainsam.c
+.P2
+as well as the file \f(CWcmname_com.c\fR:
+.P1
+.so /n/pipe/z7/nlsw7/f77.c/doc/tm/cmname_com.c
+.P2
+The files
+.CW *_com.c
+may be compiled into a library
+against which one can load to satisfy overly fastidious ANSI C compilers.
+
+
+.[
+$LIST$
+.]
+
+
+\fISource for the above is
+   \f(CW/n/pipe/usr/dmg/f2c/doc/revs\fR

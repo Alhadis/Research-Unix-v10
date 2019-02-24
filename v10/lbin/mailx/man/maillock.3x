@@ -1,0 +1,73 @@
+'\"!  tbl | mmdoc
+'\"macro stdmacro
+.if n .pH g3x.maillock %W% of %G%
+'\" t
+.nr X
+.if \nX=0 .ds x} maillock 3X "" "\&"
+.if \nX=1 .ds x} maillock 3X ""
+.if \nX=2 .ds x} maillock 3X "" "\&"
+.if \nX=3 .ds x} maillock "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4maillock\f1 \- manage lockfile for user's mailbox
+.SH SYNOPSIS
+\f4cc [flag...] file ... \-lmail\f1
+.P
+\f4#include <maillock.h>\f1
+.P
+\f4int maillock (char *user, int retrycnt);\f1
+.P
+\f4int mailunlock();\f1
+.SH DESCRIPTION
+The \f4maillock\f1 function attempts to create a lockfile for the
+user's mailfile.
+If a lockfile already exists, \f4maillock\f1 assumes the
+contents of the file is the process
+.SM ID
+(as a null-terminated
+.SM ASCII
+string)
+of the process that created the
+lockfile (presumably with a call to \f4maillock\f1).
+If the process that created the lockfile is still alive,
+\f4maillock\f1 will sleep and try
+again \f2retrycnt\f1 times before returning with an error indication.
+The sleep algorithm is to sleep for 5 seconds times the attempt number.
+That is, the first sleep will be for 5 seconds, the next sleep will be for
+10 seconds, etc. until the number of attempts reaches \f2retrycnt\f1.
+When the lockfile is no longer needed, it should be removed
+by calling \f4mailunlock\f1.
+.PP
+.I user
+is the login name of the user for whose mailbox the lockfile will be created.
+\f4maillock\f1 assumes that users' mailfiles are in the ``standard''
+place as defined in \f4<maillock.h>\f1.
+.SH RETURN VALUE
+The following return code definitions are contained in \f4<maillock.h>\f1.
+.P
+.TS
+center ;
+lf4 lf4 lf4 lf4.
+#define	L_SUCCESS	0	/\(** Lockfile created or removed \(**/
+#define	L_NAMELEN	1	/\(** Recipient name > 13 chars \(**/
+#define	L_TMPLOCK	2	/\(** Can't create tmp file \(**/
+#define	L_TMPWRITE	3	/\(** Can't write pid into lockfile \(**/
+#define	L_MAXTRYS	4	/\(** Failed after retrycnt attempts \(**/
+#define	L_ERROR	5	/\(** Check errno for reason \(**/
+.TE
+.SH FILES
+.nf
+.ft 4
+/usr/lib/llib-mail.ln
+/usr/lib/libmail.a
+/var/mail/\(**
+/var/mail/\(**.lock
+.ft 1
+.fi
+.SH NOTES
+\f4mailunlock\f1 will only remove the lockfile created from the most
+previous call to \f4maillock\f1.
+Calling \f4maillock\f1 for different users
+without intervening calls to \f4mailunlock\f1 will cause the initially
+created lockfile(s) to remain, potentially blocking subsequent message
+delivery until the current process finally terminates.

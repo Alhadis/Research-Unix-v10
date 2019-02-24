@@ -1,0 +1,42 @@
+
+SCRIPT=awk.script
+KERN=KERNING
+DEBUG=OFF
+REPLACE=OFF
+SILENT=ON
+
+for i do
+    case $i in
+	-S*) SCRIPT=`echo $i | sed s/-S//`
+	     shift;;
+
+	-K*) KERN=`echo $i | sed s/-K//`
+	     shift;;
+
+	-D*) DEBUG=ON
+	     shift;;
+
+	-R*) REPLACE=ON
+	     shift;;
+
+	-s)  SILENT=OFF
+	     shift;;
+
+	*)   break;;
+    esac
+done
+
+for i do
+    if [ "$SILENT" = OFF ]; then
+	echo "Building new $i font file:"
+    fi
+    awk -f $SCRIPT $KERN $i > $i.fix
+    if [ "$DEBUG" = ON ]; then
+	echo "\nChecking $i font file:"
+	diff $i.fix $i
+	continue
+    fi
+    if [ "$REPLACE" = ON ]; then
+	mv $i.fix $i
+    fi
+done

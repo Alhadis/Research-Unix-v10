@@ -1,0 +1,2082 @@
+#From arpa!NSFnet-Relay.AC.UK!NAGIST%vax.oxford.ac.uk Fri Jun 30 13:02 BST 1989
+#Received: from vax.oxford.ac.uk by NSFnet-Relay.AC.UK   via Janet with NIFTP
+#           id aa05326; 30 Jun 89 12:59 BST
+#Date:           Fri, 30 Jun 89  13:02 BST
+#From:           NAG Software Engineering Group <NAGIST%vax.oxford.ac.uk@NSFnet-Relay.AC.UK>
+#To:             DMG <@NSFnet-Relay.AC.UK:DMG@research.att.com>
+#Subject:        
+#
+#!/bin/sh
+# to extract, remove the header and type "sh filename"
+if `test ! -s ./data.c.ed`
+then
+echo "writting ./data.c.ed"
+cat > ./data.c.ed << '\Rogue\Monster\'
+378a
+
+ void
+make_param(p, e)
+ register struct Paramblock *p;
+ expptr e;
+{
+	p->vclass = CLPARAM;
+	impldcl(p);
+	p->paramval = mkconv(p->vtype, e);
+	}
+.
+3c
+/* ROUTINES CALLED DURING DATA AND PARAMETER STATEMENT PROCESSING */
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./data.c.ed"
+fi
+if `test ! -s ./defines.h.ed`
+then
+echo "writting ./defines.h.ed"
+cat > ./defines.h.ed << '\Rogue\Monster\'
+204c
+#define OPASSIGNI 56		/* assignment for inquire stmt */
+#define OPIDENTITY 57		/* for turning TADDR into TEXPR */
+.
+16,27d
+\Rogue\Monster\
+else
+  echo "will not over write ./defines.h.ed"
+fi
+if `test ! -s ./defs.h.ed`
+then
+echo "writting ./defs.h.ed"
+cat > ./defs.h.ed << '\Rogue\Monster\'
+635,637d
+294a
+	chainp init_values;	/* list of sorted block data init values */
+.
+202,207d
+\Rogue\Monster\
+else
+  echo "will not over write ./defs.h.ed"
+fi
+if `test ! -s ./equiv.c.ed`
+then
+echo "writting ./equiv.c.ed"
+cat > ./equiv.c.ed << '\Rogue\Monster\'
+308,312d
+275,278d
+261d
+256,259d
+223,226c
+		freqchain(equivdecl);
+.
+216,221d
+214a
+			if (x == 0) {
+			    x = 1;
+			    k = TYCHAR;
+			} /* if */
+.
+210,213d
+204,207c
+
+/* Only want TYLOGICAL if ALL the init values are logical.  Otherwise, all
+   non-zero values get mapped onto TRUE_ */
+
+				if ((x < t && (np -> vtype != TYLOGICAL || x == 0))
+				        || k == TYLOGICAL) {
+				    x = t;
+				    k = np->vtype;
+				}
+.
+198c
+			x = 0;
+.
+192,196d
+136,139d
+2,8d
+\Rogue\Monster\
+else
+  echo "will not over write ./equiv.c.ed"
+fi
+if `test ! -s ./exec.c.ed`
+then
+echo "writting ./exec.c.ed"
+cat > ./exec.c.ed << '\Rogue\Monster\'
+633,637c
+			vname -> vis_assigned = 1;
+			}
+
+		/* don't duplicate labels... */
+
+		stno = labelval->stateno;
+		for(cp = vname->varxptr.assigned_values; cp; cp = cp->nextp)
+			if ((ftnint)cp->datap == stno)
+				break;
+		if (!cp)
+			vname->varxptr.assigned_values =
+				mkchain(stno, vname->varxptr.assigned_values);
+		}
+
+	/* Code for FORMAT label... */
+
+	fs = labelval->fmtstring;
+	if (!labelval->labdefined || fs && fs != nullstr) {
+		if (!fs)
+			labelval->fmtstring = nullstr;
+		labelval->labused = 1;
+		vname = asg_name(vname->varname);
+		q = ALLOC(Addrblock);
+		q->tag = TADDR;
+		q->vtype = TYCHAR;
+		q->vstg = STGAUTO;
+		q->ntempelt = 1;
+		q->memoffset = ICON(0);
+		q->uname_tag = UNAM_IDENT;
+		sprintf(q->user.ident, "fmt_%ld", labelval->stateno);
+		putout(mkexpr(OPASSIGN, vname, q));
+		}
+
+.
+631c
+	if (!labelval->labdefined || !labelval->fmtstring) {
+
+		putout(mkexpr(OPASSIGN, p, mkintcon(labelval->stateno)));
+
+		if (vname -> vis_assigned == 0) {
+.
+627d
+625c
+	/* code for executable label... */
+.
+623c
+	/* If the label hasn't been defined, then we do things twice:
+	 * once for an executable stmt label, once for a format
+	 */
+.
+621c
+		return;
+		}
+.
+619c
+	if( ! ONEOF(p->vtype, MSKINT|MSKADDR) ) {
+.
+616a
+	register Addrp q;
+	static char nullstr[] = "";
+	char *fs;
+	register chainp cp;
+	register ftnint stno;
+.
+612c
+ register Namep vname;
+.
+610a
+ Namep
+asg_name(s1)
+ register char *s1;
+{
+	char buf[VL], *s, *se;
+	register Namep vn;
+	extern chainp assigned_fmts;
+
+	/* Use Upper-case first letter for corresponding format variable */
+	buf[0] = *s1 + 'A' - 'a';
+	s = buf + 1;
+	se = buf + VL;
+	while(s < se && (*s = *++s1) != ' ')
+		s++;
+	vn = mkname(s-buf, buf);
+	if (!vn->vis_assigned) {
+		vn->vis_assigned = 1;
+		vn->vstg = STGAUTO;
+		vn->vprocclass = CLVAR;
+		vn->vtype = TYCHAR;
+		vn->vleng = ICON(-1);	/* kludge used in list_decls */
+		assigned_fmts = mkchain((tagptr) vn, assigned_fmts);
+		}
+	return vn;
+	}
+
+.
+393c
+/* putx added 6-29-89 (mwm), not sure if fixtype is required, but I doubt it
+   since mkconv is called just before */
+		doinit = putx (mkconv (dotype, DOINIT));
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./exec.c.ed"
+fi
+if `test ! -s ./expr.c.ed`
+then
+echo "writting ./expr.c.ed"
+cat > ./expr.c.ed << '\Rogue\Monster\'
+2590,2591c
+			if (doing_setbound)
+				lp = p->exprblock.leftp = make_int_expr(lp);
+			else {
+				p->exprblock.vtype = ltype;
+				return(p);
+				}
+.
+2551a
+	extern expptr make_int_expr();
+.
+2545a
+int doing_setbound;
+.
+1991a
+	case OPASSIGNI:
+.
+1980a
+	case OPIDENTITY:
+.
+1865a
+	case OPIDENTITY:
+.
+1843a
+	case OPASSIGNI:
+.
+1405c
+		    return (Addrp) cpexpr ((expptr) retslot);
+.
+1282,1284d
+1279d
+1128c
+	if (!replaced)
+		s->memoffset = mkexpr(OPPLUS, s->memoffset, suboffset(p) );
+.
+1118a
+	replaced = 0;
+.
+1082c
+			return((Addrp) errnode() );
+.
+1068a
+			replaced = 1;
+.
+1052d
+1050a
+static int replaced;
+.
+1003c
+			if((rp->rpltag = rp->rplvp->tag) == TERROR)
+.
+871a
+#endif
+.
+869a
+#if 0
+/* erroneous error msg */
+.
+822d
+806d
+561,563d
+559d
+549a
+		if (rtype == TYREAL)
+			break;
+.
+363a
+		if (p->addrblock.vtype > TYERROR)	/* i/o block */
+			break;
+.
+209c
+#if PDP11_option
+.
+99a
+	p -> vtype = (p -> const.ci >> typesize[TYSHORT]) ? TYLONG : TYSHORT;
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./expr.c.ed"
+fi
+if `test ! -s ./f2c.h.ed`
+then
+echo "writting ./f2c.h.ed"
+cat > ./f2c.h.ed << '\Rogue\Monster\'
+102a
+	/* fix up name clashes */
+
+#define acos__ acos_
+#define asin__ asin_
+#define asm__ asm_
+#define auto__ auto_
+#define break__ break_
+#define case__ case_
+#define char__ char_
+#define const__ const_
+#define cos__ cos_
+#define cosh__ cosh_
+#define do__ do_
+#define double__ double_
+#define else__ else_
+#define entry__ entry_
+#define enum__ enum_
+#define exp__ exp_
+#define extern__ extern_
+#define float__ float_
+#define for__ for_
+#define int__ int_
+#define log__ log_
+#define long__ long_
+#define short__ short_
+#define signed__ signed_
+#define sin__ sin_
+#define sinh__ sinh_
+#define sizeof__ sizeof_
+#define sqrt__ sqrt_
+#define static__ static_
+#define struct__ struct_
+#define switch__ switch_
+#define tan__ tan_
+#define tanh__ tanh_
+#define union__ union_
+#define void__ void_
+#define while__ while_
+#define pow_ii_ pow_ii
+#define pow_ri_ pow_ri
+#define pow_di_ pow_di
+#define pow_ci_ pow_ci
+#define pow_zi_ pow_zi
+#define pow_hh_ pow_hh
+#define pow_dd_ pow_dd
+#define pow_zz_ pow_zz
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./f2c.h.ed"
+fi
+if `test ! -s ./format.c.ed`
+then
+echo "writting ./format.c.ed"
+cat > ./format.c.ed << '\Rogue\Monster\'
+1319c
+	    sprintf(buf+k, "[%d]", this_size -> constblock.const.ci);
+	    k += strlen (buf + k);
+.
+1310c
+    sprintf (buf, "\t/* was ");
+    k = strlen (buf);
+.
+1304c
+    int i, k;
+.
+1302a
+int size;
+.
+1300c
+char *write_array_decls(outfile, dimp, size)
+.
+1260a
+    else if (write_header == 2)
+	nice_printf(outfile, "\n");
+
+/* Finally, ioblocks (which may reference equivs) */
+    if (iob_list)
+	write_ioblocks(outfile);
+    if (assigned_fmts)
+	write_assigned_fmts(outfile);
+
+.
+1249a
+		if (Define) {
+			indent_printf(0, outfile, ")\n");
+			write_header = 2;
+			}
+.
+1200c
+		if (!Define)
+			nice_printf (outfile, " = ");
+.
+1178c
+ Alias1:
+	    if (Alias) {
+.
+1175d
+1173c
+			comment = write_array_decls(outfile, var->vdim, 1);
+		}
+.
+1160,1171c
+		    !ISICON (var -> vleng)
+	    || oneof_stg(var, stg, M(STGEQUIV)|M(STGCOMMON)))
+		nice_printf (outfile, "*%s", storage);
+	    else {
+		nice_printf (outfile, "%s", storage);
+		if (var -> vclass == CLPROC)
+			nice_printf (outfile, "()");
+		else if (var -> vtype == TYCHAR && ISICON ((var -> vleng)))
+			write_char_len(outfile, var->vdim,
+				var -> vleng -> constblock.const.ci, 0);
+		else if (var -> vdim &&
+.
+1115c
+	    Alias = oneof_stg(var, stg, M(STGEQUIV)|M(STGCOMMON));
+	    if (Define = Alias && define_equivs) {
+		if (!write_header)
+			nice_printf(outfile, ";\n");
+		define_start(outfile, storage, CNULL, "(");
+		goto Alias1;
+		}
+	    else if (type == last_type && class == last_class &&
+.
+1104a
+		write_header = 2;
+		}
+.
+1103c
+		    M(STGBSS)|M(STGEXT)|M(STGAUTO)|M(STGCOMMON)|M(STGEQUIV))) {
+.
+1101c
+	    if (write_header == 1 && (new_vars || nequiv || used_builtins)
+.
+999,1001c
+		    ISICON ((var -> vleng))
+			&& (i = var->vleng->constblock.const.ci) > 0)
+		nice_printf (outfile, "[%d]", i);
+.
+957a
+/* Next come formats */
+    write_formats(outfile);
+
+.
+951c
+    int Alias, Define, did_one, i, last_type, type;
+    extern int define_equivs;
+.
+939a
+ static void
+write_formats(outfile)
+ FILE *outfile;
+{
+	register struct Labelblock *lp;
+	int first = 1;
+	extern int in_string;
+	char *fs;
+
+	for(lp = labeltab ; lp < highlabtab ; ++lp)
+		if (lp->labused) {
+			if (first) {
+				first = 0;
+				nice_printf(outfile, "/* Format strings */\n");
+				}
+			nice_printf(outfile, "static char fmt_%ld[] = \"",
+				lp->stateno);
+			in_string = 1;
+			if (!(fs = lp->fmtstring))
+				fs = "";
+			nice_printf(outfile, "%s\"", fs);
+			in_string = 0;
+			nice_printf(outfile, ";\n");
+			}
+	if (!first)
+		nice_printf(outfile, "\n");
+	}
+
+ static void
+write_ioblocks(outfile)
+ FILE *outfile;
+{
+	register iob_data *L;
+	register char *f, **s, *sep;
+
+	nice_printf(outfile, "/* Fortran I/O blocks */\n");
+	L = iob_list = (iob_data *)revchain((chainp)iob_list);
+	do {
+		nice_printf(outfile, "static %s %s = { ",
+			L->type, L->name);
+		indent += tab_size;
+		sep = 0;
+		for(s = L->fields; f = *s; s++) {
+			if (sep)
+				nice_printf(outfile, sep);
+			sep = ", ";
+			if (*f == '"') {	/* kludge */
+				nice_printf(outfile, "\"");
+				in_string = 1;
+				nice_printf(outfile, "%s\"", f+1);
+				in_string = 0;
+				}
+			else
+				nice_printf(outfile, "%s", f);
+			}
+		nice_printf(outfile, " };\n");
+		indent -= tab_size;
+		}
+		while(L = L->next);
+	nice_printf(outfile, "\n\n");
+	}
+
+ static void
+write_assigned_fmts(outfile)
+ FILE *outfile;
+{
+	register chainp cp;
+	Namep np;
+	int did_one = 0;
+
+	cp = assigned_fmts = revchain(assigned_fmts);
+	nice_printf(outfile, "/* Assigned format variables */\nchar ");
+	do {
+		np = (Namep)cp->datap;
+		if (did_one)
+			nice_printf(outfile, ", ");
+		did_one = 1;
+		nice_printf(outfile, "*%s", varstr(VL, np->varname));
+		}
+		while(cp = cp->nextp);
+	nice_printf(outfile, ";\n\n");
+	}
+
+.
+747c
+        next_tab (outfile);
+.
+742a
+
+.
+98a
+    other_undefs(c_file);
+.
+40c
+    extern FILE *fopen ();
+.
+31a
+extern chainp assigned_fmts;
+.
+20a
+static int p1get_const (), p1getn ();
+.
+12c
+int c_output_line_length = DEF_C_LINE_LENGTH;
+.
+10a
+#include "iob.h"
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./format.c.ed"
+fi
+if `test ! -s ./format_d.c.ed`
+then
+echo "writting ./format_d.c.ed"
+cat > ./format_d.c.ed << '\Rogue\Monster\'
+821a
+
+save_block_data (comname, values)
+char *comname;
+chainp values;
+{
+    struct Extsym *ext = mkext (varunder (XL, comname));
+
+    if (ext && ext -> extp)
+	if (ext -> init_values)
+	    errstr ("Two block data for %s common block", comname);
+	else
+	    ext -> init_values = values;
+    else
+        errstr ("Bad common block '%s' with BLOCK DATA", comname);
+} /* save_block_data */
+.
+802,820c
+    type = eqv -> eqvtype;
+    nice_printf (outfile, "static %s %s", c_type_decl (type, NULL),
+	    equiv_name (memno, NULL));
+    nice_printf (outfile, "[%d] = ", (eqv -> eqvtop - eqv -> eqvbottom) /
+            typesize[type]);
+    reshape_values (type, values, '\0');
+    write_array_init (outfile, type, values);
+    nice_printf (outfile, ";\n");
+.
+799,800d
+792a
+    int type;
+.
+622a
+	    int index = (int) (((chainp) values -> datap) -> datap);
+
+	    while (index - main_index++ > 0)
+		*str_ptr++ = ' ';
+
+.
+620c
+/* Find the max length of init string, by finding the highest offset
+   value stored in the list of initial values */
+
+	for(k = 1, prev = CHNULL, v = values; v; prev = v, v = v->nextp) 
+	    ;
+	if (prev != CHNULL)
+	    k = ((int) (((chainp) prev -> datap) -> datap)) + 1;
+.
+617,618c
+	chainp v, prev;
+	int b = 0, k = 0, main_index = 0;
+.
+611a
+int str_start;		/* offset at which character storage starts. If type
+			   is not TYCHAR, this value is ignored */
+.
+608c
+union Constant *make_one_const (type, storage, values, str_start)
+.
+583c
+		const = make_one_const (type, storage, values, 0);
+.
+574c
+		const = make_one_const (type, storage, values, 0);
+.
+511a
+if (stddbg)fprintf (stddbg, "format_data: index %d, main %d\n", index, main_index);
+.
+455c
+	(tagptr) mkchain ((tagptr) offset, mkchain ((tagptr) dest, val)), CHNULL));
+.
+434c
+			res.c[i] = pad_char;
+			if (i == 0)
+			    offset = 0;
+.
+418c
+			    c = pad_char;
+.
+414c
+			make_one_const (TYLONG, &c, cp, 0);
+.
+409a
+
+/* Now this is a little weird.  Until June 20, 1989, we didn't need to store
+   any offset information.  But it seems the equiv init process requires it.
+   So, instead of zeroing it out, we'll keep it in, BUT the offset is in
+   terms of characters, whereas the reshaped data is of the proper type. */
+
+			offset = ((int) this -> datap);
+.
+400a
+		int offset = 0;
+.
+349a
+char pad_char;		/* value used for padding.  ' ' for most, but
+			   '\0' for equivalenced data  */
+.
+347c
+static reshape_values (dest, data, pad_char)
+.
+339c
+	const = make_one_const (type, temp, values, 0);
+.
+330c
+    reshape_values (type, values, ' ');
+.
+216,219d
+213,214c
+		? 0 : write_array_decls (outfile, namep -> vdim, 1);
+.
+173c
+
+/* I don't know why eqvstart needs to be subtracted, but Dave Gay thinks
+   it's necessary 28-June-89 (mwm)
+*/
+	write_equiv_init (outfile, memno - eqvstart, values);
+.
+139c
+ static int ch_ar_dim = -1; /* length of each element of char string array,
+			       used to break up long init strings for ansi
+			       compilers  */
+.
+78a
+/* Save the COMMON block data initializations for later */
+		save_block_data (ovarname, values);
+
+.
+77a
+	    else
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./format_d.c.ed"
+fi
+if `test ! -s ./gram.dcl.ed`
+then
+echo "writting ./gram.dcl.ed"
+cat > ./gram.dcl.ed << '\Rogue\Monster\'
+197,199c
+			make_param($1, $3);
+.
+173d
+\Rogue\Monster\
+else
+  echo "will not over write ./gram.dcl.ed"
+fi
+if `test ! -s ./gram.exec.ed`
+then
+echo "writting ./gram.exec.ed"
+cat > ./gram.exec.ed << '\Rogue\Monster\'
+\Rogue\Monster\
+else
+  echo "will not over write ./gram.exec.ed"
+fi
+if `test ! -s ./gram.expr.ed`
+then
+echo "writting ./gram.expr.ed"
+cat > ./gram.expr.ed << '\Rogue\Monster\'
+98a
+	| bit_const
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./gram.expr.ed"
+fi
+if `test ! -s ./gram.head.ed`
+then
+echo "writting ./gram.head.ed"
+cat > ./gram.head.ed << '\Rogue\Monster\'
+136,149d
+5,16d
+\Rogue\Monster\
+else
+  echo "will not over write ./gram.head.ed"
+fi
+if `test ! -s ./init.c.ed`
+then
+echo "writting ./init.c.ed"
+cat > ./init.c.ed << '\Rogue\Monster\'
+318d
+302a
+	frchain(&assigned_fmts);
+.
+270d
+266,268d
+242d
+240d
+237a
+	iob_list = 0;
+	for(i = 0; i < 9; i++)
+		io_structs[i] = 0;
+.
+168,172d
+161d
+23a
+chainp assigned_fmts = CHNULL;	/* assigned formats */
+.
+3a
+#include "iob.h"
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./init.c.ed"
+fi
+if `test ! -s ./intr.c.ed`
+then
+echo "writting ./intr.c.ed"
+cat > ./intr.c.ed << '\Rogue\Monster\'
+672c
+		return((Addrp) errnode() );
+.
+26c
+	char intrfname[VL+1];	/* "+1" added 19 June 89 (mwm) */
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./intr.c.ed"
+fi
+if `test ! -s ./io.c.ed`
+then
+echo "writting ./io.c.ed"
+cat > ./io.c.ed << '\Rogue\Monster\'
+963a
+			ioset_assign = OPASSIGN;
+			}
+.
+962c
+		    ONEOF(p->addrblock.vtype, M(TYLONG)|M(TYLOGICAL)) ) {
+			ioset_assign = OPASSIGNI;
+.
+940,946c
+		if (!p)
+			return;
+		if (p->tag != TADDR)
+			badtag(who, p->tag);
+		if (p->vtype != TYCHAR
+		&& p->vtype != TYLONG
+		&& p->vtype != TYSHORT)
+			badtype(who, p->vtype);
+		offset /= SZLONG;
+		switch(p->uname_tag) {
+		    case UNAM_NAME:
+			mo = p->memoffset;
+			if (mo->tag != TCONST)
+				badtag("ioseta/memoffset", mo->tag);
+			if (mo->constblock.const.ci)
+				sprintf(s = mem(VL+20,0), "%s+%ld",
+					varstr(VL, p->user.name->varname),
+					mo->constblock.const.ci);
+			else
+				s = cpstring(varstr(VL, p->user.name->varname));
+			break;
+		    case UNAM_CONST:
+			s = tostring(p->user.const.ccp1.ccp0,
+				p->vleng->constblock.const.ci);
+			break;
+		    default:
+			badthing("uname_tag", who, p->uname_tag);
+		    }
+		/* kludge for Hollerith */
+		if (p->vtype != TYCHAR) {
+			s1 = mem(strlen(s)+10,0);
+			sprintf(s1, "(char *)%s%s", p->isarray ? "" : "&", s);
+			s = s1;
+			}
+		iob_list->fields[offset] = s;
+.
+936c
+	char *s, *s1;
+	static char who[] = "ioseta";
+	expptr mo;
+.
+910,912c
+		}
+	else {
+		register Addrp q;
+
+		q = ALLOC(Addrblock);
+		q->tag = TADDR;
+		q->vtype = type;
+		q->vstg = STGAUTO;
+		q->ntempelt = 1;
+		q->isarray = 0;
+		q->memoffset = ICON(0);
+		q->uname_tag = UNAM_IDENT;
+		sprintf(q->user.ident, "%s.%s",
+			statstruct ? iob_list->name : ioblkp->user.ident,
+			io_fields[offset + 1]);
+		if (type == TYADDR && p->tag == TCONST
+				   && p->constblock.vtype == TYADDR) {
+			/* kludge */
+			register Addrp p1;
+			p1 = ALLOC(Addrblock);
+			p1->tag = TADDR;
+			p1->vtype = type;
+			p1->vstg = STGAUTO;	/* wrong, but who cares? */
+			p1->ntempelt = 1;
+			p1->isarray = 0;
+			p1->memoffset = ICON(0);
+			p1->uname_tag = UNAM_IDENT;
+			sprintf(p1->user.ident, "fmt_%ld",
+				p->constblock.const.ci);
+			frexpr(p);
+			p = (expptr)p1;
+			}
+		putexpr(mkexpr(ioset_assign, q, p));
+		}
+.
+900,908c
+	offset /= SZLONG;
+	if(statstruct && ISCONST(p)) {
+		register char *s;
+		switch(type) {
+			case TYADDR:	/* stmt label */
+				s = IO_FMT_NAME;
+				break;
+			case TYIOINT:
+				s = "";
+				break;
+			default:
+				badtype("ioset", type);
+			}
+		iob_list->fields[offset] =
+			string_num(s, p->constblock.const.ci);
+.
+895d
+893a
+static int ioset_assign = OPASSIGN;
+.
+794a
+		ioblkp = 0;	/* unnecessary */
+.
+793d
+746,758d
+744c
+		new_iob_data(ios,
+			temp_name(IO_YAIN_NAME, lastvarno,
+			ioblkp->user.ident));
+	} else if(!(ioblkp = io_structs[iostmt1]))
+		io_structs[iostmt1] = ioblkp =
+			autovar(1, ios->type, PNULL, IO_BLOCK_NAME);
+.
+738c
+		ioblkp->vtype = ios->type;
+.
+732,735c
+		iob_data *iod;
+		char *s, *se;
+.
+729a
+	if (intfile) {
+		ios = io_stuff + iostmt;
+		iostmt1 = IOREAD;
+		}
+	else {
+		ios = io_stuff;
+		iostmt1 = 0;
+		}
+	io_fields = ios->fields;
+.
+690c
+				fmtp = (Addrp)mkaddcon(lp->stateno);
+				/* lp->stateno for names fmt_nnn */
+				lp->labused = 1;
+.
+688c
+			struct Labelblock *lp;
+			lp = mklabel(p->constblock.const.ci);
+			if( (k = fmtstmt(lp)) > 0 )
+.
+674,675c
+				varfmt = YES;
+				fmtp = asg_addr(p);
+.
+588a
+	struct io_setup *ios;
+.
+587c
+	int iostmt1, k;
+.
+583c
+	register Addrp unitp, fmtp, recp;
+.
+577a
+
+LOCAL Addrp asg_addr(p)
+ union Expression *p;
+{
+	extern Namep asg_name();
+	register Addrp q;
+
+	if (p->tag != TPRIM)
+		badtag("asg_addr", p->tag);
+	q = ALLOC(Addrblock);
+	q->tag = TADDR;
+	q->vtype = TYCHAR;
+	q->vstg = STGAUTO;
+	q->ntempelt = 1;
+	q->isarray = 0;
+	q->memoffset = ICON(0);
+	q->uname_tag = UNAM_NAME;
+	q->user.name = asg_name(p->primblock.namep->varname);
+	return q;
+	}
+.
+571,576c
+	putexpr(q);
+	if(ioendlab) {
+		exif(mkexpr(OPLT, cpexpr(zork), ICON(0)));
+		exgoto(execlab(ioendlab));
+		exendif();
+		}
+	if(ioerrlab) {
+		exif(mkexpr(iostmt==IOREAD||iostmt==IOWRITE ? OPGT : OPNE,
+			cpexpr(zork), ICON(0)));
+		exgoto(execlab(ioerrlab));
+		exendif();
+		}
+	if (zorkf)
+		templist = mkchain(zorkf, templist);
+.
+569c
+		q = fixexpr( mkexpr(OPASSIGN, cpexpr(zork), q));
+.
+566c
+	expptr zork, zorkf;
+
+	if (!(zork = IOSTP) && (ioendlab || ioerrlab))
+		zork = zorkf = (expptr)mktemp(tyint, PNULL, IO_RESRC_NAME);
+	else
+		zorkf = 0;
+	if(zork)
+.
+546,556d
+533,537c
+		expptr mc = mkconv(TYLONG, ICON(type));
+		q = c	? call4(TYINT, "do_lio", mc, nelt, addr, c)
+			: call3(TYINT, "do_lio", mc, nelt, addr);
+		}
+	else {
+		char *s = ioformatted==FORMATTED ? "do_fio" : "do_uio";
+		q = c	? call3(TYINT, s, nelt, addr, c)
+			: call2(TYINT, s, nelt, addr);
+		}
+.
+528a
+#endif
+		c = ALLOC(Addrblock);
+		c->tag = TADDR;
+		c->vtype = type;
+		c->vstg = STGAUTO;
+		c->ntempelt = 1;
+		c->isarray = 1;
+		c->memoffset = ICON(0);
+		c->uname_tag = UNAM_IDENT;
+		sprintf(c->user.ident, "sizeof(%s)", c_type_decl ((type
+			== TYCHAR ? TYADDR : type), NULL));
+.
+519c
+#if 0
+.
+515a
+		char *c_type_decl ();
+.
+514d
+502a
+	extern Constp mkconst();
+	register Addrp c = 0;
+.
+494,496d
+457c
+			} 
+			else if(qe->headblock.vtype != TYERROR)
+.
+283c
+	
+.
+279,280c
+			io_structs[iostmt] = ioblkp =
+				autovar(1, ios->type, PNULL, IO_BLOCK_NAME);
+.
+277a
+		ios = io_stuff + iostmt;
+		io_fields = ios->fields;
+		ioblkp = io_structs[iostmt];
+.
+244,272c
+	else if(iostmt == IOREAD && ioerrlab && ioendlab && ioerrlab!=ioendlab)
+		IOSTP = (expptr) mktemp(TYINT, PNULL, IO_START_NAME);
+.
+232c
+			execlab(ioerrlab = p->constblock.const.ci);
+.
+226c
+			execlab(ioendlab = p->constblock.const.ci);
+.
+222c
+	ioerrlab = ioendlab = 0;
+.
+216a
+	struct io_setup *ios;
+.
+193,194c
+	s0 = s = lexline(&n);
+	se = t = s + n;
+
+	/* fix MYQUOTES (\002's) and \\'s */
+
+	while(s < se)
+		switch(*s++) {
+			case 2:
+				t += 3; break;
+			case '"':
+			case '\\':
+				t++; break;
+			}
+	s = s0;
+	lp->fmtstring = t = mem(t - s + 1, 0);
+	while(s < se)
+		switch(k = *s++) {
+			case 2:
+				t[0] = '\\';
+				t[1] = '0';
+				t[2] = '0';
+				t[3] = '2';
+				t += 4;
+				break;
+			case '"':
+			case '\\':
+				*t++ = '\\';
+				/* no break */
+			default:
+				*t++ = k;
+			}
+	*t = 0;
+.
+189,191c
+	char *s0, *lexline();
+	register char *s, *se, *t;
+	register k;
+.
+184d
+160a
+
+LOCAL char _0[] = "0";
+LOCAL char *cilist_names[] = {
+	"cilist",
+	"cierr",
+	"ciunit",
+	"ciend",
+	"cifmt",
+	"cirec"
+	};
+LOCAL char *icilist_names[] = {
+	"icilist",
+	"icierr",
+	"iciunit",
+	"iciend",
+	"icifmt",
+	"icirlen",
+	"icirnum"
+	};
+LOCAL char *olist_names[] = {
+	"olist",
+	"oerr",
+	"ounit",
+	"ofnm",
+	"ofnmlen",
+	"osta",
+	"oacc",
+	"ofm",
+	"orl",
+	"oblnk"
+	};
+LOCAL char *cllist_names[] = {
+	"cllist",
+	"cerr",
+	"cunit",
+	"csta"
+	};
+LOCAL char *alist_names[] = {
+	"alist",
+	"aerr",
+	"aunit"
+	};
+LOCAL char *inlist_names[] = {
+	"inlist",
+	"inerr",
+	"inunit",
+	"infile",
+	"infilen",
+	"inex",
+	"inopen",
+	"innum",
+	"innamed",
+	"inname",
+	"innamlen",
+	"inacc",
+	"inacclen",
+	"inseq",
+	"inseqlen",
+	"indir",
+	"indirlen",
+	"infmt",
+	"infmtlen",
+	"inform",
+	"informlen",
+	"inunf",
+	"inunflen",
+	"inrecl",
+	"innrec",
+	"inblank",
+	"inblanklen"
+	};
+
+LOCAL char **io_fields;
+
+#define zork(n,t) n, sizeof(n)/sizeof(char *) - 1, t
+
+LOCAL io_setup io_stuff[] = {
+	zork(cilist_names, TYCILIST),	/* external read/write */
+	zork(inlist_names, TYINLIST),	/* inquire */
+	zork(olist_names,  TYOLIST),	/* open */
+	zork(cllist_names, TYCLLIST),	/* close */
+	zork(alist_names,  TYALIST),	/* rewind */
+	zork(alist_names,  TYALIST),	/* backspace */
+	zork(alist_names,  TYALIST),	/* endfile */
+	zork(icilist_names,TYICILIST),	/* internal read */
+	zork(icilist_names,TYICILIST)	/* internal write */
+	};
+
+#undef zork
+		
+.
+24c
+Addrp ioblkp;
+.
+20,21d
+12c
+iob_data *iob_list;
+Addrp io_structs[9];
+.
+10a
+#include "iob.h"
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./io.c.ed"
+fi
+if `test ! -s ./lex.c.ed`
+then
+echo "writting ./lex.c.ed"
+cat > ./lex.c.ed << '\Rogue\Monster\'
+985a
+
+/* Check for NAG's special hex constant */
+
+	if (isdigit (*nextch) && (*(nextch + 1) == '#' ||
+		(isdigit (*(nextch + 1)) && *(nextch + 2) == '#'))) {
+
+	    radix = atoi (nextch);
+	    if (*++nextch != '#')
+		nextch++;
+	    if (radix != 2 && radix != 8 && radix != 16) {
+	        erri ("invalid base for constant, defaulting to hex", radix);
+		radix = 16;
+	    } /* if */
+	    nextch++;
+	    for (p = token; hextoi (*nextch) < radix;)
+		*p++ = *nextch++;
+	    toklen = p - token;
+	    token[toklen] = '\0';
+	    return (radix == 16) ? SHEXCON : ((radix == 8) ? SOCTCON :
+		    SBITCON);
+	} /* if */
+
+.
+930a
+
+/* BUG BUG BUG Why the heck is this a single OR? (mwm 6-20-89) */
+
+.
+923a
+
+.
+840a
+/* gettok -- moves the right amount of text from   nextch   into the   token
+   buffer.   token   initially contains garbage (leftovers from the prev token) */
+
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./lex.c.ed"
+fi
+if `test ! -s ./machdefs.h.ed`
+then
+echo "writting ./machdefs.h.ed"
+cat > ./machdefs.h.ed << '\Rogue\Monster\'
+1,15c
+/*#define SDB 1*/
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./machdefs.h.ed"
+fi
+if `test ! -s ./main.c.ed`
+then
+echo "writting ./main.c.ed"
+cat > ./main.c.ed << '\Rogue\Monster\'
+378d
+369,376d
+305,318d
+262,265d
+255,258d
+226d
+220,221c
+/*	fatal("vax cannot recover from floating exception");*/
+.
+99c
+    f2c_entry ("Fr", P_ONE_ARG, P_STRING, &fl_fmt_string, 0),
+    f2c_entry ("ev", P_NO_ARGS, P_INT, &define_equivs, NO)
+.
+67a
+int define_equivs = YES;
+.
+30d
+8,28d
+1,2c
+char xxxvers[] = "\n@(#) FORTRAN to C Translator, VERSION 0.4, June 29, 1989\n";
+#define	VER	0x9629	/* for pi; 8YMDD */
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./main.c.ed"
+fi
+if `test ! -s ./mem.c.ed`
+then
+echo "writting ./mem.c.ed"
+cat > ./mem.c.ed << '\Rogue\Monster\'
+59a
+	}
+
+ void
+new_iob_data(ios, name)
+ register io_setup *ios;
+ char *name;
+{
+	register iob_data *iod;
+	register char **s, **se;
+
+	iod = (iob_data *)
+		mem(sizeof(iob_data) + ios->nelt*sizeof(char *), 1);
+	iod->next = iob_list;
+	iob_list = iod;
+	iod->type = ios->fields[0];
+	iod->name = cpstring(name);
+	s = iod->fields;
+	se = s + ios->nelt;
+	while(s < se)
+		*s++ = "0";
+	*s = 0;
+	}
+
+ char *
+string_num(pfx, n)
+ char *pfx;
+ long n;
+{
+	char buf[32];
+	sprintf(buf, "%s%ld", pfx, n);
+	/* can't trust return type of sprintf -- BSD gets it wrong */
+	return strcpy(mem(strlen(buf)+1,0), buf);
+	}
+
+ char *
+cpstring(s)
+ register char *s;
+{
+	return strcpy(mem(strlen(s)+1,0), s);
+	}
+
+static defines *define_list;
+
+ void
+define_start(outfile, s1, s2, post)
+ FILE *outfile;
+ char *s1, *s2, *post;
+{
+	defines *d;
+	int n, n1;
+
+	n = n1 = strlen(s1);
+	if (s2)
+		n += strlen(s2);
+	d = (defines *)mem(sizeof(defines)+n, 1);
+	d->next = define_list;
+	define_list = d;
+	strcpy(d->defname, s1);
+	if (s2)
+		strcpy(d->defname + n1, s2);
+	nice_printf(outfile, "#define %s %s", d->defname, post);
+	}
+
+ void
+other_undefs(outfile)
+ FILE *outfile;
+{
+	defines *d;
+	if (d = define_list) {
+		define_list = 0;
+		nice_printf(outfile, "\n");
+		do
+			nice_printf(outfile, "#undef %s\n", d->defname);
+			while(d = d->next);
+		nice_printf(outfile, "\n");
+		}
+.
+57,58c
+	register int k = n + 2, L;
+	for(L = 0; L < n; L++)
+		if (s[L] == '"')
+			k++; 
+	rv = s1 = mem(k);
+	*s1++ = '"';
+	for(L = 0; L < n; L++) {
+		if (s[L] == '"')
+			*s1++ = '\\';
+		*s1++ = s[L];
+		}
+	*s1 = 0;
+.
+55a
+	register char *s1;
+.
+53,54c
+ register char *s;
+ register int n;
+.
+48c
+	return rv;
+.
+44,45c
+		rv = b->buf;
+		mem_last = rv + sizeof(b->buf);
+		s = rv + n;
+.
+28c
+	if (round)
+		mem_next = (char *)(
+			((long)mem_next + sizeof(char *)-1)
+				& ~(sizeof(char *)-1));
+	rv = mem_next;
+	s = rv + n;
+.
+26c
+	register char *rv, *s;
+.
+22c
+mem(n, round)
+.
+1a
+#include "iob.h"
+#include <string.h>
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./mem.c.ed"
+fi
+if `test ! -s ./misc.c.ed`
+then
+echo "writting ./misc.c.ed"
+cat > ./misc.c.ed << '\Rogue\Monster\'
+1137a
+} /* struct_eq */
+
+/* biggest_type -- returns the largest type that can be used to output 
+   offset   padding bytes. */
+
+int biggest_type (offset)
+int offset;
+{
+    if (offset % typesize[TYDCOMPLEX] == 0)
+        return TYDCOMPLEX;
+    if (offset % typesize[TYDREAL] == 0)
+        return TYDREAL;
+    if (offset % typesize[TYLONG] == 0)
+        return TYLONG;
+    if (offset % typesize[TYSHORT] == 0)
+	return TYSHORT;
+    return TYCHAR;
+} /* biggest_type */
+.
+888a
+		case OPASSIGNI:
+.
+745d
+730c
+
+.
+559a
+	nextext->init_values = CHNULL;
+.
+510c
+/*		lp->labused = YES; */
+.
+485a
+	lp->fmtstring = 0;
+.
+275,276d
+273d
+247c
+	static char name[IDENT_LEN+1];
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./misc.c.ed"
+fi
+if `test ! -s ./names.c.ed`
+then
+echo "writting ./names.c.ed"
+cat > ./names.c.ed << '\Rogue\Monster\'
+605,610c
+	"acos", "alist", "asin", "asm", "atan", "atan2", "auto", "break",
+	"case", "char", "cilist", "cllist", "const", "continue", "cos", "cosh",
+	"default", "do", "double", "else", "entry", "enum", "exp",
+	"extern", "flag", "float", "for", "ftnint", "ftnlen", "goto",
+	"icilist", "if", "inlist", "int", "log", "long",
+	"noalias", "olist", "register", "return",
+.
+602a
+/* Also includes keywords used for I/O in f2c.h */
+.
+545c
+    static char buf[USER_LABEL_MAX + 1];
+.
+427,429c
+		define_start (outfile, varstr (XL, ext -> extname),
+			comm_union_name (count, NULL), CNULL);
+.
+264,267c
+    sprintf (pointer, "_%d", count);
+.
+78a
+	case TYCILIST:	strcpy (buff, "cilist");	break;
+	case TYICILIST:	strcpy (buff, "icilist");	break;
+	case TYOLIST:	strcpy (buff, "olist");		break;
+	case TYCLLIST:	strcpy (buff, "cllist");	break;
+	case TYALIST:	strcpy (buff, "alist");		break;
+	case TYINLIST:	strcpy (buff, "inlist");	break;
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./names.c.ed"
+fi
+if `test ! -s ./names.h.ed`
+then
+echo "writting ./names.h.ed"
+cat > ./names.h.ed << '\Rogue\Monster\'
+18a
+#define IO_YAIN_NAME "io_"		/* Yet another I/O Name */
+#define IO_FMT_NAME "fmt_"		/* IO Format prefix */
+#define IO_RESRC_NAME "io_rc"
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./names.h.ed"
+fi
+if `test ! -s ./nice_printf.c.ed`
+then
+echo "writting ./nice_pf.c.ed"
+cat > ./nice_pf.c.ed << '\Rogue\Monster\'
+229c
+	    cursor_pos = in_string ? 0 : ind +
+.
+211a
+	    (void) safe_strncpy (next_slot, pointer + 1, sizeof(output_buf)-1);
+.
+210d
+198,199c
+			pointer = adjust_pointer_in_string(pointer);
+		else if (strchr("&*+-/<=>|", *pointer)
+.
+167c
+		    else if (word_start && isntident(*(unsigned char *)pointer))
+.
+164,165c
+		    if (!word_start && isident(*(unsigned char *)pointer))
+.
+160,162c
+   at the same time.  Must check for tokens first, since '-' is considered
+   part of an identifier; checking isident first would mean breaking up "->" */
+.
+129d
+124c
+	if (in_string)
+        	for (pointer = next_slot; *pointer && *pointer != '\n' &&
+				cursor_pos <= max_line_len; pointer++)
+			cursor_pos++;
+	else
+          for (pointer = next_slot; *pointer && *pointer != '\n' &&
+.
+117,119d
+113a
+    ind = indent <= MAX_INDENT
+		? indent
+		: MIN_INDENT + indent % (MAX_INDENT - MIN_INDENT);
+
+.
+100a
+    extern char tr_tab[];	/* in output.c */
+    register char *Tr = tr_tab;
+    int ind;
+.
+97d
+89c
+/* #define isident(x) (isalnum (x) || (x) == '_' || (x) == '.' || (x) == '-') */
+#define isident(x) (Tr[x] & 1)
+#define isntident(x) (!Tr[x])
+.
+81a
+ static char *
+adjust_pointer_in_string(pointer)
+ register char *pointer;
+{
+	register char *s, *s1, *se, *s0;
+
+	if (pointer - next_slot < 20)	/* arbitrary choice */
+		return next_slot - 1;
+	/* arrange not to break \002 */
+	for(s = s1 = next_slot; s < pointer; s++) {
+		s0 = s1;
+		s1 = s;
+		if (*s == '\\') {
+			se = s++ + 4;
+			if (se > pointer)
+				break;
+			if (*s < '0' || *s > '7')
+				continue;
+			while(++s < se)
+				if (*s < '0' || *s > '7')
+					break;
+			--s;
+			}
+		}
+	return s0 - 1;
+	}
+
+.
+22c
+	int tab = ind + (use_extra ? TOO_LONG_INDENT : 0);
+.
+20a
+    ind = indent <= MAX_INDENT
+		? indent
+		: MIN_INDENT + indent % (MAX_INDENT - MIN_INDENT);
+
+.
+19c
+    int ind;
+.
+8a
+#define MAX_INDENT 44
+#define MIN_INDENT 22
+.
+7d
+2d
+\Rogue\Monster\
+else
+  echo "will not over write ./nice_pf.c.ed"
+fi
+if `test ! -s ./nice_pf.h.ed`
+then
+echo "writting ./nice_pf.h.ed"
+cat > ./nice_pf.h.ed << '\Rogue\Monster\'
+5c
+#define MAX_OUTPUT_SIZE 6000	/* Number of chars on one output line PLUS
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./nice_pf.h.ed"
+fi
+if `test ! -s ./output.c.ed`
+then
+echo "writting ./output.c.ed"
+cat > ./output.c.ed << '\Rogue\Monster\'
+1168a
+    extern int tab_size;
+    register char *s;
+
+    s = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+-.";
+    while(*s)
+	tr_tab[*s++] = 3;
+    tr_tab['>'] = 1;
+.
+1157a
+char tr_tab[256];	/* machine dependent */
+.
+1114,1141d
+1104,1108d
+1096d
+1050,1054c
+#endif		
+			ONEOF(q->addrblock.vstg,
+				M(STGARG)|M(STGCOMMON)|M(STGEQUIV)|M(STGCONST))
+			|| (memoffset && (!ISICON(memoffset)
+				|| memoffset->constblock.const.ci)))
+			|| ONEOF(q->addrblock.vstg,
+					M(STGINIT)|M(STGAUTO)|M(STGBSS))
+				&& !q->addrblock.isarray)
+.
+1047c
+			q -> addrblock.vstg, M(STGARG)|M(STGEQUIV)) ||
+.
+1045c
+			!oneof_stg(q -> addrblock.uname_tag == UNAM_NAME ?
+.
+1043c
+			!ONEOF (q -> addrblock.vstg, M(STGEXT)|M(STGLENG))
+			&& (
+#if 0
+.
+983a
+	if (q->tag == TADDR) {
+		if (q->addrblock.vtype > TYERROR) {
+			/* I/O block */
+			nice_printf(outfile, "&%s", q->addrblock.user.ident);
+			continue;
+			}
+		if (!byvalue && q->addrblock.isarray
+		&& q->addrblock.vtype != TYCHAR
+		&& q->addrblock.memoffset->tag == TCONST
+		&& q->addrblock.memoffset->constblock.const.ci == 0) {
+
+			/* &x[0] == x */
+			/* This also prevents &sizeof(doublereal)[0] */
+			switch(q->addrblock.uname_tag) {
+			    case UNAM_NAME:
+				output_name(outfile, q->addrblock.user.name);
+				continue;
+			    case UNAM_IDENT:
+				nice_printf(outfile, "%s",
+					q->addrblock.user.ident);
+				continue;
+			    case UNAM_EXTERN:
+				output_extern(outfile,
+					&extsymtab[q->addrblock.memno]);
+				continue;
+			    }
+			}
+		}
+
+.
+976,977c
+    for (cp = arglist; cp; cp = cp -> nextp, done_once = TRUE) {
+.
+961c
+    nice_printf(outfile, " (");
+.
+940,947d
+909a
+    register expptr q;
+.
+907,908d
+894d
+877,879d
+813a
+    /* Fudge character/arithmetic pairs: promote char to int. */
+    /* This mainuplation is meant to make ichar() work right. */
+
+    if (e->vtype >= TYSHORT && e->vtype <= TYLOGICAL) {
+	register union Expression *Offset;
+
+	if (e->leftp && e->leftp->tag == TADDR
+			&& e->leftp->addrblock.vtype == TYCHAR) {
+		e->leftp->addrblock.vtype = tyint;
+		Offset = e->leftp->addrblock.memoffset;
+		e->leftp->addrblock.memoffset =
+			Offset
+			? mkexpr(OPSTAR, Offset, ICON(typesize[tyint]))
+			: ICON(0);
+		e->leftp->addrblock.isarray = 1;
+		}
+	if (e->rightp && e->rightp->tag == TADDR
+			&& e->rightp->addrblock.vtype == TYCHAR) {
+		e->rightp->addrblock.vtype = tyint;
+		Offset = e->rightp->addrblock.memoffset;
+		e->rightp->addrblock.memoffset =
+			Offset
+			? mkexpr(OPSTAR, Offset, ICON(typesize[tyint]))
+			: ICON(0);
+		e->rightp->addrblock.isarray = 1;
+		}
+	}
+
+.
+754a
+	case OPIDENTITY:
+.
+110d
+94a
+	/* OPASSIGNI 56 */	{ BINARY_OP,  2, "%l = &%r" },
+	/* OPIDENTITY 57 */	{ UNARY_OP, 15, "%l" },
+.
+27,28c
+	/* OPEQV 9 */		{ BINARY_OP,  9, "%l == %r" },
+	/* OPNEQV 10 */		{ BINARY_OP,  9, "%l != %r" },
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./output.c.ed"
+fi
+if `test ! -s ./p1output.c.ed`
+then
+echo "writting ./p1output.c.ed"
+cat > ./p1output.c.ed << '\Rogue\Monster\'
+359a
+	case OPIDENTITY:
+.
+209c
+	    stg, M(STGARG)|M(STGEQUIV)) && addrp->vtype != TYCHAR) {
+.
+206c
+   Lengths are passed by value, so don't check STGLENG
+   28-Jun-89 (dmg)  Added the check for != TYCHAR
+ */
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./p1output.c.ed"
+fi
+if `test ! -s ./pccdefs.h.ed`
+then
+echo "writting ./pccdefs.h.ed"
+cat > ./pccdefs.h.ed << '\Rogue\Monster\'
+56,64c
+#define P2SHORT 3
+#define P2INT 4
+#define P2LONG 4
+.
+1c
+/* The following numbers are strange, and implementation-dependent */
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./pccdefs.h.ed"
+fi
+if `test ! -s ./proc.c.ed`
+then
+echo "writting ./proc.c.ed"
+cat > ./proc.c.ed << '\Rogue\Monster\'
+1522a
+	doing_setbound = 0;
+.
+1521c
+		p->basexpr = make_int_expr (fixtype (q));
+.
+1491c
+				p->dims[i].dimexpr = make_int_expr (fixtype (q));
+.
+1458a
+	doing_setbound = 1;
+.
+1445a
+	extern expptr make_int_expr ();
+	extern int doing_setbound;
+.
+1046,1099d
+1003,1007d
+990,993c
+
+.
+959,964d
+770,773d
+733,761d
+727,731d
+688,691c
+				(qclass==CLVAR && qstg==STGUNKNOWN) ) {
+			    if (! q -> vis_assigned)
+				warn1("local variable %s never used",
+				      varstr(VL,q->varname) );
+			} else if(qclass==CLVAR && qstg==STGBSS) {
+.
+658,686d
+597,600d
+565,569d
+536,542d
+519,524d
+451,454d
+439,442d
+404,411d
+402d
+397,399d
+394d
+390,392d
+260,281d
+172,186d
+111,123d
+97d
+87,95d
+41,44d
+18a
+char *memname();
+.
+4,12d
+\Rogue\Monster\
+else
+  echo "will not over write ./proc.c.ed"
+fi
+if `test ! -s ./put.c.ed`
+then
+echo "writting ./put.c.ed"
+cat > ./put.c.ed << '\Rogue\Monster\'
+85,86c
+/*	templist = hookup(templist, holdtemps);		*/
+/*	holdtemps = NULL;				*/
+
+.
+61d
+57,59d
+50c
+	P2BAD, P2BAD, P2BAD, P2BAD,
+	1,1,1,1,1 /* OPNEG1, OPQUESTd, OPCOLONd, OPASSIGNI, OPIDENTITY */
+.
+9,15d
+7a
+#include "pccdefs.h"
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./put.c.ed"
+fi
+if `test ! -s ./putpcc.c.ed`
+then
+echo "writting ./putpcc.c.ed"
+cat > ./putpcc.c.ed << '\Rogue\Monster\'
+1459c
+    return (expptr) p;
+.
+1447c
+	cp -> datap = (tagptr) addrfix(putx( mkconv(TYLENG,cp->datap)));
+.
+1327c
+	    if( ISCHAR(q) &&
+		(q->headblock.vclass != CLPROC || q->headblock.vstg == STGARG))
+.
+1260a
+ LOCAL expptr
+addrfix(e)		/* fudge character string length if it's a TADDR */
+ expptr e;
+{
+	return e->tag == TADDR ? mkexpr(OPIDENTITY, e, ENULL) : e;
+	}
+
+.
+1076c
+return (expptr) p;
+.
+1070c
+		return ENULL;
+.
+895c
+	return (Addrp) p;
+.
+465a
+	case OPASSIGNI:
+.
+355a
+		case OPASSIGNI:
+		case OPIDENTITY:
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./putpcc.c.ed"
+fi
+if `test ! -s ./star2s.c.ed`
+then
+echo "writting ./star2s.c.ed"
+cat > ./star2s.c.ed << '\Rogue\Monster\'
+634a
+
+char *parstate2s (par, pointer)
+int par;
+char *pointer;
+{
+    static char buff[STATIC_STORE_SIZE];
+
+    if (pointer == NULL)
+        pointer = buff;
+
+    switch (par) {
+        case OUTSIDE: strcpy (pointer, "OUTSIDE"); break;
+	case INSIDE: strcpy (pointer, "INSIDE"); break;
+	case INDCL: strcpy (pointer, "INDCL"); break;
+	case INDATA: strcpy (pointer, "INDATA"); break;
+	case INEXEC: strcpy (pointer, "INEXEC"); break;
+	default: strcpy (pointer, "Bad parstate '%d'", par);
+    } /* switch */
+
+    return pointer;
+} /* parstate2s */
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./star2s.c.ed"
+fi
+if `test ! -s ./star2s.h.ed`
+then
+echo "writting ./star2s.h.ed"
+cat > ./star2s.h.ed << '\Rogue\Monster\'
+3a
+char *parstate2s ();
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./star2s.h.ed"
+fi
+if `test ! -s ./statics.c.ed`
+then
+echo "writting ./statics.c.ed"
+cat > ./statics.c.ed << '\Rogue\Monster\'
+169a
+} /* free_static_inits */
+.
+63c
+		    type = biggest_type (val);
+		    val /= typesize[type];
+		    nice_printf (fp, "%s ", c_type_decl (type, 0));
+.
+39a
+    int type;
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./statics.c.ed"
+fi
+if `test ! -s ./vax.c.ed`
+then
+echo "writting ./vax.c.ed"
+cat > ./vax.c.ed << '\Rogue\Monster\'
+617,840d
+608d
+603d
+497d
+495c
+			expptr expr = (expptr) cpexpr (dp -> dims[i].dimexpr);
+.
+170d
+144,153d
+140d
+80,87d
+32,33c
+#if 1
+.
+2,10d
+\Rogue\Monster\
+else
+  echo "will not over write ./vax.c.ed"
+fi
+if `test ! -s ./vaxdefs.h.ed`
+then
+echo "writting ./vaxdefs.h.ed"
+cat > ./vaxdefs.h.ed << '\Rogue\Monster\'
+1,15c
+/*#define SDB 1*/
+.
+\Rogue\Monster\
+else
+  echo "will not over write ./vaxdefs.h.ed"
+fi
+if `test ! -s ./FINAL_NOTES`
+then
+echo "writting ./FINAL_NOTES"
+cat > ./FINAL_NOTES << '\Rogue\Monster\'
+	NOTES AS I PREPARE TO LEAVE NAG ON JUNE 30
+----------------------------------------------------------------------
+
+	/user/mark/bin/f2c - translator before I merged the IO stuff
+		-- source in /user/mark/f2c/hold
+	/user/mark/bin/f2cio - Dave Gay's version, as of June 28
+		-- source in /user/mark/update_f2c/new
+	/user/mark/f2c/f2c - translator with I/O and bugs
+		-- source in /user/mark/f2c
+
+	(null)com_ bug -- grep for "null" in all source files, I think
+the only one is in star2s.c, stg2s().  Set a breakpoint there, run the
+translator and look at the stack trace.
+
+	common array init bug -- look at the differences between an
+earlier version and the current version.  First run the earlier
+version to see if it gets it right (it should).
+
+	other bugs -- look at the file /user/mark/mail/dave.  These
+are the email messages I've exchanged with David Gay
+(cbs%uk.ac.nsfnet-relay::com.att.research::dmg).  I've incorporated
+most of his bug fixes except for the last ones (which 1. increase the
+default sizee of the statement function table and 2. fix a problem
+with a "too many initializers" error message).  There's nothing too
+personal in there, I hope!
+
+	Look in my .login for the   c and h   aliases.  Most useful at
+searching the right files, avoiding gram.c (yacc output) and gram.o,
+but looking at the 5 grammar source files.
+
+	I want to send Dave Gay my whole directory tree, if possible.
+PLEASE delete the .o's, files ending in ~, and the executables (look
+in /user/mark/bin for some more of these) before tar(1)ing these.  If
+that's not possible, just /user/mark/f2c subtree.  If THAT's not
+possible, just the /user/mark/f2c directory by itself.
+
+	I also want to email him the diff -e between /user/mark/f2c
+source files and /user/mark/update_f2c/original_f2c source files.  You
+can find a list of all relevant source files in the file
+/user/mark/f2c/myfiles.
+\Rogue\Monster\
+else
+  echo "will not over write ./FINAL_NOTES"
+fi
+echo "Finished archive 1 of 1"
+exit

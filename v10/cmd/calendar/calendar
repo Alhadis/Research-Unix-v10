@@ -1,0 +1,107 @@
+#/bin/sh -p
+PATH=/bin:/usr/bin
+export PATH
+T=/tmp/cal$$
+trap "rm -f ${T}*;exit" 0 1 2 13 15
+for i
+do	case $i in
+	[0-9]| [0-9][0-9])
+		ND=$i ;;
+	-)
+		if test -r /usr/lib/calendar
+		then	EXTRA=${T}7
+			sed '/^[^ ]*!/!s/^/!/' /usr/lib/calendar >$EXTRA
+		fi
+		ALL=all ;;
+	esac
+done
+case $ALL in
+all)
+	;;
+*)
+	case $HOME in
+	"")
+		C=calendar ;;
+	*)
+		C=$HOME/calendar
+	esac
+esac
+
+/usr/lib/calendar1 $C | sort -u - $EXTRA >${T}1
+: T1 = system!calpath uid, for every calendar to be consulted
+
+sed 's/!.*//' ${T}1 | sort -u >${T}2
+: T2 = machname, for every remote machine to consult
+
+for i in ''  `cat ${T}2`
+do
+	sed "s@^$i!@@
+	     /!/d
+	     s/ .*//
+	" ${T}1 | sort -u |
+	case $i in
+	"")	/usr/lib/calendar3 $ND ;;
+	*)	rx $i /usr/lib/calendar3 $ND 2>/dev/null ||
+		dcon -l -s /dev/fd/5  5<<!
+$i
+OK
+$ND
+!
+	esac |
+	sed "s@^@$i!@"
+done | sort -u >${T}3
+: T3 = system!calpath:message, for every calendar entry found
+
+case $C in
+"")
+	;;
+*)
+	sed 's/^[^ :]*://' ${T}3|sort +0M +1n
+	exit
+esac
+
+sed 's/:/ /' ${T}3 |
+join - ${T}1 >${T}4
+: T4 = system!calpath message uid
+
+sed 's/[^ ]* \(.*\) \(.*\)/\2 \1/' ${T}4 | sort +0 -1 +1M +2n -o ${T}5
+: T5 = uid message
+
+echo >>${T}5
+sed '
+	:a
+	/^mail \([^ ]*\)\( .*\n\)\1 \([^\n]*\)$/{
+		s//mail \1\2\3/
+		N
+		ba
+	}
+	/^mail/!{
+		s/\([^ ]*\) /mail \1 <<"!"\
+/
+		N
+		ba
+	}
+	:x
+	/[^\n]*\n/{
+		P
+		s///
+		bx
+	}
+	s/^/!\
+/
+	P
+	s/[^\n]*\n//
+	ba
+' ${T}5 | sed '
+:y
+/\([^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^\n][^ \n]*\) /{
+	s//\1\
+    /
+	P
+	s/.*\n//
+	by
+}
+' >${T}6
+: T6 = "mail" uid "<<! ..."
+
+sh ${T}6

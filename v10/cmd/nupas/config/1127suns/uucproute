@@ -1,0 +1,28 @@
+#!/bin/sh -p
+PATH=/bin:/usr/bin:/usr/lib/upas; export PATH
+sender=$1;shift
+system=$1;shift
+sys=`cat /etc/whoami`
+
+# save the mail
+cat > /tmp/ur$$
+
+#
+#  Try direct.  Queuing is only done by uucp.
+#
+uux - -a "$sender" "$system!rmail" "($*)" < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+
+# get gateway system
+gateway=`cat /usr/lib/upas/gateway`
+case $gateway in
+"") gateway=research ;;
+esac
+
+# let the gateway figure it out
+temp=
+for i in $*; do temp="$temp $system!$i"; done
+tosmtp -u $sender dk!$gateway!smtp $temp < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+uux - -a "$sender" "$gateway!rmail" "($temp)" </tmp/ur$$
+rv=$?
+rm -f /tmp/ur$$
+exit $rv

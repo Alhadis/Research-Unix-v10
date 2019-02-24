@@ -1,0 +1,32 @@
+<../mkconf.v10
+
+CC=lcc
+LPROG=connect dispatch canon hostname
+LIBS=lib.a
+LIBOBJ=canon.o lcreat.o
+
+%: %.sh
+	cp $stem.sh $target
+	chmod +x $target
+
+connect: connect.o
+	$CC $CFLAGS -o connect connect.o -lipc
+
+dispatch: dispatch.o
+	$CC $CFLAGS -o dispatch dispatch.o -lipc
+
+canon: canonmain.o lib.a
+	$CC $CFLAGS -o canon canonmain.o lib.a
+
+compile:V: $LPROG $LIBS
+
+install:V:
+	test -d $LDIR || mkdir $LDIR
+	cp $LPROG $LDIR
+
+lib.a: $LIBOBJ
+	ar r lib.a $LIBOBJ
+	ranlib lib.a
+
+clean:V:
+	rm -f $LPROG $LIBS *.o

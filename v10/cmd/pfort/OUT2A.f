@@ -1,0 +1,79 @@
+      SUBROUTINE OUT2A( IT, JJ, N, ISW )
+C
+C     IT CONTINAS TITLE FOR FIRST LINE OF OUTPUT
+C     JJ CONTAINS NUMBER OF CHARS IN TITLE, J<=25
+C     N CONTAINS NUMBER OF ELEMENTS TO BE PRINTED
+C     ISW TELLS IF THESE ARE COMMON NAMES OR PROC NAMES
+C
+      INTEGER IT(25), II(25), BL, PLAT, PCOM, COM, STACK, OUTUT, S
+      INTEGER BUF(54)
+      COMMON /GRAPH/ LLAT, PLAT, LAT(6000)
+      COMMON /PARAMS/ II1, OUTUT, II2, II3, II4, II5, II6
+      COMMON /CEXPRS/ LSTACK, STACK(620)
+      COMMON /COMS/ LCOM, PCOM, COM(300)
+      DATA BL/1H /,S/1HS/
+C
+C     UNPACK TITLE
+C
+      NN = JJ
+      IF(JJ.GT.25) NN=25
+      CALL S5UNPK( IT(1), II(1), NN)
+      K1 = NN + 1
+      IF(K1.GT.25) GOTO 15
+      DO 10 K =K1, 25
+        II(K) = BL
+ 10   CONTINUE
+C
+C     SETUP FIRST LINE OF ELEMENTS
+C
+ 15   K = 6
+      IF (K.GT.N) K = N
+      IB = 1
+      DO 50 I = 1, K
+        IL = STACK(I)
+        GOTO (20, 30),ISW
+C       FOR PARE OR DESC LISTS
+ 20     CALL S5UNPK( LAT(IL), BUF(IB), 6 )
+        BUF(IB + 7) = BL
+        GOTO 40
+C       FOR COMMON LISTS- INDEX TO ELEMENTS IS NEGATIVE
+C       IF COMMON IS SET BY PGM UNIT
+ 30     BUF(IB + 7) = BL
+        IF(IL.LT.0) BUF(IB + 7) = S
+        IL = IABS(IL)
+        CALL S5UNPK( COM(IL), BUF(IB), 6 )
+ 40     BUF(IB + 6) = BL
+        BUF(IB + 8) = BL
+        IB = IB + 9
+ 50   CONTINUE
+      IB = IB - 1
+      WRITE(OUTUT,99999) (II(L),L=1,25), (BUF(I),I=1,IB)
+99999 FORMAT(80A1)
+      IF(K.EQ.N) GOTO 110
+C       WRITE SUBSEQUENT LINES
+ 60   IB = 1
+      K1 = K + 1
+      K = K + 6
+      IF (K.GT.N) K = N
+      DO 100 I = K1, K
+        IL = STACK(I)
+        GOTO (70, 80), ISW
+C       FOR PAR OR DESC LISTS
+ 70     CALL S5UNPK( LAT(IL), BUF(IB), 6 )
+        BUF(IB + 7) = BL
+        GOTO 90
+C     FOR   COMMON LISTS
+ 80     BUF(IB + 7) = BL
+        IF(IL.LT.0) BUF(IB + 7) = S
+        IL = IABS(IL)
+        CALL S5UNPK( COM(IL), BUF(IB), 6 )
+ 90     BUF(IB + 6) = BL
+        BUF(IB +8) = BL
+        IB = IB + 9
+ 100  CONTINUE
+      IB = IB - 1
+      WRITE(OUTUT,99998) (BUF(I),I =1,IB)
+99998 FORMAT(25X,55A1)
+      IF(K.LT.N) GOTO 60
+ 110  RETURN
+      END

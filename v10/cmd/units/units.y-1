@@ -1,0 +1,468 @@
+/*% mkcdate >cdate.h && yacc % && cyntax y.tab.c && cc -go # y.tab.c
+ * New units
+ */
+%{
+#define	NDIM	11
+#define	NUNIT	700
+#define	NSTRBUF	8192
+struct unit{
+	char *name;
+	double coef;
+	int dim[NDIM];
+}unit[NUNIT];
+struct unit *dim[NDIM];
+char strbuf[NSTRBUF];
+char *strp=strbuf;
+struct unit mul(), div(), pwr(), prim();
+%}
+%term NUMBER NAME SQUARE CUBE
+%type<u> u unit NUMBER NAME
+%union{
+	struct unit u;
+}
+%left SQUARE CUBE
+%left '^'
+%%
+unit:			{static struct unit u={0,1}; $$=u;}
+|	unit u		{$$=mul($1, $2);}
+|	unit '/' u	{$$=div($1, $3);}
+u:	NUMBER
+|	NAME
+|	'@' NUMBER	{$$=prim($2);}
+|	'(' unit ')'	{$$=$2;}
+|	SQUARE u	{$$=pwr($2, 2.);}
+|	CUBE u		{$$=pwr($2, 3.);}
+|	u '^' NUMBER	{$$=pwr($1, $3.coef);}
+%%
+#include <stdio.h>
+#include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "cdate.h"
+char *strchr();
+char *lp, *line;
+digit(c){ return '0'<=c && c<='9'; }
+char idchar[256];
+int nerror;
+idcharfn(c){
+	switch(c){
+	case '\0':
+	case '*':
+	case '/':
+	case '@':
+	case '(':
+	case ')':
+	case '^':
+	case ' ':
+	case '\t':
+	case '\n':
+		return 0;
+	default:
+		return 1;
+	}
+}
+struct prefix{
+	int len;
+	double coef;
+	char *name;
+}prefix[]={
+0,	1e18,	"exa",	/* 1e15? */
+0,	1e15,	"peta",	/* 1e18? */
+0,	1e12,	"tera",
+0,	1e9,	"giga",
+0,	1e6,	"mega",
+0,	1e6,	"meg",
+0,	1e4,	"myria",
+0,	1e3,	"kilo",
+0,	1e2,	"hekta",
+0,	1e2,	"hekto",
+0,	1e1,	"deka",
+0,	1.5,	"sesqui",
+0,	.5,	"hemi",
+0,	.5,	"demi",
+0,	.5,	"semi",
+0,	1e-1,	"deci",
+0,	1e-2,	"centi",
+0,	1e-3,	"milli",
+0,	1e-6,	"micro",
+0,	1e-9,	"nano",
+0,	1e-12,	"pico",
+0,	1e-15,	"femto",
+0,	1e-18,	"atto",
+/* Are these a good idea? */
+0,	1e9,	"G",
+0,	1e6,	"M",
+0,	1e3,	"k",
+0,	1e-3,	"m",
+0,	1e-6,	"u",
+0,	1e-9,	"n",
+0,	1e-12,	"p",
+0,	0,	0
+};
+hash(s)
+register char *s;
+{
+	register i, j;
+	i=0;
+	for(j=0;*s;j++)
+		i+=*s++*j;
+	i%=NUNIT;
+	return i<0?i+NUNIT:i;
+}
+/*
+ * symbol table lookup subroutine: look for the name.  If not found,
+ * try stripping prefixes.
+ */
+struct unit *look2(name)
+char *name;
+{
+	register char *s=name;
+	register i, j;
+	register struct prefix *p;
+	double coef=1;
+	static struct unit mul;
+	do{
+		i=j=hash(s);
+		do{
+			if(unit[j].name==0)
+				break;
+			if(strcmp(s, unit[j].name)==0){
+				if(coef==1)
+					return unit+j;
+				mul=unit[j];
+				mul.coef*=coef;
+				return &mul;
+			}
+			if(++j==NUNIT)
+				j=0;
+		}while(j!=i);
+		for(p=prefix;p->name;p++)
+			if(strncmp(s, p->name, p->len)==0){
+				coef*=p->coef;
+				s+=p->len;
+				if(*s=='\0'){	/* no unit, just prefixes */
+					mul.coef=coef;
+					for(i=0;i!=NDIM;i++)
+						mul.dim[i]=0;
+					return &mul;
+				}
+				break;
+			}
+	}while(p->name);
+	return 0;
+}
+/*
+ * Look for the unit with the given name.
+ * Perhaps deleting a trailing `s' will help.
+ */
+struct unit *lookup(name)
+char *name;
+{
+	register struct unit *u=look2(name);
+	if(u==0 && name[strlen(name)-1]=='s'){
+		name[strlen(name)-1]=0;
+		u=look2(name);
+	}
+	if(u==0){
+		fprintf(stderr, "Unknown unit %s\n", name);
+		nerror++;
+	}
+	return u;
+}
+char *copy(s)
+register char *s;
+{
+	char *strcpy();
+	register l=strlen(s)+1;
+	if(strp+l>&strbuf[NSTRBUF]){
+		fprintf(stderr, "Units: out of space (copy)\n");
+		exit(1);
+	}
+	strcpy(strp, s);
+	strp+=l;
+	return strp-l;
+}
+yylex(){
+	register char *s;
+	char token[512];
+	register digits, dot, i;
+	register struct unit *up;
+	while(*lp==' ' || *lp=='\t')
+		lp++;
+	if(*lp=='\0')
+		return EOF;
+	if(digit(*lp) || *lp=='-' || *lp=='.'){
+		s=token;
+		digits=0;
+		dot=0;
+		do{
+			if(digit(*lp))
+				digits++;
+			else if(*lp=='.')
+				dot++;
+			*s++=*lp++;
+		}while(digit(*lp) || *lp=='.');
+		if(!digits || dot>1)
+			yyerror("Bad number");
+		else if(*lp=='e' || *lp=='E'){
+			*s++=*lp++;
+			if(*lp=='+' || *lp=='-')
+				*s++=*lp++;
+			if(!digit(*lp))
+				yyerror("Bad number");
+			else{
+				do
+					*s++=*lp++;
+				while(digit(*lp));
+			}
+		}
+		*s='\0';
+		yylval.u.coef=atof(token);
+		for(i=0;i!=NDIM;i++)
+			yylval.u.dim[i]=0;
+		return NUMBER;
+	}
+	if(idchar[*lp]){
+		for(s=token;idchar[*s=*lp];s++,lp++);
+		*s='\0';
+		if(strcmp(token, "square")==0) return SQUARE;
+		if(strcmp(token, "sq")==0) return SQUARE;
+		if(strcmp(token, "cubic")==0) return CUBE;
+		if(strcmp(token, "cu")==0) return CUBE;
+		if(up=lookup(token))
+			yylval.u=*up;
+		else
+			yylval.u.coef=5551212.;
+		return NAME;
+	}
+	switch(*lp){
+	case '*':
+	case '/':
+	case '(':
+	case ')':
+	case '^':
+	case '@':
+		return *lp++;
+	case '\0':
+		return EOF;
+	default:
+		yyerror("Bad char");
+		return EOF;
+	}
+}
+conformable(u, v)
+register struct unit *u, *v;
+{
+	register i;
+	for(i=0;i!=NDIM;i++)
+		if(u->dim[i]!=v->dim[i])
+			return 0;
+	return 1;
+}
+char *dname(i){
+	static char v[]="%000";
+	if(dim[i])
+		return dim[i]->name;
+	sprintf(v, "%%%d", i);
+	return v;
+}
+punit(u)
+register struct unit *u;
+{
+	register i;
+	printf("\t%g", u->coef);
+	for(i=0;i!=NDIM;i++)
+		switch(u->dim[i]){
+		case 0: break;
+		case 1: printf(" %s", dname(i)); break;
+		default: printf(" %s^%d", dname(i), u->dim[i]); break;
+		}
+	putchar('\n');
+}
+yyerror(m)
+char *m;
+{
+	register char *s;
+	printf("%s\n", line);
+	for(s=line;s!=lp;s++)
+		putchar(*s=='\t'?'\t':' ');
+	printf("^\n%s\n", m);
+	nerror++;
+}
+struct unit mul(u, v)
+struct unit u, v;
+{
+	register i;
+	u.coef*=v.coef;
+	for(i=0;i!=NDIM;i++)
+		u.dim[i]+=v.dim[i];
+	return u;
+}
+struct unit div(u, v)
+struct unit u, v;
+{
+	register i;
+	u.coef/=v.coef;
+	for(i=0;i!=NDIM;i++)
+		u.dim[i]-=v.dim[i];
+	return u;
+}
+struct unit pwr(u, f)
+struct unit u;
+double f;
+{
+	register i;
+	if(f!=(int)f)
+		yyerror("Sorry, only integer powers");
+	u.coef=pow(u.coef, f);
+	for(i=0;i!=NDIM;i++)
+		u.dim[i]*=f;
+	return u;
+}
+struct unit prim(u)
+struct unit u;
+{
+	register d=u.coef;
+	if(d!=u.coef)
+		yyerror("Primitive unit must be integral");
+	else if(d<0 || NDIM<=u.coef)
+		yyerror("Primitive unit out of range");
+	else{
+		u.coef=1;
+		u.dim[d]=1;
+	}
+	return u;
+}
+readunits(file)
+char *file;
+{
+	register FILE *f;
+	char buf[512];
+	register char *s, *name;
+	register i, j, nunit;
+	int n;
+	struct stat ascii, bin;
+	sprintf(buf, "%s.bin", file);
+	if(stat(file, &ascii)>=0 && stat(buf, &bin)>=0
+	&& ascii.st_mtime<bin.st_mtime && cdate<bin.st_mtime){
+		if((i=open(buf, 0))>=0
+		&& read(i, (char *)unit, sizeof unit)==sizeof unit
+		&& read(i, (char *)strbuf, sizeof strbuf)==sizeof strbuf
+		&& read(i, (char *)&n, sizeof n)==sizeof n
+		&& read(i, (char *)dim, sizeof dim)==sizeof dim){
+			strp=strbuf+n;
+			close(i);
+			return;
+		}
+		close(i);
+		for(i=0;i!=NUNIT;i++)
+			unit[i].name=0;
+	}
+	f=fopen(file, "r");
+	if(f==0){
+		perror(file);
+		exit(1);
+	}
+	while(fgets(buf, sizeof buf, f)){
+		if((s=strchr(buf, '#')) || (s=strchr(buf, '\n')))
+			*s='\0';
+		for(name=buf;*name==' ' || *name=='\t';name++);
+		if(*name=='\0')
+			continue;
+		for(s=name;idchar[*s];s++);
+		if(*s!=' ' && *s!='\t'){
+			fprintf(stderr, "Bad unit `%s'\n", name);
+			nerror++;
+			continue;
+		}
+		*s++='\0';
+		line=lp=s;
+		if(yyparse())
+			continue;
+		i=j=hash(name);
+		do{
+			if(unit[j].name==0){
+				unit[j]=yyval.u;
+				unit[j].name=copy(name);
+				if(unit[j].coef==1){
+					nunit=0;
+					for(i=0;i!=NDIM;i++)
+						switch(unit[j].dim[i]){
+						case 1: nunit++; n=i; break;
+						case 0: break;
+						default: nunit=2; break;
+						}
+					if(nunit==1 && dim[n]==0)
+						dim[n]=unit+j;
+				}
+				goto Ok;
+			}
+			if(++j==NUNIT)
+				j=0;
+		}while(j!=i);
+		fprintf(stderr, "Units: out of space (NUNIT)\n");
+		exit(1);
+	Ok:	;
+	}
+	fclose(f);
+	sprintf(buf, "%s.bin", file);
+	umask(0);
+	if((i=creat(buf, 0666))>=0){
+		n=strp-strbuf;
+		write(i, (char *)unit, sizeof unit);
+		write(i, (char *)strbuf, sizeof strbuf);
+		write(i, (char *)&n, sizeof n);
+		write(i, (char *)dim, sizeof dim);
+		close(i);
+	}
+}
+getunit(u, prompt)
+struct unit *u;
+char *prompt;
+{
+	char buf[512];
+	register char *s;
+	do{
+		nerror=0;
+		printf("%s: ", prompt);
+		if(fgets(buf, sizeof buf, stdin)==0)
+			return 0;
+		if((s=strchr(buf, '#')) || (s=strchr(buf, '\n')))
+			*s='\0';
+		for(s=buf;*s==' ' || *s=='\t';s++);
+		if(*s=='\0')
+			continue;
+		line=lp=s;
+	}while(yyparse() || nerror);
+	*u=yyval.u;
+	return 1;
+}
+#include <setjmp.h>
+jmp_buf jmp;
+err(){
+	signal(8, err);
+	printf("Floating point error\n");
+	nerror++;
+	longjmp(jmp, 0);
+}
+main(){
+	struct unit have, want;
+	register i;
+	for(i=0;prefix[i].name;i++)
+		prefix[i].len=strlen(prefix[i].name);
+	for(i=0;i!=256;i++)
+		idchar[i]=idcharfn(i);
+	setjmp(jmp);
+	signal(8, err);
+	readunits("/usr/lib/Units");
+	while(getunit(&have, "You have") && getunit(&want, "You want")){
+		if(conformable(&have, &want))
+			printf("* %g\n/ %g\n",
+				have.coef/want.coef, want.coef/have.coef);
+		else{
+			printf("conformability\n");
+			punit(&have);
+			punit(&want);
+		}
+	}
+}

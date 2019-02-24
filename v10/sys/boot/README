@@ -1,0 +1,86 @@
+This directory contains boot blocks and related things:
+bb is boot blocks
+other directories are support specific to some particular VAX:
+naut for Nautilus (8550 et al), uvax for MicroVAX (II and III).
+
+How booting works, and how the pieces fit in:
+The scheme is stolen from the VAX-11/750 (comet) hardware.
+Some boot code (call it a ROM, as it is in the comet) is copied into
+a standard place in memory.  The ROM is chosen according to boot device;
+it contains a subroutine to read a block from the device, and code to
+initialize the device and read the first 512 bytes off that device into
+the bottom of memory.  The ROM then branches to the code it read in,
+with a pointer to the device driver and the parameters it needs left in
+registers.  Hence the boot block (the code read into low memory) can be
+device- and processor-independent; it need only know about the filesystem
+it wants to read.
+
+The boot block reads in /unix directly, or prompts for a name and reads
+that file.  There is no intermediate program like the old /boot; the boot
+block does it all.  (It wasn't easy fitting it into 512 bytes.)  /unix must
+be in the filesystem beginning at the front of the boot device, and must
+be no more than singly indirect.
+
+On some VAXes, like the 11/750, 8200, and 6200, the hardware provides ROMs
+that work exactly as above.  On other known real (not Micro) VAXes, there's
+no convenient ROM, but there is a separate console computer with its own
+disk, and booting is controlled by a command file.  The command file just
+copies code that does what the ROM should do into the proper place in memory,
+sets registers, and starts it.
+
+MicroVAXes are rather different.  The only way to boot involves the standard
+DEC VMB boot program, which has device drivers for everything in the world
+but won't let the boot block use them.  It also understands FILES-11 filesystems,
+which is of course useless for Unix.  Fortunately it also understands a somewhat
+complicated boot block scheme.  Hence the following subterfuge:
+For the MicroVAX, booting involves the first 1024 bytes of the boot device,
+not just the first 512.  Sector 0 contains a header that VMB understands,
+with various magic numbers and checksums; there's also enough space left over
+for code that does what the ROM is meant to do, and a prologue that copies it
+to the right place in memory and starts it.  Sector 1 contains the same boot
+block used by real VAXes.  The VMB header causes sector 0 to be loaded and
+the prologue code started; the pseudo-ROM code loads sector 1 instead of sector
+0; thereafter things work exactly as for real VAXes.
+
+For real VAXes, pick a boot block from bb according to filesystem type.
+You may also need to get stuff from some other directory to stuff in the console.
+For MicroVAXes, pick a boot block from uvax according to boot device and
+filesystem type.
+
+Here are some magic numbers.  For more details, look in the chapter on the
+VAX-11/750 console subsystem in the VAX Hardware Handbook.
+
+The ROM is expected to occupy physical addresses 0xfa00-0xfdff while booting
+happens.  The important point is that the boot block doesn't overwrite that
+part of memory until it's all done, and that the MicroVAX hack code and the
+console command files load the pseudo-ROM there.
+
+When the ROM is started, the registers should contain:
+	R3 == device unit number
+	R5 == boot flags, to be preserved
+	SP == address of useable memory + 0x200
+The ROM sets up the device, reads the first 512-byte block into the bottom
+of memory, and branches to address 0xC.  The registers contain:
+	R1 R2 == device address stuff for driver
+	R3 == device unit number
+	R5 == boot flags
+	R6 == addr of device driver
+	SP == addr of useful memory + 0x200
+The boot flags in R5 are passed to Unix.  They are copied into R11 as well,
+for compatibility with broken code from the past.  The following flags are
+interesting:
+	01	makes the boot block ask for a filename, rather than assuming
+		`unix'.  The prompt is `*'.  There are no erase and kill, but
+		a nonexistent file makes it prompt again.
+	02	makes Unix come up single-user rather than multi-user.
+
+The device driver reads one 512-byte block into memory.  It expects
+the registers to contain
+	R1 R2 == address stuff as above
+	R3 == device unit number
+	R5 == where in memory to put data
+	4(SP) == where in memory to put data
+	R8 == block number
+R0 is returned with an odd value iff things worked.
+The memory address will probably work only if <64K.
+The driver is allowed to scribble on R0 R7 R8 R9 FP.

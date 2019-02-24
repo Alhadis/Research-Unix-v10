@@ -1,0 +1,4669 @@
+.data
+.globl _Zero
+.align 2; _Zero:.long 0x0,0x0
+.globl _Half
+.align 2; _Half:.long 0x4000,0x0
+.globl _One
+.align 2; _One:.long 0x4080,0x0
+.globl _Two
+.align 2; _Two:.long 0x4100,0x0
+.globl _Three
+.align 2; _Three:.long 0x4140,0x0
+.globl _Four
+.align 2; _Four:.long 0x4180,0x0
+.globl _Five
+.align 2; _Five:.long 0x41a0,0x0
+.globl _Eight
+.align 2; _Eight:.long 0x4200,0x0
+.globl _Nine
+.align 2; _Nine:.long 0x4210,0x0
+.globl _TwentySeven
+.align 2; _TwentySeven:.long 0x42d8,0x0
+.globl _ThirtyTwo
+.align 2; _ThirtyTwo:.long 0x4300,0x0
+.globl _TwoForty
+.align 2; _TwoForty:.long 0x4470,0x0
+.globl _MinusOne
+.align 2; _MinusOne:.long 0xc080,0x0
+.globl _OneAndHalf
+.align 2; _OneAndHalf:.long 0x40c0,0x0
+.globl _NoTrials
+.align 2; _NoTrials:.long 20
+.text
+.globl _sigfpe
+.align 1
+_sigfpe:.word 0x0
+incl _fpecount
+pushal L1
+calls $4/4,_printf
+pushal __iob+16
+calls $4/4,_fflush
+tstl _sigsave
+jeql L3
+pushl _sigsave
+pushl $8
+calls $8/4,_signal
+clrl _sigsave
+pushl $1
+pushal _ovfl_buf
+calls $8/4,_longjmp
+L3:
+calls $0/4,_abort
+ret
+.data
+.align 2; L757:.long L758
+.long L759
+.long L760
+.long L761
+.text
+.globl _main
+.align 1
+_main:.word 0xfc0
+subl2 $48,sp
+movd L5,_Zero
+movd L6,_One
+movd _One,r4
+movd r4,r8
+addd3 r4,r4,_Two
+movd _Two,r2
+movd r2,r10
+addd3 r4,r2,_Three
+movd _Three,r0
+addd3 r4,r0,_Four
+movd _Four,r2
+addd3 r4,r2,_Five
+addd3 r2,r2,_Eight
+muld3 r0,r0,_Nine
+muld3 r0,_Nine,_TwentySeven
+muld3 _Eight,r2,_ThirtyTwo
+muld3 _Five,r2,r4
+muld2 r0,r4
+muld3 r2,r4,_TwoForty
+mnegd r8,_MinusOne
+divd3 r10,r8,_Half
+addd3 _Half,r8,_OneAndHalf
+clrl _ErrCnt
+clrl _ErrCnt+4
+clrl _ErrCnt+8
+clrl _ErrCnt+12
+movl $1,_PageNo
+clrl _Milestone
+pushal _sigfpe
+pushl $8
+calls $8/4,_signal
+calls $0/4,_Instructions
+calls $0/4,_Pause
+calls $0/4,_Heading
+calls $0/4,_Pause
+calls $0/4,_Characteristics
+calls $0/4,_Pause
+calls $0/4,_History
+calls $0/4,_Pause
+movl $7,_Milestone
+pushal L10
+calls $4/4,_printf
+pushal L12
+movd _Zero,r4
+addd3 r4,r4,r2
+cmpd r2,r4
+jneq L13
+movd _One,r2
+subd3 r2,r2,r0
+cmpd r0,r4
+jneq L13
+cmpd r2,r4
+jleq L13
+addd3 r2,r2,r4
+cmpd r4,_Two
+jneq L13
+movl $1,r11
+jbr L14
+L13:
+clrl r11
+L14:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+mnegd _Zero,_Z
+cmpd _Z,L5
+jeql L15
+incl _ErrCnt
+pushal L17
+calls $4/4,_printf
+movd L18,_U1
+movd L6,_Radix
+calls $0/4,_TstPtUf
+L15:
+pushal L20
+movd _Three,r4
+movd r4,r8
+movd _Two,r2
+movd r2,r6
+movd _One,r0
+movd r0,-8(fp)
+addd3 r0,r2,r4
+cmpd r8,r4
+jneq L21
+movd _Four,r4
+addd3 r0,r8,r2
+cmpd r4,r2
+jneq L21
+mnegd r6,r2
+muld2 r6,r2
+addd2 r4,r2
+movd _Zero,r0
+cmpd r2,r0
+jneq L21
+subd2 r8,r4
+subd2 -8(fp),r4
+cmpd r4,r0
+jneq L21
+movl $1,r11
+jbr L22
+L21:
+clrl r11
+L22:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _MinusOne,r4
+movd r4,r8
+movd _One,r2
+subd3 r2,L5,r0
+cmpd r4,r0
+jneq L25
+addd3 r2,r4,r0
+movd _Zero,r4
+cmpd r0,r4
+jneq L25
+addd3 r8,r2,r0
+cmpd r0,r4
+jneq L25
+movd r2,-(sp)
+calls $8/4,_fabs
+addd3 r0,r8,r4
+movd _Zero,r2
+cmpd r4,r2
+jneq L25
+movd _MinusOne,r4
+muld3 r4,r4,r0
+addd2 r0,r4
+cmpd r4,r2
+jneq L25
+movl $1,r11
+jbr L26
+L25:
+clrl r11
+L26:
+pushal L24
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+pushal L28
+movd _Half,r4
+addd3 _MinusOne,r4,r2
+addd2 r2,r4
+cmpd r4,_Zero
+jneq L29
+movl $1,r11
+jbr L30
+L29:
+clrl r11
+L30:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movl $10,_Milestone
+pushal L32
+movd _Nine,r4
+movd _Three,r2
+muld3 r2,r2,r0
+cmpd r4,r0
+jneq L33
+movd _TwentySeven,r0
+movd r0,r8
+muld2 r2,r4
+cmpd r0,r4
+jneq L33
+movd _Eight,r4
+movd _Four,r2
+addd3 r2,r2,r0
+cmpd r4,r0
+jneq L33
+movd _ThirtyTwo,r0
+muld2 r2,r4
+cmpd r0,r4
+jneq L33
+subd3 r8,r0,r4
+subd2 r2,r4
+subd2 _One,r4
+cmpd r4,_Zero
+jneq L33
+movl $1,r11
+jbr L34
+L33:
+clrl r11
+L34:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+pushal L36
+movd _Five,r4
+movd r4,r6
+movd _Four,r2
+addd3 _One,r2,r0
+cmpd r4,r0
+jneq L37
+movd _TwoForty,r0
+movd r0,r8
+muld3 r4,r2,r0
+movd _Three,r4
+movd r4,-16(fp)
+muld2 r4,r0
+muld2 r2,r0
+cmpd r8,r0
+jneq L37
+divd3 r4,r8,r0
+muld3 r2,r2,r4
+muld2 r6,r4
+subd3 r4,r0,r4
+movd _Zero,r0
+movd r0,-24(fp)
+cmpd r4,r0
+jneq L37
+divd3 r2,r8,r4
+muld3 -16(fp),r6,r0
+muld2 r2,r0
+subd2 r0,r4
+cmpd r4,-24(fp)
+jneq L37
+divd3 r6,r8,r4
+muld3 -16(fp),r2,r0
+muld2 r0,r2
+subd2 r2,r4
+cmpd r4,-24(fp)
+jneq L37
+movl $1,r11
+jbr L38
+L37:
+clrl r11
+L38:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+tstl _ErrCnt
+jneq L39
+pushal L41
+calls $4/4,_printf
+pushal L42
+calls $4/4,_printf
+L39:
+pushal L43
+calls $4/4,_printf
+movd _One,_W
+L44:
+movd _W,r4
+addd3 r4,r4,_W
+movd _W,r4
+movd _One,r2
+addd3 r2,r4,_Y
+subd3 r4,_Y,_Z
+subd3 r2,_Z,_Y
+L45:
+movd _Y,-(sp)
+calls $8/4,_fabs
+addd3 r0,_MinusOne,r4
+cmpd r4,_Zero
+jlss L44
+movd _Zero,_Precision
+movd _One,_Y
+L47:
+movd _W,r4
+movd _Y,r2
+addd3 r2,r4,_Radix
+addd3 r2,r2,_Y
+subd2 r4,_Radix
+L48:
+cmpd _Radix,_Zero
+jeql L47
+cmpd _Radix,_Two
+jgeq L50
+movd _One,_Radix
+L50:
+movd _Radix,-(sp)
+pushal L52
+calls $12/4,_printf
+cmpd _Radix,L6
+jeql L53
+movd _One,_W
+L55:
+movd _One,r4
+addd2 r4,_Precision
+muld2 _Radix,_W
+addd3 r4,_W,_Y
+L56:
+subd3 _W,_Y,r4
+cmpd r4,_One
+jeql L55
+L53:
+divd3 _W,_One,_U1
+movd _U1,r4
+muld3 r4,_Radix,_U2
+movd r4,-(sp)
+pushal L58
+calls $12/4,_printf
+pushal L59
+calls $4/4,_printf
+movd _Radix,_E0
+movd _U1,_E1
+movd _U2,_E9
+movd _Precision,_E3
+divd3 _Three,_Four,_X
+subd3 _One,_X,_Third
+movd _Third,r4
+subd3 r4,_Half,_F6
+movd _F6,r2
+addd3 r2,r2,_X
+subd3 r4,_X,-(sp)
+calls $8/4,_fabs
+movd r0,_X
+cmpd _X,_U2
+jgeq L60
+movd _U2,_X
+L60:
+L62:
+movd _X,_U2
+movd _U2,r4
+muld3 r4,_Half,r2
+muld3 r4,_ThirtyTwo,r0
+muld2 r0,r4
+addd3 r4,r2,_Y
+movd _One,r4
+addd2 r4,_Y
+subd3 r4,_Y,_X
+L63:
+movd _X,r4
+cmpd _U2,r4
+jleq L65
+cmpd r4,_Zero
+jgtr L62
+L65:
+divd3 _Three,_Two,_X
+movd _Half,r4
+subd3 r4,_X,_F6
+movd _F6,r2
+addd3 r2,r2,_Third
+subd3 r4,_Third,_X
+addd3 r2,_X,-(sp)
+calls $8/4,_fabs
+movd r0,_X
+cmpd _X,_U1
+jgeq L66
+movd _U1,_X
+L66:
+L68:
+movd _X,_U1
+movd _Half,r4
+movd r4,r10
+movd _U1,r2
+muld3 r2,r4,r0
+muld3 r2,_ThirtyTwo,r4
+muld2 r2,r4
+addd3 r4,r0,_Y
+subd3 _Y,r10,_Y
+addd3 _Y,r10,_X
+subd3 _X,r10,_Y
+addd3 _Y,r10,_X
+L69:
+movd _X,r4
+cmpd _U1,r4
+jleq L71
+cmpd r4,_Zero
+jgtr L68
+L71:
+cmpd _U1,_E1
+jneq L72
+pushal L74
+calls $4/4,_printf
+jbr L73
+L72:
+movd _U1,-(sp)
+pushal L75
+calls $12/4,_printf
+L73:
+movd _U1,r4
+divd3 r4,_One,_W
+movd _Half,r2
+subd3 r4,r2,r0
+addd3 r2,r0,_F9
+divd3 r4,_U2,r4
+addd3 L76,r4,-(sp)
+calls $8/4,_floor
+movd r0,_Radix
+cmpd _Radix,_E0
+jneq L77
+pushal L79
+calls $4/4,_printf
+jbr L78
+L77:
+movd _Radix,-(sp)
+pushal L80
+calls $12/4,_printf
+L78:
+pushal L82
+movd _Eight,r4
+addd2 r4,r4
+cmpd _Radix,r4
+jgtr L83
+movl $1,r11
+jbr L84
+L83:
+clrl r11
+L84:
+pushl r11
+pushl $2
+calls $12/4,_TstCond
+pushal L86
+movd _Radix,r4
+cmpd r4,_Two
+jeql L90
+cmpd r4,L91
+jeql L90
+cmpd r4,_One
+jneq L87
+L90:
+movl $1,r11
+jbr L88
+L87:
+clrl r11
+L88:
+pushl r11
+pushl $3
+calls $12/4,_TstCond
+movl $20,_Milestone
+pushal L93
+movd _Half,r4
+subd3 r4,_F9,r2
+cmpd r2,r4
+jgeq L94
+movl $1,r11
+jbr L95
+L94:
+clrl r11
+L95:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _F9,_X
+movl $1,_I
+movd _Half,r4
+subd3 r4,_X,_Y
+subd3 r4,_Y,_Z
+pushal L97
+cmpd _X,_One
+jneq L100
+cmpd _Z,_Zero
+jneq L98
+L100:
+movl $1,r11
+jbr L99
+L98:
+clrl r11
+L99:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _One,r4
+movd _U2,r2
+addd3 r2,r4,_X
+clrl _I
+movl $25,_Milestone
+movd _Radix,r0
+subd3 r4,r0,_BMinusU2
+subd3 r2,_BMinusU2,r2
+addd3 r4,r2,_BMinusU2
+cmpd r0,r4
+jeql L101
+movd _U1,-(sp)
+calls $8/4,_log
+movd r0,r10
+movd _Radix,-(sp)
+calls $8/4,_log
+mnegd _TwoForty,r4
+muld2 r10,r4
+divd3 r0,r4,_X
+addd3 _X,_Half,-(sp)
+calls $8/4,_floor
+movd r0,_Y
+subd3 _Y,_X,-(sp)
+calls $8/4,_fabs
+muld3 _Four,r0,r4
+cmpd r4,_One
+jgeq L103
+movd _Y,_X
+L103:
+divd3 _TwoForty,_X,_Precision
+addd3 _Precision,_Half,-(sp)
+calls $8/4,_floor
+movd r0,_Y
+subd3 _Y,_Precision,-(sp)
+calls $8/4,_fabs
+muld3 _TwoForty,r0,r4
+cmpd r4,_Half
+jgeq L105
+movd _Y,_Precision
+L105:
+L101:
+movd _Precision,r4
+movd r4,r10
+movd r4,-(sp)
+calls $8/4,_floor
+cmpd r10,r0
+jneq L109
+cmpd _Radix,_One
+jneq L107
+L109:
+pushal L110
+calls $4/4,_printf
+pushal L111
+calls $4/4,_printf
+L107:
+cmpd _Radix,_One
+jneq L112
+pushal L114
+calls $4/4,_printf
+jbr L113
+L112:
+movd _Precision,-(sp)
+pushal L115
+calls $12/4,_printf
+L113:
+pushal L117
+movd _Nine,r4
+muld3 r4,_U2,r2
+muld2 r2,r4
+muld2 _TwoForty,r4
+cmpd r4,_One
+jgeq L118
+movl $1,r11
+jbr L119
+L118:
+clrl r11
+L119:
+pushl r11
+pushl $1
+calls $12/4,_TstCond
+movl $30,_Milestone
+movd _Four,r4
+movd _Three,r2
+movd r2,r10
+divd3 r2,r4,r0
+movd _One,r2
+subd2 r2,r0
+divd3 r4,r2,r4
+subd3 r4,r0,r2
+muld2 r10,r2
+subd3 r4,r2,-(sp)
+calls $8/4,_fabs
+movd r0,_X
+L120:
+movd _X,_Z2
+movd _One,r4
+movd r4,r10
+movd _Z2,r2
+muld3 r2,_Half,r0
+muld3 r2,_ThirtyTwo,r4
+muld2 r2,r4
+addd2 r0,r4
+addd2 r10,r4
+subd3 r10,r4,_X
+L121:
+movd _X,r4
+cmpd _Z2,r4
+jleq L123
+cmpd r4,_Zero
+jgtr L120
+L123:
+movd _Three,r4
+movd _Four,r2
+movd r2,r10
+divd3 r2,r4,r0
+divd3 r4,_Two,r2
+subd3 r2,r0,r2
+muld2 r2,r4
+divd3 r10,_One,r2
+subd3 r2,r4,-(sp)
+calls $8/4,_fabs
+movd r0,_Z
+movd r0,_Y
+movd r0,_X
+L124:
+movd _Z,_Z1
+divd3 _Two,_One,r4
+movd r4,r10
+movd _Z1,r2
+muld3 r2,_Half,r0
+muld3 r2,_ThirtyTwo,r4
+muld2 r2,r4
+addd2 r0,r4
+subd3 r4,r10,r4
+addd2 r10,r4
+subd3 r4,r10,r4
+addd3 r10,r4,_Z
+L125:
+movd _Z,r4
+cmpd _Z1,r4
+jleq L127
+cmpd r4,_Zero
+jgtr L124
+L127:
+L128:
+L131:
+movd _Y,_Y1
+movd _Half,r4
+movd r4,r10
+movd _Y1,r2
+muld3 r2,r4,r0
+muld3 r2,_ThirtyTwo,r4
+muld2 r2,r4
+addd2 r0,r4
+subd3 r4,r10,r4
+addd2 r10,r4
+subd3 r4,r10,r4
+addd3 r10,r4,_Y
+L132:
+movd _Y,r4
+cmpd _Y1,r4
+jleq L134
+cmpd r4,_Zero
+jgtr L131
+L134:
+movd _X,_X1
+movd _X1,r4
+muld3 r4,_Half,r2
+muld3 r4,_ThirtyTwo,r0
+muld2 r0,r4
+addd2 r2,r4
+movd _F9,r2
+subd2 r2,r4
+addd3 r2,r4,_X
+L129:
+movd _X,r4
+cmpd _X1,r4
+jleq L135
+cmpd r4,_Zero
+jgtr L128
+L135:
+movd _X1,r4
+cmpd r4,_Y1
+jneq L138
+cmpd r4,_Z1
+jeql L136
+L138:
+pushal L139
+pushl $1
+calls $8/4,_BadCond
+movd _Z1,-(sp)
+movd _Y1,-(sp)
+movd _X1,-(sp)
+pushal L140
+calls $28/4,_printf
+pushal L141
+calls $4/4,_printf
+pushal L142
+calls $4/4,_printf
+pushal L143
+calls $4/4,_notify
+movd _U1,r4
+cmpd _X1,r4
+jeql L147
+cmpd _Y1,r4
+jeql L147
+cmpd _Z1,r4
+jneq L137
+L147:
+pushal L148
+calls $4/4,_printf
+jbr L137
+L136:
+cmpd _Z1,_U1
+jneq L151
+cmpd _Z2,_U2
+jeql L149
+L151:
+cmpd _Z1,_U1
+jgeq L154
+cmpd _Z2,_U2
+jlss L152
+L154:
+pushal L155
+clrl -(sp)
+calls $8/4,_BadCond
+pushal L156
+calls $4/4,_notify
+movd _U1,r4
+subd3 r4,_Z1,-(sp)
+movd r4,-(sp)
+pushal L157
+calls $20/4,_printf
+movd _U2,r4
+subd3 r4,_Z2,-(sp)
+movd r4,-(sp)
+pushal L158
+calls $20/4,_printf
+jbr L153
+L152:
+movd _Zero,r4
+cmpd _Z1,r4
+jleq L161
+cmpd _Z2,r4
+jgtr L159
+L161:
+movd _Radix,-(sp)
+pushal L162
+calls $12/4,_printf
+pushal L163
+calls $4/4,_printf
+movd _Z2,-(sp)
+movd _Z1,-(sp)
+pushal L164
+calls $20/4,_printf
+pushal L165
+calls $4/4,_notify
+L159:
+movd _Z1,r4
+cmpd r4,_Z2
+jneq L168
+cmpd r4,_Zero
+jleq L166
+L168:
+divd3 _U1,_Z1,_X
+divd3 _U2,_Z2,_Y
+cmpd _Y,_X
+jleq L169
+movd _Y,_X
+L169:
+movd _X,-(sp)
+calls $8/4,_log
+mnegd r0,_Q
+pushal L171
+calls $4/4,_printf
+movd _Radix,-(sp)
+calls $8/4,_log
+divd3 r0,_Q,-(sp)
+pushal L172
+calls $12/4,_printf
+movd L91,-(sp)
+calls $8/4,_log
+divd3 r0,_Q,-(sp)
+pushal L173
+calls $12/4,_printf
+L166:
+pushal L148
+calls $4/4,_printf
+L153:
+L149:
+L137:
+calls $0/4,_Pause
+movl $35,_Milestone
+cmpd _Radix,_Two
+jlss L174
+movd _Radix,r4
+muld2 r4,r4
+divd3 r4,_W,_X
+movd _X,r4
+addd3 _One,r4,_Y
+subd3 r4,_Y,_Z
+movd _Z,r4
+addd3 _U2,r4,_T
+subd3 r4,_T,_X
+pushal L177
+cmpd _X,_U2
+jneq L178
+movl $1,r11
+jbr L179
+L178:
+clrl r11
+L179:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+cmpd _X,_U2
+jneq L180
+pushal L182
+calls $4/4,_printf
+L180:
+L174:
+pushal L183
+calls $4/4,_printf
+movd _F9,r4
+movd _One,r2
+movd r2,r10
+muld3 r2,r4,_Y
+muld3 r4,r2,_Z
+movd _Half,r0
+subd3 r0,r4,_X
+subd3 r0,_Y,r4
+movd _X,r2
+subd3 r2,r4,_Y
+subd3 r0,_Z,r4
+subd3 r2,r4,_Z
+movd _U2,r4
+addd3 r4,r10,_X
+movd _X,r2
+movd _Radix,r0
+muld3 r0,r2,_T
+muld3 r2,r0,_R
+subd3 r0,_T,_X
+muld2 r0,r4
+subd2 r4,_X
+subd3 r0,_R,_T
+subd2 r4,_T
+subd3 r10,r0,r4
+muld2 r4,_X
+muld2 r4,_T
+movd _Zero,r4
+cmpd _X,r4
+jneq L184
+cmpd _Y,r4
+jneq L184
+cmpd _Z,r4
+jneq L184
+cmpd _T,r4
+jneq L184
+movl $1,_GMult
+jbr L185
+L184:
+clrl _GMult
+pushal L186
+clrl -(sp)
+pushl $1
+calls $12/4,_TstCond
+L185:
+muld3 _U2,_Radix,_Z
+movd _Z,r4
+addd3 r4,_One,_X
+movd _X,r2
+addd2 r2,r4
+muld2 r2,r2
+subd3 r2,r4,-(sp)
+calls $8/4,_fabs
+movd _U2,r4
+subd3 r4,r0,_Y
+subd3 r4,_One,_X
+movd _X,r2
+subd3 r4,r2,r4
+muld2 r2,r2
+subd3 r2,r4,-(sp)
+calls $8/4,_fabs
+subd3 _U1,r0,_Z
+pushal L188
+movd _Zero,r4
+cmpd _Y,r4
+jgtr L189
+cmpd _Z,r4
+jgtr L189
+movl $1,r11
+jbr L190
+L189:
+clrl r11
+L190:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _One,r4
+movd _U2,r2
+subd3 r2,r4,_Y
+addd3 r2,r4,_X
+divd3 _Y,r4,_Z
+subd3 _X,_Z,_Y
+movd _Three,r2
+divd3 r2,r4,_X
+movd _Nine,r4
+divd3 r4,r2,_Z
+movd _Z,r2
+subd2 r2,_X
+divd3 _TwentySeven,r4,_T
+subd3 _T,r2,_Z
+pushal L192
+movd _Zero,r4
+cmpd _X,r4
+jneq L193
+cmpd _Y,r4
+jneq L193
+cmpd _Z,r4
+jneq L193
+movl $1,r11
+jbr L194
+L193:
+clrl r11
+L194:
+pushl r11
+pushl $2
+calls $12/4,_TstCond
+movd _F9,r4
+movd _One,r2
+divd3 r2,r4,_Y
+movd _Half,r0
+subd3 r0,r4,_X
+subd3 r0,_Y,r4
+subd3 _X,r4,_Y
+addd3 _U2,r2,_X
+movd _X,r4
+divd3 r2,r4,_T
+subd3 r4,_T,_X
+movd _Zero,r4
+cmpd _X,r4
+jneq L195
+cmpd _Y,r4
+jneq L195
+cmpd _Z,r4
+jneq L195
+movl $1,_GDiv
+jbr L196
+L195:
+clrl _GDiv
+pushal L197
+clrl -(sp)
+pushl $1
+calls $12/4,_TstCond
+L196:
+movd _One,r4
+addd3 _U2,r4,r2
+divd3 r2,r4,_X
+movd _Half,r4
+subd3 r4,_X,r2
+subd3 r4,r2,_Y
+pushal L199
+cmpd _Y,_Zero
+jgeq L200
+movl $1,r11
+jbr L201
+L200:
+clrl r11
+L201:
+pushl r11
+pushl $1
+calls $12/4,_TstCond
+movd _One,r4
+movd _U2,r2
+subd3 r2,r4,_X
+movd _Radix,r0
+muld2 r0,r2
+addd3 r2,r4,_Y
+movd _X,r4
+muld3 r0,r4,_Z
+movd _Y,r2
+muld3 r0,r2,_T
+divd3 r0,_Z,_R
+divd3 r0,_T,_StickyBit
+subd3 r4,_R,_X
+subd3 r2,_StickyBit,_Y
+pushal L203
+movd _Zero,r4
+cmpd _X,r4
+jneq L204
+cmpd _Y,r4
+jneq L204
+movl $1,r11
+jbr L205
+L204:
+clrl r11
+L205:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _One,r4
+movd _U1,r2
+subd3 r2,r4,_Y
+subd3 _F9,r4,_X
+subd3 _Y,r4,_Y
+movd _Radix,r4
+movd _U2,r0
+subd3 r0,r4,_T
+subd3 _BMinusU2,r4,_Z
+subd3 _T,r4,_T
+cmpd _X,r2
+jneq L206
+cmpd _Y,r2
+jneq L206
+cmpd _Z,r0
+jneq L206
+cmpd _T,r0
+jneq L206
+movl $1,_GAddSub
+jbr L207
+L206:
+clrl _GAddSub
+pushal L208
+clrl -(sp)
+pushl $1
+calls $12/4,_TstCond
+L207:
+movd _F9,r4
+movd _One,r2
+cmpd r4,r2
+jeql L209
+subd2 r2,r4
+cmpd r4,_Zero
+jlss L209
+pushal L211
+pushl $1
+calls $8/4,_BadCond
+pushal L212
+calls $4/4,_printf
+pushal L213
+calls $4/4,_printf
+pushal L214
+calls $4/4,_printf
+L209:
+cmpl _GMult,$1
+jneq L215
+cmpl _GDiv,$1
+jneq L215
+cmpl _GAddSub,$1
+jneq L215
+pushal L217
+calls $4/4,_printf
+L215:
+movl $40,_Milestone
+calls $0/4,_Pause
+pushal L218
+calls $4/4,_printf
+clrl _RMult
+clrl _RDiv
+clrl _RAddSub
+movd _Two,r4
+divd3 r4,_Radix,_RadixD2
+movd r4,_A1
+clrl _Done
+L219:
+movd _Radix,_AInvrse
+L222:
+movd _AInvrse,r4
+movd r4,_X
+divd3 _A1,r4,_AInvrse
+L223:
+movd _AInvrse,-(sp)
+calls $8/4,_floor
+cmpd r0,_AInvrse
+jeql L222
+cmpd _X,_One
+jeql L228
+cmpd _A1,_Three
+jleq L226
+L228:
+movl $1,r11
+jbr L227
+L226:
+clrl r11
+L227:
+movl r11,_Done
+tstl _Done
+jneq L229
+addd3 _One,_Nine,_A1
+L229:
+L220:
+tstl _Done
+jeql L219
+cmpd _X,_One
+jneq L231
+movd _Radix,_A1
+L231:
+movd _A1,r4
+divd3 r4,_One,_AInvrse
+movd r4,_X
+movd _AInvrse,_Y
+clrl _Done
+L233:
+muld3 _Y,_X,r4
+subd3 _Half,r4,_Z
+pushal L237
+cmpd _Z,_Half
+jneq L238
+movl $1,r11
+jbr L239
+L238:
+clrl r11
+L239:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+cmpd _X,_Radix
+jneq L241
+movl $1,r11
+jbr L242
+L241:
+clrl r11
+L242:
+movl r11,_Done
+movd _Radix,_X
+divd3 _X,_One,_Y
+L234:
+tstl _Done
+jeql L233
+movd _One,r4
+movd _U2,r2
+movd r2,r8
+addd3 r2,r4,_Y2
+subd3 r2,r4,_Y1
+movd _OneAndHalf,r4
+movd r4,r10
+subd3 r2,r4,_X
+addd3 r2,r4,_Y
+movd _X,r0
+subd3 r2,r0,r4
+movd _Y2,r2
+movd r2,r6
+muld3 r2,r4,_Z
+movd _Y,r4
+movd _Y1,r2
+muld3 r2,r4,_T
+subd2 r0,_Z
+subd2 r0,_T
+muld3 r6,r0,_X
+addd2 r8,r4
+muld3 r2,r4,_Y
+subd2 r10,_X
+subd2 r10,_Y
+movd _Zero,r4
+cmpd _X,r4
+jneq L243
+cmpd _Y,r4
+jneq L243
+cmpd _Z,r4
+jneq L243
+cmpd _T,r4
+jgtr L243
+movd _OneAndHalf,r4
+movd r4,r10
+movd _U2,r2
+addd3 r2,r4,r0
+movd _Y2,r4
+movd r4,r8
+muld3 r4,r0,_X
+subd3 r2,r10,r4
+subd3 r2,r4,_Y
+addd3 r2,r0,_Z
+movd _Y1,r0
+movd r0,r6
+muld3 r0,r4,_T
+movd _Z,r4
+addd3 r2,r4,r0
+movd r0,-32(fp)
+subd2 r0,_X
+movd _Y,r0
+muld3 r6,r0,_StickyBit
+muld3 r8,r4,_S
+subd2 r0,_T
+subd3 r0,r2,r4
+addd3 _StickyBit,r4,_Y
+addd3 r2,-32(fp),r4
+subd3 r4,_S,_Z
+addd3 r2,r8,r4
+muld3 r6,r4,_StickyBit
+muld3 r6,r8,_Y1
+subd2 r8,_StickyBit
+movd _Half,r4
+subd2 r4,_Y1
+movd _Zero,r2
+cmpd _X,r2
+jneq L245
+cmpd _Y,r2
+jneq L245
+cmpd _Z,r2
+jneq L245
+cmpd _T,r2
+jneq L245
+cmpd _StickyBit,r2
+jneq L245
+cmpd _Y1,r4
+jneq L245
+movl $1,_RMult
+pushal L247
+calls $4/4,_printf
+jbr L246
+L245:
+movd _U2,r4
+addd3 r4,_X,r2
+movd _Zero,r0
+cmpd r2,r0
+jneq L248
+cmpd _Y,r0
+jgeq L248
+addd3 r4,_Z,r2
+cmpd r2,r0
+jneq L248
+cmpd _T,r0
+jgeq L248
+addd2 _StickyBit,r4
+cmpd r4,r0
+jneq L248
+cmpd _Y1,_Half
+jgeq L248
+movl $2,_RMult
+pushal L250
+calls $4/4,_printf
+jbr L249
+L248:
+pushal L251
+calls $4/4,_printf
+L249:
+L246:
+cmpl _RMult,$1
+jneq L244
+tstl _GMult
+jneq L244
+pushal L254
+calls $4/4,_notify
+jbr L244
+L243:
+pushal L251
+calls $4/4,_printf
+L244:
+movl $45,_Milestone
+movd _One,r4
+movd _U2,r2
+addd3 r2,r4,_Y2
+subd3 r2,r4,_Y1
+movd _OneAndHalf,r4
+movd r4,r8
+addd3 r2,r4,r0
+movd r0,r10
+addd3 r2,r0,_Z
+movd _Z,r0
+movd r0,-32(fp)
+movd _Y2,r4
+movd r4,r6
+divd3 r4,r0,_X
+subd3 r2,r8,r4
+subd3 r2,r4,_T
+movd _T,r4
+movd r4,-40(fp)
+subd3 r2,r4,r0
+movd _Y1,r4
+divd3 r4,r0,_Y
+addd3 r2,-32(fp),r0
+divd3 r6,r0,_Z
+subd2 r8,_X
+subd2 -40(fp),_Y
+divd3 r4,-40(fp),_T
+subd2 r10,_Z
+subd3 r8,r2,r4
+addd2 r4,_T
+movd _Zero,r4
+cmpd _X,r4
+jgtr L255
+cmpd _Y,r4
+jgtr L255
+cmpd _Z,r4
+jgtr L255
+cmpd _T,r4
+jgtr L255
+movd _OneAndHalf,r4
+movd _Y2,r2
+movd r2,r10
+divd3 r2,r4,_X
+movd _U2,r0
+movd r0,r8
+subd3 r0,r4,_Y
+addd3 r0,r4,_Z
+movd _Y,r2
+subd2 r2,_X
+movd _Y1,r0
+divd3 r0,r4,_T
+divd3 r0,r2,_Y
+movd _Z,r2
+addd3 r8,r2,r0
+subd2 r0,_T
+subd2 r2,_Y
+divd3 r10,r2,_Z
+addd3 r8,r10,r2
+divd3 r10,r2,_Y1
+subd2 r4,_Z
+subd3 r10,_Y1,_Y2
+movd _F9,r4
+subd3 _U1,r4,r2
+divd3 r4,r2,_Y1
+movd _Zero,r2
+cmpd _X,r2
+jneq L257
+cmpd _Y,r2
+jneq L257
+cmpd _Z,r2
+jneq L257
+cmpd _T,r2
+jneq L257
+movd _Y2,r0
+cmpd r0,r2
+jneq L257
+cmpd r0,r2
+jneq L257
+movd _Half,r2
+subd3 r2,_Y1,r0
+subd2 r2,r4
+cmpd r0,r4
+jneq L257
+movl $1,_RDiv
+pushal L259
+calls $4/4,_printf
+tstl _GDiv
+jneq L258
+pushal L262
+calls $4/4,_notify
+jbr L258
+L257:
+movd _Zero,r4
+cmpd _X,r4
+jgeq L263
+cmpd _Y,r4
+jgeq L263
+cmpd _Z,r4
+jgeq L263
+cmpd _T,r4
+jgeq L263
+cmpd _Y2,r4
+jgeq L263
+movd _Half,r4
+subd3 r4,_Y1,r2
+subd3 r4,_F9,r4
+cmpd r2,r4
+jgeq L263
+movl $2,_RDiv
+pushal L265
+calls $4/4,_printf
+L263:
+L258:
+L255:
+tstl _RDiv
+jneq L266
+pushal L268
+calls $4/4,_printf
+L266:
+divd3 _Radix,_One,_BInvrse
+pushal L270
+muld3 _Radix,_BInvrse,r4
+movd _Half,r2
+subd2 r2,r4
+cmpd r4,r2
+jneq L271
+movl $1,r11
+jbr L272
+L271:
+clrl r11
+L272:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movl $50,_Milestone
+pushal L274
+addd3 _U1,_F9,r4
+movd _Half,r2
+subd2 r2,r4
+cmpd r4,r2
+jneq L275
+addd3 _U2,_BMinusU2,r4
+movd _One,r2
+subd2 r2,r4
+subd3 r2,_Radix,r2
+cmpd r4,r2
+jneq L275
+movl $1,r11
+jbr L276
+L275:
+clrl r11
+L276:
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _One,r4
+movd _U1,r2
+muld2 r2,r2
+subd3 r2,r4,_X
+movd _U2,r2
+subd3 r2,r4,r0
+muld2 r0,r2
+addd3 r2,r4,_Y
+movd _Half,r2
+subd3 r2,_F9,_Z
+subd3 r2,_X,r2
+subd3 _Z,r2,_X
+subd2 r4,_Y
+movd _Zero,r4
+cmpd _X,r4
+jneq L277
+cmpd _Y,r4
+jneq L277
+movl $2,_RAddSub
+pushal L279
+calls $4/4,_printf
+L277:
+cmpl _GAddSub,$1
+jneq L280
+movd _Half,r4
+movd _U2,r2
+addd3 r2,r4,r0
+muld3 r2,r0,_X
+subd2 r2,r4
+muld3 r2,r4,_Y
+movd _One,r4
+addd2 r4,_X
+addd2 r4,_Y
+addd2 r4,r2
+subd3 _X,r2,_X
+subd3 _Y,r4,_Y
+movd _Zero,r4
+cmpd _X,r4
+jneq L282
+cmpd _Y,r4
+jneq L282
+movd _Half,r4
+movd r4,r10
+movd _U2,r2
+addd3 r2,r4,r0
+movd _U1,r4
+muld3 r4,r0,_X
+subd3 r2,r10,r2
+muld3 r4,r2,_Y
+movd _One,r4
+subd3 _X,r4,_X
+subd3 _Y,r4,_Y
+subd3 _X,_F9,_X
+subd3 _Y,r4,_Y
+movd _Zero,r4
+cmpd _X,r4
+jneq L284
+cmpd _Y,r4
+jneq L284
+movl $1,_RAddSub
+pushal L286
+calls $4/4,_printf
+tstl _GAddSub
+jneq L281
+pushal L289
+calls $4/4,_notify
+jbr L281
+L284:
+pushal L290
+calls $4/4,_printf
+jbr L281
+L282:
+pushal L290
+calls $4/4,_printf
+jbr L281
+L280:
+pushal L290
+calls $4/4,_printf
+L281:
+movd _One,r4
+movd r4,_S
+movd _Half,r2
+addd3 r2,r4,r0
+muld2 r2,r0
+addd3 r0,r4,_X
+addd2 _U2,r4
+muld3 r2,r4,_Y
+movd _X,r4
+movd _Y,r2
+subd3 r2,r4,_Z
+subd3 r4,r2,_T
+addd3 _T,_Z,_StickyBit
+cmpd _StickyBit,_Zero
+jeql L291
+movd _Zero,_S
+pushal L293
+pushl $3
+calls $8/4,_BadCond
+L291:
+movd _Zero,_StickyBit
+cmpl _GMult,$1
+jneq L294
+cmpl _GDiv,$1
+jneq L294
+cmpl _GAddSub,$1
+jneq L294
+cmpl _RMult,$1
+jneq L294
+cmpl _RDiv,$1
+jneq L294
+cmpl _RAddSub,$1
+jneq L294
+movd _RadixD2,-(sp)
+calls $8/4,_floor
+cmpd r0,_RadixD2
+jneq L294
+pushal L296
+calls $4/4,_printf
+movd _Half,r4
+addd3 _U1,r4,r2
+movd _U2,r0
+muld3 r0,r2,_X
+muld3 r0,r4,_Y
+movd _One,r4
+addd3 _Y,r4,_Z
+addd3 _X,r4,_T
+subd3 r4,_Z,r2
+cmpd r2,_Zero
+jgtr L297
+subd3 r4,_T,r4
+cmpd r4,r0
+jlss L297
+movd _T,r4
+addd3 _Y,r4,_Z
+movd _Z,r2
+subd3 _X,r2,_Y
+subd2 r4,r2
+cmpd r2,_U2
+jlss L299
+subd3 r4,_Y,r4
+cmpd r4,_Zero
+jneq L299
+movd _Half,r4
+movd _U1,r2
+addd3 r2,r4,r0
+muld3 r2,r0,_X
+muld3 r2,r4,_Y
+movd _One,r4
+subd3 _Y,r4,_Z
+subd3 _X,r4,_T
+subd3 r4,_Z,r4
+movd _Zero,r2
+cmpd r4,r2
+jneq L301
+subd3 _F9,_T,r4
+cmpd r4,r2
+jneq L301
+movd _U1,r4
+movd r4,r10
+subd3 r4,_Half,r2
+muld3 r4,r2,_Z
+movd _F9,r2
+subd3 _Z,r2,_T
+subd3 _Y,r2,_Q
+subd3 r2,_T,r0
+movd _Zero,r4
+cmpd r0,r4
+jneq L303
+subd2 r10,r2
+subd2 _Q,r2
+cmpd r2,r4
+jneq L303
+movd _One,r4
+movd r4,r10
+movd _U2,r2
+addd3 r2,r4,r0
+movd _OneAndHalf,r4
+muld3 r4,r0,_Z
+addd2 r2,r4
+subd2 _Z,r4
+addd3 r2,r4,_T
+movd _Radix,r4
+divd3 r4,_Half,r0
+addd3 r0,r10,_X
+muld2 r2,r4
+addd3 r4,r10,_Y
+movd _X,r2
+muld3 _Y,r2,_Z
+movd _Zero,r0
+cmpd _T,r0
+jneq L305
+addd2 r2,r4
+subd2 _Z,r4
+cmpd r4,r0
+jneq L305
+cmpd _Radix,_Two
+jeql L307
+movd _Two,r4
+addd3 _U2,r4,_X
+divd3 r4,_X,_Y
+subd3 _One,_Y,r4
+cmpd r4,_Zero
+jneq L308
+movd _S,_StickyBit
+jbr L308
+L307:
+movd _S,_StickyBit
+L308:
+L305:
+L303:
+L301:
+L299:
+L297:
+L294:
+cmpd _StickyBit,_One
+jneq L311
+pushal L313
+calls $4/4,_printf
+jbr L312
+L311:
+pushal L314
+calls $4/4,_printf
+L312:
+pushal L316
+tstl _GMult
+jeql L317
+tstl _GDiv
+jeql L317
+tstl _GAddSub
+jeql L317
+tstl _RMult
+jeql L317
+tstl _RDiv
+jeql L317
+tstl _RAddSub
+jeql L317
+movl $1,r11
+jbr L318
+L317:
+clrl r11
+L318:
+pushl r11
+pushl $3
+calls $12/4,_TstCond
+movl $60,_Milestone
+pushal L42
+calls $4/4,_printf
+pushal L319
+calls $4/4,_printf
+pushl _NoTrials
+pushal L320
+calls $8/4,_printf
+movd L321,-(sp)
+calls $8/4,_sqrt
+movd r0,_Random9
+movd _Third,_Random1
+movl $1,_I
+L322:
+calls $0/4,_Random
+movd r0,_X
+calls $0/4,_Random
+movd r0,_Y
+movd _Y,r4
+movd _X,r2
+muld3 r2,r4,_Z9
+muld3 r4,r2,_Z
+subd3 _Z9,_Z,_Z9
+incl _I
+L323:
+cmpl _I,_NoTrials
+jgtr L325
+cmpd _Z9,_Zero
+jeql L322
+L325:
+cmpl _I,_NoTrials
+jneq L326
+movd _One,r4
+divd3 _Three,_Half,r2
+addd2 r4,r2
+movd r2,_Random1
+addd3 _U1,_U2,r0
+addd2 r0,r4
+movd r4,r10
+movd r4,_Random2
+movd _Random1,r0
+movd _Random2,r4
+muld3 r4,r0,_Z
+muld3 r0,r4,_Y
+muld3 r10,r2,r4
+subd3 r4,r4,_Z9
+L326:
+cmpl _I,_NoTrials
+jeql L328
+cmpd _Z9,_Zero
+jeql L328
+pushal L330
+pushl $2
+calls $8/4,_BadCond
+jbr L329
+L328:
+pushl _NoTrials
+pushal L331
+calls $8/4,_printf
+L329:
+movl $70,_Milestone
+pushal L332
+calls $4/4,_printf
+movd _Zero,r4
+movd r4,r8
+movd r4,-(sp)
+calls $8/4,_sqrt
+cmpd r8,r0
+jneq L335
+mnegd _Zero,r4
+movd r4,r6
+movd r4,-(sp)
+calls $8/4,_sqrt
+cmpd r6,r0
+jneq L335
+movd _One,r4
+movd r4,-48(fp)
+movd r4,-(sp)
+calls $8/4,_sqrt
+cmpd -48(fp),r0
+jneq L335
+movl $1,r11
+jbr L336
+L335:
+clrl r11
+L336:
+pushal L334
+pushl r11
+clrl -(sp)
+calls $12/4,_TstCond
+movd _Zero,r4
+movd r4,_MinSqEr
+movd r4,_MaxSqEr
+movd r4,_J
+movd _Radix,_X
+movd _U2,_OneUlp
+pushl $1
+calls $4/4,_SqXMinX
+movd _BInvrse,r4
+movd r4,_X
+muld3 _U1,r4,_OneUlp
+pushl $1
+calls $4/4,_SqXMinX
+movd _U1,r4
+movd r4,_X
+muld3 r4,r4,_OneUlp
+pushl $1
+calls $4/4,_SqXMinX
+cmpd _J,_Zero
+jeql L337
+calls $0/4,_Pause
+L337:
+pushl _NoTrials
+pushal L339
+calls $8/4,_printf
+movd _Zero,_J
+movd _Two,_X
+movd _Radix,r4
+movd r4,_Y
+cmpd r4,_One
+jeql L340
+L342:
+movd _Y,r4
+movd r4,_X
+muld3 r4,_Radix,_Y
+L343:
+subd3 _X,_Y,r4
+cvtld _NoTrials,r2
+cmpd r4,r2
+jlss L342
+L340:
+muld3 _U2,_X,_OneUlp
+movl $1,_I
+jbr L346
+L345:
+addd2 _One,_X
+pushl $2
+calls $4/4,_SqXMinX
+cmpd _J,_Zero
+jleq L348
+jbr L347
+L348:
+incl _I
+L346:
+cmpl _I,_NoTrials
+jleq L345
+L347:
+pushal L350
+calls $4/4,_printf
+movl $-1,_I
+movd _BMinusU2,_X
+movd _Radix,r4
+movd r4,_Y
+muld3 _U2,r4,r2
+addd3 r2,r4,_Z
+clrl _NotMonot
+clrl _Monot
+jbr L352
+L351:
+incl _I
+movd _X,-(sp)
+calls $8/4,_sqrt
+movd r0,_X
+movd _Y,-(sp)
+calls $8/4,_sqrt
+movd r0,_Q
+movd _Z,-(sp)
+calls $8/4,_sqrt
+movd r0,_Z
+movd _Q,r4
+cmpd _X,r4
+jgtr L356
+cmpd r4,_Z
+jleq L354
+L356:
+movl $1,_NotMonot
+jbr L355
+L354:
+addd3 _Half,_Q,-(sp)
+calls $8/4,_floor
+movd r0,_Q
+tstl _I
+jgtr L359
+movd _Q,r4
+muld2 r4,r4
+cmpd _Radix,r4
+jneq L357
+L359:
+movl $1,_Monot
+jbr L358
+L357:
+tstl _I
+jleq L360
+cmpl _I,$1
+jleq L362
+movl $1,_Monot
+jbr L361
+L362:
+muld2 _BInvrse,_Y
+movd _Y,r4
+movd _U1,r2
+subd3 r2,r4,_X
+addd3 r2,r4,_Z
+jbr L361
+L360:
+movd _Q,_Y
+movd _Y,r4
+movd _U2,r2
+subd3 r2,r4,_X
+addd3 r2,r4,_Z
+L361:
+L358:
+L355:
+L352:
+tstl _NotMonot
+jneq L364
+tstl _Monot
+jeql L351
+L364:
+tstl _Monot
+jeql L365
+pushal L367
+calls $4/4,_printf
+jbr L366
+L365:
+pushal L155
+pushl $2
+calls $8/4,_BadCond
+movd _Y,-(sp)
+pushal L368
+calls $12/4,_printf
+L366:
+movl $80,_Milestone
+movd _Half,r4
+addd2 r4,_MinSqEr
+subd2 r4,_MaxSqEr
+addd3 _U2,_One,-(sp)
+calls $8/4,_sqrt
+movd _One,r4
+subd3 r4,r0,r2
+movd _U2,r0
+divd3 r0,r2,_Y
+subd3 r4,_Y,r4
+divd3 _Eight,r0,r2
+addd3 r2,r4,_SqEr
+cmpd _SqEr,_MaxSqEr
+jleq L369
+movd _SqEr,_MaxSqEr
+L369:
+divd3 _Eight,_U2,r4
+addd3 r4,_Y,_SqEr
+cmpd _SqEr,_MinSqEr
+jgeq L371
+movd _SqEr,_MinSqEr
+L371:
+movd _F9,-(sp)
+calls $8/4,_sqrt
+movd _U2,r4
+subd3 r4,r0,r2
+subd3 r4,_One,r4
+subd3 r4,r2,r4
+movd _U1,r2
+divd3 r2,r4,_Y
+divd3 _Eight,r2,r4
+addd3 r4,_Y,_SqEr
+cmpd _SqEr,_MaxSqEr
+jleq L373
+movd _SqEr,_MaxSqEr
+L373:
+addd3 _One,_Y,r4
+divd3 _Eight,_U1,r2
+addd3 r2,r4,_SqEr
+cmpd _SqEr,_MinSqEr
+jgeq L375
+movd _SqEr,_MinSqEr
+L375:
+movd _U2,_OneUlp
+movd _OneUlp,_X
+movl $1,_Indx
+L377:
+movd _X,r4
+addd3 _U1,r4,r2
+addd2 r2,r4
+addd3 _F9,r4,-(sp)
+calls $8/4,_sqrt
+movd r0,_Y
+movd _U2,r4
+subd3 r4,_Y,r2
+subd3 r4,_One,r4
+movd _X,r0
+addd2 r0,r4
+subd3 r4,r2,r4
+movd _OneUlp,r2
+movd r2,r10
+divd3 r2,r4,_Y
+subd3 r0,_U1,r4
+addd2 _F9,r4
+movd _Half,r2
+muld2 r2,r4
+muld2 r0,r4
+muld2 r0,r4
+divd3 r10,r4,_Z
+addd3 r2,_Y,r4
+addd3 _Z,r4,_SqEr
+cmpd _SqEr,_MinSqEr
+jgeq L381
+movd _SqEr,_MinSqEr
+L381:
+subd3 _Half,_Y,r4
+addd3 _Z,r4,_SqEr
+cmpd _SqEr,_MaxSqEr
+jleq L383
+movd _SqEr,_MaxSqEr
+L383:
+movl _Indx,r5
+cmpl r5,$1
+jeql L387
+cmpl r5,$3
+jneq L385
+L387:
+movd _X,-(sp)
+calls $8/4,_Sign
+movd r0,r10
+movd _OneUlp,-(sp)
+calls $8/4,_sqrt
+muld3 r0,_Nine,r4
+divd3 r4,_Eight,-(sp)
+calls $8/4,_floor
+muld3 r10,_OneUlp,r4
+muld3 r0,r4,_X
+jbr L386
+L385:
+movd _U1,_OneUlp
+mnegd _OneUlp,_X
+L386:
+L378:
+incl _Indx
+cmpl _Indx,$3
+jleq L377
+movl $85,_Milestone
+clrl _SqRWrng
+clrl _Anomaly
+clrl _RSqrt
+cmpd _Radix,_One
+jeql L388
+pushal L390
+calls $4/4,_printf
+movd _Precision,r4
+movd r4,r10
+movd r4,-(sp)
+calls $8/4,_floor
+addd3 r10,_One,r4
+subd3 r0,r4,-(sp)
+movd _Radix,-(sp)
+calls $16/4,_pow
+addd3 r0,_Half,-(sp)
+calls $8/4,_floor
+movd r0,_D
+movd _D,r4
+divd3 _Radix,r4,_X
+divd3 _A1,r4,_Y
+movd _X,r4
+movd r4,r10
+movd r4,-(sp)
+calls $8/4,_floor
+cmpd r10,r0
+jneq L393
+movd _Y,r4
+movd r4,r8
+movd r4,-(sp)
+calls $8/4,_floor
+cmpd r8,r0
+jeql L391
+L393:
+movl $1,_Anomaly
+jbr L392
+L391:
+movd _Zero,_X
+movd _X,_Z2
+movd _One,r4
+movd r4,_Y
+movd _Y,_Y2
+subd3 r4,_Radix,_Z1
+muld3 _D,_Four,_FourD
+L394:
+cmpd _Y2,_Z2
+jleq L397
+movd _Radix,_Q
+movd _Y,_Y1
+L399:
+movd _Q,r4
+movd r4,r10
+divd3 _Y1,r4,r2
+subd3 r2,_Half,-(sp)
+calls $8/4,_floor
+muld3 _Y1,r0,r4
+addd3 r4,r10,-(sp)
+calls $8/4,_fabs
+movd r0,_X1
+movd _Y1,_Q
+movd _X1,_Y1
+L400:
+cmpd _X1,_Zero
+jgtr L399
+cmpd _Q,_One
+jgtr L402
+movd _Y2,_Z2
+movd _Y,_Z
+L402:
+L397:
+addd2 _Two,_Y
+addd2 _Eight,_X
+addd2 _X,_Y2
+cmpd _Y2,_FourD
+jlss L404
+subd2 _FourD,_Y2
+L404:
+L395:
+cmpd _Y,_D
+jlss L394
+movd _FourD,r4
+subd3 _Z2,r4,_X8
+movd _X8,r2
+movd _Z,r0
+muld2 r0,r0
+addd2 r2,r0
+divd3 r4,r0,_Q
+divd3 _Eight,r2,_X8
+movd _Q,r4
+movd r4,r10
+movd r4,-(sp)
+calls $8/4,_floor
+cmpd r10,r0
+jeql L406
+movl $1,_Anomaly
+jbr L407
+L406:
+clrl _Break
+L408:
+muld3 _Z,_Z1,_X
+movd _X,r4
+movd r4,r10
+divd3 _Radix,r4,-(sp)
+calls $8/4,_floor
+muld3 _Radix,r0,r4
+subd3 r4,r10,_X
+cmpd _X,_One
+jneq L411
+movl $1,_Break
+jbr L412
+L411:
+subd2 _One,_Z1
+L412:
+L409:
+tstl _Break
+jneq L413
+cmpd _Z1,_Zero
+jgtr L408
+L413:
+cmpd _Z1,_Zero
+jgtr L414
+tstl _Break
+jneq L414
+movl $1,_Anomaly
+jbr L415
+L414:
+cmpd _Z1,_RadixD2
+jleq L416
+subd2 _Radix,_Z1
+L416:
+L418:
+calls $0/4,_NewD
+L419:
+muld3 _D,_U2,r4
+cmpd r4,_F9
+jlss L418
+movd _D,r4
+muld3 _Radix,r4,r2
+subd2 r4,r2
+subd3 r4,_W,r4
+cmpd r2,r4
+jeql L421
+movl $1,_Anomaly
+jbr L422
+L421:
+movd _D,r4
+movd r4,_Z2
+clrl _I
+movd _Z,r2
+addd3 r2,_One,r0
+muld2 _Half,r0
+addd3 r0,r4,_Y
+addd2 r2,r4
+addd3 _Q,r4,_X
+calls $0/4,_SR3750
+movd _D,r4
+movd _Z,r2
+subd3 r2,_One,r0
+muld2 _Half,r0
+addd2 r4,r0
+addd3 r4,r0,_Y
+subd3 r2,r4,r2
+addd3 r4,r2,_X
+movd _X,r4
+addd3 _Q,r4,r2
+addd3 r4,r2,_X
+calls $0/4,_SR3750
+calls $0/4,_NewD
+movd _Z2,r4
+subd3 r4,_D,r2
+subd3 r4,_W,r4
+cmpd r2,r4
+jeql L423
+movl $1,_Anomaly
+jbr L424
+L423:
+movd _Z2,r4
+subd3 r4,_D,r2
+movd r2,r10
+movd _Z,r0
+subd3 r0,_One,r2
+muld2 _Half,r2
+addd2 r4,r2
+addd3 r2,r10,_Y
+subd2 r0,r4
+addd2 _Q,r4
+addd3 r4,r10,_X
+calls $0/4,_SR3750
+addd3 _Z,_One,r4
+muld3 _Half,r4,_Y
+movd _Q,_X
+calls $0/4,_SR3750
+tstl _I
+jneq L425
+movl $1,_Anomaly
+L425:
+L424:
+L422:
+L415:
+L407:
+L392:
+tstl _I
+jeql L429
+tstl _Anomaly
+jeql L427
+L429:
+pushal L430
+clrl -(sp)
+calls $8/4,_BadCond
+movd _W,-(sp)
+pushal L431
+calls $12/4,_printf
+pushal L432
+calls $4/4,_printf
+movl $1,_SqRWrng
+L427:
+L388:
+tstl _Anomaly
+jneq L433
+movd _Zero,r4
+cmpd _MinSqEr,r4
+jlss L435
+cmpd _MaxSqEr,r4
+jgtr L435
+movl $1,_RSqrt
+pushal L437
+calls $4/4,_printf
+jbr L436
+L435:
+movd _U2,r4
+addd3 r4,_MaxSqEr,r2
+movd _Half,r0
+subd2 r0,r4
+cmpd r2,r4
+jgtr L441
+movd _MinSqEr,r4
+cmpd r4,r0
+jgtr L441
+addd2 _Radix,r4
+cmpd r4,r0
+jgeq L438
+L441:
+movl $1,_SqRWrng
+jbr L439
+L438:
+movl $2,_RSqrt
+pushal L442
+calls $4/4,_printf
+L439:
+L436:
+L433:
+tstl _SqRWrng
+jeql L443
+pushal L445
+calls $4/4,_printf
+subd3 _Half,_MinSqEr,-(sp)
+pushal L446
+calls $12/4,_printf
+addd3 _MaxSqEr,_Half,-(sp)
+pushal L447
+calls $12/4,_printf
+pushal L449
+subd3 _MinSqEr,_MaxSqEr,r4
+movd _Radix,r2
+muld2 r2,r2
+cmpd r4,r2
+jgeq L450
+movl $1,r11
+jbr L451
+L450:
+clrl r11
+L451:
+pushl r11
+pushl $1
+calls $12/4,_TstCond
+L443:
+movl $90,_Milestone
+calls $0/4,_Pause
+pushal L452
+calls $4/4,_printf
+clrl _N
+clrl _I
+mnegd _Zero,_Z
+movl $3,_M
+clrl _Break
+L453:
+movd _One,_X
+calls $0/4,_SR3980
+cmpl _I,$10
+jgtr L456
+movl $1023,_I
+calls $0/4,_SR3980
+L456:
+cmpd _Z,_MinusOne
+jneq L458
+movl $1,_Break
+jbr L459
+L458:
+movd _MinusOne,_Z
+calls $0/4,_PrintIfNPositive
+clrl _N
+movl $-4,_I
+L459:
+L454:
+tstl _Break
+jeql L453
+calls $0/4,_PrintIfNPositive
+movl _N,_N1
+clrl _N
+movd _A1,_Z
+movd _W,-(sp)
+calls $8/4,_log
+movd r0,r10
+movd _A1,-(sp)
+calls $8/4,_log
+muld3 r10,_Two,r4
+divd3 r0,r4,-(sp)
+calls $8/4,_floor
+cvtdl r0,_M
+clrl _Break
+L460:
+movd _Z,_X
+movl $1,_I
+calls $0/4,_SR3980
+cmpd _Z,_AInvrse
+jneq L463
+movl $1,_Break
+jbr L464
+L463:
+movd _AInvrse,_Z
+L464:
+L461:
+tstl _Break
+jeql L460
+movl $100,_Milestone
+movl _NoTrials,_M
+movd _Three,_Z
+L465:
+movd _Z,_X
+movl $1,_I
+calls $0/4,_SR3980
+L468:
+addd2 _Two,_Z
+L469:
+movd _Three,r4
+movd r4,r10
+divd3 r4,_Z,-(sp)
+calls $8/4,_floor
+muld3 r0,r10,r4
+cmpd r4,_Z
+jeql L468
+L466:
+muld3 _Three,_Eight,r4
+cmpd _Z,r4
+jlss L465
+tstl _N
+jleq L471
+pushal L473
+calls $4/4,_printf
+pushal L474
+calls $4/4,_printf
+L471:
+calls $0/4,_PrintIfNPositive
+addl2 _N1,_N
+tstl _N
+jneq L475
+pushal L477
+calls $4/4,_printf
+L475:
+tstl _N
+jleq L478
+calls $0/4,_Pause
+jbr L479
+L478:
+pushal L42
+calls $4/4,_printf
+L479:
+movl $110,_Milestone
+pushal L480
+calls $4/4,_printf
+movd _U1,_D
+movd _Precision,r4
+movd r4,r10
+movd r4,-(sp)
+calls $8/4,_floor
+cmpd r10,r0
+jeql L481
+movd _BInvrse,_D
+movd _Precision,_X
+L483:
+muld2 _BInvrse,_D
+subd2 _One,_X
+L484:
+cmpd _X,_Zero
+jgtr L483
+L481:
+movd _One,_Y
+movd _D,_Z
+L486:
+movd _Y,_C
+movd _Z,_Y
+movd _Y,r4
+muld3 r4,r4,_Z
+L487:
+movd _Z,r4
+cmpd _Y,r4
+jleq L489
+addd3 r4,r4,r2
+cmpd r2,r4
+jgtr L486
+L489:
+movd _C,_Y
+muld3 _D,_Y,_Z
+L490:
+movd _Y,_C
+movd _Z,_Y
+muld3 _D,_Y,_Z
+L491:
+movd _Z,r4
+cmpd _Y,r4
+jleq L493
+addd3 r4,r4,r2
+cmpd r2,r4
+jgtr L490
+L493:
+cmpd _Radix,_Two
+jgeq L494
+movd _Two,_HInvrse
+jbr L495
+L494:
+movd _Radix,_HInvrse
+L495:
+movd _One,r4
+divd3 _HInvrse,r4,_H
+movd _C,r2
+divd3 r2,r4,_CInvrse
+movd r2,_E0
+muld3 _H,_E0,_Z
+L496:
+movd _E0,_Y
+movd _Z,_E0
+muld3 _H,_E0,_Z
+L497:
+movd _Z,r4
+cmpd _E0,r4
+jleq L499
+addd3 r4,r4,r2
+cmpd r2,r4
+jgtr L496
+L499:
+movd _E0,_UfThold
+movd _Zero,r4
+movd r4,_E1
+movd r4,_Q
+movd _U2,_E9
+addd3 _E9,_One,_S
+movd _C,r4
+muld3 _S,r4,_D
+cmpd _D,r4
+jgtr L500
+muld3 _U2,_Radix,_E9
+addd3 _E9,_One,_S
+movd _C,r4
+muld3 _S,r4,_D
+cmpd _D,r4
+jgtr L501
+pushal L504
+clrl -(sp)
+calls $8/4,_BadCond
+movd _E0,_Underflow
+movd _Zero,_Y1
+movd _Z,_PseudoZero
+calls $0/4,_Pause
+jbr L501
+L500:
+movd _D,_Underflow
+muld3 _H,_Underflow,_PseudoZero
+movd _Zero,_UfThold
+L505:
+movd _Underflow,_Y1
+movd _PseudoZero,_Underflow
+movd _E1,r4
+addd3 r4,r4,r2
+cmpd r2,r4
+jgtr L508
+muld3 _HInvrse,_Underflow,_Y2
+subd3 _Y2,_Y1,-(sp)
+calls $8/4,_fabs
+movd r0,_E1
+movd _Y1,r4
+movd r4,_Q
+cmpd _UfThold,_Zero
+jneq L510
+cmpd r4,_Y2
+jeql L510
+movd _Y1,_UfThold
+L510:
+L508:
+muld2 _H,_PseudoZero
+L506:
+movd _PseudoZero,r4
+cmpd _Underflow,r4
+jleq L512
+addd3 r4,r4,r2
+cmpd r2,r4
+jgtr L505
+L512:
+L501:
+cmpd _PseudoZero,_Zero
+jeql L513
+pushal L42
+calls $4/4,_printf
+movd _PseudoZero,r4
+movd r4,_Z
+cmpd r4,_Zero
+jgtr L515
+pushal L517
+clrl -(sp)
+calls $8/4,_BadCond
+pushal L518
+calls $4/4,_printf
+movd _PseudoZero,-(sp)
+pushal L519
+calls $12/4,_printf
+mnegd _PseudoZero,_X
+cmpd _X,_Zero
+jgtr L516
+pushal L522
+calls $4/4,_printf
+movd _X,-(sp)
+pushal L523
+calls $12/4,_printf
+jbr L516
+L515:
+pushal L524
+pushl $3
+calls $8/4,_BadCond
+movd _PseudoZero,-(sp)
+pushal L525
+calls $12/4,_printf
+L516:
+calls $0/4,_TstPtUf
+L513:
+movl $120,_Milestone
+movd _CInvrse,r4
+muld3 _Y,r4,r2
+muld2 _Y1,r4
+cmpd r2,r4
+jleq L526
+muld2 _H,_S
+movd _Underflow,_E0
+L526:
+movd _E1,r4
+cmpd r4,_Zero
+jeql L528
+cmpd r4,_E0
+jeql L528
+pushal L155
+pushl $2
+calls $8/4,_BadCond
+cmpd _E1,_E0
+jgeq L530
+pushal L532
+calls $4/4,_printf
+pushal L533
+calls $4/4,_printf
+cmpd _PseudoZero,_Zero
+jneq L531
+movd _E1,_E0
+jbr L531
+L530:
+pushal L536
+calls $4/4,_printf
+pushal L537
+calls $4/4,_printf
+L531:
+L528:
+movd _E0,-(sp)
+pushal L538
+calls $12/4,_printf
+movd _E0,_Z
+calls $0/4,_TstPtUf
+movd _E0,_Underflow
+cmpl _N,$1
+jneq L539
+movd _Y,_Underflow
+L539:
+movl $4,_I
+cmpd _E1,_Zero
+jneq L541
+movl $3,_I
+L541:
+cmpd _UfThold,_Zero
+jneq L543
+subl2 $2,_I
+L543:
+movl $1,_UfNGrad
+movl _I,r5
+cmpl r5,$1
+jlss L545
+cmpl r5,$4
+jgtr L545
+movl L569-4[r5],r5
+jmp (r5)
+.align 2; L569:.long L547
+.long L554
+.long L559
+.long L560
+L547:
+movd _Underflow,_UfThold
+movd _CInvrse,r4
+muld3 _Q,r4,r2
+muld2 _Y,r4
+muld2 _S,r4
+cmpd r2,r4
+jeql L548
+movd _Y,_UfThold
+pushal L550
+clrl -(sp)
+calls $8/4,_BadCond
+movd _UfThold,-(sp)
+pushal L551
+calls $12/4,_printf
+movd _C,-(sp)
+pushal L552
+calls $12/4,_printf
+pushal L553
+calls $4/4,_printf
+L548:
+calls $0/4,_Pause
+jbr L546
+L554:
+pushal L555
+clrl -(sp)
+calls $8/4,_BadCond
+pushal L556
+calls $4/4,_printf
+movd _Y2,-(sp)
+movd _Q,-(sp)
+pushal L557
+calls $20/4,_printf
+subd3 _Y2,_Q,-(sp)
+calls $8/4,_fabs
+movd r0,-(sp)
+pushal L558
+calls $12/4,_printf
+movd _Q,_UfThold
+jbr L546
+L559:
+movd _X,_X
+jbr L546
+L560:
+movd _UfThold,r4
+cmpd _Q,r4
+jneq L561
+movd _E1,r2
+cmpd r2,_E0
+jneq L561
+divd2 _E9,r2
+subd3 r2,r4,-(sp)
+calls $8/4,_fabs
+cmpd r0,_E1
+jgtr L561
+clrl _UfNGrad
+pushal L563
+calls $4/4,_printf
+pushal L564
+calls $4/4,_printf
+movd _CInvrse,r4
+muld3 r4,_E0,_Y
+movd _U2,r2
+addd3 r2,_OneAndHalf,r0
+muld2 r0,_Y
+addd2 _One,r2
+muld3 r2,r4,_X
+divd2 _X,_Y
+cmpd _Y,_E0
+jneq L566
+movl $1,r11
+jbr L567
+L566:
+clrl r11
+L567:
+movl r11,_IEEE
+L561:
+L545:
+L546:
+tstl _UfNGrad
+jeql L571
+pushal L42
+calls $4/4,_printf
+movl $_sigfpe,_sigsave
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jeql L573
+pushal L575
+calls $4/4,_printf
+movd _H,r4
+addd3 r4,r4,_R
+jbr L574
+L573:
+divd3 _UfThold,_Underflow,-(sp)
+calls $8/4,_sqrt
+movd r0,_R
+L574:
+clrl _sigsave
+cmpd _R,_H
+jgtr L576
+movd _R,r4
+muld3 _UfThold,r4,_Z
+movd _One,r2
+movd _H,r0
+muld2 r0,r4
+addd2 r2,r0
+muld2 r0,r4
+addd2 r2,r4
+muld3 r4,_Z,_X
+jbr L577
+L576:
+movd _UfThold,_Z
+movd _One,r4
+movd _H,r2
+muld3 r2,r2,r0
+addd2 r4,r2
+muld2 r0,r2
+addd2 r2,r4
+muld3 r4,_Z,_X
+L577:
+movd _X,r4
+movd _Z,r2
+cmpd r4,r2
+jeql L578
+subd2 r2,r4
+cmpd r4,_Zero
+jneq L578
+pushal L155
+pushl $3
+calls $8/4,_BadCond
+movd _Z,-(sp)
+movd _X,-(sp)
+pushal L580
+calls $20/4,_printf
+subd3 _Z,_X,_Z9
+movd _Z9,-(sp)
+pushal L581
+calls $12/4,_printf
+pushal L582
+calls $4/4,_printf
+pushal L583
+calls $4/4,_printf
+pushal L584
+calls $4/4,_printf
+pushal L585
+calls $4/4,_printf
+pushal L586
+calls $4/4,_printf
+pushal L587
+calls $4/4,_printf
+movl $_sigfpe,_sigsave
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jeql L588
+pushal L590
+calls $4/4,_printf
+jbr L589
+L588:
+divd3 _Z,_X,r4
+movd _Half,r2
+subd2 r2,r4
+subd3 r2,r4,-(sp)
+pushal L591
+calls $12/4,_printf
+L589:
+clrl _sigsave
+L578:
+L571:
+pushal L593
+movd _UfThold,-(sp)
+pushal L592
+calls $16/4,_printf
+pushal L594
+calls $4/4,_printf
+pushal L595
+calls $4/4,_printf
+movd _U1,r4
+muld3 r4,r4,_Y2
+movd _Y2,r2
+muld3 r2,r2,_Y
+muld3 r4,_Y,_Y2
+cmpd _Y2,_UfThold
+jgtr L596
+cmpd _Y,_E0
+jleq L598
+pushal L155
+pushl $2
+calls $8/4,_BadCond
+movl $5,_I
+jbr L599
+L598:
+pushal L155
+pushl $1
+calls $8/4,_BadCond
+movl $4,_I
+L599:
+pushl _I
+pushal L600
+calls $8/4,_printf
+L596:
+movl $130,_Milestone
+movd _UfThold,-(sp)
+calls $8/4,_log
+movd r0,r10
+movd _HInvrse,-(sp)
+calls $8/4,_log
+muld3 r10,_TwoForty,r4
+divd2 r0,r4
+subd3 r4,_Half,-(sp)
+calls $8/4,_floor
+mnegd r0,r4
+divd3 _TwoForty,r4,_Y
+movd _Y,r4
+addd3 r4,r4,_Y2
+pushal L601
+calls $4/4,_printf
+movd _Y,-(sp)
+movd _HInvrse,-(sp)
+pushal L602
+calls $20/4,_printf
+movd _Y,-(sp)
+movd _HInvrse,-(sp)
+pushal L603
+calls $20/4,_printf
+movd _Y2,-(sp)
+movd _HInvrse,-(sp)
+calls $16/4,_pow
+movd r0,_V9
+movd _V9,-(sp)
+pushal L604
+calls $12/4,_printf
+movd _V9,r4
+cmpd r4,_Zero
+jlss L607
+movd _Radix,r2
+addd2 r2,r2
+addd2 _E9,r2
+muld2 _UfThold,r2
+cmpd r4,r2
+jleq L605
+L607:
+pushal L608
+pushl $1
+calls $8/4,_BadCond
+movd _UfThold,-(sp)
+pushal L609
+calls $12/4,_printf
+jbr L606
+L605:
+addd3 _E9,_One,r4
+muld2 _UfThold,r4
+cmpd _V9,r4
+jgtr L610
+pushal L612
+calls $4/4,_printf
+jbr L611
+L610:
+pushal L608
+pushl $2
+calls $8/4,_BadCond
+movd _UfThold,-(sp)
+pushal L609
+calls $12/4,_printf
+L611:
+L606:
+movl $140,_Milestone
+pushal L42
+calls $4/4,_printf
+movd _Zero,r4
+movd r4,_X
+movl $2,_I
+muld3 _Three,_Two,_Y
+movd r4,_Q
+clrl _N
+L613:
+movd _X,_Z
+incl _I
+movl _I,r5
+addl2 r5,r5
+cvtld r5,r4
+divd2 r4,_Y
+addd3 _Q,_Y,_R
+movd _Z,r4
+movd _R,r2
+addd3 r2,r4,_X
+subd2 _X,r4
+addd3 r2,r4,_Q
+L614:
+cmpd _X,_Z
+jgtr L613
+movd _OneAndHalf,r4
+divd3 _Eight,_One,r2
+addd2 r4,r2
+muld2 _ThirtyTwo,r4
+divd3 r4,_X,r4
+addd3 r4,r2,_Z
+movd _Z,r4
+muld3 r4,r4,_X
+movd _X,r4
+muld3 r4,r4,_Exp2
+movd _F9,_X
+subd3 _U1,_X,_Y
+movd _Exp2,-(sp)
+pushal L616
+calls $12/4,_printf
+movl $1,_I
+L617:
+movd _X,r4
+movd _BInvrse,r2
+movd r2,r10
+subd3 r2,r4,_Z
+movd _One,r0
+addd3 r0,r4,r2
+subd2 r10,r0
+subd3 r0,_Z,r0
+divd3 r0,r2,_Z
+movd _Z,-(sp)
+movd r4,-(sp)
+calls $16/4,_pow
+subd3 _Exp2,r0,_Q
+movd _Q,-(sp)
+calls $8/4,_fabs
+muld3 _U2,_TwoForty,r4
+cmpd r0,r4
+jleq L621
+movl $1,_N
+movd _BInvrse,r4
+subd3 r4,_X,r2
+subd3 r4,_One,r4
+subd3 r4,r2,_V9
+pushal L623
+pushl $2
+calls $8/4,_BadCond
+movd _Z,-(sp)
+movd _X,-(sp)
+calls $16/4,_pow
+movd r0,-(sp)
+pushal L624
+calls $12/4,_printf
+movd _Z,-(sp)
+movd _V9,-(sp)
+pushal L625
+calls $20/4,_printf
+movd _Q,-(sp)
+pushal L626
+calls $12/4,_printf
+pushal L627
+calls $4/4,_printf
+pushal L628
+calls $4/4,_printf
+jbr L619
+L621:
+movd _Y,r4
+subd3 _X,r4,r2
+muld2 _Two,r2
+addd3 r4,r2,_Z
+movd r4,_X
+movd _Z,_Y
+movd _One,r4
+subd3 _F9,_X,r2
+muld2 r2,r2
+addd3 r2,r4,_Z
+cmpd _Z,r4
+jleq L629
+cmpl _I,_NoTrials
+jgeq L629
+incl _I
+jbr L617
+L629:
+cmpd _X,_One
+jleq L631
+tstl _N
+jneq L619
+pushal L635
+calls $4/4,_printf
+jbr L619
+L631:
+movd _U2,r4
+addd3 r4,_One,_X
+addd3 r4,r4,_Y
+addd2 _X,_Y
+movl $1,_I
+jbr L617
+L619:
+movl $150,_Milestone
+pushal L636
+calls $4/4,_printf
+clrl _N
+movd _A1,_Z
+movd _C,-(sp)
+calls $8/4,_log
+movd r0,r10
+movd _A1,-(sp)
+calls $8/4,_log
+divd3 r0,r10,r4
+subd3 r4,_Half,-(sp)
+calls $8/4,_floor
+movd r0,_Q
+clrl _Break
+L637:
+movd _CInvrse,_X
+movd _Q,-(sp)
+movd _Z,-(sp)
+calls $16/4,_pow
+movd r0,_Y
+calls $0/4,_IsYeqX
+mnegd _Q,_Q
+movd _C,_X
+movd _Q,-(sp)
+movd _Z,-(sp)
+calls $16/4,_pow
+movd r0,_Y
+calls $0/4,_IsYeqX
+cmpd _Z,_One
+jgeq L640
+movl $1,_Break
+jbr L641
+L640:
+movd _AInvrse,_Z
+L641:
+L638:
+tstl _Break
+jeql L637
+calls $0/4,_PrintIfNPositive
+tstl _N
+jneq L642
+pushal L644
+calls $4/4,_printf
+L642:
+pushal L42
+calls $4/4,_printf
+movl $160,_Milestone
+calls $0/4,_Pause
+pushal L645
+calls $4/4,_printf
+pushal L646
+calls $4/4,_printf
+mnegd _CInvrse,_Y
+muld3 _Y,_HInvrse,_V9
+movl $_sigfpe,_sigsave
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jeql L647
+clrl _I
+movd _Y,_V9
+jbr L649
+L647:
+L650:
+movd _Y,_V
+movd _V9,_Y
+muld3 _Y,_HInvrse,_V9
+L651:
+cmpd _V9,_Y
+jlss L650
+movl $1,_I
+L649:
+clrl _sigsave
+movd _V9,_Z
+pushal L653
+calls $4/4,_printf
+movd _Y,-(sp)
+pushal L654
+calls $12/4,_printf
+movd _Y,r4
+mnegd r4,_V9
+movd _V9,_V0
+movd _V,r2
+subd3 r4,r2,r4
+addd2 _V0,r2
+cmpd r4,r2
+jneq L655
+pushal L657
+calls $4/4,_printf
+jbr L656
+L655:
+pushal L658
+calls $4/4,_printf
+pushal L659
+pushl $3
+calls $8/4,_BadCond
+L656:
+cmpd _Z,_Y
+jeql L660
+pushal L155
+pushl $1
+calls $8/4,_BadCond
+movd _Z,-(sp)
+movd _Y,-(sp)
+pushal L662
+calls $20/4,_printf
+L660:
+tstl _I
+jeql L663
+movd _V,r4
+movd r4,r10
+movd _HInvrse,r2
+movd _U2,r0
+muld3 r0,r2,r4
+subd2 r2,r4
+muld3 r4,r10,_Y
+subd3 r2,_One,r4
+muld2 r0,r4
+muld2 r10,r4
+addd3 r4,_Y,_Z
+cmpd _Z,_V0
+jgeq L665
+movd _Z,_Y
+L665:
+cmpd _Y,_V0
+jgeq L667
+movd _Y,_V
+L667:
+movd _V0,r4
+subd3 _V,r4,r2
+cmpd r2,r4
+jgeq L664
+movd _V0,_V
+jbr L664
+L663:
+movd _Y,r4
+movd r4,r10
+movd _HInvrse,r2
+movd _U2,r0
+muld3 r0,r2,r4
+subd2 r2,r4
+muld3 r4,r10,_V
+subd3 r2,_One,r4
+muld2 r0,r4
+muld2 r10,r4
+addd2 r4,_V
+L664:
+movd _V,-(sp)
+pushal L671
+calls $12/4,_printf
+tstl _I
+jeql L672
+movd _V0,-(sp)
+pushal L674
+calls $12/4,_printf
+jbr L673
+L672:
+pushal L675
+calls $4/4,_printf
+L673:
+muld3 _One,_V,_V9
+movd _V9,-(sp)
+pushal L676
+calls $12/4,_printf
+divd3 _One,_V,_V9
+movd _V9,-(sp)
+pushal L677
+calls $12/4,_printf
+pushal L678
+calls $4/4,_printf
+pushal L679
+calls $4/4,_printf
+movl $170,_Milestone
+movd _V,r4
+mnegd r4,r2
+cmpd r2,r4
+jgeq L684
+movd _V0,r2
+mnegd r2,r0
+cmpd r0,r2
+jgeq L684
+movd _UfThold,r2
+mnegd r2,r0
+cmpd r0,r4
+jgeq L684
+cmpd r2,r4
+jlss L680
+L684:
+pushal L685
+clrl -(sp)
+calls $8/4,_BadCond
+movd _UfThold,-(sp)
+movd _V0,-(sp)
+movd _V,-(sp)
+pushal L686
+calls $28/4,_printf
+L680:
+movl $175,_Milestone
+pushal L42
+calls $4/4,_printf
+movl $1,_Indx
+L687:
+movl _Indx,r5
+cmpl r5,$1
+jeql L693
+cmpl r5,$2
+jeql L694
+cmpl r5,$3
+jeql L695
+jbr L691
+L693:
+movd _UfThold,_Z
+jbr L692
+L694:
+movd _E0,_Z
+jbr L692
+L695:
+movd _PseudoZero,_Z
+L691:
+L692:
+cmpd _Z,_Zero
+jeql L696
+movd _Z,-(sp)
+calls $8/4,_sqrt
+movd r0,_V9
+movd _V9,r4
+muld3 r4,r4,_Y
+movd _Y,r4
+movd r4,r10
+movd _One,r2
+movd r2,r8
+muld3 _E9,_Radix,r0
+subd3 r0,r2,r4
+divd3 r4,r10,r4
+movd _Z,r2
+cmpd r4,r2
+jlss L700
+addd3 r0,r8,r4
+muld2 r2,r4
+cmpd r10,r4
+jleq L698
+L700:
+cmpd _V9,_U1
+jleq L701
+pushal L155
+pushl $1
+calls $8/4,_BadCond
+jbr L702
+L701:
+pushal L155
+pushl $2
+calls $8/4,_BadCond
+L702:
+movd _Z,-(sp)
+pushal L703
+calls $12/4,_printf
+movd _Y,-(sp)
+pushal L704
+calls $12/4,_printf
+L698:
+L696:
+L688:
+incl _Indx
+cmpl _Indx,$3
+jleq L687
+movl $180,_Milestone
+movl $1,_Indx
+L705:
+cmpl _Indx,$1
+jneq L709
+movd _V,_Z
+jbr L710
+L709:
+movd _V0,_Z
+L710:
+movd _Z,-(sp)
+calls $8/4,_sqrt
+movd r0,_V9
+movd _One,r4
+movd r4,r10
+movd _Radix,r2
+movd _E9,r0
+movd r0,r8
+muld3 r0,r2,r4
+subd3 r4,r10,r4
+movd _V9,r0
+muld3 r0,r4,_X
+muld3 _X,r0,_V9
+movd _V9,r4
+muld2 _Two,r2
+muld2 r8,r2
+subd3 r2,r10,r2
+movd _Z,r0
+muld2 r0,r2
+cmpd r4,r2
+jlss L713
+cmpd r4,r0
+jleq L711
+L713:
+movd _V9,_Y
+cmpd _X,_W
+jgeq L714
+pushal L155
+pushl $1
+calls $8/4,_BadCond
+jbr L715
+L714:
+pushal L155
+pushl $2
+calls $8/4,_BadCond
+L715:
+movd _Z,-(sp)
+pushal L716
+calls $12/4,_printf
+movd _Y,-(sp)
+pushal L717
+calls $12/4,_printf
+L711:
+L706:
+incl _Indx
+cmpl _Indx,$2
+jleq L705
+movl $190,_Milestone
+calls $0/4,_Pause
+muld3 _V,_UfThold,_X
+movd _Radix,r4
+muld3 r4,r4,_Y
+movd _X,r4
+movd _Y,r2
+muld3 r2,r4,r0
+cmpd r0,_One
+jlss L720
+cmpd r4,r2
+jleq L718
+L720:
+movd _X,r4
+movd r4,r10
+movd _Y,r2
+muld3 r2,r4,r0
+movd _U1,r4
+cmpd r0,r4
+jlss L723
+divd3 r4,r2,r4
+cmpd r10,r4
+jleq L721
+L723:
+pushal L724
+pushl $2
+calls $8/4,_BadCond
+jbr L722
+L721:
+pushal L155
+pushl $3
+calls $8/4,_BadCond
+L722:
+pushal L726
+movd _X,-(sp)
+pushal L725
+calls $16/4,_printf
+L718:
+movl $200,_Milestone
+movl $1,_Indx
+L727:
+movd _F9,_X
+movl _Indx,r5
+cmpl r5,$2
+jlss L731
+cmpl r5,$5
+jgtr L731
+movl L738-8[r5],r5
+jmp (r5)
+.align 2; L738:.long L733
+.long L734
+.long L735
+.long L736
+L733:
+addd3 _U2,_One,_X
+jbr L732
+L734:
+movd _V,_X
+jbr L732
+L735:
+movd _UfThold,_X
+jbr L732
+L736:
+movd _Radix,_X
+L731:
+L732:
+movd _X,_Y
+movl $_sigfpe,_sigsave
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jeql L740
+movd _X,-(sp)
+pushal L742
+calls $12/4,_printf
+jbr L741
+L740:
+divd3 _X,_Y,r4
+movd _Half,r2
+subd2 r2,r4
+subd3 r2,r4,_V9
+cmpd _V9,_Zero
+jneq L743
+jbr L728
+L743:
+mnegd _U1,r4
+cmpd _V9,r4
+jneq L745
+cmpl _Indx,$5
+jgeq L745
+pushal L155
+pushl $3
+calls $8/4,_BadCond
+jbr L746
+L745:
+pushal L155
+pushl $1
+calls $8/4,_BadCond
+L746:
+movd _X,-(sp)
+pushal L747
+calls $12/4,_printf
+movd _V9,-(sp)
+pushal L748
+calls $12/4,_printf
+L741:
+clrl _sigsave
+L728:
+incl _Indx
+cmpl _Indx,$5
+jleq L727
+movl $210,_Milestone
+movd _Zero,_MyZero
+pushal L42
+calls $4/4,_printf
+pushal L749
+calls $4/4,_printf
+movl $_sigfpe,_sigsave
+pushal L750
+calls $4/4,_printf
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jneq L751
+divd3 _MyZero,_One,-(sp)
+pushal L753
+calls $12/4,_printf
+L751:
+clrl _sigsave
+movl $_sigfpe,_sigsave
+pushal L754
+calls $4/4,_printf
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jneq L755
+divd3 _MyZero,_Zero,-(sp)
+pushal L753
+calls $12/4,_printf
+L755:
+clrl _sigsave
+movl $220,_Milestone
+calls $0/4,_Pause
+pushal L42
+calls $4/4,_printf
+clrl r11
+L762:
+tstl _ErrCnt[r11]
+jeql L766
+pushl _ErrCnt[r11]
+pushl L757[r11]
+pushal L768
+calls $12/4,_printf
+L766:
+L763:
+incl r11
+cmpl r11,$4
+jlss L762
+pushal L42
+calls $4/4,_printf
+addl3 _ErrCnt+4,_ErrCnt,r5
+addl2 _ErrCnt+8,r5
+addl2 _ErrCnt+12,r5
+jleq L769
+addl3 _ErrCnt+4,_ErrCnt,r5
+addl2 _ErrCnt+8,r5
+jneq L774
+tstl _ErrCnt+12
+jleq L774
+pushal L779
+calls $4/4,_printf
+pushal L780
+calls $4/4,_printf
+L774:
+addl3 _ErrCnt+4,_ErrCnt,r5
+jneq L781
+tstl _ErrCnt+8
+jleq L781
+pushal L785
+calls $4/4,_printf
+pushal L786
+calls $4/4,_printf
+L781:
+addl3 _ErrCnt+4,_ErrCnt,r5
+jleq L787
+pushal L790
+calls $4/4,_printf
+pushal L791
+calls $4/4,_printf
+L787:
+tstl _ErrCnt
+jleq L770
+pushal L794
+calls $4/4,_printf
+pushal L795
+calls $4/4,_printf
+jbr L770
+L769:
+pushal L796
+calls $4/4,_printf
+cmpl _RMult,$1
+jneq L801
+cmpl _RDiv,$1
+jneq L801
+cmpl _RAddSub,$1
+jneq L801
+cmpl _RSqrt,$1
+jeql L797
+L801:
+pushal L802
+calls $4/4,_printf
+jbr L798
+L797:
+movd _One,r4
+cmpd _StickyBit,r4
+jlss L803
+movd _Radix,r2
+subd3 _Two,r2,r0
+subd2 _Nine,r2
+subd3 r4,r2,r4
+muld2 r0,r4
+cmpd r4,_Zero
+jneq L803
+pushal L805
+calls $4/4,_printf
+pushal L806
+calls $4/4,_printf
+movd _Two,r4
+cmpd _Radix,r4
+jneq L807
+movd _Precision,r2
+muld3 _Three,_Four,r0
+muld2 r0,r4
+subd3 r4,r2,r4
+movd _TwentySeven,r0
+subd2 r0,r2
+subd2 r0,r2
+addd2 _One,r2
+muld2 r2,r4
+cmpd r4,_Zero
+jneq L807
+pushal L809
+calls $4/4,_printf
+jbr L808
+L807:
+pushal L810
+calls $4/4,_printf
+L808:
+tstl _IEEE
+jeql L811
+pushal L813
+calls $4/4,_printf
+jbr L812
+L811:
+pushal L814
+calls $4/4,_printf
+pushal L815
+calls $4/4,_printf
+L812:
+L803:
+pushal L816
+calls $4/4,_printf
+L798:
+L770:
+tstl _fpecount
+jeql L817
+pushl _fpecount
+pushal L819
+calls $8/4,_printf
+L817:
+pushal L820
+calls $4/4,_printf
+ret
+.globl _Sign
+.align 1
+_Sign:.word 0x0
+cmpd 4(ap),L5
+jlss L885
+movd L6,r4
+jbr L886
+L885:
+movd L887,r4
+L886:
+movd r4,r0
+ret
+.globl _Pause
+.align 1
+_Pause:.word 0x0
+pushl _Milestone
+pushal L888
+calls $8/4,_printf
+pushl _PageNo
+pushal L889
+calls $8/4,_printf
+incl _Milestone
+incl _PageNo
+ret
+.globl _TstCond
+.align 1
+_TstCond:.word 0x0
+tstl 8(ap)
+jneq L890
+pushl 12(ap)
+pushl 4(ap)
+calls $8/4,_BadCond
+pushal L813
+calls $4/4,_printf
+L890:
+ret
+.data
+.align 2; L892:.long L893
+.long L894
+.long L895
+.long L896
+.text
+.globl _BadCond
+.align 1
+_BadCond:.word 0x800
+movl 4(ap),r11
+incl _ErrCnt[r11]
+pushl 8(ap)
+pushl L892[r11]
+pushal L897
+calls $12/4,_printf
+ret
+.globl _Random
+.align 1
+_Random:.word 0xf00
+addd3 _Random9,_Random1,r10
+muld3 r10,r10,r8
+muld2 r8,r8
+muld2 r8,r10
+movd r10,-(sp)
+calls $8/4,_floor
+subd3 r0,r10,r8
+muld3 r10,L898,r4
+addd3 r4,r8,_Random1
+movd _Random1,r0
+ret
+.globl _SqXMinX
+.align 1
+_SqXMinX:.word 0xc00
+subl2 $8,sp
+movd _X,r4
+muld3 _BInvrse,r4,r10
+subd3 r10,r4,-8(fp)
+muld3 r4,r4,-(sp)
+calls $8/4,_sqrt
+subd3 r10,r0,r4
+subd2 -8(fp),r4
+divd3 _OneUlp,r4,_SqEr
+cmpd _SqEr,_Zero
+jeql L899
+cmpd _SqEr,_MinSqEr
+jgeq L901
+movd _SqEr,_MinSqEr
+L901:
+cmpd _SqEr,_MaxSqEr
+jleq L903
+movd _SqEr,_MaxSqEr
+L903:
+addd2 L6,_J
+pushal L42
+pushl 4(ap)
+calls $8/4,_BadCond
+muld3 _SqEr,_OneUlp,-(sp)
+movd _X,r4
+movd r4,-(sp)
+muld3 r4,r4,-(sp)
+pushal L905
+calls $28/4,_printf
+pushal L906
+calls $4/4,_printf
+L899:
+ret
+.globl _NewD
+.align 1
+_NewD:.word 0xfc0
+subl2 $8,sp
+muld3 _Q,_Z1,_X
+divd3 _Radix,_X,r4
+subd3 r4,_Half,-(sp)
+calls $8/4,_floor
+movd _Radix,r4
+movd r4,r10
+muld3 r4,r0,r2
+addd2 r2,_X
+movd _X,r2
+movd r2,r6
+movd _Z,r0
+movd r0,r8
+muld3 r0,r2,r4
+subd3 r4,_Q,r4
+divd2 r10,r4
+movd r4,-8(fp)
+muld3 r2,r2,r0
+movd _D,r2
+divd3 r10,r2,r4
+muld2 r0,r4
+addd3 r4,-8(fp),_Q
+muld3 r6,_Two,r4
+muld2 r2,r4
+subd3 r4,r8,_Z
+cmpd _Z,_Zero
+jgtr L907
+mnegd _Z,_Z
+mnegd _Z1,_Z1
+L907:
+muld2 _Radix,_D
+ret
+.globl _SR3750
+.align 1
+_SR3750:.word 0xc00
+movd _X,r4
+movd r4,r10
+movd _Radix,r2
+subd3 r2,r4,r0
+movd _Z2,r4
+subd3 r2,r4,r2
+cmpd r0,r2
+jlss L913
+subd3 r4,r10,r2
+subd3 r4,_W,r4
+cmpd r2,r4
+jgtr L913
+incl _I
+muld3 _D,_X,-(sp)
+calls $8/4,_sqrt
+movd r0,_X2
+movd _Z2,r4
+subd3 r4,_X2,r2
+movd _Y,r0
+subd3 r4,r0,r4
+subd3 r4,r2,_Y2
+movd _Half,r4
+subd3 r4,r0,r2
+divd3 r2,_X8,_X2
+movd _X2,r2
+muld3 r2,r4,r0
+muld2 r2,r0
+subd3 r0,r2,_X2
+addd3 r4,_Y2,r2
+subd2 _X2,r4
+addd3 r4,r2,_SqEr
+cmpd _SqEr,_MinSqEr
+jgeq L915
+movd _SqEr,_MinSqEr
+L915:
+subd3 _X2,_Y2,_SqEr
+cmpd _SqEr,_MaxSqEr
+jleq L917
+movd _SqEr,_MaxSqEr
+L917:
+L913:
+ret
+.globl _IsYeqX
+.align 1
+_IsYeqX:.word 0x0
+cmpd _Y,_X
+jeql L920
+tstl _N
+jgtr L922
+movd _Zero,r4
+cmpd _Z,r4
+jneq L924
+cmpd _Q,r4
+jgtr L924
+pushal L926
+calls $4/4,_printf
+jbr L925
+L924:
+pushal L927
+pushl $2
+calls $8/4,_BadCond
+L925:
+movd _Q,-(sp)
+movd _Z,-(sp)
+pushal L928
+calls $20/4,_printf
+movd _Y,-(sp)
+pushal L929
+calls $12/4,_printf
+movd _X,-(sp)
+pushal L930
+calls $12/4,_printf
+subd3 _X,_Y,-(sp)
+pushal L931
+calls $12/4,_printf
+L922:
+incl _N
+L920:
+ret
+.globl _SR3980
+.align 1
+_SR3980:.word 0x0
+L932:
+cvtld _I,_Q
+movd _Q,-(sp)
+movd _Z,-(sp)
+calls $16/4,_pow
+movd r0,_Y
+calls $0/4,_IsYeqX
+addl3 $1,_I,r5
+movl r5,_I
+cmpl r5,_M
+jleq L935
+jbr L934
+L935:
+muld2 _Z,_X
+L933:
+cmpd _X,_W
+jlss L932
+L934:
+ret
+.globl _PrintIfNPositive
+.align 1
+_PrintIfNPositive:.word 0x0
+tstl _N
+jleq L937
+pushl _N
+pushal L939
+calls $8/4,_printf
+L937:
+ret
+.globl _TstPtUf
+.align 1
+_TstPtUf:.word 0x0
+clrl _N
+cmpd _Z,_Zero
+jeql L940
+pushal L942
+calls $4/4,_printf
+pushal L943
+calls $4/4,_printf
+movl $_sigfpe,_sigsave
+pushal _ovfl_buf
+calls $4/4,_setjmp
+tstl r0
+jeql L944
+jbr L946
+L944:
+movd _Z,r4
+addd3 r4,r4,r2
+divd3 r4,r2,_Q9
+movd _Q9,-(sp)
+pushal L947
+calls $12/4,_printf
+subd3 _Two,_Q9,-(sp)
+calls $8/4,_fabs
+muld3 _U2,_Radix,r4
+cmpd r0,r4
+jgeq L948
+pushal L950
+calls $4/4,_printf
+pushal L951
+calls $4/4,_printf
+jbr L949
+L948:
+movd _Q9,r4
+cmpd r4,_One
+jlss L954
+cmpd r4,_Two
+jleq L952
+L954:
+L946:
+movl $1,_N
+addl3 $1,_ErrCnt+4,_ErrCnt+4
+pushal L957
+calls $4/4,_printf
+jbr L953
+L952:
+movl $1,_N
+addl3 $1,_ErrCnt+8,_ErrCnt+8
+pushal L960
+calls $4/4,_printf
+L953:
+L949:
+clrl _sigsave
+movd _Z,r4
+movd _One,r2
+muld3 r2,r4,_V9
+movd _V9,_Random1
+muld3 r4,r2,_V9
+movd _V9,_Random2
+divd3 r2,r4,_V9
+cmpd r4,_Random1
+jneq L961
+cmpd r4,_Random2
+jneq L961
+cmpd r4,_V9
+jneq L961
+tstl _N
+jleq L962
+calls $0/4,_Pause
+jbr L962
+L961:
+movl $1,_N
+pushal L965
+pushl $2
+calls $8/4,_BadCond
+movd _Z,-(sp)
+pushal L966
+calls $12/4,_printf
+cmpd _Z,_Random1
+jeql L967
+movd _Random1,-(sp)
+pushal L969
+calls $12/4,_printf
+L967:
+movd _Random2,r4
+cmpd _Z,r4
+jeql L970
+cmpd r4,_Random1
+jeql L970
+movd _Random2,-(sp)
+pushal L972
+calls $12/4,_printf
+L970:
+cmpd _Z,_V9
+jeql L973
+movd _V9,-(sp)
+pushal L975
+calls $12/4,_printf
+L973:
+cmpd _Random2,_Random1
+jeql L976
+addl3 $1,_ErrCnt+8,_ErrCnt+8
+pushal L980
+pushl $2
+calls $8/4,_BadCond
+movd _Random2,-(sp)
+pushal L981
+calls $12/4,_printf
+movd _Random1,-(sp)
+pushal L982
+calls $12/4,_printf
+L976:
+calls $0/4,_Pause
+L962:
+L940:
+ret
+.globl _notify
+.align 1
+_notify:.word 0x0
+pushl 4(ap)
+pushal L983
+calls $8/4,_printf
+pushal L984
+calls $4/4,_printf
+ret
+.globl _msglist
+.align 1
+_msglist:.word 0x800
+movl 4(ap),r11
+jbr L986
+L985:
+pushl (r11)+
+pushal L988
+calls $8/4,_printf
+L986:
+tstl (r11)
+jneq L985
+ret
+.data
+.align 2; L989:.long L990
+.long L991
+.long L992
+.long L993
+.long L994
+.long L995
+.long L996
+.long L997
+.long L998
+.long 0x0
+.text
+.globl _Instructions
+.align 1
+_Instructions:.word 0x0
+pushal L989
+calls $4/4,_msglist
+ret
+.data
+.align 2; L999:.long L1000
+.long L1001
+.long L1002
+.long L1003
+.long L1004
+.long L1005
+.long L1006
+.long L1007
+.long L1008
+.long L1009
+.long L1010
+.long L1011
+.long L1012
+.long L1013
+.long 0x0
+.text
+.globl _Heading
+.align 1
+_Heading:.word 0x0
+pushal L999
+calls $4/4,_msglist
+ret
+.data
+.align 2; L1014:.long L1015
+.long L1016
+.long L1017
+.long L1018
+.long L1019
+.long L1020
+.long L1021
+.long L1022
+.long L1023
+.long L1024
+.long L1025
+.long L1026
+.long L1027
+.long L1028
+.long L1029
+.long L1030
+.long L1031
+.long L1032
+.long L1033
+.long 0x0
+.text
+.globl _Characteristics
+.align 1
+_Characteristics:.word 0x0
+pushal L1014
+calls $4/4,_msglist
+ret
+.data
+.align 2; L1034:.long L1035
+.long L1036
+.long L1037
+.long L1038
+.long L1039
+.long L1040
+.long L1041
+.long L1042
+.long L1043
+.long L1044
+.long L1045
+.long L1046
+.long L1047
+.long L1048
+.long L1049
+.long L1050
+.long L1051
+.long 0x0
+.text
+.globl _History
+.align 1
+_History:.word 0x0
+pushal L1034
+calls $4/4,_msglist
+ret
+.globl _pow
+.align 1
+_pow:.word 0xfc0
+subl2 $24,sp
+movd 4(ap),r10
+movd 12(ap),r8
+clrl r6
+clrl -24(fp)
+cmpd r8,L5
+jneq L1052
+movd L6,r0
+ret
+L1052:
+cmpd r8,L1057
+jlss L1056
+cmpd r8,L1058
+jleq L1054
+L1056:
+cmpd r10,L887
+jeql L1054
+movd r10,-(sp)
+calls $8/4,_log
+muld3 r0,r8,-(sp)
+calls $8/4,_exp
+ret
+L1054:
+cmpd r8,L5
+jgeq L1059
+mnegd r8,r8
+movl $1,-24(fp)
+L1059:
+pushal -20(fp)
+movd r8,-(sp)
+calls $12/4,_modf
+movd r0,r8
+cmpd r8,L5
+jeql L1061
+movd r10,-(sp)
+calls $8/4,_log
+muld3 r0,r8,-(sp)
+calls $8/4,_exp
+movd r0,-12(fp)
+jbr L1062
+L1061:
+movd L6,-12(fp)
+L1062:
+pushal -4(fp)
+movd r10,-(sp)
+calls $12/4,_frexp
+movd r0,r10
+cvtdl -20(fp),r7
+jeql L1063
+L1065:
+bicl3 $0xfffffffe,r7,r5
+jeql L1069
+muld2 r10,-12(fp)
+addl2 -4(fp),r6
+L1069:
+ashl $-1,r7,r7
+jneq L1071
+jbr L1067
+L1071:
+muld2 r10,r10
+movl -4(fp),r5
+movaw 0[r5],-4(fp)
+cmpd r10,L1075
+jgeq L1065
+muld2 L1076,r10
+decl -4(fp)
+jbr L1065
+L1067:
+L1063:
+tstl -24(fp)
+jeql L1077
+divd3 -12(fp),L6,-12(fp)
+mnegl r6,r6
+L1077:
+pushl r6
+movd -12(fp),-(sp)
+calls $12/4,_ldexp
+ret
+.data
+.globl _UfNGrad
+.comm _UfNGrad,4
+.globl _SqRWrng
+.comm _SqRWrng,4
+.globl _IEEE
+.comm _IEEE,4
+.globl _Anomaly
+.comm _Anomaly,4
+.globl _Monot
+.comm _Monot,4
+.globl _NotMonot
+.comm _NotMonot,4
+.globl _Done
+.comm _Done,4
+.globl _Break
+.comm _Break,4
+.globl _RSqrt
+.comm _RSqrt,4
+.globl _RAddSub
+.comm _RAddSub,4
+.globl _RDiv
+.comm _RDiv,4
+.globl _RMult
+.comm _RMult,4
+.globl _GAddSub
+.comm _GAddSub,4
+.globl _GDiv
+.comm _GDiv,4
+.globl _GMult
+.comm _GMult,4
+.globl _N1
+.comm _N1,4
+.globl _N
+.comm _N,4
+.globl _M
+.comm _M,4
+.globl _PageNo
+.comm _PageNo,4
+.globl _Milestone
+.comm _Milestone,4
+.globl _fpecount
+.comm _fpecount,4
+.globl _ErrCnt
+.comm _ErrCnt,16
+.globl _Z9
+.comm _Z9,8
+.globl _Z2
+.comm _Z2,8
+.globl _Z1
+.comm _Z1,8
+.globl _PseudoZero
+.comm _PseudoZero,8
+.globl _Z
+.comm _Z,8
+.globl _Random2
+.comm _Random2,8
+.globl _Y2
+.comm _Y2,8
+.globl _Y1
+.comm _Y1,8
+.globl _Y
+.comm _Y,8
+.globl _Random1
+.comm _Random1,8
+.globl _X8
+.comm _X8,8
+.globl _X2
+.comm _X2,8
+.globl _X1
+.comm _X1,8
+.globl _X
+.comm _X,8
+.globl _W
+.comm _W,8
+.globl _V9
+.comm _V9,8
+.globl _V0
+.comm _V0,8
+.globl _V
+.comm _V,8
+.globl _U2
+.comm _U2,8
+.globl _U1
+.comm _U1,8
+.globl _UfThold
+.comm _UfThold,8
+.globl _OneUlp
+.comm _OneUlp,8
+.globl _S
+.comm _S,8
+.globl _Underflow
+.comm _Underflow,8
+.globl _T
+.comm _T,8
+.globl _Random9
+.comm _Random9,8
+.globl _R
+.comm _R,8
+.globl _Q9
+.comm _Q9,8
+.globl _Q
+.comm _Q,8
+.globl _Precision
+.comm _Precision,8
+.globl _MyZero
+.comm _MyZero,8
+.globl _J
+.comm _J,8
+.globl _StickyBit
+.comm _StickyBit,8
+.globl _I
+.comm _I,4
+.globl _HInvrse
+.comm _HInvrse,8
+.globl _H
+.comm _H,8
+.globl _F9
+.comm _F9,8
+.globl _F6
+.comm _F6,8
+.globl _Third
+.comm _Third,8
+.globl _E9
+.comm _E9,8
+.globl _MaxSqEr
+.comm _MaxSqEr,8
+.globl _SqEr
+.comm _SqEr,8
+.globl _MinSqEr
+.comm _MinSqEr,8
+.globl _E3
+.comm _E3,8
+.globl _Exp2
+.comm _Exp2,8
+.globl _E1
+.comm _E1,8
+.globl _E0
+.comm _E0,8
+.globl _FourD
+.comm _FourD,8
+.globl _D
+.comm _D,8
+.globl _CInvrse
+.comm _CInvrse,8
+.globl _C
+.comm _C,8
+.globl _A1
+.comm _A1,8
+.globl _AInvrse
+.comm _AInvrse,8
+.globl _ch
+.comm _ch,8
+.globl _Indx
+.comm _Indx,4
+.globl _BMinusU2
+.comm _BMinusU2,8
+.globl _RadixD2
+.comm _RadixD2,8
+.globl _BInvrse
+.comm _BInvrse,8
+.globl _Radix
+.comm _Radix,8
+.globl _sigsave
+.comm _sigsave,4
+.globl _ovfl_buf
+.comm _ovfl_buf,40
+.text 1
+.align 2; L1076:.long 0x4100,0x0
+.align 2; L1075:.long 0x4000,0x0
+.align 2; L1058:.long 0x80004589,0x0
+.align 2; L1057:.long 0x8000c589,0x0
+L1051:.ascii "see source comments for more history.\000"
+L1050:.ascii "BASIC version of this program (C) 1983 by Prof. W. M. Kahan;\000"
+L1049:.ascii "as used by certain early WANG machines.\012\000"
+L1048:.ascii "floating-point numbers, but also allows logarithmic encoding\000"
+L1047:.ascii "\012The program is based upon a conventional radix representatio"
+.ascii "n for\000"
+L1046:.ascii "of pathologies, and to say how well the arithmetic is implemente"
+.ascii "d.\000"
+L1045:.ascii "of the arithmetic, this program tries to cope with a wider varie"
+.ascii "ty\000"
+L1044:.ascii "the Radix, Precision and range (over/underflow thresholds)\000"
+L1043:.ascii "W. J. Cody and W. Waite. Although both programs try to discover\000"
+L1042:.ascii "book  `Software Manual for the Elementary Functions' (1980) by\000"
+L1041:.ascii "program called `MACHAR', which can be found at the end of the\000"
+L1040:.ascii "The diagnostic capabilities of this program go beyond an earlier"
+.ascii "\000"
+L1039:.ascii "Failures may confound subsequent diagnoses.\012\000"
+L1038:.ascii "   FAILUREs, like 2+2 == 5 .\000"
+L1037:.ascii "   Serious DEFECTs, like lack of a guard digit, and\000"
+L1036:.ascii "   FLAWs, like lack of a sticky bit,\000"
+L1035:.ascii "The program attempts to discriminate among\000"
+L1033:.ascii "     Decimal-Binary conversion is NOT YET tested for accuracy.\000"
+L1032:.ascii "     Extra-precise subexpressions are revealed but NOT YET teste"
+.ascii "d.\000"
+L1031:.ascii "     Sqrt is tested.  Y^X is not tested.\000"
+L1030:.ascii "\011and for contamination with pseudo-zeros.\000"
+L1029:.ascii "     Comparisions are checked for consistency with subtraction\000"
+L1028:.ascii "     V0  tells, roughly, whether  Infinity  is represented.\000"
+L1027:.ascii "     V = an overflow threshold, roughly.\000"
+L1026:.ascii "     E0 and PseudoZero tell whether underflow is abrupt, gradual"
+.ascii ", or fuzzy.\000"
+L1025:.ascii "     UnderflowThreshold = an underflow threshold.\000"
+L1024:.ascii "     Whether a Sticky Bit used correctly for rounding.\000"
+L1023:.ascii "\011for Mult., Div., Add/Subt. and Sqrt.\000"
+L1022:.ascii "     Whether arithmetic is chopped, correctly rounded, or someth"
+.ascii "ing else\000"
+L1021:.ascii "     Adequacy of guard digits for Mult., Div. and Subt.\000"
+L1020:.ascii "     U1 = 1/Radix^Precision = One Ulp of numbers a little less t"
+.ascii "han 1.0 .\000"
+L1019:.ascii "\011(OneUlpnit in the Last Place) of 1.000xxx .\000"
+L1018:.ascii "     U2 = Radix/Radix^Precision = One Ulp\000"
+L1017:.ascii "     Precision = number of significant digits carried.\000"
+L1016:.ascii "     Radix = 1, 2, 4, 8, 10, 16, 100, 256 ...\000"
+L1015:.ascii "Running this program should reveal these characteristics:\000"
+L1013:.ascii "\011Other relevant compiler options:\000"
+L1012:.ascii "\011Optimization level:\012\000"
+L1011:.ascii "\011Compiler:\012\000"
+L1010:.ascii "\011Computer:\012\000"
+L1009:.ascii "\011Version:\01110 February 1989;\000"
+L1008:.ascii "\011Precision:\011double;\000"
+L1007:.ascii "In doing so, please include the following information:\000"
+L1006:.ascii "\011San Francisco, CA 94143-0704, USA\012\000"
+L1005:.ascii "\011University of California\000"
+L1004:.ascii "\011Computer Center U-76\000"
+L1003:.ascii "\011Richard Karpinski\000"
+L1002:.ascii "Please send suggestions and interesting results to\000"
+L1001:.ascii "cope with unanticipated and newly uncovered arithmetic pathologi"
+.ascii "es.\012\000"
+L1000:.ascii "Users are invited to help debug and augment this program so it w"
+.ascii "ill\000"
+L998:.ascii "Answer questions with Y, y, N or n (unless otherwise indicated)."
+.ascii "\012\000"
+L997:.ascii "amend it to make further progress.\012\000"
+L996:.ascii "program anyway to see how many milestones it passes, and then\000"
+L995:.ascii "warning.  If persuasion avails naught, don't despair but run thi"
+.ascii "s\000"
+L994:.ascii "to persevere with a surrogate value after, perhaps, displaying s"
+.ascii "ome\000"
+L993:.ascii "error like Over/Underflow or Division by Zero occurs, but rather"
+.ascii "\000"
+L992:.ascii "try to persuade the computer NOT to terminate execution when an\000"
+L991:.ascii "    `END OF TEST',\012\000"
+L990:.ascii "Lest this program stop prematurely, i.e. before displaying\012\000"
+L988:.byte 37,115,10,0
+L984:.ascii "   PLEASE NOTIFY KARPINKSI!\012\000"
+L983:.ascii "%s test appears to be inconsistent...\012\000"
+L982:.ascii "\011differs from Z * 1 = %.17e\012\000"
+L981:.ascii "\011Comparison alleges that 1 * Z = %.17e\012\000"
+L980:.ascii "Multiplication does not commute!\012\000"
+L975:.ascii "Z / 1 = %.17e\012\000"
+L972:.ascii "1 * Z == %g\012\000"
+L969:.ascii "Z * 1 = %.17e \000"
+L966:.ascii "%.17e\012\011compares different from  \000"
+L965:.ascii "What prints as Z = \000"
+L960:.ascii "This is a DEFECT!\012\000"
+L957:.ascii "This is a VERY SERIOUS DEFECT!\012\000"
+L951:.ascii " has NOT just been signaled.\012\000"
+L950:.ascii "This is O.K., provided Over/Underflow\000"
+L947:.ascii "What the machine gets for (Z + Z) / Z is  %.17e .\012\000"
+L943:.ascii "(Z + Z) / Z should be safe.\012\000"
+L942:.ascii "Since comparison denies Z = 0, evaluating \000"
+L939:.ascii "Similar discrepancies have occurred %d times.\012\000"
+L931:.ascii "\011\011they differ by %.17e .\012\000"
+L930:.ascii "\011which compared unequal to correct %.17e ;\012\000"
+L929:.ascii "\011yielded %.17e;\012\000"
+L928:.ascii "\011(%.17e) ^ (%.17e)\012\000"
+L927:.ascii "computing\012\000"
+L926:.ascii "WARNING:  computing\012\000"
+L906:.ascii "\011instead of correct value 0 .\012\000"
+L905:.ascii "sqrt( %.17e) - %.17e  = %.17e\012\000"
+.align 2; L898:.long 0xc5ac37a7,0x4788471b
+L897:.ascii "%s:  %s\000"
+L896:.ascii "FLAW\000"
+L895:.ascii "DEFECT\000"
+L894:.ascii "SERIOUS DEFECT\000"
+L893:.ascii "FAILURE\000"
+L889:.ascii "          Page: %d\012\012\000"
+L888:.ascii "\012Diagnosis resumes after milestone Number %d\000"
+.align 2; L887:.long 0xc080,0x0
+L820:.ascii "END OF TEST.\012\000"
+L819:.ascii "\012A total of %d floating point exceptions were registered.\012"
+.ascii "\000"
+L816:.ascii "The arithmetic diagnosed appears to be Excellent!\012\000"
+L815:.ascii " during Gradual Underflow.\012\000"
+L814:.ascii ",\012except for possibly Double Rounding\000"
+L813:.byte 46,10,0
+L810:.ascii "854\000"
+L809:.ascii "754\000"
+L806:.ascii "the proposed IEEE standard P\000"
+L805:.ascii "Rounding appears to conform to \000"
+L802:.ascii "The arithmetic diagnosed seems Satisfactory.\012\000"
+L796:.ascii "No failures, defects nor flaws have been discovered.\012\000"
+L795:.ascii " program's subsequent diagnoses.\012\000"
+L794:.ascii "Potentially fatal FAILURE may have spoiled this\000"
+L791:.ascii "unacceptable Serious Defects.\012\000"
+L790:.ascii "The arithmetic diagnosed has \000"
+L786:.ascii "despite inconvenient Defects.\012\000"
+L785:.ascii "The arithmetic diagnosed may be Acceptable\012\000"
+L780:.ascii "Satisfactory though flawed.\012\000"
+L779:.ascii "The arithmetic diagnosed seems \000"
+L768:.ascii "The number of  %-29s %d.\012\000"
+L761:.ascii "FLAWs  discovered =\000"
+L760:.ascii "DEFECTs  discovered =\000"
+L759:.ascii "SERIOUS DEFECTs  discovered =\000"
+L758:.ascii "FAILUREs  encountered =\000"
+L754:.ascii "\012    Trying to compute 0 / 0 produces ...\000"
+L753:.ascii "  %.7e .\012\000"
+L750:.ascii "    Trying to compute 1 / 0 produces ...\000"
+L749:.ascii "What message and/or values does Division by Zero produce?\012\000"
+L748:.ascii "  instead, X / X - 1/2 - 1/2 = %.17e .\012\000"
+L747:.ascii "  X / X differs from 1 when X = %.17e\012\000"
+L742:.ascii "  X / X  traps when X = %g\012\000"
+L726:.ascii "is too far from 1.\012\000"
+L725:.ascii " unbalanced range; UfThold * V = %.17e\012\011%s\012\000"
+L724:.ascii "Badly\000"
+L717:.ascii " is too far from sqrt(Z) ^ 2 (%.17e) .\012\000"
+L716:.ascii "Comparison alleges that Z = %17e\012\000"
+L704:.ascii " is too far from sqrt(Z) ^ 2 = %.17e .\012\000"
+L703:.ascii "Comparison alleges that what prints as Z = %.17e\012\000"
+L686:.ascii "+-%g, +-%g\012and +-%g are confused by Overflow.\000"
+L685:.ascii "Comparisons involving \000"
+L679:.ascii "above is a DEFECT.\012\000"
+L678:.ascii "Any overflow signal separating this * from the one\012\000"
+L677:.ascii "                           nor for V / 1 = %.17e .\012\000"
+L676:.ascii "No Overflow should be signaled for V * 1 = %.17e\012\000"
+L675:.ascii "There is no saturation value because the system traps on overflo"
+.ascii "w.\012\000"
+L674:.ascii "Overflow saturates at V0 = %.17e .\012\000"
+L671:.ascii "Overflow threshold is V  = %.17e .\012\000"
+L662:.ascii "overflow past %.17e\012\011shrinks to %.17e .\012\000"
+L659:.ascii "-(-Y) differs from Y.\012\000"
+L658:.ascii "finds a \000"
+L657:.ascii "Seems O.K.\012\000"
+L654:.ascii "Trying it on Y = %.17e .\012\000"
+L653:.ascii "Can `Z = -Y' overflow?\012\000"
+L646:.ascii "This may generate an error.\012\000"
+L645:.ascii "Searching for Overflow threshold:\012\000"
+L644:.ascii " ... no discrepancies found.\012\000"
+L636:.ascii "Testing powers Z^Q at four nearly extreme values.\012\000"
+L635:.ascii "Accuracy seems adequate.\012\000"
+L628:.ascii "\011calculations involving tiny interest rates.\012\000"
+L627:.ascii "\011This much error may spoil financial\012\000"
+L626:.ascii "\011differs from correct value by %.17e .\012\000"
+L625:.ascii "\011(1 + (%.17e) ^ (%.17e);\012\000"
+L624:.ascii " %.17e for\012\000"
+L623:.ascii "Calculated\000"
+L616:.ascii "Testing X^((X + 1) / (X - 1)) vs. exp(2) = %.17e as X -> 1.\012\000"
+L612:.ascii "This computed value is O.K.\012\000"
+L609:.ascii "   threshold = %.17e .\012\000"
+L608:.ascii "this is not between 0 and underflow\012\000"
+L604:.ascii "actually calculating yields: %.17e .\012\000"
+L603:.ascii "should afflict the expression\012\011(%.17e) ^ (%.17e);\012\000"
+L602:.ascii "UfThold = (%.17e) ^ (%.17e)\012only underflow \000"
+L601:.ascii "Since underflow occurs below the threshold\012\000"
+L600:.ascii "Range is too narrow; U1^%d Underflows.\012\000"
+L595:.ascii "merely roundoff.\012\000"
+L594:.ascii "calculation may suffer larger Relative error than \000"
+L593:.ascii " below which\000"
+L592:.ascii "The Underflow threshold is %.17e, %s\012\000"
+L591:.ascii "X / Z = 1 + %g .\012\000"
+L590:.ascii "X / Z fails!\012\000"
+L587:.ascii "encounter Division by Zero although actually\012\000"
+L586:.ascii "  ... (f(X) - f(Z)) / (X - Z) ...\012\000"
+L585:.ascii "    if (X == Z)  ...  else\000"
+L584:.ascii "confusion when innocent statements like\012\000"
+L583:.ascii "this is a SERIOUS DEFECT\012that causes \000"
+L582:.ascii "    Should this NOT signal Underflow, \000"
+L581:.ascii "yet X - Z yields %.17e .\012\000"
+L580:.ascii "X = %.17e\012\011is not equal to Z = %.17e .\012\000"
+L575:.ascii "Underflow / UfThold failed!\012\000"
+L564:.ascii "(roundoff in UfThold) < E0.\012\000"
+L563:.ascii "Underflow is gradual; it incurs Absolute Error =\012\000"
+L558:.ascii "|Q - Y| = %.17e .\012\000"
+L557:.ascii "print out as Q = %.17e, Y = %.17e .\012\000"
+L556:.ascii "Q == Y while denying that |Q - Y| == 0; these values\012\000"
+L555:.ascii "Underflow confuses Comparison, which alleges that\012\000"
+L553:.ascii " or else multiplication gets too many last digits wrong.\012\000"
+L552:.ascii " coming down from %.17e\012\000"
+L551:.ascii "approach a threshold = %.17e\012\000"
+L550:.ascii "Either accuracy deteriorates as numbers\012\000"
+L538:.ascii "Smallest strictly positive number found is E0 = %g .\012\000"
+L537:.ascii " threshold than products.\012\000"
+L536:.ascii "Difference underflows at a higher\000"
+L533:.ascii " threshold than differences.\012\000"
+L532:.ascii "Products underflow at a higher\000"
+L525:.ascii "value PseudoZero that prints out as %g .\012\000"
+L524:.ascii "Underflow can stick at an allegedly positive\012\000"
+L523:.ascii "positive, isn't; it prints out as  %g .\012\000"
+L522:.ascii "But -PseudoZero, which should be\012\000"
+L519:.ascii "PseudoZero that prints out as: %g .\012\000"
+L518:.ascii "allegedly negative value\012\000"
+L517:.ascii "Positive expressions can underflow to an\012\000"
+L504:.ascii "multiplication gets too many last digits wrong.\012\000"
+L480:.ascii "Seeking Underflow thresholds UfThold and E0.\012\000"
+L477:.ascii "... no discrepancis found.\012\000"
+L474:.ascii "\011involving interest rates.\012\000"
+L473:.ascii "Errors like this may invalidate financial calculations\012\000"
+L452:.ascii "Testing powers Z^i for small Integers Z and i.\012\000"
+L449:.ascii "sqrt gets too many last digits wrong\000"
+L447:.ascii "to %.7e ulps.\012\000"
+L446:.ascii "Observed errors run from %.7e \000"
+L445:.ascii "Square root is neither chopped nor correctly rounded.\012\000"
+L442:.ascii "Square root appears to be chopped.\012\000"
+L437:.ascii "Square root appears to be correctly rounded.\012\000"
+L432:.ascii " fails test whether sqrt rounds or chops.\012\000"
+L431:.ascii "Radix^Precision = %.7e\012\000"
+L430:.ascii "Anomalous arithmetic with Integer < \000"
+L390:.ascii "Testing whether sqrt is rounded or chopped.\012\000"
+L368:.ascii "sqrt(X) is non-monotonic for X near %.7e .\012\000"
+L367:.ascii "sqrt has passed a test for Monotonicity.\012\000"
+L350:.ascii "Test for sqrt monotonicity.\012\000"
+L339:.ascii "Testing if sqrt(X * X) == X for %d Integers X.\012\000"
+L334:.ascii "Square root of 0.0, -0.0 or 1.0 wrong\000"
+L332:.ascii "\012Running test of square root(x).\012\000"
+L331:.ascii "     No failures found in %d integer pairs.\012\000"
+L330:.ascii "X * Y == Y * X trial fails.\012\000"
+.align 2; L321:.long 0x4140,0x0
+L320:.ascii "Testing on %d random pairs.\012\000"
+L319:.ascii "Does Multiplication commute?  \000"
+L316:.ascii "lack(s) of guard digits or failure(s) to correctly round or chop"
+.ascii "\012(noted above) count as one flaw in the final tally below\000"
+L314:.ascii "Sticky bit used incorrectly or not at all.\012\000"
+L313:.ascii "Sticky bit apparently used correctly.\012\000"
+L296:.ascii "Checking for sticky bit.\012\000"
+L293:.ascii "(X - Y) + (Y - X) is non zero!\012\000"
+L290:.ascii "Addition/Subtraction neither rounds nor chops.\012\000"
+L289:.ascii "Add/Subtract\000"
+L286:.ascii "Addition/Subtraction appears to round correctly.\012\000"
+L279:.ascii "Add/Subtract appears to be chopped.\012\000"
+L274:.ascii "Incomplete carry-propagation in Addition\000"
+L270:.ascii "Radix * ( 1 / Radix ) differs from 1\000"
+L268:.ascii "/ is neither chopped nor correctly rounded.\012\000"
+L265:.ascii "Division appears to chop.\012\000"
+L262:.ascii "Division\000"
+L259:.ascii "Division appears to round correctly.\012\000"
+L254:.ascii "Multiplication\000"
+L251:.ascii "* is neither chopped nor correctly rounded.\012\000"
+L250:.ascii "Multiplication appears to chop.\012\000"
+L247:.ascii "Multiplication appears to round correctly.\012\000"
+L237:.ascii "X * (1/X) differs from 1\000"
+L218:.ascii "Checking rounding on multiply, divide and add/subtract.\012\000"
+L217:.ascii "     *, /, and - appear to have guard digits, as they should.\012"
+.ascii "\000"
+L214:.ascii "  ...  if (X == 1.0) {.....} else {.../(X-1.0)...}\012\000"
+L213:.ascii "  such precautions against division by zero as\012\000"
+L212:.ascii "  subtraction yields  (1-U1) - 1 = 0 , thereby vitiating\012\000"
+L211:.ascii "comparison alleges  (1-U1) < 1  although\012\000"
+L208:.ascii "- lacks Guard Digit, so cancellation is obscured\000"
+L203:.ascii "* and/or / gets too many last digits wrong\000"
+L199:.ascii "Computed value of 1/1.000..1 >= 1\000"
+L197:.ascii "Division lacks a Guard Digit, so X/1 != X\000"
+L192:.ascii "Division lacks a Guard Digit, so error can exceed 1 ulp\012or  1"
+.ascii "/3  and  3/9  and  9/27 may disagree\000"
+L188:.ascii "* gets too many final digits wrong.\012\000"
+L186:.ascii "* lacks a Guard Digit, so 1*X != X\000"
+L183:.ascii "\012Checking for guard digit in *, /, and -.\012\000"
+L182:.ascii "Subtraction appears to be normalized, as it should be.\000"
+L177:.ascii "Subtraction is not normalized X=Y,X+Z != Y+Z!\000"
+L173:.ascii "roughly %g extra significant decimals.\012\000"
+L172:.ascii "precisely with about %g extra B-digits, i.e.\012\000"
+L171:.ascii "Some subexpressions appear to be calculated extra\012\000"
+L165:.ascii "of an\012extra-precision\000"
+L164:.ascii "Z1 = %.7e, or Z2 = %.7e \000"
+L163:.ascii ", or exact rational arithmetic a result\012\000"
+L162:.ascii "Because of unusual Radix = %f\000"
+L158:.ascii "\011U2 = %.7e, Z2 - U2 = %.7e\012\000"
+L157:.ascii "\011U1 = %.7e, Z1 - U1 = %.7e\012\000"
+L156:.ascii "Precision\000"
+L155:.byte 0
+L148:.ascii "That feature is not tested further by this program.\012\000"
+L143:.ascii "Possibly some part of this\000"
+L142:.ascii "by extra-precise evaluation of arithmetic subexpressions.\012\000"
+L141:.ascii "are symptoms of inconsistencies introduced\012\000"
+L140:.ascii "respectively  %.7e,  %.7e,  %.7e,\012\000"
+L139:.ascii "Disagreements among the values X1, Y1, Z1,\012\000"
+L117:.ascii "Precision worse than 5 decimal figures  \000"
+L115:.ascii "The number of significant digits of the Radix is %f .\012\000"
+L114:.ascii "logarithmic encoding has precision characterized solely by U1.\012"
+.ascii "\000"
+L111:.ascii "of significant digits but, by itself, this is a minor flaw.\012\000"
+L110:.ascii "Precision cannot be characterized by an Integer number\012\000"
+L97:.ascii "Comparison is fuzzy,X=1 but X-1/2-1/2 != 0\000"
+L93:.ascii "(1-U1)-1/2 < 1/2 is FALSE, prog. fails?\000"
+.align 2; L91:.long 0x4220,0x0
+L86:.ascii "Radix is not as good as 2 or 10\000"
+L82:.ascii "Radix is too big: roundoff problems\000"
+L80:.ascii "MYSTERY: recalculated Radix = %.7e .\012\000"
+L79:.ascii "Radix confirmed.\012\000"
+.align 2; L76:.long 0xd70a3d23,0xa3d83d70
+L75:.ascii "gets better closest relative separation U1 = %.7e .\012\000"
+L74:.ascii "confirms closest relative separation U1 .\012\000"
+L59:.ascii "Recalculating radix and precision\012 \000"
+L58:.ascii "Closest relative separation found is U1 = %.7e .\012\012\000"
+L52:.ascii "Radix = %f .\012\000"
+L43:.ascii "Searching for Radix and Precision.\012\000"
+L42:.byte 10,0
+L41:.ascii "-1, 0, 1/2, 1, 2, 3, 4, 5, 9, 27, 32 & 240 are O.K.\012\000"
+L36:.ascii "5 != 4+1, 240/3 != 80, 240/4 != 60, or 240/5 != 48\000"
+L32:.ascii "9 != 3*3, 27 != 9*3, 32 != 8*4, or 32-27-4-1 != 0\000"
+L28:.ascii "1/2 + (-1) + 1/2 != 0\000"
+L24:.ascii "-1+1 != 0, (-1)+abs(1) != 0, or -1+(-1)*(-1) != 0\000"
+L20:.ascii "3 != 2+1, 4 != 3+1, 4+2*(-2) != 0, or 4-3-1 != 0\000"
+.align 2; L18:.long 0x126e3b83,0x4fe0978d
+L17:.ascii "Comparison alleges that -0.0 is Non-zero!\012\000"
+L12:.ascii "0+0 != 0, 1-1 != 0, 1 <= 0, or 1+1 != 2\000"
+L10:.ascii "Program is now RUNNING tests on small integers:\012\000"
+.align 2; L6:.long 0x4080,0x0
+.align 2; L5:.long 0x0,0x0
+L1:.ascii "\012* * * FLOATING-POINT ERROR * * *\012\000"

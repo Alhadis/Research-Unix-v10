@@ -1,0 +1,23 @@
+MGR=nameserver
+BINDIR=/usr/ipc/mgrs
+CC=CC
+OBJS=set.o tuple.o attribute.o ordered.o distance.o parsefiles.o
+CFLAGS=-g
+
+all:V: ns
+$OBJS: dbtypes.h
+
+ns: $OBJS ns.o
+	CC $CFLAGS $prereq -lipc -lin ../common/libcommon.a -o ns
+
+tester: $OBJS tester.o
+	CC $CFLAGS $prereq -lipc ../common/libcommon.a -o tester
+
+install: ns
+	rm -f $BINDIR/ns
+	cp ns $BINDIR/ns
+	chmod 775 $BINDIR/ns
+	/etc/chown bin,bin $BINDIR/ns
+
+clean:
+	rm -f *.out *.o ns

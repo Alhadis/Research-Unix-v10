@@ -1,0 +1,15 @@
+changed flush.c so as not to flake out when flushing an unbuffered file
+
+changed swcoup.c and osopen.c to use mode 0666 when creating files.
+	If the user desires more protection, umask is the right way to go.
+
+made host(4,"x") return value of environment variable x
+
+changed osint.s to relocate flptr by new-old stack over load module
+	write/read.  changed header.s to make flptr global.
+
+changed osopen.c to make buffered input (but not output) the default
+	on tty-style file.  Original code:
+		if ( testty( fd ) == 0 )
+	Modified code:
+		if ( (ioptr -> flg & IO_INP) == 0 && testty( fd ) == 0 )

@@ -1,0 +1,51 @@
+		Definition of Script Language
+
+OBJECTS
+Text
+%   text <options> <x> <y> <string>
+	Quote rules for string:
+	    If no leading quote, string starts at first character not
+		space or tab and goes for rest of line
+	    If leading quote, later leading white space is kept and
+		trailing quote at end of line is stripped (if present);
+		intermediate quotes are kept
+	Some strings may be recognized by some processors:
+	    bullet, dot, circle, times
+	Options -- [default] in brackets
+	    [center]  ljust  rjust  above  below
+	    small  [medium]  big  bigbig
+	Option format (for text and geometry):
+	    list of option names (possibly null) terminated by first number
+Geometry
+%   line <options> <x1> <y1> <x2> <y2>
+	Options
+	    [solid]  fat  fatfat  dotted  dashed
+	    [-]  ->  <-  <->
+%   box <options> <xmin> <ymin> <xmax> <ymax>
+	Options
+	    [nofill]  fill
+%   circle <options> <x1> <y1> <radius>
+	Radius measured in x dimension
+	Options
+	    [nofill]  fill
+
+HOUSEKEEPING
+Erasing
+%   (label:) <text or geometric command>
+	At most one label per line
+%   erase <label>
+	Distinct name space for each view
+	``foo: command'' implicitly deletes previous foo
+	Error if object never defined or already deleted
+%   clear
+	Erase all objects currently in current view
+Time
+%   click <optional name>
+Independent views
+%   view <name>
+	If no view statements appear, there is a single implicit view def.view
+	If geometry appears before any view statement, it goes in the
+	    first view mentioned, and a warning is generated
+
+MISC
+Comments follow #; blank lines ignored

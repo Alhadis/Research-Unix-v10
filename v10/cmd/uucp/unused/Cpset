@@ -1,0 +1,71 @@
+#!/bin/sh
+#	@(#)Cpset	1.3
+
+
+# This shell simulates the action of the spset command that
+# is available on system V systems.
+#  It only does the part required for my makefile!
+#
+USAGE="usage: Cpset [-o] from-file to-file  mode  owner group"
+#
+# It will copy the file, change the mode, owner and
+# group if specified.  If -o is used, an existing file is moved
+# to OLDfile.
+
+OLD=
+MODE=
+OWNER=
+GROUP=
+FILE=
+TO=
+
+while [ $# -gt 0 ]
+do
+	case $1 in
+	-o)	OLD="OLD"
+		shift
+		;;
+	*)	break
+		;;
+	esac
+done
+
+if [ $# -lt 2 ]; then
+	echo $USAGE
+	exit 1
+fi
+
+FILE=$1
+TO=$2
+MODE=$3
+OWNER=$4
+GROUP=$5
+
+BASE=`basename $TO`
+TODIR=` echo $TO | sed "s/${BASE}\$//"`
+if [ -n "$OLD" -a -f $TO ]; then
+	rm -f $TODIR/OLD$BASE
+	echo Cpset: mv $TO $TODIR/OLD$BASE
+	mv $TO $TODIR/OLD$BASE
+fi
+
+rm -f $TO
+echo Cpset: cp $FILE $TO
+cp $FILE $TO
+
+if [ -n "$GROUP" ]; then
+	echo Cpset: chgrp $GROUP $TO
+	chgrp $GROUP $TO
+fi
+
+if [ -n "$OWNER" ]; then
+	echo Cpset: chown $OWNER $TO
+	chown $OWNER $TO
+fi
+
+if [ -n "$MODE" ]; then
+	echo Cpset: chmod $MODE $TO
+	chmod $MODE $TO
+fi
+
+ls -l $TO

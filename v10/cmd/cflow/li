@@ -1,0 +1,50 @@
+L=/src/cmd/lint
+LL="$L $HOME/lib"
+
+H=/usr/tmp/hlint$$	# header buffer file
+O="-C -Dlint" 		# cpp options
+P=unix
+PATH=/bin:/usr/bin 
+S=/usr/tmp/slint$$	# string buffer file
+T=/usr/tmp/lint.$$	# intermediate file
+X=
+
+trap "rm -f $T $H $S; exit" 1 2 3 15
+
+for A in $*
+do
+	case $A in
+	-[IDU]*)	O="$O $A" ;;
+	-L*)	LL="`expr $A : '-L\(.*\)'` $LL";;
+	-l*)	ln=llib$A.ln
+		LN=
+		for ll in $LL
+		do
+			if [ -f $ll/$ln ]
+			then LN=$ll/$ln
+			fi
+		done
+		if [ "$LN" ]
+		then cat $LN >> $T
+		else echo "$0: $ln: not found"
+		fi ;;
+	-*n*)	P=""  X="$X$A" ;; 
+	-*p*)	P="port"  X="$X$A" ;;
+	-*)	X="$X$A" ;;
+	*.c)	(/lib/cpp $O $A | $L/lint1 $X -H$H -S$S $A >>$T)2>&1 ;;
+	*.ln)	cat $A >> $T;;
+	*)	echo "$0: bad file or option ignored: $A" ;;
+	esac
+done
+
+case $P in
+	unix)	cat $L/llib-lc.ln >>$T ;;
+	port)	cat $L/llib-port.ln >>$T ;;
+esac
+
+if [ -s $H ]
+then
+	$L/lint2 -T$T $X -H$H -S$S
+fi
+
+rm -f $T $H $S

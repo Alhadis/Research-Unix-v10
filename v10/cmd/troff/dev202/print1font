@@ -1,0 +1,30 @@
+# print one font from description file
+
+awk '
+BEGIN {
+	filename = ARGV[2]
+	print ".sp 2"
+	print ".vs 18p"
+	print ".ll 5i"
+	print ".ft 1"
+	for (i = 2; i < ARGC; i++)
+		printf "%s ", ARGV[i]
+	printf "\n"
+	print ".sp"
+	print ".fp 2 2", filename
+	print ".ft 2"
+	ARGC = 2
+	ARGV[1] = filename
+}
+
+NR==1, /charset/	{ next }
+
+$1 ~ /^.$/	{ print "\\&" $1 }
+
+$1 ~ "^[zZ%]$"	{ print ".br" }
+
+$1 ~ /^..$/	{ printf "\\ \\(%s\\|\\s6\\d\\f1\\e(%s\\fP\\u\\s0\n", $1, $1 }
+
+$1 ~ /^---$/	{ printf "\\ \\N@%s@\\|\\s6\\d\\f1\\eN\\(fm%s\\(fm\\fP\\u\\s0\n", $4, $4 }
+
+' $*

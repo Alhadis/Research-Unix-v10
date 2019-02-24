@@ -1,0 +1,3373 @@
+# To unbundle, sh this file
+echo makefile 1>&2
+sed 's/.//' >makefile <<'//GO.SYSIN DD makefile'
+-CC = cc
+-YFLAGS = -dDv
+-CFLAGS = -g
+-OBJS = pret.o pret1.o pret2.o pret3.o pret4.o pret6.o pret7.o pret8.o pret9.o pret0.o pretlex.o
+-
+-#	FILES:
+-#		pret.y	-	yacc parser
+-#		pret.h	-	constants and macros
+-#		pret.d	-	internal representation of the tables
+-#		pret0.c  -	reduction of the state machines
+-#		pret1.c	-	qsets
+-#		pret2.c	-	operations on rows and columns
+-#		pret3.c	-	procedures
+-#		pret4.c	-	processes
+-#		pret6.c	-	queues and messages
+-#		pret7.c	-	memory allocation
+-#		pret8.c	-	variables
+-#		pret9.c	-	parameters
+-#		pret.expr.c -	expressions
+-#		pretlex.c	lexical analyzer
+-
+-pret:	$(OBJS) pret.h pret.d
+-	$(CC) $(CFLAGS) $(OBJS) -lln -o pret
+-
+-pret.o:	pret.y pret.expr.c
+-
+-pretlex.o:	pretlex.l x.tab.h
+-	lex pretlex.l
+-	$(CC) $(CFLAGS) -c lex.yy.c
+-	rm lex.yy.c
+-	mv lex.yy.o pretlex.o
+-
+-x.tab.h:	y.tab.h
+-	-cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+-
+-clean:
+-	rm -f *.o [xy].tab.[ch] y.output pret.out pret.err pret.tmp core a.out
+-
+-install:
+-	cp pret /usr/bin
+//GO.SYSIN DD makefile
+echo pret.d 1>&2
+sed 's/.//' >pret.d <<'//GO.SYSIN DD pret.d'
+-	/*
+-	** 3-dimensional table:
+-	**	one row per state
+-	**	one column per event
+-	**	one `pilar' per possible response
+-	*/
+-
+- struct ENTRY {
+-	int nrpils;		/* size of pilar stack */
+-	struct PILAR *pilar;
+-	struct ENTRY *nextrow;
+-	struct ENTRY *nextcol;
+- };
+- struct PILAR {
+-	int transf;		/* row transition function   */
+-	int code;		/* output message or bltin index */
+-	struct PILAR *nxtp;	/* last pilar points to NULL */
+- };
+-
+- struct COL {
+-	int coltype;		/* msg, spont, tau, default, task, condition */
+-	int ccode;
+- };
+-
+- struct ROW {
+-	char name[256];		/* can be composite name   */
+-	char reached;		/* is row reachable ?      */
+-	char refcount;		/* label reference index   */
+-	char labeled;		/* start of do-loop or label */
+-	int mapping;		/* indicates transit rows  */
+-	int maptwo;		/* renumbers reduced table */
+- };
+//GO.SYSIN DD pret.d
+echo pret.expr.c 1>&2
+sed 's/.//' >pret.expr.c <<'//GO.SYSIN DD pret.expr.c'
+-#define DEBUG	 0
+-
+-#define setv	 1
+-#define addeq	 2
+-#define subeq	 3
+-#define muleq	 4
+-#define diveq	 5
+-#define modeq	 6
+-#define plus	 7
+-#define minus	 8
+-#define times	 9
+-#define div	10
+-#define mod	11
+-#define power	12
+-#define uminus	13
+-#define gt	14
+-#define lt	15
+-#define ge	16
+-#define le	17
+-#define eq	18
+-#define ne	19
+-#define land	20
+-#define lor	21
+-#define lnot	22
+-#define princ	23
+-#define prdec	24
+-#define poinc	25
+-#define podec	26
+-
+-#define OP	0
+-#define NM	1
+-
+-#define unary(c)	(c == uminus || c == lnot || c >= princ)
+-#define binary(c)	!unary(c)
+-
+-struct REVPOL {
+-	char toktyp;
+-	short tokval;
+-} *parsed;
+-
+-int prs = 0;
+-extern int verbose;
+-char * Emalloc();
+-
+-pushnm(tok)
+-{	if (prs >= EXPRMAX)
+-		whoops("expression too long");
+-	parsed[prs].toktyp = NM;
+-	parsed[prs++].tokval = tok;
+-}
+-
+-pushop(tok)
+-{	if (prs >= EXPRMAX)
+-		whoops("expression too long");
+-	parsed[prs].toktyp = OP;
+-	parsed[prs++].tokval = tok;
+-}
+-
+-struct Node *
+-newnode(ntyp, nval, left, right)
+-	struct Node *left, *right;
+-{
+-	struct Node *try;
+-
+-	try = (struct Node *) Emalloc(sizeof(struct Node));
+-	try->ntyp = ntyp;
+-	try->nval = nval;
+-	try->left = left;
+-	try->right = right;
+-	return try;
+-}
+-
+-makeexpr(n)
+-{	pushexpr(n);
+-	return -(2 + addrevpol());
+-}
+-
+-pushexpr(n)
+-	struct Node *n;
+-{
+-	if (n == NULL) return;
+-	switch (n->ntyp) {
+-	case NM: pushnm(n->nval); break;
+-	case OP: pushexpr(n->left); pushexpr(n->right); pushop(n->nval); break;
+-	default: whoops("unknown node type");
+-	}
+-}
+-
+-struct {
+-	short n;
+-	struct REVPOL *p;
+-} revpols[MANY];
+-
+-int npols = 0;
+-
+-numexps(fd)
+-	FILE *fd;
+-{ int i, j;
+-  struct REVPOL *p;
+-
+-	fprintf(fd, "EXPR %d\n", npols);
+-	for (i = 0; i < npols; i++)
+-	{	fprintf(fd, "%d: ", revpols[i].n);
+-		p = revpols[i].p;
+-		for (j = (revpols[i].n)-1; j >= 0; j--)
+-			fprintf(fd, "%d/%d ", p[j].toktyp, p[j].tokval);
+-		putc('\n', fd);
+-}	}
+-
+-findsame(a)
+-{	struct REVPOL *p, *q;
+-	int k = revpols[a].n;
+-	int i, j;
+-
+-	q = revpols[a].p;
+-	for (i = 0; i < npols; i++)
+-	{	if (revpols[i].n != revpols[a].n)
+-			continue;
+-		p = revpols[i].p;
+-		for (j = 0; j < k; j++)
+-			if (p[j].toktyp != q[j].toktyp
+-			||  p[j].tokval != q[j].tokval)
+-				break;
+-		if (j == k)
+-			break;
+-	}
+-	return i;
+-}
+-
+-addrevpol()
+-{ int i;
+-  int retval;
+-
+-	if (npols >= MANY)
+-		whoops("too many expressions");
+-
+-	revpols[npols].n = prs;
+-	revpols[npols].p = parsed;
+-
+-	if ((retval = findsame(npols)) == npols)
+-		npols++;
+-
+-#if 0
+-	printf("exp(%d): ", prs);
+-	for (i = prs-1; i >= 0; i--)
+-	{	if (parsed[i].toktyp == NM)
+-		{	printf("%d ", parsed[i].tokval);
+-			continue;
+-		}
+-		switch(parsed[i].tokval) {
+-		case setv:	printf("= "); break;
+-		case addeq:	printf("+= "); break;
+-		case subeq:	printf("-= "); break;
+-		case muleq:	printf("*= "); break;
+-		case diveq:	printf("/= "); break;
+-		case modeq:	printf("%= "); break;
+-		case plus:	printf("+ "); break;
+-		case minus:	printf("- "); break;
+-		case times:	printf("* "); break;
+-		case div:	printf("/ "); break;
+-		case mod:	printf("% "); break;
+-		case power:	printf("^ "); break;
+-		case uminus:	printf(".- "); break;
+-		case gt:	printf("> "); break;
+-		case lt:	printf("< "); break;
+-		case ge:	printf(">= "); break;
+-		case le:	printf("<= "); break;
+-		case eq:	printf("== "); break;
+-		case ne:	printf("!= "); break;
+-		case land:	printf("&& "); break;
+-		case lor:	printf("|| "); break;
+-		case lnot:	printf("! "); break;
+-		case princ:	printf("++. "); break;
+-		case prdec:	printf("--. "); break;
+-		case poinc:	printf(".++ "); break;
+-		case podec:	printf(".-- "); break;
+-		default:	fprintf(stderr, "%d", parsed[i].tokval);
+-				whoops("unknown operator");
+-		}
+-	}
+-	putchar('\n');
+-#endif
+-	parsed = (struct REVPOL *) Emalloc(EXPRMAX * sizeof(struct REVPOL));
+-	prs = 0;
+-
+-	return retval;
+-}
+//GO.SYSIN DD pret.expr.c
+echo pret.h 1>&2
+sed 's/.//' >pret.h <<'//GO.SYSIN DD pret.h'
+-#define NORM	0	/* normal  message */
+-#define INITM	1	/* initial message */
+-
+-#define SND	2
+-#define RCV	4
+-#define SAR	6
+-#define RFR	1
+-#define DCL	2
+-#define RAD	3
+-#define ADR	4
+-#define DAR	6
+-
+-#define MAXNAME	32	/* max available composite namelength */
+-#define MAXPROC	16	/* max number of processes */
+-#define MANY	512	/* max nr of distinct rows or names */
+-#define MAXDEPTH 32	/* max nesting depth of if's and do's */
+-#define EXPRMAX	64
+-#define NOSTATE -1	/* default state */
+-
+-#define SOME	 1	/* not none */
+-#define NONE	-1	/* default signal */
+-#define NEW	-1
+-#define OLD	0
+-#define LAB	1
+-
+-#define ISM	0	/* message variable   */
+-#define ISQ	1	/* queue-set variable */
+-#define ISV	2	/* protocol variable  */
+-#define ISQN	3	/* queuename variable */
+-
+-			/* types of transitions: */
+-#define INP	10		/* recv specific message */
+-#define DFL	11		/* default input from q  */
+-#define TMO	12		/* transition on timeout */
+-#define OUTP	13		/* append message to a q */
+-#define SPN	14		/* builtin call or transit state */
+-#define CND	15		/* conditional   */
+-#define FCT	16		/* function call */
+-
+-				/* `builtins:' */
+-#define INCR	16		/* increment   */
+-#define DECR	17		/* decrement   */
+-#define SUBT	18		/* subtract    */
+-#define ADDT	19		/* add         */
+-#define SETV	32		/* set:     =  */
+-#define ISEQ	256		/* compare: == */
+-#define NTEQ	257		/* !=          */
+-#define GREQ	258		/* >=          */
+-#define SMEQ	259		/* <=          */
+-#define GRNQ	260		/* >           */
+-#define SMNQ	261		/* <           */
+-
+-#define SPNT(u)	(u == TMO || u == OUTP)
+-
+-struct QTABLE {
+-	char name[MAXNAME];
+-	short status;
+-	short limit;
+-	short owner;
+-	int multiple;
+-	unsigned char magic;
+-};
+-
+-#define BASEVAL	MAXPROC		/* base value for coding messages */
+-#define NQUEUES	2*MAXPROC	/* maximum number of queues */
+-
+-struct PROCTABLE {
+-	char name[MAXNAME];
+-	int nrstates;
+-	int unreach;
+-	int replic;
+-};
+//GO.SYSIN DD pret.h
+echo pret.y 1>&2
+sed 's/.//' >pret.y <<'//GO.SYSIN DD pret.y'
+-%{
+-#include <stdio.h>
+-#include "pret.h"
+-#include "pret.d"
+-
+-#define YYDEBUG 1
+-
+-struct Node {
+-	int ntyp;	/* OP ~ nval&left&right, NM ~ val */
+-	int nval;
+-	struct Node *left, *right;
+-};
+-
+-extern struct Node *newnode();
+-
+-struct PARS {
+-	int home;
+-	int dest;
+-	int bpnt;
+-} ties[MAXDEPTH];
+-
+-FILE *tb;				/* temp file to store tables */
+-
+-char procname[MAXNAME], refname[MAXNAME], qsetname[MAXNAME];
+-char str[256], filename[256];
+-char strings[MANY][MAXNAME];
+-extern char yytext[];
+-extern struct QTABLE qtable[NQUEUES];
+-extern int varwidths;
+-int nnames = 0;
+-int linenumber = 1;
+-int linecode = 0;	/* include source code references  */
+-int nest = 0;		/* nesting level of comments (lex) */
+-int anyerror = 0;
+-
+-int pid = NONE;	/* process number  */
+-int qid = NONE;	/* queue number    */
+-int rid = NONE;	/* template number when defined */
+-int sid = NONE;	/* qset number     */
+-int nid = NONE;	/* template number when refered */
+-int cid = NONE;	/* index in call table          */
+-int qind, qisz;		/* queue's initial string size  */
+-int parnum;		/* counts actual parameters     */
+-int assertion = -1;	/* id of assertion table, if any */
+-int inertion = -1;	/* id of error table, if any */
+-int vartype, inside;
+-int n, m, from, xx, zz;
+-int soo = 0;		/* start of optionlist */
+-int curstate = 0;
+-int curdepth = 0;
+-int lastloop = -1;
+-
+-int verbose = 0;
+-int nopurge = 0;
+-
+-checknames()
+-{
+-	checkrefs();
+-	checkglobvars();
+-	checkqs();
+-}
+-
+-putglobals(fd)
+-	FILE *fd;
+-{
+-	numrefs(fd);
+-	numprocs(fd);
+-	numsorts(fd);
+-	numinits(fd);
+-	numglobvars(fd);
+-}
+-
+-puttables(fd1)
+-	FILE *fd1;
+-{	FILE *fd2;
+-	char buffer[MANY];
+-	int howmuch;
+-
+-	if ((fd2 = fopen("pret.tmp", "r")) == NULL)
+-		whoops("cannot find pret.tmp");
+-
+-	while ((howmuch = fread(buffer, sizeof(*buffer), MANY, fd2)) > 0)
+-		fwrite(buffer, sizeof(*buffer), howmuch, fd1);
+-
+- 	fclose(fd2);
+-	unlink("pret.tmp");
+-}
+-
+-makebin()
+-{	FILE *fd;
+-
+-	if ((fd = fopen((anyerror)?"pret.err":"pret.out", "w")) == NULL)
+-		whoops("cannot create output file");
+-
+-	putglobals(fd);
+-	puttables(fd);
+-	numexps(fd);
+-	fclose(fd);
+-	if (anyerror)
+-		fprintf(stderr, "output written to `pret.err'\n");
+-}
+-
+-transfer(cl, tg)
+-{	int i = curstate;
+-	curstate = enterowname(NEW, "", DAR);
+-	setrans(i, cl, curstate, tg);
+-}
+-
+-#include "pret.expr.c"
+-
+-%}
+-%union{
+-	int resu;
+-	struct Node *node;
+-}
+-
+-%type	<resu>	PREIO INDEX QINDEX IMPORT ASGN ASGN
+-%type	<node>	expr VARNAME
+-%token	<resu>	NAME VALUE ARNAME QSNAME
+-
+-%start		PROT_SPEC
+-%token		ASSERT ERROR
+-%token		PROCESS PBEGIN END IF FI DO OD
+-%token		timeout skip BREAK DEFAULT GOTO
+-%token		FLAG ARROW SEMICOLON COLON
+-%token		QUEUES QSET PVAR MESG
+-%right		'=' ADDEQ SUBEQ MULEQ DIVEQ MODEQ
+-%left		OR
+-%left		AND
+-%left		GT GE LT LE EQ NE
+-%left		'+' '-'
+-%left		'*' '/' '%'
+-%left		UNARYMINUS NOT INC DEC
+-%right		'^'
+-
+-%%
+-
+-PROT_SPEC	:	ONEMODULE
+-	 	|	PROT_SPEC ONEMODULE
+-	 	;
+-
+-ONEMODULE	:	PROC_SPEC
+-		|	TASK_SPEC
+-		|	ONEDECL
+-		|	REQUIREMENT
+-		;
+-
+-PROC_SPEC	:	PROCESS NAME QINDEX
+-			{	strcpy(procname, strings[$2]);
+-				pid = newprocname(strings[$2], $3);
+-			}
+-			PBEGIN ANYDECLS
+-			{ extern int extras;
+-			  int ival;
+-				curstate = enterowname(NEW, "", DAR);
+-				newcalltable();
+-				ival = 3*MANY+pid+extras;
+-				addvarname("_PROCID", (DCL|RFR), ival, NONE, 0);
+-			}
+-			SEQUENCE END
+-			{	wrapup(NONE, pid, tb, nopurge, verbose);
+-				pid = NONE;
+-				strcpy(procname, "_");
+-			}
+-	       	;
+-
+-ANYDECLS	:	/* empty */
+-		|	DECLS
+-		;
+-DECLS		:	ONEDECL
+-		|	DECLS ONEDECL
+-		;
+-
+-ONEDECL		:	QDECLS
+-		|	VARDECLS
+-		;
+-/*
+- *	QUEUES
+- *      ======
+- */
+-
+-QDECLS		:	QUEUES QDECL SEPARATOR
+-		;
+-QDECL		:	ONEQ
+-		|	QNAMELIST
+-		;
+-
+-ONEQ		:	NAME QINDEX '='
+-			{	if ($2 == NONE || (qisz=$2) <= 0)
+-				yyerror("illegal queue size, %s", strings[$1]);
+-				qid = newqname(strings[$1], DCL, qisz, NONE);
+-			}
+-			PBEGIN MNAMELIST END
+-		;
+-
+-/*
+- *	VARIABLES and QUEUESETS
+- *      =======================
+- */
+-
+-VARDECLS	:	PVAR VNAMELIST  SEPARATOR
+-		|	QSET QSETDECL SEPARATOR
+-		;
+-
+-QINDEX		:	/* empty */	{ $$ = NONE; }
+-		|	'[' VALUE ']'	{ $$ =   $2; }
+-		;
+-
+-QSETDECL	:	NAME PBEGIN NAME QINDEX COLON
+-			{	xx = newqname(strings[$3], RFR, NONE, $4);
+-				sid = newqset(strings[$1], strings[$3], DCL, $4);
+-			}
+-			SNAMELIST END
+-			{	closeqset(sid);
+-			}
+-		;
+-/*
+- *	PROCEDURES
+- *      ==========
+- */
+-
+-TASK_SPEC	:	NAME
+-			{	rid = newreftask(strings[$1], DCL);
+-				curstate = enterowname(NEW, "", DAR);
+-				strcpy(refname, strings[$1]);
+-				newcalltable();
+-				vartype = ISV;
+-				inside = 1;
+-			}
+-			'(' ANYPARAMS ')'
+-			{	inside = 0;
+-			}
+-			ANYPARTYPES
+-			{	reorder();	/* renumber formal parameters */
+-			}
+-			PBEGIN
+-			ANYDECLS
+-			SEQUENCE
+-			END
+-			{	wrapup(rid, NONE, tb, nopurge, verbose);
+-				strcpy(refname, "_");
+-				rid = NONE;
+-			}
+-		;
+-
+-ANYPARAMS	:	/* empty */
+-		|	PNAMELIST
+-		|	error
+-			{	yyerror("bad namelist", "");
+-			}
+-
+-		;
+-
+-ANYPARTYPES	:	/* empty */
+-		|	PARTYPES
+-		|	error
+-			{	yyerror("bad parameterlist", "");
+-			}
+-		;
+-
+-PARTYPES	:	ONEPARTYPE SEMICOLON
+-		|	PARTYPES ONEPARTYPE SEMICOLON
+-		;
+-ONEPARTYPE	:	PVAR
+-			{	vartype = ISV;
+-			}
+-			PNAMELIST
+-		|	QSET NAME PBEGIN NAME COLON
+-			{	strcpy(qsetname, strings[$2]);
+-				sid = newqset(strings[$2], strings[$4], DCL, NONE);
+-				qid = addFpar(rid, strings[$2], sid, ISQ, inside);
+-				vartype = ISM;
+-			}
+-			PNAMELIST END
+-			{	qid = NONE;
+-				closeqset(sid);
+-			}
+-		;
+-/*
+- *	REQUIREMENTS
+- *	============
+- */
+-REQUIREMENT	:	ASSERT
+-			PBEGIN
+-			{	rid = newreftask(" assert", DCL);
+-				assertion = rid;
+-				curstate = enterowname(NEW, "", DAR);
+-				strcpy(refname, " assert");
+-				newcalltable();
+-			}
+-			_SEQUENCE
+-			END
+-			{	wrapup(rid, NONE, tb, nopurge, verbose);
+-				strcpy(refname, "_");
+-				rid = NONE;
+-				lastloop = -1;
+-			}
+-		|	ERROR
+-			PBEGIN
+-			{	rid = newreftask(" error", DCL);
+-				inertion = rid;
+-				curstate = enterowname(NEW, "", DAR);
+-				strcpy(refname, " error");
+-				newcalltable();
+-			}
+-			_SEQUENCE
+-			END
+-			{	wrapup(rid, NONE, tb, nopurge, verbose);
+-				strcpy(refname, "_");
+-				rid = NONE;
+-				lastloop = -1;
+-			}
+-		;
+-_SEQUENCE	:	_STMNT
+-		|	_SEQUENCE SEPARATOR _STMNT
+-	 	;
+-
+-_STMNT		:	skip		{ lastloop = -1; }
+-		|	_SELECT		{ lastloop = -1; }
+-	 	|	_CYCLE
+-	 	|	SEND		{ lastloop = -1; }
+-	 	|	GUARD		{ lastloop = -1; }
+-		|	STRUCTGOTO	{ lastloop = -1; }
+-		|	error
+-			{	yyerror("illegal assertion statement, %s", yytext);
+-			}
+-	 	;
+-_SELECT		:	IF
+-			{	if (++curdepth == MAXDEPTH)
+-					whoops("nesting too deep");
+-
+-				ties[curdepth].home = curstate;
+-				ties[curdepth].dest = enterowname(NEW, "", DAR);
+-				ties[curdepth].bpnt =
+-					(curdepth > 1) ? ties[curdepth-1].bpnt : -1;
+-			}
+-			_OPTIONLIST FI
+-			{	setrowname(ties[curdepth].dest);
+-				curstate = ties[curdepth--].dest;
+-			}
+-		;
+-
+-_CYCLE		:	DO
+-			{	if (curdepth++ == MAXDEPTH)
+-					whoops("nesting too deep");
+-
+-				labelrow(curstate);
+-				ties[curdepth].home = curstate;
+-				ties[curdepth].dest = curstate;
+-				ties[curdepth].bpnt = enterowname(NEW, "", DAR);
+-			}
+-			_OPTIONLIST OD
+-			{	lastloop = ties[curdepth].home;
+-				setrowname(ties[curdepth].bpnt);
+-				curstate = ties[curdepth--].bpnt;
+-			}
+-		;
+-_OPTIONLIST	:	_ONEOPTION
+-	 	|	_ONEOPTION _OPTIONLIST
+-	 	;
+-
+-_ONEOPTION	:	FLAG _SEQUENCE
+-			{	getrowname(str, ties[curdepth].dest);
+-				from = curstate;
+-				curstate = enterowname(OLD, str, DAR);
+-				setrans(from, 0, curstate, NONE);
+-				curstate = ties[curdepth].home;
+-			}
+-	 	;
+-/*
+- *	NAMELISTS
+- *	=========
+- */
+-
+-ANAMELIST	:	ANAME
+-		|	ANAMELIST ',' ANAME
+-		;
+-MNAMELIST	:	MNAME
+-		|	MNAMELIST ',' MNAME
+-		;
+-PNAMELIST	:	PNAME
+-		|	PNAMELIST ',' PNAME
+-		;
+-QNAMELIST	:	QNAME
+-		|	QNAMELIST ',' QNAME
+-		;
+-SNAMELIST	:	SNAME
+-		|	SNAMELIST ',' SNAME
+-		;
+-VNAMELIST	:	VNAME
+-		|	VNAMELIST ',' VNAME
+-		;
+-/*
+- *	NAMES
+- *	=====
+- */
+-
+-ANAME		:	QSNAME { addApars(strings[$1], nid, parnum++, NONE); }
+-		|	expr   { addAspecial(makeexpr($1), nid, parnum++);   }
+-		;
+-MNAME		:	NAME
+-			{	qtable[qid].status |= ADR;
+-				addmsg(strings[$1], qid, SND, INITM, NONE);
+-				if (--qisz < 0)
+-				yyerror("queue overfilled, %s", strings[$1]);
+-			}
+-		;
+-PNAME		:	NAME
+-			{	if (vartype == ISM)
+-				addsetname(strings[$1], sid, 1);
+-				else
+-				addFpar(rid, strings[$1], qid, vartype, inside);
+-			}
+-		;
+-QNAME		:	NAME '[' VALUE ']'
+-			{	if ((qisz = $3) <= 0)
+-				yyerror("illegal queue size, %s", strings[$1]);
+-				newqname(strings[$1], DCL, $3, NONE);
+-			}
+-		|	NAME '[' VALUE ']' '[' VALUE ']'
+-			{	if ((qisz = $6) <= 0)
+-				yyerror("illegal queue size, %s", strings[$1]);
+-				newqname(strings[$1], DCL, qisz, $3);
+-			}
+-		;
+-SNAME		:	NAME		{ addsetname(strings[$1], sid, 0); }
+-		;
+-VNAME		:	NAME QINDEX
+-			{	addvarname(strings[$1], DCL, NONE, $2, 0);
+-			}
+-		|	NAME QINDEX '=' expr
+-			{	addvarname(strings[$1], DCL, makeexpr($4), $2, 0);
+-			}
+-		|	NAME QINDEX COLON VALUE
+-			{	addvarname(strings[$1], DCL, NONE, $2, $4);
+-			}
+-		;
+-/*
+- *	CODE
+- *	====
+- */
+-
+-SEQUENCE	:	STMNT
+-			{	soo = 0;
+-			}
+-		|	SEQUENCE SEPARATOR STMNT
+-			{	soo = 0;
+-			}
+-	 	;
+-
+-STMNT		:	skip
+-			{	if (soo)	/* only if used as a guard */
+-					transfer(0, NONE);
+-			}
+-		|	SELECT
+-	 	|	CYCLE
+-	 	|	SEND
+-	 	|	GUARD
+-	 	|	JUMP
+-	 	|	LABEL STMNT
+-	 	|	TEMPLATE
+-	 	|	BUILTIN
+-	 	|	CONDITIONAL
+-		|	END
+-			{	yyerror("expecting a statement", "");
+-				whoops("exit");
+-			}
+-	 	;
+-
+-SELECT		:	IF
+-			{	if (++curdepth == MAXDEPTH)
+-					whoops("nesting too deep");
+-
+-				ties[curdepth].home = curstate;
+-				ties[curdepth].dest = enterowname(NEW, "", DAR);
+-				ties[curdepth].bpnt =
+-					(curdepth>1) ? ties[curdepth-1].bpnt : -1;
+-			}
+-			OPTIONLIST FI
+-			{	setrowname(ties[curdepth].dest);
+-				curstate = ties[curdepth--].dest;
+-			}
+-		;
+-
+-CYCLE		:	DO
+-			{	if (curdepth++ == MAXDEPTH)
+-					whoops("nesting too deep");
+-
+-				labelrow(curstate);
+-				ties[curdepth].home = curstate;
+-				ties[curdepth].dest = curstate;
+-				ties[curdepth].bpnt = enterowname(NEW, "", DAR);
+-			}
+-			OPTIONLIST OD
+-			{	setrowname(ties[curdepth].bpnt);
+-				curstate = ties[curdepth--].bpnt;
+-			}
+-		;
+-
+-OPTIONLIST	:	ONEOPTION
+-	 	|	ONEOPTION OPTIONLIST
+-	 	;
+-
+-ONEOPTION	:	FLAG
+-			{	soo = 1;	/* start of an option string */
+-			}
+-			SEQUENCE
+-			{	getrowname(str, ties[curdepth].dest);
+-				from = curstate;
+-				curstate = enterowname(OLD, str, DAR);
+-				setrans(from, 0, curstate, NONE);
+-				curstate = ties[curdepth].home;
+-			}
+-	 	;
+-
+-INDEX		:	/* empty */	{ $$ = NONE; }
+-		|	'[' expr ']'	{ $$ = makeexpr($2); }
+-		;
+-
+-PREIO		:	NAME INDEX
+-			{	strcpy(str, strings[$1]); /* swivel away name */
+-				$$ = $2;
+-			}
+-		;
+-
+-SEND		:	PREIO NOT NAME EXPORT
+-			{	xx = newqname(str, ADR, NONE, $1);
+-				zz = addmsg(strings[$3], xx, SND, NORM, $1);
+-				n = entercolname(zz, OUTP);
+-				transfer(n, m);
+-			}
+-		;
+-
+-EXPORT	:		/* empty */	{ m = NONE; }
+-		|	'(' expr ')'	{ m = makeexpr($2); }
+-		;
+-
+-GUARD		:	PREIO '?' timeout
+-			{ int x;
+-				xx = newqname(str, RFR, NONE, $1);
+-				x = addmsg(" tau", xx, SAR, NORM, $1);
+-				/*
+-				** the leading space is to avoid
+-				** clashes with a user name `tau',
+-				** e.g. in a formal parameter list
+-				*/
+-				n = entercolname(x, TMO);
+-				transfer(n, NONE);
+-			}
+-	  	|	PREIO '?' NAME IMPORT
+-			{	xx = newqname(str, RFR, NONE, $1);
+-				zz = addmsg(strings[$3], xx, RCV, NORM, $1);
+-				n = entercolname(zz, INP);
+-				transfer(n, $4);
+-			}
+-	  	|	PREIO '?' DEFAULT IMPORT
+-			{	xx = newqname(str, RFR, NONE, $1);
+-				zz = addmsg(" any", xx, SAR, NORM, $1);
+-				n = entercolname(zz, DFL);
+-				transfer(n, $4);
+-			}
+-	 	;
+-
+-IMPORT	:		/* empty */
+-			{	$$ = NONE;
+-			}
+-	 	|	'(' ARNAME INDEX ')'
+-			{	$$ = addvarname(strings[$2], RFR, NONE, $3, 0);
+-			}
+-	 	|	'(' NAME ')'
+-			{	$$ = addvarname(strings[$2], RFR, NONE, NONE, 0);
+-			}
+-	 	|	'(' VALUE ')'
+-			{	yyerror("importing into constant", "");
+-			}
+-		;
+- 
+-SEPARATOR	:	ARROW
+-	  	|	SEMICOLON
+-	  	|	error
+-			{	yyerror("expecting a stmnt separator", "");
+-			}
+-	 	;
+-
+-JUMP		:	GOTO NAME
+-			{	from = curstate;
+-				curstate = enterowname(LAB, strings[$2], ADR);
+-				setrans(from, 0, curstate, NONE);
+-				curstate = enterowname(NEW, "", DAR);
+-			}
+-		|	STRUCTGOTO
+-		;
+-
+-STRUCTGOTO	:	BREAK
+-			{ int i;
+-				from = curstate;
+-				i = ties[curdepth].bpnt;
+-
+-				if (curdepth == 0 || i == -1)
+-					whoops("illegal break statement");
+-
+-				getrowname(str, i);
+-				curstate = enterowname(OLD, str, DAR);
+-				setrans(from, 0, curstate, NONE);
+-				curstate = enterowname(NEW, "", DAR);
+-			}
+-	 	;
+-
+-TEMPLATE	:	NAME
+-			{	nid = newreftask(strings[$1], RFR);
+-				parnum = 0; qid = sid = NONE;
+-				cid = newcall(nid);
+-			}
+-			'(' ANYACTUALS ')'
+-			{ int x;
+-				parrefs(parnum, nid);
+-				x = entercolname(cid, FCT);
+-				transfer(x, NONE);
+-			}
+-	 	;
+-
+-ANYACTUALS	:	/* empty */
+-		|	ANAMELIST
+-		;
+-
+-CONDITIONAL	:	'(' expr ')'
+-			{	transfer(entercolname(makeexpr($2), CND), NONE);
+-			}
+-		;
+-
+-VARNAME		:	ARNAME INDEX
+-			{	m = addvarname(strings[$1], RFR, NONE, $2, 0);
+-				$$ = newnode(NM, m, NULL, NULL);
+-			}
+-		|	NAME
+-			{	m = addvarname(strings[$1], RFR, NONE, NONE, 0);
+-				$$ = newnode(NM, m, NULL, NULL);
+-			}
+-		;
+-
+-BUILTIN		:	VARNAME ASGN expr
+-			{	m = makeexpr(newnode(OP, $2, $1, $3));
+-				transfer(0, m);
+-			}
+-		|	VARNAME INC 
+-			{	m = makeexpr(newnode(OP, poinc, $1, NULL));
+-				transfer(0, m);
+-			}
+-		|	VARNAME DEC
+-			{	m = makeexpr(newnode(OP, podec, $1, NULL));
+-				transfer(0, m);
+-			}
+-		;
+-
+-ASGN		:	'='	{ $$ =  setv; }
+-		|	ADDEQ	{ $$ = addeq; }
+-		|	SUBEQ	{ $$ = subeq; }
+-		|	MULEQ	{ $$ = muleq; }
+-		|	DIVEQ	{ $$ = diveq; }
+-		|	MODEQ	{ $$ = modeq; }
+-		;
+-
+-expr		:	expr '+' expr { $$ = newnode(OP, plus, $1, $3); }
+-		|	expr '-' expr { $$ = newnode(OP, minus, $1, $3); }
+-		|	expr '*' expr { $$ = newnode(OP, times, $1, $3); }
+-		|	expr '/' expr { $$ = newnode(OP, div, $1, $3); }
+-		|	expr '%' expr { $$ = newnode(OP, mod, $1, $3); }
+-		|	expr '^' expr { $$ = newnode(OP, power, $1, $3); }
+-		|	expr GT expr { $$ = newnode(OP, gt, $1, $3); }
+-		|	expr GE expr { $$ = newnode(OP, ge, $1, $3); }
+-		|	expr LT expr { $$ = newnode(OP, lt, $1, $3); }
+-		|	expr LE expr { $$ = newnode(OP, le, $1, $3); }
+-		|	expr EQ expr { $$ = newnode(OP, eq, $1, $3); }
+-		|	expr NE expr { $$ = newnode(OP, ne, $1, $3); }
+-		|	expr AND expr { $$ = newnode(OP, land, $1, $3); }
+-		|	expr OR expr { $$ = newnode(OP, lor, $1, $3); }
+-		|	'-' expr %prec UNARYMINUS
+-			{	$$ = newnode(OP, uminus, $2, NULL); }
+-		|	NOT expr
+-			{	$$ = newnode(OP, lnot, $2, NULL); }
+-		|	VALUE
+-			{	$$ = newnode(NM, $1+3*MANY, NULL, NULL); }
+-		|	ARNAME INDEX
+-			{	m = addvarname(strings[$1], RFR, NONE, $2, 0);
+-				$$ = newnode(NM, m, NULL, NULL);
+-			}
+-		|	NAME
+-			{	m = addvarname(strings[$1], RFR, NONE, NONE, 0);
+-				$$ = newnode(NM, m, NULL, NULL);
+-			}
+-		|	'(' expr ')' { $$ = $2; }
+-		;
+-
+-LABEL		:	NAME COLON
+-			{	from = curstate;
+-				curstate = enterowname(LAB, strings[$1], DCL);
+-				labelrow(curstate);
+-				setrans(from, 0, curstate, NONE);
+-			}
+-		;
+-%%
+-
+-extern FILE *yyin;
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	int base = 1, i = 1;
+-	char c, buff[256];
+-	char outfile[32];
+-
+-	if (argc > base && argv[1][0] == '-')
+-	{	while ((c = argv[1][i++]) != '\0')
+-			switch (c) {
+-			case 's': varwidths = 1; break;
+-			case 'v': verbose = 1; break;
+-			case 'n': nopurge = 1; break;
+-			case 'l': linecode = 1; break;
+-			default : fprintf(stderr, "usage: pret [-vsnl] file\n");
+-				  fprintf(stderr, "\tv - verbose\n");
+-				  fprintf(stderr, "\ts - supertrace format\n");
+-				  fprintf(stderr, "\tn - no minimization\n");
+-				  fprintf(stderr, "\tl - enables linecode\n");
+-				  exit(1);
+-			}
+-		base++;
+-	}
+-	if (argc <= base)
+-	{	fprintf(stderr, "usage: pret [-vnl] file\n");
+-		exit(1);
+-
+-	}
+-	if ((tb = fopen("pret.tmp", "w")) == NULL)
+-		whoops("cannot create pret.tmp\n");
+-
+-	strcpy(procname, "_");
+-	strcpy(refname, "_");
+-	unlink("pret.out");
+-	unlink("pret.err");
+-
+-	if (argc > base)
+-	{	strcpy(filename, argv[base]);
+-
+-		mktemp(strcpy(outfile, "/tmp/trans.XXXXXX"));
+-		sprintf(buff, "/lib/cpp %s > %s", filename, outfile);
+-
+-		if (system(buff))
+-		{	unlink(outfile);
+-			exit(1);
+-		} else
+-			if ((yyin = fopen(outfile, "r")) == NULL)
+-			{	printf("cannot open %s\n", outfile);
+-				whoops("aborting");
+-			}
+-		unlink(outfile);
+-	}
+-	parsed = (struct REVPOL *)
+-		Emalloc(EXPRMAX * sizeof(struct REVPOL));
+-	prs = 0;
+-
+-	yyparse();
+-	prepsorts();
+-	checknames();
+-	fclose(tb);
+-	chatter();
+-	makebin();
+-	exit(0);
+-}
+-
+-newstring(str)
+-	char *str;
+-{	register int i;
+-
+-	for (i = 0; i < nnames; i++)
+-		if (strcmp(str, strings[i]) == 0)
+-			return i;
+-	if (++nnames >= MANY)
+-		yyerror("symbol table overflow, %s", str);
+-	strncpy(strings[i], str, MAXNAME-1);
+-	return i;
+-}
+//GO.SYSIN DD pret.y
+echo pret0.c 1>&2
+sed 's/.//' >pret0.c <<'//GO.SYSIN DD pret0.c'
+-#include <stdio.h>
+-#include "pret.h"
+-#include "pret.d"
+-
+-#define DEBUG6	0
+-#define DEBUG7	0
+-
+-extern struct COL column[MANY];
+-extern struct ROW row[MANY];
+-extern int nrrows, nrcols, redrows;
+-
+-struct ENTRY * find();
+-char * Emalloc();
+-
+-char  **triangle;
+-short **successor;
+-short *tmpsucc;
+-int *unmap;		/* reverses maptwo values to original row numbers */
+-
+-MAP(x)
+-{ int y = row[x].maptwo;	/* gives a value between 0 and redrows    */
+-
+-	unmap[y] = x;
+-	return y;
+-}
+-
+-minimize()
+-{ int i, j;
+-  int n = redrows;
+-
+-	unmap = (int *)
+-		Emalloc( n * sizeof (int) );
+-	triangle = (char **)
+-		Emalloc( n * sizeof (char *) );
+-	/*
+-	** allocate a triangle of states
+-	** triangle[i][j] == 1
+-	** will indicate that the states i and j are
+-	** in the same equivalence class
+-	** initially, claim all pairs to be equivalent
+-	*/
+-
+-	for (i = 1; i < n; i++)
+-	{	triangle[i] = (char *)
+-			Emalloc(i * sizeof (char));
+-		for (j = 0; j < i; j++)
+-			triangle[i][j] = 1;
+-	}
+-	tmpsucc = (short *)
+-		Emalloc( n * sizeof (short));
+-	successor = (short **)
+-		Emalloc( n * sizeof (short *) );
+-
+-	for (i = 0; i < n; i++)
+-	{	successor[i] = (short *)
+-			Emalloc(n * sizeof (short));
+-		for (j = 0; j < n; j++)
+-			successor[i][j] = 0;
+-	}
+-	partition();
+-
+-#if DEBUG6
+-	putriangle();
+-#endif
+-	squash();
+-
+-	for (i = 1; i < n; i++)
+-		free(triangle[i]);
+-	free(triangle);
+-	free(unmap);
+-}
+-
+-/*
+-newgeneration()
+-{ register int i,j;
+-
+-	for (j = 0; j < n; i++)
+-		tmpsucc[j] = 0;
+-	for (i = 0; i < n; i++)
+-	{	for (j = 0; j < n; j++)
+-			addkids(successor[i][j]);
+-		for (j = 0; j < n; j++)
+-		{	successor[i][j] = tmpsucc[j];
+-			tmpsucc[i] = 0;
+-		}
+-	}
+-}
+-
+-addkids(whosekids)
+-{ register int h,k,x,y;
+-  struct ENTRY *one = find(i, 0);
+-  struct ENTRY *two = find(j, 0);
+-  struct PILAR *a;
+-
+-
+-	for (k = 0; k < nrcols; k++)
+-	{	for (h = 0; h < one->nrpils; h++)
+-		{	a = one->pilar;
+-
+-			tmpsucc[target(a->transf)] = 1;
+-
+-			a = a->nxtp;
+-		}
+-		one = one->nextcol;
+-		two = two->nextcol;
+-	}
+-}
+-*/
+-
+-partition()
+-{ register int i, j, K;
+-  int anychange = 1;
+-
+-	/*
+-	** recursively scan through the
+-	** triangle to find non-equivalent pairs
+-	** until pi(1) -> pi(k) == pi(k-1)
+-	*/
+-
+-	for (K = 1; anychange == 1; K++)
+-	{	anychange = 0;
+-#if DEBUG7
+-		printf("%d Equivalence:\n", K);
+-#endif DEBUG7
+-		for (i = nrrows-1; i > 0; i--)
+-		{	if (row[i].mapping != NOSTATE)
+-				continue;
+-
+-			for (j = 0; j < i; j++)
+-			{	if (row[j].mapping != NOSTATE
+-				||  triangle[MAP(i)][MAP(j)] == 0)
+-					continue;
+-
+-				if ( !equiv(K, i, j) )
+-				{	triangle[MAP(i)][MAP(j)] = 0;
+-					anychange = 1;
+-				}
+-#if DEBUG7
+-				else
+-				{	printf("\tstates: %2d,", MAP(i));
+-					printf("%2d\n", MAP(j));
+-				}
+-#endif DEBUG7
+-}	}	}	}
+-
+-#if DEBUG6
+-putriangle()
+-{ int i, j;
+-  int n = redrows;
+-  int cn = 0;
+-  char * class = (char *) Emalloc (n * sizeof (char) );
+-
+-	for (i = 0; i < n; i++)
+-		class[i] = 0;
+-	
+-	for (i = 1; i < n; i++)
+-	for (j = 0; j < i; j++)
+-		if ( triangle[i][j] )
+-		{	if (class[i] == 0 && class[j] == 0)
+-				class[i] = class[j] = ++cn;
+-			else if (class[i] != 0)
+-				class[j] = class[i];
+-			else if (class[j] != 0)
+-				class[i] = class[j];
+-			else
+-				whoops("cannot happen, classes");
+-		}
+-
+-	for (i = 1; i <= cn; i++)
+-	{	printf("class %2d: ", i);
+-		for (j = 0; j < n; j++)
+-			if (class[j] == i)
+-				printf("%d,", j);
+-		printf("\n\n");
+-	}
+-
+-	free(class);
+-}
+-#endif
+-
+-squash()
+-{ int i, j;
+-  int n = redrows;
+-	for (i = 1; i < n; i++)
+-	for (j = 0; j < i; j++)
+-		if ( triangle[i][j] )
+-		{	row[unmap[i]].mapping = unmap[j];
+-			row[unmap[j]].labeled |= row[unmap[i]].labeled;
+-		}
+-}
+-
+-outequiv(A, B)
+-	struct ENTRY *A, *B;
+-{ struct PILAR *at = A->pilar;
+-  struct PILAR *it = B->pilar;
+-
+-	/*
+-	** don't look at the at->transf's, 
+-	** equal columns implicitly give
+-	** equal inputs or outputs, so
+-	** just compare the cargo codes
+-	*/
+-
+-	while (it != NULL && at != NULL)
+-	{	if (at->code != it->code)
+-			break;
+-
+-		at = at->nxtp;
+-		it = it->nxtp;
+-	}
+-
+-	return (it == NULL && at == NULL);
+-}
+-
+-equiv(K, i, j)
+-{ int h, k, x, y, z;
+-  struct ENTRY *one = find(i, 0);
+-  struct ENTRY *two = find(j, 0);
+-  struct PILAR *a, *b;
+-
+-	if (one->nrpils != two->nrpils)
+-		return 0;
+-
+-	if (K == 1)
+-	{	for (k = 0; k < nrcols; k++)
+-		{	if ( !outequiv(one, two) )
+-				return 0;
+-
+-			one = one->nextcol;
+-			two = two->nextcol;
+-		}
+-	} else
+-		for (k = 0; k < nrcols; k++)
+-		{	a = one->pilar;
+-			b = two->pilar;
+-			for (h = 0; h < one->nrpils; h++)
+-			{
+-				x = target(a->transf);
+-				y = target(b->transf);
+-				x = MAP(x); y = MAP(y);
+-				if (y > x) { z=x; x=y; y=z; }
+-				if (x != y && triangle[x][y] == 0)
+-					return 0;
+-
+-				a = a->nxtp;
+-				b = b->nxtp;
+-			}
+-			one = one->nextcol;
+-			two = two->nextcol;
+-		}
+-
+-	return 1;
+-}
+//GO.SYSIN DD pret0.c
+echo pret1.c 1>&2
+sed 's/.//' >pret1.c <<'//GO.SYSIN DD pret1.c'
+-#include <stdio.h>
+-#include "pret.h"
+-
+-#define LOOK	0
+-#define ADD	1
+-
+-struct QSET_EL {
+-	char name[MAXNAME];		/* message name           */
+-	char status;			/* usage of this message  */
+-	int id;				/* number assigned to msg */
+-	struct QSET_EL *nxtel;
+-};
+-
+-struct QSETS {
+-	int nrelmnts;
+-	int status;			/* usage of the qset itself */
+-	int qstatus;			/* usage of the setowner (a queue) */
+-	char setname[MAXNAME];		/* symbolic name */
+-	char setowner[MAXNAME];		/* queue */
+-	int qind;			/* NONE if simple q, #expr if array */
+-	struct QSET_EL *elmnts;
+-	struct QSETS *nxtset;
+-	int closed;
+-};
+-
+-struct QSETS *frstset;
+-int nrsets = 0;
+-
+-extern struct QTABLE qtable[NQUEUES];
+-extern char procname[MAXNAME];
+-extern char refname[MAXNAME];
+-extern pid, rid;
+-char *Emalloc();
+-
+-isqset(str)
+-	char *str;
+-{	struct QSETS *q = frstset;
+-	char buf1[MAXNAME], buf2[MAXNAME];
+-	int i;
+-
+-	buf1[0] = '\0';
+-	if (pid != NONE)
+-		strncpy(buf1, procname, 8);
+-	else if (rid != NONE)
+-		strncpy(buf1, refname, 8);
+-	strcat(buf1, ":");
+-
+-	strcpy(buf2, "global:");
+-	strcat(buf1, str);
+-	strcat(buf2, str);
+-
+-	for (i = 0; i < nrsets; i++, q = q->nxtset)
+-	{	if (strcmp(buf1, q->setname) == 0
+-		||  strcmp(buf2, q->setname) == 0)
+-			return 1;
+-	}
+-	return 0;
+-}
+-
+-struct QSETS *
+-findset(which)
+-{	struct QSETS *hook = frstset;
+-	int i;
+-
+-	if (which >= nrsets || which < 0)
+-		whoops("cannot happen - findset");
+-
+-	for (i = 0; i < which; i++)
+-		hook = hook->nxtset;
+-
+-	return hook;
+-}
+-
+-inqset(which, what, usage, qind)
+-	char *what;
+-{
+-	struct QSETS   *hook  = findset(which);
+-	struct QSET_EL *hookl = hook->elmnts;
+-	int i;
+-
+-	for (i = 0; i < hook->nrelmnts; i++)
+-	{	if (strcmp(what, hookl->name) == 0)
+-		{	hookl->status |= usage;
+-			if (hookl->id == -1)
+-				whoops("unnumbered parameter");
+-			if (qind != hook->qind)
+-				yyerror("queue indexing error, qset, %s", what);
+-			return hookl->id;
+-		}
+-		hookl = hookl->nxtel;
+-	}
+-
+-	return -1;
+-}
+-
+-renumqset(which, N)
+-{ struct QSETS * hook = findset(which);
+-  struct QSET_EL * hookl = hook->elmnts;
+-  int i, j;
+-
+-	qsetowner(which, 0);
+-	for (i = 0, j = N; i < hook->nrelmnts; i++)
+-	{	hookl->id = j++;
+-		hookl = hookl->nxtel;
+-	}
+-	return j;
+-}
+-
+-matchset(a, b)
+-{ struct QSETS * one = findset(a);
+-  struct QSETS * two = findset(b);
+-  struct QSET_EL * onel;
+-  struct QSET_EL * twol;
+-  int i;
+-
+-	if (one->nrelmnts != two->nrelmnts)
+-	{	yyerror("qset does not match formal parameter, %s", one->setname);
+-		return;
+-	}
+-	onel = one->elmnts;
+-	twol = two->elmnts;
+-
+-	for (i = 0; i < one->nrelmnts; i++)
+-	{	onel->status |= twol->status;
+-		onel = onel->nxtel;
+-		twol = twol->nxtel;
+-	}
+-	return two->qstatus;
+-}
+-
+-matchowner(a, str, how, qind)
+-	char *str;
+-{ struct QSETS * hook = findset(a);
+-
+-	if (strcmp(hook->setowner, str) == 0)
+-	{	hook->qstatus |= how;
+-		if (qind != hook->qind)
+-			yyerror("queue indexing error (qset ref), %s", str);
+-		return 1;
+-	}
+-	return 0;
+-}
+-
+-struct QSET_EL *
+-mkelmnt(str, how)
+-	char *str;
+-{ struct QSET_EL *try = (struct QSET_EL *)
+-		Emalloc( sizeof( struct QSET_EL ) );
+-
+-	strcpy(try->name, str);
+-	try->nxtel = NULL;
+-	try->status = how;
+-	try->id = -1;
+-
+-	return try;
+-}
+-
+-struct QSETS *
+-mkset(str1, str2, how, qind)
+-	char *str1, *str2;
+-{ struct QSET_EL *hook;
+-  struct QSETS *try = (struct QSETS *)
+-		Emalloc( sizeof( struct QSETS ) );
+-
+-	if (how == RFR)
+-		yyerror("undeclared qset, %s", str1);
+-
+-	try->status = how;
+-	try->qstatus = 0;
+-	try->nxtset = NULL;
+-	strcpy(try->setname,  str1);
+-	strcpy(try->setowner, str2);
+-	try->closed = 0;
+-	try->qind = qind;
+-
+-	try->nrelmnts = 0;
+-	try->elmnts = mkelmnt(" tau", SAR);
+-	try->nrelmnts++;
+-
+-	hook = try->elmnts;
+-	hook->nxtel = mkelmnt(" any", SND);
+-	try->nrelmnts++;
+-
+-	nrsets++;
+-	return try;
+-}
+-
+-qsetowner(which, how)
+-{	struct QSETS *hook = findset(which);
+-	return newqname(hook->setowner, how, NONE, hook->qind);
+-}
+-
+-inset(str, str2, mask, how, qind)
+-	char *str, *str2;
+-{ struct QSETS *hook = frstset;
+-  struct QSETS *last = frstset;
+-  int i;
+-	for (i = 0; i < nrsets && hook != NULL; i++)
+-	{	if (strcmp(hook->setname, str) == 0)
+-		{	if (mask == DCL)
+-				yyerror("qset redeclared, %s", str);
+-			hook->status |= mask;
+-			break;
+-		}
+-		last = hook;
+-		hook = hook->nxtset;
+-	}
+-	if (how == ADD && i == nrsets)
+-		last->nxtset = mkset(str, str2, mask, qind);
+-
+-	return i;
+-}
+-
+-newqset(str1, str2, mask, qind)
+-	char *str1, *str2;
+-{
+-	int i = nrsets;
+-	char str[MAXNAME];
+-
+-	if (pid != NONE)
+-		strncpy(str, procname, 8);
+-	else if (rid != NONE)
+-		strncpy(str, refname, 8);
+-	else
+-		strcpy(str, "global");
+-	strcat(str, ":");
+-	strcat(str, str1);
+-
+-	if (mask == RFR && (pid != NONE || rid != NONE))
+-	{	if (inset(str, str2, mask, LOOK, qind) == nrsets)
+-		{	strcpy(str, "global");
+-			strcat(str, ":");
+-			strcat(str, str1);
+-	}	}
+-
+-	if (nrsets == 0)
+-		frstset = mkset(str, str2, mask, qind);
+-	else
+-		i = inset(str, str2, mask, ADD, qind);
+-
+-	return i;
+-}
+-
+-closeqset(which)
+-{	struct QSETS *where = findset(which);
+-	where->closed = 1;
+-}
+-
+-isclosed(which)
+-{	struct QSETS *where = findset(which);
+-	return where->closed;
+-}
+-
+-addsetname(str, which, susp)
+-	char *str;
+-{ struct QSETS   *where = findset(which);
+-  struct QSET_EL *hook  = where->elmnts;
+-  int i, j;
+-
+-	j = newqname(where->setowner, 0, NONE, where->qind);
+-	i = where->nrelmnts;
+-
+-	if (i == 0)
+-		where->elmnts = mkelmnt(str, 0);
+-	else
+-	{	for (i = 1; i < where->nrelmnts; i++)
+-			hook = hook->nxtel;
+-
+-		hook->nxtel = mkelmnt(str, 0);
+-	}
+-
+-	/* if setowner is a formal parameter name
+-	 * the returned value `j' refers to the qset
+-	 * in which it was defined + an offset `MANY'
+-	 * if so, we must check that the message added
+-	 * here was also defined in the original set
+-	 */
+-
+-	if (susp && j >= MANY && isclosed(j - MANY))	/* current set is open */
+-		addmsg(str, j, 0, NORM, where->qind);	/* check validity msg  */
+-
+-	where->nrelmnts++;
+-
+-	return i;
+-}
+-
+-callist(which, hit)
+-{ int i, j;
+-  struct QSETS   * hook = findset(which);
+-  struct QSET_EL * kooh = hook->elmnts;
+-
+-	for (i = 0; i < hook->nrelmnts; i++)
+-	{	j = addmsg(kooh->name, hit, kooh->status, NORM, hook->qind);
+-		callentry(ISM, j);
+-		kooh = kooh->nxtel;
+-	}
+-}
+//GO.SYSIN DD pret1.c
+echo pret2.c 1>&2
+sed 's/.//' >pret2.c <<'//GO.SYSIN DD pret2.c'
+-#include <stdio.h>
+-#include "pret.h"
+-#include "pret.d"
+-
+- struct COL column[MANY];
+- struct ROW row[MANY];
+-
+- struct ENTRY *rowtail;
+- struct ENTRY *coltail;
+- struct ENTRY *base;		/* base of transition table */
+-
+- struct ENTRY *newentry();
+- struct PILAR *newunit();
+-
+- int nrrows = 0;	/* raw nr of rows (incremented by addrow() */
+- int nrcols = 0;	/* number of columns per table             */
+- int redrows = 0;	/* reduced nr of rows (set by remap()      */
+- int extras = 0;	/* counts replicated processes		   */
+-
+-extern char procname[MAXNAME], refname[MAXNAME];
+-extern int anyerror, pid, rid, curstate, lastloop;
+-
+-struct ENTRY *
+-find(R, C)
+-{ register int i;
+-  register int r = R;
+-  register int c = C;
+-  register struct ENTRY *here = base;
+-
+-	if (r >= nrrows || c >= nrcols || r < 0 || c < 0)
+-		whoops ("bad table index");
+-	for (i = 0; i < r; i++)
+-		here = here->nextrow;
+-	for (i = 0; i < c; i++)
+-		here = here->nextcol;
+-	return here;
+-}
+-
+-getrowname(where, which)
+-	char *where;
+-{	strcpy(where, row[which].name);
+-}
+-
+-setrowname(which)
+-{ char stro[256];
+-  extern linenumber;
+-  extern char filename[];
+-
+-	sprintf(stro, "%d/%d:%s", linenumber, nrrows, filename);
+-	strcpy(row[which].name, stro);
+-}
+-
+-deadlabels()
+-{ register int i;
+-	for (i = 0; i < nrrows; i++)
+-	switch(row[i].refcount)
+-	{	case ADR: printf("%s: undeclared label\n", row[i].name);
+-			  anyerror++;
+-			  break;
+-		case DCL: printf("%s: unused label\n", row[i].name);
+-			  break;
+-		case ADR+DCL:
+-			  break;
+-		default:  whoops("cannot happen - label");
+-	}
+-}
+-
+-remap()
+-{ register int i, j;
+-
+-	for (i = j = 0; i < nrrows; i++)
+-		if (row[i].mapping == NOSTATE)
+-			row[i].maptwo = j++;
+-	redrows = j;
+-}
+-
+-purgerows(how)
+-{ int i; extern int linecode, assertion, inertion;
+-
+-	for (i = 0; i < nrrows; i++)
+-	{	row[i].mapping = NOSTATE;
+-		row[i].maptwo = i;
+-	}
+-	redrows = nrrows;
+-/* -> bug if (!linecode) */
+-	if (!linecode || rid==assertion || rid==inertion)
+-		transitrows();	/* remove dummy transitions */
+-	remap();
+-
+-	if (!linecode && !how)
+-	{	minimize();
+-		remap();
+-	}
+-}
+-
+-target(y)
+-{ int i = 0;
+-  int x = y;
+-	while (row[x].mapping != NOSTATE)
+-	{	x = row[x].mapping;
+-		if (i++ > nrrows)
+-		{	printf("%s: ", (pid == NONE) ? procname : refname);
+-			whoops("contains unconditional, infinite loop");
+-		}
+-	}
+-	return x;
+-}
+-
+-enterowname(how, stri, bang)
+-	char *stri, bang;
+-{ register int i;
+-  char stro[256];
+-  extern int linenumber;
+-  extern char filename[];
+-
+-	switch(how) {
+-	case LAB:	sprintf(stro, "%s: %s", stri, filename);
+-			for (i = 0; i < nrrows; i++)
+-				if (strcmp(stro, row[i].name) == 0)
+-					break;
+-
+-			if (i < nrrows)
+-			{	if (bang == DCL && (row[i].refcount & DCL))
+-				{	fprintf(stderr, "%d/%d %s %s\n",
+-						i, nrrows, stro, row[i].name);
+-					yyerror("label redeclared, %s", stro);
+-				}else
+-					row[i].refcount |= bang;
+-				break;
+-			} else
+-			{	addrow();
+-				row[i].refcount = bang;
+-				row[i].labeled = 0;
+-				strcpy(row[i].name, stro);
+-			}
+-			break;
+-	case NEW:	i = nrrows;
+-			sprintf(stro, "%d/%d:%s", linenumber, i, filename);
+-			addrow();
+-			row[i].refcount = bang;
+-			row[i].labeled = 0;
+-			strcpy(row[i].name, stro);
+-			break;
+-	case OLD:	for (i = 0; i < nrrows; i++)
+-				if (strcmp(stri, row[i].name) == 0)
+-					break;
+-			if (i == nrrows)
+-				whoops("cannot happen - rows");
+-			break;
+-	}
+-	return i;
+-}
+-
+-labelrow(n)
+-{
+-	if (n < 0 || n >= nrrows)
+-		whoops("cannot happen - labelrow");
+-	row[n].labeled = 1;
+-
+-}
+-
+-deadrows(p, r)
+-{ register int i, j, k;
+-  struct ENTRY *it;
+-  struct PILAR  *at;
+-  char fld[128];
+-  extern int nrprocs;
+-
+-	for (i = 0; i < nrrows; i++)
+-		row[i].reached = 0;
+-
+-	for (i = 0; i < nrrows; i++)
+-	{	if (row[i].mapping != NOSTATE)
+-			continue;
+-		it = find(i, 0);
+-		for (j = 0; j < nrcols; j++, it = it->nextcol)
+-		{	at = it->pilar;
+-			do
+-			{	if (at->transf != NOSTATE)
+-				{	k = target(at->transf);
+-					if (k != i)
+-						row[k].reached = 1;
+-				}
+-				at = at->nxtp;
+-			} while (at != NULL);
+-	}	}
+-
+-	fld[0] = '\0';
+-	for (i = k = 0; i < nrrows; i++)
+-	{	if (row[i].mapping != NOSTATE)
+-			continue;
+-		if (row[i].reached == 0 && row[i].maptwo != 0)
+-		{	j = strlen(fld); k++;
+-			sprintf(&fld[j], "%d, ", row[i].maptwo);
+-	}	}
+-
+-	if (p == NONE)
+-		refsize(r, redrows, k);
+-	else
+-		procsize(p, redrows, k);
+-}
+-
+-deadends(tb)
+-	FILE *tb;
+-{ register int i, j, x;
+-  struct ENTRY *it;
+-  struct PILAR  *at;
+-  char field[256];
+-  int nrdeads = 0;
+-
+-	if (nrrows == 0)
+-		return;
+-
+-	field[0] = '\0';
+-	for (i = 0; i < nrrows; i++)
+-	{	if (row[i].mapping != NOSTATE)
+-			continue;
+-		it = find(i, 0);
+-		for (j = 0; j < nrcols; j++, it = it->nextcol)
+-		{	for (at = it->pilar; at != NULL; at = at->nxtp)
+-				if (at->transf != NOSTATE)
+-					break;
+-			if (at != NULL)
+-				break;
+-		}
+-		if (j == nrcols)
+-		{	x = strlen(field);
+-			sprintf(&field[x], "%d,", row[i].maptwo);
+-			nrdeads++;
+-	}	}
+-	if ((i = lastloop) >= 0)
+-	{	if (i >= nrrows || row[i].mapping != NOSTATE)
+-			whoops("cannot happen - deadends");
+-		x = strlen(field);
+-		sprintf(&field[x], "%d,", row[i].maptwo);
+-		nrdeads++;
+-	}
+-	fprintf(tb, "ENDSTATES %d: %s\n", nrdeads, field);
+-}
+-
+-transitrows()
+-{ register int i, j;
+-  struct ENTRY *here, *there;
+-					/* maintain row 0 as initial state */
+-	here = base->nextrow;
+-	for (i = 1; i < nrrows; i++, here = here->nextrow)
+-	{	if (here->nrpils != 1 || here->pilar->code != NONE)
+-			continue;
+-
+-		there = here->nextcol;
+-		for (j = 1; j < nrcols; j++, there = there->nextcol)
+-			if (there->nrpils != 0)
+-				break;
+-		if (j == nrcols)
+-		{	row[i].mapping = here->pilar->transf;
+-			row[here->pilar->transf].labeled |= row[i].labeled;
+-	}	}
+-}
+-
+-entercolname(val, what)
+-{ register int i;
+-
+-	for (i = 0; i < nrcols; i++)
+-		if (column[i].ccode == val && column[i].coltype == what)
+-			break;
+-	if (i == nrcols)
+-	{	addcol();
+-		column[i].ccode = val;
+-		column[i].coltype = what;
+-	}
+-	return i;
+-}
+-
+-addrow()
+-{ register i = nrcols;
+-  struct ENTRY *lastcol, *thiscol;
+-  char uni[32];
+-
+-	if (nrcols == 0)
+-	{	rowtail = coltail = base = newentry();
+-		sprintf(uni, "%4d", curstate);
+-		column[0].ccode = -1;
+-		column[0].coltype = SPN;
+-		strcpy(row[0].name, uni);
+-		nrrows = nrcols = 1;
+-	} else
+-	{	if (nrrows == MANY)
+-			whoops("too many rows");
+-		lastcol = rowtail;
+-		rowtail = thiscol = lastcol->nextrow = newentry();
+-		for (--i; i > 0; i--)
+-		{	thiscol = thiscol->nextcol = newentry();
+-			lastcol = lastcol->nextcol;
+-			lastcol->nextrow = thiscol;
+-		}
+-		nrrows++;
+-	}
+-}
+-
+-addcol()
+-{ register int i = nrrows;
+-  struct ENTRY *lstrow, *thisrow;
+-
+-	if (nrcols == 0)
+-		whoops("cannot happen - columns");
+-	else
+-	{	lstrow = coltail;
+-		coltail = thisrow = lstrow->nextcol = newentry();
+-		if (nrcols++ == MANY)
+-			whoops("too many columns");
+-		for (--i; i > 0; i--)
+-		{	thisrow = thisrow->nextrow = newentry();
+-			lstrow = lstrow->nextrow;
+-			lstrow->nextcol = thisrow;
+-	}	}
+-}
+-
+-setrans(r, c, tr, to)
+-{ struct ENTRY *ft;
+-  struct PILAR  *pt;
+-  int i;
+-	ft = find(r, c);
+-	pt = ft->pilar;
+-	for (i = ft->nrpils++; i > 0; i--)
+-		pt = pt->nxtp;
+-
+-	pt->code = to;
+-	pt->transf = tr;
+-
+-	pt->nxtp = newunit();
+-}
+-
+-badstates(tb)
+-	FILE *tb;
+-{ struct ENTRY *this, *that;
+-  struct PILAR *at;
+-  int i, k, x, nrbads = 0, nrlabs = 0;
+-  char field[512], labfield[512];
+-
+-	if (nrrows == 0)
+-		return;
+-
+-	labfield[0] = field[0] = '\0';
+-	for (i = 0, this = base; this != NULL; this = this->nextrow, i++)
+-	{	if (row[i].mapping != NOSTATE)
+-			continue;
+-
+-		if (row[i].labeled)
+-		{	sprintf(&labfield[strlen(labfield)], "%d,", row[i].maptwo);
+-			nrlabs++;
+-		}
+-		that = find(i, 0);
+-		for (k = 0; k < nrcols; k++, that = that->nextcol)
+-		{	if (!SPNT(column[k].coltype))
+-				continue;
+-
+-			for (at = that->pilar, x = 0; at != NULL; at = at->nxtp)
+-			{	if (at->transf == NOSTATE)
+-					continue;
+-				x++; break;
+-			}
+-			if (x > 0)
+-			{	sprintf(&field[strlen(field)],"%d,",row[i].maptwo);
+-				nrbads++;
+-				break;
+-		}	}
+-	}
+-	fprintf(tb, "BADSTATES %d: %s\n", nrbads, field);
+-	fprintf(tb, "LABSTATES %d: %s\n", nrlabs, labfield);
+-}
+-
+-dumpforw(tb)
+-	FILE *tb;
+-{ struct ENTRY *this, *that;
+-  struct PILAR *at;
+-  char field[256];
+-  int i, j, k, x, y; extern int linecode;
+-
+-	if (pid == NONE)
+-		fprintf(tb, "%s %d:", "REF", rid);
+-	else
+-		fprintf(tb, "%s %d:", "PROC", pid+extras);
+-
+-	fprintf(tb, "%d/%d:", redrows, nrcols);
+-	for (i = 0; i < nrcols; i++)
+-		fprintf(tb, "%d(%d),", column[i].ccode, column[i].coltype);
+-	putc('\n', tb);
+-
+-	for (i = 0, this = base; this != NULL; this = this->nextrow, i++)
+-	{	if (row[i].mapping != NOSTATE)
+-			continue;
+-
+-		that = find(i, 0);
+-		for (k = 0; k < nrcols; k++, that = that->nextcol)
+-		{	y = 0; field[0] = '\0';
+-			for (at = that->pilar; at != NULL; at = at->nxtp)
+-			{	if (at->transf == NOSTATE)
+-					continue;
+-
+-				j = row[ target(at->transf) ].maptwo;
+-
+-				if ((x = strlen(field)) > 200)
+-					whoops("string overflow");
+-
+-				sprintf(&field[x], "[%d,%d]", j, at->code);
+-				y++;
+-		   	}
+-
+-			if (y > 0)
+-		   	{	fprintf(tb, "%d/%d ", row[i].maptwo, k);
+-				fprintf(tb, "(%d) %s\n", y, field);
+-	}	}	}
+-	fprintf(tb, "0/0 (0)\n");
+-
+-	if (linecode)
+-	{	fprintf(tb, "rownames:\n");
+-		for (i = 0; i < redrows; i++)
+-			fprintf(tb, "%s\n", row[i].name);
+-	}
+-}
+-
+-wrapup(r, p, tb, np, vb)
+-	FILE *tb;
+-{
+-	int i;
+-	extern struct PROCTABLE proctable[MAXPROC];
+-
+-	purgerows(np);
+-	dumpforw(tb);
+-	deadends(tb);
+-	badstates(tb);
+-	putcalls(tb);
+-	numlocvars(tb);
+-
+-	if (r == NONE)
+-	for (i = 1; i < proctable[p].replic; i++)
+-	{	extras++;
+-		twiddle("_PROCID");
+-		dumpforw(tb);
+-		deadends(tb);
+-		badstates(tb);
+-		putcalls(tb);
+-		numlocvars(tb);
+-	}
+-
+-	if (vb)
+-	{	deadrows(p, r);
+-		deadlabels();
+-	}
+-
+-	release();
+-	scrapcalltable();
+-}
+//GO.SYSIN DD pret2.c
+echo pret3.c 1>&2
+sed 's/.//' >pret3.c <<'//GO.SYSIN DD pret3.c'
+-#include <stdio.h>
+-#include "pret.h"
+-
+- struct FORMALS {
+-	char name[MAXNAME];
+-	int typefs;		/* qset or pvar	(default)   */
+-	int tag;		/* id			    */
+-	char used;		/* reference count	    */
+-	char reset;		/* default type overwritten */
+-	struct FORMALS *nxtpar;
+- };
+-
+- struct {
+-	char name[MAXNAME];
+-	int status;
+-	int nrparams;
+-	int nrstates;
+-	int unreach;
+-	struct FORMALS *params;	/* formal parameters */
+- } reftable[MAXPROC];
+-
+- int nrrefs = 0;
+-
+- extern int anyerror, pid, rid, assertion, inertion;
+- extern char qsetname[MAXNAME];
+-
+-refsize(n, m, k)
+-{	reftable[n].nrstates = m;
+-	reftable[n].unreach = k;
+-}
+-
+-reorder()
+-{ int i, j, N, M;
+-  struct FORMALS * hook;
+-
+-	if (rid == NONE)
+-		return;
+-	/*
+-	 * make sure that formal msg parameters
+-	 * are numbered in the order in which they
+-	 * will be pushed onto the call stack in trace.c
+-	 */
+-
+-	j = reftable[rid].nrparams;
+-	hook = reftable[rid].params;
+-
+-	for (i = N = M = 0; i < j; i++)
+-	{	if (hook->typefs == ISQ || hook->typefs == ISQN)
+-			N = renumqset(hook->tag, N);
+-		else
+-			hook->tag = M++;
+-
+-		hook = hook->nxtpar;
+-	}
+-}
+-
+-newreftask(str, mask)
+-	char *str;
+-{ register int i;
+-
+-	for (i = 0; i < nrrefs; i++)
+-		if (strcmp(str, reftable[i].name) == 0)
+-			break;
+-	if (i == nrrefs)
+-	{	if (nrrefs >= MAXPROC)
+-			whoops("too many procedures");
+-		if (mask == RFR)
+-			yyerror("undeclared procedure, %s", str);
+-
+-		reftable[i].status = 0;
+-		reftable[i].nrparams = 0;
+-		reftable[i].nrstates = 0;
+-		reftable[i].unreach = 0;
+-		strcpy(reftable[nrrefs++].name, str);
+-	} else
+-	{	if (mask == DCL && (reftable[i].status & DCL))
+-			yyerror("procedure redeclared, %s", str);
+-		if (mask == RFR && rid == i)
+-			yyerror("recursive procedure, %s", str);
+-	}
+-	reftable[i].status |= mask;
+-
+-	return i;
+-}
+-
+-struct FORMALS *
+-newparunit(str, nn, tp, ins)
+-	char *str;
+-{ struct FORMALS * try = (struct FORMALS *)
+-		Emalloc ( sizeof(struct FORMALS) );
+-
+-	try->used  = 0;
+-	try->reset = 0;
+-
+-	strcpy(try->name, str);
+-
+-	try->typefs = tp;
+-	try->nxtpar = NULL;
+-
+-	try->tag = nn;
+-	if (!ins)
+-		yyerror("unspecified parameter, %s", str);
+-
+-	return try;
+-}
+-
+-addFpar(to, stri, n, vt, ins)
+-	char *stri;
+-{ struct FORMALS *hook;
+-  int N = reftable[to].nrparams;
+-  int i = N;
+-
+-	if (N == 0)
+-	{	reftable[to].params = newparunit(stri, n, vt, ins);
+-		reftable[to].nrparams++;
+-	} else
+-	{	hook = reftable[to].params;
+-		for (i = 0; i < N; i++, hook = hook->nxtpar)
+-		{	if (strcmp(hook->name, stri) == 0)
+-			{	if (ins || hook->reset == 1)
+-					yyerror("name clash, %s", stri);
+-
+-				hook->tag = n;
+-				hook->typefs = vt;
+-				hook->reset = 1;
+-				break;
+-			}
+-			if (hook->nxtpar == NULL)
+-			{	hook->nxtpar = newparunit(stri, n, vt, ins);
+-				reftable[to].nrparams++;
+-				i++;
+-				break;
+-	}	}	}
+-
+-	return i;
+-}
+-
+-Fparname(str, which, vt, hit, how, qind)
+-	char *str;
+-{ int i, j, k;
+-  struct FORMALS * hook = reftable[which].params;
+-
+-	for (i = 0, j = reftable[which].nrparams; i < j; i++)
+-	{	if (strcmp(str, hook->name) == 0 &&  hook->typefs == vt)
+-			break;
+-		if (hook->typefs == ISQ || hook->typefs == ISQN)
+-		{	switch (vt) {
+-			case ISM:
+-				if (hook->tag == hit
+-				&& (k = inqset(hook->tag, str, how, qind)) != -1)
+-					return k;
+-				break;
+-			case ISQ:
+-				if (matchowner(hook->tag, str, how, qind))
+-					return hook->tag;	/* id of qset */
+-				break;
+-		}	}
+-		hook = hook->nxtpar;
+-	}
+-	if (i == j || (vt == ISM && hook->tag != hit))
+-		return -1;
+-		
+-	hook->used |= how;
+-
+-	if (vt == ISV)
+-		return hook->tag;
+-
+-	return i;
+-}
+-
+-checkrefs()
+-{ int i;
+-	if (nrrefs == 0)
+-		return;
+-	for (i = 0; i < nrrefs; i++)
+-		if (reftable[i].status == DCL)
+-		{	if (strcmp(reftable[i].name, " assert") != 0
+-			&&  strcmp(reftable[i].name, " error") != 0)
+-				printf("%s: unused procedure\n", reftable[i].name);
+-		} else if (reftable[i].status == RFR)
+-			printf("%s: undeclared procedure\n", reftable[i].name);
+-}
+-
+-numrefs(fd)
+-	FILE *fd;
+-{	extern int linecode;
+-	fprintf(fd, "%d linecode\n", linecode);
+-	fprintf(fd, "%d procedures ", nrrefs);
+-	fprintf(fd, "(assert %d/%d)\n", assertion, inertion);
+-}
+-
+-parrefs(n, m)
+-{ int i;
+-	if ((i = reftable[m].nrparams - n) == 0)
+-		return;
+-	if (i > 0)
+-		yyerror("missing parameters, %s", reftable[m].name);
+-	else
+-		yyerror("too many parameters, %s", reftable[m].name);
+-}
+-
+-isdigit(c) {	return (c >= '0' && c <= '9'); }
+-
+-addAspecial(val, which, pn)
+-{ struct FORMALS * hook = reftable[which].params;
+-  int i;
+-
+-	if (pn >= reftable[which].nrparams || pn < 0)
+-		return;
+-
+-	for (i = 0; i < pn; i++)
+-		if ((hook = hook->nxtpar) == NULL)
+-			whoops("cannot happen - addAspecial");
+-
+-	switch (hook->typefs)
+-	{	case ISQN:
+-		case ISQ: yyerror("mismatched parameter, %s", "queue or qset");
+-			  break;
+-		case ISV: callentry(ISV, val);
+-			  break;
+-		default : whoops("cannot happen - addAspecial");
+-	}
+-}
+-
+-addApars(what, which, pn, index)
+-	char *what;
+-{ struct FORMALS * hook = reftable[which].params;
+-  int val, hit, x;
+-
+-	if (pn >= reftable[which].nrparams || pn < 0)
+-		return;
+-
+-	for (x = 0; x < pn; x++)
+-		if ((hook = hook->nxtpar) == NULL)
+-			whoops("cannot happen - formals");
+-
+-	switch (hook->typefs)
+-	{	case ISQN:
+-			  val = newqset(what, what, 0, index);
+-			  x = matchset(val, hook->tag);
+-			  hit = qsetowner(val, x);	/* find queue-id  */
+-			  callentry(ISQ, hit);		/* enter queue-id */
+-			  callist(val, hit);		/* enter messages */
+-			  break;
+-		case ISQ: val = newqset(what, "", RFR, index);
+-			  x = matchset(val, hook->tag);
+-			  hit = qsetowner(val, x);	/* find queue-id  */
+-			  callentry(ISQ, hit);		/* enter queue-id */
+-			  callist(val, hit);		/* enter messages */
+-			  break;
+-		case ISV: val = addvarname(what, RFR, NONE, index, 0);
+-			  callentry(ISV, val);
+-			  break;
+-		default : whoops("cannot happen - addApars");
+-	}
+-}
+-
+-listrefs()
+-{	int i, k;
+-
+-	for (i = 0; i < nrrefs; i++)
+-	{	printf("\t%2d\t%s, ", i+1, reftable[i].name);
+-		for (k = strlen(reftable[i].name)+1; k < 10; k++)
+-			putchar(' ');
+-		k = reftable[i].nrstates;
+-		printf("%d state%s", k, (k!=1)?"s":"");
+-		if ((k = reftable[i].unreach) > 0)
+-			printf(" (%d unreachable state%s)", k, (k>1)?"s":"");
+-		putchar('\n');
+-	}
+-}
+//GO.SYSIN DD pret3.c
+echo pret4.c 1>&2
+sed 's/.//' >pret4.c <<'//GO.SYSIN DD pret4.c'
+-#include <stdio.h>
+-#include "pret.h"
+-
+-struct PROCTABLE proctable[MAXPROC];		/* index to process names */
+-
+-int nrprocs = 0;
+-
+-procsize(n, m, k)
+-{	proctable[n].nrstates = m;
+-	proctable[n].unreach = k;
+-}
+-
+-newprocname(str, repl)
+-	char *str;
+-{ register int i;
+-
+-	for (i = 0; i < nrprocs; i++)
+-		if (strcmp(str, proctable[i].name) == 0)
+-			break;
+-
+-	if (i == nrprocs)
+-	{	if (nrprocs >= MAXPROC)
+-			whoops("too many processes");
+-		proctable[i].nrstates = 0;
+-		proctable[i].unreach = 0;
+-		proctable[i].replic = repl;
+-		strcpy(proctable[nrprocs++].name, str);
+-	} else
+-		yyerror("process redeclared, %s", str);
+-
+-	return i;
+-}
+-
+-numprocs(fd)
+-	FILE *fd;
+-{
+-	extern int extras;
+-	fprintf(fd, "%d processes\n", nrprocs+extras);
+-}
+-
+-chatter()
+-{	int i;
+-	extern int verbose, nrqs, nrmesgs, nrrefs, assertion, inertion, extras;
+-
+-	if (verbose)
+-	{	i = ((assertion != -1) + (inertion != -1));
+-		printf("\nOverview:\n========\n");
+-		printf("%d queue%s:\n", nrqs, (nrqs==1)?"":"s");
+-		listqs();
+-		printf("%d process%s:\n",
+-				nrprocs+extras, (nrprocs+extras==1)?"":"es");
+-		listprs();
+-		printf("%d procedure%s:\n", nrrefs, (nrrefs==1)?"":"s");
+-		listrefs();
+-		printf("%d assertion%s\n", i, (i==1)?"":"s");
+-	}
+-}
+-
+-listprs()
+-{	int i, k;
+-
+-	for (i = 0; i < nrprocs; i++)
+-	{	printf("\t%2d", i+1);
+-		if (proctable[i].replic != NONE)
+-			printf("x%d", proctable[i].replic);
+-		printf("\t%s, ", proctable[i].name);
+-		for (k = strlen(proctable[i].name)+1; k < 10; k++)
+-			putchar(' ');
+-		k = proctable[i].nrstates;
+-		printf("%d state%s", k, (k!=1)?"s":"");
+-		if ((k = proctable[i].unreach) > 0)
+-			printf(" (%d unreachable state%s)", k, (k>1)?"s":"");
+-		putchar('\n');
+-	}
+-}
+//GO.SYSIN DD pret4.c
+echo pret6.c 1>&2
+sed 's/.//' >pret6.c <<'//GO.SYSIN DD pret6.c'
+-#include <stdio.h>
+-#include "pret.h"
+-
+-struct {
+-	char name[MAXNAME];
+-	char mbox;
+-	char status;
+-	int  qind;		/* index!=NONE if q addressed is array */
+-	int  equa;		/* basename match */
+-	int  code;
+-} mesgtable[MANY];
+-
+-struct QTABLE qtable[NQUEUES];
+-
+-int msize[NQUEUES];		/* mailbox sizes per queue */
+-
+-int msgval = BASEVAL;
+-int nrmesgs = 0;
+-int nrqs = 0;
+-
+-int initable[MANY];
+-int nrinits = 0;		/* number initial messages */
+-
+-extern anyerror, pid, rid;
+-
+-newqname(str, mask, lim, qind)
+-	char *str;
+-{
+-	register int i;
+-
+-	if (rid != NONE)
+-	{	if ((i = Fparname(str, rid, ISQ, NONE, mask, qind)) != -1)
+-			return (MANY + i);	/* id of qset + offset */
+-	}
+-	for (i = 0; i < nrqs; i++)
+-		if (strcmp(str, qtable[i].name) == 0)
+-			break;
+-	if (i == nrqs)
+-	{	if (nrqs >= NQUEUES)
+-			whoops("too many queues");
+-
+-		qtable[i].owner = (mask == DCL || mask == RFR) ? pid : NONE;
+-		qtable[i].limit  = (lim == NONE) ? 2 : lim;
+-		qtable[i].status = mask;
+-		qtable[i].magic  = 0;
+-		qtable[i].multiple  = qind;
+-		strcpy(qtable[nrqs++].name, str);
+-	} else
+-	{	if (mask == DCL)
+-		{	if (qtable[i].status & DCL)
+-				yyerror("queue redeclared, %s", str);
+-
+-			if (qtable[i].owner == NONE)
+-				qtable[i].owner = pid;
+-			else if (qtable[i].owner != pid && pid != NONE)
+-				warning("queue read by 2 processes", str);
+-			qtable[i].limit = lim;
+-			qtable[i].multiple = qind;
+-		} else if (mask & RFR)
+-		{	if (qtable[i].owner == NONE)
+-				qtable[i].owner = pid;
+-
+-			else if (qtable[i].owner != pid)
+-				warning("queue read by 2 processes", str);
+-		}
+-		if ((mask & RFR) || (mask & ADR))
+-		{	if (qind != qtable[i].multiple
+-			&&  (qind == NONE || qtable[i].multiple == NONE))
+-				yyerror("queue indexing error, mesg name, %s", str);
+-		}
+-		qtable[i].status |= mask;
+-	}
+-	return i;
+-}
+-
+-addmsg(what, hit, mask, tpp, qind)
+-	char *what; char mask;
+-{ register int i, j;
+-  char str[MAXNAME];
+-
+-	if (rid != NONE)
+-	{	if ((i = Fparname(what, rid, ISM, hit - MANY, mask, qind)) != -1)
+-			return (MANY + i);
+-		if (hit >= MANY)
+-		{	yyerror("undeclared message, %s", what);
+-			return -1;
+-	}	}
+-
+-	strcpy(str, qtable[hit].name);
+-	strcat(str, ":"); strcat(str, what);
+-
+-	for (j = 0; j < nrmesgs; j++)
+-	{	if (strcmp(str, mesgtable[j].name) == 0)
+-			break;
+-	}
+-	for (i = j; i < nrmesgs; i++)
+-		if (strcmp(str, mesgtable[i].name) == 0
+-		&&  mesgtable[i].qind == qind)
+-			break;
+-	if (i == nrmesgs)
+-	{	if (nrmesgs >= MANY)
+-			whoops("too many messages");
+-		if (qtable[hit].multiple != qind
+-		&&  (qind == NONE || qtable[hit].multiple == NONE))
+-			yyerror("Queue indexing error, qname, %s", str);
+-
+-		mesgtable[i].mbox = hit;
+-		mesgtable[i].qind = qind;
+-		mesgtable[i].status = mask;
+-		strcpy(mesgtable[nrmesgs++].name, str);
+-		mesgtable[i].code = msgval++;
+-		mesgtable[i].equa = mesgtable[j].code;
+-	} else
+-		mesgtable[i].status |= mask;
+-
+-	if (tpp == INITM)
+-		initable[nrinits++] = mesgtable[i].code;
+-
+-	if (strcmp(what, " any") == 0 && mask == SAR)
+-		qtable[hit].magic = 1;
+-
+-	return mesgtable[i].code;
+-}
+-
+-isoqs()
+-{ int i;
+-	for (i = 0; i < nrqs; i++)
+-	{	if (!(qtable[i].status & DCL))
+-		printf("warning: queue `%s' undeclared\n", qtable[i].name);
+-		if (qtable[i].owner == NONE)
+-		printf("warning: queue `%s' unknown owner\n", qtable[i].name);
+-		switch (qtable[i].status) {
+-		case 0:		/* used to check name existence in qsets */
+-		case DCL:	printf("%s: isolated queue\n", qtable[i].name);
+-				break;
+-		case DCL+RFR:	printf("%s: queue not addressed\n", qtable[i].name);
+-				break;
+-		case DCL+ADR:	printf("%s: queue is never read\n", qtable[i].name);
+-		default:	break;
+-		}
+-	}
+-}
+-
+-silentcheck()
+-{ int i, j, k, p;
+-	for (i = 0; i < nrqs; i++)
+-	{	if (msize[i] == 0)
+-			continue;
+-		k = strlen(qtable[i].name) + 1;
+-		for (j = 0; j < nrmesgs; j++)
+-		if (mesgtable[j].mbox == i && (p = mesgtable[j].status) != SAR)
+-		{	switch (p) {
+-			case RCV: if (qtable[i].multiple) break;
+-				  printf("queue %s: ", qtable[i].name);
+-				  printf("mesg '%s' ", &mesgtable[j].name[k]);
+-				  printf("is received but not sent\n");
+-				  anyerror++;
+-				  break;
+-			case SND: if (qtable[i].magic != 0
+-				  ||  qtable[i].multiple
+-				  ||  strcmp(&mesgtable[j].name[k], " any") == 0)
+-				  	break;
+-				  printf("queue %s: ", qtable[i].name);
+-				  printf("mesg '%s' ", &mesgtable[j].name[k]);
+-				  printf("is sent but not received\n");
+-				  anyerror++;
+-				  break;
+-			case 0:   printf("queue %s: ", qtable[i].name);
+-				  printf("mesg '%s' ", &mesgtable[j].name[k]);
+-				  printf("is never used\n");
+-				  break;
+-			}
+-	}	}	
+-}
+-
+-checkqs()
+-{	isoqs();
+-	silentcheck();
+-}
+-
+-numsorts(fd)
+-	FILE *fd;
+-{ int i, j;
+-
+-	for (i = j = 0; i < nrqs; i++)
+-	{	if (qtable[i].multiple == NONE)
+-			j++;
+-		else
+-			j += qtable[i].multiple;
+-	}
+-	fprintf(fd, "%d queues:\n", j);
+-	numesgs(fd);
+-	for (i = 0; i < nrqs; i++)
+-	{	fprintf(fd, "%s\t%d/",
+-				qtable[i].name, qtable[i].owner);
+-		fprintf(fd, "%d/%d/%d: ",
+-				qtable[i].limit, msize[i], qtable[i].multiple);
+-		for (j = 0; j < nrmesgs; j++)
+-			if (mesgtable[j].mbox == i)
+-				fprintf(fd, "%d[%d,%d],", mesgtable[j].code,
+-					mesgtable[j].qind,
+-					mesgtable[j].equa);
+-		putc('\n', fd);
+-}	}
+-
+-numinits(fd)
+-	FILE *fd;
+-{ int i;
+-	fprintf(fd, "%d inits:\n", nrinits);
+-	for (i = 0; i < nrinits; i++)
+-		fprintf(fd, "%d,", initable[i]);
+-	if (nrinits > 0)
+-		putc('\n', fd);
+-}
+-
+-numesgs(fd)
+-	FILE *fd;
+-{ int i, j;
+-  char c;
+-
+-	fprintf(fd, "%d messages, base %d:\n", nrmesgs, BASEVAL);
+-	for (i = 0; i < nrmesgs; i++)
+-	{	for (j = 0; (c = mesgtable[i].name[j]) != '\0'; j++)
+-			if (c == ':')
+-			{	j++;
+-				break;
+-			}
+-		if (c == '\0')
+-			j = 0;
+-
+-		fprintf(fd, "%s ", &mesgtable[i].name[j]);
+-	}
+-	if (nrmesgs > 0)
+-		putc('\n', fd);
+-}
+-
+-prepsorts()
+-{ int i, j;
+-	for (i = 0; i < nrqs; i++)
+-	{	msize[i] = 0;
+-		for (j = 0; j < nrmesgs; j++)
+-			if (mesgtable[j].mbox == i)
+-				msize[i]++;
+-	}
+-}
+-
+-listqs()
+-{	int i, j, k, l, a;
+-
+-	for (i = 0; i < nrqs; i++)
+-	{
+-		if (qtable[i].status & DCL == 0)	/* formal q-parameter */
+-			continue;
+-
+-		printf("\t%2d\t%s", i+1, qtable[i].name);
+-		k = strlen(qtable[i].name) + 1;
+-		if (qtable[i].multiple != NONE)
+-		{	printf("[%d], ", qtable[i].multiple);
+-			a = (qtable[i].multiple>9)?4:3;
+-		} else
+-		{	printf(", ");
+-			a = 0;
+-		}
+-		for (j = 10; j > k+a; j--) putchar(' ');
+-		printf("sort: ");
+-
+-		for (j = l = 0; j < nrmesgs; j++)
+-		if (mesgtable[j].mbox == i &&
+-			strcmp(&mesgtable[j].name[k], " tau") != 0 &&
+-			strcmp(&mesgtable[j].name[k], " any") != 0)
+-		{	if (l++ > 0)
+-				printf(", ");
+-			printf("%s", &mesgtable[j].name[k]);
+-			if ((a = mesgtable[j].qind) != NONE)
+-			{	if (a < -1)
+-					printf("/*%d", -(a+2));
+-				else
+-					printf("/%d", a);
+-		}	}
+-		printf("\n");
+-	}
+-}
+//GO.SYSIN DD pret6.c
+echo pret7.c 1>&2
+sed 's/.//' >pret7.c <<'//GO.SYSIN DD pret7.c'
+-#include <stdio.h>
+-#include "pret.h"
+-#include "pret.d"
+-
+-extern FILE *tb;
+-extern int anyerror, linenumber;
+-extern int nrrows, nrcols, curstate, curdepth;
+-extern int nrvars, realnrvars;
+-extern struct ENTRY *base;
+-extern char filename[256];
+-
+-char *
+-Emalloc(N)
+-	unsigned N;
+-{ char *try, *malloc();
+-	if ((try = malloc(N)) == NULL)
+-		whoops("out of memory");
+-	return try;
+-}
+-
+-whoops(s)
+-	char *s;
+-{	yyerror(s, "aborting");
+-	fclose(tb);
+-	unlink("pret.tmp");
+-	exit(1);
+-}
+-
+-yyerror(s1, s2)
+-	char *s1, *s2;
+-{
+-	char buf[512];
+-	sprintf(buf, s1, s2);
+-
+-	printf("\"%s\", line %2d: %s\n", filename, linenumber, buf);
+-	fflush(stdout);
+-	anyerror++;
+-}
+-
+-warning(s1, s2)
+-	char *s1, *s2;
+-{
+-	printf("\"%s\", line %2d, warning: %s", filename, linenumber, s1);
+-	if (strlen(s2) > 0 && strcmp(s1, "syntax error") != 0)
+-		printf(" (%s)\n", s2);
+-	else
+-		printf("\n");
+-}
+-
+-release()
+-{ register struct ENTRY *this, *temp1, *temp2;
+-  register struct PILAR  *that, *temp3;
+-
+-	this = base;
+-	while (this != NULL)
+-	{	temp1 = this->nextrow;
+-		do
+-		{	temp2 = this->nextcol;
+-			that = this->pilar;
+-			do
+-			{	temp3 = that->nxtp;
+-				free(that);
+-				that = temp3;
+-			} while (that != NULL);
+-			free(this);
+-			this = temp2;
+-		} while (this != NULL);
+-		this = temp1;
+-	}
+-	nrrows = nrcols = curstate = curdepth = 0;
+-	nrvars = realnrvars = 0;
+-}
+-
+-struct PILAR *
+-newunit()
+-{ struct PILAR  *try;
+-
+-	try = (struct PILAR *) Emalloc(sizeof(struct PILAR));
+-
+-	try->transf = NOSTATE;
+-	try->code = NONE;
+-	try->nxtp = NULL;
+-
+-	return try;
+-}
+-
+-struct ENTRY *
+-newentry()
+-{ struct ENTRY *try;
+-
+-	try = (struct ENTRY *) Emalloc(sizeof(struct ENTRY));
+-
+-	try->pilar = newunit();
+-	try->nrpils = 0;
+-	try->nextrow = try->nextcol = NULL;
+-	return try;
+-}
+//GO.SYSIN DD pret7.c
+echo pret8.c 1>&2
+sed 's/.//' >pret8.c <<'//GO.SYSIN DD pret8.c'
+-#include <stdio.h>
+-#include "pret.h"
+-
+-struct {
+-	char name[MAXNAME];
+-	int status;
+-	int initval;
+-	int index;	/* set if used as array */
+-	int width;	/* in bits: for supertrace */
+-} vartbl[MANY];
+-
+-struct {
+-	int m;		/* index of basename in vartbl */
+-	int n;		/* reference to the index      */
+-} ivartbl[MANY];
+-int realnrvars=0;
+-
+-struct {
+-	int m;		/* index of basename in globvartbl */
+-	int n;		/* reference to the index      */
+-} igvartbl[MANY];
+-int realgvars=0;
+-
+-struct {
+-	char name[MAXNAME];
+-	int status;
+-	int initval;
+-	int index;
+-	int width;
+-} globvartbl[MANY];
+-
+-int nrvars = 0;
+-int nrglobvars = 0;
+-int varwidths = 0;
+-
+-extern char procname[MAXNAME];
+-extern char refname[MAXNAME];
+-extern int anyerror, pid, rid;
+-
+-reallocal(m, n)
+-{	int i;
+-	for (i = 0; i < realnrvars; i++)
+-		if (ivartbl[i].m == m && ivartbl[i].n == n)
+-			return i;
+-	if ((i = realnrvars++) >= MANY)
+-		whoops("reallocal overflow");
+-	ivartbl[i].n = n;
+-	ivartbl[i].m = m;
+-	return i;
+-}
+-
+-realglobal(m, n)
+-{	int i;
+-	for (i = 0; i < realgvars; i++)
+-		if (igvartbl[i].m == m && igvartbl[i].n == n)
+-			return i;
+-	if ((i = realgvars++) >= MANY)
+-		whoops("realglobal overflow");
+-	igvartbl[i].n = n;
+-	igvartbl[i].m = m;
+-	return i;
+-}
+-
+-twiddle(suff)
+-	char *suff;
+-{	int i; extern int extras;
+-
+-	for (i = 0; i < nrvars; i++)
+-		if (strcmp(vartbl[i].name, suff) == 0)
+-		{	vartbl[i].initval++;
+-			return;
+-		}
+-	whoops("cannot happen, twiddle");
+-}
+-
+-isarrayvar(suff)
+-	char *suff;
+-{	int i;
+-
+-	for (i = 0; i < nrvars; i++)
+-		if (strcmp(vartbl[i].name, suff) == 0
+-		&& vartbl[i].index != NONE)
+-			return 1;
+-	for (i = 0; i < nrglobvars; i++)
+-		if (strcmp(globvartbl[i].name, suff) == 0
+-		&& globvartbl[i].index != NONE)
+-			return 1;
+-	return 0;
+-}
+-
+-looklocal(suff, how, index)
+-	char *suff;
+-{	int i;
+-
+-	for (i = 0; i < nrvars; i++)
+-		if (strcmp(vartbl[i].name, suff) == 0)
+-		{	vartbl[i].status |= how;
+-			break;
+-		}
+-
+-	if (i != nrvars && how == DCL)
+-		yyerror("local variable redeclared, %s", suff);
+-
+-	if (i != nrvars && how == RFR && index != vartbl[i].index
+-	&& (index == NONE || vartbl[i].index == NONE))
+-		yyerror("local variable array indexing error, %s", suff);
+-	return i;
+-}
+-
+-lookglobal(suff, how, index)
+-	char *suff;
+-{	int i;
+-
+-	for (i = 0; i < nrglobvars; i++)
+-		if (strcmp(globvartbl[i].name, suff) == 0)
+-		{	globvartbl[i].status |= how;
+-			break;
+-		}
+-
+-	if (pid == NONE && rid == NONE && i != nrglobvars && how == DCL)
+-		yyerror("global variable redeclared, %s", suff);
+-
+-	if (i != nrglobvars && how == RFR && index != globvartbl[i].index
+-	&& (index == NONE || globvartbl[i].index == NONE))
+-		yyerror("global variable array indexing error, %s", suff);
+-	return i;
+-}
+-
+-putlocal(what, ival, how, index, width)
+-	char *what;
+-{	int i;
+-
+-	if ((i = nrvars++) >= MANY)
+-		whoops("too many variables");
+-
+-	strcpy(vartbl[i].name, what);
+-	vartbl[i].initval = ival;
+-	vartbl[i].status = how;
+-	vartbl[i].index = index;
+-	vartbl[i].width = width;
+-	if (index != NONE && ival != NONE)
+-	{	fprintf(stderr,"error: no automatic initialization");
+-		fprintf(stderr, " of array `%s'\n",what);
+-		anyerror++;
+-	}
+-	if (width != 0) varwidths=1;
+-	return (MANY + i);
+-}
+-
+-putglobal(what, ival, how, index, width)
+-	char *what;
+-{	int i;
+-
+-	if ((i = nrglobvars++) >= MANY)
+-		whoops("too many variables");
+-	strcpy(globvartbl[i].name, what);
+-	globvartbl[i].initval = ival;
+-	globvartbl[i].status = how;
+-	globvartbl[i].index = index;
+-	globvartbl[i].width = width;
+-	if (index != NONE && ival != NONE)
+-	{	fprintf(stderr,"error: no automatic initialization");
+-		fprintf(stderr, " of array `%s'\n",what);
+-		anyerror++;
+-	}
+-	if (width != 0) varwidths=1;
+-
+-	return i;
+-}
+-/*
+- * arrays are merely patched in for now
+- */
+-addvarname(what, how, ival, index, width)
+-	char *what;
+-{
+-	int i, islocal = (rid != NONE || pid != NONE);
+-
+-	if (rid != NONE && (i = Fparname(what, rid, ISV, NONE, how, index)) != -1)
+-		return (2*MANY + i);
+-	/* formal parameter may not be an array reference */
+-
+-	if (islocal && (i = looklocal(what, how, index)) < nrvars)
+-		return (MANY + reallocal(i, index));
+-	if ((i = lookglobal(what, how, index)) < nrglobvars)
+-		return realglobal(i, index);
+-
+-	if (how == RFR)
+-		yyerror("undeclared variable, %s", what);
+-	if (islocal)
+-		return putlocal(what, ival, how, index, width);
+-
+-	return putglobal(what, ival, how, index, width);
+-}
+-
+-checklocvars()
+-{	int i;
+-
+-	for (i = 0; i < nrvars; i++)
+-		if (vartbl[i].status == DCL)
+-		{	printf("%s: ", (pid != NONE)?procname:refname);
+-			printf("pvar %s is never used\n", vartbl[i].name);
+-		}
+-}
+-
+-checkglobvars()
+-{	int i;
+-
+-	for (i = 0; i < nrglobvars; i++)
+-		if (globvartbl[i].status == DCL)
+-		{	printf("global: ");
+-			printf("pvar %s is never used\n", globvartbl[i].name);
+-		}
+-}
+-
+-numglobvars(fd)
+-	FILE *fd;
+-{	int i;
+-
+-	fprintf(fd, "%d g-variables: ", nrglobvars);
+-	for (i = 0; i < nrglobvars; i++)
+-		fprintf(fd, "%d/%d,", globvartbl[i].initval, globvartbl[i].index);
+-	putc('\n', fd);
+-	if (varwidths)
+-	{	fprintf(fd, "%d g-widths: ", nrglobvars);
+-		for (i = 0; i < nrglobvars; i++)
+-			fprintf(fd, "%d,", globvartbl[i].width);
+-		putc('\n', fd);
+-	}
+-	fprintf(fd, "%d g-uses: ", realgvars);
+-	for (i = 0; i < realgvars; i++)
+-		fprintf(fd, "%d/%d,", igvartbl[i].m, igvartbl[i].n);		
+-	putc('\n', fd);
+-}
+-
+-numlocvars(fd)
+-	FILE *fd;
+-{	int i;
+-
+-	fprintf(fd, "%d l-variables: ", nrvars);
+-	for (i = 0; i < nrvars; i++)
+-		fprintf(fd, "%d/%d,", vartbl[i].initval, vartbl[i].index);
+-	putc('\n', fd);
+-	if (varwidths)
+-	{	fprintf(fd, "%d l-widths: ", nrvars);
+-		for (i = 0; i < nrvars; i++)
+-			fprintf(fd, "%d,", vartbl[i].width);
+-		putc('\n', fd);
+-	}
+-
+-	fprintf(fd, "%d l-uses: ", realnrvars);
+-	for (i = 0; i < realnrvars; i++)
+-		fprintf(fd, "%d/%d,", ivartbl[i].m, ivartbl[i].n);		
+-	putc('\n', fd);
+-}
+//GO.SYSIN DD pret8.c
+echo pret9.c 1>&2
+sed 's/.//' >pret9.c <<'//GO.SYSIN DD pret9.c'
+-#include <stdio.h>
+-#include "pret.h"
+-
+-#define MAXACTUALS	(MANY)
+-
+- struct ACTUALS {
+-	int typefs[MAXACTUALS];		/* queue mesg or pvar */
+-	int index [MAXACTUALS];		/* qid,  if mesg      */
+-	struct ACTUALS *nxtcall;
+-	int nractuals;
+-	int whattask;			/* id of task called  */
+- };
+-
+- struct ACTUALS *calls;		/* procedure call data   */
+- int nrcalls;			/* nr of procedure calls */
+-
+- extern pid, rid, linenumber;
+-
+-newcalltable()
+-{	nrcalls = 0;
+-	calls = NULL;
+-}
+-
+-scrapcalltable()
+-{ struct ACTUALS *tmp;
+-  struct ACTUALS *hook = calls;
+-  int i;
+-
+-	for (i = 0; i < nrcalls; i++)
+-	{	tmp = hook;
+-		hook = hook->nxtcall;
+-		free(tmp);
+-	}
+-}
+-
+-newcall(ofwhat)
+-{ int i, j;
+-  struct ACTUALS *new, *old;
+-
+-	new = ( struct ACTUALS *)
+-		Emalloc( sizeof(struct ACTUALS) );
+-	new->nractuals = 0;
+-	new->whattask = ofwhat;
+-
+-	if ((j = nrcalls++) == 0)
+-		calls = new;
+-	else
+-	{	old = calls;
+-		for (i = 1; i < j; i++)
+-			old = old->nxtcall;
+-		old->nxtcall = new;
+-	}
+-	return nrcalls-1;
+-}
+-
+-putcalls(tb)
+-	FILE *tb;
+-{ struct ACTUALS *hook;
+-  int j, k, a, b;
+-  int maxm = 0;
+-  int maxv = 0;
+-
+-	fprintf(tb, "FCT_CALLS %d\n",  nrcalls);
+-	for (j = 0, hook = calls; j < nrcalls; j++)
+-	{
+-		for (k = a = b = 0; k < hook->nractuals; k++)
+-		{	if (hook->typefs[k] == ISM)
+-				a++;
+-			else if (hook->typefs[k] == ISV)
+-				b++;
+-		}
+-		if (a > maxm) maxm = a;
+-		if (b > maxv) maxv = b;
+-
+-		fprintf(tb, "%d-%d/%d:", hook->whattask, a, b);
+-		for (k = 0; k < hook->nractuals; k++)
+-		{	if (hook->typefs[k] != ISQ)
+-			fprintf(tb, " %d/%d", hook->typefs[k], hook->index[k]);
+-		}
+-		putc('\n', tb);
+-		hook = hook->nxtcall;
+-	}
+-	fprintf(tb, "PARS %d/%d\n",  maxm, maxv);
+-}
+-
+-callentry(x, val)
+-{ int i;
+-  struct ACTUALS *hook = calls;
+-
+-	for (i = 1; i < nrcalls; i++)
+-		hook = hook->nxtcall;
+-
+-	if ((i = hook->nractuals++) >= MAXACTUALS)
+-		whoops("too many parameters");
+-	hook->typefs[i] = x;
+-	hook->index[i] = val;
+-}
+//GO.SYSIN DD pret9.c
+echo pretlex.l 1>&2
+sed 's/.//' >pretlex.l <<'//GO.SYSIN DD pretlex.l'
+-%{
+-#include "stdio.h"
+-#include "pret.h"
+-#include "y.tab.h"
+-
+-extern linenumber, nest;
+-extern char filename[256];
+-
+-putback(c)
+-{	unput(c);
+-}
+-
+-%}
+-%%
+-\n	{ linenumber++; }
+-\/\*	{ char c1, c2;		/* comment string */
+-
+-	  for(nest++, c2 = ' ';;){
+-		c1 = c2;
+-		c2 = input();
+-		if (c1 == '/' && c2 == '*')
+-			nest++;
+-		else if (c1 == '*' && c2 == '/')
+-			nest--;
+-		if (nest <= 0)
+-			break;
+-		if (c2 == '\n')
+-			linenumber++;
+-		else if (c2 == 0)
+-			whoops("unexpected eof (in comment)");
+-	  }
+-	}
+-[ \t]	{ ; }
+-^#[ ]+[0-9]+[ ]+\"[^\"]+\"\n	{
+-		sscanf(&yytext[1], "%d \"%s\"\n", &linenumber, filename);
+-		filename[strlen(filename)-1] = 0;	/* strip the last " */
+-	}
+-queue	{ return(QUEUES); }
+-qset	{ return(QSET); }
+-pvar	{ return(PVAR); }
+-proc	{ return(PROCESS); }
+-if	{ return(IF); }
+-fi	{ return(FI); }
+-do	{ return(DO); }
+-od	{ return(OD); }
+-skip	{ return(skip); }
+-goto	{ return(GOTO); }
+-break	{ return(BREAK); }
+-any 	{ return(DEFAULT); }
+-default	{ return(DEFAULT); }
+-assert	{ return(ASSERT); }
+-error	{ return(ERROR); }
+-timeout	{ return(timeout); }
+-\{	{ return(PBEGIN); }
+-\}	{ return(END); }
+-[0-9]+	{ yylval.resu = atoi(yytext); return(VALUE); }
+-[a-zA-Z][_a-zA-Z0-9]*	{
+-		yylval.resu = newstring(yytext);
+-		if (isarrayvar(yytext)) return(ARNAME);
+-		if (isqset(yytext)) return(QSNAME);
+-		return(NAME);
+-	}
+-_PROCID	{ yylval.resu = newstring("_PROCID"); return(NAME); }
+-"::"	{ return(FLAG); }
+-"->"	{ return(ARROW); }
+-";"	{ return(SEMICOLON); }
+-":"	{ return(COLON); }
+-\+\+	{ return(INC); }
+-\-\-	{ return(DEC); }
+-\+\=	{ return(ADDEQ); }
+-\-\=	{ return(SUBEQ); }
+-\*\=	{ return(MULEQ); }
+-\/\=	{ return(DIVEQ); }
+-\%\=	{ return(MODEQ); }
+-\|\|	{ return(OR); }
+-\&\&	{ return(AND); }
+-\>\=	{ return(GE); }
+-\<\=	{ return(LE); }
+-\!\=	{ return(NE); }
+-\>	{ return(GT); }
+-\<	{ return(LT); }
+-\!	{ return(NOT); }
+-==	{ return(EQ); }
+-.	{ return(yytext[0]); }
+//GO.SYSIN DD pretlex.l
+echo x.tab.h 1>&2
+sed 's/.//' >x.tab.h <<'//GO.SYSIN DD x.tab.h'
+-
+-typedef union {
+-	int resu;
+-	struct Node *node;
+-} YYSTYPE;
+-extern YYSTYPE yylval;
+-# define NAME 257
+-# define VALUE 258
+-# define ARNAME 259
+-# define QSNAME 260
+-# define ASSERT 261
+-# define ERROR 262
+-# define PROCESS 263
+-# define PBEGIN 264
+-# define END 265
+-# define IF 266
+-# define FI 267
+-# define DO 268
+-# define OD 269
+-# define timeout 270
+-# define skip 271
+-# define BREAK 272
+-# define DEFAULT 273
+-# define GOTO 274
+-# define FLAG 275
+-# define ARROW 276
+-# define SEMICOLON 277
+-# define COLON 278
+-# define QUEUES 279
+-# define QSET 280
+-# define PVAR 281
+-# define MESG 282
+-# define ADDEQ 283
+-# define SUBEQ 284
+-# define MULEQ 285
+-# define DIVEQ 286
+-# define MODEQ 287
+-# define OR 288
+-# define AND 289
+-# define GT 290
+-# define GE 291
+-# define LT 292
+-# define LE 293
+-# define EQ 294
+-# define NE 295
+-# define UNARYMINUS 296
+-# define NOT 297
+-# define INC 298
+-# define DEC 299
+//GO.SYSIN DD x.tab.h

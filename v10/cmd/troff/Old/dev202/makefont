@@ -1,0 +1,28 @@
+case $# in
+0)	echo 'makefont archive fontname internal ...'; exit ;;
+esac
+
+arch=$1
+shift
+
+echo "# $*
+name $1
+internalname $2" >$1
+awk '
+BEGIN {
+	OFS = "	"
+	print "charset"
+	print "\\|	6	0	0"
+	print "\\^	3	0	0"
+}
+# read width file to get char number and width
+$1 == "char" {
+	w[$2] = $7
+}
+
+# read proto file to get char name, number
+$2 ~ /^[0123]$/ && NF == 3 {
+	print $1, w[$3], $2, $3
+	if ($1 == "hy")
+		print "-	\"	=hy"
+} ' $arch.w proto >>$1

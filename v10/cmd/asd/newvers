@@ -1,0 +1,15 @@
+CMD=/n/bowell/src/cmd/asd
+mkpkg -D.=/src/cmd/asd `
+	for i in *.[ch] Makefile remarks
+	do	if cmp -s $i $CMD/$i
+		then	:
+		else	echo $i
+		fi
+	done `  > newpkg
+ar x newpkg Instructions
+ed - Instructions <<!
+1,\$s/ark	other/bin	bin/
+wq
+!
+ar r newpkg Instructions
+seal -k newpkg | uux - 'bowell!asdrcv grigg ark'

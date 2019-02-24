@@ -1,0 +1,89 @@
+      SUBROUTINE SETEXT
+      INTEGER Z, FINDND, PLAT, PNODE, PP, SS(3), SYMLEN
+      INTEGER BLANK
+      LOGICAL ERR, SYSERR, ABORT
+      COMMON /SCR1/ LINODE, INODE(500)
+      COMMON /GRAPH/ LLAT, PLAT, LAT(6000)
+      COMMON /INTS/ Z(346)
+      COMMON /DETECT/ ERR, SYSERR, ABORT
+      COMMON /HEAD/ LNODE, PNODE, NODE(500)
+      COMMON /PARAMS/ I1, I2, I3, SYMLEN, I4, I5, I6
+      DATA BLANK /1H /
+C
+C     SUBROUTINE SETS UP DEFNS FOR BASIC EXTERNAL FCNS USED IN PASS 1
+C     FLUSH PAST INTRINSICS IN TABLE
+C
+      K = 1
+      DO 10 I=1,31
+        K = K + Z(K) + 2
+   10 CONTINUE
+C
+C     SEARCH EXTERNAL ENTRIES IN TABLE TO SEE WHICH HAVE BEEN USED
+C
+      DO 90 I=1,24
+        N = K + Z(K) + 1
+        L = Z(N)/1024
+        IF (L) 80, 80, 20
+C
+C     SEE IF THIS EXTERNAL FCN HAS BEEN USER DEFINED
+C
+   20   L = Z(K)
+        DO 30 J=1,SYMLEN
+          SS(J) = BLANK
+   30   CONTINUE
+        CALL S5PACK(Z(K+1), SS, L)
+        LL = FINDND(SS(1),J)
+        IF (LL.NE.0) GO TO 80
+C
+C     SETUP LATTICE ENTRY FOR THIS EXERNAL FCN
+C
+        IF (PNODE+1.GE.LNODE) GO TO 120
+        IF (PLAT+SYMLEN+8.GE.LLAT) GO TO 110
+C     SET LEVEL OF BASIC EXTERNAL FUNCTION TO -2
+        INODE(PNODE) = -2
+        NODE(PNODE) = PLAT
+        PNODE = PNODE + 1
+        DO 40 J=1,SYMLEN
+          L = PLAT + J - 1
+          LAT(L) = SS(J)
+   40   CONTINUE
+        PP = PLAT
+        PLAT = PLAT + SYMLEN
+        LAT(PLAT) = MOD(Z(N),512)/128
+        L = PLAT + 1
+        LL = PLAT + 5
+        DO 50 NN=L,LL
+          LAT(NN) = 0
+   50   CONTINUE
+        LAT(PLAT+6) = 6 + 8*MOD(Z(N),8)
+        NO = LAT(PLAT)
+        PLAT = PLAT + 7
+C
+C     FILL IN ARG ENTRIES
+C     NO CONTAINS NUMBER OF ARGS
+C
+        IF ((PLAT+4)*NO.GE.LLAT) GO TO 110
+        L = PP + SYMLEN + 1
+   60   LL = PLAT + 3
+        DO 70 NN=PLAT,LL
+          LAT(NN) = 0
+   70   CONTINUE
+        CALL SATT2(PLAT, 1, MOD(Z(N),64)/8)
+        CALL SATT2(PLAT, 4, 1)
+        CALL SATT2(PLAT, 8, 10)
+        LAT(L) = PLAT
+        LAT(PLAT+1) = 1
+        L = PLAT + 3
+        PLAT = PLAT + 4
+        IF (NO.EQ.1) GO TO 80
+        NO = NO - 1
+        GO TO 60
+   80   K = N + 1
+   90 CONTINUE
+  100 RETURN
+  110 CALL ERROR1(33H IN SETEXT, TABLE OVERFLOW OF LAT, 33)
+      GO TO 130
+  120 CALL ERROR1(34H IN SETEXT, TABLE OVERFLOW OF NODE, 34)
+  130 SYSERR = .TRUE.
+      GO TO 100
+      END

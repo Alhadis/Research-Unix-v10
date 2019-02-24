@@ -1,0 +1,126 @@
+.text
+.globl _main
+.align 2
+_main:link a6,#-16
+movm.l #0x490,-12(a6)
+clr.l $d7
+L2:
+lea _down,$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l &1,0($a2,$d4.l)
+lea _up,$a2
+mov.l &1,0($a2,$d4.l)
+L3:
+addq.l &1,$d7
+cmp.l &15,$d7; jlt L2
+clr.l $d7
+L6:
+lea _rows,$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l &1,0($a2,$d4.l)
+L7:
+addq.l &1,$d7
+cmp.l &8,$d7; jlt L6
+mov.l &0,($sp)
+jbsr _queens
+clr.l $d0
+L1:
+movm.l -12(a6),#0x490
+unlk a6
+rts
+.globl _queens
+.align 2
+_queens:link a6,#-20
+movm.l #0x4d0,-16(a6)
+mov.l 8($a6),$d7
+clr.l $d6
+L11:
+lea _rows,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$d4
+tst.l $d4; jeq L15
+lea _up+28,$a2
+mov.l $d6,$d4; sub.l $d7,$d4
+asl.l &2,$d4
+mov.l 0($a2,$d4.l),$d4
+tst.l $d4; jeq L15
+lea _down,$a2
+mov.l $d6,$d4; add.l $d7,$d4
+asl.l &2,$d4
+mov.l 0($a2,$d4.l),$d4
+tst.l $d4; jeq L15
+lea _down,$a2
+mov.l $d6,$d4; add.l $d7,$d4
+asl.l &2,$d4
+mov.l &0,0($a2,$d4.l)
+lea _up+28,$a2
+mov.l $d6,$d4; sub.l $d7,$d4
+asl.l &2,$d4
+mov.l &0,0($a2,$d4.l)
+lea _rows,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l &0,0($a2,$d4.l)
+lea _x,$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l $d6,0($a2,$d4.l)
+cmp.l &7,$d7; jne L19
+jbsr _print
+jra L20
+L19:
+mov.l $d7,$d4; addq.l &1,$d4
+mov.l $d4,($sp)
+jbsr _queens
+L20:
+lea _down,$a2
+mov.l $d6,$d4; add.l $d7,$d4
+asl.l &2,$d4
+mov.l &1,0($a2,$d4.l)
+lea _up+28,$a2
+mov.l $d6,$d4; sub.l $d7,$d4
+asl.l &2,$d4
+mov.l &1,0($a2,$d4.l)
+lea _rows,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l &1,0($a2,$d4.l)
+L15:
+L12:
+addq.l &1,$d6
+cmp.l &8,$d6; jlt L11
+L10:
+movm.l -16(a6),#0x4d0
+unlk a6
+rts
+.globl _print
+.align 2
+_print:link a6,#-20
+movm.l #0x490,-12(a6)
+clr.l $d7
+L23:
+mov.l &_27,($sp)
+lea _x,$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$d4
+add.l &49,$d4
+mov.l $d4,4($sp)
+jbsr _printf
+L24:
+addq.l &1,$d7
+cmp.l &8,$d7; jlt L23
+mov.l &_28,($sp)
+jbsr _printf
+L22:
+movm.l -12(a6),#0x490
+unlk a6
+rts
+.bss
+.globl _x
+comm _x,32
+.globl _rows
+comm _rows,32
+.globl _down
+comm _down,60
+.globl _up
+comm _up,60
+.text
+.align 2; _28:.byte 10,0
+.align 2; _27:.ascii "%c \000"

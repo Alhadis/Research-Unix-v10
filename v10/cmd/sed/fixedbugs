@@ -1,0 +1,88 @@
+Since V7:
+
+1) garbage could be compiled into pseudo-sense.
+Fix: in sed0.c, function compile, case '\0':
+remove continue statement, so the '\0' and '\n'
+are treated identically.
+
+2) cc warning messages quieted by adding r[12] specifiers
+to all references to union reptr.
+
+3) 2/28/80: H command used a null pointer sometimes.
+Fix: initialize hspend = holdsp in main().
+
+4) 10/23/80: Null RE could not be first address of range.
+Fixed by moving test for null RE into else after test for
+no address (near 160 in sed0.c).
+
+5) 2/8/82: got rid of two warning messages from the compiler.
+(Changed rep->negfl to rep->r1.negfl in sed0.c;
+ipc->r1.lb1 to ipc->r2.lb1 in sed1.c.)
+
+6) 12/6/82: removed (commented out) debugging code in
+sed0.c for unrecognized command. (It had been there since
+at latest Jan 30, 1981.)
+
+7) 6/22/83: changed the substitute() function in sed1.c
+to fix bugs concerning matches of the empty string.
+(The previous version would loop.  Note that /bin/ed
+as of today has a different bug relating to s/a*b/x/g;
+/usr/rob/bin/qed has a third bug.)
+s/a*/x/g should now work properly.
+
+8) 4/12/84: added sed: prefix to all error messages.
+
+9) 6/25/84: Removed an artificial limit on the size of a regular expression
+by undefinig ESIZE, and making the test of how big a regular expression
+can be always be against reend (= &respace[RESIZE].
+This limits the total space for storing re's, instead of limiting them
+individually.
+
+10) 4/26/85: Increased the size of PTRSPACE (256->512) and RESPACE
+(5000->10000).
+
+11) 5/17/85: fixed a bug found by boulder!geoff;
+resets sflag (saying whether a substitution was done on the
+current line) in routine gline().
+Fixes "t" to work as advertized.
+
+12) 7/24/85: changed the 's' case in fcomp to notice if an empty
+RE is the first re found.
+
+13) 10/01/85: increased max number of w files to 120; #defined MAXFILES
+
+14) 10/01/85: fixed number of line-numbers to be 256 instead of 128
+	(in sed1.c added & 0377 when line# index is moved from byte
+	to int).
+
+15) 4/16/86: changed number of linenumbers to be a long instead of a char.
+
+16) 4/14/86: fixed bug in case '}' in comp() in sed0.c so that ; functions
+	as a new-line separating commands.
+
+17) 8/6/87: #define'd Read in sed1.c to work with new stdio library.
+	Read flushes stdout whenever it reads in a new block from the input
+	file.
+
+18) 10/2/89: arranged for 'q' to position the input file after
+	the last character handled, rather than at buffer end,
+	for uses such as (sed /END/q; cat)<file.  [doug]
+
+19) 11/14/90: line number 0 made illegal [llc]
+
+20) 11/14/90: l command dropped core on characters over 0177.
+	l command produced ambiguous output, cured by
+		always using 3-digit octal escapes
+		appending \n if line ends with \n [doug]
+
+21) 5/3/92: fixes to handle latin-1 [doug]:
+	unsigned chars throughout
+	bigger lists for character classes and y commands
+	no magic coding with 0200 bits for & and \d in s commands
+
+22) 5/30/92: tighter label syntax on :,j,t commands [doug]
+	null label is error
+	semicolon ends label
+
+23) 12/3/93: Increased the size of PTRSPACE (512->1024) and RESPACE
+(10000->20000).

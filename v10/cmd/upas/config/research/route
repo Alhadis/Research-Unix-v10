@@ -1,0 +1,58 @@
+#!/bin/sh -p
+PATH=/bin:/usr/bin:/usr/lib/upas; export PATH
+sender=$1;shift
+system=$1;shift
+sys=`cat /etc/whoami`
+
+# save the mail
+cat > /tmp/ur$$
+
+#
+# Try smtp via datakit.  Mail to a!b!c from d!e!f will be
+# transformed into mail to c@b from f%e@d
+# 
+netname=`egrep ".*/.*/$system\$" /usr/lib/asd/destinations`
+case $netname in
+"") ;;
+*)  tosmtp -u $sys!$sender dk!$system!smtp $* < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+    ;;
+esac
+
+#
+# Try smtp via internet.  Mail to a!b!c from d!e!f will be
+# transformed into mail to b!c@a from f%e@d.  We do this because
+# the receiving system may not treat ! and @ addresses equivalently.
+# 
+# Don't use smtp to bellcore systems because of name clashes.
+# Don't send to vax135 because it doesn't know how to return smtp mail.
+# Don't send to gauss because 1135 has a machine named gauss in hosts.att.  (Why?)
+#
+netname=`egrep "[ 	]$system([ 	]|\$)" /usr/ipc/lib/inaddr\
+	/usr/ipc/lib/inaddr.local | egrep -v "bellcore|mre|vax135|gauss"`
+case $netname in
+"") ;;
+*)  temp=
+    for i in $*; do temp="$temp $system!uucp!$i"; done
+    tosmtp -u $sender $system $temp < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+    ;;
+esac
+
+#
+# finally try old faithful.  Queuing is only done by uucp.
+#
+uux - -a "$sender" "$system!rmail" "($*)" < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+
+# get gateway system
+gateway=`cat /usr/lib/upas/gateway`
+case $gateway in
+"") gateway=research ;;
+esac
+
+# let the gateway figure it out
+temp=
+for i in $*; do temp="$temp $system!$i"; done
+tosmtp -u $sender dk!$gateway!smtp $temp < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+uux - -a "$sender" "$gateway!rmail" "($temp)" </tmp/ur$$
+rv=$?
+rm -f /tmp/ur$$
+exit $rv

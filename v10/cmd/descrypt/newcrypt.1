@@ -1,0 +1,65 @@
+.TH ENCRYPT 1 
+.SH NAME
+encrypt, decrypt \- encrypt or decrypt a message or file
+.SH SYNOPSIS
+.B encrypt
+[
+.B \-p
+]
+[ password ]
+.br
+.B decrypt
+[
+.B \-p
+]
+[ password ]
+.SH DESCRIPTION
+.I Encrypt
+(
+.I decrypt
+)
+reads from the standard input and writes
+on the standard output.
+The
+.I password
+is a key, up to 127 characters in length, which selects a particular transformation.
+If no
+.I password 
+is given,
+.I encrypt
+demands a key from the terminal (without echoing what the user types).
+If the wrong key is given to decrypt, it will usually exit without
+writing on standard output.
+.PP
+If the
+.B \-p
+option is specified, the ciphertext will be encoded into printing
+characters only; suitable for sending through mail.
+In this mode,
+.B decrypt
+ignores any lines that do not have a special prefix (added by
+.B encrypt
+),
+so messages received in the mail can be read without having to edit
+out headers.
+.PP
+Encryption takes place in three layers.  The first addresses traffic
+analysis threats by hiding the size of the message and insuring that
+if the same message is send repeatedly with the same
+.I password
+the ciphertext will be entirely different each time.
+The second layer is the proposed Data Encryption Standard (DES) used
+in Cipher Block Chaining (CBC) mode.  Finally, a key-dependent character
+transposition is applied to the ciphertext which impedes the
+assembly of corresponding pairs of DES blocks under a known-plaintext attack.
+.PP
+The user is encouraged to use a lengthy password.  A short sequence of
+words chosen at random from a dictionary and committed to memory is
+a good plan.
+.SH FILES
+/dev/tty for typed key
+.SH AUTHOR
+D.P.Mitchell
+.SH BUGS
+This encryption program is not provably secure, and the author gives no
+guarantee that it cannot be broken.

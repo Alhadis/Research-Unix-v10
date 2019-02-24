@@ -1,0 +1,431 @@
+.if n .pH aguide2.mail %W%
+.Bk "System Administrator's Guide"
+.CH "Mail Subsystem Administration" F
+.H 1 "Administering the Mail Subsystem"
+.IX istart \f4mail\f1, administration
+The purpose of this appendix is to aid the System Administrator in taking
+advantage of various options within the mail subsystem.
+By default, the mail subsystem provides electronic communications between
+users on the same machine, or between machines connected together on a UUCP
+network, and
+supports two addressing schemes, known as ``bang'' style and ``domain''
+style.
+.IX \f4mail\f1, bang addressing
+.IX \f4mail\f1, domain addressing
+The System Administrator does not need to do anything for mail to work in
+the default manner.
+.P
+.IX \f4mail\f1, smart host
+This appendix will provide information on
+setting up a smarter host,
+establishing a domain name,
+administering a set of sites so that they all send mail with the same machine
+name,
+.IX \f4mail\f1, machine cluster
+.IX \f4mail\f1, gateway machine
+setting up the mail directory to be shared across a networked file
+system, such as RFS and NFS,
+.IX \f4mail\f1, LAN
+.IX \f4mail\f1, RFS
+.IX \f4mail\f1, NFS
+filling in alias information,
+.IX \f4mail\f1, alias lists
+and
+setting up a connection to another site that uses the
+.IX \f4mail\f1, SMTP (Simple Mail Transfer Protocol)
+.IX SMTP (see \f4mail\f1)
+.IX Simple Mail Transfer Protocol (see \f4mail\f1)
+Simple Mail Transfer Protocol (SMTP).
+.H 2 "Mail Administration Files"
+.IX files, mail
+.IX \f4mail\f1, files
+.IX \f4/usr/lib/mail\f1 files
+.IX \f4/etc/mail\f1 files
+.IX \f4mail\f1, \f4/etc/mail\f1 files
+There are four files that are important to mail administration.
+The surrogate file, \f4/etc/mail/mailsurr\f1,
+.IX \f4mailsurr\f1 mail file
+is described on the \f4mailsurr\f1(4) manual page.
+It describes how to rewrite addresses and how to deliver messages through
+the networks.
+The configuration file, \f4/etc/mail/mailcnfg\f1,
+.IX \f4mailcnfg\f1 mail file
+is described on \f4mailcnfg\f1(4).
+It permits various per-site options to be established.
+For more information on the \f4mailsurr\f1 and \f4mailcnfg\f1 manual pages,
+see the \f2System Administrator's Reference Manual\f1.
+The master alias path file, \f4/etc/mail/namefiles\f1, points
+.IX \f4namefiles\f1 mail file
+to one alias file, \f4/etc/mail/names\f1.
+Both are described on
+\f4mailalias\f1(1).
+.IX \f4names\f1 mail file
+These two files are used to define name mappings and address lists.
+For more information on the \f4mailalias\f1 manual page, see
+the \f2User's Reference Manual\f1.
+.H 3 "Mail Addressing Styles"
+.IX \f4mail\f1, address style translation
+.IX address style translation (see \f4mail\f1)
+The default surrogate file contains entries to translate between domain
+style addresses and bang style addresses.
+Bang style addressing is
+characterized by exclamation points (a.k.a. bangs) within the
+address and looks like \f2host\f4!\f2user\f1
+or \f2host1\f4!\f2host2\f4!\f2user\f1.
+Domain style addressing is characterized by the commercial
+at sign (\f4@\f1) and looks like \f2user\f4@\f2host\f4.\f2domain\f1
+or \f2user\f4@\f2host\f1.
+.H 2 "Establishing a Smarter Host"
+Although it is possible to maintain the data files for the UUCP
+network so that the system knows about hundreds or thousands of other
+systems that can be contacted, it is impractical to do so.
+It is often much easier to set up what is known as a ``smarter host,'' that is,
+another UNIX system to which remote mail will be shipped if the
+local machine doesn't know about the system to which the mail is being sent.
+For example, assume you need to send a mail message to \f4hosta!tony\f1,
+but your local machine does not know about \f4hosta\f1.
+The mail message can be automatically routed to the machine
+\f4worldly\f1, which has a more extensive list of UUCP connections.
+.P
+This is done in two steps:
+.AL
+.LI
+Add a line to mailcnfg that says
+.DS I UI
+SMARTERHOST=\f2smhost\fP
+.DE
+where \f2smhost\f1 is replaced with the name of the smarter system (\f4worldly).
+.LI
+Remove the \f4#\f1 character from the line within
+\f4mailsurr\f1 that looks like this:
+.DS I UI
+#'.+'	'.*[!@].*'	'Translate R=%X!%n'
+.DE
+.LE
+.H 2 "Establishing Domain Addresses"
+.IX istart \f4mail\f1, domain addressing
+As distributed, mail knows about two forms of domain style addresses:
+.DS I
+\f2user\f4@\f2host\f1
+.DE
+and
+.DS I
+\f2user\f4@\f2host\f4.UUCP\f1
+.DE
+It does not know about
+.DS I
+\f2user\f4@\f2host\f4.\f2domain\f1
+.DE
+A domain name is an internationally recognized and registered name for a
+set of machines.
+Commercial entities may be registered under domain names similar to
+\&\f4.\f2company-name\f4.COM\f1 and educational entities may be registered
+under domain names similar to \(CW.\f2school\f4.EDU\f1.
+(Note that \f4.UUCP\f1 is not a true domain name.
+The high-level domain names of \f4.COM\f1 and \f4.EDU\f1 are assigned
+by a central authority.)
+A system will generally know how to establish direct connections to
+other machines within the local domain, 
+but will want to make use of a smarter host to take care of other domains.
+.P
+To establish the local domain name, complete this step:
+.AL
+.LI
+Type the command
+.DS I UI
+/usr/sbin/domainname \f2domain\fP
+.DE
+where \f2domain\f1 is replaced with the domain name, such as
+\&\f4.\f2company-name\f4.COM\f1 or whatever is appropriate, and contains
+the leading period.
+(Any periods present within the domain name will be converted to 
+\f4\e.\f1 before being passed to the regular expressions in the surrogate
+file.)
+.LE
+The domain name will also be used by the SMTP router when rewriting
+header files into RFC822 format (see ``Administering SMTP'' below).
+.IX iend \f4mail\f1, domain addressing
+.H 2 "Establishing a Mail Cluster or Gateway"
+.IX istart \f4mail\f1, machine cluster
+.IX istart \f4mail\f1, gateway machine
+With the arrival of inexpensive personal computers, it is often desirable
+to assign a single name to a set (or a cluster) of machines by which all the
+machines in the cluster will be known to external machines, for purposes of
+mail.
+For example, a cluster of machines known internally under names such as
+\f4Xsysa\f1, \f4Xsysb\f1 and \f4Xsysc\f1, could be assigned the cluster name
+of \f4Xsys\f1.
+Mail sent from any of these machines would be shown as being from \f4Xsys\f1;
+that is, the internal names would not be known outside the cluster.
+.P
+To establish a cluster name, add a line to the \f4mailcnfg\f1 that says:
+.DS I UI
+CLUSTER=\f2extname\fP
+.DE
+where \f2extname\f1 is the name by which the machine is known
+externally (\f4Xsys\f1).
+.IX iend \f4mail\f1, machine cluster
+.IX iend \f4mail\f1, gateway machine
+.H 2 "Establishing Mail Service on a Networked File System (RFS or NFS)"
+.IX istart \f4mail\f1, LAN
+.IX istart \f4mail\f1, RFS
+.IX istart \f4mail\f1, NFS
+With the arrival of inexpensive Local Area Networking (LAN) and networked file
+systems such as RFS and NFS, clusters of machines 
+that share many file systems can be set up.
+It is also possible to share \f4/var/mail\f1 across the machines.
+.IX \f4/var/mail\f1
+.IX files, mail
+.IX \f4mail\f1, files
+In this case, you can arrange to have all user's mail boxes created on only
+one machine, but accessible from all machines.
+.P
+As an example, assume that you want the machines \f4Xsysa\f1, \f4Xsysb\f1 and
+\f4Xsysc\f1 to share the mail directory under \f4Xsysa\f1.
+In addition, the entire file system for each system is mounted under the names
+\f4/Xsysa\f1, \f4/Xsysb\f1 and \f4/Xsysc\f1.
+All users have home directories under file systems named \f4/homea\f1,
+\f4/homeb\f1 and \f4/\f1homec, which are mounted on
+the corresponding machines.
+.P
+To establish a shared \f4/var/mail\f1 file system, complete the following
+steps:
+.AL
+.LI
+Make certain that \f4/var/mail\f1 from \f4Xsysa\f1 is advertised.
+.LI
+Remove the directory \f4/var/mail/:saved\f1 from the systems that
+will not have a local \f4/var/mail\f1 (\f4Xsysb\f1 and \f4Xsysc\f1).
+.LI
+Add a line to \f4mailcnfg\f1 that says
+.DS I UI
+FAILSAFE=Xsysa
+.DE
+With this specified, \f4mail\f1 will look for the presence of
+\f4/var/mail/:saved\f1.
+If the directory is not there (indicating that the network connection to
+\f4Xsysa\f1 has been lost), \f4mail\f1 will requeue the file to be delivered to
+\f4Xsysa\f1 via other means (such as UUCP or SMTP).
+.LI
+Move any mailboxes from \f4/var/mail\f1 on \f4Xsysb\f1 and
+\f4Xsysc\f1 to \f4Xsysa\f1 (otherwise the files will be inaccessible).
+.LI
+Mount \f4/var/mail\f1 from \f4Xsysa\f1.
+.LI
+In order for the \f4notify\f1 program to identify where the
+user is logged in (so that it can notify the user when new mail arrives),
+create a file on all machines named \f4/etc/mail/notify.sys\f1
+with contents similar to the following:
+.SS
+Xsysa	/Xsysa
+Xsysb	/Xsysb
+Xsysc	/Xsysc
+.SE
+The first column lists the name of the system and the second gives a pathname
+of the \f4root\f1 filesystem for each machine.
+.LI
+In order for the \f4notify\f1 program to handle a network failure,
+create a file on all machines named \f4/etc/mail/notify.fsys\f1
+with contents similar to the following:
+.SS
+/homea	Xsysa
+/homeb	Xsysb
+/homec	Xsysc
+.SE
+The first column lists a file system name and the second column contains the
+system (machine name) on which that file system is normally mounted.
+If \f4notify\f1 cannot open the mail file for writing, it will look up the
+file system in this list and requeue the file to be delivered to the
+corresponding system via other means (such as UUCP or SMTP).
+.LE
+.IX iend \f4mail\f1, LAN
+.IX iend \f4mail\f1, RFS
+.IX iend \f4mail\f1, NFS
+.H 2 "Administering \f4alias\fP Lists"
+.IX istart \f4mail\f1, alias lists
+.IX istart alias lists, \f4mail\f1
+Before delivering a local mail message, \f4mail\f1 will look up the user name to
+see if it has been aliased to another name or list of names.
+The master alias path file \f4/etc/mail/namefiles\f1 contains a list of
+files that \f4mail\f1 will search for aliases.
+As distributed, this list contains only one file,
+\f4/etc/mail/names\f1, to be searched for aliases.
+If the named alias is found at the beginning of a line within an alias file,
+the rest of that line will be used as the alias.
+This may contain a single name, or a list of names separated by whitespace.
+For example, if you want to set up a group mailing list (e.g., \f4andy.group\f1)
+that will be expanded, add a line similar to the following to the alias file:
+.DS I UI
+andy.group tony paul john ned gary hailey mike
+.DE
+Recursive references are permitted, as in this reference to
+\f4andy.group\f1 within another alias:
+.DS I UI
+armida.dept andy.group danielle.group bob.group \e
+	lee.group pier.group
+.DE
+Several alias files can be listed in \f4namefiles\f1, which may be kept
+anywhere on the machine.
+This permits different alias files to be owned by different administrators.
+.IX iend \f4mail\f1, alias lists
+.IX iend alias lists, \f4mail\f1
+.H 2 "Other Tricks of the \f4surrogate\fP File Trade"
+.H 3 "Logging Mail"
+.IX \f4mail\f1, logging
+.IX logging mail
+Occasionally it may be necessary to keep a log of traffic going through the
+system.
+For example, if you were to write a program \f4/usr/lib/mail/surrcmd/logmail\fP
+that takes three arguments (a log file name, the sender and recipient), it
+could log all external mail flowing through the system by using this
+surrogate entry:
+.SS
+\&'.+!.+' '.*' '> /usr/lib/mail/surrcmd/logmail /var/adm/mailtransport %R %n'
+.SE
+Another example would be to log traffic to or from
+a particular system (here to \f5xyz\f1 and from \f5abc\f1):
+.SS
+\&'.*' 'xyz!.+' '> /usr/lib/mail/surrcmd/logmail /var/adm/mailto-xyz %R %n'
+\&'abc!.+' '.*' '> /usr/lib/mail/surrcmd/logmail /var/adm/mailfrom-abc %R %n'
+.SE
+.H 3 "Path Translation"
+.IX PATH Translation
+.IX translate, PATH
+Many systems have a path translation program available that will give the
+shortest route to a given system, based on various criteria or a database.
+An example of this is the public domain smail program.
+As an alternative to using a smarter host, the autorouter can be invoked as
+a final step in the mailsurr file:
+.SS
+\&'.+'	'.*[!@].*'		'Translate R=|smail -A %n'
+.SE
+.H 3 "Controlling Mail Resource Access"
+.IX Deny, mail access
+.IX \f4mail\f1, controlling access
+It is often necessary to control access to commercial services, such as AT&T
+Mail.
+One method of doing this is to prevent any non-local users from sending mail
+to the commercial site using the Accept and Deny commands:
+.SS
+\&'[^!]+' 'attmail!.+' 'Accept'
+\&'.+'    'attmail!.+' 'Deny'
+.SE
+Another method is to use an external program to check the sender's path to
+see if it is a valid user of the service.
+For example, this shell script returns 0 if the sender is a valid system,
+and 1 otherwise:
+.SS
+case "$1" in
+    abc | def | ghi ) exit 0 ;;
+    * ) echo "$1 is not permitted to send mail to external service"
+	exit 1 ;;
+esac
+.SE
+If the script were installed as /usr/lib/mail/surrcmd/chksender,
+it would be invoked as a delivery agent which will either continue or fail:
+.SS
+# check senders more than one hop away
+\&'.+!(.+)![^!]+' 'attmail!.+' '< C=0;F=*; /usr/lib/mail/surrcmd/chksender \e\e1'
+# check senders one hop away
+\&'(.+)![^!]+'    'attmail!.+' '< C=0;F=*; /usr/lib/mail/surrcmd/chksender \e\e1'
+.SE
+.H 2 "Administering SMTP"
+.IX istart \f4mail\f1, SMTP (Simple Mail Transfer Protocol)
+.IX SMTP (see \f4mail\f1)
+.IX Simple Mail Transfer Protocol (see \f4mail\f1)
+.IX TCP/IP
+The Simple Mail Transfer Protocol
+(SMTP) mail subsystem is delivered as a group of programs that
+allow UNIX System mail to send and receive mail using the SMTP protocol.
+This protocol is typically used over TCP/IP networks.
+However, as delivered, the SMTP processes can connect over any
+TLI-based, connection-oriented, transport that has been administered
+to have an SMTP service.
+.P
+To establish SMTP service requires these steps:
+.AL
+.LI
+By default, SMTP is installed in the mail surrogate file,
+but it is turned off (commented out).
+It may be turned on by uncommenting the line that says:
+.SS
+#'.+' '([^!@]+)!(.+)' '< /usr/lib/mail/surrcmd/smtpqer %R \e\e1 \e\e2'
+.SE
+To uncomment this line, edit the \f4mailsurr\f1 file to
+remove the \f4#\f1 from the start of each line.
+.P
+Mail is addressed using the standard UNIX system mail
+formats of \f2host\f4!\f2user\f1 or \f2user\f4@\f2host\f1.
+If \f2host\f1 is known to support SMTP mail delivery, the mail
+will be queued for delivery using SMTP.
+If not, \f4smtpqer\f1 will not accept the message, and delivery will be
+done by subsequent surrogates in the \f4mailsurr\f1 file.
+.P
+.IX files, SMTP (see \f4mail\f1)
+All messages that are spooled for SMTP delivery are stored in the directory
+\f4/var/spool/smtpq/\f2host\f1, where \f2host\f1 is the name of the machine
+to which mail is being sent.
+.LI
+The list of machines that will accept SMTP mail is specified by the
+\f4netdird\f1 service.
+See \f4netdird\f1(1M) in the \f2System Administrator's Reference Manual\f1
+to see how to add services to this database.
+By default, the SMTP daemon \f4smtpd\f1 will always start when
+your system is booted.
+If \f4smtpd\f1 finds that there are no networks installed for which the
+SMTP service is defined, it will exit.
+.P
+When the daemon \f4smtpd\f1 receives a piece of mail, it does three things:
+1) it inserts a valid UNIX System mail ``\f4From \f1''
+header line;
+2) it converts the recipient address to \f2host\f4!\f2user\f1 form; and,
+3) hands the message to \f4rmail\f1 for delivery.
+.LI
+The following entry must be uncommented from \f4root\f1's \f4crontab\f1 file
+[see \f4crontab\f1(1) for an explanation of this file]:
+.SS
+25 * * * * /usr/lib/mail/surrcmd/smtpsched
+55 1 * * * /usr/lib/mail/surrcmd/smtpsched -c -w 1 -r 7
+.SE
+To do this, execute the following commands as root:
+.SS
+# crontab -l > /tmp/cron.temp
+# ed /tmp/cron.temp
+g!/smtpsched!s/^#//
+w
+q
+# crontab /tmp/cron.temp
+# rm /tmp/cron.temp
+#
+.SE
+.P
+By default, mail that cannot be delivered immediately (as
+it is sent), is queued and retried at one hour intervals by \f4smtpsched\f1.
+You can change the interval by modifying the
+entry for \f4smtpsched\f1 in \f4root\f1's \f4cron\f1 file.
+.IX \f4smtpsched\f1(1M)
+.LE
+.P
+.IX logs, SMTP (see \f4mail\f1)
+SMTP logs all SMTP activity, including
+incoming mail messages, in the log file \f4/var/spool/smtpq/LOG\f1.
+.IX \f4/var/spool/smtpq/LOG\f1
+It is backed up once per day by \f4smtpsched\f1; previous days' log files are
+located in \f4/var/spool/smtpq/LOG.\f2n\f1, where \f2n\f1 is the day
+of the week (from 0 to 6).
+The \f4smtpsched\f1 program will also return undeliverable mail messages.
+For more information on \f4smtpsched\f1(1M)
+see the \f2System Administrator's Reference Manual\f1.
+.H 3 "Setting Up SMTP to Listen Over Multiple Networks"
+\f4smtpd\f1 will listen to any connection-oriented TLI network
+that provides the SMTP service.
+TLI networks are specified in \f4/etc/netconfig\f1.
+For each network that is
+connection-oriented, \f4smtpd\f1 will use \f4netdir_getbyname\f1(3) to
+determine if the SMTP service exists for that network.
+If the service does exist, a port is opened at the address returned by this
+function.
+To make the listener listen to a new network,
+first administer the \f4netdir\f1 databases, and then restart the listener.
+.IX iend \f4mail\f1, SMTP (Simple Mail Transfer Protocol)
+.IX iend \f4mail\f1, administration

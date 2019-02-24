@@ -1,0 +1,208 @@
+.text
+.globl _addpoint
+.align 2
+_addpoint:link a6,#-8
+moveml #0x10,a6@(-8)
+movl a1,a6@(-4)
+movl a6@(8),d4
+addl a6@(16),d4
+movl d4,a6@(8)
+movl a6@(12),d4
+addl a6@(20),d4
+movl d4,a6@(12)
+lea a6@(8),a0
+movl a6@(-4),a1
+movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+L1:
+moveml a6@(-8),#0x10
+unlk a6
+rts
+.globl _canonrect
+.align 2
+_canonrect:link a6,#-28
+moveml #0x90,a6@(-28)
+movl a1,a6@(-4)
+movl a6@(8),d4
+cmpl a6@(16),d4; jge L10
+movl a6@(8),d7
+jra L11
+L10:
+movl a6@(16),d7
+L11:
+movl d7,a6@(-20)
+movl a6@(12),d4
+cmpl a6@(20),d4; jge L19
+movl a6@(12),d7
+jra L20
+L19:
+movl a6@(20),d7
+L20:
+movl d7,a6@(-16)
+movl a6@(8),d4
+cmpl a6@(16),d4; jle L25
+movl a6@(8),d7
+jra L26
+L25:
+movl a6@(16),d7
+L26:
+movl d7,a6@(-12)
+movl a6@(12),d4
+cmpl a6@(20),d4; jle L36
+movl a6@(12),d1
+jra L37
+L36:
+movl a6@(20),d1
+L37:
+movl d1,a6@(-8)
+lea a6@(-20),a0
+movl a6@(-4),a1
+movl #16/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+L5:
+moveml a6@(-28),#0x90
+unlk a6
+rts
+.globl _makepoint
+.align 2
+_makepoint:link a6,#-12
+movl a1,a6@(-4)
+movl a6@(8),a6@(-12)
+movl a6@(12),a6@(-8)
+lea a6@(-12),a0
+movl a6@(-4),a1
+movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+L38:
+unlk a6
+rts
+.globl _makerect
+.align 2
+_makerect:link a6,#-36
+movl a1,a6@(-4)
+lea a6@(8),a0
+lea a6@(-20),a1
+movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(16),a0
+lea a6@(-12),a1
+movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-20),a0
+lea sp@(0),a1; movl #16/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+movl a6@(-4),a1
+jbsr _canonrect:l
+L41:
+unlk a6
+rts
+.globl _ptinrect
+.align 2
+_ptinrect:link a6,#-4
+moveml #0x10,a6@(-4)
+movl a6@(8),d4
+cmpl a6@(16),d4; jlt L53
+cmpl a6@(24),d4; jge L53
+movl a6@(12),d4
+cmpl a6@(20),d4; jlt L53
+movl a6@(12),d4
+cmpl a6@(28),d4; jge L53
+movl #1,d1
+jra L54
+L53:
+clrl d1
+L54:
+movl d1,d0
+L45:
+moveml a6@(-4),#0x10
+unlk a6
+rts
+.text
+.align 2; L56:.long 0
+.long 0
+.align 2; L57:.long 320
+.long 320
+.align 2; L58:.long -1
+.long -1
+.long 1
+.long 1
+.long 20
+.long 300
+.long 500
+.long 400
+.text
+.globl _main
+.align 2
+_main:link a6,#-136
+moveml #0x90,a6@(-112)
+lea L56:l,a0
+lea a6@(-64),a1
+movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea L57:l,a0
+lea a6@(-72),a1
+movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea L58:l,a0
+lea a6@(-32),a1
+movl #32/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+movl #-10,sp@
+movl #-10,sp@(4)
+lea a6@(-80),a1
+jbsr _makepoint:l
+lea a6@(-72),a0
+lea sp@(0),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-80),a0
+lea sp@(8),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-88),a1
+jbsr _addpoint:l
+movl #10,sp@
+movl #10,sp@(4)
+lea a6@(-96),a1
+jbsr _makepoint:l
+lea a6@(-64),a0
+lea sp@(0),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-96),a0
+lea sp@(8),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-104),a1
+jbsr _addpoint:l
+lea a6@(-88),a0
+lea sp@(0),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-104),a0
+lea sp@(8),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-48),a1
+jbsr _makerect:l
+clrl d7
+jra L67
+L64:
+movl d7,d4; asll #3,d4
+movl a6@(-32,d4:l:1),sp@
+movl a6@(-28,d4:l:1),sp@(4)
+lea a6@(-56),a1
+jbsr _makepoint:l
+movl #L68,sp@
+movl d7,d4; asll #3,d4
+movl a6@(-32,d4:l:1),sp@(4)
+movl a6@(-52),sp@(8)
+jbsr _printf:l
+lea a6@(-56),a0
+lea sp@(0),a1; movl #8/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+lea a6@(-48),a0
+lea sp@(8),a1; movl #16/2,d0; 2:movw a0@+,a1@+; subql #1,d0; jgt 2b
+jbsr _ptinrect:l
+tstl d0; jne L71
+movl #L73,sp@
+jbsr _printf:l
+L71:
+movl #L74,sp@
+movl a6@(-48),sp@(4)
+movl a6@(-44),sp@(8)
+movl a6@(-40),sp@(12)
+movl a6@(-36),sp@(16)
+jbsr _printf:l
+L65:
+addql #1,d7
+L67:
+cmpl #4,d7; jcs L64
+movl #0,sp@
+jbsr _exit:l
+L55:
+moveml a6@(-112),#0x90
+unlk a6
+rts
+.text
+.align 2; L74:.ascii "within [%d,%d; %d,%d]\012\000"
+.align 2; L73:.ascii "not \000"
+.align 2; L68:.ascii "(%d,%d) is \000"

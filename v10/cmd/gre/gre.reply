@@ -1,0 +1,142 @@
+	The following is a summary of the somewhat plausible ideas
+suggested for the new grep. I thank leo de witt particularly and others
+for clearing up misconceptions and pointing out (correctly) that
+existing tools like sed already do (or at least nearly do) what some people
+asked for. The following points are in no particular order and no slight is
+intended by my presentation.
+
+1) named character classes, e.g. \alpha, \digit.
+	i think this is a hokey idea and dismissed it as unnecessary crud
+	but then found out it is part of the proposed regular expression
+	stuff for posix. it may creep in but i hope not.
+
+2) matching multi-line patterns (\n as part of pattern)
+	this actually requires a lot of infrastructure support and thought.
+	i prefer to leave that to other more powerful programs such as sam.
+
+3) print lines with context.
+	the second most requested feature but i'm not doing it. this is
+	just the job for sed. to be consistent, we just took the context
+	crap out of diff too. this is actually reasonable; showing context
+	is the job for a separate tool (pipeline difficulties apart).
+
+4) print one(first matching) line and go onto the next file.
+	most of the justification for this seemed to be scanning
+	mail and/or netnews articles for the subject line; neither
+	of which gets any sympathy from me. but it is easy to do
+	and doesn't add an option; we add a new option (say -1)
+	and remove -s. -1 is just like -s except it prints the matching line.
+	then the old grep -s pattern is now grep -1 pattern > /dev/null
+	and within epsilon of being as efficent.
+
+5) divert matching lines onto one fd, nonmatching onto another.
+	sorry, run grep twice.
+
+6) print the Nth occurence of the pattern (N is number or list).
+	it may be possible to think of a real reason for this (i couldn't)
+	but the answer is no.
+
+7) -w (pattern matches only words)
+	the most requested feature. well, it turns out that -x (exact)
+	is there because doug mcilroy wanted to match words against a dictionary.
+	it seems to have no other use. Therefore, -x is being dropped
+	(after all, it only costs a quick edit to do it yourself) and is
+	replaced by -w == (^|[^_a-zA-Z0-9])pattern($|[^_a-zA-Z0-9]).
+
+8) grep should work on binary files and kanji.
+	that it should work on kanji or any character set is a given
+	(at least, any character set supported by the system V international
+	character set stuff). binary files will work too modulo the
+	following restraint: lines (between \n's) have to fit in a
+	buffer (current size 64K). violations are an error (exit 2).
+
+9) -b has bogus units.
+	agreed. -b now is in bytes.
+
+10) -B (add an ^ to the front of the given pattern, analogous to -x and -w)
+	-x (and -w) is enough. sorry.
+
+11) recursively descend through argument lists
+	no. find | xargs is going to have to do.
+
+12) read filenames on standard input
+	no. xargs will have to do.
+
+13) should be as fast as bm.
+	no worries. in fact, our egrep is 3xfaster than bm. i intend to be
+	competetive with woods' egrep. it should also be as fast as fgrep for
+	multiple keywords. the new grep incorporates boyer-moore
+	as a degenerate case of Commentz-Walter, a faster replacement
+	for the fgrep algorithm.
+
+14) -lv (files that don't have any matching lines)
+	-lv means print names of files that have any nonmatching lines
+	(useful, say, for checking input syntax). -L will mean print
+	names of files without selected lines.
+
+15) print the part of the line that matched.
+	no. that is available at the subroutine level.
+
+16) compatability with old grep/fgrep/egrep.
+	the current name for the new command is gre (aho chose it).
+	after a while, it will become our grep. there will be a -G
+	flag to take patterns a la old grep and a -F to take
+	patterns a la fgrep (that is, no metacharacters except \n == |).
+	gre is close enough to egrep to not matter.
+
+17) fewer limits.
+	so far, gre will have only one limit, a line length of 64K.
+	(NO, i am not supporting arbitrary length lines (yet)!)
+	we forsee no need for any other limit. for example, the
+	current gre acts like fgrep. it is 4 times faster than
+	fgrep and has no limits; we can gre -f /usr/dict/words
+	(72K words, 600KB).
+
+18) recognise file types (ignore binaries, unpack packed files etc).
+	get real. go back to your macintosh or pyramid. gre will just grep
+	files, not understand them.
+
+19) handle patterns occurring multiple times per line
+	this is illdefined (how many time does aaaa occur in a line of 20 'a's?
+	in order of decreasing correctness, the answers are >=1, 17, 5).
+	For the cases people mentioned (words), pipe it thru
+	tr to put the words one per line.
+
+20) why use \{\} instead of \(\)?
+	this is not yet resolved (mcilroy&ritchie vs aho&pike&me).
+	grouping is an orthogonal issue to subexpressions so why
+	use the same parentheses? the latest suggestion (by ritchie)
+	is to allow both \(\) and \{\} as grouping operators but
+	the \3 would only count one type (say \(\)). this would be much
+	better for complicated patterns with much grouping.
+
+21) subroutine versions of the pattern matching stuff.
+	in a deep sense, the new grep will have no pattern matching code in it.
+	all the pattern matching code will be in libc with a uniform
+	interface. the boyer-moore and commentz-walter routines have been
+	done. the other two are egrep and back-referencing egrep.
+	lastly, regexp will be reimplemented.
+
+22) support a filename of - to mean standard input.
+	a unix with /dev/stdin is largely bogus but as a sop to the poor
+	barstards having to work on BSD, gre will support -
+	as stdin (at least for a while).
+
+Thus, the current proposal is the following flags. it would take a GOOD
+argument to change my mind on this list (unless it is to get rid of a flag).
+
+-f file	pattern is (`cat file`)
+-v	nonmatching lines are 'selected'
+-i	ignore aphabetic case
+-n	print line number
+-c	print count of selected lines only
+-l	print filenames which have a selected line
+-L	print filenames who do not have a selected line
+-b	print byte offset of line begin
+-h	do not print filenames in front of matching lines
+-H	always print filenames in front of matching lines
+-w	pattern is (^|[^_a-zA-Z0-9])pattern($|[^_a-zA-Z0-9])
+-1	print only first selected line per file
+-e expr	use expr as the pattern
+
+research!andrew

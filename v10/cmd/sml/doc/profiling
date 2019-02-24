@@ -1,0 +1,73 @@
+Execution Profiling
+
+You can use the built-in ML execution profiler to find out where the
+bottlenecks in your programs are.  The profiler will tell how much
+time is spent in each function and how many calls were made to each
+function.  In order to profile a set of functions, those functions must
+be compiled in "profiling mode".
+
+Here's how to use the profiler:
+
+(1) System.Control.Profile.profiling := true;
+
+    This tells the compiler to insert profiling hooks in the compiled code
+    for any ML declarations that are compiled from now on, or until this
+    flag is set back to false.
+
+(2) compile some ML code, either by typing it in to the interactive
+    system, or by means of the "use" function.
+
+(3) System.Control.Profile.profileOn();
+
+    This starts the timer interrupts that are used for statistical profiling.
+
+(4) execute your program
+
+(5) System.Control.Profile.profileOff();
+
+    This turns off the timer interrupts.
+
+(6) System.Control.Profile.report std_out;
+
+    This prints a report of profiling information on your screen.  For
+    each function you will be told what percentage of the time was spent
+    in that function, how many calls were made, etc.  Instead of std_out
+    you can call "report" with any outstream as an argument if, for
+    instance, you want the report sent to a file.
+
+Other commands:
+
+System.Control.Profile.reset: unit -> unit
+
+    The "reset" command sets all timing and call-count information to
+    zero, but remembers which functions have been profiled.
+
+System.Control.Profile.clear: unit -> unit
+
+    The "clear" command tells the system to forget about profiling any
+    functions that have been compiled so far, but allows you to compile
+    and profile further functions.
+
+Of course, the long names can be avoided by first opening the structure
+System.Control.Profile.
+
+A slightly simpler way to use the profiler is as follows (after having
+opened System.Control.Profile):
+
+(1) profiling := true;
+(2) profileOn();
+(3) compile and execute some ML code
+(4) report std_out;
+(5) repeat from step (3)
+(6) when finished profiling, execute profileOff() and profiling := false
+
+The batch compiler can also be made to generate object files with
+profiling code by toggling the flag "profiling" to true, using the
+command "^profiling".  We use this method to profile the compiler
+itself.
+
+For more details about the profiler, and to learn more tricks you can
+make it do, read the paper "Profiling in the presence of optimization
+and garbage collection" provided in the doc/papers directory.  Details
+of the implemention have changed since that paper was written, but it
+is still basically accurate.

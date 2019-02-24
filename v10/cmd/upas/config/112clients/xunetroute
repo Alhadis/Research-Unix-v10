@@ -1,0 +1,39 @@
+#!/bin/sh -p
+PATH=/bin:/usr/bin:/usr/lib/upas
+sender=$1;shift
+system=$1;shift
+relay=
+
+case $system in
+*.wisc.edu)
+	relay=wi/wisc/cs/pokey
+	;;
+*.uiuc.edu)
+	relay=il/uiuc/cs/gateway
+	;;
+*.berkeley.edu)
+	relay=ca/ucb/cs/ucbarpa
+	;;
+*)
+	exit 1
+	;;
+esac
+
+# first try quick
+cat > /tmp/ur$$
+
+smtp -H research.att.com -a dk!$relay!smtp $sender $system $* < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+
+# get gateway system
+gateway=`cat /usr/lib/upas/gateway`
+case $gateway in
+"") gateway=research ;;
+esac
+
+# give it to the gateway
+temp=
+for i in $*; do temp="$temp $system!$i"; done
+uux - -a "$sender" "$gateway!rmail" "($temp)" </tmp/ur$$
+rv=$?
+rm -f /tmp/ur$$
+exit $rv

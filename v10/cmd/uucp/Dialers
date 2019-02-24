@@ -1,0 +1,47 @@
+#	@(#)Dialers	1.7
+#
+# Each caller type that appears in the Devices file (5th field)
+# should appear in this file except for the built in callers.
+# Each line consists of three parts:
+# - the name of the caller
+# - the translation table for the phone number to translate from
+#   the 801 codes (=-) to the code for the particular device
+# - a chat script (same format and meaning as the login scripts
+#   that appear in the Systems file.
+#
+# Meaning of some of the escape characters:
+# \p - pause (approximately 1/4-1/2 second delay)
+# \d - delay (2 seconds)
+# \D - phone number/token
+# \T - phone number with Dialcodes and character translation
+# \K - insert a BREAK
+# \E - turn on echo checking (for slow devices)
+# \e - turn off echo checking
+# \r - carriage return
+# \c - no new-line
+# \n - send new-line
+# \nnn - send octal number
+#
+# See the Administration Documentation for more details.
+#
+# NOTE: blank lines and lines that begin with a <space>, <tab>, or # are ignored
+
+penril	=W-P	"" \d > s\p9\c )-W\p\r\ds\p9\c-) y\c : \E\TP > 9\c OK
+ventel	=&-%	"" \r\p\r\c $ <K\T%%\r>\c ONLINE!
+vadic	=K-K	"" \005\p *-\005\p-*\005\p-* D\p BER? \E\T\e \r\c LINE
+develcon ""	"" \pr\ps\c est:\007 \E\D\e \007
+micom	""	"" \s\c NAME? \D\r\c GO
+direct
+
+#  Rixon Intelligent Modem -- modem should be set up in the Rixon 
+#  mode and not the Hayes mode.
+#
+rixon	=&-%	"" \r\r\d $ s9\c )-W\r\ds9\c-) s\c : \T\r\c $ 9\c LINE
+
+#   Hayes Smartmodem -- modem should be set with the configuration
+#   switches as follows:
+#
+#       S1 - UP		S2 - UP		S3 - DOWN	S4 - UP
+#       S5 - UP		S6 - UP		S7 - ?		S8 - DOWN
+#
+hayes	=,-,	"" \dAT\r\c OK\r \EATDT\T\r\c CONNECT

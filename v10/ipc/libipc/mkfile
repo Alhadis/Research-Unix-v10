@@ -1,0 +1,30 @@
+INCS=-I. -I../h
+CFLAGS=-g $INCS
+L=libipc.a
+OBJS=$L(ipcopen.o) $L(ipccreat.o) $L(ipcproto.o) $L(pwsearch.o) $L(ipclogin.o)\
+    $L(ipcpath.o) $L(ipcexec.o) $L(ipcbuf.o) $L(qns.o)
+COBJS=ipcopen.O ipccreat.O ipcproto.O pwsearch.O ipclogin.O ipcpath.O\
+    ipcexec.O ipcbuf.O qns.O
+NPROC=2
+
+all:V: cyntax $L
+
+cyntax: $COBJS
+	cyntax $COBJS && touch cyntax
+
+$L: $OBJS
+	ar rv $L *.o && rm *.o && ranlib $L
+
+%.o: %.c ../h/defs.h ../h/ipc.h
+$L(%.o):N: %.o
+
+%.O: %.c ../h/defs.h ../h/ipc.h
+	cyntax -DLINT $INCS $stem.c
+
+install: $L
+	cp $L /usr/lib
+	ranlib /usr/lib/$L
+
+clean:
+	rm *.[oOa] cyntax
+

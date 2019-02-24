@@ -1,0 +1,18 @@
+# case conversion for postmaster
+pOsTmAsTeR		alias		postmaster
+
+# local mail
+[^!@%]+			translate	"exec translate '&'"
+local!([^!@%]+)		>>		/usr/spool/mail/\1
+\l!(.+)			alias		\1
+
+# convert %@ format to ! format
+(_822_)!((.+)!)?([^!]+)[%@]([^!%@]+)	alias	\1!\2\5!\4
+([^!]+)[%@]([^!@%]+)			alias	_822_!\2!\1
+_822_!(.+)				alias	\1
+
+# real networks
+([^!]+)!(.+)		|	"smtproute '\s' '\1'" "'\2'"
+
+# anything else goes to research (the default)
+.*			alias	research!&

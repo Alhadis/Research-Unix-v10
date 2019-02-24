@@ -1,0 +1,60 @@
+This is a set of routines that are not far from those necessary
+to talk to the Radian controller "unixp" process.  This in turn is
+supposed to be akin to some version of "standard" Datakit controllers.
+Lee or Bill may be able to tell you what version.  The System V
+analogue to mgrproc is somewhat of an expert system and adapts to
+various versions; this one doesn't.
+
+Not included in this stuff is the line discipline dev/unixpld.c,
+which corresponds with cmcld.c.  It is part of the standard
+v9 system and need only be mentioned in your conf file.
+Similarly, required changes to the device drivers (kdi.c and dk.c)
+have already been made.
+
+These routines replace /etc/mgrproc, /etc/dkdialsub, and the tdkdial
+and tdkmgr subroutines.  Thus they are set up for the old (not
+connection-server) mechanisms.  It would be of benefit to adapt them
+to the new regime; the most important advantage would be that
+only the connection-server dkmgr program would have to be tailored.
+Because this version has a new tdkdial, all programs that
+make DK calls have to be relinked.
+
+From memory, these are the differences between generic (PSDN, unixp)
+and local (unx9p?) controller interfaces:
+	generic probably uses a different control channel
+	generic assigns incoming from high numbers, outgoing
+	   from low numbers; local uses odd-even.
+	the details of the messages are different
+
+
+Here is a guide:
+
+uxdialsub.c:  -> /etc/uxdialsub
+	supersedes /etc/dkdialsub.
+	This version passes the file descriptor for the callout
+	channel back through the pipe created in _tdkdial (uxpdial.c).
+
+Ouxpdial.c
+	is an older version that uses much the same interface as the existing
+	dkdialsub (not fd-passing).  It isn't supported by a calling
+	routine; it might work if named /etc/dkdialsub.
+
+uxpdial.c
+	is a replacement for tdkdial.c, and I think the external
+	interface is the same for the non-_ names (_tdkdial
+	takes a string to select the intent instead of a code).
+
+uxpctlchan.c:
+	this implements assumptions about the name of the control
+	channel; it seems to try /dev/dk/dk001 and /dev/dk/201
+	depending on the traffic type, and if this fails,
+	tries /dev/dk/dk01.  It also knows the number associated
+	with uxp_ld (that's the 19).   This should be in the library.
+
+uxmgrproc.c:
+	This supplants /etc/mgrproc.
+
+uxpmgr.c:
+	supplants tdkmgr in the library.
+	I don't know if it will work with servers other than
+	uxmgrproc; if not, any changes should be trivial.

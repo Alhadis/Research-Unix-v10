@@ -1,0 +1,126 @@
+.P
+The following list gives the program affected and a
+description of the change.
+.VL 15 0
+.LI all
+The spool directory is now a tree with one directory for
+each active or recently accessed remote.
+The inactive directories are removed periodically.
+.LI all
+The error messages were cleaned up;
+ASSERT messages are standardized and they will now be put
+into an error log (/usr/spool/uucp/.Admin/errors).
+Other rare error messages will also appear in the file.
+The most common message is a PKXSTART message;
+it can be discounted, since it just means that the other
+side hung up in the middle of a conversation.
+.LI all
+All programs use \fIgetopt()\fR to read arguments.
+.LI uucp
+\-e option was removed;
+forwarding is specified in the same manner as with mail.
+.LI uucp
+Uucp is more robust;
+Files that the user can read, but are unreadable by others can now be
+sent;
+uucp will assume \-C option for these files.
+.LI uucico
+The locking mechanism was redone;
+non-active lock files will be automatically deleted when a
+program needs access to the facility.
+.LI uucico
+The retry time algorithm was changed;
+it now uses an exponential backoff instead of a constant time.
+In addition, the format and meaning of the retry time in the
+Systems (old name was L.sys) file changed;
+a ';' is used in place of the previously used ','.
+.LI uucico
+The conn routine in uucico was made much more flexible;
+it can now handle many more device types:
+develcon, ventel, micom
+switches and dialers.
+.LI uucico
+It can now talk over DATAKIT using either
+normal uucp protocol, or the DATAKIT protocol,
+which is much faster.
+(Some sites may not be able to use the DATAKIT protocol
+with uucp.)
+.LI uucico
+Uucico can now be compiled so that it will not converse
+with any site that is not in the local Systems file.
+(This is set in the parms.h file before compiling the uucp
+programs.)
+A shell called remote.unknown is provided that puts the name
+of the remote site into a file.
+The local administrator can change it to meet local needs.
+.LI uucico
+Uucico no longer will search for a system to call;
+rather, a new program ``uusched'' provides that function.
+.LI uuxqt
+One can now specify the commands available to a remote system
+by system name.
+.LI "uuxqt, uux"
+There is a more flexible and more informative error return mechanism;
+new options allow the return of standard input when commands fail.
+In addition, one can control error return notification for always,
+only when non-zero, or never.
+When notification is returned for error, stderr is returned with
+the error message.
+.LI uustat
+Uustat was completely rewritten;
+some of the old features are gone and some new features are
+added.
+.LI uulog
+The uulog program was removed and replaced by a shell;
+there are new features and old features were removed.
+.LI uucheck
+A new program was written to check the existence of all files
+required for execution of uucp programs.
+It is automatically run during installation;
+if failure occurs, the installation is discontinued.
+In addition, this program can be invoked by the administrator
+to produce an English interpretation of the Permissions file.
+.LI uusub
+Uusub was deleted.
+.LI uucleanup
+Uuclean was completely rewritten and renamed uucleanup.
+Using heuristics and knowledge of the structure and contents
+of various uucp generated files, \fIuucleanup\fRt tries to return
+undeliverable mail messages, execute rnews on ophan netnews data
+files, and gives specific date and file name information
+to the requester for
+requests that can not be executed due to failure to contact the
+remote in a given number of days.
+.LI uuxqt
+The number of uuxqt program running at one time is now
+controlled by a file in /usr/lib/uucp (Maxuuxqts).
+.LI uugetty
+A new program in included;
+it is a getty that can be used on ports that have dialers
+801/212-103 or intelligent modems so that the port can be used
+for both input (getty) or output (uucico).
+.LI LOGFILE
+The file is no longer used;
+there is now a separate log file for each system and command.
+The uulog program knows about them as do the demons that
+take care of cleanup.
+Note also that the log messages have changed;
+they more clearly indicate what system and what files are being
+transmitted.
+.LI Systems
+The format of the direct line connections changed;
+the first field that had a tty number is now replaced by
+the word Direct.
+.LI Devices
+New fields were added to each line and some new
+type device lines are available.
+See documentation on the Systems, Devices files.
+.LI Permissions
+The USERFILE, used for security, was deleted;
+it was replaced by the Permissions file,
+which is easier to read, understand, and has more
+flexibility.
+A new document describes this feature.
+One important aspect is that permissions must be overtly granted,
+the default is for a high level of security.
+.LE

@@ -1,0 +1,1425 @@
+From att!zoo.toronto.edu!henry Mon Apr  9 15:34:40 EDT 1990
+Received: by att-in; Mon Apr  9 15:32:52 1990
+Received: by inet.att.com; Mon Apr  9 15:34 EDT 1990
+From: henry@zoo.toronto.edu
+Date: Mon, 9 Apr 90 15:34:40 EDT
+To: research.att.com!dmr
+Subject: 11 cross-compiler changes for host-byte-order portability
+
+Here's context diffs for the stuff I did, with some irrelevant localisms
+(location of include files and such) edited out.
+
+One or two things are probably slightly overkill; I haven't made a
+determined effort to minimize the changes.  I think the result should
+work regardless of host byte order.
+
+I made one change to semantics after hitting an old problem in our pdp11
+kernel build:  11ld now does not consider lingering undefined externals to
+be grounds for returning status 1 when -r is used.  This seemed sensible;
+-r normally means that another 11ld will be done later, so treating
+undefined externals as a sign of trouble is inappropriate -- it messes
+up Makefiles.
+
+I fixed a bug in 11cc.c:  the creation of tmp0 should not be conditional,
+since the construction of later filenames depends on it.
+
+There is an "#ifndef sun" in c00.c that perhaps should be changed to
+something like "#ifndef cpp_sometimes_puts_funny_third_field_in_#_lines".
+
+As I mentioned in earlier mail, chkleaf() now fills in the tr2 field to
+avoid trouble later.
+
+Emission of floating-point constants assumes host and target share a
+common representation for them, and I have not tried to fix this.
+
+Lingering problems with long constants are possible; the code I'm mostly
+concerned with does not use them much.
+
+                                    Henry Spencer at U of Toronto Zoology
+                                uunet!attcan!utzoo!henry henry@zoo.toronto.edu
+
+*** /tmp/11ld.c.old	Mon Apr  9 14:34:37 1990
+--- 11ld.c	Mon Apr  2 16:05:05 1990
+***************
+*** 74,80 ****
+  char	goodnm[] = "__.SYMDEF";
+  
+  /* table of contents stuff */
+! #define TABSZ	900
+  struct tab
+  {	char cname[8];
+  	long cloc;
+--- 73,79 ----
+  char	goodnm[] = "__.SYMDEF";
+  
+  /* table of contents stuff */
+! #define TABSZ	2000		/* match 11ranlib */
+  struct tab
+  {	char cname[8];
+  	long cloc;
+***************
+*** 119,125 ****
+  
+  struct	ar_hdr archdr;
+  
+! struct {
+  	short	fmagic;
+  	ushort tsize;
+  	ushort dsize;
+--- 118,124 ----
+  
+  struct	ar_hdr archdr;
+  
+! struct filhdr_t {
+  	short	fmagic;
+  	ushort tsize;
+  	ushort dsize;
+***************
+*** 145,151 ****
+  /* symbol management */
+  struct symbol {
+  	char	sname[8];
+! 	char	stype;
+  	char	spare;
+  	ushort svalue;
+  };
+--- 144,150 ----
+  /* symbol management */
+  struct symbol {
+  	char	sname[8];
+! 	char	stype;		/* obscene -- should be ushort -- but works */
+  	char	spare;
+  	ushort svalue;
+  };
+***************
+*** 507,512 ****
+--- 506,512 ----
+  		}
+  		lseek(infil, (long)(SARMAG+sizeof(archdr)), 0);
+  		read(infil, (char *)tab, tnum * sizeof(struct tab));
++ 		/* ldrand looks after byte-order issues in tab */
+  		while (ldrand())
+  			;
+  		libp->loc = -1;
+***************
+*** 545,556 ****
+  	register short i;
+  	register struct symbol *sp;
+  	register struct liblist *oldp = libp;
+  	for(i = 0; i<tnum; i++) {
+  		if ((sp = *slookup(tab[i].cname)) == 0)
+  			continue;
+  		if (sp->stype != EXTERN+UNDEF)
+  			continue;
+! 		step(tab[i].cloc >> 1);
+  	}
+  	return(oldp != libp);
+  }
+--- 545,566 ----
+  	register short i;
+  	register struct symbol *sp;
+  	register struct liblist *oldp = libp;
++ 	register long cloc;
++ 	register char *cp;
++ 
+  	for(i = 0; i<tnum; i++) {
+  		if ((sp = *slookup(tab[i].cname)) == 0)
+  			continue;
+  		if (sp->stype != EXTERN+UNDEF)
+  			continue;
+! 		cp = (char *)&tab[i].cloc;
+! 		/* strange pdp11 byte order in longs */
+! 		cloc = 0;
+! 		cloc |= (*cp++ & 0377) << 16;
+! 		cloc |= (*cp++ & 0377) << 24;
+! 		cloc |= (*cp++ & 0377);
+! 		cloc |= (*cp++ & 0377) << 8;
+! 		step(cloc >> 1);
+  	}
+  	return(oldp != libp);
+  }
+***************
+*** 593,598 ****
+--- 603,609 ----
+  	dseek(&text, loc, filhdr.ssize);
+  	while (text.size > 0) {
+  		mget((short *)&cursym, sizeof cursym);
++ 		usin(&cursym.svalue);
+  		type = cursym.stype;
+  		if (Sflag) {
+  			mtype = type&037;
+***************
+*** 716,722 ****
+  	nund = 0;
+  	for (sp = symtab; sp<symp; sp++) switch (sp->stype) {
+  	case EXTERN+UNDEF:
+! 		errlev |= 01;
+  		if (arflag==0 && sp->svalue==0) {
+  			if (nund==0)
+  				printf("Undefined:\n");
+--- 727,734 ----
+  	nund = 0;
+  	for (sp = symtab; sp<symp; sp++) switch (sp->stype) {
+  	case EXTERN+UNDEF:
+! 		if (arflag==0)
+! 			errlev |= 01;
+  		if (arflag==0 && sp->svalue==0) {
+  			if (nund==0)
+  				printf("Undefined:\n");
+***************
+*** 771,776 ****
+--- 783,790 ----
+  
+  setupout()
+  {
++ 	struct filhdr_t fhbuf;
++ 
+  	tcreat(&toutb, 0);
+  	mktemp(tfname);
+  	tcreat(&doutb, 1);
+***************
+*** 794,800 ****
+  		filhdr.entry=0;
+  	filhdr.pad = 0;
+  	filhdr.relflg = (rflag==0);
+! 	mput(&toutb, (short *)&filhdr, sizeof filhdr);
+  }
+  
+  tcreat(buf, tempflg)
+--- 808,823 ----
+  		filhdr.entry=0;
+  	filhdr.pad = 0;
+  	filhdr.relflg = (rflag==0);
+! 	fhbuf = filhdr;
+! 	usout(&fhbuf.fmagic);
+! 	usout(&fhbuf.tsize);
+! 	usout(&fhbuf.dsize);
+! 	usout(&fhbuf.bsize);
+! 	usout(&fhbuf.ssize);
+! 	usout(&fhbuf.entry);
+! 	usout(&fhbuf.pad);
+! 	usout(&fhbuf.relflg);
+! 	mput(&toutb, (short *)&fhbuf, sizeof fhbuf);
+  }
+  
+  tcreat(buf, tempflg)
+***************
+*** 861,866 ****
+--- 884,890 ----
+  	while (text.size > 0) {
+  		symno++;
+  		mget((short *)&cursym, sizeof cursym);
++ 		usin(&cursym.svalue);
+  		symreloc();
+  		type = cursym.stype;
+  		if (Sflag) {
+***************
+*** 868,875 ****
+  			if (mtype==1 || mtype>4) continue;
+  		}
+  		if ((type&EXTERN) == 0) {
+! 			if (!sflag&&!xflag&&(!Xflag||cursym.sname[0]!='L'))
+! 				mput(&soutb, (short *)&cursym, sizeof cursym);
+  			continue;
+  		}
+  		if ((sp = *lookup()) == 0)
+--- 892,903 ----
+  			if (mtype==1 || mtype>4) continue;
+  		}
+  		if ((type&EXTERN) == 0) {
+! 			if (!sflag&&!xflag&&(!Xflag||cursym.sname[0]!='L')) {
+! 				struct symbol st;
+! 				st = cursym;
+! 				usout(&st.svalue);
+! 				mput(&soutb, (short *)&st, sizeof st);
+! 			}
+  			continue;
+  		}
+  		if ((sp = *lookup()) == 0)
+***************
+*** 904,909 ****
+--- 932,938 ----
+  {
+  	register r, t;
+  	register struct symbol *sp;
++ 	short stmp;
+  
+  	for (;;) {
+  		/*
+***************
+*** 922,927 ****
+--- 951,957 ----
+  			t = get(&text);
+  		} else
+  			t = *text.ptr++;
++ 		stmp = t; usin(&stmp); t = stmp;
+  
+  		/* next relocation word */
+  		if (--reloc.size <= 0) {
+***************
+*** 935,940 ****
+--- 965,971 ----
+  			r = get(&reloc);
+  		} else
+  			r = *reloc.ptr++;
++ 		stmp = r; usin(&stmp); r = stmp;
+  
+  		switch (r&016) {
+  
+***************
+*** 970,976 ****
+  
+  finishout()
+  {
+! 	register short n, *p;
+  
+  	if (nflag||iflag) {
+  		n = torigin;
+--- 1001,1008 ----
+  
+  finishout()
+  {
+! 	register short n;
+! 	register struct symbol *sp;
+  
+  	if (nflag||iflag) {
+  		n = torigin;
+***************
+*** 989,996 ****
+  	if (sflag==0) {
+  		if (xflag==0)
+  			copy(&soutb);
+! 		for (p = (short *)symtab; p < (short *)&symtab[symindex];)
+! 			putw(*p++, &toutb);
+  	}
+  	flush(&toutb);
+  	close(toutb.fildes);
+--- 1021,1032 ----
+  	if (sflag==0) {
+  		if (xflag==0)
+  			copy(&soutb);
+! 		for (sp = symtab; sp < &symtab[symindex]; sp++) {
+! 			register ushort u = sp->svalue;
+! 			usout(&sp->svalue);
+! 			mput(&toutb, (short *)sp, sizeof(*sp));
+! 			sp->svalue = u;		/* just in case */
+! 		}
+  	}
+  	flush(&toutb);
+  	close(toutb.fildes);
+***************
+*** 1018,1024 ****
+  		n >>= 1;
+  		p = (short *)doutb.iobuf;
+  		do
+! 			putw(*p++, &toutb);
+  		while (--n);
+  	}
+  	close(f);
+--- 1054,1060 ----
+  		n >>= 1;
+  		p = (short *)doutb.iobuf;
+  		do
+! 			rputw(*p++, &toutb);
+  		while (--n);
+  	}
+  	close(f);
+***************
+*** 1027,1032 ****
+--- 1063,1069 ----
+  mkfsym(s)
+  char *s;
+  {
++ 	struct symbol st;
+  
+  	if (sflag || xflag)
+  		return;
+***************
+*** 1033,1039 ****
+  	cp8c(s, cursym.sname);
+  	cursym.stype = 037;
+  	cursym.svalue = torigin;
+! 	mput(&soutb, (short *)&cursym, sizeof cursym);
+  }
+  
+  mget(aloc, an)
+--- 1070,1078 ----
+  	cp8c(s, cursym.sname);
+  	cursym.stype = 037;
+  	cursym.svalue = torigin;
+! 	st = cursym;
+! 	usout(&st.svalue);
+! 	mput(&soutb, (short *)&st, sizeof st);
+  }
+  
+  mget(aloc, an)
+***************
+*** 1073,1079 ****
+  	loc = aloc;
+  	n = an>>1;
+  	do {
+! 		putw(*loc++, buf);
+  	} 
+  	while (--n);
+  }
+--- 1112,1118 ----
+  	loc = aloc;
+  	n = an>>1;
+  	do {
+! 		rputw(*loc++, buf);
+  	} 
+  	while (--n);
+  }
+***************
+*** 1327,1332 ****
+--- 1366,1379 ----
+  
+  	dseek(&text, loc, sizeof filhdr);
+  	mget((short *)&filhdr, sizeof filhdr);
++ 	usin(&filhdr.fmagic);
++ 	usin(&filhdr.tsize);
++ 	usin(&filhdr.dsize);
++ 	usin(&filhdr.bsize);
++ 	usin(&filhdr.ssize);
++ 	usin(&filhdr.entry);
++ 	usin(&filhdr.pad);
++ 	usin(&filhdr.relflg);
+  	if (filhdr.fmagic != FMAGIC)
+  		error(2, "Bad format");
+  	st = (filhdr.tsize+01) & ~01;
+***************
+*** 1363,1368 ****
+--- 1410,1425 ----
+  putw(w, b)
+  register struct buf *b;
+  {
++ 	*b->xnext = w;
++ 	usout(b->xnext);
++ 	b->xnext++;
++ 	if (--b->nleft <= 0)
++ 		flush(b);
++ }
++ 
++ rputw(w, b)
++ register struct buf *b;
++ {
+  	*(b->xnext)++ = w;
+  	if (--b->nleft <= 0)
+  		flush(b);
+***************
+*** 1400,1403 ****
+--- 1457,1482 ----
+  	while(*p >= '0' && *p <= '9')
+  		n = n*10 + *p++ - '0';
+  	return(n);
++ }
++ 
++ usin(usp)
++ ushort *usp;
++ {
++ 	register ushort u;
++ 	register char *p = (char *)usp;
++ 
++ 	u = *p++ & 0377;
++ 	u |= (*p++ & 0377) << 8;
++ 	*usp = u;
++ }
++ 
++ usout(usp)
++ ushort *usp;
++ {
++ 	register ushort u;
++ 	register char *p = (char *)usp;
++ 
++ 	u = *usp;
++ 	*p++ = u & 0377;
++ 	*p++ = (u >> 8) & 0377;
+  }
+*** /tmp/11nm.c.old	Mon Apr  9 14:34:55 1990
+--- 11nm.c	Mon Mar 19 16:04:09 1990
+***************
+*** 22,27 ****
+--- 22,28 ----
+  int	globl_flg;
+  int	nosort_flg;
+  int	arch_flg;
++ int	swab_flg;
+  int	prep_flg;
+  struct	ar_hdr	arp;
+  long	arsize;
+***************
+*** 35,40 ****
+--- 36,43 ----
+  
+  char	*progname;	/*god: for error messages, hold name here*/
+  
++ short	swab();
++ 
+  main(argc, argv)
+  char **argv;
+  {
+***************
+*** 100,105 ****
+--- 103,110 ----
+  		fread((char *)&magbuf, 1, sizeof(magbuf), fi);	/* get magic no. */
+  		if (strncmp(magbuf.a, ARMAG, SARMAG)==0)
+  			arch_flg++;
++ 		else if (BADMAG(magbuf.i) && !BADMAG(swab(magbuf.i)))
++ 			swab_flg++;
+  		else if (BADMAG(magbuf.i)) {
+  			fprintf(stderr, "%s: %s-- bad format\n",
+  					progname, *argv);
+***************
+*** 118,123 ****
+--- 123,138 ----
+  			struct nlist sym;
+  
+  			fread((char *)&exp, 1, sizeof(struct exec), fi);
++ 			if (swab_flg) {
++ 				exp.a_magic = swab(exp.a_magic);
++ 				exp.a_text = swab(exp.a_text);
++ 				exp.a_data = swab(exp.a_data);
++ 				exp.a_bss  = swab(exp.a_bss );
++ 				exp.a_syms = swab(exp.a_syms);
++ 				exp.a_entry = swab(exp.a_entry);
++ 				exp.a_unused = swab(exp.a_unused);
++ 				exp.a_flag = swab(exp.a_flag);
++ 			}
+  			if (BADMAG(exp.a_magic)) {		/* archive element not in  */
+  				continue;	/* proper format - skip it */
+  			}
+***************
+*** 134,139 ****
+--- 149,158 ----
+  			i = 0;
+  			while (--n >= 0) {
+  				fread((char *)&sym, 1, sizeof(sym), fi);
++ 				if (swab_flg) {
++ 					sym.n_type = swab(sym.n_type);
++ 					sym.n_value = swab(sym.n_value);
++ 				}
+  				if (globl_flg && (sym.n_type&N_EXT)==0)
+  					continue;
+  				switch (sym.n_type&N_TYPE) {
+***************
+*** 255,258 ****
+--- 274,284 ----
+  		++arsize;
+  	off = ftell(af) + arsize;	/* offset to next element */
+  	return(1);
++ }
++ 
++ short
++ swab(s)
++ short s;
++ {
++ 	return(((s&0377)<<8) | ((s>>8)&0377));
+  }
+*** /tmp/11ranlib.c.old	Mon Apr  9 14:34:58 1990
+--- 11ranlib.c	Wed Mar 21 17:38:20 1990
+***************
+*** 35,40 ****
+--- 35,42 ----
+  {
+  	char buf[256];
+  	char magbuf[SARMAG+1];
++ 	register long temp;
++ 	register int i;
+  
+  	progname = argv[0];	/*god: for error messages */
+  	--argc;
+***************
+*** 61,68 ****
+  			long o;
+  			register n;
+  			struct nlist sym;
+  
+! 			fread((char *)&exp, 1, sizeof(struct exec), fi);
+  			if (BADMAG)		/* archive element not in  */
+  				continue;	/* proper format - skip it */
+  			o = (long)exp.a_text + exp.a_data;
+--- 63,81 ----
+  			long o;
+  			register n;
+  			struct nlist sym;
++ 			char ebuf[sizeof(exp)];
++ 			register char *ep;
+  
+! 			fread(ebuf, 1, sizeof(ebuf), fi);
+! 			ep = ebuf;
+! 			exp.a_magic = *ep++ & 0377; exp.a_magic |= (*ep++ & 0377) << 8;
+! 			exp.a_text = *ep++ & 0377; exp.a_text |= (*ep++ & 0377) << 8;
+! 			exp.a_data = *ep++ & 0377; exp.a_data |= (*ep++ & 0377) << 8;
+! 			exp.a_bss = *ep++ & 0377; exp.a_bss |= (*ep++ & 0377) << 8;
+! 			exp.a_syms = *ep++ & 0377; exp.a_syms |= (*ep++ & 0377) << 8;
+! 			exp.a_entry = *ep++ & 0377; exp.a_entry |= (*ep++ & 0377) << 8;
+! 			exp.a_unused = *ep++ & 0377; exp.a_unused |= (*ep++ & 0377) << 8;
+! 			exp.a_flag = *ep++ & 0377; exp.a_flag |= (*ep++ & 0377) << 8;
+  			if (BADMAG)		/* archive element not in  */
+  				continue;	/* proper format - skip it */
+  			o = (long)exp.a_text + exp.a_data;
+***************
+*** 77,82 ****
+--- 90,102 ----
+  			}
+  			while (--n >= 0) {
+  				fread((char *)&sym, 1, sizeof(sym), fi);
++ 				ep = (char *)&sym.n_type;
++ 				temp = *ep++ & 0377;
++ 				temp |= (*ep++ & 0377) >> 8;
++ 				sym.n_type = temp;
++ 				temp = *ep++ & 0377;
++ 				temp |= (*ep++ & 0377) >> 8;
++ 				sym.n_value = temp;
+  				if ((sym.n_type&N_EXT)==0)
+  					continue;
+  				switch (sym.n_type&N_TYPE) {
+***************
+*** 98,103 ****
+--- 118,133 ----
+  		if(fo == NULL)
+  		{	fprintf(stderr, "can't create temporary\n");
+  			exit(1);
++ 		}
++ 		for (i = 0; i < TABSZ; i++) {
++ 			register char *p;
++ 
++ 			p = (char *)&tab[i].cloc;
++ 			temp = tab[i].cloc;
++ 			*p++ = (temp >> 16) & 0377;	/* funny long order */
++ 			*p++ = (temp >> 24) & 0377;
++ 			*p++ = (temp) & 0377;
++ 			*p++ = (temp >> 8) & 0377;
+  		}
+  		fwrite((char *)tab, tnum, sizeof(struct tab), fo);
+  		fclose(fo);
+*** /tmp/11size.c.old	Mon Apr  9 14:35:01 1990
+--- 11size.c	Wed Mar 21 17:20:35 1990
+***************
+*** 8,21 ****
+  
+  int a_magic[] = {A_MAGIC1,A_MAGIC2,A_MAGIC3,A_MAGIC4,0};
+  
+  main(argc, argv)
+  char **argv;
+  {
+! 	struct exec buf;
+  	long sum;
+  	int gorp,i;
+  	FILE *f;
+  
+  	if (argc==1) {
+  		*argv = A_DOT_OUT;	/*god*/
+  		argc++;
+--- 12,31 ----
+  
+  int a_magic[] = {A_MAGIC1,A_MAGIC2,A_MAGIC3,A_MAGIC4,0};
+  
++ char *progname;
++ 
+  main(argc, argv)
+  char **argv;
+  {
+! 	struct exec h;
+! 	char buf[sizeof(struct exec)];
+! 	register char *bp;
+  	long sum;
+  	int gorp,i;
+  	FILE *f;
+  
++ 	progname = argv[0];
++ 
+  	if (argc==1) {
+  		*argv = A_DOT_OUT;	/*god*/
+  		argc++;
+***************
+*** 25,45 ****
+  	while(--argc) {
+  		++argv;
+  		if ((f = fopen(*argv, "r"))==NULL) {
+! 			printf("11size: %s not found\n", *argv);
+  			continue;
+  		}
+! 		fread((char *)&buf, sizeof(buf), 1, f);
+  		for(i=0;a_magic[i];i++)
+! 			if(a_magic[i] == buf.a_magic) break;
+  		if(a_magic[i] == 0) {
+! 			printf("11size: %s not an object file\n", *argv);
+! 			fclose(f);
+  			continue;
+  		}
+  		if (gorp>2)
+  			printf("%s: ", *argv);
+! 		printf("%u+%u+%u = ", buf.a_text,buf.a_data,buf.a_bss);
+! 		sum = (long) buf.a_text + (long) buf.a_data + (long) buf.a_bss;
+  		printf("%ldb = %#lob\n", sum, sum);
+  		fclose(f);
+  	}
+--- 35,68 ----
+  	while(--argc) {
+  		++argv;
+  		if ((f = fopen(*argv, "r"))==NULL) {
+! 			fprintf(stderr, "11size: `%s' not found\n", *argv);
+  			continue;
+  		}
+! 		if (fread(buf, sizeof(buf), 1, f) != 1) {
+! 			fprintf(stderr, "11size: read error in `%s'\n", *argv);
+! 			(void) fclose(f);
+! 			continue;
+! 		}
+! 		bp = buf;
+! 		h.a_magic = *bp++ & 0377; h.a_magic |= (*bp++&0377) << 8;
+! 		h.a_text = *bp++ & 0377; h.a_text |= (*bp++&0377) << 8;
+! 		h.a_data = *bp++ & 0377; h.a_data |= (*bp++&0377) << 8;
+! 		h.a_bss = *bp++ & 0377; h.a_bss |= (*bp++&0377) << 8;
+! 		h.a_syms = *bp++ & 0377; h.a_syms |= (*bp++&0377) << 8;
+! 		h.a_entry = *bp++ & 0377; h.a_entry |= (*bp++&0377) << 8;
+! 		h.a_unused = *bp++ & 0377; h.a_unused |= (*bp++&0377) << 8;
+! 		h.a_flag = *bp++ & 0377; h.a_flag |= (*bp++&0377) << 8;
+  		for(i=0;a_magic[i];i++)
+! 			if(a_magic[i] == h.a_magic) break;
+  		if(a_magic[i] == 0) {
+! 			printf("11size: `%s' not an object file\n", *argv);
+! 			(void) fclose(f);
+  			continue;
+  		}
+  		if (gorp>2)
+  			printf("%s: ", *argv);
+! 		printf("%u+%u+%u = ", h.a_text,h.a_data,h.a_bss);
+! 		sum = (long) h.a_text + (long) h.a_data + (long) h.a_bss;
+  		printf("%ldb = %#lob\n", sum, sum);
+  		fclose(f);
+  	}
+*** /tmp/11strip.c.old	Mon Apr  9 14:35:04 1990
+--- 11strip.c	Wed Mar 21 17:08:18 1990
+***************
+*** 47,52 ****
+--- 51,58 ----
+  	int i;
+  	time_t tm[2];
+  	struct stat stbuf;
++ 	char buf[sizeof(head)];
++ 	register char *bp;
+  
+  	tm[0] = 0;
+  	f = open(name, 0);
+***************
+*** 58,64 ****
+  	fstat(f, &stbuf);
+  	tm[0] = stbuf.st_atime;
+  	tm[1] = stbuf.st_mtime;
+! 	read(f, (char *)&head, sizeof(head));
+  	for(i=0;a_magic[i];i++)
+  		if(a_magic[i] == head.a_magic) break;
+  	if(a_magic[i] == 0) {
+--- 64,79 ----
+  	fstat(f, &stbuf);
+  	tm[0] = stbuf.st_atime;
+  	tm[1] = stbuf.st_mtime;
+! 	read(f, buf, sizeof(buf));
+! 	bp = buf;
+! 	head.a_magic = *bp++ & 0377; head.a_magic |= (*bp++ & 0377) << 8;
+! 	head.a_text = *bp++ & 0377; head.a_text |= (*bp++ & 0377) << 8;
+! 	head.a_data = *bp++ & 0377; head.a_data |= (*bp++ & 0377) << 8;
+! 	head.a_bss = *bp++ & 0377; head.a_bss |= (*bp++ & 0377) << 8;
+! 	head.a_syms = *bp++ & 0377; head.a_syms |= (*bp++ & 0377) << 8;
+! 	head.a_entry = *bp++ & 0377; head.a_entry |= (*bp++ & 0377) << 8;
+! 	head.a_unused = *bp++ & 0377; head.a_unused |= (*bp++ & 0377) << 8;
+! 	head.a_flag = *bp++ & 0377; head.a_flag |= (*bp++ & 0377) << 8;
+  	for(i=0;a_magic[i];i++)
+  		if(a_magic[i] == head.a_magic) break;
+  	if(a_magic[i] == 0) {
+***************
+*** 73,81 ****
+  	size = (long)head.a_text + head.a_data;
+  	head.a_syms = 0;
+  	head.a_flag |= 1;
+  
+  	lseek(tf, (long)0, 0);
+! 	write(tf, (char *)&head, sizeof(head));
+  	if(copy(name, f, tf, size)) {
+  		status = 1;
+  		goto out;
+--- 88,105 ----
+  	size = (long)head.a_text + head.a_data;
+  	head.a_syms = 0;
+  	head.a_flag |= 1;
++ 	bp = buf;
++ 	*bp++ = head.a_magic&0377; *bp++ = (head.a_magic>>8)&0377;
++ 	*bp++ = head.a_text&0377; *bp++ = (head.a_text>>8)&0377;
++ 	*bp++ = head.a_data&0377; *bp++ = (head.a_data>>8)&0377;
++ 	*bp++ = head.a_bss&0377; *bp++ = (head.a_bss>>8)&0377;
++ 	*bp++ = head.a_syms&0377; *bp++ = (head.a_syms>>8)&0377;
++ 	*bp++ = head.a_entry&0377; *bp++ = (head.a_entry>>8)&0377;
++ 	*bp++ = head.a_unused&0377; *bp++ = (head.a_unused>>8)&0377;
++ 	*bp++ = head.a_flag&0377; *bp++ = (head.a_flag>>8)&0377;
+  
+  	lseek(tf, (long)0, 0);
+! 	write(tf, buf, sizeof(buf));
+  	if(copy(name, f, tf, size)) {
+  		status = 1;
+  		goto out;
+*** /tmp/didnotexistbefore	Mon Apr  9 14:52:59 1990
+--- as/README.tmpf	Mon Mar 19 15:57:38 1990
+***************
+*** 0 ****
+--- 1,23 ----
++ The assembler uses three temporary files to pass info from pass 1 to pass 2.
++ All are binary format.  Code dealing with them had to be beat on a bit to
++ make it run on the Sun; the VAX had the same byte ordering as the pdp11,
++ which preserved some unportable code.  (Not just wrong byte order in
++ shorts, but also writing out the first half of a long and assuming
++ that was the low-order half.)
++ 
++ The first file, pof in pass 1 and stdin/intfil in pass 2, is shorts in
++ pdp11 byte order (low byte first).  (A bit curious, but pass 1 wrote them
++ as words and pass 2 read them as pairs of chars [barf], and the choice of
++ which to fix was arbitrary.)  They are restored to host byte order for
++ pass-2 processing, and flipped to pdp11 order again for final output.
++ 
++ The second, fbfil in both, is information on temporary labels.  It is
++ binary records of type "struct expr", in host format.  (For some bizarre
++ reason, pass 1 used to define its own structure with the type field of
++ the struct broken down into two chars, while pass 2 extracted the pieces
++ with shifts and masks on a short!)
++ 
++ The third, t in pass 1 and symf in pass 2, is the symbol table.  It is
++ binary records of type "struct symtab", in host format.  The shorts in
++ these are transmogrified into pdp11 byte order before they are written
++ out to the final output.
+*** /tmp/Makefile.old	Mon Apr  9 14:54:12 1990
+--- as/Makefile	Thu Mar 29 16:10:22 1990
+***************
+*** 4,21 ****
+  #
+  #	BINDIR and LIBDIR must be defined.
+  #
+! BINDIR = /usr/bin
+  LIBDIR = /usr/lib
+  
+  AS1 = 11as
+  AS2 = 11as2
+! A_DOT_OUT = a.out
+  
+  CC = cc
+  CFLAGS = -O "-DPASS2PGM=\"${LIBDIR}/${AS2}\"" "-DA_DOT_OUT=\"${A_DOT_OUT}\""
+  
+! AS1O = as11.o as12.o as13.o as14.o as15.o as16.o as17.o as18.o as19.o
+! AS2O = as21.o as22.o as23.o as24.o as25.o as26.o as27.o as28.o as29.o
+  
+  all: ${AS1} ${AS2}
+  
+--- 4,21 ----
+  #
+  #	BINDIR and LIBDIR must be defined.
+  #
+! BINDIR = /usr/bin
+  LIBDIR = /usr/lib
+  
+  AS1 = 11as
+  AS2 = 11as2
+! A_DOT_OUT = a.out
+  
+  CC = cc
+  CFLAGS = -O "-DPASS2PGM=\"${LIBDIR}/${AS2}\"" "-DA_DOT_OUT=\"${A_DOT_OUT}\""
+  
+! AS1O = as11.o as12.o as13.o as14.o as15.o as16.o as17.o as18.o as19.o heap.o
+! AS2O = as21.o as22.o as23.o as24.o as25.o as26.o as27.o as28.o as29.o heap.o
+  
+  all: ${AS1} ${AS2}
+  
+*** /tmp/as1.h.old	Mon Apr  9 14:54:13 1990
+--- as/as1.h	Thu Mar 29 16:09:31 1990
+***************
+*** 107,109 ****
+--- 107,110 ----
+  extern	int nargs;
+  extern	char **curarg;
+  extern	int numval;
++ #define	sbrk	hbrk
+*** /tmp/as11.c.old	Mon Apr  9 14:54:14 1990
+--- as/as11.c	Mon Mar 19 16:08:05 1990
+***************
+*** 22,27 ****
+--- 22,28 ----
+  	extern aexit();
+  	FILE *t;
+  	char *buf1,*buf2;
++ 	extern char *sbrk();
+  
+  	if (signal(SIGINT,SIG_IGN)!=SIG_IGN) signal(SIGINT,aexit);
+  	while (--argc>=0 && (++argv)[0][0]=='-') {
+*** /tmp/as12.c.old	Mon Apr  9 14:54:15 1990
+--- as/as12.c	Mon Mar 19 16:08:06 1990
+***************
+*** 11,16 ****
+  putw(t)
+  OP t;
+  {
+! 	if (ifflg==0 || (t.v=='\n'))
+! 		if (EOF==fwrite(&t,2,1,pof)) wrterr();
+  }
+--- 11,21 ----
+  putw(t)
+  OP t;
+  {
+! 	char buf[2];
+! 
+! 	if (ifflg==0 || (t.v=='\n')) {
+! 		buf[0] = t.uv&0377;
+! 		buf[1] = (t.uv>>8)&0377;
+! 		if (EOF==fwrite(buf,2,1,pof)) wrterr();
+! 	}
+  }
+*** /tmp/as13.c.old	Mon Apr  9 14:54:15 1990
+--- as/as13.c	Mon Mar 19 16:08:06 1990
+***************
+*** 5,10 ****
+--- 5,11 ----
+  assem()
+  {
+  	OP op1,op2;
++ 	struct expr buf;
+  
+  	for (;;) {
+  	op1=readop();
+***************
+*** 34,41 ****
+  				if (op1.v!=T_ABS) {error('x'); continue;}
+  				t=fbcheck(numval);
+  				curfbr[t]= *dotrel; curfb[t]= *dot;
+! 				nxtfb.c0= *dotrel; nxtfb.c1=t; nxtfb.val= *dot;
+! 				if (1!=fwrite(&nxtfb,sizeof(nxtfb),1,fbfil)) wrterr();
+  			} else {
+  				if (op1.xp->typ&037) error('m');
+  				op1.xp->typ |= *dotrel; op1.xp->val = *dot;
+--- 35,43 ----
+  				if (op1.v!=T_ABS) {error('x'); continue;}
+  				t=fbcheck(numval);
+  				curfbr[t]= *dotrel; curfb[t]= *dot;
+! 				buf.typ = ((t&0377)<<8)|(*dotrel&0377);
+! 				buf.val = *dot;
+! 				if (1!=fwrite(&buf,sizeof(buf),1,fbfil)) wrterr();
+  			} else {
+  				if (op1.xp->typ&037) error('m');
+  				op1.xp->typ |= *dotrel; op1.xp->val = *dot;
+*** /tmp/as14.c.old	Mon Apr  9 14:54:16 1990
+--- as/as14.c	Thu Mar 29 16:23:41 1990
+***************
+*** 1,5 ****
+--- 1,6 ----
+  /* a4 -- pdp-11 assembler pass1 */
+  #include "as1.h"
++ #define	end	heap
+  extern char end[];
+  char *brkend = end;
+  extern struct symtab *hshtab[HSHSIZ];
+***************
+*** 14,19 ****
+--- 15,21 ----
+  	struct symtab *sp,**hp;
+  	int around;
+  	int h=0,flags=0;
++ 	extern char *sbrk();
+  
+  	for (cp1=symbol+NCPS,i=NCPS; --i>=0; ) *--cp1=0;
+  	i=NCPS;
+*** /tmp/as2.h.old	Mon Apr  9 14:54:17 1990
+--- as/as2.h	Thu Mar 29 16:09:58 1990
+***************
+*** 94,96 ****
+--- 94,97 ----
+  extern	int ifflg;
+  extern	int numval;
+  extern	int brdelt;
++ #define	sbrk	hbrk
+*** /tmp/as21.c.old	Mon Apr  9 14:54:17 1990
+--- as/as21.c	Thu Mar 29 16:51:24 1990
+***************
+*** 37,42 ****
+--- 37,46 ----
+  	int datbase,bssbase;
+  	int nsym;
+  	int defund = 0;
++ 	extern char *sbrk();
++ 	char hbuf[sizeof(hdr)];
++ 	char buf[2];
++ 	register char *hbp;
+  
+  	if (signal(SIGINT,SIG_IGN)!=SIG_IGN) signal(SIGINT,saexit);
+  	while (--argc>=0 && (++argv)[0][0]=='-') {
+***************
+*** 62,68 ****
+  
+  		fstat(fileno(symf),&statbuf); hdr.symsiz=statbuf.st_size;
+  		nsym=n=statbuf.st_size/sizeof(dsksym);
+! 		if (-1==(usymtab=sp=sbrk(n*sizeof(*sp)))) saexit();
+  		while (--n>=0) {
+  			if (1!=fread(&dsksym,sizeof(dsksym),1,symf)) wrterr();
+  			if ((t=dsksym.dtyp&037)==T_TEXT || t==T_DATA) {
+--- 66,72 ----
+  
+  		fstat(fileno(symf),&statbuf); hdr.symsiz=statbuf.st_size;
+  		nsym=n=statbuf.st_size/sizeof(dsksym);
+! 		if ((struct expr *)-1==(usymtab=sp=(struct expr *)sbrk(n*sizeof(*sp)))) saexit();
+  		while (--n>=0) {
+  			if (1!=fread(&dsksym,sizeof(dsksym),1,symf)) wrterr();
+  			if ((t=dsksym.dtyp&037)==T_TEXT || t==T_DATA) {
+***************
+*** 79,85 ****
+  
+  		fstat(fileno(fbfil),&statbuf);
+  		nfb=statbuf.st_size/sizeof(*fbp);
+! 		if (-1==(fbbuf=fbp=sbrk((nfb+1)*sizeof(*fbp)))) saexit();
+  		if (nfb!=fread(fbp,sizeof(*fbp),nfb,fbfil)) wrterr();
+  		while (--nfb>=0) fbp++->typ+=T_ESTTXT-T_TEXT; 	/* mark "estimated" */
+  		usymend=fbp; fbp->typ=0100000;
+--- 83,89 ----
+  
+  		fstat(fileno(fbfil),&statbuf);
+  		nfb=statbuf.st_size/sizeof(*fbp);
+! 		if ((struct expr *)-1==(fbbuf=fbp=(struct expr *)sbrk((nfb+1)*sizeof(*fbp)))) saexit();
+  		if (nfb!=fread(fbp,sizeof(*fbp),nfb,fbfil)) wrterr();
+  		while (--nfb>=0) fbp++->typ+=T_ESTTXT-T_TEXT; 	/* mark "estimated" */
+  		usymend=fbp; fbp->typ=0100000;
+***************
+*** 119,125 ****
+  		}
+  	}
+  
+! 	if (1!=fwrite(&hdr,sizeof(hdr),1,txtf)) wrterr();
+  	fseek(txtf,tseek[T_TEXT-T_TEXT],0);
+  	fseek(relf,rseek[T_TEXT-T_TEXT],0);
+  	assem();
+--- 123,138 ----
+  		}
+  	}
+  
+! 	hbp = hbuf;
+! 	*hbp++ = hdr.magic&0377; *hbp++ = (hdr.magic>>8)&0377;
+! 	*hbp++ = hdr.txtsiz&0377; *hbp++ = (hdr.txtsiz>>8)&0377;
+! 	*hbp++ = hdr.datsiz&0377; *hbp++ = (hdr.datsiz>>8)&0377;
+! 	*hbp++ = hdr.bsssiz&0377; *hbp++ = (hdr.bsssiz>>8)&0377;
+! 	*hbp++ = hdr.symsiz&0377; *hbp++ = (hdr.symsiz>>8)&0377;
+! 	*hbp++ = hdr.entry&0377; *hbp++ = (hdr.entry>>8)&0377;
+! 	*hbp++ = hdr.flag&0377; *hbp++ = (hdr.flag>>8)&0377;
+! 	*hbp++ = hdr.dummy&0377; *hbp++ = (hdr.dummy>>8)&0377;
+! 	if (1!=fwrite(hbuf,sizeof(hbuf),1,txtf)) wrterr();
+  	fseek(txtf,tseek[T_TEXT-T_TEXT],0);
+  	fseek(relf,rseek[T_TEXT-T_TEXT],0);
+  	assem();
+***************
+*** 132,138 ****
+  		while (--n>=0) {
+  			if (1!=fread(&dsksym,sizeof(dsksym),1,symf)) wrterr();
+  			dsksym.dtyp=sp->typ; dsksym.dval=sp->val;
+! 			if (1!=fwrite(&dsksym,sizeof(dsksym),1,relf)) wrterr();
+  			sp++;
+  		}
+  	}
+--- 145,157 ----
+  		while (--n>=0) {
+  			if (1!=fread(&dsksym,sizeof(dsksym),1,symf)) wrterr();
+  			dsksym.dtyp=sp->typ; dsksym.dval=sp->val;
+! 			if (1!=fwrite(dsksym.name,sizeof(dsksym.name),1,relf)) wrterr();
+! 			buf[0] = dsksym.dtyp&0377;
+! 			buf[1] = (dsksym.dtyp>>8)&0377;
+! 			if (1!=fwrite(buf,2,1,relf)) wrterr();
+! 			buf[0] = dsksym.dval&0377;
+! 			buf[1] = (dsksym.dval>>8)&0377;
+! 			if (1!=fwrite(buf,2,1,relf)) wrterr();
+  			sp++;
+  		}
+  	}
+*** /tmp/as22.c.old	Mon Apr  9 14:54:18 1990
+--- as/as22.c	Mon Mar 19 16:08:08 1990
+***************
+*** 34,46 ****
+  
+  outb(typ,val)
+  {
+  	if (*dotrel==T_BSS) {error('x'); return;}
+  	if ((unsigned)typ>T_ABS) error('r');
+  	if (passno!=0) {
+! 		if (1!=fwrite(&val,1,1,txtf)) wrterr();
+  		tseek[*dotrel-T_TEXT]++;
+  		if (!(*dot&1)) {/* relocate immediately, so we don't forget */
+! 			val=0; if (1!=fwrite(&val,2,1,relf)) wrterr();
+  			rseek[*dotrel-T_TEXT]+=2;
+  		}
+  	}
+--- 34,49 ----
+  
+  outb(typ,val)
+  {
++ 	char buf[2];
++ 
+  	if (*dotrel==T_BSS) {error('x'); return;}
+  	if ((unsigned)typ>T_ABS) error('r');
+  	if (passno!=0) {
+! 		buf[0] = val;
+! 		if (1!=fwrite(buf,1,1,txtf)) wrterr();
+  		tseek[*dotrel-T_TEXT]++;
+  		if (!(*dot&1)) {/* relocate immediately, so we don't forget */
+! 			if (2!=fwrite("\0\0",1,2,relf)) wrterr();
+  			rseek[*dotrel-T_TEXT]+=2;
+  		}
+  	}
+*** /tmp/as24.c.old	Mon Apr  9 14:54:19 1990
+--- as/as24.c	Mon Mar 19 16:08:08 1990
+***************
+*** 4,10 ****
+  putw(w,fp)
+  FILE *fp;
+  {
+! 	if (1!=fwrite(&w,2,1,fp)) wrterr();
+  }
+  
+  wrterr()
+--- 4,14 ----
+  putw(w,fp)
+  FILE *fp;
+  {
+! 	char buf[2];
+! 
+! 	buf[0] = w&0377;
+! 	buf[1] = (w>>8)&0377;
+! 	if (1!=fwrite(buf,2,1,fp)) wrterr();
+  }
+  
+  wrterr()
+*** /tmp/didnotexistbefore	Mon Apr  9 14:52:59 1990
+--- heap.c	Thu Mar 29 16:50:08 1990
+***************
+*** 0 ****
+--- 1,21 ----
++ /*
++  * fake heap and fake sbrk() for ugly old code
++  */
++ #include <stdio.h>
++ #ifndef HEAPSIZ
++ #define	HEAPSIZ	100000
++ #endif
++ char heap[HEAPSIZ];
++ static char *hbreak = &heap[0];
++ 
++ char *
++ hbrk(amount)
++ int amount;
++ {
++ 	register char *old = hbreak;
++ 
++ 	hbreak += amount;
++ 	if (hbreak > &heap[HEAPSIZ])
++ 		return((char *)-1);
++ 	return(old);
++ }
+*** /tmp/11cc.c.old	Mon Apr  9 15:00:44 1990
+--- 11cc.c	Thu Mar 29 15:20:43 1990
+***************
+*** 246,253 ****
+  		pref = "/lib/mcrt0.o";*/	/*god*/
+  	if(nc==0)
+  		goto nocom;
+  	if (pflag==0 || Fflag) {	/* mjm: added Fflag */
+- 		tmp0 = copy("/tmp/ctm0a");
+  		while (access(tmp0, 0)==0)
+  			tmp0[9]++;
+  		while((creat(tmp0, 0400))<0) {
+--- 244,251 ----
+  		pref = "/lib/mcrt0.o";*/	/*god*/
+  	if(nc==0)
+  		goto nocom;
++ 	tmp0 = copy("/tmp/ctm0a");
+  	if (pflag==0 || Fflag) {	/* mjm: added Fflag */
+  		while (access(tmp0, 0)==0)
+  			tmp0[9]++;
+  		while((creat(tmp0, 0400))<0) {
+*** /tmp/Makefile.old	Mon Apr  9 15:05:10 1990
+--- cc/Makefile	Thu Mar 29 15:25:23 1990
+***************
+*** 9,19 ****
+  
+  CFLAGS = -O
+  
+! C0FILES = c00.o c01.o c02.o c03.o c04.o c05.o
+! C1FILES = c10.o c11.o c12.o c13.o
+! C2FILES = c20.o c21.o
+  
+! all:	${C0} ${C1} ${C2}
+  	@echo \`all\' is up to date: $?
+  
+  ${C0}: ${C0FILES}
+--- 10,20 ----
+  
+  CFLAGS = -O
+  
+! C0FILES = c00.o c01.o c02.o c03.o c04.o c05.o heap.o
+! C1FILES = c10.o c11.o c12.o c13.o heap.o
+! C2FILES = c20.o c21.o heap.o
+  
+! all:	${C0} ${C1} ${C2}
+  	@echo \`all\' is up to date: $?
+  
+  ${C0}: ${C0FILES}
+*** /tmp/c0.h.old	Mon Apr  9 15:05:12 1990
+--- cc/c0.h	Thu Mar 29 14:37:05 1990
+***************
+*** 75,81 ****
+   * Structure of tree nodes for operators
+   */
+  struct tnode {
+! 	int	op;		/* operator */
+  	int	type;		/* data type */
+  	int	*subsp;		/* subscript list (for arrays) */
+  	union	str *strp;	/* structure description for structs */
+--- 75,81 ----
+   * Structure of tree nodes for operators
+   */
+  struct tnode {
+! 	short	op;		/* operator */
+  	int	type;		/* data type */
+  	int	*subsp;		/* subscript list (for arrays) */
+  	union	str *strp;	/* structure description for structs */
+***************
+*** 87,93 ****
+   * Tree node for constants
+   */
+  struct	cnode {
+! 	int	op;
+  	int	type;
+  	int	*subsp;
+  	union	str *strp;
+--- 87,93 ----
+   * Tree node for constants
+   */
+  struct	cnode {
+! 	short	op;
+  	int	type;
+  	int	*subsp;
+  	union	str *strp;
+***************
+*** 98,104 ****
+   * Tree node for long constants
+   */
+  struct lnode {
+! 	int	op;
+  	int	type;
+  	int	*subsp;
+  	union	str *strp;
+--- 98,104 ----
+   * Tree node for long constants
+   */
+  struct lnode {
+! 	short	op;
+  	int	type;
+  	int	*subsp;
+  	union	str *strp;
+***************
+*** 110,116 ****
+   * constants
+   */
+  struct	fnode {
+! 	int	op;
+  	int	type;
+  	int	*subsp;
+  	union	str *strp;
+--- 110,116 ----
+   * constants
+   */
+  struct	fnode {
+! 	short	op;
+  	int	type;
+  	int	*subsp;
+  	union	str *strp;
+***************
+*** 453,459 ****
+  /*
+   * functions
+   */
+! char	*sbrk();
+  union	tree *tree();
+  char	*copnum();
+  union	tree *convert();
+--- 453,460 ----
+  /*
+   * functions
+   */
+! char	*hbrk();
+! #define	sbrk(n)	hbrk(n)
+  union	tree *tree();
+  char	*copnum();
+  union	tree *convert();
+*** /tmp/c00.c.old	Mon Apr  9 15:05:16 1990
+--- cc/c00.c	Thu Mar 29 14:38:22 1990
+***************
+*** 223,229 ****
+  			peekc = getchar();
+  		}
+  		if (peekc != '\n') {
+! 			error("Illegal #");
+  			while (getchar()!='\n' && eof==0)
+  				;
+  		}
+--- 223,231 ----
+  			peekc = getchar();
+  		}
+  		if (peekc != '\n') {
+! #ifndef sun			/* Sun cpp adds level indicator on end */
+! 			error("Illegal # suffix");
+! #endif
+  			while (getchar()!='\n' && eof==0)
+  				;
+  		}
+***************
+*** 465,485 ****
+  
+  /*
+   * read a single-quoted character constant.
+-  * The routine is sensitive to the layout of
+-  * characters in a word.
+   */
+  getcc()
+  {
+  	register int c, cc;
+- 	register char *ccp;
+  	char realc;
+  
+  	cval = 0;
+- 	ccp = (char *)&cval;
+  	cc = 0;
+! 	while((c=mapch('\'')) >= 0)
+! 		if(cc++ < LNCPW)
+! 			*ccp++ = c;
+  	if (cc>LNCPW)
+  		error("Long character constant");
+  	if (cc==1) {
+--- 467,485 ----
+  
+  /*
+   * read a single-quoted character constant.
+   */
+  getcc()
+  {
+  	register int c, cc;
+  	char realc;
+  
+  	cval = 0;
+  	cc = 0;
+! 	while((c=mapch('\'')) >= 0) {
+! 		if(cc < LNCPW)
+! 			cval = cval | ((c&0377) << (cc*8));
+! 		cc++;
+! 	}
+  	if (cc>LNCPW)
+  		error("Long character constant");
+  	if (cc==1) {
+*** /tmp/c04.c.old	Mon Apr  9 15:05:20 1990
+--- cc/c04.c	Thu Mar 29 14:38:49 1990
+***************
+*** 375,387 ****
+  	ap = &a;
+  	for (;;) switch(*s++) {
+  	case 'B':
+! 		putc(*ap++, bufp);
+  		putc(0376, bufp);
+  		continue;
+  
+  	case 'N':
+! 		putc(*ap, bufp);
+! 		putc(*ap++>>8, bufp);
+  		continue;
+  
+  	case 'F':
+--- 375,387 ----
+  	ap = &a;
+  	for (;;) switch(*s++) {
+  	case 'B':
+! 		putc(*ap++&0377, bufp);
+  		putc(0376, bufp);
+  		continue;
+  
+  	case 'N':
+! 		putc(*ap&0377, bufp);
+! 		putc((*ap++>>8)&0377, bufp);
+  		continue;
+  
+  	case 'F':
+*** /tmp/c1.h.old	Mon Apr  9 15:05:21 1990
+--- cc/c1.h	Thu Mar 29 14:37:22 1990
+***************
+*** 147,153 ****
+  int	panicposs;		/* set when there might be a need for regpanic */
+  jmp_buf	jmpbuf;
+  long	ftell();
+! char	*sbrk();
+  struct	optab *match();
+  union	tree *optim();
+  union	tree *unoptim();
+--- 147,154 ----
+  int	panicposs;		/* set when there might be a need for regpanic */
+  jmp_buf	jmpbuf;
+  long	ftell();
+! char	*hbrk();
+! #define	sbrk(n)	hbrk(n)
+  struct	optab *match();
+  union	tree *optim();
+  union	tree *unoptim();
+*** /tmp/c10.c.old	Mon Apr  9 15:05:24 1990
+--- cc/c10.c	Thu Mar 29 14:39:14 1990
+***************
+*** 1090,1095 ****
+--- 1090,1096 ----
+  	lbuf.type = tree->t.type;
+  	lbuf.degree = tree->t.degree;
+  	lbuf.tr1 = tree;
++ 	lbuf.tr2 = TNULL;
+  	return(rcexpr((union tree *)&lbuf, table, reg));
+  }
+  
+*** /tmp/c2.h.old	Mon Apr  9 15:05:34 1990
+--- cc/c2.h	Thu Mar 29 14:37:22 1990
+***************
+*** 130,136 ****
+  struct optab *ophash[OPHS];
+  struct	node *nonlab();
+  char	*copy();
+! char	*sbrk();
+  char	*findcon();
+  struct	node *insertl();
+  struct	node *codemove();
+--- 130,137 ----
+  struct optab *ophash[OPHS];
+  struct	node *nonlab();
+  char	*copy();
+! char	*hbrk();
+! #define	sbrk(n)	hbrk(n)
+  char	*findcon();
+  struct	node *insertl();
+  struct	node *codemove();
+*** /tmp/didnotexistbefore	Mon Apr  9 14:52:59 1990
+--- cc/heap.c	Thu Mar 29 16:53:11 1990
+***************
+*** 0 ****
+--- 1,20 ----
++ /*
++  * fake heap and fake sbrk() for ugly old code
++  */
++ #ifndef HEAPSIZ
++ #define	HEAPSIZ	100000
++ #endif
++ static char heap[HEAPSIZ];
++ static char *hbreak = &heap[0];
++ 
++ char *
++ hbrk(amount)
++ int amount;
++ {
++ 	register char *old = hbreak;
++ 
++ 	hbreak += amount;
++ 	if (hbreak > &heap[HEAPSIZ])
++ 		return((char *)-1);
++ 	return(old);
++ }
+

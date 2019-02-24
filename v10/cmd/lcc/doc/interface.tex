@@ -1,0 +1,2173 @@
+\documentstyle{article}
+
+\begin{document}
+\begin{titlepage}
+\normalsize
+\vspace*{.7in}
+\begin{center}
+\begin{tabular}{c}
+\bf\Large A Code Generation Interface for ANSI C \\[.5in]
+
+Christopher W. Fraser \\
+\em AT\&T Bell Laboratories, 600 Mountain Avenue, \\
+\em Murray Hill, NJ 07974 \\[1ex]
+and \\[1ex]
+David R. Hanson \\
+\em Department of Computer Science, Princeton University, \\
+\em Princeton, NJ 08544 \\[.7in]
+
+Research Report CS-TR-270-90 \\[1ex]
+July 1990 \\
+Last Revised September 1992 \\[.5in]
+
+\end{tabular}
+\end{center}
+
+\begin{abstract}
+\normalsize
+\verb|lcc| is a retargetable, production compiler for ANSI~C;
+it has been ported to the VAX, Motorola 68020, SPARC, and MIPS R3000,
+and some versions have been in use for over two years.
+It is smaller and faster than generally available alternatives,
+and its local code is comparable.
+This report describes the interface between the target-independent front end
+and the target-dependent back ends.
+The interface consists of shared data structures, a few functions,
+and a dag language. While this approach couples the front
+and back ends tightly, it results in efficient, compact compilers.
+The interface is illustrated by detailing a complete code generator
+that emits naive VAX code.
+\end{abstract}
+
+\end{titlepage}
+
+%\setcounter{secnumdepth}{0}
+%\bibliographystyle{abbrv}
+
+\section{Introduction}
+
+\verb|lcc| is a retargetable compiler for ANSI~C~\cite{ansi:Cstandard}.
+It has been ported to the VAX, Motorola 68020, SPARC, and MIPS R3000.
+It emits code that is comparable with that from other generally
+available C compilers, but it runs up to twice as fast and is about
+half the size~\cite{fraser:hanson:91b}.
+\verb|lcc| is in production use at Princeton University
+and AT\&T Bell Laboratories.
+
+This paper describes the interface between the target-independent
+front end and the target-dependent back ends.\footnote{References~\cite{fraser:hanson:91a}
+and~\cite{fraser:hanson:92} were drawn from earlier versions of this report.
+This report is slightly more detailed and corresponds to the latest
+release of \verb|lcc|.}
+Good code-generation interfaces are hard to design.
+An inadequate interface may force each back end
+to do work that could otherwise be done once in the front end.
+Annotating frequently referenced variables for assignment
+to registers is an example.
+If the interface is too small, it
+may not encode enough information to exploit new
+machines thoroughly.  If the interface is too large, the back ends
+may be needlessly complicated.
+These competing demands
+require careful engineering, and re-engineering as new targets expose
+flaws. This paper reports the results of such experience.
+
+The interface is illustrated with a {\em sample} code generator
+for the VAX.  This code generator emits naive code; i.e., it uses only
+the `RISC subset' of the VAX instruction set.  It is nevertheless
+complete:  when used with a conforming preprocessor and library, the
+compiler with this code generator passes the conformance section of
+Version 2.00 of the Plum-Hall Validation Suite for ANSI~C, except that
+it does not detect overflow in floating constants.
+The production versions of \verb|lcc| use the interface described here,
+but use back ends in which instruction selection and optimization are
+generated automatically from a compact specification~\cite{fraser:sigplan89}.%
+\footnote{The {\tt lcc} front end and a sample code generator are available
+for anonymous {\tt ftp} from {\tt princeton.edu}.
+The file {\tt README} in the directory {\tt pub/lcc} gives details.}
+
+Unlike other interfaces, \verb|lcc|'s interface is not a monolithic
+intermediate language~\cite{tanenbaum:toplas:82}. Such interfaces
+promote decoupling between the front and back ends, but sacrifice
+compiler performance~\cite{tanenbaum:sigplan:89}. With \verb|lcc|'s
+interface, the front and back ends are tightly coupled; this approach
+yields efficient, compact compilers, but can complicate maintenance
+because changes to the front end may affect the back ends.  This
+complication is less important for standardized languages like ANSI~C
+because there will be few changes to the language.
+
+The interface consists of a few shared data structures, 19 functions,
+most of which are very simple, and a 36-operator dag language, which
+encodes the executable code from a source program. The dag language
+corresponds to the `intermediate language' used in other compilers, but
+it is smaller than typical intermediate languages.
+The functions, which can be implemented as true functions or as macros,
+are listed in Appendix~\ref{appendix:interface} and are
+described in the sections below.
+
+The front and back ends are clients of each other.  The front end calls
+on the back end to generate and emit code.  The back end calls on the
+front end to perform output, allocate storage, interrogate types, and
+manage nodes, symbols, and strings. These front-end services are
+performed by functions that are summarized in Appendix~\ref{appendix:functions}.
+
+
+\section{Configuration}
+
+\label{configuration}
+Target-specific configuration parameters specify the widths and
+alignments of the basic datatypes and optionally define conditional
+compilation flags.  They are defined in a `header' file, \verb|config.h|,
+which is included when a target-specific \verb|lcc| is compiled.
+
+The sample type metrics
+and conditional compilation flags are defined as follows.
+Target-specific components of the shared data structures
+are defined in Sections~\ref{symbols} and \ref{dags}.
+\begin{verbatim}
+typedef int Xinterface;
+\end{verbatim}
+
+Type metrics are triples that give the size and alignment of the type
+in bytes, along with a flag indicating whether or not constants of that
+type can appear in instructions. A \verb|1| indicates that the
+constants {\em cannot} appear in instructions; the front end generates
+variables to hold them. The size of a type must be a multiple of its alignment.
+
+Both the size and alignment for characters must be \verb|1|.
+Unsigned and long integers are assumed to have metrics
+identical to integer, and long doubles are assumed to have metrics
+identical to double. The front end correctly treats all of these types
+as separate, however.
+\verb|POINTER_METRICS| apply to all pointer types, and pointers
+must fit in unsigned integers.
+The alignment of a structure is the maximum of the alignments
+of its fields and \verb|STRUCT_ALIGN|.
+
+If \verb|JUMP_ON_RETURN| is non-zero, the front end generates a jump to
+a generated label for each \verb|return| statement and defines this
+label at the end of each function.  Similar action is taken if the
+compiler is asked to generate data for a debugger, because some
+debuggers assume a common exit point.  Since the VAX does returns with
+one instruction, \verb|JUMP_ON_RETURN| is defined as \verb|0|.
+
+By default, the front end generates code that evaluates function
+arguments from right to left;
+defining \verb|LEFT_TO_RIGHT| yields the opposite order.
+A sequence of bit fields is laid out from left to right
+in one or more unsigned values; defining \verb|LITTLE_ENDIAN|
+yields a right-to-left layout.
+Defining \verb|LITTLE_ENDIAN| for the sample
+makes the code compatible with existing VAX C compilers.
+The standard permits either argument evaluation
+or bit-field layout order, however.
+
+The front end contains a few target-specific operations.
+These are protected by conditional compilation on \verb|VAX|,
+\verb|MIPS|, \verb|MC|, \verb|SPARC|, etc. Thus, \verb|VAX| is defined above.
+
+\subsection{{\tt progbeg} and \tt progend}
+
+\label{progbeg}\label{progend}
+During initialization, the front end calls
+\begin{verbatim}
+void progbeg(int argc, char *argv[])
+\end{verbatim}
+\verb|argv[0..argc-1]| point
+to those program arguments that are not recognized by the front end,
+e.g., target-specific options.
+Typical implementations of \verb|progbeg| process such
+options and initialize themselves.
+At the end of compilation, \verb|progend(void)| is called to give
+the back end an opportunity to finalize its output.
+
+The sample \verb|progbeg| initializes a register usage mask
+\begin{verbatim}
+void progbeg(int argc, char *argv[]) {
+   rmask = ((~0)<<12)|1;
+}
+\end{verbatim}
+which is described in Section~\ref{dags:registers}.
+Finalization is unnecessary in the sample,
+so \verb|progend| is an empty function:
+\begin{verbatim}
+static void progend(void) {
+}
+\end{verbatim}
+All back-end functions except \verb|address| and \verb|gen| return nothing.
+
+
+\section{Symbols}
+
+\label{symbols}
+The front and back ends share two major data structures: symbol table
+entries and dag nodes. Dag nodes are described in Section~\ref{dags}.
+Symbol table entries are used for variables, constants, and labels.
+They are represented by pointers to the following structure.
+\begin{verbatim}
+typedef struct symbol *Symbol;
+struct symbol {        /* symbol table entries: */
+   Xsymbol x;             /* type extension for code generator */
+   char *name;            /* name */
+   unsigned char scope;   /* scope level */
+   unsigned char sclass;  /* storage class */
+   unsigned defined:1;    /* 1 if defined */
+   unsigned temporary:1;  /* 1 if a temporary */
+   unsigned generated:1;  /* 1 if a generated identifier */
+   unsigned addressed:1;  /* 1 if its address is taken */
+   unsigned structarg:1;  /* 1 if parameter is a struct */
+   Type type;             /* data type */
+   union {
+      struct {		  /* labels: */
+         int label;          /* label number */
+      } l;
+      struct {            /* constants: */
+         Value v;            /* value */
+         Symbol loc;         /* out-of-line location */
+      } c;
+      int seg;            /* globals, statics: definition segment */
+   } u;
+};
+\end{verbatim}
+The \verb|scope|, \verb|sclass|, and \verb|type| fields give the symbol's
+scope level, its storage class, and its type, respectively.
+Most of the bit fields flag self-explanatory attributes for each symbol;
+fields relevant only to the front end are elided above.
+
+Scope values classify symbols as constants, labels, or variables.
+For labels, constants, and some variables,
+a field of the union \verb|u| supplies additional data.
+
+Labels have a \verb|scope| equal to the enumeration constant \verb|LABELS|.
+The \verb|u.l.label| field is the numeric value of the label,
+and \verb|name| is the string representation of that value.
+Labels have no \verb|type| or \verb|sclass|.
+
+Constants have a scope equal to \verb|CONSTANTS|, a \verb|sclass| equal
+to \verb|STATIC|, and a \verb|name|
+equal to the string representation of the constant.
+The actual value of the constant is stored in the \verb|u.c.v| field,
+which is defined by
+\begin{verbatim}
+typedef union value {   /* constant values: */
+   char sc;                /* signed */
+   short ss;               /* signed */
+   int i;                  /* signed */
+   unsigned char uc;
+   unsigned short us;
+   unsigned int u;
+   float f;
+   double d;
+   char *p;                /* pointer to anything */
+} Value;
+\end{verbatim}
+If a variable is generated to hold the constant,
+\verb|u.c.loc| points to the symbol-table entry for that variable.
+
+Variables have a \verb|scope| equal to \verb|GLOBAL|, \verb|PARAM|,
+or \verb|LOCAL|$+k$ for nesting level $k$.
+\verb|sclass| is \verb|STATIC|, \verb|AUTO|, \verb|EXTERN|, or \verb|REGISTER|.
+The \verb|name| of most variables is the name used in the source code.
+For temporaries and other generated variables, \verb|name| is a digit sequence.
+\verb|temporary| and \verb|generated| are set for temporaries,
+and \verb|generated| is set for labels and other generated variables, e.g., those
+that hold constants.
+\verb|structarg| is described in Section~\ref{emit}.
+For global and static variables,
+\verb|u.seg| gives the logical segment in which the variable is defined
+(see Section~\ref{segment}).
+
+The \verb|type| field for constants and variables points to
+a structure that describes types. The \verb|size| and \verb|align|
+fields of this structure give, respectively, the size and alignment constraints
+of the type in bytes.
+
+The \verb|x| field is an `extension' in which the back end stores
+target-specific data for the symbol.
+The sample has only two fields:
+\begin{verbatim}
+typedef struct {
+   char *name;    /* name for back end */
+   int offset;    /* frame offset */
+} Xsymbol;
+\end{verbatim}
+This definition appears in the configuration file.
+\verb|p->name| identifies the symbol to the front end, but the back end
+may need to emit a different `name'. For example,
+the `name' for locals is usually an offset from a frame pointer.
+\verb|p->x.name| is the back end's name for the symbol.
+For parameters and locals, \verb|p->x.offset| is the
+offset from the frame pointer (see Sections~\ref{function} and~\ref{local}).
+
+\subsection{\tt defsymbol}
+
+\label{defsymbol}
+Whenever the front end defines a new symbol with
+\verb|scope| \verb|CONSTANTS|, \verb|LABELS|, or \verb|GLOBAL|
+or a static variable, it calls
+\verb|defsymbol(Symbol p)| to give the back end an opportunity to initialize
+its \verb|Xsymbol| fields. The sample's \verb|defsymbol| is
+\begin{verbatim}
+static void defsymbol(Symbol p) {
+   if (p->scope == CONSTANTS)
+      p->x.name = p->name;
+   else if (p->scope >= LOCAL && p->sclass == STATIC)
+      p->x.name = stringf("L%d", genlabel(1));
+   else if (p->generated)
+      p->x.name = stringf("L%s", p->name);
+   else
+      p->x.name = stringf("_%s", p->name);
+}
+\end{verbatim}
+The back end's name for a constant is just the constant itself.
+For generated symbols including labels, \verb|x.name| is the front end's name,
+which is a digit string, prefixed with an \verb|L|,
+and an underscore prefixes the names of other symbols.
+\verb|stringf| returns a pointer to a string formatted as specified
+by its \verb|printf|-style arguments.
+
+For \verb|scope| \verb|PARAM| and  \verb|LOCAL|$+k$,
+the \verb|Xsymbol| fields are initialized
+by \verb|function| (see Section~\ref{function})
+and \verb|local| (see Section~\ref{local}), respectively,
+and symbols that represent address computations
+are initialized by \verb|address| (see Section~\ref{address}).
+
+\subsection{{\tt import} and \tt export}
+
+\label{import}\label{export}
+A symbol can be exported or imported.
+Non-static variables and functions are exported
+in order to be available to other,
+separately compiled modules. Likewise, variables and functions used
+in one module, but defined in another one, are imported
+in the former module.
+The front end identifies an exported or imported symbol
+by calling \verb|export(Symbol p)| or \verb|import(Symbol p)|. \verb|export|
+is always called {\em before} the symbol is defined;
+\verb|import|, however, may be called any time, before or after the symbol
+is used.
+
+The sample back end emits an assembler directive for \verb|export|,
+but no output is required for \verb|import|:
+\begin{verbatim}
+static void export(Symbol p) {
+   print(".globl %s\n", p->x.name);
+}
+
+static void import(Symbol p) {
+}
+\end{verbatim}
+\verb|print| is a front-end function similar to the standard \verb|printf|.
+
+\subsection{\tt segment}
+
+\label{segment}
+The front end manages four logical segments:
+\verb|CODE|, \verb|BSS|, \verb|DATA|, and \verb|LIT|.
+Executable code is emitted into the \verb|CODE| segment,
+uninitialized variables are defined in the \verb|BSS| segment,
+initialized variables are defined and initialized in the \verb|DATA| segment,
+and constants appear in the \verb|LIT| segment.
+
+The front end announces a segment change by calling
+\verb|segment(int s)| where \verb|s| is one of the segments listed above.
+\verb|segment| maps the logical segments onto the segments
+provided by the target machine. The \verb|CODE| and \verb|LIT| segments
+can be mapped to read-only segments; the others must be mapped to read/write segments.
+The sample mapping is
+\begin{verbatim}
+static void segment(int s) {
+   switch (s) {
+   case CODE: print(".text\n");   break;
+   case  LIT: print(".text 1\n"); break;
+   case DATA:
+   case  BSS: print(".data\n");   break;
+   }
+}
+\end{verbatim}
+
+\subsection{\tt global}
+
+\label{global}
+\verb|global(Symbol p)| emits code to define a global variable.
+The front end will have already directed the definition
+to the appropriate logical segment by calling \verb|segment| and
+set \verb|p->u.seg| to that segment,
+and it will follow the call to \verb|global|
+with any appropriate calls to the data initialization functions.
+\verb|global| handles the necessary alignment adjustments and
+the actual definition.
+
+The sample definition for global \verb|y| is simply
+\verb|y|'s \verb|x.name| field preceded by an alignment directive, if necessary:
+\begin{verbatim}
+static void global(Symbol p) {
+   switch (p->type->align) {
+   case 2: print(".align 1; "); break;
+   case 4: print(".align 2; "); break;
+   case 8: print(".align 3; "); break;
+   }
+   print("%s:", p->x.name);
+}
+\end{verbatim}
+
+\subsection{\tt defconst}
+
+\label{defconst}
+
+\verb|defconst(int ty, Value v)| emits the scalar \verb|v|.
+\verb|ty| indicates which field of
+\verb|v| is to be emitted according the following table.
+
+\begin{center}
+\begin{tabular}{lll}
+\tt ty	& \tt v \it field	& \it type \\ \hline
+\tt C	& \tt v.uc		& character \\
+\tt S	& \tt v.us		& short \\
+\tt I	& \tt v.i		& int \\
+\tt U	& \tt v.u		& unsigned \\
+\tt P	& \tt v.p		& any pointer type \\
+\tt F	& \tt v.f		& float \\
+\tt D	& \tt v.d		& double \\
+\end{tabular}
+\end{center}
+The codes \verb|S|, \verb|I|, \ldots\ are identical to the type suffixes
+used for the dag operators, which are described in Section~\ref{dags}.
+The signed fields \verb|v.sc| and \verb|v.ss| can be used instead
+of \verb|v.uc| and \verb|v.us|, but \verb|defconst|
+must initialize only the specified number of bits.
+
+The sample \verb|defconst| is
+\begin{verbatim}
+static void defconst(int ty, Value v) {
+   switch (ty) {
+   case C: print(".byte %d\n",   v.uc); break;
+   case S: print(".word %d\n",   v.us); break;
+   case I: print(".long %d\n",   v.i ); break;
+   case U: print(".long 0x%x\n", v.u ); break;
+   case P: print(".long 0x%x\n", v.p ); break;
+   case F:
+      print(".long 0x%x\n", ((unsigned *) &v.f)[0]);
+      break;
+   case D: 
+      print(".long 0x%x,0x%x\n", ((unsigned *) &v.d)[0],
+         ((unsigned *) &v.d)[1]);
+      break;
+   }
+}
+\end{verbatim}
+In the production compilers, \verb|defconst| accommodates cross-compilation,
+so it corrects for different representations and byte orders.
+
+If \verb|ty| is \verb|P|, \verb|v.p| holds a numeric constant of some pointer type.
+These originate from declarations like \verb|char *p=(char *)0xF0|.
+\verb|defaddress| emits addresses relative to a symbol.
+
+Few ANSI~C compilers can leave the encoding of floating-point constants
+to the assembler, because few assemblers can cope with the effect of
+casts on these constants.  For example, the correct initialization for
+\begin{verbatim}
+double x = (float)0.3;
+\end{verbatim}
+is \verb|.long 0x999a3f99,0x0|.
+The directive \verb|.double 0.3| would erroneously initialize \verb|x|
+to the equivalent of
+\begin{verbatim}
+.long 0x99993f99,0x0999a9999
+\end{verbatim}
+because it cannot represent the effect of the cast.
+
+
+\subsection{{\tt defstring}, {\tt defaddress}, and \tt space}
+
+\label{defstring}
+\label{defaddress}
+\label{space}
+
+\verb|defstring(int len, char *s)| emits code to initialize
+a string of length \verb|len| to the characters in \verb|s|.
+The front end converts escape sequences, like \verb|\n|, into
+the corresponding ASCII characters.
+
+\verb|defaddress(Symbol p)| emits the address denoted by \verb|p|.
+\verb|space(int n)| emits code to allocate \verb|n| zero bytes.
+
+The sample \verb|defstring|, \verb|defaddress|, and \verb|space| are
+\begin{verbatim}
+static void defstring(int len, char *s) {
+   while (len-- > 0)
+      print(".byte %d\n", *s++);
+}
+
+static void defaddress(Symbol p) {
+   print(".long %s\n", p->x.name);
+}
+
+static void space(int n) {
+   print(".space %d\n", n);
+}
+\end{verbatim}
+
+
+\section{Functions}
+
+The front end completely consumes each function before passing any part
+of the function to the back end.  This organization permits certain
+optimizations.  For example, only by processing complete functions can
+the front end identify the locals and parameters whose address is not taken; only
+these variables may be assigned to registers.
+
+\subsection{\tt function}
+
+\label{function}
+
+The front end accumulates functions into private data structures.  At
+the end of each function, it calls \verb|function| to generate and emit
+code. The typical form of \verb|function| is
+\begin{flushleft}\tt
+\verb|void function(Symbol f, Symbol caller[], Symbol callee[], int ncalls) {| \\
+\ \ \ \ldots {\rm initialize} \\
+\ \ \ gencode(caller, callee); \\
+\ \ \ \ldots {\rm emit prologue} \\
+\ \ \ emitcode(); \\
+\ \ \ \ldots {\rm emit epilogue} \\
+\verb|}|
+\end{flushleft}
+\verb|gencode| is a front-end routine that traverses the front end's
+private structures and passes each dag to the back end's \verb|gen|
+(see Section~\ref{gen}), which selects code, annotates the dag to
+record its selection, and returns a dag pointer. \verb|emitcode| is a
+front-end routine that traverses the private structures again and
+passes each of the pointers from \verb|gen| to \verb|emit| (see
+Section~\ref{emit}), which emits the code.
+
+This organization offers the back end flexibility in
+generating function prologue and epilogue code.
+Before calling \verb|gencode|, \verb|function| initializes
+the \verb|Xsymbol| fields of the function's parameters, as described
+below, and does other per-function initializations, if necessary.
+After calling \verb|gencode|, the size of the activation record,
+or {\em frame}, the number of registers used, etc.\ are known;
+this information is usually needed to emit the prologue.
+After calling \verb|emitcode| to emit the code for the body of the function,
+\verb|function| emits the epilogue.
+
+The argument \verb|f| to \verb|function| is the pointer
+to the symbol-table entry for the current function,
+and \verb|ncalls| is the number of calls to other functions
+made by the current function. \verb|ncalls| is useful
+on targets like the SPARC where `leaf' functions get special treatment.
+
+\verb|caller| and \verb|callee| are arrays of pointers to symbol
+table entries; each is terminated with a zero pointer.
+The symbols in \verb|caller| are the function parameters
+as passed by a caller; those in \verb|callee| are the parameters
+as seen within the function. For most functions,
+the symbols in each array are the same, but they
+can differ in both \verb|sclass| and \verb|type|.
+For example, in
+\begin{verbatim}
+foo(x) float x; { ... }
+\end{verbatim}
+a call to \verb|foo| passes the actual argument as a double.
+Within \verb|foo|, \verb|x| is a float.
+Thus, \verb|caller[0]->type| refers to `double' and \verb|callee[0]->type|
+refers to `float.' And in
+\begin{verbatim}
+int strlen(register char *s) { ... }
+\end{verbatim}
+\verb|caller[0]->sclass| is \verb|AUTO| and \verb|callee[0]->sclass| is \verb|REGISTER|.
+Even without register declarations, the front end assigns
+frequently referenced parameters to the \verb|REGISTER| class,
+and \verb|callee|'s \verb|sclass| is set accordingly.
+This assignment is made only when there are no explicit register {\em locals}
+to avoid interfering with the programmer's intentions (see Section~\ref{local}).
+
+\verb|caller| and \verb|callee| are passed to \verb|gencode|.
+If \verb|caller[i]->type| is not equal to \verb|callee[i]->type|
+or if \verb|caller[i]->sclass| is not equal to \verb|callee[i]->sclass|,
+\verb|gencode| generates an assignment of \verb|caller[i]|
+to \verb|callee[i]|. If the types are not equal, this assignment
+may include a conversion; for example, the assignment to \verb|x| in
+\verb|foo| includes a truncation of a double to a float.
+For parameters that include register declarations, \verb|function|
+must assign a register and initialize the \verb|x| field accordingly,
+or change the \verb|callee|'s \verb|sclass| to \verb|AUTO|.
+
+\verb|function| could also change \verb|callee[i]->sclass| from \verb|AUTO|
+to \verb|REGISTER| if it wished to assign a register to that parameter.
+On the MIPS, for example, some of the parameters are passed in registers,
+so \verb|function| assigns those registers to the corresponding
+\verb|callee|s in leaf functions. If, however, \verb|callee[i]->addressed| is set,
+the address of the parameter is taken in the function body,
+and it must be stored in memory on most machines.
+
+Initialization of the \verb|Xsymbol| fields of the symbols
+in \verb|caller| and \verb|callee| depends on the frame layout,
+which is target specific. Figure~\ref{fig:frame} shows the layout
+of the VAX frame. The stack grows towards
+lower addresses and towards the top of the page.
+
+\begin{figure}
+\begin{center}
+\setlength{\unitlength}{12pt}
+\begin{picture}(10,16)
+\thinlines
+
+\put( 0,14){\makebox(10, 2){argument build area}}
+	\put( 0,14){\line( 1, 0){10}}
+	\put(13,15.5){\vector(-1,0){3}}\put(13,15){\makebox(1.5,1){\tt sp}}
+\put( 0,10){\makebox(10, 4){locals}}
+	\put( 0,10){\line( 1, 0){10}}
+\put( 0, 9){\makebox(10, 1){\tt 0}}
+	\put( 0, 9){\line( 1, 0){10}}
+	\put(13, 9.5){\vector(-1,0){3}}\put(13, 9){\makebox(1.5,1){\tt fp}}
+\put( 0, 8){\makebox(10, 1){\sc psw}}
+	\put( 0, 8){\line( 1, 0){10}}
+\put( 0, 7){\makebox(10, 1){previous \tt ap}}
+	\put( 0, 7){\line( 1, 0){10}}
+\put( 0, 6){\makebox(10, 1){previous \tt fp}}
+	\put( 0, 6){\line( 1, 0){10}}
+\put( 0, 5){\makebox(10, 1){previous \tt pc}}
+	\put( 0, 5){\line( 1, 0){10}}
+\put( 0, 3){\makebox(10, 2){saved registers}}
+	\put( 0, 3){\line( 1, 0){10}}
+\put( 0, 2){\makebox(10, 1){argument count}}
+	\put( 0, 2){\line( 1, 0){10}}
+	\put(13, 2.5){\vector(-1,0){3}}\put(13, 2){\makebox(1.5,1){\tt ap}}
+\put( 0, 0){\makebox(10, 2){actual arguments}}
+
+\thicklines
+\put( 0, 0){\line( 1, 0){10}}
+\put( 0, 0){\line( 0, 1){16}}
+\put(10,16){\line( 0,-1){16}}
+\put(10,16){\line(-1, 0){10}}
+
+\end{picture}
+\end{center}
+\caption{VAX Frame Layout.\label{fig:frame}}
+\end{figure}
+
+Arguments are referenced by displacement-mode addressing
+with positive offsets from register \verb|ap|, so
+the first argument is at address \verb|4(ap)|. Locals are referenced
+via negative offsets from \verb|fp|, e.g., the first local is at \verb|-4(fp)|.
+The `argument build area' is used to store arguments to functions that are
+called by the current function. The front end `un-nests' calls so that
+the back end does not need to deal with nested calls. The argument build area
+can thus be used for all calls and must be large enough to hold the largest
+argument list. When a function is called, the caller's argument build area
+becomes the callee's `actual arguments'.
+
+Typical VAX calling sequences can handle nested calls,
+so using an argument build area is not strictly necessary.
+But other targets, such as the MIPS, require this approach,
+so it's used here to illustrate the technique. This approach also
+has the advantage that stack overflow can occur only at function
+entry, which is useful on targets that require explicit
+prologue code to detect stack overflow.
+
+The sample version of \verb|function| is
+\begin{verbatim}
+static int framesize;     /* size of activation record */
+static int offset;        /* current frame offset */
+static int argbuildsize;  /* size of argument build area */
+
+\end{verbatim}
+\begin{verbatim}
+static void function(Symbol f, Symbol caller[],
+   Symbol callee[], int ncalls) {
+   int i;
+
+   offset = 4;
+   for (i = 0; caller[i] && callee[i]; i++) {
+      offset = roundup(offset, caller[i]->type->align);
+      callee[i]->x.offset = caller[i]->x.offset = offset;
+      callee[i]->x.name = caller[i]->x.name = stringf("%d(ap)", offset);
+      offset += caller[i]->type->size;
+      callee[i]->sclass = AUTO;
+   }
+   usedmask = argbuildsize = framesize = offset = 0;
+   gencode(caller, callee);
+   print("%s:.word 0x%x\n", f->x.name, usedmask&~0x3f);
+   framesize += 4*nregs + argbuildsize;
+   print("subl2 $%d,sp\n", framesize);
+   if (isstruct(freturn(f->type)))
+      print("movl r1,-4(fp)\n");
+   emitcode();
+   if (glevel > 1)
+      print("ret\n");
+}
+\end{verbatim}
+The VAX \verb|calls| instruction saves the general registers specified
+by the entry mask, \verb|ap|, \verb|fp|,
+and the return address, \verb|pc|, as shown in the frame figure above.
+\verb|function| computes the size of the locals and argument build area,
+given by \verb|framesize| and \verb|argbuildsize|, respectively.
+
+The first part of \verb|function| initializes the \verb|x.offset| and \verb|x.name| fields
+of each \verb|caller| and \verb|callee| symbol to the appropriate offset and name, respectively.
+The running \verb|offset| is rounded up to the alignment for each argument.
+\verb|roundup(n,m)| is a front-end macro that returns \verb|n| rounded up to the
+next multiple of \verb|m|. Depending on the type metrics, the size of an
+argument may not be a multiple of longwords (e.g., 3-byte structures),
+but the front end ensures that the minimum alignment for each \verb|caller[i]|
+is that for integers, which keeps the VAX stack longword-aligned.
+\verb|stringd(n)| is a front-end function that returns the string
+representation of the integer \verb|n|.
+
+This version of \verb|function| does not support register
+declarations, so each \verb|callee|'s storage \verb|sclass| is
+set to \verb|AUTO|.
+
+During code generation, \verb|argbuildsize| is increased when
+code for calls is generated (see Section~\ref{gen}), \verb|offset| is adjusted in response
+to the definition of locals and block boundaries,
+and \verb|framesize| records \verb|offset|'s maximum
+(see Sections~\ref{local} and \ref{blockbeg}).
+Before calling \verb|gencode|, \verb|function| clears
+\verb|usedmask|, which records the registers used in the function body,
+and clears \verb|argbuildsize|, \verb|framesize|, and \verb|offset|.
+
+After \verb|gencode| returns, \verb|usedmask| and \verb|framesize|
+hold the information needed to generate the prologue.
+\verb|framesize| is adjusted to include the argument build area
+and space for saving all of the registers.
+This space, which is in addition to that specified by the register save mask,
+is used to save registers across those instructions that
+destroy fixed registers, e.g., \verb|movc3|.
+The \verb|subl2| instruction allocates the remainder of the frame.
+
+The last instruction of the prologue is emitted only for
+functions that return structures. For a function type \verb|ty|,
+\verb|freturn(ty)| gives the type of the value returned by the function,
+and \verb|isstruct(ty)| is true if \verb|ty| is a structure or union type.
+Section~\ref{dags:calls} gives details on returning structures.
+
+If \verb|JUMP_ON_RETURN| had been defined as \verb|1| in the configuration,
+returns would have been followed by a jump to the label
+that follows the code emitted by \verb|emitcode|. If the front
+end is passed the \verb|-g|$n$ option, it sets the global
+variable \verb|glevel| to $n$
+and behaves as if \verb|JUMP_ON_RETURN| is \verb|1|, so the code
+above emits the necessary \verb|ret| instruction at the end
+of each function.
+
+\subsection{\tt local}
+
+\label{local}
+
+During the execution of \verb|gencode|, the front end announces local
+variables by calling \verb|local(Symbol p)|, where \verb|p| points the
+relevant symbol-table entry.  It announces temporaries likewise; these
+have \verb|p->temporary| set. \verb|local| must initialize \verb|p|'s
+\verb|Xsymbol| fields. That is, it must set \verb|p->x.offset| and \verb|p->x.name|
+so that they identify a
+stack offset or register number, depending on the availability of
+registers and on the value of \verb|p->sclass|, which is \verb|AUTO| or
+\verb|REGISTER|.
+
+For each block, the front end first announces locals with explicit
+register declarations, in order of declaration, to permit programmer
+control of register assignment. Then it announces the rest, starting
+with those that appear to be most frequently referenced.  It assigns
+\verb|REGISTER| class to even these locals {\em if} their address
+is never taken and if their estimated frequency of use exceeds two.
+This announcement order and \verb|sclass| override collaborate to put the most
+promising locals in registers even if no registers were declared.  As
+with parameters, \verb|local| could assign a register to \verb|p| and
+change \verb|p->sclass| from \verb|AUTO| to \verb|REGISTER|, but it
+should do so only if \verb|p->addressed| is not set.
+
+If \verb|p->sclass| is \verb|REGISTER|, \verb|local|
+can decline to allocate a register by setting \verb|p->sclass| to \verb|AUTO|
+and initializing \verb|p->x.offset| and \verb|p->x.name| to the appropriate frame offset
+and address string, respectively.
+This choice is illustrated by the sample version:
+\begin{verbatim}
+static void local(Symbol p) {
+   offset = roundup(offset + p->type->size, p->type->align);
+   offset = roundup(offset, 4);
+   p->x.offset = -offset;
+   p->x.name = stringf("%d(fp)", -offset);
+   p->sclass = AUTO;
+}
+\end{verbatim}
+The second \verb|roundup| keeps \verb|offset| and hence the stack
+aligned on longwords, as described above.
+
+\subsection{\tt address}
+
+\label{address}
+The front end calls \verb|address(Symbol q, Symbol p, int n)| to
+initialize \verb|q->x| to a symbol that represents an address of the form $x+{\tt n}$,
+where $x$ is the address represented by \verb|p| and \verb|n| is positive or negative.
+Like \verb|defsymbol|, \verb|address| initializes \verb|q->x|, but
+does so based on the values of \verb|p->x| and \verb|n|.
+The sample \verb|address| is
+\begin{verbatim}
+static void address(Symbol q, Symbol p, int n) {
+   if (p->scope == GLOBAL || p->sclass == STATIC || p->sclass == EXTERN)
+      q->x.name = stringf("%s%s%d", p->x.name, n >= 0 ? "+" : "", n);
+   else {
+      q->x.offset = p->x.offset + n;
+      q->x.name = stringf("%d(%s)", q->x.offset,
+         p->scope == PARAM ? "ap" : "fp");
+   }
+}
+\end{verbatim}
+which computes \verb|q->x.offset| and \verb|q->x.name| for locals and parameters,
+or sets \verb|q->x.name| to \verb|p->x.name| concatenated with \verb|+n| or \verb|-n|
+for other variables. 
+
+For example, in
+\begin{verbatim}
+struct node { struct node *link; int count; } a;
+f() { int b[10]; b[4] = a.count; ... }
+\end{verbatim}
+suppose \verb|a| and \verb|b| point to the symbol-table entries
+for \verb|a| and \verb|b|, respectively.
+\verb|a->x.name| is set to \verb|"_a"| by \verb|defsymbol|, and
+\verb|b->x.offset| and \verb|b->x.name| are set to, respectively,
+\verb|-40| \verb|"-40(fp)"| by \verb|local|.
+\verb|address(q1,a,4)| is called with \verb|q1| representing the address
+of \verb|a.count|, and \verb|q1->x.name| is set to \verb|"_a+4"|.
+Likewise, \verb|address(q2,b,16)| sets \verb|q2->x.offset|
+and \verb|q2->x.name| to, respectively, \verb|-24| and \verb|"-24(fp)"|,
+which together denote the address of \verb|b[4]|.
+
+\verb|address| accepts globals, parameters, and locals,
+and is called only after these symbols have been initialized
+by {\tt defsymbol}, {\tt function}, or {\tt local}.
+
+\subsection{{\tt blockbeg} and \tt blockend}
+
+\label{blockbeg}\label{blockend}
+Source-language blocks bracket the lifetime of locals.
+\verb|gencode| announces the beginning and end of a block
+by calling \verb|blockbeg(Env *e)| and \verb|blockend(Env *e)|, respectively.
+\verb|Env| is target specific and typically includes
+the data necessary to reuse that portion of the local frame
+space associated with the block
+and to release any registers assigned to locals within the block.
+The sample \verb|Env| is
+\begin{verbatim}
+typedef struct {
+   unsigned rmask;
+   int offset;
+} Env;
+\end{verbatim}
+The fields save the values of \verb|rmask| and \verb|offset| at the beginning
+of a block so that they can be restored on the end of the block.
+The sample \verb|blockbeg| and \verb|blockend| are thus
+
+\noindent
+\begin{minipage}[t]{.5\textwidth}
+\vspace{\parskip}
+\begin{verbatim}
+static void blockbeg(Env *e) {
+   e->rmask = rmask;
+   e->offset = offset;
+}
+\end{verbatim}
+\vspace{\parskip}
+\end{minipage}
+\begin{minipage}[t]{.5\textwidth}
+\vspace{\parskip}
+\begin{verbatim}
+static void blockend(Env *e) {
+   if (offset > framesize)
+      framesize = offset;
+   offset = e->offset;
+   rmask = e->rmask;
+}
+\end{verbatim}
+\vspace{\parskip}
+\end{minipage}
+
+\noindent
+\verb|blockend| also updates \verb|framesize| if the locals for the current
+block require more space than previous blocks.
+The sample could do without the \verb|rmask| field, but
+if its \verb|local| assigned registers to locals, it would need
+the field to release those registers.
+
+Temporaries --- locals with \verb|temporary| set --- to which
+\verb|local| assigned registers live only for the expressions in which
+they are used.  They are announced by \verb|local| as usual, but are
+used only in the dags passed to next call on \verb|gen|
+(see~\ref{gen}).  \verb|gen| can thus release all registers assigned to
+temporaries.
+
+
+\section{Dags}
+
+\label{dags}
+Executable code is specified by dags.  A function body is a sequence of
+forests of dags, each of which is passed the back end via \verb|gen|,
+as described below.  Dag nodes, or simply nodes, are defined by
+\begin{verbatim}
+typedef struct node *Node;
+struct node {           /* dag nodes: */
+   Opcode op;              /* operator */
+   short count;            /* reference count */
+   Symbol syms[MAXSYMS];   /* symbols */
+   Node kids[MAXKIDS];     /* operands */
+   Node link;              /* next dag in the forest */
+   Xnode x;                /* back-end's type extension */
+};
+\end{verbatim}
+
+The \verb|kids| point to the operand nodes.  Some operators also
+take symbol table pointers as operands; these appear in the \verb|syms|
+array.  The default and minimum allowable value for both \verb|MAXKIDS|
+and \verb|MAXSYMS| is \verb|2|; larger values can be defined for the
+back end's convenience in the configuration file. \verb|count|
+holds the number of references to this node from \verb|kids| in other
+nodes. \verb|link| points to the root of the next dag in the forest.
+
+The \verb|x| field is the back end's `extension' to nodes.  The
+configuration defines the type \verb|Xnode| to hold the per-node data
+that the back end needs to generate code.  The sample \verb|Xnode| is
+\begin{verbatim}
+typedef struct {
+   int state;
+   unsigned visited:1; /* 1 if dag has been linearized */
+   int reg;            /* register number */
+   unsigned rmask;     /* unshifted register mask */
+   unsigned busy;      /* busy regs */
+   int argoffset;      /* ARG: argument offset */
+   Node next;          /* next node on emit list */
+} Xnode;
+\end{verbatim}
+Section~\ref{gen} describes the fields.
+
+The \verb|op| field holds an operator. The last character of each is a
+{\em type suffix} from Table~\ref{dags:suffix-table}.
+For example, the generic operator \verb|ADD| has the variants
+\verb|ADDI|, \verb|ADDU|, \verb|ADDP|, \verb|ADDF|, and \verb|ADDD|.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{lll}
+\em type suffix	& \em type \\ \hline
+\tt C		& char \\
+\tt S		& short \\
+\tt I		& int \\
+\tt U		& unsigned \\
+\tt P		& any pointer type \\
+\tt F		& float \\
+\tt D		& double \\
+\tt B		& structure or block \\
+\tt V		& void \\
+\end{tabular}
+\end{center}
+\caption{Type Suffixes.\label{dags:suffix-table}}
+\end{table}
+
+Table~\ref{dags:op-table} lists each generic operator, its valid type
+suffixes, and the number of \verb|kids| and \verb|syms| that it uses;
+multiple values for \verb|kids| indicate type-specific variations,
+which are detailed below.  For most operators, the type suffix denotes
+the type of operation to perform and the type of the result.
+Exceptions are \verb|ADDP|, in which an integer operand
+is added to a pointer operand, and \verb|SUBP|, which
+subtracts the second integer operand from the first pointer operand.
+The operators for assignment, comparison, arguments, and some calls return
+no results; their type suffixes denote the type of operation to perform.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{lllll}
+\tt syms & \tt kids & \it operator & \it type suffixes	& \it operation \\ \hline
+ 1	& 0	& \tt ADDRF	& \verb|    P    |	& address of a parameter \\
+ 1	& 0	& \tt ADDRG	& \verb|    P    |	& address of a global \\
+ 1	& 0	& \tt ADDRL	& \verb|    P    |	& address of a local\\
+ 1	& 0	& \tt CNST	& \verb|CSIUPFD  |	& constant \\[1.5ex]
+
+	& 1	& \tt BCOM	& \verb|   U     |	& bitwise complement \\
+	& 1	& \tt CVC	& \verb|  IU     |	& convert from \tt char \\
+	& 1	& \tt CVD	& \verb|  I  F   |	& convert from \tt double \\
+	& 1	& \tt CVF	& \verb|      D  |	& convert from \tt float \\
+	& 1	& \tt CVI	& \verb|CS U  D  |	& convert from \tt int \\
+	& 1	& \tt CVP	& \verb|   U     |	& convert from pointer \\
+	& 1	& \tt CVS	& \verb|  IU     |	& convert from \tt short \\
+	& 1	& \tt CVU	& \verb|CSI P    |	& convert from \tt unsigned \\
+	& 1	& \tt INDIR	& \verb|CSI PFDB |	& fetch \\
+	& 1	& \tt NEG	& \verb|  I  FD  |	& negation \\[1.5ex]
+
+	& 2	& \tt ADD	& \verb|  IUPFD  |	& addition \\
+	& 2	& \tt BAND	& \verb|   U     |	& bitwise \sc AND \\
+	& 2	& \tt BOR	& \verb|   U     |	& bitwise inclusive \sc OR \\
+	& 2	& \tt BXOR	& \verb|   U     |	& bitwise exclusive \sc OR \\
+	& 2	& \tt DIV	& \verb|  IU FD  |	& division \\
+	& 2	& \tt LSH	& \verb|  IU     |	& left shift \\
+	& 2	& \tt MOD	& \verb|  IU     |	& modulus \\
+	& 2	& \tt MUL	& \verb|  IU FD  |	& multiplication \\
+	& 2	& \tt RSH	& \verb|  IU     |	& right shift \\
+	& 2	& \tt SUB	& \verb|  IUPFD  |	& subtraction \\[1.5ex]
+
+ 2	& 2	& \tt ASGN	& \verb|CSI PFDB |	& assignment \\
+ 1	& 2	& \tt EQ	& \verb|  I  FD  |	& jump if equal \\
+ 1	& 2	& \tt GE	& \verb|  IU FD  |	& jump if greater than or equal \\
+ 1	& 2	& \tt GT	& \verb|  IU FD  |	& jump if greater than \\
+ 1	& 2	& \tt LE	& \verb|  IU FD  |	& jump if less than or equal \\
+ 1	& 2	& \tt LT	& \verb|  IU FD  |	& jump if less than \\
+ 1	& 2	& \tt NE	& \verb|  I  FD  |	& jump if not equal \\[1.5ex]
+
+ 2	& 1	& \tt ARG	& \verb|  I PFDB |	& argument \\
+ 1	& 1 2	& \tt CALL	& \verb|  I  FDBV|	& function call \\
+	& 0 1	& \tt RET	& \verb|  I  FD V|	& return from function \\[1.5ex]
+
+  	& 1	& \tt JUMP	& \verb|        V|	& unconditional jump \\
+ 1	& 0	& \tt LABEL	& \verb|        V|	& label definition \\
+\end{tabular}
+\end{center}
+\caption{Node Operators.\label{dags:op-table}}
+\end{table}
+
+The leaf operators yield the address of a variable or the value of a
+constant. \verb|syms[0]| identifies the variable or constant.
+
+The unary operators accept and yield a number, except for \verb|INDIR|,
+which accepts an address and yields the value at that address.
+There is no \verb|BCOMI|; signed integers are complemented using
+\verb|BCOMU|. The binary operators accept two numbers and yield one.
+
+The type suffix for a conversion operator denotes the type of the
+result.  For example, \verb|CVUI| converts an unsigned (\verb|U|) to an
+signed integer (\verb|I|).  Conversions between unsigned and short and
+between unsigned and character are unsigned conversions; those between
+integer and short and between integer and character are signed
+conversions.  For example, \verb|CVSU| converts an unsigned short to an
+unsigned while \verb|CVSI| converts an signed short to a signed
+integer.
+
+The front end composes conversions to form those not in the table.
+For example, it converts a short to a float by first
+converting it to an int and then a double.  The 16
+conversion operators are represented by arrows in Figure~\ref{fig:conversions}.
+Composed conversions follow the path from the source
+type to the destination type.
+
+\begin{figure}
+\begin{center}
+\setlength{\unitlength}{7pt}
+\begin{picture}(20,12)
+\multiput(1,2)(6,0){3}{\begin{picture}(0,3)
+	\put(0,0){\vector(0,1){3}}\put(0,0){\vector(0,-1){0}}\end{picture}}
+\multiput(7,7)(6,0){2}{\begin{picture}(0,3)
+	\put(0,0){\vector(0,1){3}}\put(0,0){\vector(0,-1){0}}\end{picture}}
+\multiput(2,6)(6,0){3}{\begin{picture}(4,0)
+	\put(0,0){\vector(1,0){4}}\put(0,0){\vector(-1,0){0}}\end{picture}}
+\put( 1, 1){\makebox(0,0){\tt F}}
+\put( 7, 1){\makebox(0,0){\tt S}}
+\put(13, 1){\makebox(0,0){\tt S}}
+
+\put( 1, 6){\makebox(0,0){\tt D}}
+\put( 7, 6){\makebox(0,0){\tt I}}
+\put(13, 6){\makebox(0,0){\tt U}}
+\put(19, 6){\makebox(0,0){\tt P}}
+
+\put( 7,11){\makebox(0,0){\tt C}}
+\put(13,11){\makebox(0,0){\tt C}}
+\end{picture}
+\end{center}
+\vspace{-1.5pc}\small\em
+\caption{Conversions~\label{fig:conversions}}
+\end{figure}
+
+There is no \verb|CVUD|; conversion of an unsigned \verb|u| to a double
+is done by the equivalent of the expression
+\begin{verbatim}
+(int)u >= 0 ? (double)(int)u : (double)(int)u + UINT_MAX + 1
+\end{verbatim}
+where \verb|UINT_MAX| is the ANSI-specified maximum value for an unsigned.
+Likewise, there is no \verb|CVDU|; conversion of a double \verb|d| to an unsigned
+is done by the equivalent of the expression
+\begin{verbatim}
+d >= INT_MAX + 1 ? (unsigned)(int)(d-(INT_MAX+1)) + INT_MAX + 1
+                 : (unsigned)(int)d
+\end{verbatim}
+where \verb|INT_MAX| is the ANSI-specified maximum value for a signed integer.
+
+\verb|ASGN| stores the value of \verb|kids[1]| in the cell addressed by
+\verb|kids[0]|. \verb|syms[0]| and \verb|syms[1]| point to symbol table
+entries for integer constants that give the size of the value and
+its alignment, respectively. These are most useful for \verb|ASGNB|,
+which implements structure assignment and other
+`block moves' (e.g., initialization of automatic arrays).
+
+For the comparisons, \verb|syms[0]| points to a symbol-table entry for
+the label to jump to if the comparison is true.  \verb|JUMPV| is an
+unconditional jump to the address computed by \verb|kids[0]|. \verb|LABEL|
+defines the label given by \verb|syms[0]| and is otherwise a no-op.
+As on most computers, signed comparisons are used for unsigned equals and not equals. 
+
+Function calls have a \verb|CALL| node preceded by zero or more
+\verb|ARG| nodes. The front end `un-nests'
+function calls, so \verb|ARG| nodes are always associated with the next
+\verb|CALL| node in the forest. The order of the \verb|ARG| nodes is
+right-to-left unless the configuration parameter \verb|LEFT_TO_RIGHT|
+is defined, which it is for the sample.
+A \verb|CALL| node's \verb|syms[0]| points to a symbol
+whose only non-null field is \verb|type|,
+which is the function type of the callee.
+
+\verb|ARG| nodes establish the value computed by \verb|kids[0]| as the
+next argument.  \verb|syms[0]| and \verb|syms[1]| point to symbol table
+entries for integer constants that give the size of the argument and
+its alignment, respectively.
+
+\label{dags:calls}
+
+In \verb|CALL| nodes, \verb|kids[0]| computes the address of the callee.
+\verb|CALLB| calls functions that return structures;
+\verb|kids[1]| computes the address of a
+temporary local variable to hold the returned value. There is no
+\verb|RETB|; the front end uses a \verb|RETV| preceded by an
+\verb|ASGNB| to the structure addressed by the first local. The
+\verb|CALLB| code and the function prologue must collaborate to store the
+\verb|CALLB|'s \verb|kids[1]| into the callee's first local.
+\verb|function| (Section~\ref{function}), \verb|local| (Section~\ref{local})
+and the code emitted below for \verb|CALLB| (Section~\ref{emit})
+illustrate such collaboration.
+\verb|CALLB| nodes have a \verb|count| of \verb|0| because the front end references
+the temporary wherever the returned value is referenced.
+
+In \verb|RET| nodes, \verb|kids[0]| computes the value returned, except
+for \verb|RETV| nodes, which are childless.
+
+Character and short integer arguments are always promoted to the
+corresponding integer type even in the presence of a prototype.
+The promoted values are converted back to the intended
+type upon entry to the function. The front end accomplishes
+this conversion by specifying the intended types for the callee
+as described in Section~\ref{function}. 
+For example, the body for
+\begin{verbatim}
+f(char c) { f(c); }
+\end{verbatim}
+becomes two forests, which are linearized below;
+the \verb|syms| columns list the \verb|x.name| fields.
+\begin{verbatim}
+ #  op      count kids    syms
+ 1. ADDRFP   1            4(ap)
+ 2. ADDRFP   1            4(ap)
+ 3. INDIRI   1     2                                    
+ 4. CVIC     1     3                                    
+ 5. ASGNC    0     1  4                                 
+                                  
+ 1. ADDRFP   1            4(ap)
+ 2. INDIRC   1     1                                    
+ 3. CVCI     1     2                                    
+ 4. ARGI     0     3      4 4                           
+ 5. ADDRGP   1            _f                             
+ 6. CALLI    0     5      4                             
+\end{verbatim}
+The first forest holds one dag, which converts the actual argument to the
+intended type.  The second forest holds two dags.
+The first (nodes 1--4) promotes \verb|c| to pass it as an integer,
+and the second (nodes 5 \& 6) calls \verb|f|.
+
+Unsigned variants of \verb|ASGN|, \verb|INDIR|, \verb|ARG|,
+\verb|CALL|, and \verb|RET| were omitted as unnecessary.  Signed and
+unsigned integers have the same size, so the corresponding signed
+operator is used instead.  Likewise, there is no \verb|CALLP| or
+\verb|RETP|. A pointer is returned by using \verb|CVPU| and
+\verb|RETI|. A pointer-valued function is called by using \verb|CALLI|
+and \verb|CVUP|.
+
+In Table~\ref{dags:op-table}, the operators listed at and following \verb|ASGN|
+are used for their side-effects. They always appear as roots in the
+forest of dags, and they appear in the order in which they must be executed.
+Except for \verb|CALLD|, \verb|CALLF| and \verb|CALLI|, their reference
+counts are always zero.  Even these \verb|CALL| nodes have zero
+reference counts when their values are unused.
+
+\subsection{\tt gen}
+
+\label{gen}
+\label{dags:registers}
+The front end calls \verb|gen| to select code.  It passes \verb|gen| a
+forest of dags.  For example,
+\begin{verbatim}
+int i, *p; f() { i = *p++; }
+\end{verbatim}
+yields the forest linearized below.
+\begin{verbatim}
+ #  op      count kids      syms
+ 1. ADDRGP   2              _p
+ 2. INDIRP   2     1
+ 3. CNSTI    1              4
+ 4. ADDP     1     2  3
+ 5. ASGNP    0     1  4
+ 6. ADDRGP   1              _i
+ 7. INDIRI   1     2
+ 8. ASGNI    0     6  7
+\end{verbatim}
+This forest consists of three dags, rooted at nodes 2, 5, and 8 above.
+The \verb|INDIRP| node, which fetches the value of \verb|p|, comes
+before node 5, which changes \verb|p|, so the original value of
+\verb|p| is available for subsequent use by node 7, which fetches the
+integer pointed to by that value.
+
+\verb|gen| traverses the forest and selects code, but it
+emits nothing because it may be necessary to determine, for example,
+the registers needed before the function prologue
+can be emitted (see Section~\ref{function}).
+So \verb|gen| merely annotates the nodes to identify the code selected,
+and it returns a pointer that is ultimately passed to the back end's
+\verb|emit| to actually output the code.  Once the front end calls
+\verb|gen|, it does not inspect the contents of the nodes again, so
+\verb|gen| may modify them freely.
+
+The sample code generator emits naive code, so \verb|gen| concerns
+itself mainly with register allocation. 
+The sample \verb|gen|
+\begin{verbatim}
+static Node gen(Node p) {
+   Node head, *last;
+
+   for (last = &head; p; p = p->link)
+      last = linearize(p, last, 0);
+   for (p = head; p; p = p->x.next) {
+      ralloc(p);
+      if (p->count == 0 && sets(p))
+         putreg(p);
+   }
+   return head;
+}
+\end{verbatim}
+linearizes each dag in the forest, in execution order, and then
+allocates registers for each node.  If the node sets a register, but no
+subsequent node references it, which is indicated by a reference
+\verb|count| of \verb|0|, \verb|gen| releases the register.  Finally,
+it returns the linearized node list for traversal by \verb|emit|.
+
+\verb|gen| linearizes the dags before allocating registers to simplify
+the insertion of spills and reloads. The function
+\begin{verbatim}
+static Node *linearize(Node p, Node *last, Node next) {
+   if (p && !p->x.visited) {
+      last = linearize(p->kids[0], last, 0);
+      last = linearize(p->kids[1], last, 0);
+      p->x.visited = 1;
+      *last = p;
+      last = &p->x.next;
+   }
+   *last = next;
+   return last;
+}
+\end{verbatim}
+linearizes the dag at \verb|p| and inserts it into the growing list of
+nodes between \verb|*last| and \verb|next|.
+
+\verb|ralloc| handles register allocation for a single node.
+\begin{verbatim}
+static void ralloc(Node p) {
+   int i;
+
+   switch (generic(p->op)) {
+   case ARG:
+      argoffset = roundup(argoffset, p->syms[1]->u.c.v.i);
+      p->x.argoffset = argoffset;
+      argoffset += p->syms[0]->u.c.v.i;
+      if (argoffset > argbuildsize)
+         argbuildsize = roundup(argoffset, 4);
+      break;
+   case CALL:
+      argoffset = 0;
+      break;
+   }
+   for (i = 0; i < MAXKIDS; i++)
+      putreg(p->kids[i]);
+   p->x.busy = rmask;
+   if (needsreg(p))
+      getreg(p);
+}
+\end{verbatim}
+\verb|generic| strips the type suffix from an operator and
+thus simplifies the switch.  \verb|ralloc| calls \verb|putreg| to
+release the registers allocated for the node's children and then it
+calls \verb|getreg| to allocate a register for the node itself if it needs one.  It sets
+the node's \verb|x.busy| to record the busy registers; \verb|emit|
+needs this information for a few operators.  The register state is
+encoded in \verb|rmask|; \verb|rmask&(1<<r)| is \verb|1| if register
+\verb|r| is busy, for \verb|r| from \verb|0| to \verb|11|.
+
+\verb|CALL| and \verb|ARG| nodes require extra steps.  \verb|ARG| nodes
+produce no result; instead, they store the value computed by
+\verb|kids[0]| into the next location in the argument build area.
+\verb|syms[0]| and \verb|syms[1]| point to constant symbols that give
+the size and alignment of the argument.  \verb|argoffset| is the
+running offset into the argument build area.
+\verb|argoffset| is rounded up to the appropriate alignment boundary, saved
+in the node's \verb|x.argoffset| for use in \verb|emit|, and incremented
+by the size of the argument.  \verb|argbuildsize| tracks the maximum
+\verb|argoffset| needed by the current function.  The case for \verb|CALL| nodes
+clears \verb|argoffset| for the next set of \verb|ARG| nodes.
+
+\verb|getreg|
+accepts a node and allocates a register for it:
+\begin{verbatim}
+static void getreg(Node p) {
+   int r, m = optype(p->op) == D ? 3 : 1;
+
+   for (r = 0; r < nregs; r++)
+      if ((rmask&(m<<r)) == 0) {
+         p->x.rmask = m;
+         p->x.reg = r;
+         rmask |= sets(p);
+         usedmask |= sets(p);
+         return;
+      }
+   r = spillee(p, m);
+   spill(r, m, p);
+   getreg(p);
+}
+\end{verbatim}
+\verb|optype(op)| returns the type suffix of operator \verb|op|.
+\verb|m| is set to the mask \verb|1| if
+the result of \verb|p->op| needs an ordinary register and \verb|3| if it
+needs a double register.
+\verb|getreg| loops over the registers. If it finds one that's free,
+it sets the node's \verb|x.reg| field to the register allocated and the
+\verb|x.rmask| field to the mask. It also
+updates \verb|usedmask|, which is used to generate the prologue
+described in Section~\ref{function}; \verb|sets(p)| returns
+\verb|p->x.rmask<<p->x.reg|.  If no registers are free, \verb|getreg|
+spills a register and calls itself recursively to try again.
+Section~\ref{spills} describes spills.
+
+\verb|putreg| releases registers:
+\begin{verbatim}
+static void putreg(Node p) {
+   if (p && --p->count <= 0)
+      rmask &= ~sets(p);
+}
+\end{verbatim}
+Dags can use result registers multiple times, so \verb|putreg|
+decrements the reference count and frees the register only when the
+last reference is removed by clearing the appropriate bits in
+\verb|rmask|.
+
+\subsection{\tt emit}
+
+\label{emit}
+\verb|emit| emits the linearized forest. The sample walks down the list,
+switches on the opcode to identify the code to emit:
+\begin{verbatim}
+void emit(Node p) {
+   for (; p; p = p->x.next) {
+      Node a = p->kids[0], b = p->kids[1];
+      int r = p->x.reg;
+      switch (p->op) {
+      case CNSTC: case CNSTI: case CNSTP:
+      case CNSTS: case CNSTU:
+         print("movl $%s,r%d\n", p->syms[0]->x.name, r);
+         break;
+      case ADDRGP: case ADDRFP: case ADDRLP:
+         print("moval %s,r%d\n", p->syms[0]->x.name, r);
+         break;
+      ...
+      }
+   }
+}
+\end{verbatim}
+The individual cases emit naive code for a single operator.
+The \verb|CNST| cases above emit a VAX instruction that loads a constant
+into a register. \verb|defsymbol| stored the constant string in
+\verb|p->syms[0]->x.name|, and \verb|ralloc| stored the result register
+name \verb|p->x.reg|. The \verb|ADDR| cases above emit a VAX
+instruction that moves the address of a variable into the result
+register.
+
+Most of the unary operators share a common pattern, which the sample
+abstracts into a macro:
+\begin{verbatim}
+#define suffix(p)    ".fdbwllll."[optype((p)->op)]
+#define unary(inst)  print("%s%c r%d,r%d\n", inst, suffix(p), a->x.reg, r)
+case BCOMU:                             unary("mcom" );  break;
+case NEGD:  case NEGF:  case NEGI:      unary("mneg" );  break;
+case CVCI:                              unary("cvtb" );  break;
+case CVCU:                              unary("movzb");  break;
+case CVSI:                              unary("cvtw" );  break;
+case CVSU:                              unary("movzw");  break;
+case CVDF:  case CVDI:                  unary("cvtd" );  break;
+case CVFD:                              unary("cvtf" );  break;
+case CVUC:  case CVUS:                  unary("cvtl" );  break;
+case CVIC:  case CVIS:  case CVID:      unary("cvtl" );  break;
+case CVIU:  case CVUI:                  unary("mov"  );  break;
+case CVPU:  case CVUP:                  unary("mov"  );  break;
+\end{verbatim}
+\verb|unary| emits the VAX operator, the VAX type suffix --- which is
+computed by indexing a string of such suffixes --- and the source and
+destination registers. Most of the binary operators
+\begin{verbatim}
+#define binary(inst) print("%s%c3 r%d,r%d,r%d\n", inst, suffix(p), \
+                        b->x.reg, a->x.reg, r)
+case BANDU:                             binary("bic");   break;
+case BORU:                              binary("bis");   break;
+case BXORU:                             binary("xor");   break;
+case ADDD:  case ADDF:                  binary("add");   break;
+case ADDI:  case ADDP:  case ADDU:      binary("add");   break;
+case SUBD:  case SUBF:                  binary("sub");   break;
+case SUBI:  case SUBP:  case SUBU:      binary("sub");   break;
+case MULD:  case MULF:                  binary("mul");   break;
+case MULI:  case MULU:                  binary("mul");   break;
+case DIVD:  case DIVF:  case DIVI:      binary("div");   break;
+\end{verbatim}
+and all of the comparisons
+\begin{verbatim}
+#define compare(cp)  print("cmp%c r%d,r%d; j%s %s\n", suffix(p), \
+                        a->x.reg, b->x.reg, cp, p->syms[0]->x.name)
+case EQD:   case EQF:   case EQI:       compare("eql" ); break;
+case GED:   case GEF:   case GEI:       compare("geq" ); break;
+case GEU:                               compare("gequ"); break;
+case GTD:   case GTF:   case GTI:       compare("gtr" ); break;
+case GTU:                               compare("gtru"); break;
+case LED:   case LEF:   case LEI:       compare("leq" ); break;
+case LEU:                               compare("lequ"); break;
+case LTD:   case LTF:   case LTI:       compare("lss" ); break;
+case LTU:                               compare("lssu"); break;
+case NED:   case NEF:   case NEI:       compare("neq" ); break;
+\end{verbatim}
+are handled similarly.
+
+The cases
+\begin{verbatim}
+case INDIRC: case INDIRD: case INDIRF: case INDIRI:
+case INDIRP: case INDIRS:
+   print("mov%c (r%d),r%d\n", suffix(p), a->x.reg, r);
+   break;
+case ASGNC: case ASGND: case ASGNF: case ASGNI: case ASGNP: case ASGNS:
+   print("mov%c r%d,(r%d)\n", suffix(p), b->x.reg, a->x.reg);
+   break;
+case JUMPV:
+   print("jmp (r%d)\n", a->x.reg);
+   break;
+case LABELV:
+   print("%s:", p->syms[0]->x.name);
+   break;
+\end{verbatim}
+emit code to indirectly load and store memory cells, to jump indirectly,
+and to emit a label definition.
+
+The cases
+\begin{verbatim}
+case ARGD: case ARGF: case ARGI: case ARGP:
+   print("mov%c r%d,%d(sp)\n", suffix(p),
+      a->x.reg, p->x.argoffset);
+   break;
+case CALLD: case CALLF: case CALLI: case CALLV:
+   save(p->x.busy&0x3e);
+   print("calls $0,(r%d)\n", a->x.reg);
+   if (p->op != CALLV)
+      print("mov%c r0,r%d\n", suffix(p), r);
+   restore(p->x.busy&0x3e);
+   break;
+case RETD: case RETF: case RETI:
+   print("mov%c r%d,r0; ret\n", suffix(p), a->x.reg);
+   break;
+case RETV:
+   print("ret\n");
+   break;
+\end{verbatim}
+emit code to move an argument onto the stack, to call a procedure, and
+to return a value. The \verb|ARG| cases use \verb|x.argoffset|,
+into which \verb|ralloc| stored the stack offset for the argument.
+Procedures may destroy registers 1--5, so the \verb|CALL| cases use
+\begin{verbatim}
+static void save(unsigned mask) {
+   int i;
+
+   for (i = 1; i < nregs; i++)
+      if (mask&(1<<i))
+         print("movl r%d,%d(fp)\n", i,
+            4*i - framesize + argbuildsize);
+}
+\end{verbatim}
+to emit code to save any of those registers that are busy;
+\verb|restore| is similar.
+The \verb|RET| cases merely copy any return value into register 0 and return.
+
+Several binary operators require special handling. The shift
+instructions use a syntax that differs slightly from the other binary instructions:
+\begin{verbatim}
+case RSHI: case LSHI: case LSHU:
+   print("ashl r%d,r%d,r%d\n", b->x.reg, a->x.reg, r);
+   break;
+\end{verbatim}
+\verb|RSHI| and \verb|LSHI| generate the same code because the front
+end negates the shift count for \verb|RSHI| if the configuration
+parameter \verb|VAX| is defined. No instructions directly
+implement unsigned right shift, division, or modulus, so \verb|emit|
+uses a field-extraction instruction for the first and library calls for the others:
+\begin{verbatim}
+case RSHU:
+   print("subl3 r%d,$32,r0; extzv r%d,r0,r%d,r%d\n",
+      b->x.reg, b->x.reg, a->x.reg, r);
+   break;
+case DIVU:
+   save(p->x.busy&0x3e);
+   print("pushl r%d; pushl r%d; calls $2,udiv; movl r0,r%d\n",
+      b->x.reg, a->x.reg, r);
+   restore(p->x.busy&0x3e);
+   break;
+case MODU:
+   save(p->x.busy&0x3e);
+   print("pushl r%d; pushl r%d; calls $2,urem; movl r0,r%d\n",
+      b->x.reg, a->x.reg, r);
+   restore(p->x.busy&0x3e);
+   break;
+\end{verbatim}
+Finally, ANSI C requires that \verb|a%b| equal \verb|a-(a/b)*b|,
+so \verb|MODI| computes it just this way:
+\begin{verbatim}
+case MODI:
+   print("divl3 r%d,r%d,r0; mull2 r%d,r0; subl3 r0,r%d,r%d\n",
+      b->x.reg, a->x.reg, b->x.reg, a->x.reg, r);
+   break;
+\end{verbatim}
+
+Only the structure instructions remain:
+\begin{verbatim}
+case INDIRB:
+   print("moval (r%d),r%d\n", a->x.reg, r);
+   break;
+case ASGNB:
+   save(p->x.busy&0x3f);
+   print("movc3 $%s,(r%d),(r%d)\n", p->syms[0]->x.name,
+      b->x.reg, a->x.reg);
+   restore(p->x.busy&0x3f);
+   break;
+case ARGB:
+   save(p->x.busy&0x3f);
+   print("movc3 $%s,(r%d),%d(sp)\n", p->syms[0]->x.name,
+      a->x.reg, p->x.argoffset);
+   restore(p->x.busy&0x3f);
+   break;
+\end{verbatim}
+The scalar \verb|INDIR|s and \verb|ASGN|s load and store values
+directly, but structures won't fit in registers, so their instructions
+manipulate {\em addresses} instead. \verb|ASGNB| uses a
+block move instruction, which needs the size from
+\verb|p->syms[0]->x.name|; it also destroys registers 0--5, so
+\verb|emit| arranges to save and restore their values. \verb|ARGB|
+operates similarly, but copies the structure into the stack instead.
+Finally,
+\begin{verbatim}
+case CALLB:
+   save(p->x.busy&0x3e);
+   if (a->x.reg == 1) {
+      print("movl r1,r0\n");
+      a->x.reg = 0;
+   }
+   if (b->x.reg != 1)
+      print("movl r%d,r1\n", b->x.reg);
+   print("calls $0,(r%d)\n", a->x.reg);
+   restore(p->x.busy&0x3e);
+   break;
+\end{verbatim}
+is like an ordinary call, but it also passes the address at which to
+store the return value in register 1; if the address of the {\em function}
+is already in register 1, it is first moved out of the way into
+register 0, which is not otherwise allocated.
+
+If \verb|NOARGB| is defined (e.g., in the configuration file),
+the front end uses Sun's convention for passing structures by value.
+It builds dags that copy structure arguments to temporaries,
+passes pointers to these temporaries, adds an extra indirection
+to references to these parameters in the callee, and changes
+the types of the callee's formals to reflect this convention.
+It also sets \verb|structarg| for these parameters to distinquish
+them from bona fide structure pointer parameters.
+
+\section{Spills}
+
+\label{spills}
+When \verb|getreg| finds that all registers are busy,
+one or more must be {\em spilled} now and {\em reloaded}
+when the values are needed again.
+Handling spills correctly is difficult and a common
+source of compiler bugs. Test cases that expose
+bugs in the spill code are necessarily complex.
+As such, and for completeness,
+the implementation described in this section is adapted
+from that used in the production versions of \verb|lcc|.
+Reference~\cite{fraser:hanson:92} describes the important
+differences and explains the rationale behind this spiller.
+
+The dag constructed by the front end minimizes the reevaluation of
+common subexpressions. Spills are, in a sense,
+a result of the front end's eagerness to avoid
+reevaluation, and handling spills amounts to
+`breaking the dags' generated by the front end.
+A node representing a common subexpression is changed
+so that it stores the value in a temporary, and
+subsequent references to that node are edited
+to load the value from the temporary.
+
+Spilling involves three major steps:
+Identifying the registers to spill,
+generating the code for the spills at the correct
+location the output stream, and
+generating the code for the reloads, again at the correct locations.
+These steps are performed at the end of \verb|getreg|:
+\begin{verbatim}
+static void getreg(Node p) {
+   int r, m = optype(p->op) == D ? 3 : 1;
+   ...
+   r = spillee(p, m);
+   spill(r, m, p);
+   getreg(p);
+}
+\end{verbatim}
+\verb|spillee| identifies the register (\verb|m==1|) or register pair (\verb|m==3|)
+to be spilled on behalf of \verb|p|,
+and \verb|spill| generates the spill and reload code.
+Once \verb|r| has been spilled,
+it is available,
+and the call to \verb|getreg| is guaranteed to succeed.
+
+\verb|ralloc| frees registers as soon as possible.
+If the available registers are exhausted,
+it is because there are multiple references
+to the nodes holding the registers, which arise
+from common subexpressions and from multiple assignment, augmented
+assignment, and the operators \verb|++| and \verb|--|.
+Consider the following program.
+\begin{verbatim}
+double a[10],b[10];
+int i;
+f(){ i = (a[i]+b[i])*(a[i]-b[i]); }
+\end{verbatim}
+The initial linearized forest is shown to the left of
+the vertical line in the display below.
+\begin{flushleft}\tt
+\begin{tabular}{rlllc|cll}
+\#\ & op      & kids    & syms  & count &count   & uses   & sets  \\
+ 1. & ADDRGP  &         & \_i   &   2   &   1    &        & r1    \\
+ 2. & INDIRI  &  1      &       &   1   &   0    & r1     & r2    \\
+ 3. & CNSTI   &         & 3     &   1   &   0    &        & r3    \\
+ 4. & LSHI    &  2  3   &       &   2   &   0    & r2 r3  & r2    \\
+ 5. & ADDRGP  &         & \_a   &   1   &   0    &        & r3    \\
+ 6. & ADDP    &  4  5   &       &   1   &   0    & r2 r3  & r3    \\
+ 7. & INDIRD  &  6      &       &   2   &   2    & r3     & r3 r4 \\
+ 8. & ADDRGP  &         & \_b   &   1   &   0    &        & r5    \\
+ 9. & ADDP    &  4  8   &       &   1   &   0    & r2 r5  & r2    \\
+10. & INDIRD  &  9      &       &   2   &   2    & r2    \\
+11. & ADDD    &  7 10   &       &   1   &   1    & r3 r4 \\
+12. & SUBD    &  7 10   &       &   1   &   1    & r3 r4 \\
+13. & MULD    & 11 12   &       &   1   &   1 \\
+14. & CVDI    & 13      &       &   1   &   1 \\
+15. & ASGNI   &  1 14   &       &   0   &   0    & r1 \\
+\end{tabular}
+\end{flushleft}
+Nodes with \verb|count| fields greater than 1 represent
+four common subexpressions: the lvalue of \verb|i| (node 1),
+the addressing expression \verb|i<<3| (node 4), and
+the rvalues of \verb|a[i]| (node 7) and \verb|b[i]| (node 10).
+If only registers 1--5 are available, \verb|ralloc| runs
+out of registers at node 10.
+The linearized forest at that point is shown to the right of
+the vertical line in the display above.
+As indicated by the non-zero \verb|count|s and the \verb|sets| column,
+node 1 is using \verb|r1| and
+node 7 is using \verb|r3| and \verb|r4|.
+Node 10 needs a register pair,
+but only registers \verb|r2| and \verb|r5| are available.
+Note that the \verb|count| of node 4, which is \verb|i<<3|,
+has dropped to 0 because \verb|ralloc| has
+processed both uses (nodes 6 and 9).
+
+\verb|getreg| calls \verb|spillee| to identify a register pair
+to be spilled so that it can be used for node 10.
+\verb|spillee| chooses the register whose next use
+is the most distant in the linearized forest.
+This choice is analogous to the optimal demand paging strategy that
+replaces pages whose next use is most distant
+in the execution stream~\cite{freiburghouse}.
+
+For each register,
+\verb|spillee| simply searches down the linearized forest
+for register uses and records the most distant.
+\begin{verbatim}
+static int spillee(Node dot, unsigned m) {
+   int bestdist = -1, bestreg = 0, dist, r;
+   Node q;
+
+   for (r = 1; r < nregs - (m>>1); r++) {
+      dist = 0;
+      for (q = dot->x.next; q && !(uses(q)&(m<<r)); q = q->x.next)
+         dist++;
+      if (dist > bestdist) {
+         bestdist = dist;
+         bestreg = r;
+      }
+   }
+   return bestreg;
+}
+\end{verbatim}
+\verb|spillee| is called with \verb|dot| equal to the node at which
+the spill is required, which is node 10 in the example above.
+\verb|uses(p)| returns a bit mask giving the registers used by node \verb|p|,
+i.e., the registers set by \verb|p|'s kids:
+\begin{verbatim}
+static unsigned uses(Node p) {
+   int i;
+   unsigned m = 0;
+
+   for (i = 0; i < MAXKIDS; i++)
+      if (p->kids[i])
+         m |= sets(p->kids[i]);
+   return m;
+}
+\end{verbatim}
+
+In this example, \verb|spillee| finds \verb|r1| used
+in node 15, which is at `distance' 4, and
+\verb|r3| and \verb|r4| used in node 11 at distance 0.
+Consequently, \verb|spillee| returns \verb|r1|, which denotes
+both \verb|r1| and \verb|r2| because \verb|m| is 3.
+
+The implementations of \verb|spillee| above and \verb|spill| below
+assume that the instruction
+emitted for each node reads the registers it uses before setting
+the register allocated to it. This assumption
+permits \verb|ralloc| to reassign registers used by a node to that node.
+It also permits \verb|spillee| to start its scan {\em after} the
+current instruction.
+This assumption is invalid on machines with two-address instructions.
+
+Actually spilling the register chosen by \verb|spillee| and inserting
+the reloads is done by \verb|spill| and its associates, \verb|genspill|
+and \verb|genreloads|.
+In the example, these functions collaborate to `break the dag'
+at node 1, which sets register \verb|r1| (\verb|r2| is already free).
+\verb|genspill| generates a temporary and the nodes necessary
+to store the value computed by node 1 into the temporary.
+These new nodes are stitched into the linearized forest immediately
+after node 1. \verb|genreloads| changes future {\em uses} of the
+value computed by node 1 to reload the value from
+the temporary instead of referencing node 1 directly.
+The effect is to remove the common subexpression
+by assigning it to a temporary.
+
+\verb|spill| identifies the locations at which
+to insert the spills by searching the linearized forest beyond \verb|dot|
+for nodes that use the registers that are to be spilled, e.g.,
+\verb|r1| in the example.
+\begin{verbatim}
+static void spill(int r, unsigned m, Node dot) {
+   int i;
+   Node p = dot;
+
+   while (p = p->x.next)
+      for (i = 0; i < MAXKIDS; i++)
+         if (p->kids[i] && sets(p->kids[i])&(m<<r)) {
+            Symbol temp = genspill(p->kids[i]);
+            rmask &= ~sets(p->kids[i]);
+            genreloads(dot, p->kids[i], temp);
+         }
+}
+\end{verbatim}
+\verb|genspill| allocates the temporary,
+generates the spill code, and inserts it into the linearized forest
+right after the node that set the spillee.
+It returns the symbol-table entry for the temporary
+so that it can be used by \verb|genreloads| to generate the reloads.
+\begin{verbatim}
+static Symbol genspill(Node p) {
+   Symbol temp = newtemp(AUTO, typecode(p));
+   Node q = p->x.next;
+
+   linearize(newnode(ASGN + typecode(p),
+      newnode(ADDRLP, 0, 0, temp), p, 0),
+      &p->x.next, p->x.next);
+   rmask &= ~1;
+   for (p = p->x.next; p != q; p = p->x.next)
+      ralloc(p);
+   rmask |= 1;
+   return temp;
+}
+\end{verbatim}
+\verb|typecode| is like \verb|optype|, but maps \verb|U| to \verb|I|
+because the front-end uses \verb|ASGNI| and \verb|INDIRI|
+to store and load unsigned values. It also maps \verb|B| to
+\verb|P| because registers always point structures.
+The front-end's \verb|newtemp(sclass, type)|
+allocates a new temporary or reuses an existing one if
+its storage \verb|sclass| and \verb|type| code match those requested,
+and it announces a new temporary by calling \verb|local| as usual.
+
+The spill code is an \verb|ADDRLP| node to compute the
+address of the temporary and an \verb|ASGN| node to store the value
+into that address. The right operand of the \verb|ASGN| is simply
+\verb|p|, the node that set the registers to spill, e.g.,
+node 1 above.
+A node is allocated and initialized by the front-end function
+\verb|newnode(op,l,r,sym)|, where
+\verb|op| is the operator, \verb|l| and \verb|r|
+are \verb|kids[0]| and \verb|kids[1]|, and \verb|sym| is the symbol
+table pointer for leaf nodes. \verb|newnode| also increments
+the reference counts of \verb|l| and \verb|r|.
+
+Finally, \verb|genspill| linearizes the spill code and
+inserts it right after \verb|p|, which sets the spilled register.
+The manipulation of \verb|rmask| ensures that \verb|ralloc|
+assigns register \verb|r0| --- which is not otherwise allocated ---
+to the \verb|ADDRLP| node to compute the address.
+The linearized forest after \verb|genspill| returns is
+\begin{verbatim}
+ #  op      kids    syms  count  uses   sets
+ 1. ADDRGP          _i      1           r1
+16. ADDRLP          -4(fp)  0           r0
+17. ASGNP   16  1           0    r0 r1        
+ 2. INDIRI   1              0    r1     r2
+...     
+\end{verbatim}
+Nodes 16 and 17 are the spill code. This code references
+node 1, so its \verb|count| goes to 2 momentarily
+until \verb|ralloc| processes the reference from the spill code.
+The remaining reference is from node 15.
+Node 16's symbol \verb|-4(fp)| is the temporary location.
+
+After \verb|genspill| returns the temporary,
+\verb|spill| frees the registers set by the node and calls \verb|genreloads|.
+\verb|genreloads| searches the linearized forest
+after \verb|dot| for uses of \verb|p|.
+\begin{verbatim}
+static void genreloads(Node dot, Node p, Symbol temp) {
+   int i;
+   Node last;
+
+   for (last = dot; dot = dot->x.next; last = dot)
+      for (i = 0; i < MAXKIDS; i++)
+         if (dot->kids[i] == p) {
+            dot->kids[i] = newnode(INDIR + typecode(p),
+               newnode(ADDRL+P, 0, 0, temp), 0, 0);
+            dot->kids[i]->count = 1;
+            p->count--;
+            linearize(dot->kids[i], &last->x.next, last->x.next);
+            last = dot->kids[i];
+         }
+}
+\end{verbatim}
+Each use of \verb|p| is changed
+to a reload of the temporary \verb|temp|.
+The reload code is an \verb|ADDRLP| node to compute the
+address of the temporary and an \verb|INDIR| node to load the value
+from that address. There is only one reference to each reload, so the
+\verb|INDIR|'s \verb|count| is set accordingly,
+and \verb|p->count| is decremented to reflect the change.
+The reload code is linearized and inserted into the linearized node
+list immediately {\em before} its use.
+For the example above, a reload is placed before node 15.
+Since the reload is beyond the point that \verb|gen| has reached,
+registers are allocated for these nodes by subsequent calls to \verb|ralloc|.
+
+The linearized forest after \verb|spill| returns is
+\begin{verbatim}
+ #  op      kids    syms  count  uses   sets
+ 1. ADDRGP          _i      0           r1
+16. ADDRLP          -4(fp)  0           r0
+17. ASGNP   16  1           0    r0 r1        
+ 2. INDIRI   1              0    r1     r2
+...
+14. CVDI    13              1                 
+18. ADDRLP          -4(fp)  1                 
+19. INDIRP  18              1                 
+15. ASGNI   19 14           0                 
+\end{verbatim}
+Nodes 18 and 19 are the reload.
+Note that node 1's \verb|count| has become 0;
+after inserting the reload, there are no unprocessed references.
+
+Another spill occurs at node 11, which computes \verb|a[i]+b[i]|.
+Registers \verb|r1| and \verb|r2|, which are set by node 10, are spilled,
+and node 12 is edited to refer to the second temporary, which is reloaded
+by nodes 22 and 23 inserted before node 12.
+The last spill occurs at node 23, which is the reload
+created for the second spill. \verb|r1| and \verb|r2|, which are
+set by node 11, are spilled again, and node 13 is edited
+to refer to the third temporary.
+The final linearized forest and corresponding VAX code follows;
+\verb|count| fields are omitted because they're all 0,
+and each instruction shows which registers are used and set by each node.
+\begin{verbatim}
+VAX instruction     #  op      kids    syms
+moval _i,r1         1. ADDRGP          _i
+moval -4(fp),r0    16. ADDRLP          -4(fp)
+movl r1,(r0)       17. ASGNP   16  1
+movl (r1),r2        2. INDIRI   1
+movl $3,r3          3. CNSTI           3
+ashl r3,r2,r2       4. LSHI     2  3
+moval _a,r3         5. ADDRGP          _a
+addl3 r3,r2,r3      6. ADDP     4  5
+movd (r3),r3        7. INDIRD   6
+moval _b,r5         8. ADDRGP          _b
+addl3 r5,r2,r2      9. ADDP     4  8
+movd (r2),r1       10. INDIRD   9
+moval -12(fp),r0   20. ADDRLP          -12(fp)
+movd r1,(r0)       21. ASGND   20 10
+addd3 r1,r3,r1     11. ADDD     7 10
+moval -20(fp),r0   24. ADDRLP          -20(fp)
+movd r1,(r0)       25. ASGND   24 11
+moval -12(fp),r5   22. ADDRLP          -12(fp)
+movd (r5),r1       23. INDIRD  22
+subd3 r1,r3,r1     12. SUBD     7 23
+moval -20(fp),r3   26. ADDRLP          -20(fp)
+movd (r3),r3       27. INDIRD  26
+muld3 r1,r3,r1     13. MULD    27 12
+cvtdl r1,r1        14. CVDI    13
+moval -4(fp),r2    18. ADDRLP          -4(fp)
+movl (r2),r2       19. INDIRP  18
+movl r1,(r2)       15. ASGNI   19 14
+\end{verbatim}
+Spills have added nodes 16--27.
+
+
+\section{Discussion}
+
+\verb|lcc|'s code generation interface is smaller than most
+because it omits the inessential and makes simplifying assumptions.
+These omissions and assumptions do, however,
+limit the interface's applicability to other languages and machines.
+
+The datatype assumptions detailed in Section~\ref{configuration},
+e.g., that unsigneds, integers, and long integers all have the same size,
+make it possible to have only 9 type suffixes and 109 type-specific operators.
+Relaxing these assumptions would increase this vocabulary;
+e.g., adding a suffix for long doubles would also add at least
+19 more operators.
+
+The interface assumes that all pointer types have the same representation,
+which precludes its use for word-addressed machines.
+Differentiating between character and word pointers
+would add another suffix and at least 13 more operators.
+
+The operator repertoire omits some operators whose effect
+can be synthesized from simpler ones.
+For example, bit fields are accessed with shifting
+and masking instead of specific bit-field operators, so
+code quality may suffer on machines with bit-field instructions.
+The front end special-cases one-bit fields
+and generates efficient masking dags,
+which often yields better code than code
+that uses bit-field instructions.
+
+The front end implements switch statements completely.
+It generates a binary search of dense branch tables;
+inline comparisons replace small tables~\cite{bernstein85}.
+It fabricates the tables and indirect jumps
+using the functions \verb|global| and \verb|defaddress|
+and the \verb|JUMPV| operator.
+This decision prevents back ends from using larger `case' instructions,
+which usually combine a bounds check and an indirect branch through a table,
+but these instructions are increasingly rare, and some don't suit C anyway.
+For example, the branch table for the VAX's \verb|casel| instruction is limited
+to 16-bit offsets.
+
+The interface has no direct support for building
+a flow graph and other structures that facilitate
+global optimization. More elaborate versions of
+\verb|function| and \verb|gen| could collaborate
+to build the relevant structures, perform optimizations,
+and invoke the simpler \verb|gen|.
+The front end's \verb|gencode| and \verb|emitcode| traverse
+an approximation of a flow graph; future work may focus on
+a machine-independent optimizer that edits
+this graph while preserving the current interface.
+
+To date, the interface has been used only for ANSI~C.
+But it has little that is specific to C, and it could be used for
+similar languages and perhaps for languages with features like nested
+procedures, objects, and exception handling.
+Existing compilers for some object-oriented languages with these features,
+such as C\verb|++|, Modula-3, and Eiffel, generate C, so, in principle,
+the interface could be used for these languages.
+
+%\bibliography{refs,lib}
+\begin{thebibliography}{1}
+
+\bibitem{ansi:Cstandard}
+American National Standard Institute, Inc., New York.
+\newblock {\em American National Standards for Information Systems, Programming
+  Language C {ANSI} X3.159--1989}, 1990.
+
+\bibitem{bernstein85}
+R.~L. Bernstein.
+\newblock Producing good code for the case statement.
+\newblock {\em Software---Practice \& Experience}, 15(10):1021--1024, Oct.
+  1985.
+
+\bibitem{fraser:sigplan89}
+C.~W. Fraser.
+\newblock A language for writing code generators.
+\newblock {\em Proceedings of the SIGPLAN'89 Conference on Programming Language
+  Design and Implementation, SIGPLAN Notices}, 24(7):238--245, July 1989.
+
+\bibitem{fraser:hanson:91a}
+C.~W. Fraser and D.~R. Hanson.
+\newblock A code generation interface for {ANSI C}.
+\newblock {\em Software---Practice \& Experience}, 21(9):963--988, Sept. 1991.
+
+\bibitem{fraser:hanson:91b}
+C.~W. Fraser and D.~R. Hanson.
+\newblock A retargetable compiler for {ANSI C}.
+\newblock {\em SIGPLAN Notices}, 26(10):29--43, Oct. 1991.
+
+\bibitem{fraser:hanson:92}
+C.~W. Fraser and D.~R. Hanson.
+\newblock Simple register spilling in a retargetable compiler.
+\newblock {\em Software---Practice \& Experience}, 22(1):85--99, Jan. 1992.
+
+\bibitem{freiburghouse}
+R.~A. Freiburghouse.
+\newblock Register allocation via usage counts.
+\newblock {\em Communications of the ACM}, 17(11):638--642, Nov. 1974.
+
+\bibitem{tanenbaum:sigplan:89}
+A.~S. Tanenbaum, M.~F. Kaashoek, K.~G. Langendoen, and C.~J.~H. Jacobs.
+\newblock The design of very fast portable compilers.
+\newblock {\em SIGPLAN Notices}, 24(11):125--131, Nov. 1989.
+
+\bibitem{tanenbaum:toplas:82}
+A.~S. Tanenbaum, H.~van Staveren, and J.~W. Stevenson.
+\newblock Using peephole optimization on intermediate code.
+\newblock {\em ACM Transactions on Programming Languages and Systems},
+  4(1):21--36, Jan. 1982.
+
+\end{thebibliography}
+
+\appendix
+
+\section{Interface Functions}
+\label{appendix:interface}
+
+\begin{center}
+\begin{tabular}{cl}
+\em Section	& \em Interface Function \\ \hline
+\ref{address}	& \tt void address(Symbol, Symbol, int) \\
+\ref{blockbeg}	& \tt void blockbeg(Env *e) \\
+\ref{blockend}	& \tt void blockend(Env *e) \\
+\ref{defaddress}& \tt void defaddress(Symbol) \\
+\ref{defconst}	& \tt void defconst(int, Value) \\
+\ref{defstring}	& \tt void defstring(int, char *) \\
+\ref{defsymbol}	& \tt void defsymbol(Symbol) \\
+\ref{emit}	& \tt void emit(Node) \\
+\ref{export}	& \tt void export(Symbol) \\
+\ref{function}	& \tt void function(Symbol, Symbol [], Symbol [], int) \\
+\ref{gen}	& \tt Node gen(Node) \\
+\ref{global}	& \tt void global(Symbol) \\
+\ref{import}	& \tt void import(Symbol) \\
+\ref{local}	& \tt void local(Symbol) \\
+\ref{progbeg}	& \tt void progbeg(int, char *[]) \\
+\ref{progend}	& \tt void progend(void) \\
+\ref{segment}	& \tt void segment(int) \\
+\ref{space}	& \tt void space(int) \\
+\end{tabular}
+\end{center}
+
+
+\section{Front-End Functions}
+
+\label{appendix:functions}
+
+\begin{description}
+
+\item[{\tt void *alloc(int n)}] permanently allocates \verb|n| bytes and returns
+a pointer to the first byte.  No alignment is guaranteed.
+
+\item[{\tt void fprint(int fd, char *fmt, \ldots)}] prints up to 5 arguments on
+the file descriptor \verb|fd|. See \verb|print| for formatting details.
+If \verb|fd| is not \verb|1| (standard output),
+\verb|fprint| flushes the output buffer for \verb|fd| via \verb|outflush|.
+
+\item[{\tt Type freturn(Type t)}] is the type of the return value for
+function type \verb|t|.
+
+\item[{\tt int generic(int op)}] is the generic version
+of the type-specific operator \verb|op|.
+
+\item[{\tt int genlabel(int n)}] increments the generated identifier
+counter by \verb|n| and returns its previous value.
+
+\item[{\tt int is\it type\/\tt(Type t)}] are a set of type predicates that
+return non-zero if type \verb|t| is the type in the following table.
+
+\begin{center}
+\begin{tabular}{lllll}
+\it predicate	& \it type	&& \it predicate	& \it type \\ \hline
+\tt isarith	& arithmetic	&& \tt isint		& integral \\
+\tt isarray	& array		&& \tt isptr		& pointer \\
+\tt ischar	& character	&& \tt isscalar		& scalar \\
+\tt isdouble	& double	&& \tt isstruct		& structure or union \\
+\tt isenum	& enumeration	&& \tt isunion		& union \\
+\tt isfloat	& floating	&& \tt isunsigned	& unsigned \\
+\tt isfunc	& function	&& \\
+\end{tabular}
+\end{center}
+
+\item[{\tt Node newnode(int op, Node l, Node r, Symbol sym)}] allocates a node
+and initializes the \verb|op| field to \verb|op|, \verb|kids[0]| and \verb|kids[1]|
+to \verb|l| and \verb|r|, and \verb|syms[0]| to \verb|sym| and returns
+a pointer to the new node. If \verb|l| and \verb|r| are non-null,
+their \verb|count| fields are incremented.
+
+\item[{\tt Symbol newconst(Value v, int t)}] installs an constant with value \verb|v|
+and type suffix \verb|t| into the symbol table, if necessary,
+and returns a pointer to the symbol-table entry.
+
+\item[{\tt Symbol newtemp(int sclass, int t)}] creates a temporary
+with storage class \verb|sclass| and a type synonymous with type suffix \verb|t|
+and returns a pointer the symbol-table entry.
+If an existing temporary with the appropriate class and type is available,
+it is used; otherwise, the new temporary is announced by calling \verb|local|.
+
+\item[{\tt void outflush(void)}] writes the current output buffer
+to the standard output, if it's not empty.
+
+\item[{\tt void outs(char *s)}] appends string \verb|s| to the output buffer
+for standard output and calls \verb|outflush|
+if the resulting buffer pointer is within 80 characters
+of the end of the buffer.
+
+\item[{\tt int optype(op)}] is the type suffix of the type-specific operator \verb|op|.
+
+\item[{\tt void print(char *fmt, \ldots)}] prints up to 5 arguments on standard output
+similar to \verb|printf|. The supported formats are
+\verb|%c|, \verb|%d|, \verb|%o|, \verb|%x|, and \verb|%s|, 
+and precision and field width specifications are not supported.
+\verb|print| calls \verb|outflush| if it prints a newline character from
+\verb|fmt| within 80 characters of the end of the output buffer,
+and each format except \verb|%c| does the actual output
+with \verb|outs|, which may also flush the buffer.
+
+\item[{\tt int roundup(int n, int m)}] is \verb|n| rounded up to the
+next multiple of \verb|m| where \verb|m| is a power of 2.
+
+\item[{\tt char *string(char *s)}] installs \verb|s| in the string space,
+if necessary, and returns a pointer to the installed copy.
+
+\item[{\tt char *stringd(int n)}] returns the string representation of \verb|n|;
+the returned string is installed in the string space by \verb|string|.
+
+\item[{\tt char *stringf(char *fmt, \ldots)}] formats up to 5 arguments
+into a string in the string space and returns a pointer to that string.
+See \verb|print| for formatting details.
+
+\item[{\tt void *talloc(int n)}] temporarily allocates \verb|n| bytes and returns
+a pointer to the first byte. The storage is released at the end of
+the current function.  No alignment is guaranteed.
+
+\item[{\tt int ttob(Type t)}] is the type suffix synonymous with type \verb|t|.
+
+\item[{\tt int variadic(Type t)}] is true if type \verb|t| denotes a variadic function.
+
+\end{description}
+
+\end{document}

@@ -1,0 +1,413 @@
+BEGIN {
+		myname = "a4:"
+		list["\["] = "\]"; list["{"] = "}"; list["("] = "\\)"; list["<"] = ">"
+		# it is unclear what the proper format is,
+		# but let's give it a try
+		if (summary) {
+			summary = summary ".sum"
+			print "\n\n" summary, "doc", "type\n" >  summary
+			summarypipe = "sort -u" ">> " summary
+		}
+		while(--ARGC) {
+			i++
+			include(ARGV[i])
+		}
+	}
+
+function show(a) { # debugging aid
+	print ">>>", a |"cat 1>&2"
+#	print ">>>", a
+}
+
+function include(file,	l,m,i) { # include file handling
+	gsub( / +|\)/, "", file)
+	push( file )
+	while( (i = getline l < file ) > 0) {
+		NR++
+		if (match(l, /^\|include\(/)) {
+			include( substr(l, RSTART+RLENGTH))
+		} else {
+			if ((m = process(l)) !~ /^$/ ) {
+				print m
+			}
+		}
+	}
+	if ( i < 0 )
+		error("Cannot open: " file)
+	else {
+		close file
+		pop()
+	}
+}
+
+function push(new) {
+	stack[top++] = NR " " FILENAME
+	NR = 0; FILENAME = new
+}
+
+function pop(		a) {
+	if (--top < 0)
+		error("Internal error include stack")
+	split(stack[top], a)
+	NR = a[1]; FILENAME = a[2]
+}
+
+function error(s) {
+	print myname, s | "cat 1>&2"; exit -1
+}
+
+function warn(b1, b2) {
+	print myname, FILENAME", line", NR ":", b1, b2 | "cat 1>&2"
+	warned++
+}
+
+function process(line,		s, t) { # does all the work
+# show(line)
+
+	if (summary && line ~ /\|comment<summary: /) {
+		sub(/[ \t]*\|comment<summary: /, "", line)
+		sub(/>$/, "", line)
+		print line | summarypipe
+		return ""
+	}
+	if (comment == 0 && line ~ /\|comment[\[{(<]/ ) {
+		match(line, /\|comment[\[{(<]/)
+		comment =  substr(line, RSTART+RLENGTH-1, 1)
+		closecomment = list[comment]
+	}
+	if (comment != 0 && line ~ /[\]})>]/) {
+		if (match(line, closecomment))
+			comment = 0 ;
+		return ""
+	}
+	if (comment != 0) {
+		return ""
+	}
+
+	if (line ~ /^$/) { # ignore empty lines
+		return ""
+	}
+	if (line ~ /^[\.'][ \t]*\\"/) { # wipe out lines of troff comments
+		return ""
+	}
+	if (line ~ /[ \t]+\\".*/) { # wipe out more troff comments
+		sub(/[ \t]+\\".*/, "", line)
+	}
+
+	if (line ~ /\|REGISTER\(/) {
+		sub(/\|REGISTER\(/, "", line)
+		match(line, /[A-Za-z][A-Za-z_0-9]*/)
+		s = substr(line, RSTART, RLENGTH)
+		line = substr(line, RLENGTH+1)
+		if (s in name) {
+			warn("redefinition of register name:", s)
+		}
+		match(line, /[@-Za-z0-0%|:;.][@-Za-z0-9%|%;.]*/)
+		t = substr(line, RSTART, RLENGTH)
+		chklen2(t)
+		name[s] = t
+		type[s] = "register"
+		return ""
+	}
+
+	if (line ~ /\|LITERAL\(/) {
+		sub(/\|LITERAL\(/, "", line)
+		match(line, /[A-Za-z][A-Za-z_0-9]*/)
+		s = substr(line, RSTART, RLENGTH)
+		line = substr(line, RSTART+RLENGTH)
+# show(line)
+		if (s in name) {
+			warn("redefinition of constant name:", s)
+		}
+		sub(/, */, "", line); sub(/ *\).*/, "", line)
+		t = hunt(line)
+		name[s] = t
+		type[s] = "value"
+		return ""
+	}
+
+	if (line ~ /\|STRING\(/) {
+		sub(/\|STRING\(/, "", line)
+		match(line, /[A-Za-z][A-Za-z_0-9]*/)
+		s = substr(line, RSTART, RLENGTH)
+		line = substr(line, RLENGTH+1)
+# show(line)
+		if (s in name) {
+			warn("redefinition of string name:", s)
+		}
+		match(line, /[@-Za-z0-;%][@-Za-z0-;%]*/)
+		t = substr(line, RSTART, RLENGTH)
+		chklen2(t)
+		name[s] = t
+		type[s] = "string"
+		return ""
+	}
+
+	if (line ~ /\|STRING_ARRAY\(/) {
+		sub(/\|STRING_ARRAY\(/, "", line)
+		match(line, /[A-Za-z][A-Za-z_0-9]*/)
+		s = substr(line, RSTART, RLENGTH)
+		line = substr(line, RLENGTH+1)
+		if (s in name) {
+			warn("redefinition of string array:", s)
+		}
+		match(line, /[@-Za-z0-;%][@-Za-z0-;%]*/)
+		t = substr(line, RSTART, RLENGTH)
+		chklen1(t)
+		name[s] = t
+		type[s] = "string_array"
+		return ""
+	}
+
+	# anything else
+	t = hunt(line)
+	gsub(/^[ \t]+/, "", t)	# remove leading blanks
+	if (match(t, /^(\\!)?[\.'][ \t]/)) { # remove space after troff's control char
+		sub(/[ \t]+/, "", t)
+	}
+	if (match(t, /^(\\!)?[\.'][a-z][a-z] /)) { # remove space after troff request
+		sub(/ /, "", t)
+	}
+	return t
+}
+
+function chklen2(s) {
+	if (length(s) > 2) {
+		warn("name too long:", t)
+	}
+}
+
+function chklen1(s) {
+	if (length(s) > 1) {
+		warn("name too long:", t)
+	}
+}
+
+# match up to a closing parenthesis, while ignoring matching parentheses
+
+function parmatch(s,		l, r) {
+	l = match(s, /\(/)
+	r = match(s, /\)/)
+
+	if ( l == 0 || r < l ) {
+		return r
+	} else {
+		sub(/\(/, " ", s)
+		sub(/\)/, " ", s)
+		r = parmatch(s)
+		return r
+	}
+
+}
+
+
+# find all occurrences of macros in s and replace as text
+function hunt(s,		r, b, t, before, after, i, j) {
+
+	# 'operator' stuff
+	while(match(s, /[A-Z][A-Z]*[_A-Z][_A-Z]*\(/)) {
+		b = substr(s, 1, RSTART-1)
+		i = RLENGTH
+		j = RSTART
+		if(parmatch(substr(s, RSTART + i))) {
+			t = substr(s, j, RSTART + i -1)
+			s = substr(s, j+i+RSTART)
+			r = operator(t, i)
+		} else {
+			warn("syntax error:", s)
+			return s
+		}
+		before = before b r
+	}
+	before = before s
+	s = before
+	before = ""
+	# find macro stuff
+	while(match(s, /[A-Za-z][A-Za-z_0-9]*/)) {
+		b = substr(s, 1, RSTART-1)
+		t = substr(s, RSTART, RLENGTH)
+		s = substr(s, RSTART+RLENGTH)
+		r = replace(t)
+		if( r !~ t) {
+			if ( t in name && type[t] == "string_array") {
+				if (!match(s, /^\[[\$A-Za-z0-9][A-Za-z_0-9]*\]/)) {
+					warn("Illegal or missing subscript of:", t)
+				} else
+					r = r subscript(substr(s, RSTART+1, RLENGTH-2))
+				s = substr(s, RSTART+RLENGTH)
+			} else {
+				if (match(b, /'$/) && match(s, /^'/)) {
+					sub(/'$/, "", b)
+					sub(/^'/, "", s)
+				}
+			}
+			r = hunt(r)
+		}
+		before = before b r
+		after = s
+	}
+	if ( before || after) {
+		s = before after
+	}
+	return s	
+}
+
+# replace string s with defined name, if in table
+function replace(s) {
+	if (s in name)
+		return name[s]
+	else
+		return s	
+}
+
+# check and maybe generate form for substript
+function subscript(s) {
+	if ( s ~ /^[0-9]$/) {
+		return s
+	}
+	if ( s ~ /^\$/ )
+		return s
+	if ( s in name && type[s] == "register") {
+		return interpolreg(name[s])
+	} else {
+		warn("Illegal subscript")
+	}
+	return s
+}
+
+# turn register suitable for troff interpolation
+function interpolreg(r) {
+	if (length(r) == 1 )
+		return "\\n" r
+	else if (length(r) == 2)
+		return "\\n(" r
+	else
+		warn("Register name too long")
+	return r
+}
+
+function interpolstr(r) {
+	if (length(r) == 1 )
+		return "\\*" r
+	else
+		return "\\*(" r
+}
+
+function operator(s,i,		t,u,a) {
+	oper = substr(s, 1, i - 1)
+#	match(s, /\)/)
+#	t = substr(s, i + 1, RSTART - 1 + RLENGTH - (i + 1))
+	t = substr(s, i+1)
+	gsub(/ /, "", t)
+	i = split(t, a, ",")
+	if ( oper ~ "^GE$") {
+		if (!chckargs(oper, i, 2))
+			return t
+		t = sprintf("\"%s>=%s\"", args(a[1]), args(a[2]))
+	} else if (oper ~ "^GT$") {
+		if (!chckargs(oper, i, 2))
+			return t
+		t = sprintf("\"%s>%s\"", args(a[1]), args(a[2]))
+	} else if (oper ~ "^LE$") {
+		if (!chckargs(oper, i, 2))
+			return t
+		t = sprintf("\"%s<=%s\"", args(a[1]), args(a[2]))
+	} else if (oper ~ "^LT$") {
+		if (!chckargs(oper, i, 2))
+			return t
+		t = sprintf("\"%s<%s\"", args(a[1]), args(a[2]))
+	} else if (oper ~ "^NULL$") {
+		if (!chckargs(oper, i, 1))
+			return t
+		t = sprintf("\"@%s@@\"", args(a[1]))
+	} else if (oper ~ "^NOTNULL$") {
+		if (!chckargs(oper, i, 1))
+			return t
+		t = sprintf("\"!@%s@@\"", args(a[1]))
+	} else if (oper ~ "^EQUAL$") {
+		if (!chckargs(oper, i, 2))
+			return t
+		u = args(a[1])
+		if (u ~ /\\n\(\.z$/)  {# diversion!
+			t = sprintf("\"@%s@%s@\"", u, args(a[2]))
+		} else if ( argtype ~ /^register$/ ) {
+			t = sprintf("\"%s=%s\"", u, args(a[2]))
+		} else
+			t = sprintf("\"@%s@%s@\"", u, args(a[2]))
+	} else if (oper ~ "^UNEQUAL$") {
+		if (!chckargs(oper, i, 2))
+			return t
+		u = args(a[1])
+		if (u ~ /^\\n\(\.z$/)  {# diversion!
+			t = sprintf("\"!@%s@%s@\"", u, a[2])
+		} else if ( argtype ~ /^register$/ ) {
+			t = sprintf("\"%s!=%s\"", u, args(a[2]))
+		} else
+			t = sprintf("\"!@%s@%s@\"", u, args(a[2]))
+	} else if (oper ~ "^VALUE$") {
+		if (!chckargs(oper, i, 1))
+			return t
+		t = sprintf("\"%s\"", args(a[1]))
+	} else
+		warn("Unknown operation: " oper)
+	return t
+}
+
+function chckargs(o, i, ii) {
+	if ( i != ii) {
+		warn(ii " arguments required for " oper " (is " i ")")
+		return 0
+	} else
+		return 1
+}
+
+function args(a,		after, result, i, j) {
+	if ( a ~ /^$/ ) {
+		warn("Missing argument", a)
+		return a
+	}
+	if (match(a, /^'/)) {
+		a = substr(a, 2)
+		match(a, /'/)
+		after = substr(a, RSTART+1)
+		a = substr(a, 1, RSTART-1)
+	}
+	if (match(a, /\[/)) {
+		i = RSTART
+		if (!match(a, /\]/)) {
+			warn("syntax error")
+			return a after
+		} else
+			j = substr(a, i+1, RSTART - 1 - i)
+		a = substr(a, 1, i -1)
+	}
+
+	if ( a ~ /^[0-9]+$/ && type[a] !~ "string_array")
+		return a after
+	if ( a ~ /\$/ )		# possible monk variable
+		return a after
+	if ( a in name ) {
+# show("a: " a " name[a]: " name[a] " type[a]: " type[a])
+		argtype = type[a]
+		if (argtype ~ "^register$" )
+			result = interpolreg(name[a])
+		else if (argtype ~ "^value$")
+			result = name[a]
+		else if (argtype ~ "^string$")
+			result = interpolstr(name[a])
+		else if (argtype ~ "^string_array$")
+			result = interpolstr(name[a] args(j))
+		else
+			warn("Internal error, unknown type: " type[a] " (" a ")")
+	} else {
+		warn("Unknown variable: ", a)
+		result = a after
+	}
+	return result after
+}
+
+END {
+		# to signal make etc. that not everything is dandy
+		# if (warned)
+		#	exit -1
+	}

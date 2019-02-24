@@ -1,0 +1,66 @@
+The most important difference is that adb now uses /proc to control programs,
+rather than ptrace.  The most noticeable one is that local variables work.
+
+Process control:
+adb uses /proc.  One thing goes away: you can't send a specific signal any
+more (:s and :c).  `:c 0' still continues the process being debugged without
+sending a signal; `:c' still sends the signal with which the process stopped.
+`:c n' where n is nonzero does the same as `:c'.
+
+If the right-hand file is a process file (/proc/something), adb recognizes
+the fact, sets up mapping sensibly, and in particular figures out where the
+registers are.  If the process in question is still running, of course, the
+registers may change underneath you.  This will be made less severe
+eventually.  It will also eventually be possible to take over such a process
+(stop it, set breakpoints, &c).
+
+Local variables:
+When debugging programs compiled with the -g option, adb can examine local
+variables, roughly as it could on the PDP-11.  For example, main.argc/X
+prints 4 bytes of argc in hex from the outermost stack frame associated
+with main.  $C (traceback with locals) works too.  Register variables work,
+even if they're in registers; they appear to have funny addresses with a
+% in front (which means they live in a funny `register' address space;
+you can type the % addresses if you want, but you can't store them in a
+variable and expect them to work).
+
+Mapping:
+No longer are there just two maps for each file; there are several, and
+each is tagged with the type of thing mapped (instruction space, data
+space, user block).  ? tries for instruction space; / tries for data
+space; ?* (/*) tries data (instruction).  Even on the VAX, these are
+different kinds of space; however, if a desired instruction space address
+isn't found, data space is checked too, so things still work naturally.
+If a process isn't using separate ID space (always true on the VAX),
+its text segment is considered to be data space.
+
+a.outs on the left-hand side, and cores and process files on the right-
+hand side, are recognized and mapped accordingly.  Other kinds of files
+are mapped in the time-honoured way (a single large, direct map of data).
+The ?m and /m commands affect the first map; ?*m and /*m affect the
+second map; what that means depends on the kind of file; in no case is
+the already-set type of thing changed.  This is a foggy (and probably
+buggy) area.
+
+Kernel debugging:
+The -k option is gone.  In its place are two commands:
+address$k sets adb's idea of the system base register;
+	address is a physical address, usually Sysmap
+address$u sets the address of a pcb; address may be either a physical pcb
+	address (as found in PCBB and masterpcbb) or the kernel virtual
+	address of the page table entry for the pcb.  (The latter curious
+	quantity is stored in the p_addr.)
+0$k turns off virtual address mapping; 0$u turns off mapping for user space.
+$<crash will set up the registers and mapping from a standard crash dump.
+
+Miscellaneous appearances:
+Some attempt has been made to print things in forms that can be reused
+as input.  Addresses are printed as `main+0d/' or `main+0d?' rather than
+`main+d:'.  0$d turns on magic variable radix mode, like the old default
+on the PDP-11: numbers are read in in hex, octal, or decimal if they begin
+with #, 0, or something else; octal and hex numbers are printed with leading
+0 and # to match.
+
+If you have a very old kernel, it will take adb up to 10 seconds to learn
+that the process you're watching has terminated.  The recent kernel change
+that broke pi doesn't affect adb, though.  I don't know why it hurts pi.

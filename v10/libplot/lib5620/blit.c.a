@@ -1,0 +1,1007 @@
+!<arch>
+arc.c           424032761   41    1     100664  230       `
+#include "jcom.h"
+#include "jplot.h"
+
+void
+arc(x1, y1, x2, y2, x0, y0, r)
+double x1, y1, x2, y2, x0, y0, r;
+{
+
+	graphic(ARC);
+	xysc(x0, y0);
+	if(r < 0){
+		xysc(x2,y2);
+		xysc(x1,y1);
+	}
+	else {
+		xysc(x1, y1);
+		xysc(x2,y2);
+	}
+}
+box.c           424032761   41    1     100664  138       `
+#include "jplot.h"
+
+void
+box(x0, y0, x1, y1)
+double x0, y0, x1, y1;
+{
+	move(x0,y0);
+	vec(x0,y1);
+	vec(x1,y1);
+	vec(x1,y0);
+	vec(x0,y0);
+}
+cfill.c         424032762   41    1     100664  676       `
+#include "jcom.h"
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+cfill(s)
+char *s;
+{
+	register int  *m, c;
+	m = t1;
+	while(*s != NULL){
+		if(*s == 'B'){
+			s++;
+			if(*s >= '0' && *s <= '9'){
+				graphic(TEXTURE);
+				while(*s >= '0' && *s <= '9'){
+					*m = 0;
+					while(*s >= '0' && *s <= '9'){
+						c = *s++ - '0';
+						*m <<= 3;
+						*m |= c;
+					}
+					graphic((*m>>8)&0377);
+					graphic(*m&0377);
+					m++;
+					while(*s == ' ' || *s == ',')s++;
+				}
+				while(m <= &t1[15]){
+					*m++ = 0;
+					graphic(0);
+					graphic(0);
+				}
+				e1->texture = t1;
+				return;
+			}
+		}
+		while(*++s != NULL){
+			if(*s == '/'){
+				s++;
+				break;
+			}
+		}
+	}
+}
+circle.c        424032762   41    1     100664  159       `
+#include "jcom.h"
+#include "jplot.h"
+
+void
+circle(x,y,r)
+double x, y, r;
+{
+	register int ri;
+	graphic(CIRCLE);
+	xysc(x, y);
+	ri = r*e1->scalex;
+	intout(ri);
+}
+
+closepl.c       429816860   41    1     100664  218       `
+#include <stdio.h>
+#include "jcom.h"
+#include "jplot.h"
+#include <sgtty.h>
+
+void
+closepl()
+{
+	extern struct sgttyb
+		savetty;			/* cooked tty modes */
+
+	graphic(HOME);
+	finish(mpx);
+	ioctl(jerq, TIOCSETP, &savetty);
+}
+color.c         424032762   41    1     100664  100       `
+#include "jcom.h"
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+color(s)
+char *s;
+{}
+ctype_.c        424032762   41    1     100644  624       `
+#include	<ctype.h>
+
+char _ctype_[] = {
+	0,
+	_C,	_C,	_C,	_C,	_C,	_C,	_C,	_C,
+	_C,	_C|_S,	_C|_S,	_C|_S,	_C|_S,	_C|_S,	_C,	_C,
+	_C,	_C,	_C,	_C,	_C,	_C,	_C,	_C,
+	_C,	_C,	_C,	_C,	_C,	_C,	_C,	_C,
+	_S,	_P,	_P,	_P,	_P,	_P,	_P,	_P,
+	_P,	_P,	_P,	_P,	_P,	_P,	_P,	_P,
+	_N,	_N,	_N,	_N,	_N,	_N,	_N,	_N,
+	_N,	_N,	_P,	_P,	_P,	_P,	_P,	_P,
+	_P,	_U|_X,	_U|_X,	_U|_X,	_U|_X,	_U|_X,	_U|_X,	_U,
+	_U,	_U,	_U,	_U,	_U,	_U,	_U,	_U,
+	_U,	_U,	_U,	_U,	_U,	_U,	_U,	_U,
+	_U,	_U,	_U,	_P,	_P,	_P,	_P,	_P,
+	_P,	_L|_X,	_L|_X,	_L|_X,	_L|_X,	_L|_X,	_L|_X,	_L,
+	_L,	_L,	_L,	_L,	_L,	_L,	_L,	_L,
+	_L,	_L,	_L,	_L,	_L,	_L,	_L,	_L,
+	_L,	_L,	_L,	_P,	_P,	_P,	_P,	_C
+};
+disc.c          424032762   41    1     100664  155       `
+#include "jcom.h"
+#include "jplot.h"
+
+void
+disc(x,y,r)
+double x, y, r;
+{
+	register int ri;
+	graphic(DISC);
+	xysc(x, y);
+	ri = r*e1->scalex;
+	intout(ri);
+}
+
+erase.c         424032762   41    1     100664  72        `
+#include "jcom.h"
+#include "jplot.h"
+
+void
+erase()
+{
+	graphic(ERASE);
+}
+fill1.c         424032762   41    1     100664  1405      `
+#include "jcom.h"
+#include <stdio.h>
+#include <math.h>
+#include "jplot.h"
+#define SEGS 256
+fill(num,ff)
+int num[];
+double	*ff[];
+{
+	register struct seg *sp, *s1;
+	register int x, y, X, Y;
+	struct seg *in, *spend;
+	int fx, fy, flag;
+	int	so;
+	double	  **fp;
+	int ymin;
+	int	M, *n;
+	double	*xpp, *ypp;
+	in = (struct seg *)malloc((unsigned)(SEGS*sizeof(struct seg)));
+	spend = in + (SEGS-2);
+	n = num;
+	fp = ff;
+	sp = in;
+	ymin = 4000;
+	while((M = *n++)){
+		xpp = *fp++;
+		ypp = xpp + 1;
+		x = fx = normx(*xpp);
+		y = fy = normy(*ypp);
+		flag = 0;
+		while(--M){
+			xpp += 2;
+			ypp += 2;
+			X = normx(*xpp);
+			Y = normy(*ypp);
+	check:
+			if ( (Y > y) || (Y == y && x < X)){
+				sp->x = X;
+				sp->y = Y;
+				sp->X = x;
+				sp->Y = y;
+			} else {
+				sp->x = x;
+				sp->y = y;
+				sp->X = X;
+				sp->Y = Y;
+			}
+			x=X;
+			y=Y;
+			if(Y < ymin)
+				ymin = Y;
+			if ( sp->y == sp->Y) {
+				if(sp > in){
+				if ((sp-1)->y == (sp-1)->Y && (sp-1)->y == sp->y) {
+					if (sp->x == (sp - 1)->X) {
+						(sp - 1)->X = sp->X;
+						sp--;
+					} else if (sp->X == (sp - 1)->x) {
+						(sp - 1)->x = sp->x;
+						sp--;
+					}
+				}
+				}
+			}
+			if(sp++ > spend){
+				return(0);
+			}
+			if((M==1) && (flag == 0)){
+				X = fx;
+				Y = fy;
+				flag = 1;
+				goto check;
+			}
+		}
+	}
+	so = sp - in;
+	graphic(FILL);
+	intout(so);
+	intout(ymin);
+	for(s1=in;s1<sp;s1++){
+		xy(s1->x, s1->y);
+		xy(s1->X, s1->Y);
+	}
+	free(in);
+}
+
+frame.c         424032762   41    1     100664  498       `
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+frame(xs, ys, xf, yf)
+double xs, ys, xf, yf;
+{
+	register double osidex, osidey;
+	osidex = e1->sidex;
+	osidey = e1->sidey;
+	e1->left = xs * (e0->left + e0->sidex);
+	e1->bottom = e0->bottom - ys * fabs( e0->sidey);
+	e1->sidex = (xf-xs) * e0->sidex;
+	e1->sidey = (yf-ys) * e0->sidey;
+	e1->scalex *= e1->sidex/osidex;
+	e1->scaley *= (e1->sidey/osidey);
+	e1->quantum = e0->quantum / sqrt(e1->scalex*e1->scalex +
+		e1->scaley * e1->scaley);
+}
+grade.c         424032762   41    1     100664  100       `
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+grade(a)
+double a;
+{
+	e1->grade = a;
+}
+move.c          424032763   41    1     100664  104       `
+#include "jcom.h"
+#include "jplot.h"
+
+void
+move(xi,yi)
+double xi,yi;
+{
+	graphic(MOVE);
+	xysc(xi, yi);
+}
+nline.c         425071294   41    1     100664  1781      `
+#include <stdio.h>
+#include <math.h>
+#include "jcom.h"
+#include "jplot.h"
+
+void
+line(x0,y0,x1,y1)
+double x0,y0,x1,y1;
+{
+	if (x1 == e1->copyx && y1 == e1->copyy) {
+		move(x1, y1);
+		vec(x0, y0);
+		return;
+	}
+	move(x0, y0);
+	vec(x1, y1);
+	return;
+}
+
+void
+vec(x1, y1)
+double x1, y1;
+{
+	int t0x, t0y, t1x, t1y, t2x, t2y, t3x, t3y;
+	int ymin;
+	double deltax2, deltay2, denom, halfsq;
+	register double radx, rady;
+	register double x0, y0;
+	if(e1->pen == 1){
+		graphic(VEC);
+		xysc(x1, y1);
+		return;
+	}
+	x0 = SCX(e1->copyx);
+	y0 = SCY(e1->copyy);
+	e1->copyx = x1;
+	e1->copyy = y1;
+	x1 = SCX(x1);
+	y1 = SCY(y1);
+	if(x0 == x1 && y0 == y1)return;
+	if(x0 > x1){
+		radx = x0;
+		x0 = x1;
+		x1 = radx;
+		radx = y0;
+		y0 = y1;
+		y1 = radx;
+	}
+	deltax2 = x1 - x0;
+	deltay2 = y1 - y0;
+	deltax2 *= deltax2;
+	deltay2 *= deltay2;
+	denom = deltax2 + deltay2;
+	halfsq = (float)e1->pen*(float)e1->pen;
+	halfsq /= (float)4;
+	radx = sqrt((deltay2*halfsq)/denom) + .5;
+	rady = sqrt((deltax2*halfsq)/denom) + .5;
+	if((t0y = y0 - rady) < 0)t0y = 0;
+	t1y = y0 + rady;
+	if((t2y = y1 - rady) < 0)t2y = 0;
+	t3y = y1 + rady;
+	if(y0 < y1){
+		if(x1 != x0)
+			radx = -radx;
+		ymin = t0y;
+	}
+	else ymin = t2y;
+	if(y0 == y1){
+		t0x = t1x = x1;
+		t2x = t3x = x0;
+	}
+	else {
+		if((t0x = x0 - radx) < 0)t0x = 0;
+		if((t1x = x0 + radx) < 0)t1x = 0;
+		if((t2x = x1 - radx) < 0)t2x = 0;
+		if((t3x = x1 + radx) < 0)t3x = 0;
+	}
+	graphic(FILL);
+	intout(4);
+	intout(ymin);
+	xy(t1x,t1y);
+	xy(t0x,t0y);
+	xy(t3x,t3y);
+	xy(t2x,t2y);
+	if(y0 < y1){
+		xy(t3x,t3y);
+		xy(t1x,t1y);
+		xy(t2x,t2y);
+		xy(t0x,t0y);
+	}
+	else {
+		xy(t1x, t1y);
+		xy(t3x,t3y);
+		xy(t0x,t0y);
+		xy(t2x,t2y);
+	}
+}
+void
+rvec(dx,dy)
+double dx,dy;
+{
+	if(e1->pen == 1){
+		graphic(VEC);
+		xysc(e1->copyx+dx, e1->copyy+dy);
+	}
+	else vec(e1->copyx+dx, e1->copyy+dy);
+}
+
+openpl.c        457721397   41    4     100664  2055      `
+#include "jcom.h"
+#include	"jplot.h"
+#include	<sgtty.h>
+#include	<signal.h>
+#include	<stdio.h>
+#include	"/usr/jerq/include/jioctl.h"
+
+struct penvir E[9] = {
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0,
+	800., 0., 0., 0., 1., -1., 800., -800.,1.,.5,0.,0.,1,0
+};
+struct penvir *e1 = &E[1];
+struct penvir *e0 = E;
+struct penvir *esave;
+int t0[16] = {
+	0177777, 0177777, 0177777, 0177777,
+	0177777, 0177777, 0177777, 0177777,
+	0177777, 0177777, 0177777, 0177777,
+	0177777, 0177777, 0177777, 0177777 };
+int t1[16];
+
+int
+	mpx = 0,			
+	wantready = 0,			/* 0 if blast ahead, 1 if want READY */
+	jerq = -1,			/* file descriptor from jerq */
+	opened = 0,			/* open for graphics 0 = no, 1 = yes */
+	lasty = -1;			/* current position y */
+
+struct sgttyb savetty;				/* save tty modes */
+char plotty[] = "/dev/tty";
+
+void
+openpl()
+{
+	struct sgttyb modes;			/*  tty modes */
+	int loaded = 0;
+	char 	*ttyname(),		/* return the tty name if found */
+		cmd[100],		/* 32ld cmd to be */
+		*tty;			/* ttyname return */
+
+	e0->texture = t0;
+	e1->texture = t0;
+	jerq = open(plotty, 2);
+	if(jerq == -1){
+		fprintf(stderr, "jplot couldn't open /dev/tty\n");
+		exit(1);
+	}
+
+	if (ioctl(jerq,JMUX,0) != -1) 
+		mpx = 1;
+	if(!isatty(1) || !isjplot()){
+		if(ioctl(1,JMUX,0) != -1)
+			mpx = 1;
+		sprintf(cmd,"/usr/jerq/bin/32ld %s.%c < %s > %s",
+			JPLOT, "jm"[mpx], plotty, plotty);
+		if(system(cmd)!= 0){
+			fprintf(stderr,"jplot couldn't 32ld\n");
+			exit(1);
+		}
+	}
+	else loaded = 1;
+	ioctl(jerq, TIOCGETP, &modes);
+	savetty = modes;
+	modes.sg_flags |= RAW;
+	modes.sg_flags &= ~ECHO;
+	ioctl(jerq, TIOCSETP, &modes);
+
+	sleep(2);	/* kludge for data kit */
+
+	start(loaded);
+}
+
+pen.c           424032764   41    1     100664  369       `
+#include "jcom.h"
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+#include <ctype.h>
+void
+pen(s)
+char *s;
+{
+	register int di;
+	while(*s != NULL){
+		if(*s == 'B'){
+			s++;
+			if(isdigit(*s)){
+				graphic(LINETH);
+				di = atoi(s);
+				graphic(di);
+				e1->pen = di;
+				return;
+			}
+		}
+		while(*++s != NULL){
+			if(*s == '/'){
+				s++;
+				break;
+			}
+		}
+	}
+}
+
+point.c         424032764   41    1     100664  101       `
+#include "jcom.h"
+#include "jplot.h"
+
+void
+point(x, y)
+double x, y;
+{
+	graphic(POINT);
+	xysc(x,y);
+}
+
+poly.c          424032764   41    1     100664  263       `
+#include <stdio.h>
+poly(num, ff)
+int num[];
+double *ff[];
+{
+	register double *xp, *yp;
+	double **fp;
+	int i, *n;
+	n = num;
+	fp = ff;
+	while((i = *n++)){
+		xp = *fp++;
+		yp = xp+1;
+		move(*xp, *yp);
+		while(--i){
+			xp += 2;
+			yp += 2;
+			vec(*xp, *yp);
+		}
+	}
+}
+
+ppause.c        424032764   41    1     100664  108       `
+#include "jcom.h"
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+ppause(){
+	graphic(PAUSE);
+}
+range.c         424032765   41    1     100664  342       `
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+range(x0, y0, x1, y1)
+double x0, y0, x1, y1;
+{
+	e1->xmin = x0;
+	e1->ymin = y0;
+	e1->scalex =  e1->sidex / (x1 - x0);
+	e1->scaley =  e1->sidey / (y1 - y0);
+	e1->quantum = e0->quantum / sqrt(e1->scalex*e1->scalex +
+		e1->scaley*e1->scaley);
+	if(e1->quantum < .5) e1->quantum = .5;
+}
+restore.c       424032765   41    1     100664  385       `
+#include <stdio.h>
+#include "jcom.h"
+#include "jplot.h"
+
+restore(){
+	struct penvir *e;
+	int *t;
+	e = e1;
+	e1--;
+	move(e1->copyx, e1->copyy);
+	if(e1->pen != e->pen){
+		graphic(LINETH);
+		graphic(e1->pen);
+	}
+	if((e->texture != e1->texture) ||
+		(e->texture != t0)){
+		graphic(TEXTURE);
+		for(t=e1->texture; t<e1->texture+16;t++){
+			graphic((*t>>8)&0377);
+			graphic(*t&0377);
+		}
+	}
+}
+
+rmove.c         424032765   41    1     100664  112       `
+#include <stdio.h>
+#include "jplot.h"
+void
+rmove (dx, dy)
+double dx, dy;
+{
+	move(e1->copyx+dx, e1->copyy+dy);
+}
+save.c          424032765   41    1     100664  73        `
+#include <stdio.h>
+#include "jplot.h"
+
+save(){
+	e1++;
+	pcopy(e1-1,e1);
+}
+
+sbox.c          424032765   41    1     100664  173       `
+#include "jcom.h"
+#include "jplot.h"
+#include <stdio.h>
+#include <math.h>
+void
+sbox(x0, y0, x1, y1)
+double x0, y0, x1, y1;
+{
+	graphic(SBOX);
+	xysc(x0, y1);
+	xysc(x1, y0);
+}
+
+spline.c        424032765   41    1     100664  1342      `
+/*
+Produce spline (uniform knots, second order)
+from guiding points
+*/
+
+splin(mode, num, ff) 
+int num[], mode;
+double *ff[];
+{
+	int	i,  *np, n;
+	double	xa, ya, xc, yc, *xp, *yp, *xp0, *yp0, *xpe, *ype;
+	double **fp;
+	np = num;
+	fp = ff;
+	while((n = *np++)){
+		xp = *fp++; 
+		yp = xp + 1; 
+		xp0 = xp; 
+		yp0 = yp;
+		xpe = xp0 + 2 * (n - 1); 
+		ype = yp0 + 2 * (n - 1);
+		if (n < 3) { 
+			line(*xp, *yp, *(xp + 2), *(yp + 2)); 
+			continue;
+		}
+		if (mode == 4) {	/*closed curve*/
+			xa = 0.5 * (*xpe + *(xpe - 2)); 
+			xc = 0.5 * (*xpe + *xp0);
+			ya = 0.5 * (*ype + *(ype - 2)); 
+			yc = 0.5 * (*ype + *yp0);
+			parabola(xa, ya, xc, yc, *xpe, *ype);
+			xa = 0.5 * (*xpe + *xp0); 
+			xc = 0.5 * (*(xp0 + 2) + *xp0);
+			ya = 0.5 * (*ype + *yp0); 
+			yc = 0.5 * (*(yp0 + 2) + *yp0);
+			parabola(xa, ya, xc, yc, *xp0, *yp0);
+		}
+		else {	/*open curve with multiple endpoints*/
+			if (mode % 2) /*odd mode makes first point double*/
+				line(*xp0,*yp0,0.5*(*xp0+*(xp0+2)),0.5*(*yp0+*(yp0+2)));
+		}
+		xp += 2; 
+		yp += 2;
+		for (i = 1; i < (n - 1); i++, xp += 2, yp += 2) {
+			xa = 0.5 * (*(xp - 2) + *xp); 
+			xc = 0.5 * ( *xp + *(xp + 2));
+			ya = 0.5 * (*(yp - 2) + *yp); 
+			yc = 0.5 * ( *yp + *(yp + 2));
+			parabola(xa, ya, xc, yc, *xp, *yp);
+		}
+		if(mode >= 2 && mode != 4)
+			line(0.5*(*(xpe-2)+*xpe),0.5*(*(ype-2)+*ype),*xpe,*ype);
+	}
+}
+subr.c          430085856   41    1     100664  2138      `
+#include <stdio.h>
+#include <signal.h>
+#include "jcom.h"
+#include "jplot.h"
+
+static int
+	opened = 0		/* 0 if in alphanumeric mode, 1 if graphics */
+;
+
+static char
+	buf[PACKET],		/* storage for a packet of data */
+	*p = &buf[0]		/* free position in buf */
+;
+
+static void
+	flush()			/* output what we have */
+;
+
+void
+xysc(xi, yi)
+double xi, yi;
+{
+	register int xa, ya;
+	xa = SCX(xi);
+	ya = SCY(yi);
+
+	graphic((xa&077) | 0300);
+	graphic(((xa >> 6) & 017) | ((ya >> 3) & 0160) | 0200);
+	graphic(ya&0177 | 0200);
+
+	e1->copyx = xi;
+	e1->copyy = yi;
+}
+void
+xy(xa, ya)
+int xa, ya;
+{
+	graphic((xa&077) | 0300);
+	graphic(((xa >> 6) & 017) | ((ya >> 3) & 0160) | 0200);
+	graphic(ya&0177 | 0200);
+}
+void
+intout(n0)
+int n0;
+{
+	graphic((n0&0377));
+	graphic(((n0>>8)&0377));
+}
+
+void
+start(clear)
+{
+	if(clear)
+		graphic(ERASE);
+}
+
+void
+graphic(c)
+char c;
+{
+
+	if (opened == 0) {
+		++opened;
+		graphic(OPEN);
+	}
+
+	*p++ = c;
+	if (p == &buf[PACKET])
+		flush();
+}
+
+void
+alpha(c)
+char c;
+{
+
+	if (opened) {
+		graphic(CLOSE);
+		opened = 0;
+	}
+
+	*p++ = c;
+	if (p == &buf[PACKET])
+		flush();
+}
+
+static void
+flush()
+{
+	char c;
+	char *ss;
+
+
+	if(p != buf){
+		if((write(jerq, buf, p - buf)) == -1){
+			fprintf(stderr,"write error to blit\n");
+		}
+/*
+		for(ss=buf;ss<p;ss++)
+			fprintf(stderr,"%o ",(*ss &0377));
+		fprintf(stderr,"\n");
+*/
+	}
+	p = &buf[0];
+}
+
+void
+finish()
+{
+
+	graphic(CLOSE);
+	flush();
+}
+
+
+normx(x)
+double x;
+{
+	register double xx;
+	xx = SCX(x);
+	return( (int)(xx>0.? xx+.5: xx-.5) );
+}
+normy(y)
+double y;
+{
+	register double yy;
+	yy = SCY(y);
+	return( (int)(yy>0. ? yy+.5: yy-.5) );
+}
+idle(){}
+
+pcopy(a,b)
+struct penvir *a, *b;
+{
+	b->bottom = a->bottom;
+	b->left = a->left;
+	b->ymin = a->ymin;
+	b->xmin = a->xmin;
+	b->scalex = a->scalex;
+	b->scaley = a->scaley;
+	b->sidex = a->sidex;
+	b->sidey = a->sidey;
+	b->grade = a->grade;
+	b->quantum = a->quantum;
+	b->pen = a->pen;
+	b->texture = a->texture;
+}
+ptype(){}
+alarmcatch(){}
+isjplot(){
+	register val;
+	char c;
+	signal(SIGALRM, alarmcatch);
+	c = REQ;
+	write(jerq, &c, 1);
+	alarm(3);
+	read(jerq,&c, 1);
+	alarm(0);
+	val = ((c&0377) == ACK);
+	if(val)
+		read(jerq, &c, 1);	/*read newline*/
+	return(val);
+}
+text.c          424032765   41    1     100664  804       `
+#include <stdio.h>
+#include "jcom.h"
+#include "jplot.h"
+
+void
+text(s)
+register char *s;
+{
+	register char *p;
+	register int nchar;
+	short more, newline, centered, right;
+
+	newline = 0;
+	while(1){
+		centered =  more = right = 0;
+	for(p=s; *p != '\0';p++){
+		if(*p == '\\'){
+			switch(*(++p)){
+			case 'C':
+				centered++;
+				s = p+1;
+				continue;
+			case 'R':
+				right++;
+				s = p+1;
+				continue;
+			case 'L':
+				s = p+1;
+				continue;
+			case 'n':
+				newline++;
+				*(p-1) = '\0';
+				if(*(p+1) != '\0')more++;
+				goto output;
+			}
+		}
+	}
+output:
+	nchar = 0;
+	if(centered) nchar = (p - s - 1)/2;
+	else if(right)nchar = p - s - 1;
+	graphic(TEXT);
+	intout(nchar);
+	while(*s)
+		alpha(*s++);
+	if(!more)break;
+	move(e1->copyx,e1->copyy);
+	nchar=newline;
+	while(nchar--)
+		alpha('\n');
+	s = p + 1;
+	}
+}
+whoami.c        424032765   41    1     100664  37        `
+char *
+whoami(){
+	return("jplot");
+}
+
+jcom.h          433014941   41    1     100664  453       `
+#define void int
+
+#define	OPEN	0360
+#define	CLOSE	0361
+#define	ON	0362
+#define	OFF	0363
+#define REQ	021
+#define EXIT	0365
+#define ACK	06
+
+#define	ARC	0340
+#define	MOVE	0341
+#define	ERASE	0342
+#define POINT	0343
+#define PAUSE	0344
+#define FILL	0345
+#define TEXTURE	0346
+#define CIRCLE	0347
+#define SBOX	0350
+#define DISC	0351
+#define LINETH	0352
+#define TEXT	0353
+#define VEC	0354
+#define HOME	0355
+#define PAR	0356
+#define PACKET	100
+#define READY	017
+
+
+jplot.h         457721252   41    4     100664  1394      `
+#define	JPLOT	"/usr/jerq/mbin/jplot"
+#define void int
+
+
+extern int	mpx;			/* 0 if standalone, 1 if mpx */
+extern int	wantready;	/* 0 if blast ahead, 1 if wait till READY */
+extern int	jerq;			/* fd to jerq tty */
+
+void
+	alpha(),		/* output a character in alphanumeric mode */
+	arc(),			/* draw an arc */
+	box(),			/* draw an box */
+	circle(),		/* draw a circle */
+	closepl(),		/* close the plot */
+	vec(),			/* draw to a point */
+	point(),			/* draw a dot */
+	erase(),		/* erase the screen */
+	finish(),		/* flush buffer, turn off READYs */
+	graphic(),		/* output a character in graphics mode */
+	text(),		/* output text */
+	line(),			/* draw a line */
+	move(),			/* move to a point */
+	openpl(),		/* open a plot */
+	start(),		/* turn on READYs */
+	xysc()			/* scale, pack and output x and y coordinates */
+;
+
+extern struct penvir {
+double
+	bottom,			/* screen bottom y */
+	left,			/* screen bottom x */
+	ymin,			/* user's bottom y */
+	xmin,			/* user's bottom x */
+	scalex,			/* scale factor x */
+	scaley,			/* scale factor y */
+	sidex,			/* length of screen x */
+	sidey,			/* length of screen y */
+	grade,
+	quantum,
+	copyx,
+	copyy
+;	
+int pen;
+int *texture;
+} *e1, *esave, *e0;
+#define unorm(y)	(e1->ymin + (y-e1->bottom)/e1->scaley)
+#define SCX(x)	 ((x-e1->xmin)*e1->scalex+e1->left)
+#define SCY(y)	((y-e1->ymin)*e1->scaley+e1->bottom)
+extern int t1[], t0[];
+struct seg {
+	int x, y, X, Y;
+};
+parabola.c      433015639   41    1     100664  205       `
+#include <stdio.h>
+#include <math.h>
+#include "jplot.h"
+#include "jcom.h"
+parabola(x0, y0, x1, y1, xb, yb) 
+double	x0, y0, x1, y1, xb, yb; 
+{
+	graphic(PAR);
+	xysc(x0, y0);
+	xysc(x1, y1);
+	xysc(xb, yb);
+}
+
+

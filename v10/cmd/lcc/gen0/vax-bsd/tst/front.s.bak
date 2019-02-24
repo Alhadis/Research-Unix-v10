@@ -1,0 +1,246 @@
+progbeg argv=../rcc 
+segment text
+export main
+function main type=int function(void) class=auto scope=GLOBAL ncalls=1
+maxoffset=0
+node#2 CNSTI count=1 0
+node'1 ARGI count=0 #2 4 4
+node#4 ADDRGP count=1 exit
+node'3 CALLI count=0 #4
+node'1 RETV count=0
+1:
+end main
+export nested
+function nested type=int function(int,int) class=auto scope=GLOBAL
+caller's parameter a type=int class=auto scope=PARAM offset=0 ref=0
+callee's parameter a type=int class=register scope=PARAM offset=0 ref=3500
+caller's parameter b type=int class=auto scope=PARAM offset=4 ref=0
+callee's parameter b type=int class=register scope=PARAM offset=4 ref=5500
+maxoffset=0
+node#2 ADDRFP count=1 a
+node#4 ADDRFP count=1 a
+node#3 INDIRI count=1 #4
+node'1 ASGNI count=0 #2 #3 4 4
+node#2 ADDRFP count=1 b
+node#4 ADDRFP count=1 b
+node#3 INDIRI count=1 #4
+node'1 ASGNI count=0 #2 #3 4 4
+node#3 ADDRFP count=1 a
+node#2 INDIRI count=1 #3
+node#4 CNSTI count=1 4
+node'1 GEI count=0 #2 #4 6
+node#7 ADDRFP count=1 b
+node#6 INDIRI count=1 #7
+node#8 CNSTI count=1 114
+node'5 EQI count=0 #6 #8 9
+6:
+node#12 ADDRFP count=1 a
+node#11 INDIRI count=1 #12
+node#13 CNSTI count=1 1
+node'10 NEI count=0 #11 #13 8
+node#16 ADDRFP count=1 b
+node#15 INDIRI count=2 #16
+node#17 CNSTI count=1 104
+node'14 EQI count=0 #15 #17 9
+node#19 CNSTI count=1 105
+node'18 EQI count=0 #15 #19 9
+8:
+node#23 ADDRFP count=1 a
+node#22 INDIRI count=1 #23
+node#24 CNSTI count=1 2
+node'21 NEI count=0 #22 #24 3
+node#27 ADDRFP count=1 b
+node#26 INDIRI count=2 #27
+node#28 CNSTI count=1 111
+node'25 EQI count=0 #26 #28 9
+node#30 CNSTI count=1 121
+node'29 NEI count=0 #26 #30 3
+9:
+node#2 ADDRFP count=1 a
+node#4 ADDRFP count=1 b
+node#3 INDIRI count=1 #4
+node'1 ASGNI count=0 #2 #3 4 4
+3:
+node'1 RETV count=0
+2:
+end nested
+export s
+function s type=void function(pointer to incomplete struct D defined at ../../../tst/front.c:14) class=auto scope=GLOBAL
+caller's parameter d type=pointer to incomplete struct D defined at ../../../tst/front.c:14 class=auto scope=PARAM offset=0 ref=0
+callee's parameter d type=pointer to incomplete struct D defined at ../../../tst/front.c:14 class=auto scope=PARAM offset=0 ref=0
+maxoffset=0
+node'1 RETV count=0
+10:
+end s
+segment data
+export Dy
+global Dy type=struct D class=auto scope=GLOBAL
+defconst int 0
+space 4
+export Dz
+global Dz type=struct D class=auto scope=GLOBAL
+defconst int 1
+space 4
+segment text
+export Dfunc
+function Dfunc type=int function(void) class=auto scope=GLOBAL ncalls=1
+maxoffset=0
+end Dfunc
+export f
+function f type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end f
+export f1
+function f1 type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end f1
+export f2
+function f2 type=int function(pointer to pointer to int,pointer to pointer to int) class=auto scope=GLOBAL ncalls=1
+caller's parameter a type=pointer to pointer to int class=auto scope=PARAM offset=0 ref=0
+callee's parameter a type=pointer to pointer to int class=auto scope=PARAM offset=0 ref=1000
+caller's parameter b type=pointer to pointer to int class=auto scope=PARAM offset=4 ref=0
+callee's parameter b type=pointer to pointer to int class=auto scope=PARAM offset=4 ref=1000
+maxoffset=0
+end f2
+export g
+function g type=int function(pointer to const int) class=auto scope=GLOBAL ncalls=2
+caller's parameter p type=pointer to const int class=auto scope=PARAM offset=0 ref=0
+callee's parameter p type=pointer to const int class=auto scope=PARAM offset=0 ref=1000
+maxoffset=0
+end g
+export h
+function h type=int function(pointer to int) class=auto scope=GLOBAL ncalls=2
+caller's parameter p type=pointer to int class=auto scope=PARAM offset=0 ref=0
+callee's parameter p type=pointer to int class=auto scope=PARAM offset=0 ref=1000
+maxoffset=0
+end h
+export h1
+function h1 type=int function(const int,int) class=auto scope=GLOBAL ncalls=2
+caller's parameter x type=int class=auto scope=PARAM offset=0 ref=0
+callee's parameter x type=const int class=auto scope=PARAM offset=0 ref=1000
+caller's parameter y type=int class=auto scope=PARAM offset=4 ref=0
+callee's parameter y type=int class=auto scope=PARAM offset=4 ref=1000
+maxoffset=0
+end h1
+export h2
+function h2 type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end h2
+segment data
+global yy type=int class=static scope=LOCAL+1
+defconst int 1
+segment text
+export set1
+function set1 type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end set1
+segment data
+global yy type=int class=static scope=LOCAL+1
+defconst int 2
+segment text
+export set2
+function set2 type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end set2
+function goo type=void function(void) class=static scope=GLOBAL
+maxoffset=0
+end goo
+export sss
+function sss type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end sss
+segment bss
+global xr type=float class=static scope=LOCAL+1
+space 4
+segment text
+export rrr
+function rrr type=int function(pointer to float) class=auto scope=GLOBAL
+caller's parameter p type=pointer to float class=auto scope=PARAM offset=0 ref=0
+callee's parameter p type=pointer to float class=auto scope=PARAM offset=0 ref=1000
+maxoffset=0
+end rrr
+export setstatic
+function setstatic type=int function(void) class=auto scope=GLOBAL
+maxoffset=0
+end setstatic
+export gx1
+function gx1 type=int function(double) class=auto scope=GLOBAL ncalls=1
+caller's parameter x type=double class=auto scope=PARAM offset=0 ref=0
+callee's parameter x type=double class=auto scope=PARAM offset=0 ref=1000
+maxoffset=0
+end gx1
+export ff1
+function ff1 type=int function(double,pointer to int) class=auto scope=GLOBAL
+caller's parameter x type=double class=auto scope=PARAM offset=0 ref=0
+callee's parameter x type=float class=auto scope=PARAM offset=0 ref=1000
+caller's parameter y type=pointer to int class=auto scope=PARAM offset=8 ref=0
+callee's parameter y type=pointer to int class=auto scope=PARAM offset=8 ref=1000
+maxoffset=0
+end ff1
+export gg1
+function gg1 type=int function(int) class=auto scope=GLOBAL
+caller's parameter a type=int class=auto scope=PARAM offset=0 ref=0
+callee's parameter a type=int class=auto scope=PARAM offset=0 ref=1000
+caller's parameter b type=int class=auto scope=PARAM offset=4 ref=0
+callee's parameter b type=int class=auto scope=PARAM offset=4 ref=1000
+maxoffset=0
+end gg1
+export hh1
+function hh1 type=int function(const int) class=auto scope=GLOBAL
+caller's parameter a type=int class=auto scope=PARAM offset=0 ref=0
+callee's parameter a type=int class=auto scope=PARAM offset=0 ref=1000
+maxoffset=0
+end hh1
+export cmp
+function cmp type=int function(pointer to pointer to char,pointer to pointer to char) class=extern scope=GLOBAL ncalls=1
+caller's parameter a type=pointer to pointer to char class=auto scope=PARAM offset=0 ref=0
+callee's parameter a type=pointer to pointer to char class=auto scope=PARAM offset=0 ref=1000
+caller's parameter b type=pointer to pointer to char class=auto scope=PARAM offset=4 ref=0
+callee's parameter b type=pointer to pointer to char class=auto scope=PARAM offset=4 ref=1000
+maxoffset=0
+end cmp
+export sort
+function sort type=int function(void) class=auto scope=GLOBAL ncalls=2
+maxoffset=0
+end sort
+export onearg
+function onearg type=int function(void) class=auto scope=GLOBAL ncalls=1
+maxoffset=0
+end onearg
+import qsort
+import strcmp
+import hx1
+import fx1
+segment bss
+export ss4
+global ss4 type=int class=auto scope=GLOBAL
+space 4
+global ss2 type=int class=static scope=GLOBAL
+space 4
+global ss5 type=int class=static scope=GLOBAL
+space 4
+export ss3
+global ss3 type=int class=auto scope=GLOBAL
+space 4
+global ss1 type=int class=static scope=GLOBAL
+space 4
+global yy type=int class=static scope=GLOBAL
+space 4
+export z
+global z type=volatile unsigned int class=auto scope=GLOBAL
+space 4
+export y
+global y type=pointer to int class=auto scope=GLOBAL
+space 4
+export x
+global x type=pointer to const int class=auto scope=GLOBAL
+space 4
+export b
+global b type=int class=auto scope=GLOBAL
+space 4
+export a
+global a type=const int class=auto scope=GLOBAL
+space 4
+import xr
+import exit
+progend

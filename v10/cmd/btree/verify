@@ -1,0 +1,74 @@
+PATH=:$PATH
+export PATH
+x=$1
+if test $# = 0
+then
+	echo verify rec-cnt
+	exit 1
+fi
+echo 1. loading a btree with $x records
+btcreat junk
+awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' <<! | btran | btbuild junk
+$x
+!
+echo 1. does btreport think there are $x records
+btreport junk
+echo 2. if btcat doesn\'t agree, it will say so
+btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}'
+echo 2. end of load test
+echo
+echo 3. delete all the records
+awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' <<! | btdelete junk
+$x
+!
+echo 3. btreport should think they are all gone
+btreport junk
+echo 4. btcat should too
+btcat junk | awk '{next}; END {print NR " records"}'
+echo 4. there should be no records left
+echo
+echo 5. now load them back one at a time
+echo $x | awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' |
+	btran | tee foo | btadd junk
+echo 5. btreport should think there are $x records
+btreport junk
+echo 6. btcat should think so too
+btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo 6. there should have been no bad records
+echo
+echo 7. now throw every other one away
+awk '{for(i = 0; i < $1; i+=2) printf "%8.8d\n", i}' <<! | btdelete junk
+$x
+!
+echo 7. btreport should think they are gone
+btreport junk
+echo 8. btcat should too
+btcat junk | awk '{next}; END {print NR " records"}'
+echo 8. there should be half the records left
+echo
+echo 9. now squash the file
+btsquash junk
+echo 9. btreport says
+btreport junk
+echo 10. and can btcat find them all:
+btcat junk | awk 'length != 9 || $0+0 != 2*NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo 10. there should be half the records left
+echo
+echo 11. now put the other half back
+echo $x | awk '{for(i = 0; i < $1; i+=2) printf "%8.8d\n", i}' |
+	btran | btadd junk
+echo 11. btreport should see $x records
+btreport junk
+echo 12. so should btcat
+btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo 13. and they should all be there after squashing
+btsquash junk
+echo 13. btreport should see $x records
+btreport junk
+echo 14. so should btcat
+btcat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo and that is all I could think of doing

@@ -1,0 +1,52 @@
+.BU
+Tenth Edition code to make a network call:
+.CO
+#include <ipc.h>
+
+\fI[...]\fP
+
+int fd;
+
+fd = ipcopen(ipcpath(hostname, "dk", "dist"), "heavy");
+if (fd < 0) {
+	fprintf(stderr, "can't call %s\\n", hostname);
+	exit(1);
+}
+.CE
+.BU
+Berkeley code to make a network call:
+.CO
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+\fI[...]\fP
+
+int fd;
+struct hostent *h;
+struct servent *s;
+struct sockaddr_in sin;
+
+h = gethostbyname(hostname);
+s = getservbyname("dist", "tcp");
+fd = socket(AF_INET, SOCK_STREAM, 0);
+sin.sin_family = AF_INET;
+sin.sin_port = s->s_port;
+memcpy(&sin.sin_addr, h->h_addr, h->h_length);
+if (connect(fd, &sin, sizeof sin) < 0) {
+	fprintf(stderr, "can't call %s\\n", hostname);
+	exit(1);
+}
+.CE
+.BU
+Hostnames as seen from a Tenth Edition system:
+.EX
+dk!nj/astro/coma
+tcp!pyxis.research.att.com
+.EN
+.BU
+Hostnames as seen from a Berkeley system:
+.EX
+bowell.research.att.com
+.EN

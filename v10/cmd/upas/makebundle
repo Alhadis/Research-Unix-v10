@@ -1,0 +1,60 @@
+#! /bin/sh
+#
+#	makebundle: create an up-to-date bundle of upas and
+#	write it to stdout.  
+#
+#	This involves a make clean to remove all the binaries.  We
+#	also fetch all the current rewrite, route, etc., files and
+#	copy them into config.  The bundle routine knows how to
+#	bundle directories.
+
+(cd /usr/src/cmd/upas/v10; make clean >/dev/null) &
+
+
+#	arpa's files
+
+source=/n/coma/n/arpa/usr/lib/upas
+dest=/usr/src/cmd/upas/config/arpa
+
+for name in auth rewrite route.fast route.toatt route.tempo
+do
+	newer $source/$name $dest/$name && cp $source/$name $dest/$name
+done
+
+
+#	research's files
+
+source=/n/research/usr/lib/upas
+dest=/usr/src/cmd/upas/config/research
+
+for name in auth rewrite route.tempo xunetroute.res smtproute 
+do
+	newer $source/$name $dest/$name && cp $source/$name $dest/$name
+done
+
+
+#	112 mail clients files
+
+source=/n/coma/usr/lib/upas
+dest=/usr/src/cmd/upas/config/112clients
+
+for name in auth rewrite route route.tempo xunetroute uucproute smtproute 
+do
+	newer $source/$name $dest/$name && cp $source/$name $dest/$name
+done
+
+
+#	smtp-only config
+
+source=/n/coma/n/tempel/usr/v9/lib/upas
+dest=/usr/src/cmd/upas/config/smtponly
+
+for name in rewrite route
+do
+	newer $source/$name $dest/$name && cp $source/$name $dest/$name
+done
+
+
+wait;	# for make clean
+
+(cd /usr/src/cmd/upas; bundle *)

@@ -1,0 +1,35 @@
+L=libpicfile.a
+ALL=	$L(pic.601.o) \
+	$L(pic.bit.o) \
+	$L(pic.dmp.o) \
+	$L(pic.pco.o) \
+	$L(pic.run.o) \
+	$L(picclose.o) \
+	$L(picconf.o) \
+	$L(picerror.o) \
+	$L(picgetprop.o) \
+	$L(picopen_r.o) \
+	$L(picopen_w.o) \
+	$L(picpack.o) \
+	$L(picputprop.o) \
+	$L(picunpack.o)
+CFLAGS=-g
+AR=ar
+all:N:	$L
+$L:	$ALL
+	ranlib $L
+$L(%.o):	%.c
+	$CC -c $CFLAGS $stem.c && $AR r $L $stem.o && rm -f $stem.o
+$ALL libfb:	/usr/include/picfile.h
+clean:
+	rm -f core *.o
+touch:
+	ar x $L && touch *.o && ar u $L && ranlib $L && rm -f *.o
+listing:
+	pr *.h *.c | lp -dpsu
+install:
+	cp libpicfile.a /usr/lib
+	chmod 644 /usr/lib/libpicfile.a
+	ranlib /usr/lib/libpicfile.a
+ship:
+	ship -x'ranlib /usr/lib/libpicfile.a' /usr/lib/libpicfile.a /usr/include/picfile.h

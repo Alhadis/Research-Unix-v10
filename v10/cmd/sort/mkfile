@@ -1,0 +1,26 @@
+CFLAGS= -A -A
+CC=lcc
+BUILTINS=
+OBJ= fsort.o rsort.o number.o field.o tables.o merge.o optiona.o
+
+sort:V: $OBJ files.o
+	$CC $CFLAGS $prereq -o sort
+
+# on systems with the classical stdio implementation, "make fast"
+# will produce a more efficient "sort" that uses cgets instead of getc
+
+fast:V: $OBJ cfiles.o cgets.o
+	$CC $CFLAGS $prereq -o sort
+
+checksum: checksum.c
+	$CC checksum.c -o checksum
+
+test: checksum
+	PATH=.:$PATH sorttest
+
+%.o: %.c fsort.h
+	$CC $CFLAGS -c $stem.c
+
+clean:V:
+	rm -f *.o sort in in1 in2 out xx xsort ysort *.out 
+	rm -f unwritablefile linecount -k - -o checksum* xx.c

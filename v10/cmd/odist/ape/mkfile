@@ -1,0 +1,46 @@
+<../mkconf.$SYS
+<../mkrules.$SYS
+
+CFLAGS=-g
+BPROG=dist
+LPROG=receive transmit showq cleanq genmail nightly
+LSUID=transmit cleanq
+
+LIBOBJ=chat.$O chkperm.$O crc.$O eprintf.$O path.$O scanq.$O tryperm.$O
+
+%.$O: %.c
+	$CC -DLDIR='"'$LDIR'"' -DSDIR='"'$SDIR'"' -c $stem.c
+
+%: %.$SH
+	sed -e s@%LDIR%@$LDIR@ -e s@%SDIR%@$SDIR@ $stem.$SH > $target || rm -f $target
+	chmod +x $target
+
+compile:V: $BPROG $LPROG
+
+install:V: compile
+	test -d $LDIR || mkdir $LDIR
+	test -d $SDIR || mkdir $SDIR && chmod 777 $SDIR
+	cp $BPROG $BDIR
+	cp $LPROG $LDIR
+	(cd $LDIR; chown root $LSUID; chmod 4755 $LSUID)
+
+receive: receive.$O lib.a ../$SYS/lib.a
+	$CC -o receive receive.$O lib.a ../$SYS/lib.a $CCLIB
+
+transmit: transmit.$O lib.a ../$SYS/lib.a
+	$CC -o transmit transmit.$O lib.a ../$SYS/lib.a $CCLIB
+
+showq: showq.$O lib.a ../$SYS/lib.a
+	$CC -o showq showq.$O lib.a ../$SYS/lib.a $CCLIB
+
+cleanq: cleanq.$O lib.a ../$SYS/lib.a
+	$CC -o cleanq cleanq.$O lib.a ../$SYS/lib.a $CCLIB
+
+lib.a: ${LIBOBJ:%=lib.a(%)}
+	$RL lib.a
+
+lib.a(%): %
+	ar r lib.a $stem
+
+clean:V:
+	rm -f $BPROG $LPROG *.[$OS] lib.a

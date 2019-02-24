@@ -1,0 +1,1036 @@
+\documentstyle[titlepage,fullpage,12pt,clbiba]{article}
+\begin{document}
+\newcommand{\twigcomp}{{\tt twig}}
+\newcommand{\Twigcomp}{{\tt Twig}}
+\newcommand{\twiglang}{{\it twig}}
+\newcommand{\Twiglang}{{\it Twig}}
+\title{Twig Reference Manual}
+
+\date{
+\begin{minipage}{.8\textwidth}
+\normalsize
+\noindent
+\Twiglang{} is a language for manipulating trees.  A \twiglang{}
+program consists of a set
+of pattern-action rules together with associated declarations.  Patterns
+describe trees to be matched.  Actions calculate costs, perform tree
+manipulations and other functions such as emitting code.  A \twiglang{} program is
+translated by the \twigcomp{} compiler into subroutines and tables in a host
+language.  In the current implementation, the host language is C.\\[6pt]
+A \twiglang{} program manipulates trees by first finding a minimum cost covering of
+the input tree.  The actions of the rules whose pattern parts composes the
+covering is then executed. The minimum cost covering is determined using
+dynamic programming.  This technique naturally resolves many ambiguities that
+may be in the specifications.\\[6pt]
+The prime purpose of \twiglang{} is to create tree manipulation programs.
+One interesting application of tree manipulation is code generation and
+\twiglang{} has been used to implement a code generator for the 
+pcc2 compiler on the VAX.
+\end{minipage}}
+
+\author{Steven W.K. Tjiang}
+
+\maketitle
+\tableofcontents\newpage
+\section{Introduction}
+
+\Twiglang{} is a language for writing tree manipulation programs.
+A \twiglang{} program does this by using a matcher to find a minimal
+cost covering of a tree.
+The covering is composed of
+user supplied templates.
+Trees are manipulated by
+executing the actions associated with the templates of their coverings.
+These actions may rewrite the tree, update other data structures, or
+generate output.
+
+Figure~\ref{overview} gives an overview of the \twiglang{} system.
+The round boxes in the figure indicates files and the sharp cornered boxes
+are processing programs.
+The user writes the \twiglang{} specification file.
+This file is then compiled by the \twigcomp{} compiler into
+host language files.
+In the current version of \twiglang{}, the host language is C.
+The host language files are then compiled and linked with
+other user supplied files.
+The resulting program represented by the large box at the bottom
+of figure~\ref{overview} is the tree manipulation program.
+\begin{figure}[hp]
+\input{pic}
+\caption{The {\bf Twig } system}
+\label{overview}
+\end{figure}
+The details of this box will be discussed later.
+
+\section{Motivation}
+
+Although \Twiglang{} is a language for manipulating trees
+it was originally motivated by
+pattern directed code generation.  In many compilers, the typical
+structure is a {\sl front end} and a {\sl back end}.  The front end reads
+the input source program, checks its syntax and contextual conditions,
+and builds an intermediate representation of the program.
+The language used to do this representation is often called the
+{\it intermediate representation} and will be abbreviated as IR.
+The back end
+takes the IR and translates it into the target machine code.
+
+That isn't the whole story but it's close.  Both ends may be 
+sets of programs rather than one
+program.  There may also be a
+{\it middle} that performs transformations on the
+IR.  The intention of these
+transformations is to improve the target code that comes out of the compiler.
+For this discussion, we can ignore the middle.
+
+IRs can vary greatly from compiler to compiler.
+However the IRs are implemented, they are encodings of graphs.
+Usually three types of graphs are evident\cite{dragon}.
+There is a flowgraph whose nodes are {\sl basic blocks} and
+the edges corresponds to transfer of control between the basic blocks.
+Basic blocks are not featureless.  They are graphs themselves.
+Some compilers will represent them as a forest of
+{\it directed acyclic graphs} or DAGs.
+The nodes are data values and operations.
+Since operations yields values, one can think of nodes as
+corresponding to values.  An edge exists from node $a$ to
+node $b$ if and only if the value corresponding to $a$ depends on the
+value corresponding to $b$.  Other compilers will use trees instead of DAGs.
+Trees are not
+as general as DAGs and these compilers overcome that by using some
+type of labelling or copying.
+
+Writing a front end usually
+involves writing a recognizer
+for the source language, designing a symbol table,
+and determining an error recovery strategy.  What has made this process easy
+are parser generators like YACC\cite{yacc}.
+They separate out the task of recognizing the
+source language from the other details.  This makes the task
+intellectually more manageable.
+The compiler implementor now specifies the source language via grammar
+productions.  Symbol table manipulations,
+and IR construction rules are attached to productions and activated
+when a source language construct is recognized.
+The front end is then {\it automatically} generated by processing the
+specification with a parser generator.
+The result is
+a high quality front end whose performance is close to that of a
+hand-crafted front end.
+
+Providing the same type of facilities for automatically building back
+ends has been much more difficult.  Extending current front end
+parsers to do back ends
+has been workable but not entirely successful.  The basic idea is that
+the back end implementor writes a {\it machine grammar}
+for the IR and code generation
+occurs as actions that are executed when patterns are found
+in the IR\cite{gana,henry}.
+Unfortunately, these grammars are large and ambiguous.  Using
+parsers to handle them have usually met with many combinatorial problems
+\cite{henry}.  Furthermore, these code generators are slow
+although their output is often of high quality.
+The software engineering advantages one see with parsers in the front end
+are not so evident in this circumstance.  Instead of having to deal with
+the complexities of code generation, the implementor now has to deal with
+the complexities of the very large machine grammar.
+
+Another approach at automatically building back ends is to start with
+known good algorithms for generating code.  From these algorithms, we
+can build an abstract interpreter and then specifications can be written
+to drive them.  We hope that by doing this we can derive a much more natural
+code generation specification technique.
+\Twiglang{} is one possible result of this approach.  The algorithms
+that form the basis of \twiglang{} are presented in \cite{optimalcode} and
+\cite{treematch}.  \Twiglang{}
+specifications are much less complex than parser based
+specifications.  Ambiguities are handled naturally and do not complicate
+the specifications.
+
+In \cite{optimalcode}, it is shown how optimal code can be generated
+for an expression tree
+given a description of a machine's instruction set.
+This description is in term of tree templates.
+The algorithm first determines a minimal cost covering of
+an expression tree using dynamic programming.
+The covering is composed from the templates in the
+description.  The code generated is then the instructions
+represented by the templates in the covering.
+This algorithm was shown to generate the shortest code sequences for an
+abstract machine and
+its running time was shown to be linear in the number of nodes in the
+expression tree in \cite{optimalcode}.
+
+This is all very well in theory but what about in practice.
+Code length is  not always the quantity that one wishes to minimize.
+One might wish to minimize the number of memory accesses or machine cycles
+executed by the generated code.
+Fortunately, the algorithm can also minimize these quantities.
+In fact, it can minimize any strictly increasing cost function.
+Let $I$ denote a machine instruction and
+$I_0I_1I_2...I_n$ denote a sequence of instructions.
+Then a cost function $f$ is strictly increasing if and only if
+$f(I_0I_1I_2...I_n) < f(I_0I_1I_2...I_nI_{n+1})$ for all
+instruction sequences $I_0I_1I_2...I_n$ and instruction
+$I_{n+1}$.  Another shortcoming in \cite{optimalcode}
+is that no efficient algorithm is given for matching the templates
+in the tree.  This is where \cite{treematch} comes in.  In that paper,
+two algorithms are presented for tree matching.  \Twiglang{} combines
+the work presented in the two papers.
+
+\Twiglang{} differs from the algorithm as presented in \cite{optimalcode} in
+the following ways:
+\begin{itemize}
+\item
+It provides a convenient specification language for the templates.
+\item
+Tree templates in \cite{optimalcode} were labelled with either {\sl Register} or
+{\sl Memory}.  This label being the storage class that the instruction corresponding
+to the template would put a result.
+\Twiglang{} generalize tree labels so that
+they can be any symbol.
+\item
+Instead of associating an instruction with each template, \twiglang{} associates
+an action.
+\item
+In \cite{optimalcode}, code is generated by a bottom up traversal of the
+minimum cost covering.  \Twiglang{} allows a top down traversal of the cover
+and also the ability for the actions to rewrite parts of the
+tree.
+\item
+The algorithm in \cite{optimalcode} determines the evaluation order
+which gives the optimal code.
+\Twiglang{} does not do this.
+The evaluation order determination was omitted based on the conjecture that
+most of the time, simple left to right evaluation of the leaves will yield
+near optimal results.
+In situations where a nonstandard evaluation order is required, a new
+\twiglang{} pattern could be added that codes the order explicitly
+(see Section~\ref{exec:phase}).
+\end{itemize}
+
+In this manual, a brief discussion will be given of the \twiglang{} language
+and how \twiglang{} programs can be incorporated with C.
+
+Many statements have been made in this manual without proof.
+If the reader wishes to pursue it further, more details about the algorithms
+will be presented in an upcoming paper,
+\cite{aho:gana:tjiang}.
+
+\section{The \Twiglang{} Language}
+\subsection{Lexical Issues and Conventions}
+Currently the
+following identifiers are reserved keywords of \twiglang{}:
+
+\begin{tabbing}
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\kill
+action \> cost \> insert \\
+label \> node \> prologue
+\end{tabbing}
+
+\noindent ;:(),= are special characters.  All blanks, tabs, formfeeds and
+newlines are ignored by \twiglang{} but they may not appear inside
+identifiers and numbers.  Identifiers are nonempty strings
+made of letters, digits or underscores and starting with a letter.
+Numbers are nonempty string of digits.  Code fragments or action parts
+are enclosed in braces.  Inside code fragments, C lexical rules must
+be obeyed except that strings of the form $\$...\$$ that are not inside C
+strings have special meaning to \twiglang{}.  In the following sections, $id$
+denotes an identifier; $int_1$, $int_2$ denotes numbers; $ccode$
+denotes C code fragments; $...$ indicates repetition of the previous
+item; $[...]$ indicates that $...$ is optional.
+
+The input to the \twiglang{} program will be referred to as the subject tree.
+
+\subsection{Rules}
+
+The fundamental unit of a \twiglang{} program is a rule.
+
+\begin{verse}
+$label\_id$ {\bf :} $tree\_pattern$\quad {\bf [} $cost$ {\bf ]}
+{\bf [ =} $action$ {\bf ]}
+\end{verse}
+
+\noindent Intuitively, the pattern is used to match a subtree.
+The $cost$ code
+fragment is then evaluated.  The resulting cost is recorded by
+the matcher for use in dynamic programming.  The $action$ is executed
+if the rule is part of the least cost cover of the tree.
+The details of pattern matching will be discussed in Section~\ref{pattern}.
+
+If the $cost$ part is missing, \twigcomp{} will insert default code
+that returns the special value, {\tt DEFAULT\_COST}.
+A missing $action$ part indicates that nothing will be done when a
+match is found.
+
+\subsection{Tree Patterns}
+\label{TreePatterns}
+Tree patterns are specified
+in prefix parenthesized form and can be described by the
+following BNF:
+
+\begin{verse}
+$tree\_pattern\to node\_id\;\vert\;label\_id$\\
+$tree\_pattern\to node\_id \;{\bf (}\; tree\_list \;{\bf )}$\\
+$tree\_list \to tree \;{\bf ,}\; tree\_list \;\vert\; tree$\\
+\end{verse}
+
+\begin{figure}
+\unitlength 0.1in
+\begin{center}
+\begin{picture}(25,16)
+\put(7,0){\framebox(4,3){\tt id}}
+\put(20,0){\framebox(5,3){\tt const}}
+\put(13,6){\framebox(5,3){\tt plus}}
+\put(6,12){\framebox(5,3){\tt plus}}
+\put(0,6){\framebox(4,3){\tt id}}
+\put(11,3){\line(2,3){2}}
+\put(20,3){\line(-2,3){2}}
+\put(13,9){\line(-2,3){2}}
+\put(4,9){\line(2,3){2}}
+\end{picture}
+\end{center}
+\vspace{0.5in}
+\begin{verse}
+\begin{center}
+\tt plus(id, plus(id, const))
+\end{center}
+\end{verse}
+\caption{A Tree and its prefixed form}
+\label{treepattern}
+\end{figure}
+\noindent Figure~\ref{treepattern} gives an example of a tree pattern
+and its prefix parenthesized form.
+
+There are two types of symbols: $node\_id$\/s and $label\_id$\/s.
+$Node\_id$\/s are used to denote internal nodes and leaves.
+$Label\_id$\/s label tree patterns and are analogous to
+nonterminals in context free grammars.
+For example, the following \twiglang{} rules without their action parts describe
+simple expression trees with the {\tt plus} operator.
+
+\begin{verse}
+{\tt\begin{tabbing}
+expr: \= plus(expr, expr)\\
+expr: \> identifier\\
+expr: \> constant
+\end{tabbing}}
+\end{verse}
+
+\noindent Here, {\tt identifier} and {\tt constant} are $node\_id$\/s
+representing leaves, and
+{\tt plus} is a $node\_id$ representing an internal node whereas
+{\tt expr} is a
+$label\_id$.  Pattern leaves that are $label\_id$\/s are called
+{\sl labelled leaves}.
+In the first rule, both leaves of the pattern are labelled.
+
+\Twigcomp{} associates an integer with each node symbol and label symbol.  These
+integers are used by the \twiglang{} pattern matcher as encodings for the
+symbols.
+As the matcher traverses the
+tree, a user supplied subroutine is called to provide an integer
+corresponding to each node.
+
+\subsection{Costs}
+
+To increase the flexibility of representing costs, the tree matcher
+views costs as an {\sl abstract data type} or ADT.
+For example, costs may be represented as an integer or
+as a vector of integers with each element representing the cost of a specific
+resource.
+A cost ADT suitable for \twiglang{} must have the following four definitions:
+
+\begin{itemize}
+\item {\tt COST} is a C type.
+Although the proper functioning of the tree matcher
+does not depend on the internal details of the {\tt COST} type, it must have
+the type information for storage allocation purposes.
+\item {\tt INFINITY} is the maximum attainable cost value.
+The matcher uses {\tt INFINITY} to initialize its data structures.
+\item {\tt DEFAULT\_COST} is the cost
+value returned by rules without a cost part.
+\item
+{\tt COSTLESS} is a function of
+two cost values.  It must return true if and only if the first argument is
+less than the second.
+\end{itemize}
+
+\subsection{Trees}
+
+As with costs, trees are treated as an ADT.  Here, using an ADT is
+even more important because trees come in a variety of shapes and
+representations.
+\Twiglang{} would be overly complicated if it had to
+know any more than the fundamental properties of trees.  Thus,
+\twiglang{} treats trees as an acyclic directed
+graph of almost featureless nodes with one
+distinguished node, the root.  Each node has only one feature and that
+is an integer corresponding to the $node\_id$\/s discussed above.
+To provide this
+view to \twiglang{}, the user must provide the following definitions and
+subroutines.
+
+\begin{itemize}
+\item {\tt NODEPTR} is the type of a node.  The actual
+details of
+the {\tt NODEPTR}
+are irrelevant and \twigcomp{} uses this definition only for storage
+allocation and declaration purposes.
+\item
+{\tt NULL} is used to denote a null {\tt NODEPTR} value.
+In the current implementation this is the same {\tt NULL} used by the
+C standard I/O package and need not be defined by the user.
+This restricts the {\tt NODEPTR} representation to be a pointer.
+\item
+{\tt mtGetNodes$(r,n)$} returns the $n$th child of $r$ where $r$
+is a {\tt NODEPTR}.  The
+leftmost child is {\tt mtGetNodes}$(r,1)$.  If $n > \hbox{degree}(r)$
+then the function should return {\tt NULL}.  \Twigcomp{} expects the
+expression {\tt mtGetNodes}$({\tt NULL}, 0)$
+to denote the root node of
+the subject tree.
+\item
+{\tt mtValue$(r)$} returns the integer associated with $r$
+(See section~\ref{TreePatterns}).
+\item
+{\tt mtSetNodes$(r,n,c)$} replaces the $n$th child of $r$ with
+$c$.  This routine may be used to replace whole subtrees with others.
+{\tt mtSetNodes}$({\tt NULL},0,c)$ is used by \twigcomp{} to set the
+root of the subject tree to $c$.
+\end{itemize}
+
+\subsection{Prologue and Inserts}
+
+\begin{verse}
+{\tt prologue} $ccode$;
+\end{verse}
+
+\noindent signals to \twigcomp{} that $ccode$ should be inserted at the
+beginning of the output source file.  $Ccode$ should contain
+definitions relevant to the C code in
+rules that are defined later in the \twiglang{} source file.
+
+\begin{verse}
+{\tt insert} $ccode$;
+\end{verse}
+
+\noindent causes $ccode$ to be placed into the source file.
+There can be multiple inserts and they will be placed into the source
+file
+in the order that they appear.
+
+\subsection{Declarations}
+
+All \twiglang{} identifiers are declared before they are used.
+
+\begin{verse}
+{\tt node $id[(int_1)] [= int_2] ...$;\hfil}
+\end{verse}
+
+\noindent A node declaration declares one or more identifier to be
+associated with nodes of the subject tree.  The identifiers are
+assigned numbers by \twigcomp{} but the user can overide the assigned number
+by specifying $int_2$.  The degree of the node identifer, the
+number of children, is assumed to be fixed.  Normally, \twigcomp{} will
+deduce the degree when $id$ is used in a rule.  However, the user may
+explicitly give the degree by specifying $int_1$.
+
+\begin{verse}
+{\tt label $id ...$;}
+\end{verse}
+
+A label declaration indicates that the following $id$'s are to be used
+as labels of rules.
+
+\subsection{Costs and Action code}
+
+Code fragments such as the $cost$ and $action$ clauses of a rule are
+specfied by enclosing C code in braces.  All legal C constructs are
+permitted in code fragments.  In addition, the following are provided
+for convenient access to the subject tree and internal data
+structures of the matcher.
+
+\begin{itemize}
+\item $\$\%n\$$ denotes a pointer value to the matcher data
+structure for the $n$th labelled leaf.  Thus to access the cost value
+associated with that leaf, the notation $\$\%n\$\to${\tt cost} may be used.
+
+\item $\$\$$ denotes a pointer value to the root of the subject
+tree.
+
+\item $\$n_1.n_2.n_3.\, \hbox{...}\,.n_{k-1}.n_k\$$ denotes
+a pointer value to the $n_k$th child of the $n_{k-1}th$ child of the
+$n_{k-2}$th child of \hbox{...} of the $n_1$th child of the root of
+the subject tree.  Each $n_i$ is a positive non-zero integer.
+\end{itemize}
+
+Some special constructs are available to code fragments in the cost
+part of the specification.  The
+statement ``{\tt ABORT;}'' when encountered during the execution of
+the cost code, signals to the matcher that this pattern is to be
+rejected.  When a ``{\tt REWRITE;}'' statement is encountered, control
+is returned to the matcher and the rule will become a {\sl rewrite}
+mode match.  When the end of the cost code fragment is reached,
+control is returned to the matcher and the rule becomes a {\sl defer}
+mode match.
+The statement ``{\tt TOPDOWN;}'' is like ``{\tt REWRITE;}'' except that
+the mode of the match becomes {\sl topdown}.  The meanings of these modes
+will be explained in Section~\ref{pattern}.
+
+Cost values are returned to the matcher by assigning to
+the ``{\tt cost}'' variable in the cost clause.  If no assignment is
+made to the {\tt cost} variable then the returned cost will be {\tt
+DEFAULT\_COST}.
+
+Action clauses are expected to return a new tree which will replace
+the subject tree.  This is done by returning using the
+``{\tt return($new\_tree$);}'' statement.
+where {\tt $new\_tree$} is of type
+{\tt NODEPTR}.
+If execution reaches the end of the action clause, the
+matcher resumes execution and the subject tree is not modified.
+
+\section{Pattern Matcher Operation}
+\label{pattern}
+
+The
+pattern matcher operates in two phases: the costing phase and the execution
+phase.
+During
+the costing phase, a minimal cost covering of the subject tree is found.
+The execution phase invokes the actions that are associated with the patterns
+making up the covering.  Execution phases may begin during the costing phase
+to execute the covering of a subtree as described in Section~\ref{exec:phase}.
+
+\subsection{The Costing Phase}
+\label{cost:phase}
+
+Let the patterns of the \twiglang{} specifications be interpreted as grammar
+productions with {\sl label\_id}s as non-terminals and {\sl node\_id}s
+as terminals.
+If we add a production
+$S\,\to\,\hbox{\sl label\_id}$ for all {\sl label\_id}s where $S$ is the
+start symbol,
+then a covering for a tree is analogous to a derivation
+for the prefixed form of the tree.
+Figure~\ref{gram:interp} shows some patterns and its corresponding grammar.
+\begin{figure}
+\begin{center}
+\begin{verse}
+\tt
+e: plus(e,e)\\
+e: plus(e, plus(e,e))\\
+e: id\\
+e: const\\
+\end{verse}
+\end{center}
+\vspace{0.3in}
+\begin{center}\begin{verse}
+$S\to e$\\
+$e\to plus(e,e)$\\
+$e\to plus(e,plus(e,e)$\\
+$e\to id$\\
+$e\to const$\\
+\end{verse}\end{center}
+\caption{Pattern and Grammar}
+\label{gram:interp}
+\end{figure}
+The productions of the form $S\to\hbox{\sl label\_id}$ reflect the fact that
+any {\sl label\_id} may start a cover.
+
+The matcher finds the least cost cover by doing a preorder traversal of
+the subject tree.
+At the same time, it
+builds a skeleton tree that is structurally isomorphic to the subject tree.
+When a match is discovered the cost clause of the pattern is invoked to
+calculate the cost.  Many patterns with different labels could match at any
+given node but only the lowest cost pattern for each label is recorded in
+the skeleton.
+
+When a pattern is matched, its label is then used as input to the pattern
+matcher so that matching of patterns with labelled leaves can begin.
+This process
+is analogous to a reduce action in
+bottom up parsers.
+
+\subsection{The Execution Phase}
+\label{exec:phase}
+
+The execution phase starts when the costing phase is complete or when
+a sufficiently low cost {\sl rewrite} mode rule is encountered.
+Let $M$ be a matching
+rule and $L_1, L_2, L_3, ... ,L_n$ be
+the labelled leaves of the matching pattern.
+The following procedure is used to execute the action parts of $M$.
+
+\vbox{
+\vspace{2ex}
+\noindent {\bf Procedure \it Execute}
+
+\begin{itemize}
+\item If $M$ is a {\sl deferred} mode match then
+execution occurs by first applying {\it Execute} to the $L_i$s
+from left to right.  That is, in the order that they appear in
+the prefix form of the tree.
+When all the $L_i$s are executed, the action part of $M$ is
+invoked.
+
+\item If $M$ is a {\sl rewrite } mode match then
+just the action part of $M$ is executed.  When the action part returns
+the matcher deletes the skeleton corresponding to the subtree that
+$M$ matched and rescans the new subtree that may have been substituted
+by executing $M$.
+
+\item If $M$ is a {\sl topdown} mode match then only
+the action part of $M$ is executed.  To execute a
+labelled leaves, $L_i$, $M$'s action part may do so explicitly
+by using the {\tt tDO($\$\%i\$$)} macro.  This allows
+the user to arbitrary order the execution of the labelled leaves.
+\end{itemize}
+}
+
+\noindent When the costing phase is over, the execution phase is started
+by picking the lowest cost match at the root of the subject tree.
+This will be the root of the minimum cost cover.
+The match is executed as described above.
+
+The execution phase may begin before the costing phase is over.
+This occurs when a rewrite rule matches and its cost is lower than
+all other matches at that subtree.  In this situation the rewrite rule
+is executed immediately and the new rewritten subtree is scanned once more.
+The prescence of rewrite rules throws a wrench in the theoretical niceties
+of the matching algorithm.  For example, there is now no guarantee
+that the algorithm will terminate because the tree can
+be repeatedly enlarged.
+Rewrite rules can be dangerous.  They can
+be triggered unintentionally if the user is not careful to abort them
+in situations where they are not wanted.
+However, if used with care they can help to reduce the size of the \twiglang{}
+specification.
+
+\section{Some Examples}
+
+\subsection{Expression Trees to Prefix}
+A \twiglang{} program to print out the prefix form of expression
+parse trees
+is shown in Figure~\ref{trees:prefix}.
+
+\begin{itemize}
+
+\item The rules do not have cost calculations.
+Since there are no
+ambiguities costs are not necessary.
+
+\item The second rule is a topdown mode rule.  This is essential in printing
+the prefix form.  If it was omitted the postfix form would be printed.
+
+\item Before any matching can begin {\tt \_matchinit} must be called.
+Trees can then be processed by calling {\tt \_match} after arranging that
+the call
+{\tt mtGetNodes}$({\tt NULL},0)$ returns the root of the subject tree.
+\end{itemize}
+
+\begin{figure}[tp]
+\begin{tabbing}
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\kill
+prologue \> $\{$\\[4pt]
+typedef \> struct node $*$\>\>{\tt NODEPTR};\\
+\#define \> {\tt COST} \>\> int\\
+\#define \> {\tt INFINITY}\>\>  100000\\
+\#define \> {\tt DEFAULT\_COST} \>\> 0\\[4pt]
+{\tt NODEPTR} Root;\\
+struct code \> $\{$\\
+\> char op; \> \> $/*$ null if node is a leaf $*/$\\
+\> NODEPTR left, right;\\
+\> char $*$id;\\
+$\}$;\\[4pt]
+$\}$;\\[6pt]
+node \> nOp nIdent;\\
+label \> lExpr;\\[6pt]
+lExpr:\> nIdent\\
+\>= $\{$ printf(``$\%$s'', id); $\}$;\\[4pt]
+lExpr:\>nOp(lExpr,lExpr)\\
+\>$\{$ {\tt TOPDOWN};$\}$\\
+\>= $\{$\\
+\>\>putchar($\$\$\to$op);\\
+\>\>tDO($\$\%1\$$);\\
+\>\>tDO($\$\%2\$$);\\
+\>$\}$;\\[6pt]
+insert\>$\{$\\[4pt]
+mtValue(root)\\
+\>{\tt NODEPTR} root;\\
+$\{$\\
+\>if(root$\to$op==0)\\
+\>\>return(nIdent);\\
+\>else\\
+\>\>return(nOp);\\
+$\}$\\[4pt]
+\end{tabbing}
+\caption{Printing Expression trees to Prefix form}
+\end{figure}
+\addtocounter{figure}{-1}
+\begin{figure}[tp]
+\begin{tabbing}
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\kill
+mtGetNodes(r,n)\\
+\>{\tt NODEPTR} r;\\
+\>int n;\\
+$\{$\\
+\>if(n==1)\\
+\>\>return(r$\to$left);\\
+\>else if(n==1)\\
+\>\>return(r$\to$right);\\
+\>else if(n==0 $\&\&$ r=={\tt NULL})\\
+\>\>return(Root);\\
+\>else return({\tt NULL});\\
+$\}$\\[4pt]
+mtSetNodes(r,n, c)\\
+\>{\tt NODEPTR} r, c;\\
+\>int n;\\
+$\{$\\
+\>if(n==1)\\
+\>\>r$\to$left = c;\\
+\>else if(n==2)\\
+\>\>r$\to$right = c;\\
+\>else if(n==0)\\
+\>\>Root = c;\\
+$\}$\\[4pt]
+main(argc,argv)\>\>\>$/*$ called by user only $*/$\\
+\>char $**$argv;\\
+$\{$\\
+\>\_matchinit();\>\>$/*$ initialize the matcher $*/$\\
+\>$...$ {\sl get a tree and set Root to it}\\
+\>\_match();\>\>$/*$ do the match $*/$\\
+$\}$\\
+$\}$\\
+\end{tabbing}
+\caption{(cont.) Printing Expression trees to Prefix form}
+\label{trees:prefix}
+\end{figure}
+
+\subsection{Short Circuited Boolean Evaluation}
+
+Short circuited boolean evaluation is naturally topdown.
+A fragment of \twiglang{} program that implements this
+is shown in Figure~\ref{short:circuit}.
+
+\begin{itemize}
+
+\item Labels for true and false branches are passed down to
+rules below by putting them into the nodes.  Another way of
+accomplishing this is to use an auxillary argument stack.
+
+\item The rules assume that every test generates a branch to both
+the false and true label.  On conventional machines, extra branches
+can be eliminated by recognizing that one could generate code that
+falls through to its true or false labels.  This can be done by
+separating {\sl lTest} into {\sl lTrueTest} and {\sl lFalseTest} which
+branches only when true and false respectively.  Rules can then be
+written to take advantage of this.
+\end{itemize}
+
+\begin{figure}
+\begin{tabbing}
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\kill
+prologue \> $\{$\\[4pt]
+\#include\>``otherdefs.h''\\
+union node $\{$\\
+\> $...$ \>\>$/*$ definition of other node types $*/$\\
+\> union $\{$\\
+\>\> int operation;\\
+\>\> {\tt NODEPTR} left, right;\\
+\>\> {\tt LABEL} falselab, truelab;\>\>$/*$ {\tt LABEL} will defined
+elsewhere $*/$\\
+\>\> $...$ \>\> $/*$ other definitions relevant to {\sl test nodes} $*/$\\
+\> $\}$ test;
+\> $...$ \>\>$/*$ definition of other node types $*/$\\
+$\}$;\\[4pt]
+$\}$;\\[6pt]
+node\>nAnd nOr nNot nLess;\\
+label\>lTest lExpr;\\[6pt]
+lTest:\>nAnd(lTest,lTest)\\
+\>$\{$ {\tt TOPDOWN}; $\}$\\
+\>=$\{$\\
+\>\>$\$1\$\to$test.falselab = $\$\$\to$test.falselab;\\
+\>\>$\$1\$\to$test.truelab = getlabel();\\
+\>\>tDO($\$\%1\$$);\\
+\>\>printlab($\$1\$\to$test.truelab);\\
+\>\>$\$2\$\to$test.falselab = $\$\$\to$test.falselab;\\
+\>\>$\$2\$\to$test.truelab = $\$\$\to$test.truelab;\\
+\>\>tDO($\$\%2\$$);\\
+\>$\}$;\\[4pt]
+lTest:\>nOr(lTest,lTest)\\
+\>$\{$ {\tt TOPDOWN}; $\}$\\
+\>=$\{$\\
+\>\>$\$1\$\to$test.falselab = getlabel();\\
+\>\>$\$1\$\to$test.truelab = $\$\$\to$test.truelab;\\
+\>\>tDO($\$\%1\$$);\\
+\>\>$\$2\$\to$test.truelab = $\$\$\to$test.truelab;\\
+\>\>$\$2\$\to$test.falselab = $\$\$\to$test.falselab;\\
+\>\>tDO($\$\%2\$$);\\
+\>$\}$;\\
+\end{tabbing}
+\caption{Short circuited Boolean Evaluation}
+\label{short:circuit}
+\end{figure}
+\addtocounter{figure}{-1}
+\begin{figure}[tp]
+\begin{tabbing}
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\kill
+lTest:\>nNot(lTest)\\
+\>$\{$ {\tt TOPDOWN}; $\}$\\
+\>=$\{$\\
+\>\>$\$1\$\to$test.truelab = $\$\$\to$test.falselab;\\
+\>\>$\$1\$\to$test.falselab = $\$\$\to$test.truelab;\\
+\>\>tDO($\$\%1\$$);\\
+\>$\}$;\\[4pt]
+lTest:\>nLess(lExpr,lExpr)\>\>$/*$ {\sl not topdown anymore } $*/$\\
+\>=$\{$ $...$ {\sl generate code for comparison } $...$ $\}$;\\
+\end{tabbing}
+\caption{(cont.) Short circuited Boolean Evaluation}
+\end{figure}
+
+\subsection{Code Generation}
+
+Figure~\ref{example} is an 
+example of \twiglang{} program that
+can be used to generate VAX code for
+the subtract instruction:
+
+\begin{figure}
+\begin{tabbing}
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=
+\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\hspace{1in}\=\kill
+prologue \> $\{$\\
+$/*$ otherdefs.h will have a type definition for {\tt NODEPTR} $*/$\\
+\#include\>``otherdefs.h''\\
+\#define\>{\tt TEMP\_COST}\>\>5\\
+\#define\>{\tt SUB\_COST}\>\>30\\
+\#define\>{\tt DEC\_COST}\>\>10\\
+NODEPTR \> gettemp();\\
+$\}$;\\[4pt]
+node \> long constant sub;\\
+label \> operand temp;\\[4pt]
+operand: \> long;\>\>\>$/*$ rule 1 $*/$\\
+operand:\>constant;\>\>\>$/*$ rule 2 $*/$\\
+operand:\>temp;\>\>\>$/*$ rule 3 $*/$\\[4pt]
+temp:\>operand\>\>\>$/*$ rule 4 $*/$\\
+\>$\{$ cost = {\tt TEMP\_COST}+$\$\%1\$\to$cost;$\}$\\
+\>$=\{$\\
+\>\>NODEPTR t = gettemp();\\
+\>\> emit(``mov'', $\$\$$, t, 0);\\
+\>\>return(t);\\
+\>$\}$;\\[4pt]
+operand:\>sub(operand,operand)\>\>\>$/*$ rule 5 $*/$\\
+\>$\{$cost = $\$\%1\$\to$cost + $\$\%2\$\to$cost+{\tt SUB\_COST};$\}$\\
+\>=$\{$\\
+\>\>NODEPTR t = gettemp();\\
+\>\>emit(``sub'', $\$1\$$, $\$2\$$, t, 0);\\
+\>\>return(t);\\
+\>$\}$;\\[4pt]
+temp:\>sub(temp,constant)\>\>\>$/*$ rule 6 $*/$\\
+\>$\{$\\
+\>\>if(value($\$2\$$)==1)\\
+\>\>\>cost = $\$\%1\$\to$cost+{\tt DEC\_COST};\\
+\>\>else ABORT;\\
+\>$\}$=$\{$\\
+\>\>emit(``dec'', $\$1\$$, 0);\\
+\>\>return($\$1\$$);\\
+\>$\}$;
+\end{tabbing}
+\caption{Small Code Generation Example}
+\label{example}
+\end{figure}
+
+\begin{itemize}
+\item Rules 3 and 4 form a loop.
+The potential loop: temp$\to$operand$\to$temp$\to$operand$...$ is
+broken
+by the matcher recognizing that the cost of the second match of temp
+does not cost less than the first match of temp.
+
+\item In the cost clause of rule 5, the cost is the sum of the
+leaves plus the cost of the subtract instruction.
+The action clause emits code to add the two operands
+and leave the result in a temporary location.  The temporary is
+returned as a substitution for the subject tree.
+
+\item Rule 6 handles a special case where the left operand is
+already in a temporary and the constant is one.  In this case, the
+temporary is directly decremented and returned as the new tree.
+\end{itemize}
+
+\section{How to run \Twigcomp{}}
+
+Once a user has written the specification, \twigcomp{} is used to compile it
+into a subroutine.
+Figure~\ref{overview} gives an overview of how \twigcomp{} does this.
+In Figure~\ref{overview}, rounded boxes indicate files and sharp
+cornered boxes
+are processing programs.  The user creates the \twiglang{} specification which
+is represented by the top box.  The specification file must have the
+suffix ``{\tt .mt}''.  Let's say we have one called {\tt arbor.mt}.
+To invoke the \twigcomp{} compiler we type:
+
+\begin{verse}
+{\bf twig} [--{\bf w$xx$}] arbor.mt
+\end{verse}
+
+The proprocessor reads {\tt arbor.mt} and if there are no errors
+will create two files: {\tt symbols.h} and {\tt walker.c}.
+To build {\tt walker.c}, \twigcomp{} uses a template file called {\tt walker.$xx$}
+where $xx$ is the argument of the optional --{\bf w} flag.
+If the flag is omitted then $xx$ defaults to ``{\tt c1}''.
+
+{\tt Symbols.h} and {\tt walker.c}
+can then compiled and linked with the other modules of the
+user's program.  These other modules should provide the
+Tree and Cost ADTs described above.
+{\tt Walker.h} is an auxilliary include file that is referenced by {
+\tt walker.c}.
+A typical compile command is:
+
+\begin{verse}
+{\bf cc} -- {\bf I\sl include\_dir} {\bf -c} walker.c
+\end{verse}
+
+The --{\bf I\sl include\_dir} argument causes {\bf cc} to look for
+walker.h in {\sl include\_dir}.  The exact value of {\sl include\_dir}
+will depend on where the files are stored at your site.
+The tree matcher is initialized by calling {\tt \_matchinit} and matching
+can begin by calling {\tt \_match} from
+the user program.
+
+\section{Organization of the \Twigcomp{} Compiler}
+The preprocessor is written completely in C and YACC.
+It can be roughly broken up into four modules:
+\begin{itemize}
+\item Lexer --- The lexer performs lexical analysis.
+The input is tokenized by this module and passed to the parser
+as required.  Identifiers are looked up in the symbol table
+and space is reserved for them if they have never been encountered.
+\item Parser --- This part is written in YACC and recognizes the
+\twiglang{} language.  When a language construct is recognized actions
+are invoked.  Declarations, prologues and inserts will invoke symbol
+table operations when recognized.  Rules are broken up and stored
+in the symbol table too.  The tree patterns in the rules are unflattened
+and passed to the machine builder.
+\item Machine Builder --- This module takes tree patterns and incrementally
+builds an internal representation of the matching automaton.
+The builder takes this
+tree and then enumerates each of the possible paths from the root to the
+leaves.  These paths are treated as strings and a string matching automaton
+is built as described in \cite{fgrep} and \cite{treematch}.
+
+Inside the builder the partially built machine is kept in a linked list
+form.  Each machine state is a linked list and each node represents
+a state transition.  When the tables for the machine are written out into {
+\tt walker.c}, the linked list structure is
+translated into a table of sixteen bit integers.
+Each transistion is stored as two integers.  The first is
+the integer corresponding to the symbol that causes the transistion and the
+second is the index of the next state in the table.
+
+\item Symbol Table ---  The central data structure in this symbol table is
+the hash table.
+Each entry in the hash table is a bucket --- a linked list of symbol table
+entries.  There is no rehashing.  All colliding items are placed
+in the linked list.
+This is a simple
+and adequately efficient arrangement.  Depending on the type of symbols, the
+entry may point to other data structures.  Entries for $label\_id$s point to
+lists of trees.  $Node\_id$ entries record the integers that have been
+associates with them.  Other entries may point to data structures holding a
+textual representation of C code that forms action and cost parts.
+\end{itemize}
+
+Here is a list of the files that form the \twigcomp{} compiler's source
+and their approximate function.
+\begin{itemize}
+\item {\tt common.h} --- This file contains data definitions for how
+trees are represented in the parser.  It also contains type definitions for
+external functions.
+\item {\tt code.h} --- This file contains definitions for how code fragments
+are stored.
+\item {\tt sym.h} --- This file defines the major data structures in the
+symbol table.
+\item {\tt machine.h} ---  This file defines the how the matching automaton
+is represented internally.
+\item {\tt twig.y} --- This is the parser.
+\item {\tt sym.c} ---  This is the symbol table manager.
+\item {\tt path.c} --- The path string enumerator.
+\item {\tt machine.c} --- The machine builder.
+\item {\tt lex.c } --- The lexer.
+\item {\tt tree.c}, {\tt io.c}, and {\tt code.c} --- Miscellaneous
+routines for manipulating trees, performing I/O and manipulating
+code fragments.
+\end{itemize}
+
+\section{Performance}
+
+So far, the only experience we have with \twiglang{}
+is a VAX code generator written
+for the pcc2 compiler.  The \twiglang{} code generator is 25\% faster than
+the original code generator.
+The maintainability and modifiability of the code generator has
+improved.  For example adding the indexed addressing mode
+into the code generator took only a few hours.  The target code quality
+is just as good as the original code generator.
+
+The \twigcomp{} table
+generation algorithm is fast.  For the VAX machine description which
+consist of 109 rules, the generation time was 4.2 seconds on a 780.
+The generation time could be increased
+by two orders of magnitude
+before other table driven system can compete with \twigcomp{} on this basis.
+Furthermore, the tables are small.  The VAX description is only 7.5K
+and the text space for the walker is 30K.
+Again this is much smaller than those of other table driven systems.
+
+\Twiglang{} is currently a research tool.  Several things can be done to improve
+\twiglang{}'s performance.
+\begin{itemize}
+\item  \Twiglang{} does a lot of procedure calls.  Every machine transition
+require at least one procedure call.  Contrast this to YACC where a machine
+transition is done in line.
+\item \Twiglang{} performs a very expensive closure operation with respect to
+unit rules.  A unit rule is the analogue of a unit production and has the
+form:
+
+\begin{verse}
+$label_1$: $label_2$;
+\end{verse}
+
+\noindent This closure is done at run time.
+It requires many procedure calls and manipulates complex data structures.
+We are looking at ways of doing this
+at table generation time or to hash the results of the closures so that
+redundant calculations can be avoided.  The problem with doing them
+in the table generator is the possible explosion in its
+running time.
+
+\item Many of the cost parts for the rules are similar and hence some
+tests are performed and recalculated many times
+on a node.  \Twigcomp{} should be clever
+enough to factor out some of these tests and do them only once.
+However, the information required for \twigcomp{} to do this is not easily
+available.  It is hidden in the C code fragments.
+
+\item The current compact
+representation of the matching automaton
+require linear searching except at the
+start state where the large branching factor compelled us to use an
+array scheme.  Using another representation would speed up the
+matcher.  For example, implementing the VAX description as an array is
+estimated to use about 50K bytes but may provide
+performance improvement.
+
+\end{itemize}
+\bibliography{mybib}
+\bibliographystyle{plain}
+\end{document}

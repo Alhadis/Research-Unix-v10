@@ -1,0 +1,22 @@
+c	test local vs automatic b array
+	integer a(80)
+	integer c(20)
+	integer d(80)
+	read(5,100) (a(i), i=1,80)
+	write(6,200) (a(i), i=1,10)
+100	format( 80 a1)
+200	format( 3a4)
+	call s5pack(a,c,15)
+	write(6,250)
+250	format("packed output")
+	write(6,300) (c(i), i=1,4)
+300	format(4a4)
+	call s5pack(a,c,13)
+	write(6,300) (c(i), i=1,4)
+	call s5unpk(c,d,10)
+	write(6,325)
+325	format("unpacked output")
+	write(6,350) (d(i), i=1,80)
+350	format(20a4)
+	stop
+	end

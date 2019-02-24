@@ -1,0 +1,120 @@
+-IN80
+-TITLE MAKEMSG - PRODUCE SPITMSG.MSG FOR VAX/VMS SPITBOL SYSTEM
+-STITL PREAMBLE
+*	This is a Macro Spitbol program which generates the
+*	error message module (SPITMSG.MSG) for the VAX/VMS Spitbol
+*	interpreter.
+*
+*	Inputs to this program are:
+*
+*	1. filename.ERR - The list of error numbers and associated
+*		text from the Minimal translation.  Each record
+*		in this file consists of a three digit error message
+*		number and the remainder of the record contains the
+*		text of the message.  This file need not be sorted.
+*		It is produced automatically by the XFER program.
+*	2. Standard INPUT channel - The 'template' for SPITMSG.MSG
+*		is read using INPUT, and so must immediately follow
+*		the END statement of the program.  This template is
+*		copied to SPITMSG.MSG intact, except that lines beginning
+*		with "[[[" followed by a command are used to signal
+*		this program to invoke some special action to substitute
+*		something at that point. (E.g. Error messages).  The
+*		appendages in this program which perform these special
+*		actions all begin with "REP_" followed by the command
+*		used in the template to invoke them.
+*
+*	This program creates filename.MSG automatically.
+*
+*	Steve Duff for VAX/VMS Spitbol Project April 1980.
+*
+-STITL INITIALIZATION
+*
+*	Set Keywords
+*
+	&STLIMIT = 1000000; &TRIM = 1; &ANCHOR = 1
+*
+*	Create File Bindings
+*
+	TERMINAL = 'Enter name of .ERR file (no extension).'
+	TERMINAL = '	Output will be file.MSG.'
+	FILENAME = TERMINAL
+	INPUT(.INMESS,1,FILENAME '.ERR')		:F(NOFILE)
+	OUTPUT(.MSG,2,FILENAME '.MSG')
+*
+*	Create the Error Message Array
+*
+	MESSARY	= ARRAY(899)
+-STITL PROCESS THE ERROR MESSAGE FILE
+*
+*	This initial piece of code reads the input error message file
+*	into the array MESSARY, indexing each message by its number.
+*
+READ_MSGS
+	MESS	= INMESS			:F(MAKE_MSG)
+	MESS	LEN(3) . MESSID  REM . MESSTEXT	:F(FORMATBAD)
+	MAX_MESSID = GT(MESSID,MAX_MESSID) MESSID
+	MESSARY[MESSID] = MESSTEXT		:(READ_MSGS)
+-SPACE 3
+*
+*	Now we generate SPITMSG.MSG using the template.
+*
+MAKE_MSG
+	EMLINE	= INPUT				:F(EXIT)
+	EMLINE	'[[['  REM . CMD		:S($('REP_' CMD))
+	MSG	= EMLINE			:(MAKE_MSG)
+-SPACE 3
+*
+*	Here when finished
+*
+EXIT	:(END)
+-STITL	SUBSTITUTION APPENDAGES
+*
+*	Substitute error messages
+*
+REP_DOERRS
+	MESSID	= 0
+RDE.LOOP
+	MESSID	= LT(MESSID,MAX_MESSID) MESSID + 1	:F(MAKE_MSG)
+	MSG	= ' ERR' LPAD(MESSID,3,0) ' <' MESSARY[MESSID] '>/WARNING'
+	:(RDE.LOOP)
+*
+*	Emit definition for maximum error message number
+*
+REP_MAXMSG
+	MSG	= '	.LITERAL SPITBOL_MAXMSG = ' MAX_MESSID	:(MAKE_MSG)
+END
+ .TITLE	SPITMSG - MACRO SPITBOL Error Message Definitions
+ .FACILITY	SPITBOL,1000
+ .SEVERITY	SEVERE
+ EXIT		<EXIT Module Saved - !AD>/INFORMATIONAL/FAO=2
+ EXSUP		<Execution Suppressed>/INFORMATIONAL
+ INSVIRMEM	<Insufficient Virtual Memory>
+ LINETRUNC	<Input Source Line Truncated>/WARNING
+ LOADCRC	<Load Incompatible, Please Retranslate Source>
+ LOADMEM	<Insufficient Virtual Memory For LOAD>
+ LOADOPEN	<Can't Open LOAD File - !AD>/FAO=2
+ LOADMAP	<Error Mapping LOAD File - !AD>/FAO=2
+ LOADUNEXCOND	<Loaded Function Failed To Handle Condition At PC=!XL>/FAO=1/ERROR
+ LOADUNEXTRY	<Will Attempt to Recover By Forcing Failure>/WARN
+ LOADVERS	<Load Versions Incompatible, Please Retranslate Source>
+ NOSYSOUT	<Output File Not Accessable>
+ NOTEXITMOD	<File is Not a Saved EXIT File - !AD>/FAO=2
+ OPENOUT	<Error Opening !AD as Output>/FAO=2
+ OPENIN		<Error Opening !AD as Input>/FAO=2
+ PAUSE		<Paused at Statement !ZL>/FAO=1/INFORMATIONAL
+ STACKOVFL	<Virtual Stack Space Exhausted>
+ SYNTAX		<Syntax Error In Command Line>
+!
+! New in V3.5(BCAB-1131)
+!
+ BADLINK	<Incorrectly specified BASE(s) in SPITBOL link>
+ LOADBADINT	<Loaded function returned invalid integer result pointer>/WARN
+ LOADBADREAL	<Loaded function returned invalid real number result ptr>/WARN
+ LOADBADSTRING	<Loaded function returned invalid string descriptor>/WARN
+ LOADBADUNCONV	<Loaded function returned bad block for unconverted result>/WARN
+	.PAGE
+ ERR000 <Internal Spitbol System Error - Please Submit SPR>/SEVERE
+[[[DOERRS
+[[[MAXMSG
+	.END

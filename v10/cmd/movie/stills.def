@@ -1,0 +1,51 @@
+		Definition of Stills Language
+
+USAGE
+typical troff preprocessor: converts its input language (bracketed by
+    .begin stills and .end) into pic, and passes all else through
+
+STATEMENTS (A file and print are mandatory; all else optional.)
+
+#   comment -- must be first nonblank character on line
+
+view <name> <optional title, with blanks>
+    named views appear in order
+    if no view statements, all views are displayed
+    if title is enclosed in quotes, leading space is kept
+    if no title is given on a line, view name is used as a title
+
+print statements (any number of the following forms)
+    print all			Every click
+    print final			End of file
+    print <clickname> all	All clicks of clickname
+    print <clickname> <int>+	Designated click numbers of clickname
+
+Parameter settings
+    General form: <attribute> <value>
+	numeric values may be of form -n, n, +n, or missing (zero default)
+	all parameters reset to default at every begin statement
+    Attributes:
+	Mandatory: file
+	    give file name as <basename>.s
+	    stills develops .s to get .i, if needed
+	Text sizes: small medium big bigbig
+	    ``small -2'' does a .ps -2 for small text
+	Line widths: solid fat fatfat
+	    ``fat +4'' does a .ps +4 for fat lines
+	Directions: across down
+	    ``across 5'' gives 5 time snapshots across the page; views go
+		top to bottom; across 0 is default
+	    ``down'' or ``down 0'' gives as many snapshots as will fit down
+		an 8-inch page; views go left to right
+	Frame: frameht framewid margin
+	    height and width in inches, default 1.5
+	    margin is white space around data, default 0.05 = 5%
+	Optional parts: frames times
+	    values are ``vis'' and ``invis''; default ``vis''
+	    frames surround pictures; times are from print statements
+
+WISH LIST
+New Parameter Settings
+    Spread between frames	
+Frame control like GRAP ``graph with'', both for layout within
+    time snapshots and positioning of new snapshot w.r.t. previous

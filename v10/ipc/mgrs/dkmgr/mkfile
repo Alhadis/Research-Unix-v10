@@ -1,0 +1,34 @@
+OBJS=main.o dkctlchan.o dial.o listen.o dkerr.o
+COBJS=main.O dkctlchan.O dial.O listen.O dkerr.O
+MGR=dkmgr
+INCS=-I../../h
+CFLAGS=-g $INCS
+LIBS=../common/libcommon.a ../../libipc/libipc.a
+CLIBS=../common/*.O ../../libipc/*.O
+BINDIR=/usr/ipc/mgrs
+NPROC=2
+
+all:V: cyntax $MGR dkhup dkzap
+
+cyntax: $COBJS
+	cyntax -Vlogevent:1 $COBJS $CLIBS && touch cyntax
+
+$MGR: $OBJS $LIBS
+	$CC -g $OBJS -o $MGR $LIBS
+
+dkhup: dkhup.o dkctlchan.o
+	$CC -g dkhup.o dkctlchan.o -o dkhup
+
+dkzap: dkzap.o dkctlchan.o
+	$CC -g dkzap.o dkctlchan.o -o dkzap
+
+clean:V:
+	rm -f *.[oO] $MGR cyntax
+
+%.o: %.c ../../h/defs.h ../../h/ipc.h
+%.O: %.c ../../h/defs.h ../../h/ipc.h
+	cyntax -Vlogevent:1 -c -DLINT $INCS $stem.c
+
+install: all
+	rm -f $BINDIR/$MGR
+	cp $MGR $BINDIR

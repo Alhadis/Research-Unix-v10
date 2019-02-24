@@ -1,0 +1,169 @@
+.EQ
+define dollar % "\f(CW$\fP" %
+delim $$
+define f2c % "f\|2c" %
+define F2c % "F\^2c" %
+define libF77 % "libF77" %
+define libI77 % "libI77" %
+define LibF77 % "LibF77" %
+define LibI77 % "LibI77" %
+.EN
+.TL
+Availability of  $f2c$ \(em a Fortran to C Converter
+.AU
+S. I. Feldman
+.AI
+Bellcore
+Morristown, NJ 07960
+.AU
+D. M. Gay
+.AI
+.MH
+.AU
+M. W. Maimone
+.AI
+Carnegie-Mellon University
+Pittsburgh, PA 15213
+.AU
+N. L. Schryer
+.AI
+.MH
+.AB \ 
+.AE
+.PP
+Automatic conversion of Fortran 77
+.[ [
+ANSI FORTRAN 1978
+.]]
+to C
+.[ [
+Kernighan Ritchie 1988
+.]]
+is desirable for
+several reasons.  Sometimes it is useful to run a
+well-tested Fortran program on a machine that has a C
+compiler but no Fortran compiler.  At other times, it
+is convenient to mix C and Fortran.  Some things are
+impossible to express in Fortran 77 or are harder
+to express in Fortran than in C
+(e.g. storage management, some character operations,
+arrays of functions, heterogeneous data structures,
+and calls that depend on the operating system),
+and some programmers simply prefer C to Fortran.
+There is a large body of well tested
+Fortran source code for carrying out a wide variety of
+useful calculations, and it is sometimes desirable to
+exploit some of this Fortran source in a C environment.
+Many vendors provide some way of mixing C and Fortran, but
+the details vary from system to system.
+Automatic Fortran to C conversion lets one create a
+.I portable
+C program that exploits Fortran source code.
+.PP
+A side benefit of automatic Fortran 77 to C conversion is that
+it allows tools like
+.I lint
+\ 
+.[[
+v101
+.]]
+to provide Fortran 77 programs with some of the consistency
+and portability checks that the Pfort Verifier
+.[ [
+Ryder 1974
+.]]
+made available to Fortran 66 programs.
+.PP
+Starting from Feldman's original $f77$ compiler
+.[ [
+Feldman Weinberger Portable Fortran
+.]]
+(the original UNIX\u\(rg\d Fortran 77 compiler),
+we have created a program called $f2c$ that converts
+Fortran 77 source code into C.
+Our report
+.[ [
+Feldman Gay Maimone Schryer
+.]]
+describes $f2c$'s conversions in considerable detail;
+the purpose of this note is to point out the availability
+both of our report and of the source for $f2c$ itself.
+On request, we are happy to send out paper copies of the report.
+You can also obtain a Postscript version of it by electronic
+mail by sending the message
+.ce
+\f(CWsend f2c.ps from f2c\fR
+to \f(CWnetlib@research.att.com\fR.  Source for both $f2c$
+and the support libraries assumed by the C it produces
+is available by electronic mail and by $ftp$.  For details,
+send the electronic-mail message
+.ce
+\f(CWsend index from f2c\fR
+to  \f(CWnetlib@research.att.com\fR.  You can also $ftp$ to
+\f(CWresearch.att.com\fR; in subdirectory \f(CWdist/f2c\fR you
+will find a copy of the \f(CWindex\fR file and of source for
+$f2c$ and its support libraries.
+(As of this writing, 426 different people had
+obtained $f2c$ source from
+.I netlib ,
+i.e., by electronic mail,
+and 644 had obtained it by $ftp$.)
+.PP
+We have used $f2c$ to convert various large programs and
+subroutine libraries to C automatically (i.e., with no manual intervention);
+these include the \s-2PORT3\s+2 subroutine library (\s-2PORT1\s+2
+is described in
+.[ [
+Fox Hall Schryer Algorithm 1978
+.]
+.[
+Fox Hall Schryer port 1978
+.]]),
+MINOS
+.[ [
+Murtagh Saunders 1987
+.]],
+and Schryer's floating-point test
+.[ [
+Schryer floating
+.]].
+In addition to our own testing, we have been helped by feedback
+from many people and by observing $f2c$'s behavior on some 21 megabytes
+of Fortran submitted to $netlib$'s experimental ``\f(CWexecute f2c\fR''
+service; the feedback and our observations have led us to isolate
+and repair numerous bugs and to extend $f2c$ in various ways.
+.PP
+Although we have tried to make $f2c$'s output reasonably readable,
+our goal of strict compatibility with $f77$ implies some nasty
+looking conversions.  Input/output statements, in particular,
+generally get expanded into
+a series of calls on routines in $libI77$ ($f77$'s I/O library).
+Thus the C output of $f2c$ would probably be something of a nightmare
+to maintain as C; it is much more sensible to maintain the original
+Fortran, translating it anew each time it changes.  Some commercial
+vendors, e.g., those listed in an appendix to our report,
+seek to perform translations yielding C that one
+might reasonably maintain directly; in general, these translations
+require some manual intervention.
+.PP
+$F2c$ optionally emits special files called
+.I prototype
+files that summarize the calling sequences of
+the translated subprograms.
+A side benefit of $f2c$ is that it can read prototype
+files and check the consistency of calling sequences
+across files.  We have found this to be a useful debugging aid.
+Use of prototypes is slightly more convenient than invoking
+.I lint ,
+but
+.I lint
+warns of other possible errors, such as variables that may be
+referenced before they are set.
+
+.ce
+REFERENCES
+.LP
+.so tmac.sdisp1
+.[
+$LIST$
+.]

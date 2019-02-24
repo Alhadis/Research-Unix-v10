@@ -1,0 +1,2574 @@
+
+Return-Path: <benson@odi.com>
+Received: from indirect.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA08711; Tue, 16 May 89 09:31:32 EDT
+Received: by indirect.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA17362; Tue, 16 May 89 09:31:48 EDT
+Message-Id: <8905161331.AA17362@indirect.odi.com>
+To: c++-bugs
+Subject: void return types and void * types as printed into C
+Date: Tue, 16 May 89 09:31:47 EDT
+From: Benson I. Margulies <benson@odi.com>
+
+Pretty much all C compilers these days support void. Sun's certainly does.
+The mapping of void to char in cfront makes some debuggers print junk.
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA08826; Tue, 16 May 89 10:33:10 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02086; Tue, 16 May 89 10:33:14 EDT
+Date: Tue, 16 May 89 10:33:14 EDT
+From: sam@odi.com
+Message-Id: <8905161433.AA02086@joplin.odi.com>
+To: c++-bugs
+Subject: lexer is confused during :: processing
+
+
+The following is a bug report that will be forwarded to AT&T. It is in a
+template form designed by AT&T to help them speed up the disposition of bug
+reports; you may feel inclined to dispute this claim.
+
+
+
+
+
+who: sam@odi.com
+file:
+date: 5/12/89
+state: not fixed
+sum: 
+
+    A reference at top level to a member of the form x::y provokes an error
+    message if y also happens to be the name of a class with a constructor.
+
+	      
+release filed under: beta 6
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+description of bug with output now and expected output:
+
+
+    Output:
+
+    CC -I/usr1/sam/2.0/test/ +e0 -F /tmp/lalex-bug.C -c > /dev/null
+    "/usr1/sam/2.0/test/lalex-bug.C", line 23: error:  foo redefined: both a class name with constructor and an identifier
+    "/usr1/sam/2.0/test/lalex-bug.C", line 25: error:  foo1 redefined: both a class name with constructor and an identifier
+
+    Compilation exited abnormally with code 1 at Mon May 15 19:06:18
+
+
+
+    Expected Output:
+
+    The test should compile without any error messages.
+
+
+description of analysis and changes:
+
+    The problem appears to be localized to the lexer's ability to deal with names
+    of the form x::y at the top level, when y also happens to be the name of a
+    class. It does does not account for the fact that y is in the scope of x and
+    is consequently not a top level definition. 
+
+
+
+Example below if available-
+*/
+
+/* test exhibiting bug goes below */
+
+    class foo {
+      foo() ;
+    } ;
+
+    class foo1 {
+      foo1() ;
+    } ;
+
+    class bar {
+    public:
+      static int foo1 ;
+      void foo() ;
+    } ;
+
+    class bar1 {
+    public:
+      void foo() {} ; // No problem with foo being an inline
+    } ;
+
+
+
+    void bar::foo() {} // Redefinition error for foo
+
+    int bar::foo1 = 0 ; // Similar redefinition error
+
+    main () {
+      bar::foo1 = 5 ;   // This is ok
+    }
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA08913; Tue, 16 May 89 10:43:55 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02104; Tue, 16 May 89 10:44:00 EDT
+Date: Tue, 16 May 89 10:44:00 EDT
+From: sam@odi.com
+Message-Id: <8905161444.AA02104@joplin.odi.com>
+To: c++-bugs
+Subject: typedef enum foo{} ; core dumps
+
+
+This is a bug report that will be submitted to AT&T. It has been fixed at ODI.
+
+
+
+/*ident	"@(#)ctrans:bug.header	1.1" */
+/*
+who: sam@odi.com
+file:
+date: 5/15/89
+state: not fixed
+sum: 
+
+    An enumeration typedef of the form:
+
+    typedef bool {true, false} bool ;
+
+    provokes a core dump.
+		
+		
+release filed under: beta 6
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+description of bug with output now and expected output:
+
+    The core dump is due to a null pointer being dereferenced at line 454 in the
+    function: 
+	    bit type::check(Ptype t, TOK oper)
+
+    The backtrace is:
+
+    #0  0x41b42 in check__4typeFP4typeUc (__0this=(Ptype) 0x76594, __0t=(Ptype) 0x765d8, __0oper=0) (typ.c line 454)
+    #1  0x2b820 in hide__4nameFv (__0this=(Pname) 0x6db6a) (norm.c line 579)
+    #2  0x2b1bc in aggr__8basetypeFv (__0this=(Pbase) 0x76594) (norm.c line 415)
+    #3  0x447cc in yyparse__Fv () (gram.y line 652)
+    #4  0x43b86 in syn__Fv () (gram.y line 253)
+    #5  0x294e4 in run__Fv () (main.c line 83)
+    #6  0x2a264 in main (__0argc=1, __0argv=(char **) 0xefffe68) (main.c line 477)
+
+
+    OUTPUT:
+
+    CC  temp.C:
+    "temp.C", line 2: internal <<C++ Translator 2.0 Beta 6 04/12/89>> error: bus error (or something nasty like that)
+    1 error
+
+
+    The test should have compiled without any errors.
+
+description of analysis and changes:
+
+    The error appears to be due to check for EOBJ in the following code fragment:
+
+		    b1 = t1->base;
+		    switch (b1) {
+		    case TYPE:
+			    if (Pbase(t1)->b_const) cnst1++;
+			    t1 = Pbase(t1)->b_name->tp;
+			    goto top;
+    *		case EOBJ:
+    *			t1 = Penum(Pbase(t1)->b_name->tp)->e_type;
+    *			goto top;
+		    }
+
+		    b2 = t2->base;
+		    switch (b2) {
+		    case TYPE:
+			    if (Pbase(t2)->b_const) cnst2++;
+			    t2 = Pbase(t2)->b_name->tp;
+			    goto top;
+    *		case EOBJ:
+    *			t2 = Penum(Pbase(t2)->b_name->tp)->e_type;
+    *			goto top;
+		    }
+
+    The "goto top" statement bypasses the check for null pointers that guards the
+    enclosing while loop. 
+
+    There seem to be two possible fixes:
+
+    1) Change the goto top into a continue, so that the while expression is
+    evaluated. This provokes a redefinition error message, which may be the
+    correct thing to do, but the Reference manual is unclear on this point.  The
+    Evolution of C++:1985 to 1989 paper seems to favor the notion of separate name
+    spaces for structure tags, and possibly for enum tags. The second fix is in
+    keeping with this trend.
+
+
+    2) The second alternative is to permit such a declaration.  The EOBJ case
+    blocks the processing of EOBJ types later in the body of the same function, at
+    the enum_check label. Removing the lines marked with asterisks, permits
+    control to reach the enum_check code, and consequently permit such
+    declarations.
+
+Example below if available-
+*/
+
+/* test exhibiting bug goes below */
+
+
+
+   typedef enum bool {true, false} bool ;
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA09075; Tue, 16 May 89 11:22:14 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02122; Tue, 16 May 89 11:22:18 EDT
+Date: Tue, 16 May 89 11:22:18 EDT
+From: sam@odi.com
+Message-Id: <8905161522.AA02122@joplin.odi.com>
+To: c++-bugs
+Subject: BD in patch step
+
+
+Another candidate for AT&T.
+
+
+/*ident	"@(#)ctrans:bug.header	1.1" */
+/*
+who: sam@odi.com
+file:
+date: ?/?/89
+state: not fixed
+sum: 
+
+
+    The patch step, ie. the step following the link step to ensure that constructors
+    are run on static varaibles, takes a very long time  when the a.out file
+    contains debug symbols. "patching" cfront takes approximately 4 minutes on a
+    Sun 3/60.
+
+    The enclosed fix speeds up the "patch step", it reduces the time taken to
+    patch "cfront" to approximately 5 seconds.
+
+release filed under: beta 6
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+description of bug with output now and expected output:
+
+
+
+    compile (with the -g option)  and link cfront or any substantial C++ program
+    and observe the time taken by the patch step.
+
+
+description of analysis and changes:
+
+
+
+    The excessive time was due to the random i/o being done to obtain the string
+    for every symbol in a.out file. The enclosed fix uses a faster test that
+    eliminates the random i/o associated with debug symbols.
+
+
+
+    The diff for BSDpatch.c is enclosed below:
+
+
+    diff patch.c /odi/C++/install/att_2_0b6/Patch/BSDpatch.c
+    106,110d104
+    < 
+    < 
+    <             /* a symbol table entry, ignore it */
+    < 	    if (sym.n_type & (unsigned char) N_STAB) continue ;
+    < 
+
+
+
+Example below if available-
+
+
+Use cfront as a candidate.
+
+
+*/
+
+/* test exhibiting bug goes below */
+
+
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA10875; Tue, 16 May 89 17:21:34 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA03492; Tue, 16 May 89 17:21:52 EDT
+Date: Tue, 16 May 89 17:21:52 EDT
+From: dlw@odi.com
+Message-Id: <8905162121.AA03492@valens.odi.com>
+To: c++-bugs
+Subject: Overloading the new operator
+
+If you provide an overloaded "operator new" with extra arguments, and
+do not provide an "operator new" with no extra arguments, you get an
+incomprehensible error message, whose line number is the last line of
+the constructor function.  I don't think it should be an error at all.
+
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA13763; Wed, 17 May 89 17:55:45 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04487; Wed, 17 May 89 17:55:51 EDT
+Date: Wed, 17 May 89 17:55:51 EDT
+From: sam@odi.com
+Message-Id: <8905172155.AA04487@joplin.odi.com>
+To: c++-bugs
+Subject: data members of the form "struct x {} x;"  are broken
+
+
+/*ident	"@(#)ctrans:bug.header	1.1" */
+/*
+who: sam@odi.com
+file:
+date: 5/17/89
+state: not fixed
+sum: 
+
+    Data members of the form:
+
+       struct x {} x ;
+
+    are incorrectly translated. They are omitted completely from the C struct
+    generated as a translation of the enclosing class.
+
+release filed under: beta 6
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+description of bug with output now and expected output:
+
+
+    Consider a class declaration of the form:
+
+    class s {
+      class x1 {
+	int i ;
+      } x1; // Does not emit this field in the generated c struct
+    };
+
+    Class s is translated by cfront into:
+
+	#line 1 "2.0/test/struct-bug.c"
+	struct s {	/* sizeof s == 4 */
+	};
+
+    Note the missing reference to the field x1.
+
+    The correct translation after applying the enclosed fix is:
+
+	#line 1 "struct-bug.c"
+	struct s {	/* sizeof s == 4 */
+
+	#line 4 "struct-bug.c"
+	struct x1 x1__1s ;
+	};
+
+
+
+description of analysis and changes:
+
+    The problem is that the type name x1, hides the member name x1, in the member
+    table for the class "s". The function classdef::print_members does not allow
+    for such hiding. The fix provided below accounts for this hiding.
+
+    1374,1378c1371,1372
+    < 	// Sam: A class or an enum type declared within a class can hide a
+    < 	// member with the same name, so make sure that it gets printed by
+    < 	// traversing the n_tbl_list to get at these names.
+    < 	for (Pname nn=memtbl->get_mem(i=1); nn; nn=memtbl->get_mem(++i))
+    < 	  do if (nn->base==NAME
+    ---
+    > 	for (Pname nn=memtbl->get_mem(i=1); nn; nn=memtbl->get_mem(++i)) {
+    > 		if (nn->base==NAME
+    1389,1392c1383,1384
+    < 		      }
+    < 	  while ((nn->base == NAME) &&
+    < 		 ((nn->tp->base!=CLASS) || (nn->tp->base!=ENUM)) &&
+    < 		 (nn = nn->n_tbl_list)) ;
+    ---
+    > 		}
+    > 	}
+
+			
+			
+
+Example below if available-
+*/
+
+/* test exhibiting bug goes below */
+
+
+class s {
+  class x1 {
+    int i ;
+  } x1; // Does not emit this field in the generated c struct
+};
+
+s v ;
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA15049; Thu, 18 May 89 10:44:36 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04745; Thu, 18 May 89 10:44:41 EDT
+Date: Thu, 18 May 89 10:44:41 EDT
+From: sam@odi.com
+Message-Id: <8905181444.AA04745@joplin.odi.com>
+To: c++-bugs
+Subject: linkage specification is incorrectly processed
+
+
+
+
+
+/*ident	"@(#)ctrans:bug.header	1.1" */
+/*
+who: sam@odi.com
+file:
+date: 5/18/89
+state: not fixed
+sum:
+
+The linkage specification sometimes produces unwarranted error messages.
+
+release filed under: beta 6
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+description of bug with output now and expected output:
+
+Compiling the program below provokes an error message when it shouldn't
+
+CC  2.0/test/linkage-bug.C:
+"2.0/test/linkage-bug.C", line 6: error: inconsistent linkage specifications for malloc()
+1 error
+
+
+description of analysis and changes:
+
+
+The test to determine whether two linkages are consistent is incorrect in the
+function 
+
+Pname name::dofct(Ptable tbl, TOK scope)
+
+The fix is provided below as output from diff:
+
+file: dcl3.c
+1667,1669c1667
+< 			if (linkage && nf->f_signature &&
+< 			    *nf->f_signature  // the signature is not ""
+< 			    )
+---
+> 			if (linkage && nf->f_signature)
+
+
+Example below if available-
+*/
+
+/* test exhibiting bug goes below */
+
+
+
+extern "C" char *malloc(unsigned);
+
+extern "C" {
+	char *malloc(unsigned);
+
+      } ;
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA17783; Fri, 19 May 89 10:45:39 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA05539; Fri, 19 May 89 10:45:47 EDT
+Date: Fri, 19 May 89 10:45:47 EDT
+From: sam@odi.com
+Message-Id: <8905191445.AA05539@joplin.odi.com>
+To: c++-bugs
+Cc: benson
+Subject: A missing ";" after a function declaration provokes a core dump
+
+
+
+/*ident	"@(#)ctrans:bug.header	1.1" */
+/*
+who: sam@odi.com
+file:
+date: 5/19/89
+state: not fixed
+sum: 
+
+A missing semi colon after a function declaration causes a core dump.
+
+release filed under: beta 6
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+description of bug with output now and expected output:
+
+A missing semi after a function declaration is detected as an error, but the
+cfront core dumps trying to issue the error message since the format effector
+used for the error message is a %t(for type) rather than a %k for token.
+
+Erroneous Output
+----------------
+
+CC  2.0/test/syntax-bug.c:
+"2.0/test/syntax-bug.c", line 2: error: syntax error: unexpected "2.0/test/syntax-bug.c", line 2: "2.0/test/syntax-bug.c", line 2: internal <<C++ Translator 2.0 Beta 6 04/12/89>> error: bus error (or something nasty like that)
+1 error
+
+
+Correct Output
+-------------
+
+    CC  syntax-bug.c:
+    "syntax-bug.c", line 2: error: syntax error: unexpected char
+    "syntax-bug.c", line 2: error: syntax error
+
+
+description of analysis and changes:
+
+    Fixing the call to error in the production (in file gram.y)
+
+	    arg_list : arg_lp arg_type_list ellipsis_opt RP TYPE
+
+    to use the %k format effector fixes the problem.
+
+
+Example below if available-
+*/
+
+/* test exhibiting bug goes below */
+
+
+
+int foo(int i) 
+
+char i ;
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA06592; Wed, 24 May 89 17:49:46 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA01476; Wed, 24 May 89 17:49:36 EDT
+Date: Wed, 24 May 89 17:49:36 EDT
+From: dlw@odi.com
+Message-Id: <8905242149.AA01476@valens.odi.com>
+To: c++bugs
+Subject: socketpair
+Reply-To: dlw@odi.com
+
+The BSD system call "socketpair" is not defined in any of the
+include files.
+
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA08331; Thu, 25 May 89 11:12:25 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02117; Thu, 25 May 89 11:12:17 EDT
+Date: Thu, 25 May 89 11:12:17 EDT
+From: dlw@odi.com
+Message-Id: <8905251512.AA02117@valens.odi.com>
+To: c++bugs
+Subject: more standard declarations
+Reply-To: dlw@odi.com
+
+C++'s libc.h does declare mktemp, but does not have a declaration
+for mkstemp.  These are both library routines from the "(3)" part
+of the documentation.
+
+
+Return-Path: <tompkins@odi.com>
+Received: from moon.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA04276; Tue, 20 Jun 89 12:34:12 EDT
+Received: by moon.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA00792; Tue, 20 Jun 89 12:34:12 EDT
+Date: Tue, 20 Jun 89 12:34:12 EDT
+From: tompkins@odi.com
+Message-Id: <8906201634.AA00792@moon.odi.com>
+To: c++-bugs
+Subject: anonymous union bug
+
+
+
+/*ident	"@(#)ctrans:bug.header	1.1" */
+/*
+
+who: Rick Tompkins, Object Design, Inc.
+
+file: print2.c:658
+
+	default:
+		// encode with lexicallevel UNLESS ``special''
+		// e.g. __builtin
+		if (string[0]!='_' || string[1]!='_') {
+			if (i)
+658:				fprintf(out_file,"__%d__O%d.",lex_level-1,i,i);
+			else
+				fprintf(out_file,"__%d",lex_level);
+			}
+		}
+		break;
+
+
+date: 6/20/89
+
+state: not fixed
+
+sum: 	Anonymous unions within functions result in undefined unions.
+
+release filed under: beta 6
+
+MR:
+priority:
+category:
+teststate: 
+name of changed files:
+release agent:
+related MRs:
+
+description of bug with output now and expected output:
+
+ 	Anonymous unions within functions result in undefined unions.
+	This is due to the inconsistency in outputing the lexical level
+	of such a union when generating its C name. In an expression the 
+	union name generated for a anonymous union at the function level 
+	has the lexical level part while the corresponding declaration 
+	does not.
+
+	EXAMPLE:
+
+	    main ()
+	    {
+
+		union {
+		    char u_c;
+		    int u_i;
+		    float u_f;
+		  };
+
+		u_c = 'a';	/* These result in an undefined union name. */
+		u_i = 9;
+		u_f = 3.5;
+
+	    }
+	
+
+	OUTPUT:
+
+	    #line 1 "e.out.C"
+
+	    /* <<C++ Translator 2.0 Beta 6 04/12/89 ODI version 1.2.1.18 of 89/06/06 16:24:40 by benson. Compiled by tompkins at 89-06-08 14:48:22 in /usr1/tompkins/C++_2.0_bugs/src>> */
+	    /* < e.out.C > */
+
+	    #line 3 "e.out.C"
+	    char *_vec_new ();
+
+	    #line 3 "e.out.C"
+	    char _vec_delete ();
+	    typedef int (*__vptp)();
+	    struct __mptr {short d; short i; __vptp f; };
+
+	    #line 3 "e.out.C"
+
+	    #line 6 "e.out.C"
+	    union __C1 {	/* sizeof __C1 == 4 */
+
+	    #line 7 "e.out.C"
+	    char u_c ;
+	    int u_i ;
+	    float u_f ;
+	    };
+
+	    #line 3 "e.out.C"
+	    int main (){ _main(); 
+	    #line 4 "e.out.C"
+	    { 
+	    #line 6 "e.out.C"
+
+	    #line 10 "e.out.C"
+	    union __C1 __O1 ;	/* Declaration of generated union. */
+
+	    #line 12 "e.out.C"
+	    __1__O1.u_c = 'a' ;	/* Use of generated union has different name.*/
+	    __1__O1.u_i = 9 ;
+	    __1__O1.u_f = 3.5 ;
+	    }
+	    } 
+	    #line 18 "e.out.C"
+
+	    /* the end */
+
+	ERRORS:
+
+	    moon:tompkins(34)> /usr/local/bin/CC -g -o e.out e.out.C
+	      e.out.C:
+	    cc    -o e.out  -g e.out..c -l/usr/local/lib/libC.1.2.a
+	    "e.out.C", line 12: __1__O1 undefined
+
+
+description of analysis and changes:
+
+	The simplest change is to delete the lexical level part of the
+	generated union name. And of course, the extra "i" argument to
+	fprintf can be deleted as well. Given that any generated union
+	name is guaranteed to be unique within a file, the lexical level
+	isn't needed.
+
+
+print2.c:658>			fprintf(out_file,"__O%d.",,i);
+
+
+Example below if available-
+*/
+
+/* test exhibiting bug goes below */
+
+
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA14961; Wed, 28 Jun 89 19:35:57 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA07403; Wed, 28 Jun 89 19:35:58 EDT
+Date: Wed, 28 Jun 89 19:35:58 EDT
+From: sam@odi.com
+Message-Id: <8906282335.AA07403@joplin.odi.com>
+To: c++-bugs
+Subject: name hiding lossage in real 2.0
+
+
+
+Rather than fixing the bugs associated with conflicting type and member names,
+2.0 has made things worse. You now have to ensure that even formal parmeter
+member names don't conflict with an existing type.
+
+Thus the following example that compiled under 2.0 beta, fails in the real 2.0
+Changing the name of the formal for y::foo permits compilation to proceed.
+					  
+					  
+		    
+class x{ public: x() ;} ;
+
+class y {
+  foo (int x ) ;
+  gotcha() ;
+} ;
+
+y::gotcha() {
+  new x() ;  // Syntax error in real 2.0, ok in beta 2.0
+}
+
+
+Return-Path: <benson>
+Received: by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA28498; Sun, 2 Jul 89 08:02:50 EDT
+Date: Sun, 2 Jul 89 08:02:50 EDT
+From: Benson Margulies <benson>
+Message-Id: <8907021202.AA28498@odi.com>
+To: c++bugs
+Subject: exit.c shadows important functionality of sun's exit(3)
+
+exit(3) has various responsabilities other than calling _exit.
+The copy of exit in libC.a busts profiling, in that the call
+to _mcount is lost. It probably also busts sun's on_exit
+stuff, and possibly other things. 
+
+
+Return-Path: <benson>
+Received: by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA02052; Mon, 3 Jul 89 20:07:23 EDT
+Message-Id: <8907040007.AA02052@odi.com>
+To: dlw@odi.com
+Cc: c++-bugs
+Subject: Re: stdargs.h 
+In-Reply-To: Your message of Mon, 03 Jul 89 17:22:21 -0400.
+             <8907032122.AA04350@valens.odi.com> 
+Date: Mon, 03 Jul 89 20:07:22 EDT
+From: Benson I. Margulies <benson>
+
+
+    The file /odi/C++/install/bugs/include/stdargs.h is missing an #endif.
+
+    (The att2.0 version of the file is also broken.)
+
+stdargs.h is full of non-working code. stdarg.h is correct.
+stdargs.h should be deleted.
+
+
+
+Return-Path: <tompkins@odi.com>
+Received: from moon.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA07601; Wed, 12 Jul 89 15:54:48 EDT
+Received: by moon.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA03177; Wed, 12 Jul 89 15:55:19 EDT
+Date: Wed, 12 Jul 89 15:55:19 EDT
+From: tompkins@odi.com
+Message-Id: <8907121955.AA03177@moon.odi.com>
+To: c++-bugs
+Subject: [aml: trivial spelling bug]
+
+Return-Path: <aml>
+Date: Wed, 12 Jul 89 15:32:51 EDT
+From: Al Leisinger <aml>
+To: rick
+Subject: trivial spelling bug
+
+Cfront error message:
+	warning: negative retured from function returning unsigned
+			  ^^^^^^^
+		          returned  ??
+I know it's trivial but why not report it ?
+
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA09657; Wed, 12 Jul 89 18:50:48 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA16557; Wed, 12 Jul 89 18:51:05 EDT
+Date: Wed, 12 Jul 89 18:51:05 EDT
+From: dlw@odi.com
+Message-Id: <8907122251.AA16557@valens.odi.com>
+To: c++bugs
+Subject: mman.h
+Reply-To: dlw@odi.com
+
+mman.h has been changed from the beta release to the 2.0 release.  It
+now no longer provides a declaration for the "mprotect" system call.
+
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA02846; Fri, 14 Jul 89 08:35:48 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA00287; Fri, 14 Jul 89 08:36:10 EDT
+Message-Id: <8907141236.AA00287@cass.odi.com>
+To: sam, c++bugs
+Subject: void versus ansi mode
+Date: Fri, 14 Jul 89 08:36:06 EDT
+From: Benson I. Margulies <benson@odi.com>
+
+Cfront translates void types to char types, in apparent support
+of really ancient K&R c compilers. This is supposedly turned off
+by +a1. However, 
+
+(1) the code in print2.c that conditions on ansi_opt fails to
+print the string "void" when ansi mode is turned on. It just prints
+nothing.
+
+(2) the code in simpl.c referred to by print2.c dosen't even check
+ansi mode, it just emits a cast.
+
+I've changed print2 and simple to leave void be when running on a sun,
+since the sun compiler is quite content with void. I also fixed it to
+print "void" when in ansi mode. 
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA03158; Fri, 14 Jul 89 11:44:01 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA00819; Fri, 14 Jul 89 11:44:00 EDT
+Date: Fri, 14 Jul 89 11:44:00 EDT
+From: sam@odi.com
+Message-Id: <8907141544.AA00819@joplin.odi.com>
+To: c++-bugs
+Subject: problem with reference initialization
+
+
+
+A reference initialized by a function returning a reference generates bad c
+code which provokes an error message from cc of the form:
+
+"/usr1/sam/2.0/test/cast.C", line 3: unacceptable operand of &
+
+
+for the example provided below:
+
+
+int &foo () ;
+int &i = foo() ;
+
+
+
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA17585; Wed, 19 Jul 89 07:46:52 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA01219; Wed, 19 Jul 89 07:47:19 EDT
+Message-Id: <8907191147.AA01219@cass.odi.com>
+To: c++bugs
+Subject: confusion over placement options
+Date: Wed, 19 Jul 89 07:47:17 EDT
+From: Benson I. Margulies <benson@odi.com>
+
+Please explain the following message:
+
+"foo.C", line 7: error:  argument  2 of type void * expected for T::operator new()
+
+#include <sys/types.h>
+#include <malloc.h>
+
+void * operator new (size_t, void *);
+
+class T {
+  public:
+    char * s;
+    void * operator new (size_t, void *);
+    T(int x, void * v) {
+	s = new (v)(char[x]);
+    };
+};
+
+void * T::operator new (size_t s, void * v)
+{
+    return (void *)malloc(s);
+}
+
+T* Q()
+{
+    int z = 1;
+    void * v = 0;
+    T* t = new (v)T(z, v);
+    return t;
+}
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA17849; Wed, 19 Jul 89 09:58:24 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA01533; Wed, 19 Jul 89 09:58:52 EDT
+Message-Id: <8907191358.AA01533@cass.odi.com>
+To: c++bugs
+Subject: don't put names on typedef param list params
+Date: Wed, 19 Jul 89 09:58:49 EDT
+From: Benson I. Margulies <benson@odi.com>
+
+
+The followings gets an entirely spurious error.
+
+class node {
+};
+
+typedef (* gruz) (node * node);
+
+class bn : public node {
+    int y;
+};
+
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA18574; Wed, 19 Jul 89 12:39:44 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA11032; Wed, 19 Jul 89 12:40:26 EDT
+Date: Wed, 19 Jul 89 12:40:26 EDT
+From: landis@odi.com
+Message-Id: <8907191640.AA11032@pigpen.odi.com>
+To: C++-bugs
+Subject: static members of nested classes
+
+Static members of nested class definitions don't work.  The
+following code:
+
+  main()
+  {
+    class T {
+     public:
+      static int count;
+    };
+
+    T::count++;		// "int T::count;" also causes failure
+  }
+
+results in a link error: 
+
+  ld: Undefined symbol
+     T__main__Fv__L1::count
+
+Now, the C++ 2.0 reference manual says that 
+ (1) The declaration of a static member in its class declaration is
+     NOT a definition.
+ (2) Static members of a class declared local to some function ...
+     cannot be initialized [and must therefore accept the default
+     "all zeros" initialization].
+
+The current behavior, though, is worse than that: static members of a
+nested class cannot be referred to at all, because they are declared
+but never defined.
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA18753; Wed, 19 Jul 89 15:12:40 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA24717; Wed, 19 Jul 89 15:13:09 EDT
+Date: Wed, 19 Jul 89 15:13:09 EDT
+From: dlw@odi.com
+Message-Id: <8907191913.AA24717@valens.odi.com>
+To: landis@odi.com
+Cc: C++-bugs
+In-Reply-To: landis@odi.com's message of Wed, 19 Jul 89 12:40:26 EDT <8907191640.AA11032@pigpen.odi.com>
+Subject: static members of nested classes
+Reply-To: dlw@odi.com
+
+   Date: Wed, 19 Jul 89 12:40:26 EDT
+   From: landis@odi.com
+
+   The current behavior, though, is worse than that: static members of a
+   nested class cannot be referred to at all, because they are declared
+   but never defined.
+
+You know, it's conceivable that this works properly with the C
+compiler that they use at AT&T, because C compilers are inconsistent
+about how they handle this.  Harbison & Steele goes into great detail
+about the four different sets of behavior that they've seen in various
+C compilers.
+
+However, that's not much of an excuse, because if that's why the bug
+exists, then it's only because they are depending on non-ANSI-like
+behavior.
+
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA26387; Fri, 21 Jul 89 08:57:51 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA06686; Fri, 21 Jul 89 08:58:23 EDT
+Date: Fri, 21 Jul 89 08:58:23 EDT
+From: benson@odi.com
+Message-Id: <8907211258.AA06686@cass.odi.com>
+To: c++bugs
+Subject: malloc.h
+
+malloc.h is broken. 
+
+First of all, the correct prototype for mallinfo on a sun is to
+take no arguments.
+
+Second of all, the attempt to deal with the identically named
+structure and function fails, since the function of no args
+gets C++ linkage.
+
+I kludged around it by removing the declaration from the extern "C",
+and surrounding the cc/malloc.h include with
+
+#pragma linkage C
+#pragma linkage
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA06715; Thu, 27 Jul 89 11:51:19 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA00607; Thu, 27 Jul 89 11:51:57 EDT
+Message-Id: <8907271551.AA00607@cass.odi.com>
+To: c++bugs
+Subject: local typedefs and references are broken
+Date: Thu, 27 Jul 89 11:51:54 EDT
+From: Benson I. Margulies <benson@odi.com>
+
+
+the following emits a reference to type "z" in the C code
+for the declaration of ZZ.
+
+int qq();
+
+int q(int a) {
+    typedef int z;
+    z Z;
+    z& ZZ = Z;
+
+    int b;
+
+    Z =  qq();
+
+    b= (int)(a + ZZ);
+
+    return b;
+}
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA07632; Thu, 27 Jul 89 18:22:56 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA14970; Thu, 27 Jul 89 18:23:52 EDT
+Date: Thu, 27 Jul 89 18:23:52 EDT
+From: landis@odi.com
+Message-Id: <8907272223.AA14970@pigpen.odi.com>
+To: c++-bugs
+Subject: global ref variable init broken?
+
+The following file:
+
+	int theint;
+
+	int& intref(){return theint;};
+	int& bar = intref();
+
+	main()
+	{
+	}
+
+gives the message (from cc):
+
+	"foo.C", line 4: unacceptable operand of &
+
+while
+
+	int theint;
+
+	int& intref(){return theint;};
+	int bar = intref();
+
+	main()
+	{
+	}
+
+and
+
+	int theint;
+
+	int& intref(){return theint;};
+
+	main()
+	{
+	  int& bar = intref();
+	}
+
+both compile correctly.
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA11374; Fri, 28 Jul 89 18:22:27 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA11900; Fri, 28 Jul 89 18:22:37 EDT
+Date: Fri, 28 Jul 89 18:22:37 EDT
+From: sam@odi.com
+Message-Id: <8907282222.AA11900@joplin.odi.com>
+To: jack@odi.com
+In-Reply-To: jack@odi.com's message of Fri, 28 Jul 89 15:13:15 EDT <8907281913.AA08729@indirect.odi.com>
+Subject: initialization of local static variables
+Cc: c++bugs
+
+   Date: Fri, 28 Jul 89 15:13:15 EDT
+   From: jack@odi.com
+
+   Are you aware of problems with the handling of static local variables?
+   I created a static path object (which encapsulates a linked list)
+   inside a function:
+
+   person::person(string n, person* f, person* m)
+	: name(n), age(-1), father(NULL), mother(NULL)
+   {
+     // Without cast to person*, cfront complains about "&this".
+     set_father(f);
+     set_mother(m);
+     if (father)
+       father->children.insert((person*) this);
+     if (mother)
+       mother->children.insert((person*) this);
+
+     static path f_index = arrow(person, father);
+     children.add_index(f_index);
+   }
+
+   The first time person::person runs, f_index is created, and temporary
+   path_step objects (used to initialize permanent path_steps comprising
+   the path) get deleted. I verified this by watching ~path_step run. On
+   the second invocation of person::person, the path isn't created, but
+   dtors are called anyway, sometimes with a zero address, sometimes not.
+
+   If the f_index declaration is moved outside the function, so that it
+   is static global, the program runs.
+
+   I don't need a fix for this - I'm just wondering if I am
+   misunderstanding something about when dtors should be run, or whether
+   I'm running into a known bug.
+
+
+   Jack
+
+
+   (The code above is from /odi/aggs/src/person.C)
+
+
+The code generation for local static variables initialized with an expression
+that requires the use of compiler temporaries is busted. The constructor code
+for initializing the temporaries is run conditionally, since local static
+variables must be initialized just once, when control first passes through the
+declaration. Unfortunately, the destructor is run unconditionally in the
+generated code, each time control passes through the block containing the
+local static declaration.
+
+You may wish to avoid the use of local static variables with non-trivial
+initializations for now. 
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA20107; Wed, 2 Aug 89 13:11:40 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA00545; Wed, 2 Aug 89 13:12:25 EDT
+Date: Wed, 2 Aug 89 13:12:25 EDT
+From: benson@odi.com
+Message-Id: <8908021712.AA00545@cass.odi.com>
+To: c++bugs
+Subject: complex initializations bungled for consts.
+
+when a complex expr initialization of a const is evaluated to an integer,
+dcl.c DEL's the variable init but neither zero's it nor skips the code
+that looks at it. Depending on accidents of storage, this can cause
+the compiler to core-dump shortly thereafter trying to run need_sti
+over it.
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA28108; Fri, 25 Aug 89 10:42:08 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04592; Fri, 25 Aug 89 10:42:08 EDT
+Date: Fri, 25 Aug 89 10:42:08 EDT
+From: dlw@odi.com
+Message-Id: <8908251442.AA04592@valens.odi.com>
+To: c++-bugs
+Subject: Computed pointer-to-function values
+Reply-To: dlw@odi.com
+
+In the following program, the last line, but only the last line, gets
+an error, namely "illegal indirection", whatever that means.  I don't
+understand how the last line could not be legal C++ code.
+
+int
+twice(int x) {
+  return x + x;
+}
+
+main() {
+  int dummy;
+  int (*fn)(int);
+  int (*fn2)(int);
+  int (*fn3)(int);
+
+  fn = twice;
+  fn2 = twice;
+
+  dummy = (*fn)(30);
+
+  dummy = fn(30);
+
+  dummy = (fn)(3);
+
+  fn3 = (dummy > 30 ? fn : fn2);
+
+  dummy = (dummy > 30 ? fn : fn2)(30);  /* line 22: illegal indirection */
+
+}
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA28339; Fri, 25 Aug 89 11:30:08 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA06818; Fri, 25 Aug 89 11:30:13 EDT
+Date: Fri, 25 Aug 89 11:30:13 EDT
+From: benson@odi.com
+Message-Id: <8908251530.AA06818@cass.odi.com>
+To: c++bugs, sam, stryker, tompkins
+Subject: Installation in /usr2/odi/c++/versions/odi2/src/
+
+Installation version odi2_34 in /usr2/odi/c++/versions/odi2/src/ at 89:7:25:11:26:44.
+
+Version odi2_34(1.34) from /usr1/benson/work/cfront/
+
+cfront croaked for
+
+   class x : public y {
+    public:
+      x (a, b, c) : y(z(a), Cast(b)) {};
+
+because it tried to detect the entry to the initialization list
+only by seeing ) :, and to exit it at any ). So the close of the z(a)
+turned off the global that indicated that the current state was within
+a base init list, and then got confused by the cast. The fix is to use
+grammar actions to control the state.
+
+
+gram.y:
+revision 1.12        
+date: 89/08/25 11:23:09;  author: benson;  state: Exp;  lines added/del: 21/7
+set must_be_expr for base_init processing and for nothing else.
+Don't leave in_arg_list on in the base_init list.
+
+lalex.c:
+revision 1.6        
+date: 89/08/25 11:22:33;  author: benson;  state: Exp;  lines added/del: 20/18
+Remove code to try to set the must_be_expr code by detecting
+) : and const : in the token stream. Depend on the grammar.
+
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA04677; Tue, 29 Aug 89 12:31:06 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02179; Tue, 29 Aug 89 12:31:03 EDT
+Date: Tue, 29 Aug 89 12:31:03 EDT
+From: sam@odi.com
+Message-Id: <8908291631.AA02179@joplin.odi.com>
+To: c++-bugs
+Subject: missing error message
+
+
+
+
+The following example is in error, since the class "b" has effectively been
+defined twice in the global scope. Cfront fails to detect this error, and
+generates a bad translation that evokes complaints from the C compiler.
+
+Removing the member x::mb does result in an appropriate error message !
+									   
+
+
+class a {
+  class b {
+    int mb ;
+    double r ;
+  } cb ;
+} ;
+
+
+
+class x {
+  int ma ; /* provokes the bug ? */
+  
+  class b {
+    int mb ;
+  } cb ;
+} ;
+
+
+Return-Path: <dlw@odi.com>
+Received: from valens.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA02798; Fri, 8 Sep 89 17:48:28 EDT
+Received: by valens.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA05949; Fri, 8 Sep 89 17:51:07 EDT
+Date: Fri, 8 Sep 89 17:51:07 EDT
+From: dlw@odi.com
+Message-Id: <8909082151.AA05949@valens.odi.com>
+To: c++-bugs
+Subject: base type expected for init_fn 
+Reply-To: dlw@odi.com
+
+Compiling the file /usr2/odi/storage/client/bug.C, I get the weird
+error message "base type expected for init_fn".  Look at this file,
+and search for #define bug.  If you remove this line, the file compiles.
+This is extremely strange since the thing that "bug" controls has
+nothing to do with the part of the code that causes the error message.
+
+valens:dlw(89)> pwd
+/usr2/odi/storage/client
+valens:dlw(90)> CC -v bug.C -o bug.o
+CC $Revision: 1.8 $ of $Date: 89/08/22 13:25:28 $ by $Author: tompkins $
+/lib/cpp -B -C   -Dc_plusplus=1 -D__cplusplus=1 -DBSD -I/usr2/odi/C++/install/odi2/include bug.C > /usr/tmp/CC.5939/cpptmp
+/usr2/odi/C++/install/odi2/cfront  +v +fbug.C  </usr/tmp/CC.5939/cpptmp > /usr/tmp/CC.5939/bug.i
+<<C++ Translator 2.00 06/30/89 ODI version 1.42 of 89/09/07 15:05:58 by benson. Compiled by benson at 89-09-07 15:43:00 in /usr2/odi/C++/versions/odi2/src>>
+"bug.C", line 2916: error:  base type expected for init_fn 
+1 error
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA15018; Wed, 13 Sep 89 10:25:59 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02436; Wed, 13 Sep 89 10:25:57 EDT
+Date: Wed, 13 Sep 89 10:25:57 EDT
+From: sam@odi.com
+Message-Id: <8909131425.AA02436@joplin.odi.com>
+To: c++-bugs
+Subject: typedefs nested within a class definition 
+
+
+Definition of a typedef nested within a class with the same name as a class
+definition, is not detected as an error, and may provoke subsequent confusing
+error messages, since the class definition is effectively blocked.
+
+An example:
+	    
+
+class t {double d ;} ;
+
+class c {
+  typedef int t ; // Bug: this should be flagged as an error, but isn't.
+} ;
+
+
+// It appears that "t" is an int from this point forth !
+t i = 0 ;
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA18635; Thu, 14 Sep 89 17:03:45 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04200; Thu, 14 Sep 89 17:03:42 EDT
+Date: Thu, 14 Sep 89 17:03:42 EDT
+From: sam@odi.com
+Message-Id: <8909142103.AA04200@joplin.odi.com>
+To: jack
+Cc: c++-bugs
+Subject: pure virtual operator functions are broken
+
+
+Compiling the following example:
+
+class c
+{
+  virtual operator int() = 0  ;
+};
+
+
+provokes the internal error message:
+
+"/usr1/sam/2.0/test/z.C", line 5: internal /usr2/odi/C++/install/odi2/cfront error: signature of  0
+
+
+Cfront appears to be one field short; it uses name::n_initializer
+both to hold the type of the operator, however, the remarkable
+abstract class declaration syntax uses this field to store what looks
+like an initializer, thereby overwriting the operator type
+information. 
+
+Just deserts for the abstract class kludge !
+
+
+Will save this one for the bugfest.
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA14391; Tue, 19 Sep 89 18:21:56 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA11736; Tue, 19 Sep 89 18:21:54 EDT
+Date: Tue, 19 Sep 89 18:21:54 EDT
+From: sam@odi.com
+Message-Id: <8909192221.AA11736@joplin.odi.com>
+To: c++-bugs, dlw
+Subject: name hiding lossage
+
+
+
+odi2_51 fixes the pernicious name hiding bug, where a formal argument name
+in a function member declaration would hide the name of an outer class
+definition, as in the example below:
+	
+
+	
+class x ;
+
+class c {
+  foo(int x) ;
+
+  bar(x *v) ;  // invalid error message, x should be visible here
+} ;
+
+"hide.C", line 6: error:  argument type expected for bar()
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA28358; Tue, 26 Sep 89 10:08:38 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA03843; Tue, 26 Sep 89 10:08:37 EDT
+Date: Tue, 26 Sep 89 10:08:37 EDT
+From: benson@odi.com
+Message-Id: <8909261408.AA03843@cass.odi.com>
+To: c++bugs
+Subject: static member functions treated like ordinary member functions
+
+
+class foo {
+  public:
+    static int x (int y) { return y; };
+    int (*xx) (int);
+    foo () { xx = x;};
+};
+
+foo FOO;
+
+compiling this gets:
+
+"bug.C", line 6: warning: address of bound function (try using ``foo ::*'' for po
+inter type and ``&foo ::x '' for address)
+
+which is wrong. Since x is a static function, it ought to be usuable
+like any other function.
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA14840; Wed, 4 Oct 89 13:19:17 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA13854; Wed, 4 Oct 89 13:19:14 EDT
+Date: Wed, 4 Oct 89 13:19:14 EDT
+From: landis@odi.com
+Message-Id: <8910041719.AA13854@pigpen.odi.com>
+To: c++-bugs
+Subject: members of const objects not const
+
+The following incorrectly compiles without error.  This bug is
+documented in the 2.0 release notes, page A-9.
+
+  class embedded { public:
+    int value;
+    void update() {value++;};
+  };
+
+  class C { public:
+    embedded strct;
+  };
+
+  main()
+  {
+    const C p;
+    p.strct.update();
+    p.strct.value = 23;
+  }
+
+
+Return-Path: <dysak@odi.com>
+Received: from mojo.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA14856; Wed, 4 Oct 89 13:42:12 EDT
+Received: by mojo.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA18996; Wed, 4 Oct 89 13:42:10 EDT
+Date: Wed, 4 Oct 89 13:42:10 EDT
+From: dysak@odi.com
+Message-Id: <8910041742.AA18996@mojo.odi.com>
+To: c++-bugs
+Subject: Can't Type Cast New Placement Arguments
+
+
+Compiling the following 3 lines provokes syntax errors for line 3.
+
+typedef unsigned int size_t;
+extern void * operator new(size_t,size_t,size_t);
+char *fund_01_xc_01 = new(size_t(1),size_t(2)) char('a');
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA15538; Wed, 4 Oct 89 16:49:48 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA14895; Wed, 4 Oct 89 16:49:43 EDT
+Date: Wed, 4 Oct 89 16:49:43 EDT
+From: landis@odi.com
+Message-Id: <8910042049.AA14895@pigpen.odi.com>
+To: c++-bugs
+Subject: coercion ops order-dependent
+
+class test { public:
+  void dummy() {};
+  operator const test*() { return this; }; // the order of these ops ...
+  operator test*() { return this; };	   // ... is significant (??)
+};
+
+main()
+{
+  test t;
+  ((test*)t) -> dummy();	// both of these casts use operator test*()
+  ((const test*)t) -> dummy();  // rather than operator const test*()
+};
+
+// however, if the ops appear in the opposite order in the class defn,
+// then they are called correctly --
+// BUT it is only a warning (not an error) that a const test* is used
+// as the this for the non-const member function dummy()
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA18054; Thu, 5 Oct 89 16:36:38 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA16379; Thu, 5 Oct 89 16:36:35 EDT
+Date: Thu, 5 Oct 89 16:36:35 EDT
+From: landis@odi.com
+Message-Id: <8910052036.AA16379@pigpen.odi.com>
+To: c++-bugs
+Subject: CAST is not a permitted struct/union operation
+
+/* The following code goes through CC ok, but gets errors from cc:
+
+     line 31: CAST is not a permitted struct/union operation
+     line 31: operands of = have incompatible types
+*/
+
+template<class vtype>
+class vpointer { public:
+  int foo;
+  vpointer(){};
+  vpointer(vpointer<vtype>& v) {foo = v.foo;};
+  int operator==(vpointer<vtype> const&v) const { return (foo == v.foo); };
+};
+
+template<class t>
+class attribute { public:
+  t rep;
+  operator t() {return rep;};
+  attribute(){};			  // if these constructors are removed
+  attribute(attribute& v) {rep = v.rep;}; // then the 2nd error dissappears
+};
+
+class c { public:
+  attribute<vpointer<int> > foo;
+};
+
+main()
+{
+  c a, b;
+
+  if (a.foo == b.foo);
+}
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA18060; Thu, 5 Oct 89 16:40:22 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA16396; Thu, 5 Oct 89 16:40:19 EDT
+Date: Thu, 5 Oct 89 16:40:19 EDT
+From: landis@odi.com
+Message-Id: <8910052040.AA16396@pigpen.odi.com>
+To: c++-bugs
+Subject: CAST still not permitted
+
+/* whoops -- I just realized that the templates were a red herring;
+the same error occurs without templates: */
+
+/* The following code goes through CC ok, but gets errors from cc:
+
+     line 29: CAST is not a permitted struct/union operation
+     line 29: operands of = have incompatible types
+*/
+
+class vpointer { public:
+  int foo;
+  vpointer(){};
+  vpointer(vpointer& v) {foo = v.foo;};
+  int operator==(vpointer const&v) const { return (foo == v.foo); };
+};
+
+class attribute { public:
+  vpointer rep;
+  operator vpointer() {return rep;};
+  attribute(){};			  // if these constructors are removed
+  attribute(attribute& v) {rep = v.rep;}; // then the 2nd error dissappears
+};
+
+class c { public:
+  attribute foo;
+};
+
+main()
+{
+  c a, b;
+
+  if (a.foo == b.foo);
+}
+
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA19948; Fri, 6 Oct 89 14:34:59 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA00311; Fri, 6 Oct 89 14:34:57 EDT
+Date: Fri, 6 Oct 89 14:34:57 EDT
+From: sam@odi.com
+Message-Id: <8910061834.AA00311@joplin.odi.com>
+To: c++-bugs
+Subject: compile time checking of pure virtual functions is suspect
+
+
+The following compiles without error, even though it should according
+to section 10.3.
+
+				    
+class b1 {
+
+  virtual foo() ;
+} ;
+
+
+class b2 {
+  virtual foo() = 0 ;
+} ;
+
+
+class d : public b1, public b2 {
+} ;
+
+
+Note that modifying the derivation order so that b2 precedes b1 in the
+definition of the class "d", results in an appropriate error message,
+reproduced at the end of this message.  According to section 10.1
+order of derivation is not supposed to be significant except for
+default initialization, cleanup, and storage layout.
+
+
+
+
+
+CC -I/usr1/sam/2.0/test/ -I /odi/include  +e0 -F /tmp/x.C -c > /dev/null
+"/usr1/sam/2.0/test/x.C", line 12: error: cannot inherit pure virtual function b2::foo()
+
+Compilation finished at Fri Oct  6 14:27:23
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA26627; Tue, 10 Oct 89 11:56:10 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02816; Tue, 10 Oct 89 11:56:09 EDT
+Date: Tue, 10 Oct 89 11:56:09 EDT
+From: sam@odi.com
+Message-Id: <8910101556.AA02816@joplin.odi.com>
+To: c++-bugs
+Cc: bob
+Subject: pure virtual destructors
+
+
+
+Pure virtual destructors appear to be broken in two ways:
+
+a) The derived class buit from the abstract class is not checked to
+ensure that it defines a virtual destructor.
+
+b) Section 10.3 of the PRM states that a pure virtual function must be
+defined if it is called explicitly. In the example below, the
+destructor is called "explicitly" by the compiler as part of the code
+generated for the destructors of the derived type. I think it
+is just the documentation that is remiss here.
+							   
+
+The moral of the story seems to be that if you have defined a pure
+virtual destructor you must define a body for it. The hack (= 0)
+syntax prevents you from defining the body at the same time that you
+define it "pure", so you must do it outside the class declaration.
+
+
+
+class base {
+protected:
+  int a;
+
+public:
+  base( int anA);
+  virtual ~base() = 0;
+};
+
+class derived : public base {
+protected:
+  int b;
+
+public:
+  derived( int anA, int aB);
+  virtual ~derived();  // commenting out this line doesn't  provoke an error
+		       // message 
+};
+
+base::base( int anA) {
+}
+
+derived::derived( int anA, int aB) : base( anA) {
+}
+
+derived::~derived() {
+}
+
+base::~base(){}
+
+main(){}
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA27198; Tue, 10 Oct 89 16:29:51 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA02918; Tue, 10 Oct 89 16:29:47 EDT
+Date: Tue, 10 Oct 89 16:29:47 EDT
+From: sam@odi.com
+Message-Id: <8910102029.AA02918@joplin.odi.com>
+To: c++-bugs
+Subject: default arguments
+
+
+It would seem that the default arguments for a virtual function
+should have the same initialization expression in the base and derived
+types. Otherwise, since the evaluation of the default argument is
+performed at the point of call, the expression used for the default
+initialization may not correspond to the virtual function that is
+actually run for the object ! 
+
+
+This may be a language bug rather than a cfront bug, since I can't
+find any such strictures on default arguments in the PRM.
+
+
+class b {
+public:
+  virtual foo(int i = 5) ; 
+} ;
+
+
+class d : public b {
+public:
+  virtual foo(int i = 6) ; // different initialization
+} ;
+
+foo(d *dp) {
+  b *bp = d ;
+
+  bp->foo() ;  // uses  i = 5, even though the "most derived type" of
+               // bp * is a d, and d::foo is the function that would
+               // actually be invoked.
+  dp->foo() ;  // uses  i = 6
+}
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA27291; Tue, 10 Oct 89 16:56:56 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA03101; Tue, 10 Oct 89 16:56:54 EDT
+Date: Tue, 10 Oct 89 16:56:54 EDT
+From: sam@odi.com
+Message-Id: <8910102056.AA03101@joplin.odi.com>
+To: c++-bugs
+Subject: incorrect error message
+
+
+
+A missing destructor member declaration, derived::~derived in this
+case results in a very misleading error message. 
+     
+	  
+class base {
+public:
+  base();
+  virtual ~base() ;
+};
+
+
+class derived : public base {
+public:
+  derived();
+};
+
+derived::~derived() {
+}
+
+CC -I/usr1/sam/2.0/test/ -I /odi/include  +e0 -F /tmp/vd.C -c > /dev/null
+"/usr1/sam/2.0/test/vd.C", line 13: error: two definitions of derived::~derived() 
+
+Compilation finished at Tue Oct 10 16:52:59
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA27460; Tue, 10 Oct 89 18:54:22 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA03209; Tue, 10 Oct 89 18:54:21 EDT
+Date: Tue, 10 Oct 89 18:54:21 EDT
+From: sam@odi.com
+Message-Id: <8910102254.AA03209@joplin.odi.com>
+To: c++-bugs
+Subject: more name visibility lossage (how bankrupt can a symbol table be)
+
+
+
+Members defined in a base class but accessed from within a derived class
+provoke syntax errors when the member name is shadowed by a global
+type name.
+
+
+Note that it is ok to access a a member in the immediate class even if
+it is shadowed as above.
+
+
+
+typedef unsigned char t ;
+typedef unsigned char t1 ;
+		      
+class b {
+public:
+  int t ;
+} ;
+
+class d : public b {
+  int t1 ;
+  foo() {
+    t1 = 0 ;         // t1 is ok since it is local
+    t = 0 ;          // incorrect error by cfront here
+  }
+  bar() ;
+} ;
+
+
+d::bar() { t = 0 ; }  // incorrect error by cfront  here
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA28825; Wed, 11 Oct 89 09:12:07 EDT
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA19362; Wed, 11 Oct 89 09:12:05 EDT
+Date: Wed, 11 Oct 89 09:12:05 EDT
+From: landis@odi.com
+Message-Id: <8910111312.AA19362@pigpen.odi.com>
+To: c++-bugs@odi.com, sam@odi.com
+Subject: Re:  default arguments
+
+   Date: Tue, 10 Oct 89 16:29:47 EDT
+   From: sam@odi.com
+   
+   It would seem that the default arguments for a virtual function
+   should have the same initialization expression in the base and derived
+   types. Otherwise, since the evaluation of the default argument is
+   performed at the point of call, the expression used for the default
+   initialization may not correspond to the virtual function that is
+   actually run for the object ! 
+   
+   This may be a language bug rather than a cfront bug, since I can't
+   find any such strictures on default arguments in the PRM.
+   
+   class b {
+   public:
+     virtual foo(int i = 5) ; 
+   } ;
+   
+   class d : public b {
+   public:
+     virtual foo(int i = 6) ; // different initialization
+   } ;
+   
+   foo(d *dp) {
+     b *bp = d ;
+   
+     bp->foo() ;  // uses  i = 5, even though the "most derived type" of
+                  // bp * is a d, and d::foo is the function that would
+                  // actually be invoked.
+     dp->foo() ;  // uses  i = 6
+   }
+   
+I am not even completely convinced that this is a language bug (on the
+other hand I am hesitant to call it exactly a feature either -- it's
+firmly in that grey area in between).  Since default arg selection
+happens at compile time, of course it cannot use the actual type of
+the object, it can only use the declared type.  But what's so wrong
+with that?  Sure, it might be confusing to some users, but that seems
+like a scant motivation for labelling it a "bug", since it might
+actually be useful in some cases:
+
+class person { public:
+  virtual void hire(char* job_title, int starting_salary = MINIMUM_WAGE);
+};
+
+class college_graduate : public person { public:
+  virtual void hire(char* job_title, int starting_salary = 30000);
+};
+
+main() {
+  college_graduate *g = new college_graduate;
+  person *p = g;
+
+  p->hire("box packer");  /* minimum wage, who cares if she went to college */
+  g->hire("CEO");	  /* for a job like this, she better be a grad,
+			   * and she should get paid accoringly */
+}
+
+I'm not sure if this is a convincing argument that this isn't a bug;
+but on the other hand, I don't see a strong argument that it is a bug
+either.  Users just have to get their heads around a slightly
+complicated rule: for virtual functions, the function body chosen
+depends on the actual type of the object, but the default args depend
+on its declared type.
+
+$.02
+-Gordon
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA02033; Thu, 12 Oct 89 14:13:37 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA23840; Thu, 12 Oct 89 14:13:35 EDT
+Date: Thu, 12 Oct 89 14:13:35 EDT
+From: benson@odi.com
+Message-Id: <8910121813.AA23840@cass.odi.com>
+To: c++bugs
+Subject: multiple uses of constr
+
+
+consider:
+
+class foo {} ;
+
+typedef foo * FOO;
+typedef FOO const FOOc;
+typedef FOOc const FOOcc;
+
+if c++ was like ansi C, the last typedef would be invalid.
+Instead, it is permitted, but a FOOcc cannot be passed as a FOOc.
+The code in type::check adds 1 to cnst1 or cnst2 for each const that it
+sees, and then makes various arithmetic comparisons.
+
+Whatever this means, it can't be true that two const's is more const
+than one const. Either type::check should use |=, or the grammar should
+catch and yell about the last typedef above.
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA17710; Thu, 19 Oct 89 15:06:19 EDT
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA01604; Thu, 19 Oct 89 15:06:17 EDT
+Date: Thu, 19 Oct 89 15:06:17 EDT
+From: benson@odi.com
+Message-Id: <8910191906.AA01604@cass.odi.com>
+To: c++bugs
+Subject: warnings? ! ^!%#%
+
+Consider this program:
+
+class C {
+    int x;
+    int y;
+};
+
+class D : public C {
+  public:
+    D (D &);
+    D();
+    int r;
+    int s;
+};
+
+void x (C &);
+
+D makec(D&);
+
+void y ()
+{
+    D q;
+    int z;
+
+/* Warning */
+    x(makec(q));
+
+/* No Warning */
+    x((z = 0, makec(q)));
+}
+
+In both cases, the code generates has no temporary.
+
+(to be precise, the code generated has a temporary passed in as a
+result argument, but no copies are made. that temporary is passed
+directly to the function X.)
+
+In call_fct, a G_CM and a temp are built if f_result is non-0,
+and that is non-0 because there is a D(D&) constructor. (see
+make_res). In the second case, the presence of the comma hides
+the so-called temporary from the sight of the code in call_fct
+that produces the warning.
+
+Since the generated code is AOK, its hard to be too upset about this.
+but it sure is mystifying.
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA26697; Mon, 23 Oct 89 19:38:29 EDT
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA11165; Mon, 23 Oct 89 19:38:26 EDT
+Date: Mon, 23 Oct 89 19:38:26 EDT
+From: sam@odi.com
+Message-Id: <8910232338.AA11165@joplin.odi.com>
+To: c++-bugs
+Subject: coercions within the operands of a conditional operator are broken
+
+
+
+The first operand of a condition operator is not coerced to the result
+type, the second operator matches the result type, as in the example below.
+
+class b0 {
+  int i ;
+} ;
+
+
+class b {
+  int i ;
+  virtual f() ;
+} ;
+
+class d : public b0, public b {
+public:
+  int i ;
+  d (int i) ;
+  virtual f() ;
+} ;
+
+
+int f() ;
+
+b *lose(d *dp, b* bp) 
+{
+  bp = (f() ? dp : bp) ;  // incorrect code, no coercion of dp 
+
+  return (f() ? dp : bp) ;  // same bug
+}
+
+
+Return-Path: <dysak@odi.com>
+Received: from mojo.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA01763; Wed, 25 Oct 89 13:25:14 EDT
+Received: by mojo.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04012; Wed, 25 Oct 89 13:25:11 EDT
+Date: Wed, 25 Oct 89 13:25:11 EDT
+From: dysak@odi.com
+Message-Id: <8910251725.AA04012@mojo.odi.com>
+To: c++-bugs
+Subject: You can't new a pointer to member function
+
+
+Compiling the following program
+
+   /* This may look like C code, but it is really -*- C++ -*- */
+
+   struct MF_01_tk_01 {
+      char char_00, char_01, char_02, char_03;
+      char fun_00();
+   };
+   struct MF_01_tk_02 : public MF_01_tk_01 {
+      char fun_01();
+   };
+
+   void *MF_new_01()
+   {
+      typedef char (MF_01_tk_01::*MFp)();
+      return (void *)(new MFp(MF_01_tk_02::fun_00));
+   }
+
+produces the not immediately comprehensible error messages
+
+   "MF_new_01.C", line 15: syntax error at or near symbol {
+   "MF_new_01.C", line 14: syntax error at or near symbol }
+   "MF_new_01.C", line 17: syntax error
+
+from cc (not CC).
+
+
+Return-Path: <tompkins@odi.com>
+Received: from moon.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA04140; Thu, 26 Oct 89 11:08:45 EDT
+Received: by moon.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA16204; Thu, 26 Oct 89 11:08:42 EDT
+Date: Thu, 26 Oct 89 11:08:42 EDT
+From: tompkins@odi.com
+Message-Id: <8910261508.AA16204@moon.odi.com>
+To: c++-bugs
+Subject: bit field packing
+
+
+
+cfront incorrectly estimates the size of classes containing
+bit fields. Consequently, when casting a derived class pointer
+to a pointer to one of its base classes which contains a bit field, 
+the wrong offset may be added to the derived class pointer.
+
+The field basecl::obj_offset is getting the wrong value as
+cfront assumes each bit fields to be aligned on a byte
+boundary.
+
+The places to look.
+
+     Allocating base class objects: probably the culprit, but given
+	cfront's method of code reuse (cut and paste) the other places
+	probably need to be checked.
+
+	dcl4.c:1349:  l->obj_offset = boff;
+
+     Allocating virtual base classes
+
+	dcl4.c:1764:  if (b->obj_offset = has_allocated_base(bcl)) continue;
+
+	dcl4.c:1771:  b->obj_offset = byte_offset;      // offset in this
+
+
+     Generating destructors for both non-virtual and virtual base
+	classes.
+
+	simpl.c:555:  x->obj_offset = l->obj_offset;
+
+	simpl.c:562:  b->obj_offset = l->obj_offset;
+
+
+Test Code
+---------
+
+
+#include <iostream.h>
+
+typedef unsigned int  uint ;
+
+
+class A {
+  public:
+    char c;
+    A () { c = 0; }
+  };
+
+class bit_fields_1 {
+
+  public:
+    uint file_index      : 10;
+    uint line_no         : 22;
+    
+    bit_fields_1 () { file_index = 0; line_no = 0; };
+
+  };
+
+
+class bit_fields_2 {
+
+  public:
+    uint file_index      : 10,
+         line_no         : 22;
+
+    bit_fields_2 () { file_index = 0; line_no = 0; };
+
+  };
+
+
+class B {
+  public:
+    int v;
+
+    B () { v = 0xaaaa; };
+
+  };
+
+class D1 : public A,  public bit_fields_1, public B {
+  };
+
+class D2 : public A, public bit_fields_2, public B {
+  };
+
+
+int works_as_B (B *b)
+{
+
+    if (b->v == 5)
+	return 1;
+    else
+	return 0;
+
+}
+
+
+int main ()
+{
+
+    int passed = 1;
+
+    D1 d1;
+    if ( ! works_as_B(&d1)) {
+	cout << "FAILED: d1 doesn't work as B" << endl;
+	cout << "\tsizeof(D1) = " << sizeof(D1) << endl;
+	passed = 0;
+      }
+
+    D2 d2;
+    if ( ! works_as_B(&d2)) {
+	cout << "FAILED: d2 doesn't work as B" << endl;
+	cout << "\tsizeof(D2) = " << sizeof(D2) << endl;
+	passed = 0;
+      }
+
+    if (passed)
+	cout << "PASSED" << endl;
+
+}
+
+
+
+-Rick
+
+
+Return-Path: <landis@odi.com>
+Received: from pigpen.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA03326; Tue, 31 Oct 89 15:28:12 EST
+Received: by pigpen.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA01538; Tue, 31 Oct 89 15:28:08 EST
+Date: Tue, 31 Oct 89 15:28:08 EST
+From: landis@odi.com
+Message-Id: <8910312028.AA01538@pigpen.odi.com>
+To: c++-bugs
+Subject: bad template ref member inits not caught
+
+The following file appropriately fails to compile:
+
+struct A {
+  int& i;
+  A() : i() {};
+};
+
+generating the errors:
+
+"t.C", line 1: error: empty  initializer for reference  A::i
+"t.C", line 1: error:  reference member A::i  needs initializer
+
+But if you hide the ref member inside a template parameter, 
+cfront dies with a core dump:
+
+template<class T>
+struct A {
+  T i;
+  A() : i() {};
+};
+
+static A<int&> a;
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA02618; Wed, 1 Nov 89 13:44:45 EST
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04946; Wed, 1 Nov 89 13:44:37 EST
+Date: Wed, 1 Nov 89 13:44:37 EST
+From: sam@odi.com
+Message-Id: <8911011844.AA04946@joplin.odi.com>
+To: landis@odi.com
+Cc: c++-bugs
+In-Reply-To: landis@odi.com's message of Tue, 31 Oct 89 15:28:08 EST <8910312028.AA01538@pigpen.odi.com>
+Subject: bad template ref member inits not caught(actually bad typedefed ref member inits not caught)
+
+   Date: Tue, 31 Oct 89 15:28:08 EST
+   From: landis@odi.com
+
+   The following file appropriately fails to compile:
+
+   struct A {
+     int& i;
+     A() : i() {};
+   };
+
+   generating the errors:
+
+   "t.C", line 1: error: empty  initializer for reference  A::i
+   "t.C", line 1: error:  reference member A::i  needs initializer
+
+   But if you hide the ref member inside a template parameter, 
+   cfront dies with a core dump:
+
+   template<class T>
+   struct A {
+     T i;
+     A() : i() {};
+   };
+
+   static A<int&> a;
+
+The problem is template independent. The case below will blow up in
+the same way, a fix is on the way.
+
+typedef int & x ;
+struct A {
+  x i;
+  A() : i() {};
+};
+
+
+
+Return-Path: <benson@odi.com>
+Received: from cass.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA13420; Mon, 6 Nov 89 10:35:39 EST
+Received: by cass.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA04499; Mon, 6 Nov 89 10:35:37 EST
+Date: Mon, 6 Nov 89 10:35:37 EST
+From: benson@odi.com
+Message-Id: <8911061535.AA04499@cass.odi.com>
+To: c++bugs
+Subject: how to confuse const checking
+
+The following program:
+
+/* -*- Mode:C++ -*- */
+
+int gruz (char *, char *);
+int gruz (char const *, char const *);
+
+void plugh (char const * x, char * y)
+{
+    gruz(x,y);
+}
+
+gets the following error:
+
+CC  foo.C:
+"foo.C", line 8: error: two exact matches for gruz(): int (const char *, const c
+har *) and int (char *, char *)
+1 error
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA13457; Mon, 6 Nov 89 10:46:49 EST
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA09132; Mon, 6 Nov 89 10:46:47 EST
+Date: Mon, 6 Nov 89 10:46:47 EST
+From: sam@odi.com
+Message-Id: <8911061546.AA09132@joplin.odi.com>
+To: benson@odi.com
+Cc: c++bugs
+In-Reply-To: benson@odi.com's message of Mon, 6 Nov 89 10:35:37 EST <8911061535.AA04499@cass.odi.com>
+Subject: how to confuse const checking
+
+   Date: Mon, 6 Nov 89 10:35:37 EST
+   From: benson@odi.com
+
+   The following program:
+
+   /* -*- Mode:C++ -*- */
+
+   int gruz (char *, char *);
+   int gruz (char const *, char const *);
+
+   void plugh (char const * x, char * y)
+   {
+       gruz(x,y);
+   }
+
+   gets the following error:
+
+   CC  foo.C:
+   "foo.C", line 8: error: two exact matches for gruz(): int (const char *, const c
+   har *) and int (char *, char *)
+   1 error
+
+
+Unfortunately, according to Section 13 of the PRM this error message
+is legitimate. 
+
+
+Return-Path: <sam@odi.com>
+Received: from joplin.odi.com by odi.com (4.0/SMI-4.0/ODI-4)
+	id AA13519; Mon, 6 Nov 89 11:01:50 EST
+Received: by joplin.odi.com (4.0/SMI-4.0/ODI-C2)
+	id AA09163; Mon, 6 Nov 89 11:01:47 EST
+Date: Mon, 6 Nov 89 11:01:47 EST
+From: sam@odi.com
+Message-Id: <8911061601.AA09163@joplin.odi.com>
+To: benson@odi.com
+Cc: c++bugs
+In-Reply-To: benson@odi.com's message of Mon, 6 Nov 89 10:35:37 EST <8911061535.AA04499@cass.odi.com>
+Subject: how to confuse const checking
+
+   
+Upon further reflection there is a bug here. It shouldn't have been
+possible to define the second gruz, ie. the  following abbreviated
+test should fail, but doesn't.
+---------
+
+   int gruz (char *, char *);
+   int gruz (const char  *, const char  *);
+
+----------
+				  
+	     
+   Date: Mon, 6 Nov 89 10:35:37 EST
+   From: benson@odi.com
+
+   The following program:
+
+   /* -*- Mode:C++ -*- */
+
+   int gruz (char *, char *);
+   int gruz (char const *, char const *);
+
+   void plugh (char const * x, char * y)
+   {
+       gruz(x,y);
+   }
+
+   gets the following error:
+
+   CC  foo.C:
+   "foo.C", line 8: error: two exact matches for gruz(): int (const char *, const c
+   har *) and int (char *, char *)
+   1 error
+
+
+Unfortunately, according to Section 13 of the PRM this error message
+is legitimate. 
+

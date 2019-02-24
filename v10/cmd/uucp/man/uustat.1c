@@ -1,0 +1,106 @@
+.\"@(#)uustat.1c	?.?
+.TH UUSTAT 1C
+.SH NAME
+uustat \- uucp status inquiry and job control
+.SH SYNOPSIS
+.B uustat
+.RB [ \-a]
+or
+.RB [ \-m]
+or
+.RB [ \-p]
+or
+.RB [ \-q]
+or
+.RB [ \-k \^jobid]
+or
+.RB [ \-r \^jobid]
+.br
+.B uustat
+.RB [ \-s \^system]
+.RB [ \-u \^user]
+.SH DESCRIPTION
+.I Uustat\^
+will display the status of, or cancel, previously specified
+.I uucp\^
+commands, or provide general status on
+.I uucp\^
+connections to other systems.
+The following
+.I options\^
+are recognized:
+.PP
+.PD 0
+.TP 10
+.B \-a\^
+output all jobs in queue.
+.TP 10
+.BI \-k jobid\^
+Kill the
+.I uucp\^
+request whose job identification is
+.IR jobid .
+The killed
+.I uucp\^
+request must belong to the person
+issuing the
+.I uustat\^
+command
+unless one is the super-user.
+.TP 10
+.B \-m\^
+Report the status of accessibility of all machines.
+.TP
+.B \-p\^
+Execute a ``ps -flp'' for all the process-ids that are in
+the lock files.
+.TP
+.B \-q\^
+List the jobs queued for each machine.
+If a status file exists for the machine, its date, time and
+status information are reported.
+In addition, if a number appears in () next to the number of C or X
+files, it is the age in days of the oldest C./X. file for that system.
+The Retry field represents the number of hours until the next possible call.
+The Count is the number of failure attempts.
+NOTE: for systems with a moderate number of outstanding jobs, this
+could take 30 seconds or more of real-time to execute.
+.TP 10
+.BI \-r jobid\^
+Rejuvenate
+.I jobid\^.
+The files associated with
+.I jobid\^
+are touched so that 
+their modification time is set to the current time.
+This prevents the cleanup demon
+from deleting the job until the jobs modification
+time reaches the limit imposed by the demon.
+.TP 10
+.BI \-s sys\^
+Report the status of all
+.I uucp\^
+requests for remote system
+.IR sys .
+.TP 10
+.BI \-u user\^
+Report the status of all
+.I uucp\^
+requests issued by
+.IR user .
+.PD
+.PP
+When no options are given,
+.I uustat\^
+outputs the status of all
+.I uucp\^
+requests issued by the current user.
+.SH FILES
+.PD 0
+.TP 1.5i
+/usr/spool/uucp/*
+spool directories
+.PD
+.SH SEE ALSO
+uucp(1C).
+.\"	@(#)uustat.1c	?.?

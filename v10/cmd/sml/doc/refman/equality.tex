@@ -1,0 +1,37 @@
+\chapter{Equality}
+
+The equality function \verb"op = : ''a * ''a -> bool" is available at
+all types \verb"''a" except function types, abstract types, and the
+types constructed from them.  In fact, type variables that begin
+with two primes are special: they stand only for types that admit
+equality.
+
+Two values are tested for equality as follows, depending on the kind
+of value:
+\begin{description}
+\item[Primitive types] like integers, reals, and strings have
+equality functions with the conventional behavior.
+
+\item[Function types] cannot be compared (``do not admit equality'').
+
+\item[Reference types:] On references, equality means identity; a
+reference is equal to itself and to no other references, regardless
+of similar contents.
+
+\item[Record types] may be compared if all their components admit equality.
+
+\item[Datatypes] may be compared for equality if all of their
+constructed types admit equality.
+
+\item[Opaque types] from functor parameters and abstractions do not
+admit equality unless the \verb"eqtype" keyword is used (instead of
+the \verb"type" keyword) in the
+signature defining them.
+\end{description}
+
+The function \verb"op <> : ''a * ''a -> bool" is the inequality function;
+it is applicable to any equality type.
+
+The comparison functions \verb">", verb"<", \verb"<=", and \verb">=" do not
+have this behavior; they are overloaded just for the types
+\verb"int", \verb"real", and \verb"string".

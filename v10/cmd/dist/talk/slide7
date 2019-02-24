@@ -1,0 +1,43 @@
+.ce
+How \fIinsdist\fP works
+.sp 2
+.BU
+We want either completely install the distribution, or
+completely fail to install it; we don't want the file system
+left in an intermediate state.
+Initial idea:
+.CO
+tar cf $backup $files
+tar t $backup | sort > $oldlist
+tar tf $tarfile | sort > $newlist
+if tar xf $tarfile
+then
+	comm -23 $oldlist $newlist > $remove
+	test -s $remove && xargs rm -fr < $remove
+else
+	tar xf $backup
+	comm -13 $oldlist $newlist > $remove
+	test -s $remove && xargs rm -fr < $remove
+fi
+.CE
+.BU
+Unfortunately, line oriented text utilities don't like
+funny file names.  We can fix this with \f(CWqargs\fP and
+\f(CWuargs\fP.
+Revised code:
+.CO
+# assume $files is in qargs format
+uargs tar cf $backup $files
+# tarf -tq prints tarfile contents in qargs format
+tarf -tq < $backup | sort > $oldlist
+tarf -tq < $tarfile | sort > $newlist
+if tar xf $tarfile
+then
+	comm -23 $oldlist $newlist > $remove
+	test -s $remove && xargs uargs rm -fr < $remove
+else
+	tar xf $backup
+	comm -13 $oldlist $newlist > $remove
+	test -s $remove && xargs uargs rm -fr < $remove
+fi
+.CE

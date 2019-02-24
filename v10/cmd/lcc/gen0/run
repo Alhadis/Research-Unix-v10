@@ -1,0 +1,20 @@
+#!/bin/sh
+# ../run target os test
+
+# set -x
+target=$1 os=$2 test=$3
+
+cd tst
+if [ ! -r "../../../include/${target}_$os" ]; then
+	echo 2>&1 $0: unknown target-system combination '"'$target-$os'"'
+fi
+
+echo $target-$os $test: 1>&2
+cc -E -I../../../include/${target}_$os ../../../tst/$test.c | ../rcc - $test.s 2>$test.2
+diff ../../../tst/$test.2 $test.2
+if [ ! -r $test.s.bak ]; then
+	mv $test.s $test.s.bak
+	cp $test.s.bak $test.s
+else diff $test.s.bak $test.s
+fi
+exit 0

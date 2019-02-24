@@ -1,0 +1,64 @@
+% look at TeXbook, p 246
+\par
+\centerline{%
+\vbox{\offinterlineskip\hrule
+\halign{\vrule#&\strut\quad\hfil#\hfil\quad&
+        \vrule#&\strut\quad\hfil#\hfil\quad&
+        \vrule#&\strut\quad#\hfil\quad&
+        \vrule#\cr
+height2pt&\omit&&\omit&&\omit&\cr
+&Registers&&Forward&&\hfil Description&\cr
+height2pt&\omit&&\omit&&\omit&\cr
+\noalign{\hrule}
+height2pt&\omit&&\omit&&\omit&\cr
+&0&&&&zero&\cr
+&1&&&&reserved for assembler (temporary)&\cr
+&2&&yes&&standard argument ({\tt saved\_ptrs[0]})&\cr
+&3&&yes&&standard continuation ({\tt saved\_ptrs[1]})&\cr
+&4&&yes&&standard closure ({\tt saved\_ptrs[2]})&\cr
+&5--19&&yes&&miscellaneous registers&\cr
+&20&&&&{\tt my\_arithtemp} (internal to {\tt CMACHINE})&\cr
+&21&&yes&&{\tt my\_ptrtmp} (internal to {\tt CMACHINE})&\cr
+&22&&special&&store pointer (list of stored locations)&\cr
+&23&&special&&data pointer (next available word on heap)&\cr
+&24--25&&&&arithmetic temporaries 1~and~2 (exported by {\tt CMACHINE})&\cr
+&26--27&&&&reserved for operating system kernel&\cr
+&28&&&&global pointer (used by C)&\cr
+&29&&&&stack pointer (used by C)&\cr
+&30&&yes&&points to current exception handler&\cr
+&31&&special&&reserved for the assembler (to hold program counter)&\cr
+height2pt&\omit&&\omit&&\omit&\cr
+}\hrule}}
+\endinput
+
+
+\def\*{\rlap{${}^*$}}
+I've put an asterisk (\*) next to registers that are forwarded
+during garbage collection.
+The data pointer and store pointer are special to garbage collection
+\begin{itemize}
+\item[\$0] zero
+\item[\$1] reserved for the assembler (as a temporary)
+\item[\$2\*] standard argument; also [[saved_ptrs[0] ]]
+\item[\$3\*] standard continuation; also [[saved_ptrs[1] ]]
+\item[\$4\*] standard closure; also [[saved_ptrs[2] ]]
+\item[\$5--\$19\*] miscellaneous registers; 
+		may contain only pointers or tagged integers.
+\item[\$20] arithmetic temporary number 3; 
+		may contain anything except pointers
+\item[\$21\*] pointer temporary 1; 
+		may contain only pointers or tagged integers.
+\item[\$22\*] store pointer;
+		used to track mutable (assigned) cells for garbage collection
+\item[\$23] data pointer;
+		this points to the first available word in the 
+		garbage-collectible area, the word that will be the
+		descriptor of a newly-created object.
+\item[\$24--\$25] arithmetic temporaries number 1 and 2;
+		may contain anything except pointers
+\item[\$26--\$27] reserved for the operating system kernel
+\item[\$28]	the ``global pointer'' (whatever that is)
+\item[\$29]	the stack pointer; mostly unused
+\item[\$30\*] points to the current exception handler
+\item[\$31] reserved for the assembler (to hold the program counter)
+\end{itemize} 

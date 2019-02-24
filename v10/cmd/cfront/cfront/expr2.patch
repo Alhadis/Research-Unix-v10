@@ -1,0 +1,49 @@
+*** /usr/src/cmd/cfront/cfront/expr2.c	Thu May 10 11:31:31 1990
+--- expr2.c	Mon Aug 27 10:17:35 1990
+***************
+*** 1717,1737
+  	default:	/* look for conversions to basic types */
+  		if (n1
+  		&& Pclass(n1->tp)->conv
+  		&& (bb==ANDAND || bb==OROR)) {
+  			e1 = check_cond(e1,bb,tbl);
+  			return 0;
+  		}
+  
+  		if (n2
+  		&& Pclass(n2->tp)->conv
+! 		&& (bb==ANDAND || bb==OROR || bb==NOT)) {
+  			e2 = check_cond(e2,bb,tbl);
+  			return 0;
+  		}
+  
+  // error( 'd', "bb: %k t1: %k t2: %k", bb, t1?t1->base:0, t2?t2->base:0 );
+  		switch (try_to_demote(bb,t1,t2)) {
+  		default:
+  			if (Lcoerce) error("ambiguous conversion of%n",n1);
+  			if (Rcoerce) error("ambiguous conversion of%n",n2);
+  		case 0:
+
+--- 1717,1738 -----
+  	default:	/* look for conversions to basic types */
+  		if (n1
+  		&& Pclass(n1->tp)->conv
+  		&& (bb==ANDAND || bb==OROR)) {
+  			e1 = check_cond(e1,bb,tbl);
+  			return 0;
+  		}
+  
+  		if (n2
+  		&& Pclass(n2->tp)->conv
+! 		&& (bb==ANDAND || bb==OROR || bb==NOT ||
+! 		    bb==UMINUS || bb==UPLUS || bb==COMPL)) {
+  			e2 = check_cond(e2,bb,tbl);
+  			return 0;
+  		}
+  
+  // error( 'd', "bb: %k t1: %k t2: %k", bb, t1?t1->base:0, t2?t2->base:0 );
+  		switch (try_to_demote(bb,t1,t2)) {
+  		default:
+  			if (Lcoerce) error("ambiguous conversion of%n",n1);
+  			if (Rcoerce) error("ambiguous conversion of%n",n2);
+  		case 0:

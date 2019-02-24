@@ -1,0 +1,24 @@
+#! /bin/sh
+# bundle: group files into distribution package (K&Pike, p.98)
+# recursive version (Ex. 3-17, p.99)
+
+case $DEJA_VU in
+'')
+	echo '# To unbundle, sh this file'
+	DEJA_VU='done'
+	export DEJA_VU
+	;;
+esac
+for file
+do
+	if test -d $file
+	then
+		echo "mkdir $file 2>/dev/null"
+		bundle $file/*
+	else
+		echo "echo $file 1>&2"
+		echo "sed 's/^-//' >$file <<'!'"	# remove leading guard
+		sed 's/^[^A-EG-Za-z0-9]/-&/' $file	# prepend a guard to some
+		echo !
+	fi
+done

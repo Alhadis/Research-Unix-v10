@@ -1,0 +1,51 @@
+'\"macro stdmacro
+.if n .pH g1a.tosmtp %W% of %G%
+.nr X
+.if \nX=0 .ds x} tosmtp 1M "" "\&"
+.if \nX=1 .ds x} tosmtp 1M ""
+.if \nX=2 .ds x} tosmtp 1M "" "\&"
+.if \nX=3 .ds x} tosmtp "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4tosmtp\fP \- send mail to \s-1SMTP\s+1
+.SH SYNOPSIS
+\f4tosmtp\f1 [ \f4\-f\f1 ] [ \f4\-n \f1] [ \f4\-u\f1 ] [ \f4\-d\f2 domain \f1]\f1
+[ \-H\f2 helohost \f4]\f2 sender host recip ...\f1
+.SH DESCRIPTION
+\f4tosmtp\fP translates a
+.SM UNIX
+System mail message (read from standard
+input), into an RFC822 mail message, which can then be delivered with \s-1SMTP\s+1.
+\f4tosmtp\fP is normally invoked by \f4smtpqer\fP as part of the process of
+queueing mail for delivery.
+.P
+The options to \f4tosmtp\fP and their meanings are as follows:
+.TP 12
+\f4\-d \f2domain\f1
+Pass the specified \f2domain\fP directly to the \f4smtp\fP program.
+.TP
+\f4\-f\fP
+Act as a filter.
+The RFC822 message is sent to the standard output.
+.TP
+\f4\-H \f2helohost\f1
+This option can be used to specify the name to be used for the host in the
+initial
+.SM SMTP
+.SM HELO
+message.
+This option is also passed to the \f4smtp\fP program.
+.TP
+\f4\-n\fP
+Do not place a \f4To:\fP line in the resulting RFC822 header.
+.TP
+\f4\-u\fP
+Do no conversion.
+The standard input is sent directly to the standard output.
+.SH FILES
+.TP
+\f4/usr/lib/mail/surrcmd/smtp\fP		Where the message is piped to
+.SH "SEE ALSO"
+\f4smtp\fP(1M), \f4smtpqer\fP(1M)
+.br
+RFC822 \- Standard for the Format of \s-1ARPA\s+1 Internet Text Messages

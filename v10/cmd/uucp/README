@@ -1,0 +1,80 @@
+
+See the following files:
+uucp.D		Administrative manual
+		It includes files uucp.D, App*
+		(mm -t uucp.D)
+Permissions:	an example of a Permissions file. (a default will be generated
+		during the installation procedure.
+uucp.1c		manual page for uucp
+uustat.1c:	uustat man page
+uulog.1c:	uulog man page
+uucleanup.1m:	man page for uucleanup
+uugetty.1m	man page for a getty that permits input/output on a port
+uudemon.hour:	hourly demon
+uudemon.poll:	polling demon
+uudemon.admin:	to send messages about status to the administrator of uucp
+uudemon.cleanup:	cleanup demon
+
+Some useful shells:
+Uutry:		shell for debugging--starts uucico with debugging option
+Nutry:		shell for debugging--starts local directory
+		 uucico with debugging option
+uukick		same as Uutry except no output
+uutry		same as uutry but output on standard out
+uutac		output log file in reverse order - assumes a tac (backwards
+		cat command exists in your path
+uutail		does a tail command on a system log file.
+Cvt:		shell to move C. and D. files from /usr/spool/uucp to proper
+		place for the new directory structure
+SetUp		shell that copies old system files to the
+		new places (L.sys etc)
+
+Here are some pointers for converting to the new version:
+
+1- There are some significant changes in L.sys  (new name = Systems) format.
+    a-	For direct lines, the first device specification is changed
+	from "ttyxx" to "Direct"
+    b-	On time fields where the default wait time was specified,
+	the ',' must be changed to a ';'
+	In addition, the time has a slightly different meaning.
+	The retry algorithm is now an exponential backoff with initial
+	time (RETRYTIME in parms.h) and max retrytime (MAXRETRYTIME in
+	parms.h).  If the ;time field is specified, that will always
+	be the retry time.  If it is not given, the backoff will be used.
+2- The L-devices (new name=Devices) file must also be changed.
+    a-	All ACU lines must have "801" added to the end of the line.
+    b-	All DIR lines must have "DIR" changed to "Direct".
+  see uucp.D documentation for details.
+3- The uucico program no longer searches for a system to call, it
+   must be called with a -s option.  A new program, uusched,
+   does the search for work and calls remotes in random order,
+   by invoking uucico with -sSYSTEM option.  (see uudemon.hour)
+
+Cron entries should be put into crontab for the demons. For example
+
+39,9 * * * * /bin/su uucp -c "/usr/lib/uucp/uudemon.hour > /dev/null"
+1,30 * * * * /bin/su uucp -c "/usr/lib/uucp/uudemon.poll >/dev/null"
+45 23 * * * ulimit 5000; /bin/su uucp -c "/usr/lib/uucp/uudemon.cleanup > /dev/null"
+48 8,12,16 * * * /bin/su uucp -c "/usr/lib/uucp/uudemon.admin" > /dev/null
+
+Note - at least the cleanup one must be started as root since it must
+do a ulime
+
+For building the system:
+1- Carefully go through the parms.h file to set it up for your
+   environment. (see Appendix I for details)
+2- make install will create a Permissions file if one does not exist.
+   It will also make the needed directories, create some files in INSDIR
+   and install the uudemons.
+3- The demons also send mail to someone (default uucp).  Change as
+   desired.
+
+
+Other misc:
+0- See uucp.D to learn how to set up the Permissions file.
+   A default one will be created by make install.
+1- There is a new undocumented option for the Permissions file.
+   MYNAME=somename.  When used on a LOGNAME line, it will be the
+   name reported in the Shere message when someone logs in as
+   one of the names in LOGNAME.  If used in MACHINE= entry, it
+   is the name used to identify you when you call someone.

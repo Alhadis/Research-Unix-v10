@@ -1,0 +1,36 @@
+\chapter{Compatibility}
+The language definition has changed a bit over the past year
+(1986--87), particularly in the area of exception syntax.  Some
+attempt has been made to allow old programs to continue running.
+\section{Exceptions}
+Three keywords: \verb"exceptionx", \verb"raisex", and \verb"handlex"
+are provided.  They implement the old-style exception mechanism, and
+are treated as derived forms.
+\begin{tabular}{@{}l l}
+\multicolumn{1}{c}{\bf Derived Form}&
+\multicolumn{1}{c}{\bf Equivalent Form} \\ \hline
+\verb"exceptionx" identifier & \verb"exception" Identifier \\
+\verb"exceptionx" identifier \verb":" ty & \verb"exception" Identifier \verb"of" ty \\
+
+\verb"raisex" identifier & \verb"raise" Identifier \\
+\verb"raisex" identifier \verb"with" exp& \verb"raise" Identifier \verb"(" exp \verb")" \\
+
+\verb"handlex" ident \verb"=>" exp & \verb"handle" Ident \verb"=>" exp \\
+\verb"handlex" ident \verb"=>" exp & \verb"handle" Ident () \verb"=>" exp \\
+
+\verb"handlex" ident \verb"with" pat \verb"=>" exp & \verb"handle" Ident pat \verb"=>" exp \\
+\hline
+\end{tabular}
+
+The derivations for \verb"handlex" are a bit more intricate than
+shown above.  The intent is that any program that works under the old
+scheme will continue to work if all instances of \verb"exception",
+\verb"handle", and \verb"raise" are changed to 
+ \verb"exceptionx", \verb"handlex", and \verb"raisex" respectively.
+
+Note that the derived forms change the exception identifier in
+converting to the standard forms; they capitalize the first letter.
+This is to simulate the old scheme, in which exception names lived in
+a different space from value names.  This will cause problems in any
+programs with a capitalized value-name that happens to conflict with
+a (capitalized or uncapitalized) exception name.

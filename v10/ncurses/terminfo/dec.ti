@@ -1,0 +1,139 @@
+# # --------------------------------
+#	@(#)dec.ti	1.2	(1.13	9/13/82)
+#
+# dec: DEC (DIGITAL EQUIPMENT CORPORATION)
+#
+# Note that xenl glitch in vt100 is not quite the same as concept,
+# since the cursor is left in a different position while in the
+# weird state (concept at beginning of next line, vt100 at end
+# of this line) so all versions of vi before 3.7 don't handle
+# xenl right on vt100.  The correct way to handle xenl is when
+# you output the char in column 80, immediately output CR LF
+# and then assume you are in column 1 of the next line.  if xenl
+# is on, am should be on too.
+# I assume you have smooth scroll off or are at a slow enough baud
+# rate that it doesn't matter (1200? or less).  Also this assumes
+# that you set auto-nl to "on", if you set it off use vt100-nam below.
+#
+# Since there are two things here called vt100, the installer can make
+# a local decision to make either one standard "vt100" by including
+# it in the list of terminals in reorder, since the last vt100 in
+# this file is the one that will be left around.  The choice is between
+# nam (no automatic margins) and am (automatic margins), as determined
+# by the wrapline switch (group 3 #2).  I presonally recommend turning
+# on the bit and using vt100-am, since having stuff hammer on the right
+# margin is sort of hard to read.  However, the xenl glitch does not occur
+# if you turn the bit off.
+#
+# The padding requirements listed here are guesses.  It is strongly
+# recommended that xon/xoff be enabled, as this is assumed here.
+#
+# The vt100 uses rs2 and rf rather than is2/tbc/hts because the tab settings
+# are in non-volatile memory and don't need to be reset upon login.
+# Also setting the number of columns glitches the screen annoyingly.
+# You can type "reset" to get them set.
+#
+# Vanilla vt100 definitions.
+vt100|vt100-am|dec vt100,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cols#80, lines#24, it#8,
+	clear=\E[H\E[2J$<50>, cub1=^H, am, cup=\E[%i%p1%d;%p2%dH$<5>,
+	cuf1=\E[C$<2>, cuu1=\E[A$<2>, el=\E[K$<3>, ed=\E[J$<50>,
+	cud=\E[%p1%dB, cuu=\E[%p1%dA, cub=\E[%p1%dD, cuf=\E[%p1%dC, 
+	smso=\E[7m$<2>, rmso=\E[m$<2>, smul=\E[4m$<2>, rmul=\E[m$<2>,
+	bold=\E[1m$<2>, rev=\E[7m$<2>, blink=\E[5m$<2>, sgr0=\E[m$<2>,
+	sgr=\E[%?%p1%t;7%;%?%p2%t;4%;%?%p3%t;7%;%?%p4%t;5%;%?%p6%t;1%;m,
+	rs2=\E>\E[?3l\E[?4l\E[?5l\E[?7h\E[?8h, smkx=\E[?1h\E=, rmkx=\E[?1l\E>,
+	tbc=\E[3g, hts=\EH, home=\E[H,
+	kcuu1=\EOA, kcud1=\EOB, kcuf1=\EOC, kcub1=\EOD, kbs=^H,
+	kf1=\EOP, kf2=\EOQ, kf3=\EOR, kf4=\EOS, ht=^I, ri=\EM$<5>,
+	vt#3, xenl, xon, sc=\E7, rc=\E8, csr=\E[%i%p1%d;%p2%dr,
+vt100|vt100-nam|vt100 w/no am,
+	am@, xenl@, use=vt100-am,
+# Ordinary vt100 in 132 column ("wide") mode.
+vt100-w|vt100-w-am|dec vt100 132 cols (w/advanced video),
+	cols#132, lines#24, rs2=\E>\E[?3h\E[?4l\E[?5l\E[?8h, use=vt100-am,
+vt100-w-nam|vt100-nam-w|dec vt100 132 cols (w/advanced video),
+	cols#132, lines#24, rs2=\E>\E[?3h\E[?4l\E[?5l\E[?8h, vt@, use=vt100-nam,
+# vt100's with no advanced video.
+vt100-nav|vt100 without advanced video option,
+	sgr@, smso=\E[7m , rmso=\E[m , xmc#1,
+	smul@, rmul@, bold@, rev@, blink@, sgr0@, use=vt100,
+vt100-nav-w|vt100-w-nav|dec vt100 132 cols 14 lines (no advanced video option),
+	lines#14, cols#132, use=vt100-nav,
+# vt100's with one of the 24 lines used as a status line.
+# We put the status line on the top.
+vt100-s|vt100-s-top|vt100-top-s|vt100 for use with sysline,
+	lines#23, is2=\E7\E[2;24r\E8, clear=\E[2;1H\E[J$<50>, home=\E[2;1H,
+	dsl=\E7\E[1;24r\E8,
+	cup=\E[%i%p1%{1}%+%d;%p2%dH$<5>, csr=\E[%i%i%p1%d;%p2%dr,
+	hs, eslok, tsl=\E7\E[1;%p1%dH\E[1K, fsl=\E8, use=vt100-am,
+# Status line at bottom.  Clearing the screen will clobber status line.
+vt100-s-bot|vt100-bot-s|vt100 for use with sysline,
+	lines#23, is2=\E[1;23r\E[23;1H, dsl=\E7\E[1;24r\E8,
+	hs, eslok, tsl=\E7\E[24;%p1%dH\E[1K, fsl=\E8, use=vt100-am,
+# vt132 - like vt100 but slower and has ins/del line and such.
+vt132|vt132,
+	il1=\E[L$<99>, dl1=\E[M$<99>, ip=$<7>, dch1=\E[P$<7>, rmir=\E[4l,
+	smir=\E[4h, xenl, ind=^J$<30>, use=vt100,
+# Older DEC CRT's
+vt50|dec vt50,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cub1=^H, ed=\EJ, el=\EK, clear=\EH\EJ,
+	cols#80, lines#12, cuf1=\EC, ht=^I, cuu1=\EA,
+vt50h|dec vt50h,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cub1=^H, ed=\EJ, el=\EK,
+	clear=\EH\EJ, cup=\EY%p1%' '%+%c%p2%' '%+%c, cols#80, lines#12,
+	cuf1=\EC, ht=^I, ri=\EI, cuu1=\EA,
+vt52|dec vt52,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cub1=^H, ed=\EJ, el=\EK,
+	clear=\EH\EJ, cup=\EY%p1%' '%+%c%p2%' '%+%c, cols#80, lines#24,
+	cuf1=\EC, ht=^I, it#8, ri=\EI, cuu1=\EA,
+	kcuu1=\EA, kcud1=\EB, kcuf1=\EC, kcub1=\ED, kbs=^H,
+# Graphics CRT's.
+# clear screen also erases graphics
+vt125|vt125 graphics terminal,
+	clear=\E[;H\E[2J\EPpS(E)\E\\$<50>, use=vt100, 
+gt40|dec gt40,
+	cr=^M, cud1=^J, bel=^G,
+	cub1=^H, cols#72, lines#30, os,
+gt42|dec gt42,
+	cr=^M, cud1=^J, bel=^G,
+	cub1=^H, cols#72, lines#40, os,
+#       The gigi does standout with red!
+gigi|vk100|dec gigi graphics terminal,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cols#84, lines#24, am,
+	clear=\E[;H\E[2J, cub1=^H, cup=\E[%i%p1%d;%p2%dH, cuf1=\E[C,
+	cuu1=\E[A, el=\E[K, ed=\E[J, smso=\E[7;31m, rmso=\E[m,
+	smul=\E[4m, rmul=\E[m,
+	is2=\E>\E[?3l\E[?4l\E[?5l\E[?20l\E[?7h\E[?8h, smkx=\E[?1h\E=,
+	rmkx=\E[?1l\E>, kcuu1=\EOA,
+	kcud1=\EOB, kcuf1=\EOC, kcub1=\EOD, khome=\E[H, kf1=\EOP,
+	kf2=\EOQ, kf3=\EOR, kf4=\EOS, ht=^I, ri=\EM, xenl, cud=\E[%p1%dB,
+	cuu=\E[%p1%dA, cub=\E[%p2%dD, cuf=\E[%p1%dC,
+#
+# Hard copy (decwriter) dec terminals.
+dw1|decwriter I,
+	cr=^M, cud1=^J, ind=^J, bel=^G,
+	cub1=^H, cols#72, hc, os,
+dw2|decwriter|dw|decwriter II,
+	cr=^M, cud1=^J, ind=^J, bel=^G, kbs=^H, cub1=^H, cols#132, hc, os,
+# \E(B	Use U.S. character set (otherwise # => british pound !)
+# \E[20l Disable "linefeed newline" mode (otherwise puts \r after \n,\f,\(vt )
+# \E[w	10 char/in pitch
+# \E[1;132	full width horizontal margins
+# \E[2g	clear all tab stops
+# \E[z	6 lines/in
+# \E[66t	66 lines/page (for \f)
+# \E[1;66r	full vertical page can be printed
+# \E[4g	clear vertical tab stops
+# \E>	disable alternate keypad mode (so it transmits numbers!)
+# \E[%i%du	set tab stop at column %d (origin == 1)
+#	(Full syntax is2 \E[n;n;n;n;n;...;nu where each 'n' is2 a tab stop)
+#       The dw3 does standout with wide characters.
+dw3|la120|decwriter III,
+	cr=^M, cud1=^J, ind=^J, bel=^G, kbs=^h, cub1=^H, cols#132, hc,
+	os, smso=\E[6w, rmso=\E[w, ht=^I,
+	is1=\E(B\E[20l\E[w\E[0;132s\E[2g\E[z\E[66t\E[1;66r\E[4g\E>,
+	is2=\E[9;17;25;33;41;49;57;65;73;81;89;97;105;113;121;129u\r,
+dw4|decwriter IV,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cub1=^H, cols#132, hc, os, am,
+	ht=^I, is2=\Ec, kf0=\EOP, kf1=\EOQ, kf2=\EOR, kf3=\EOS, kbs=^H,

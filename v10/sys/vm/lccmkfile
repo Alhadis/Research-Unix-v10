@@ -1,0 +1,15 @@
+CFLAGS=-I.. -I/usr/include -DKERNEL $gflag
+L=../lib/lccvm.a
+FILES=\
+	$L(vmdrum.x) $L(vmmem.x) $L(vmmon.x) $L(vmpage.x) $L(vmproc.x) \
+	$L(vmpt.x) $L(vmsched.x) $L(vmsubr.x) $L(vmswap.x) $L(vmsys.x)
+
+$L: $FILES
+	names=`membername $newprereq`
+	ar r $L $names && rm $names
+	ranlib $L
+$L(%):N: %
+%.x: %.c
+	lcc $CFLAGS -S $stem.c
+	sed -f ../lib/lccasm.sed <$stem.s | as -o $stem.x
+	rm $stem.s

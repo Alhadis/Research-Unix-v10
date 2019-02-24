@@ -1,0 +1,95 @@
+.seg "text"
+.global _main
+.align 4
+.proc 4
+_main:
+L1:
+retl; nop
+.global _memchar
+.align 4
+.proc 4
+_memchar:save %sp,-104,%sp
+ld [%fp+-8],%r29
+add %r29,1,%r28
+st %r28,[%fp+-8]
+ldsb [%r29],%r29
+stb %r29,[%fp+-1]
+ld [%fp+-8],%r29
+add %r29,1,%r29
+st %r29,[%fp+-8]
+ldsb [%r29],%r29
+stb %r29,[%fp+-1]
+ld [%fp+-8],%r29
+add %r29,-1,%r28
+st %r28,[%fp+-8]
+ldsb [%r29],%r29
+stb %r29,[%fp+-1]
+ld [%fp+-8],%r29
+add %r29,-1,%r29
+st %r29,[%fp+-8]
+ldsb [%r29],%r29
+stb %r29,[%fp+-1]
+L2:
+ret; restore
+.global _memint
+.align 4
+.proc 4
+_memint:save %sp,-104,%sp
+ld [%fp+-8],%r29
+add %r29,4,%r28
+st %r28,[%fp+-8]
+ld [%r29],%r29
+st %r29,[%fp+-4]
+ld [%fp+-8],%r29
+add %r29,4,%r29
+st %r29,[%fp+-8]
+ld [%r29],%r29
+st %r29,[%fp+-4]
+ld [%fp+-8],%r29
+add %r29,-4,%r28
+st %r28,[%fp+-8]
+ld [%r29],%r29
+st %r29,[%fp+-4]
+ld [%fp+-8],%r29
+add %r29,-4,%r29
+st %r29,[%fp+-8]
+ld [%r29],%r29
+st %r29,[%fp+-4]
+L3:
+ret; restore
+.global _regchar
+.align 4
+.proc 4
+_regchar:
+mov %r12,%r11
+add %r11,1,%r12
+ldsb [%r11],%r13
+add %r12,1,%r11
+mov %r11,%r12
+ldsb [%r11],%r13
+mov %r12,%r11
+add %r11,-1,%r12
+ldsb [%r11],%r13
+add %r12,-1,%r11
+mov %r11,%r12
+ldsb [%r11],%r13
+L4:
+retl; nop
+.global _regint
+.align 4
+.proc 4
+_regint:
+mov %r12,%r11
+add %r11,4,%r12
+ld [%r11],%r13
+add %r12,4,%r11
+mov %r11,%r12
+ld [%r11],%r13
+mov %r12,%r11
+add %r11,-4,%r12
+ld [%r11],%r13
+add %r12,-4,%r11
+mov %r11,%r12
+ld [%r11],%r13
+L5:
+retl; nop

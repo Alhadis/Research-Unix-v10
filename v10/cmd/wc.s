@@ -1,0 +1,307 @@
+.data
+.data
+.globl	_type
+_type:.long	0x3030303
+.long	0x3030303
+.long	0x3000103
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x2020201
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x2020202
+.long	0x3020202
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.long	0x3030303
+.data
+.align	2
+.globl	_opt
+_opt:.data	2
+L20:.byte	0x6c,0x77,0x63,0x0
+.data
+.long	L20
+.comm	_twords,4
+.comm	_tlines,4
+.comm	_tchars,4
+.text
+	.stabs	"vaxpcc2",0xf0,0,17665,556214769
+.align	2
+.globl	_main
+.data	1
+L38:.byte	0x77,0x63,0x3a,0x20,0x0
+.text
+.data	1
+L42:.byte	0x74,0x6f,0x74,0x61,0x6c,0x0
+.text
+.set	L.R1,0xf00
+.set	L.SO1,0x0
+.data
+.comm	_buf,4096
+.text
+_main:.word	L.R1
+subl2	$L.SO1,sp
+	.stabs	"main",0x24,0,65,_main
+	.stabs	"main",0x20,0,68,0
+	.stabs	"argc",0xa0,0,4,4
+	.stabs	"argv",0xa0,0,162,8
+clrl	r9
+cmpl	4(ap),$1
+jleq	L26
+movl	8(ap),r0
+cmpb	*4(r0),$45
+jneq	L26
+addl3	$4,r0,r8
+incl	(r8)
+movl	(r8),_opt
+decl	4(ap)
+addl2	$4,8(ap)
+L26:cmpl	4(ap),$1
+jneq	L28
+pushl	$0
+pushl	$0
+calls	$2,_count
+jbr	L30
+L28:movl	$1,r11
+jbr	L33
+L34:pushl	$0
+pushl	*8(ap)[r11]
+calls	$2,_open
+movl	r0,r10
+jgeq	L36
+pushal	L38
+pushal	__iob+32
+calls	$2,_fprintf
+pushl	*8(ap)[r11]
+calls	$1,_perror
+movl	$1,r9
+jbr	L31
+L36:pushl	*8(ap)[r11]
+pushl	r10
+calls	$2,_count
+L31:incl	r11
+L33:cmpl	r11,4(ap)
+jlss	L34
+L30:cmpl	4(ap),$2
+jleq	L40
+pushal	L42
+pushl	_tlines
+pushl	_twords
+pushl	_tchars
+calls	$4,_print
+L40:movl	r9,r0
+jbr	L25
+	.stabs	"status",0x40,0,4,9
+	.stabs	"fd",0x40,0,4,10
+	.stabs	"i",0x40,0,4,11
+L25:ret
+L43:	.stabs	"main",0xf4,0,86,L43
+.align	2
+.globl	_count
+.set	L.R2,0xfc0
+.set	L.SO2,0x0
+.data
+.text
+_count:.word	L.R2
+subl2	$L.SO2,sp
+	.stabs	"count",0x24,0,90,_count
+	.stabs	"count",0x20,0,68,0
+	.stabs	"fd",0xa0,0,4,4
+	.stabs	"name",0xa0,0,34,8
+clrl	r11
+clrl	r8
+clrl	r7
+clrl	r6
+jbr	L48
+L49:addl2	r10,r8
+moval	_buf,r9
+jbr	L51
+L52:movzbl	(r9)+,r0
+cvtbl	_type(r0),r0
+bisl2	r11,r0
+casel	r0,$0,$7
+L2000001:
+.word	L55-L2000001
+.word	L51-L2000001
+.word	L59-L2000001
+.word	L51-L2000001
+.word	L56-L2000001
+.word	L2000000-L2000001
+.word	L51-L2000001
+.word	L51-L2000001
+L51:decl	r10
+jgeq	L52
+L48:pushl	$4096
+pushal	_buf
+pushl	4(ap)
+calls	$3,_read
+movl	r0,r10
+jgtr	L49
+pushl	4(ap)
+calls	$1,_close
+pushl	8(ap)
+pushl	r7
+pushl	r6
+pushl	r8
+calls	$4,_print
+addl2	r8,_tchars
+addl2	r6,_twords
+addl2	r7,_tlines
+	.stabs	"words",0x40,0,4,6
+	.stabs	"lines",0x40,0,4,7
+	.stabs	"chars",0x40,0,4,8
+	.stabs	"cp",0x40,0,44,9
+	.stabs	"n",0x40,0,4,10
+	.stabs	"token",0x40,0,4,11
+ret
+L55:incl	r7
+jbr	L51
+L56:incl	r7
+L2000000:clrl	r11
+jbr	L51
+L59:movl	$4,r11
+incl	r6
+jbr	L51
+L66:	.stabs	"count",0xf4,0,127,L66
+.align	2
+.globl	_print
+.data	1
+L75:.byte	0x25,0x37,0x6c,0x64,0x20,0x0
+.text
+.data	1
+L77:.byte	0x25,0x37,0x6c,0x64,0x20,0x0
+.text
+.data	1
+L79:.byte	0x25,0x37,0x6c,0x64,0x0
+.text
+.data	1
+L83:.byte	0x20,0x25,0x73,0xa,0x0
+.text
+.data	1
+L85:.byte	0xa,0x0
+.text
+.set	L.R3,0x800
+.set	L.SO3,0x0
+.data
+.stabs	"buf",0x20,0,108,0
+.stabn	0xfc,0,0,4096
+.stabs	"tchars",0x20,0,4,0
+.stabs	"tlines",0x20,0,4,0
+.stabs	"twords",0x20,0,4,0
+.stabs	"opt",0x20,0,34,0
+.stabs	"type",0x20,0,98,0
+.stabn	0xfc,0,0,256
+.stabs	"_iob",0x20,0,104,0
+.stabs	"_iobuf",0xfa,0,0,0
+.stabn	0xfc,0,0,120
+.text
+_print:.word	L.R3
+subl2	$L.SO3,sp
+	.stabs	"print",0x24,0,131,_print
+	.stabs	"print",0x20,0,68,0
+	.stabs	"charct",0xa0,0,4,4
+	.stabs	"wordct",0xa0,0,4,8
+	.stabs	"linect",0xa0,0,4,12
+	.stabs	"name",0xa0,0,34,16
+movl	_opt,r11
+jbr	L69
+L70:cvtbl	(r11)+,r0
+casel	r0,$99,$20
+L2000005:
+.word	L78-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L73-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L69-L2000005
+.word	L76-L2000005
+jbr	L69
+L2000003:pushl	16(ap)
+pushal	L83
+calls	$2,_printf
+jbr	L84
+L73:pushl	12(ap)
+pushal	L75
+jbr	L2000004
+L76:pushl	8(ap)
+pushal	L77
+jbr	L2000004
+L78:pushl	4(ap)
+pushal	L79
+L2000004:calls	$2,_printf
+L69:tstb	(r11)
+jneq	L70
+tstl	16(ap)
+jneq	L2000003
+pushal	L85
+calls	$1,_printf
+L84:	.stabs	"wd",0x40,0,34,11
+ret
+L86:	.stabs	"print",0xf4,0,150,L86
+L87:	.stabs	"wc.c",0x94,0,152,L87
+

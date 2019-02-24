@@ -1,0 +1,17 @@
+y=$1
+cd $1
+case $2 in
+"")	set $1 .
+esac
+/usr/man/man0/secindex $2|
+sed '
+s/\(.*\) \(.*\)\.\(.*\)/\1.\3 \2.\3/
+' | while
+	read x
+	case $x in
+	"")	break
+	esac
+do
+	set $x
+	ln $2 $1 2>/dev/null
+done

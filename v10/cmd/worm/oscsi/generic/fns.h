@@ -1,0 +1,13 @@
+extern int gen_inq(int, int *, int, char **, char *);
+extern int gen_dev(int, int *, int, char **, char *);
+extern int gen_help(int, int *, int, char **, char *);
+extern int gen_sense(int, int *, int, char **, char *);
+extern int gen_start(int, int *, int, char **, char *);
+extern int gen_stop(int, int *, int, char **, char *);
+extern int gen_capacity(int, int *, int, char **, char *);
+extern int gen_display(int, int *, int, char **, char *);
+extern int gen_reset(int, int *, int, char **, char *);
+extern int gen_tur(int, int *, int, char **, char *);
+extern int gen_scsi(int, int *, int, char **, char *);
+extern int gen_readt(int, int *, int, char **, char *);
+extern int gen_copy(int, int *, int, char **, char *);

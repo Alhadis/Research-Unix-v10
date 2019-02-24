@@ -1,0 +1,151 @@
+.data
+.globl _in
+.align 2; _in:.long 10
+.long 32
+.long -1
+.long 567
+.long 3
+.long 18
+.long 1
+.long -51
+.long 789
+.long 0
+.text
+.globl _main
+.align 1
+_main:.word 0x800
+pushl $10
+pushal _in
+calls $8/4,_sort
+clrl r11
+jbr L4
+L1:
+pushl _in[r11]
+calls $4/4,_putd
+pushl $10
+calls $4/4,_putchar
+L2:
+incl r11
+L4:
+cmpl r11,$10
+jlssu L1
+clrl r0
+ret
+.globl _putd
+.align 1
+_putd:.word 0x800
+movl 4(ap),r11
+tstl r11
+jgeq L5
+pushl $45
+calls $4/4,_putchar
+mnegl r11,r11
+L5:
+divl3 $10,r11,r5
+jeql L7
+divl3 $10,r11,-(sp)
+calls $4/4,_putd
+L7:
+divl3 $10,r11,-(sp)
+mull2 $10,(sp)
+subl3 (sp)+,r11,r5
+pushal 48(r5)
+calls $4/4,_putchar
+ret
+.globl _sort
+.align 1
+_sort:.word 0x0
+subl3 $1,8(ap),r5
+movl r5,8(ap)
+pushl r5
+clrl -(sp)
+movl 4(ap),r5
+movl r5,_xx
+pushl r5
+calls $12/4,_quick
+ret
+.globl _quick
+.align 1
+_quick:.word 0xf00
+movl 4(ap),r11
+movl 8(ap),r10
+movl 12(ap),r9
+cmpl r10,r9
+jlss L9
+ret
+L9:
+pushl r9
+pushl r10
+pushl r11
+calls $12/4,_partition
+movl r0,r8
+subl3 $1,r8,-(sp)
+pushl r10
+pushl r11
+calls $12/4,_quick
+pushl r9
+pushal 1(r8)
+pushl r11
+calls $12/4,_quick
+ret
+.globl _partition
+.align 1
+_partition:.word 0xf80
+movl 4(ap),r11
+movl 8(ap),r10
+movl 12(ap),r9
+incl r9
+movl r10,r7
+movl (r11)[r7],r8
+jbr L12
+L11:
+incl r10
+jbr L15
+L14:
+incl r10
+L15:
+cmpl (r11)[r10],r8
+jlss L14
+decl r9
+jbr L18
+L17:
+decl r9
+L18:
+cmpl (r11)[r9],r8
+jgtr L17
+cmpl r10,r9
+jgeq L20
+pushal (r11)[r9]
+pushal (r11)[r10]
+calls $8/4,_exchange
+L20:
+L12:
+cmpl r10,r9
+jlss L11
+pushal (r11)[r9]
+pushal (r11)[r7]
+calls $8/4,_exchange
+movl r9,r0
+ret
+.globl _exchange
+.align 1
+_exchange:.word 0xc00
+subl2 $4,sp
+movl 4(ap),r11
+movl 8(ap),r10
+movl _xx,r5
+subl3 r5,r10,r4
+divl3 $4,r4,-(sp)
+subl3 r5,r11,r5
+divl3 $4,r5,-(sp)
+pushal L22
+calls $12/4,_printf
+movl (r11),-4(fp)
+movl (r10),(r11)
+movl -4(fp),(r10)
+ret
+.data
+.globl _xx
+.comm _xx,4
+.text 1
+L22:.ascii "exchange(%d,%d)\012\000"

@@ -1,0 +1,44 @@
+CFLAGS=-g
+CC=CC
+NPROC=3
+ALL=vsw vswconf
+
+all:V:	$ALL
+
+install:V:	/usr/bin/vsw
+
+/usr/bin/vsw:	vsw
+	cp vsw $target; chmod 775 $target
+
+vsw:	main.o line.o switch.o crossbar.o dynasty.o system10.o
+	$CC $CFLAGS -o $target $prereq -lipc
+
+vswconf:	vswconf.c
+	cc $CFLAGS -o $target $prereq -lipc
+
+clobber:V:
+	rm -f *.o core $ALL vswconlog
+
+init.vsw:VQ:	vswconf
+	echo "chatty script takes about 2min, status at end"
+	vswconf -f < conf.script | tee temp
+	is=`ed - temp <<'EOF'
+	?LEVEL 3 SRC?ka
+	1,'a+d
+	4,$d
+	,s/.*: //
+	,s/ //g
+	1,2s/$/x/
+	,jp
+	Q
+	EOF`
+	should="20x20x4"
+	if test "$is" = $should
+	then
+		echo "**** setup succeeded, configured to $should"
+	else
+		echo "**** setup failed, wanted $should, got '$is'"
+	fi
+
+main.o switch.o line.o:	switch.h crossbar.h
+crossbar.o dynasty.o system10.o:	crossbar.h

@@ -1,0 +1,369 @@
+type Lineno = int
+val lineno = ref 0
+val error = fn x => fn (lineno : int) =>
+ (output std_out (makestring lineno ^ ": " ^ x ^ "\n"))
+%%
+%term	   EOF | ID | DOT | TYVAR | INT | REAL | STRING |
+	  ABSTRACTION  | ABSTYPE | AND | ARROW | AS | BAR | BARBAR |
+	  CASE | 
+	  DATATYPE  |
+	  DOTDOTDOT | ELSE | END | EQUAL | EQTYPE | EXCEPTION |
+	  EXCEPTIONX |
+	  DO  | DARROW | FN | FUN | FUNCTOR | HANDLE | HANDLEX | HASH |
+	  IF  | IN  | INCLUDE | INFIX | INFIXR | LET |
+	  LOCAL | NONFIX | OF | OP | OPEN | OVERLOAD |
+          QUERY | RAISE |  RAISEX | REC |
+	  SHARING | SIG | SIGNATURE | STRUCT | STRUCTURE |
+	  THEN | TYPE | VAL | WHILE | WILD  | WITH | WITHTYPE |
+	  ASTERISK | COLON | COMMA  | LBRACE |  LBRACKET | LPAREN |
+	  RBRACE | RBRACKET | RPAREN | SEMICOLON |
+	  ORELSE | ANDALSO
+
+%nonterm iddot | ident | nonfix_ident | opid | qid | selector | elabel |
+	 elabels | plabel | plabels | tlabel | tabels0 |  ty0 | ty0_pc |
+	 ty2 | ty | withclause | match | rule | handlerx | hrulex | exp_ps |
+	 exp | exp1 | exp2 | constraint | exp3 | exp4 | aexp | bexp |
+	 exp_2c | pat | pat1 | pat2 | pat3 | apat | apat1 | pat_2c | pat_ps |
+	 vb | rvb | fg | apat_p | clause | tb | tyvars | tyvar_pc | db | 
+	 constr | eb | ebx | qid_p | fixity | ldec  | exp_pa | ldecs |
+	 ops | spec_s | spec | strspec | tyspec | valspec | exnspecx |
+	 exnspec | fb | tlabels | tlabels0 |
+	 sharespec | patheqn | sign | sigconstraint_op | sigb |
+	 str | sdecs | sdec | strb | fparam | fctb | tdec | top |
+	 interdec
+
+%verbose
+
+%start tdec
+%eof EOF
+
+%nonassoc WITHTYPE
+%right AND
+%right BAR
+%right ARROW
+%right DO
+%right HANDLE HANDLEX
+%right RAISE
+%left ORELSE
+%left ANDALSO
+
+%%
+
+iddot	: ID DOT
+	   ()
+ident	: ID								()
+	| ASTERISK							()
+	| EQUAL								()
+
+nonfix_ident	: ident							()
+
+opid	: nonfix_ident							()
+	| OP ident							()
+
+qid	: iddot qid							()
+	| ident							()
+
+selector: ID							()
+	| INT							()
+
+elabel	: selector EQUAL exp						()
+
+elabels: elabel COMMA elabels						()
+	| elabel							()
+
+plabel	: selector EQUAL pat						()
+	| ID							()
+	| ID AS pat							()
+	| ID COLON ty AS pat						()
+
+plabels : plabel COMMA plabels						()
+	| plabel							()
+	| DOTDOTDOT							()
+
+tlabel	: selector COLON ty0						()
+
+tlabels0: tlabel COMMA tlabels0						()
+	| tlabel							()
+
+tlabels : tlabels0							()
+	|							()
+
+ty0	: ty0 ARROW ty0							()
+	| ty2 ASTERISK ty2						()
+	| ty2							()
+
+ty0_pc	: ty0							()
+	| ty0 COMMA ty0_pc						()
+
+ty2	: LPAREN ty0_pc RPAREN qid					()
+	| qid							()
+	| LBRACE tlabels RBRACE						()
+
+ty	: ty0							()
+
+withclause: WITH exp							()
+	| 							()
+
+match	: rule							()
+	| match BAR match						()
+
+rule	: pat DARROW exp						()
+
+handlerx: handlerx BARBAR handlerx					()
+	| hrulex							()
+
+hrulex	: qid WITH match						()
+	| qid DARROW exp						()
+	| QUERY DARROW exp						()
+
+exp_ps	: exp							()
+	| exp SEMICOLON exp_ps						()
+	
+exp	: exp1 %prec BAR						()
+
+exp1	: exp1 HANDLEX handlerx						()
+	| exp1 HANDLE match						()
+	| exp2 %prec HANDLE						()
+
+exp2	: exp3 constraint						()
+	| exp3 bexp							()
+	| bexp								()
+	| exp2 ORELSE exp2						()
+	| exp2 ANDALSO exp2						()
+
+constraint:								()
+	| COLON ty							()
+
+exp3	: exp4							()
+	| exp3 exp4							()
+
+exp4	: ID							()
+	| aexp							()
+
+aexp	: OP ID							()
+	| iddot qid							()
+	| INT							()
+	| REAL							()
+	| STRING							()
+	| HASH selector							()
+	| LBRACE elabels RBRACE						()
+	| LBRACE RBRACE							()
+	| LPAREN RPAREN							()
+	| LPAREN exp RPAREN						()
+	| LPAREN exp_2c RPAREN						()
+	| LBRACKET exp_ps RBRACKET					()
+	| LBRACKET RBRACKET						()
+	| LET ldecs IN exp_ps END					()
+
+bexp	: FN match							()
+	| CASE exp OF match						()
+	| WHILE exp DO exp						()
+	| IF exp THEN exp ELSE exp					()
+	| RAISEX qid withclause						()
+	| RAISE exp2							()
+
+
+exp_2c	: exp COMMA exp_2c						()
+	| exp COMMA exp							()
+
+pat	: pat1							()
+	| pat1 AS pat1							()
+
+pat1	: pat2							()
+	| pat2 COLON ty							()
+
+pat2	: pat3							()
+	| pat2 pat3							()
+
+pat3	: ID							()
+	| apat1							()
+
+apat	: ID							()
+	| apat1							()
+
+apat1	: OP ident							()
+	| iddot qid							()
+	| INT							()
+	| REAL							()
+	| STRING							()
+	| WILD							()
+	| LPAREN RPAREN							()
+	| LPAREN pat RPAREN						()
+	| LPAREN pat_2c RPAREN						()
+	| LBRACKET RBRACKET						()
+	| LBRACKET pat_ps RBRACKET					()
+	| LBRACE RBRACE							()
+	| LBRACE plabels RBRACE						()
+
+pat_2c	: pat COMMA pat_2c						()
+	| pat COMMA pat							()
+
+pat_ps	: pat							()
+	| pat SEMICOLON pat_ps						()
+
+vb	: vb AND vb							()
+	| pat EQUAL exp							()
+
+rvb	: opid constraint EQUAL exp					()
+	| rvb AND rvb							()
+
+fb	: clause							()
+	| clause BAR fb							()
+	| fb AND fb							()
+
+apat_p	: apat							()
+	| apat_p apat							()
+
+clause	: apat_p constraint EQUAL exp					()
+
+tb	: tyvars ident EQUAL ty						()
+	| tb AND tb							()
+
+tyvars	: TYVAR							()
+	| LPAREN tyvar_pc RPAREN					()
+	|							()
+
+tyvar_pc: TYVAR							()
+	| TYVAR COMMA tyvar_pc						()
+
+db	: db AND db							()
+ 	| db WITHTYPE tb						()
+	| tyvars ident constr						()
+	| db BAR constr							()
+
+constr	: opid							()
+	| opid OF ty							()
+
+eb	: ident							()
+	| ident OF ty							()
+	| ident EQUAL qid						()
+	| eb AND eb							()
+
+ebx	: ident constraint						()
+	| ident EQUAL qid						()
+	| ebx AND ebx							()
+
+qid_p	: qid							()
+	| qid qid_p							()
+
+
+fixity	: INFIX							()
+	| INFIX INT							()
+	| INFIXR							()
+	| INFIXR INT							()
+	| NONFIX							()
+
+ldec	: VAL vb							()
+	| VAL REC rvb							()
+	| FUN fb							()
+	| TYPE tb							()
+	| DATATYPE db							()
+	| ABSTYPE db WITH ldecs END					()
+	| EXCEPTION eb							()
+	| EXCEPTIONX ebx						()
+	| LOCAL ldecs IN ldecs END					()
+	| OPEN qid_p							()
+	| fixity ops							()
+	| OVERLOAD ident COLON ty AS exp_pa				()
+
+exp_pa	: exp							()
+	| exp AND exp_pa						()
+
+ldecs	: ldec							()
+	| ldecs ldec							()
+	| ldecs SEMICOLON						()
+
+ops	: ident							()
+	| ident ops							()
+
+spec_s	: 							()
+	| spec spec_s							()
+	| spec SEMICOLON spec_s						()
+
+spec	: STRUCTURE strspec						()
+	| DATATYPE db							()
+	| TYPE tyspec							()
+	| EQTYPE tyspec							()
+	| VAL valspec							()
+	| EXCEPTION exnspec						()
+	| EXCEPTIONX exnspecx						()
+	| fixity ops							()
+	| SHARING sharespec						()
+	| INCLUDE ident							()
+
+strspec	: strspec AND strspec						()
+	| ident COLON sign						()
+
+tyspec	: tyspec AND tyspec						()
+	| tyvars ident							()
+
+valspec	: valspec AND valspec						()
+	| opid COLON ty							()
+
+exnspec : exnspec AND exnspec						()
+	| ident							()
+	| ident OF ty							()
+
+exnspecx: exnspecx AND exnspecx						()
+	| ident							()
+	| ident COLON ty						()
+	
+sharespec: sharespec AND sharespec					()
+	| TYPE patheqn							()
+	| qid patheqn							()
+	
+patheqn:  qid EQUAL qid							()
+	| qid EQUAL patheqn						()
+
+sign	: ID							()
+	| SIG spec_s END						()
+
+sigconstraint_op :							()
+	| COLON sign							()
+
+sigb	: sigb AND sigb							()
+	| ident EQUAL sign						()
+
+str	: qid							()
+	| STRUCT sdecs END						()
+	| ID LPAREN sdecs RPAREN					()
+	| ID LPAREN str RPAREN						()
+
+sdecs	: sdecs sdec							()
+	| sdecs sdec SEMICOLON						()
+	|							()
+
+sdec	: STRUCTURE strb						()
+	| ABSTRACTION strb						()
+	| SIGNATURE sigb						()
+	| FUNCTOR fctb							()
+	| ldec							()
+
+strb	: ident sigconstraint_op EQUAL str				()
+	| strb AND strb							()
+
+fparam	: ID COLON sign							()
+	| spec_s							()
+
+fctb	: ident LPAREN fparam RPAREN sigconstraint_op EQUAL str		()
+	| fctb AND fctb							()
+
+tdec	: SIGNATURE sigb						()
+	| FUNCTOR fctb							()
+	| STRUCTURE strb						()
+	| ABSTRACTION strb						()
+	| OPEN qid_p							()
+	| SEMICOLON tdec						()
+	|							()
+
+top	: SIGNATURE sigb						()
+	| FUNCTOR fctb							()
+	| STRUCTURE strb						()
+	| ABSTRACTION strb						()
+	| OPEN qid_p							()
+	| ldec							()
+	| exp							()
+
+interdec: top							()
+	| interdec top							()
+	| SEMICOLON							()

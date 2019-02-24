@@ -1,0 +1,131 @@
+.text
+.globl _main
+.align 1
+_main:.word 0x0
+ret
+.globl _f
+.align 1
+_f:.word 0x800
+calls $0/4,_f
+movl r0,r11
+calls $0/4,_f
+addl3 r0,r11,4(ap)
+ret
+.globl _f2
+.align 1
+_f2:.word 0xc00
+calls $0/4,_f
+movl r0,r10
+tstl 4(ap)
+jeql L3
+calls $0/4,_f
+movl r0,r11
+jbr L4
+L3:
+movl $1,r11
+L4:
+addl3 r11,r10,4(ap)
+ret
+.globl _f3
+.align 1
+_f3:.word 0xfc0
+subl2 $24,sp
+clrl r11
+clrl r10
+clrl r9
+clrl r8
+clrl r7
+clrl r6
+clrl -4(fp)
+clrl -8(fp)
+clrl -12(fp)
+clrl -16(fp)
+movl 8(ap),r5
+movl r5,-24(fp)
+addl2 $4,8(ap)
+movl 4(ap),-20(fp)
+tstl -20(fp)
+jeql L7
+calls $0/4,_f
+movl r0,-20(fp)
+L7:
+movl -20(fp),*-24(fp)
+ret
+.globl _f4
+.align 1
+_f4:.word 0xfc0
+subl2 $16,sp
+clrl r11
+clrl r10
+clrl r9
+clrl r8
+clrl r7
+clrl r6
+movl _i,r5
+movl r5,-8(fp)
+movd _a[r5],r2
+movd r2,-16(fp)
+movd _b[r5],r0
+addd3 r0,r2,r4
+movd L13,r2
+cmpd r4,r2
+jeql L11
+tstl -8(fp)
+jeql L11
+subd3 r0,-16(fp),r4
+cmpd r4,r2
+jeql L11
+movl $1,-4(fp)
+jbr L12
+L11:
+clrl -4(fp)
+L12:
+movl -4(fp),_i
+ret
+.globl _f5
+.align 1
+_f5:.word 0xec0
+movl _A,r5
+movl r5,r9
+movl _k,r4
+movl _m,r3
+mull3 r3,r4,r2
+movl _j,r1
+movl r1,r11
+mull2 r1,r3
+movl r3,r10
+muld3 (r5)[r3],(r5)[r2],r0
+movd r0,r6
+movl _B,r3
+movl _n,r5
+mull2 r5,r4
+mull2 r11,r5
+muld3 (r3)[r5],(r3)[r4],r0
+addd3 r0,r6,_x
+muld3 (r3)[r5],(r9)[r2],r0
+muld3 (r9)[r10],(r3)[r4],r4
+subd3 r4,r0,_x
+ret
+.data
+.globl _x
+.comm _x,8
+.globl _B
+.comm _B,4
+.globl _A
+.comm _A,4
+.globl _n
+.comm _n,4
+.globl _m
+.comm _m,4
+.globl _k
+.comm _k,4
+.globl _j
+.comm _j,4
+.globl _i
+.comm _i,4
+.globl _b
+.comm _b,80
+.globl _a
+.comm _a,80
+.text 1
+.align 2; L13:.long 0x0,0x0

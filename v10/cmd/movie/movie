@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# movie: "movie fname" projects movie stored in fname.s/fname.i
+
+LIB=${LIB-/usr/lib/movie}
+MEM=${MEM-65000}
+OPT="-t $LIB/animterm -m$MEM"
+FILE=""
+
+while true
+do
+	case $1 in
+	-d)	OPT="$OPT -d"; shift ;;
+	-m[0-9][0-9]*) OPT="$OPT $1"; shift ;;
+	-m)	OPT="$OPT $1$2"; shift; shift ;;
+	-t)	OPT="$OPT $1 $2"; shift; shift ;;
+	*)	FILE=$1; break ;;
+	esac
+done
+
+case $FILE in
+"")
+	trap "rm -f /tmp/movie$$.i" 0 1 2 15
+	$LIB/fdevelop >/tmp/movie$$.i
+	$LIB/anim $OPT /tmp/movie$$.i
+	;;
+*.i)
+	$LIB/anim $OPT $FILE
+	;;
+*.s)
+	bn=`echo $FILE | sed s/.s$//`
+	$LIB/develop $bn.s
+	$LIB/anim $OPT $bn.i
+	;;
+*)
+	echo 'Usage: movie file.s' 1>&2
+	exit 1
+	;;
+esac
+
+exit 0

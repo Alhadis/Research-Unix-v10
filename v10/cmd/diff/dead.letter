@@ -1,0 +1,44 @@
+Remember "jackpot"?  You got one.   These two lines
+hash into the same value.
+
+	#line 98 "../awk/awk.lx.l"
+	{ unputstr("(NF)"); return(INDIRECT); }
+
+The diagnostic used to cause more anxiety than it
+was worth, so it was abolished long since.  Now that
+hash is 32 bits, it might be restored.
+
+From bwk Sun May 26 11:46:36 EDT 1991
+The output of diff on this is pretty misleading;
+in fact, i don't understand how it
+produces what it does.
+
+File 1:
+case 35:
+
+#line 98 "../awk/awk.lx.l"
+{ unputstr("(NF)"); return(INDIRECT); }
+break;
+case 36:
+
+#line 99 "../awk/awk.lx.l"
+File2:
+case 35:
+{ unputstr("(NF)"); return(INDIRECT); }
+break;
+case 36:
+Ouput:
+2,4c2
+< 
+< #line 98 "../awk/awk.lx.l"
+< { unputstr("(NF)"); return(INDIRECT); }
+---
+> { unputstr("(NF)"); return(INDIRECT); }
+7,8d4
+< 
+< #line 99 "../awk/awk.lx.l"
+
+
+Any explanation?  it makes testing
+my new version of lex a bit trickier.
+

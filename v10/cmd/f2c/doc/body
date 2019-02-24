@@ -1,0 +1,2352 @@
+. \"define f2c % "\f(CWf2c\fP" %
+. \"define F2c % "\f(CWF2c\fP" %
+.de Bp
+.ft R
+.sp .5
+.in \w'\(bu\ 'u
+.ti 0
+\(bu\ \c
+..
+.EQ
+define dollar % "\f(CW$\fP" %
+delim $$
+define f2c % "f\|2c" %
+define F2c % "F\^2c" %
+define libF77 % "libF77" %
+define libI77 % "libI77" %
+define LibF77 % "LibF77" %
+define LibI77 % "LibI77" %
+.EN
+.TL
+A Fortran to C Converter
+.AU
+S. I. Feldman
+.AI
+Bellcore
+Morristown, NJ 07960
+.AU
+David M. Gay
+.AI
+.MH
+.AU
+Mark W. Maimone
+.AI
+Carnegie-Mellon University
+Pittsburgh, PA 15213
+.AU
+N. L. Schryer
+.AI
+.MH
+.AB
+We describe $f2c$, a program that translates Fortran 77
+into C or C++.  $F2c$ lets one portably mix C and Fortran
+and makes a large body of well-tested Fortran
+source code available to C environments.
+.AE
+.SH
+1. INTRODUCTION
+.PP
+Automatic conversion of Fortran 77
+.[ [
+ANSI FORTRAN 1978
+.]]
+to C
+.[ [
+Kernighan Ritchie 1978
+.]
+.[
+Kernighan Ritchie 1988
+.]]
+is desirable for
+several reasons.  Sometimes it is useful to run a
+well-tested Fortran program on a machine that has a C
+compiler but no Fortran compiler.  At other times, it
+is convenient to mix C and Fortran.  Some things are
+impossible to express in Fortran 77 or are harder
+to express in Fortran than in C
+(e.g. storage management, some character operations,
+arrays of functions, heterogeneous data structures,
+and calls that depend on the operating system),
+and some programmers simply prefer C to Fortran.
+There is a large body of well tested
+Fortran source code for carrying out a wide variety of
+useful calculations, and it is sometimes desirable to
+exploit some of this Fortran source in a C environment.
+Many vendors provide some way of mixing C and Fortran, but
+the details vary from system to system.
+Automatic Fortran to C conversion lets one create a
+.I portable
+C program that exploits Fortran source code.
+.PP
+A side benefit of automatic Fortran 77 to C conversion is that
+it allows such tools as
+.I cyntax (1)
+and
+.I lint (1)
+\ 
+.[[
+v101
+.]]
+to provide Fortran 77 programs with some of the consistency
+and portability checks that the Pfort Verifier
+.[ [
+Ryder 1974
+.]]
+provided to Fortran 66 programs.
+The consistency checks
+detect errors in calling sequences
+and are thus a boon to debugging.
+.PP
+This paper describes $f2c$, a Fortran 77 to C converter
+based on Feldman's original $f77$ compiler
+.[ [
+Feldman Weinberger Portable Fortran
+.]].
+We have used $f2c$ to convert various large programs and
+subroutine libraries to C automatically (i.e., with no manual intervention);
+these include the \s-2PORT3\s+2 subroutine library (\s-2PORT1\s+2
+is described in
+.[ [
+Fox Hall Schryer Algorithm 1978
+.]
+.[
+Fox Hall Schryer port 1978
+.]]),
+MINOS
+.[ [
+Murtagh Saunders 1987
+.]],
+and Schryer's floating-point test
+.[ [
+Schryer floating
+.]].
+The floating-point test is of particular interest, as it relies
+heavily on correct evaluation of parenthesized expressions and
+is bit-level self-testing.
+.PP
+As a debugging aid, we sought bit-level compatibility between
+objects compiled from the C produced by $f2c$ and objects
+produced by our local $f77$ compiler.  That is, on the VAX
+where we developed $f2c$, we sought to make it impossible to
+tell by running a Fortran program whether some of its
+modules had been compiled by $f2c$ or
+all had been compiled by $f77$.  This meant that $f2c$
+should follow the same calling conventions as $f77$
+.[ [
+Feldman Weinberger Portable Fortran
+.]]
+and should use $f77$'s support libraries, $libF77$ and $libI77$.
+.PP
+Although we have tried to make $f2c$'s output reasonably readable,
+our goal of strict compatibility with $f77$ implies some nasty
+looking conversions.  Input/output statements, in particular,
+generally get expanded into
+a series of calls on routines in $libI77$, $f77$'s I/O library.
+Thus the C output of $f2c$ would probably be something of a nightmare
+to maintain as C; it would be much more sensible to maintain the original
+Fortran, translating it anew each time it changed.  Some commercial
+vendors, e.g., those listed in Appendix A,
+seek to perform translations yielding C that one
+might reasonably maintain directly; these translations generally
+require some manual intervention.
+.PP
+The rest of this paper is organized as follows.
+Section 2 describes the interlanguage conventions used by $f2c$ (and $f77$).
+\(sc3 summarizes some extensions to Fortran 77 that $f2c$ recognizes.
+. \"The extensions to Fortran 77 that $f2c$ recognizes are summarized in \(sc3.
+Example invocations of $f2c$ appear in \(sc4.
+\(sc5 illustrates various details of $f2c$'s translations, and
+\(sc6 considers portability issues.
+\(sc7 discusses the generation and use of
+.I prototypes ,
+which can be used both by C++ and ANSI C compilers and by
+$f2c$ to check consistency of calling sequences.
+\(sc8 describes our experience with
+an experimental $f2c$ service provided by $netlib$
+.[ [
+Dongarra Grosse 1987
+.]],
+and \(sc9 considers possible extensions.
+Appendix A lists some vendors who offer
+conversion of Fortran to C that one might maintain as C.
+Finally, Appendix B contains a $man$ page telling how to use $f2c$.
+.SH
+2. INTERLANGUAGE CONVENTIONS
+.PP
+Much of the material in this section is taken from
+.[ [
+Feldman Weinberger Portable Fortran
+.]].
+.SH
+Names
+.PP
+An $f2c$ extension
+inspired by Fortran 90 (until recently called Fortran 8x
+.[ [
+Fort8x
+.]])
+is that long names are allowed ($f2c$ truncates names that are longer
+than 50 characters), and names may contain underscores.  To avoid conflict
+with the names of library routines and with names that $f2c$ generates,
+Fortran names may have one or two underscores appended.
+Fortran names are forced to lower case (unless the
+.CW \%-U
+option described in Appendix B is in effect); external names, i.e., the names
+of Fortran procedures and common blocks, have a single underscore appended
+if they do not contain any underscores and have a pair of underscores
+appended if they do contain underscores.
+Thus Fortran subroutines named
+.CW ABC ,
+.CW A_B_C ,
+and
+.CW A_B_C_
+result in C functions named
+.CW abc_ ,
+.CW a_b_c_\|\^_ ,
+and
+.CW a_b_c_\|\^_\|\^_ .
+.SH
+Types
+.PP
+The table below shows
+corresponding Fortran and C declarations;
+the C declarations use types defined in
+.CW f2c.h ,
+a header file upon which $f2c$'s translations rely.
+The table also shows the C types defined in the standard
+version of
+.CW f2c.h .
+.KS
+.TS
+center box;
+c c c
+l l l.
+Fortran	C	standard \f(CWf2c.h\fP
+.sp .5
+integer\(**2 x	shortint x;	short int x;
+integer x	integer x;	long int x;
+logical x	long int x;	long int x;
+real x	real x;	float x;
+double precision x	doublereal x;	double x;
+complex x	complex x;	struct { float r, i; } x;
+double complex x	doublecomplex x;	struct { double r, i; } x;
+character\(**6 x	char x[6];	char x[6];
+.TE
+.KE
+By the rules of Fortran,
+.CW integer,
+.CW logical,
+and
+.CW real
+data occupy the same amount of memory, and
+.CW "double precision"
+and
+.CW complex
+occupy twice this amount; $f2c$
+assumes that the types in the C column above are
+chosen (in
+.CW f2c.h )
+so that these assumptions are valid.
+The translations of the Fortran
+.CW equivalence
+and
+.CW data
+statements depend on these assumptions.
+On some machines, one must modify
+.CW f2c.h
+to make these assumptions hold.  See \(sc6 for examples
+and further discussion.
+.SH
+Return Values
+.PP
+A function of type
+.CW integer ,
+.CW logical ,
+or
+.CW "double precision"
+must be declared as a C function that returns the corresponding type.
+If the
+.CW \%-R
+option is in effect (see Appendix B), the same is true
+of a function of type
+.CW real ;
+otherwise, a
+.CW real
+function must be declared as a C function that returns
+.CW doublereal ;
+this hack facilitates our VAX regression testing, as it
+duplicates the behavior of our local Fortran compiler ($f77$).
+A
+.CW complex
+or
+.CW "double complex"
+function is equivalent to a C routine
+with an additional
+initial argument that points to the place where the return value is to be stored.
+Thus,
+.P1
+complex function f( . . . )
+.P2
+is equivalent to
+.P1
+void f_(temp, . . .)
+complex \(**temp;
+ . . .
+.P2
+A character-valued function is equivalent to a C routine with
+two extra initial arguments:
+a data address and a length.
+Thus,
+.P1
+character\(**15 function g( . . . )
+.P2
+is equivalent to
+.P1
+g_(result, length, . . .)
+char \(**result;
+ftnlen length;
+ . . .
+.P2
+and could be invoked in C by
+.P1
+char chars[15];
+ . . .
+g_(chars, 15L, . . . );
+.P2
+Subroutines are invoked as if they were
+.CW int -valued
+functions whose value specifies which alternate return to use.
+Alternate return arguments (statement labels) are not passed to the function,
+but are used to do an indexed branch in the calling procedure.
+(If the subroutine has no entry points with alternate return arguments,
+the returned value is undefined.)
+The statement
+.P1
+call nret(\(**1, \(**2, \(**3)
+.P2
+is treated exactly as if it were the Fortran computed
+.CW goto
+.P1
+goto (1, 2, 3),  nret( )
+.P2
+.SH
+Argument Lists
+.PP
+All Fortran arguments are passed by address.
+In addition,
+for every non-function argument that is of type character,
+an argument giving the length of the value is passed.
+(The string lengths are
+.CW ftnlen
+values, i.e.,
+.CW "long int"
+quantities passed by value).  In summary, the order of arguments is:
+extra arguments for complex and character functions,
+an address for each datum or function, and a
+.CW ftnlen
+for each character argument (other than character-valued functions).
+Thus, the call in
+.P1
+external f
+character\(**7 s
+integer b(3)
+ . . .
+call sam(f, b(2), s)
+.P2
+is equivalent to that in
+.P1
+int f();
+char s[7];
+long int b[3];
+ . . .
+sam_(f, &b[1], s, 7L);
+.P2
+Note that the first element of a C array always has subscript zero,
+but Fortran arrays begin at 1 by default.
+Because Fortran arrays are stored in column-major order, whereas
+C arrays are stored in row-major order,
+$f2c$ translates multi-dimensional Fortran arrays into one-dimensional
+C arrays and issues appropriate subscripting expressions.
+.SH
+3. EXTENSIONS TO FORTRAN 77
+.PP
+Since it is derived from $f77$, $f2c$ supports all of the $f77$ extensions
+described in
+.[ [
+Feldman Weinberger Portable Fortran
+.]].
+$F2c$'s extensions include the following.
+.Bp
+Type
+.CW "double complex"
+(alias
+.CW "complex*16" )
+is a double-precision version of
+.CW complex .
+Specific intrinsic functions for
+.CW "double complex"
+have names that start with
+.CW z
+rather than
+.CW c .
+An exception to this rule is
+.CW dimag ,
+which returns the imaginary part of a
+.CW "double complex"
+value;
+.CW imag
+is the corresponding generic intrinsic function.
+The generic intrinsic function
+.CW real
+is extended so that it returns the real part of a
+.CW "double complex"
+value as a
+.CW "double precision"
+value;
+.CW dble
+is the specific intrinsic function that does this job.
+.Bp
+The ``types'' that may appear in an
+.CW implicit
+statement include
+.CW undefined ,
+which implies that variables
+whose names begin with the associated letters
+must be explicitly declared in a type statement.  $F2c$ also
+recognizes the Fortran 90 statement
+.P1
+implicit none
+.P2
+as equivalent to
+.P1
+implicit undefined(a-z)
+.P2
+The command-line option
+.CW \%-u
+has the effect of inserting
+.P1
+implicit none
+.P2
+at the beginning of each Fortran procedure.
+.Bp
+Procedures may call themselves recursively, i.e.,
+may call themselves either directly or indirectly
+through a chain of other calls.
+.Bp
+The keywords
+.CW static
+and
+.CW automatic
+act as ``types'' in type and implicit statements;
+they specify storage classes.
+There is exactly one copy of each
+.CW static
+variable, and such variables retain their values between
+invocations of the procedure in which they appear.
+On the other hand, each invocation of a procedure gets
+new copies of the procedure's
+.CW automatic
+variables.
+.CW Automatic
+variables may not appear in
+.CW equivalence ,
+.CW data ,
+.CW namelist ,
+or
+.CW save
+statements.  The command-line option
+.CW \%-a
+changes the default storage class from
+.CW static
+to
+.CW automatic
+(for all variables except those that appear in
+.CW common ,
+.CW data ,
+.CW equivalence ,
+.CW namelist ,
+or
+.CW save
+statements).
+.Bp
+A tab in the first 6 columns signifies that the current line is
+a free-format line, which may extend beyond column 72.
+An ampersand
+.CW &
+in column 1 indicates that the current line is a free-format
+continuation line.  Lines that have neither an ampersand in column 1
+nor a tab in the first 6 columns are treated as Fortran 77 fixed-format
+lines:  if shorter than 72 characters, they are padded on the right
+with blanks until they are 72 characters long; if longer than 72
+characters, the characters beyond column 72 are discarded.
+After taking continuations into account,
+statements may be up to 1320 characters long; this is the only
+constraint on the length of free-format lines.  (This limit is
+implied by the Fortran 77 standard, which allows at most 19 continuation lines;
+$1320 ~=~ (1^+^19) ~times~ 66$.)
+.Bp
+Aside from quoted strings, $f2c$ ignores case (unless the
+.CW \%-U
+option is in effect).
+.Bp
+The statement
+.P1
+include 'stuff'
+.P2
+is replaced by the contents of the file
+.CW stuff.
+.CW Include s
+may be nested to a reasonable depth, currently ten.
+The command-line option
+.CW \%-!I
+disables
+.CW include s;
+this option is used by the $netlib$ $f2c$
+service described in \(sc8 (for which
+.CW include
+obviously makes no sense).
+.Bp
+$F77$ allows binary, octal, and hexadecimal constants
+to appear in
+.CW data
+statements; $f2c$ goes somewhat further, allowing
+such constants to appear anywhere; they are treated just
+like a decimal integer constant having the equivalent value.
+Binary, octal, and hexadecimal constants may assume one of
+two forms: a letter followed by a quoted string of digits,
+or a decimal base, followed by a sharp sign
+.CW # ,
+followed by a string of digits (not quoted).  The letter is
+.CW b
+or
+.CW B
+for binary constants,
+.CW o
+or
+.CW O
+for octal constants, and
+.CW x ,
+.CW X ,
+.CW z ,
+or
+.CW Z
+for hexadecimal constants.  Thus, for example,
+.CW z'a7' ,
+.CW 16#a7 ,
+.CW o'247' ,
+.CW 8#247 ,
+.CW b'10100111'
+and
+.CW 2#10100111
+are all treated just like the integer
+.CW 167 .
+.Bp
+For compatibility with C, quoted strings may contain the following
+escapes:
+.TS
+center box;
+lFCW l a lFCW l.
+\e0	null	\ 	\en	newline
+\e\e	\e	\ 	\er	carriage return
+\eb	backspace	\ 	\et	tab
+\ef	form feed	\ 	\ev	vertical tab
+.sp .5
+.T&
+aFCW l s s s.
+ \e'	apostrophe (does not terminate a string)
+ \e"	quotation mark (does not terminate a string)
+ \e\fIx\fP	\fIx\fR, where \fIx\fR is any other character
+.TE
+The
+.CW \%-!bs
+option tells $f2c$ not to recognize these escapes.
+Quoted strings may be delimited either by double quotes (\ \f(CW"\fR\ )
+or by single quotes (\ \f(CW\(fm\fR\ ); if a string starts with
+one kind of quote, the other kind may be embedded in the string
+without being repeated or quoted by a backslash escape.
+Where possible, translated strings are null-terminated.
+.Bp
+Hollerith strings are treated as character strings.
+.Bp
+In
+.CW equivalence
+statements, a multiply-dimensioned array may be given a single
+subscript, in which case the missing subscripts are taken to be 1
+(for backward compatibility with Fortran 66)
+and a warning message is issued.
+.Bp
+In a formatted read of non-character variables, the I/O
+library ($libI77$) allows a field to be terminated by a comma.
+.Bp
+Type
+.CW real*4
+is equivalent to
+.CW real ,
+.CW integer*4
+to
+.CW integer ,
+.CW real*8
+to
+.CW "double precision" ,
+.CW complex*8
+to
+.CW complex ,
+and, as stated before,
+.CW complex*16
+to
+.CW "double complex" .
+.Bp
+The type
+.CW integer*2
+designates short integers (translated to type
+.CW shortint ,
+which by default is
+.CW "short int" ).
+Such integers are expected to occupy half a ``unit'' of storage.
+The command-line options
+.CW \%-I2
+and
+.CW \%-i2
+turn type
+.CW integer
+into
+.CW integer*2 ;
+see the $man$ page (appendix B) for more details.
+.Bp
+The binary intrinsic functions
+.CW and ,
+.CW or ,
+.CW xor ,
+.CW lshift ,
+and
+.CW rshift
+and the unary intrinsic function
+.CW not
+perform bitwise operations on
+.CW integer
+or
+.CW logical
+operands.  For
+.CW lshift
+and
+.CW rshift ,
+the second operand tells how many bits to
+shift the first operand.
+.Bp
+$LibF77$ provides two functions for accessing command-line arguments:
+.CW iargc(dummy)
+returns the number of command-line arguments (and ignores its argument);
+.CW getarg(k,c)
+sets the character string
+.CW c
+to the $k$th command-line argument (or to blanks if $k$ is out of range).
+.Bp
+Variable,
+.CW common ,
+and procedure names may be arbitrarily long, but they
+are truncated after the 50th character.  These names may
+contain underscores (in which case their translations will
+have a pair of underscores appended).
+.Bp
+MAIN programs may have arguments, which are ignored.
+.Bp
+.CW Common
+variables may be initialized by a
+.CW data
+statement in any module, not just in a
+.CW "block data"
+subprogram.
+.Bp
+The label may be omitted from a
+.CW do
+loop if the loop
+is terminated by an
+.CW enddo
+statement.
+.Bp
+Unnamed Fortran 90
+.CW "do while"
+loops are allowed.
+Such a loop begins with a statement of the form
+.ce
+\f(CWdo \fR[\fIlabel\^\fR] [\f(CW,\fR] \f(CWwhile(\fIlogical expression\f(CW)\fR
+and ends either after the statement labelled by $label$ or after a matching
+.CW enddo .
+.Bp
+$F2c$ recognizes the Fortran 90 synonyms
+.CW < ,
+.CW <= ,
+.CW == ,
+.CW >= ,
+.CW > ,
+and
+.CW <>
+for the Fortran comparison operators
+.CW .LT. ,
+.CW .LE. ,
+.CW .EQ. ,
+.CW .GE. ,
+.CW .GT. ,
+and
+.CW .NE.
+.Bp
+\f(CWNamelist\fR
+works as in Fortran 90
+.[ [
+Fort8x
+.]],
+with a minor restriction on
+.CW namelist
+input:  subscripts must have the form
+.ce
+$subscript$ [ : $subscript$ [ : $stride$ ] ]
+For example, the Fortran
+.P1
+integer m(8)
+real x(10,10)
+namelist /xx/ m, x
+\&. . .
+read(*,xx)
+.P2
+could read
+.P1
+&xx x(1,1) = 2, x(1:3,8:10:2) = 1,2,3,4,5,6  m(7:8) = 9,10/
+.P2
+but would elicit error messages on the inputs
+.P1
+&xx x(:3,8:10:2) = 1,2,3,4,5,6/
+&xx x(1:3,8::2)  = 1,2,3,4,5,6/
+&xx m(7:) = 9,10/
+.P2
+(which inputs would be legal in Fortran 90).
+For compatibility with the
+.CW namelist
+variants supplied by several vendors as Fortran 77 extensions,
+$f2c$'s version of $libI77$ permits $dollar$ to be used instead of
+.CW &
+and
+.CW /
+in
+.CW namelist
+input.  Thus the Fortran shown above could read
+.P1
+$dollar$xx x(1,1) = 2, x(1:3,8:10:2) = 1,2,3,4,5,6  m(7:8) = 9,10$dollar$end
+.P2
+.in 0
+.Bp
+Internal list-directed and namelist I/O are allowed.
+.Bp
+In an
+.CW open
+statement,
+.CW name=
+is treated as
+.CW file= .
+.Bp
+Fortran 90 inline comments are allowed.
+They start with a
+.CW !
+anywhere but column 6.
+.in 0
+.SH
+4. INVOCATION EXAMPLES
+.PP
+To convert the Fortran files
+.CW main.f
+and
+.CW subs.f ,
+one might use the UNIX\u\(rg\d command:
+.P1
+f2c main.f subs.f
+.P2
+This results in translated files suffixed with
+.CW .c ,
+i.e., the resulting C files are
+.CW main.c
+and
+.CW subs.c .
+To translate all the Fortran files in the current
+directory, compile the resulting C,
+and create an executable program named
+.CW myprog ,
+one might use the following pair of UNIX commands:
+.P1
+f2c *.f
+cc -o myprog *.c -lF77 -lI77 -lm
+.P2
+The above
+.CW -lF77
+and
+.CW -lI77
+options assume that the ``standard'' Fortran support libraries
+$libF77$ and $libI77$
+are appropriate for use with $f2c$.  On some systems this is
+not the case (as further discussed in \(sc6); if one had
+installed a combination of the appropriate $libF77$ and $libI77$
+in the appropriate place, then the above example might become
+.P1
+f2c *.f
+cc -o myprog *.c -lf2c -lm
+.P2
+Sometimes it is desirable to use $f2c$'s
+.CW -R
+option, which tells $f2c$ not to force all floating-point operations
+to be done in double precision.  (One might argue that
+.CW -R
+should be the default, but we find the current arrangement
+more convenient for testing $f2c$.)  With
+.CW -R
+specified, the previous example becomes
+.P1
+f2c -R *.f
+cc -o myprog *.c -lf2c -lm
+.P2
+Sometimes it is desirable to translate several Fortran source
+files into a single C file.  This is easily done by using $f2c$
+as a filter:
+.P1
+cat *.f | f2c >mystuff.c
+.P2
+The
+.CW -A
+option lets $f2c$ use ANSI C constructs
+.[ [
+ANSIC
+.]],
+which yields more readable C when
+.CW character
+variables are initialized.  With both
+.CW -A
+and
+.CW -R
+specified, the last example becomes
+.P1
+cat *.f | f2c -A -R >mystuff.c
+.P2
+For use with C++
+.[ [
+Stroustrup C++ Programming Language 1986
+.]],
+one would specify
+.CW -C++
+rather than
+.CW -A ;
+the last example would then become
+.P1
+cat *.f | f2c -C++ -R >mystuff.c
+.P2
+The
+.CW -C++
+option gives ANSI-style headers and old-style C formatting
+of character strings and
+.CW float
+constants (since some C++ compilers reject the ANSI versions
+of these constructs).
+.LP
+With ANSI C, one can use
+.I prototypes ,
+i.e., a special syntax describing the calling sequences
+of procedures, to help catch errors in argument passing.  To
+make using prototypes convenient, the
+.CW -P
+option causes $f2c$ to create a \fIfile\f(CW.P\fR of prototypes
+for the procedures defined in
+each input \fIfile\f(CW.f\fR (or \fIfile\f(CW.F\fR, i.e., the
+suffix
+.CW .f '' ``
+or
+.CW .F '' ``
+is replaced by
+.CW .P ''). ``
+One could concatenate all relevant prototype files into
+a header file and arrange for the header to be
+.CW #include d
+with each C file compiled.
+Since
+.CW -P
+implies
+.CW -A
+unless
+.CW -C++
+is specified, one could
+convert all the Fortran files in the current directory
+to ANSI C
+and get corresponding prototype files by issuing the command
+.P1
+f2c -P *.f
+.P2
+Several command options may be combined if none but perhaps the
+last takes an argument; thus to specify
+.CW -R
+and get C++ prototypes for all the
+files in the current directory, one could say either
+.P1
+f2c -C++ -P -R *.f
+.P2
+or
+.P1
+f2c -C++PR *.f
+.P2
+or
+.P1
+f2c -RPC++ *.f
+.P2
+\(em options can come in any order.
+.LP
+For numeric variables initialized by character data, the
+.CW -W
+option specifies the (machine-dependent!)
+number of characters per word and is further discussed
+in \(sc6.  This option takes a numeric argument, as in
+.CW -W8 ;
+such an option must be listed either separately or at the end
+of a string of other options, as in
+.P1
+f2c -C++RPW8 *.f
+.P2
+.SH
+5. TRANSLATION DETAILS
+.PP
+$F2c$ is based on the ancient $f77$ Fortran compiler of
+.[ [
+Feldman Weinberger Portable Fortran
+.]].
+That compiler produced a C parse-tree,
+which it converted into input for the second pass of the
+portable C compiler (PCC)
+.[ [
+Johnson portable compiler
+.]].
+The compiler has been used for many years and is the
+direct ancestor of many current Fortran compilers.
+Thus, it provided us with a solid base of Fortran knowledge
+and a nearly complete C representation.
+The converter $f2c$ is a copy of the $f77$ Fortran compiler
+which has been altered to print out a C representation
+of the program being converted.
+The program $f2c$ is a \fIhorror\fP, based on ancient code and
+hacked unmercifully.
+Users are only supposed to look at its C output,
+not at its appalling inner workings.
+.PP
+Here are some examples that illustrate $f2c$'s translations.
+For starters, it is helpful to see a short but complete
+example: $f2c$ turns the
+Fortran inner product routine
+.P1
+.so dot.f
+.P2
+into
+.P1
+.so dot.c
+.P2
+The translated C always starts with a ``translated by f2c'' comment
+and a
+.CW #include
+of
+.CW f2c.h .
+$F2c$ forces the variable and procedure names to lower-case and
+appends an underscore to the external name
+.CW dot
+(to avoid possible conflicts with library names).
+The parameter adjustments
+.CW --x '' ``
+and
+.CW --y '' ``
+account for the fact that C arrays start at index 0.
+Unused labels are retained in comments for orienteering purposes.
+Within a function, Fortran references to the function name are turned into
+references to the local variable
+.CW ret_val ,
+which holds the value to be returned.  Unless the
+.CW -R
+option is specified, $f2c$ converts the return type of
+.CW real
+function values to
+.CW doublereal .
+Because using the C ``op='' operators
+leads to greater efficiency on some machines, $f2c$ looks for opportunities
+to use these operators, as in the line
+.CW "ret_val += ..." '' ``
+above.
+.PP
+$F2c$ generally dispenses with superfluous parentheses: ANSI C
+specifies a clear order of evaluation for floating-point expressions,
+and $f2c$ uses the ANSI C rules to decide when parentheses are required
+to faithfully translate a parenthesized Fortran expression.
+Non-ANSI compilers are free to violate parentheses; by default, $f2c$ does
+not attempt to break an expression into several statements to
+foil pernicious non-ANSI C compilers.  Thus, for example, the Fortran
+.P1
+     x = a*(b*c)
+     y = (a*b)*c
+.P2
+becomes
+.P1
+    x = a * (b * c);
+    y = a * b * c;
+.P2
+The
+.CW \%-kr
+and
+.CW \%-krd
+options cause $f2c$ to use temporary variables to force correct
+evaluation order with non-ANSI C compilers.
+.ig
+If, for instance,
+.CW a ,
+.CW b ,
+and
+.CW c ,
+are
+.CW real
+variables, then under
+.CW \%-kr
+the above Fortran results in
+.P1
+    /* System generated locals */
+    real r_1;
+\&. . .
+    r_1 = b * c;
+    x = a * r_1;
+    r_1 = a * b;
+    y = r_1 * c;
+.P2
+..
+.PP
+Fortran I/O is complicated; like $f77$, $f2c$ converts
+a Fortran I/O statement into calls on the Fortran I/O library $libI77$.
+For Fortran
+.CW read s
+and
+.CW write s,
+there is generally one call to start the statement, one to end it,
+and one for each item read or written.  Given the Fortran declarations
+.P1
+      integer count(10)
+      real val(10)
+.P2
+the Fortran
+.P1
+      read(*,*) count, val
+.P2
+is turned into some header lines:
+.P1
+static integer c_\|\^_3 = 3;
+static integer c_\|\^_10 = 10;
+static integer c_\|\^_4 = 4;
+\&. . .
+    /* Builtin functions */
+    integer s_rsle(), do_lio(), e_rsle();
+\&. . .
+    /* Fortran I/O blocks */
+    static cilist io_\|\^_1 = { 0, 5, 0, 0, 0 };
+.P2
+and the executable lines
+.P1
+s_rsle(&io_\|\^_1);
+do_lio(&c_\|\^_3, &c_\|\^_10, (char *)&count[0], (ftnlen)sizeof(integer));
+do_lio(&c_\|\^_4, &c_\|\^_10, (char *)&val[0], (ftnlen)sizeof(real));
+e_rsle();
+.P2
+Implicit Fortran do-loops, e.g.
+.P1
+      read(*,*) (count(i), val(i), i = 1, 10)
+.P2
+get turned into explicit C loops:
+.P1
+s_rsle(&io_\|\^_4);
+for (i = 1; i <= 10; ++i) {
+    do_lio(&c_\|\^_3, &c_\|\^_1, (char *)&count[i - 1], (ftnlen)sizeof(integer));
+    do_lio(&c_\|\^_4, &c_\|\^_1, (char *)&val[i - 1], (ftnlen)sizeof(real));
+}
+e_rsle();
+.P2
+The Fortran
+.CW end=
+and
+.CW err=
+specifiers make the resulting C even less readable, as they require
+tests to be inserted.  For example,
+.P1
+      read(*,*,err=10) count, val
+ 10   continue
+.P2
+becomes
+.P1
+    i_\|\^_1 = s_rsle(&io_\|\^_1);
+    if (i_\|\^_1 != 0) {
+        goto L10;
+    }
+    i_\|\^_1 = do_lio(&c_\|\^_3, &c_\|\^_10, (char *)&count[0], (ftnlen)sizeof(integer));
+    if (i_\|\^_1 != 0) {
+        goto L10;
+    }
+    i_\|\^_1 = do_lio(&c_\|\^_4, &c_\|\^_10, (char *)&val[0], (ftnlen)sizeof(real));
+    if (i_\|\^_1 != 0) {
+        goto L10;
+    }
+    i_\|\^_1 = e_rsle();
+L10:
+    ;
+.P2
+.PP
+A Fortran routine containing $n$ \f(CWentry\fR statements
+is turned into $n^+^2$ C functions, a big one containing
+the translation of everything but the \f(CWentry\fR statements,
+and $n^+^1$ little ones that invoke the big one.  Each little
+one passes a different integer to the big one to tell
+it where to begin; the big one starts with a switch
+that branches to the code for the appropriate entry.
+For instance, the Fortran
+.P1
+      function sine(x)
+      data pi/3.14159265358979324/
+      sine = sin(x)
+      return
+      entry cosneg(y)
+      cosneg = cos(y+pi)
+      return
+      end
+.P2
+is turned into the big procedure
+.P1
+doublereal sine_0_(n_\|\^_, x, y)
+int n_\|\^_;
+real *x, *y;
+{
+    /* Initialized data */
+
+    static real pi = (float)3.14159265358979324;
+
+    /* System generated locals */
+    real ret_val;
+
+    /* Builtin functions */
+    double sin(), cos();
+
+    switch(n_\|\^_) {
+	case 1: goto L_cosneg;
+	}
+
+    ret_val = sin(*x);
+    return ret_val;
+
+L_cosneg:
+    ret_val = cos(*y + pi);
+    return ret_val;
+} /* sine_ */
+.P2
+and the little invoking procedures
+.P1
+doublereal sine_(x)
+real *x;
+{
+    return sine_0_(0, x, (real *)0);
+    }
+
+doublereal cosneg_(y)
+real *y;
+{
+    return sine_0_(1, (real *)0, y);
+    }
+.P2
+.LP
+Fortran
+.CW common
+regions are turned into C
+.CW struct s.
+For example, the Fortran declarations
+.P1
+      common /named/ c, d, r, i, l
+      complex c(10)
+      double precision d(10)
+      real r(10)
+      integer i(10)
+      logical m(10)
+
+      if (m(i(2))) d(3) = d(4)/d(5)
+.P2
+result in
+.P1
+struct {
+    complex c[10];
+    doublereal d[10];
+    real r[10];
+    integer i[10];
+    logical m[10];
+} named_;
+
+#define named_1 named_
+\&. . .
+
+    if (named_1.m[named_1.i[1] - 1]) {
+	named_1.d[2] = named_1.d[3] / named_1.d[4];
+	}
+.P2
+Under the
+.CW -p
+option, the above
+.CW if
+statement becomes more readable:
+.P1
+\&. . .
+#define c (named_1.c)
+#define d (named_1.d)
+#define r (named_1.r)
+#define i (named_1.i)
+#define m (named_1.m)
+\&. . .
+    if (m[i[1] - 1]) {
+	d[2] = d[3] / d[4];
+.P2
+If the above
+.CW common
+block were involved in a
+.CW "block data"
+subprogram, e.g.
+.P1
+      block data
+      common /named/ c, d, r, i, l, m
+      complex c(10)
+      double precision d(10)
+      real r(10)
+      integer i(10)
+      logical m(10)
+      data c(1)/(1.0,0e0)/, d(2)/2d0/, r(3)/3e0/, i(4)/4/,
+     *     m(5)/.false./
+      end
+.P2
+then the
+.CW struct
+would begin
+.CW "struct named_1_ {" '', ``
+and $f2c$ would issue a more elaborate
+.CW #define :
+.P1
+#define named_1 (*(struct named_1_ *) &named_)
+
+/* Initialized data */
+
+struct {
+    complex e_1;
+    doublereal fill_2[10];
+    doublereal e_3;
+    doublereal fill_4[9];
+    real e_5;
+    integer fill_6[10];
+    integer e_7;
+    integer fill_8[11];
+    logical e_9;
+    integer fill_10[5];
+    } named_ = { (float)1., (float)0., {0}, 2., {0}, (float)3., {0}, 4,
+	    {0},  FALSE_ };
+.P2
+In this example, $f2c$ relies on C's structure initialization rules
+to supply zeros to the
+\f(CWfill_\fIn\fR
+arrays that take up the space for which no
+.CW data
+values were given.  (The logical constants
+.CW TRUE_
+and
+.CW FALSE_
+are defined in
+.CW f2c.h .)
+.PP
+Character manipulations of multiple-character strings
+generally result in function calls.  For example,
+the Fortran
+.P1
+      character*(*) function cat(a,b)
+      character*(*) a, b
+      cat = a // b
+      end
+.P2
+yields
+.P1
+\&. . .
+static integer c_\|\^_2 = 2;
+
+/* Character */ int cat_(ret_val, ret_val_len, a, b, a_len, b_len)
+char *ret_val;
+ftnlen ret_val_len;
+char *a, *b;
+ftnlen a_len;
+ftnlen b_len;
+{
+
+    /* System generated locals */
+    address a_\|\^_1[2];
+    integer i_\|\^_1[2];
+
+    /* Builtin functions */
+    /* Subroutine */ int s_cat();
+
+/* Writing concatenation */
+    i_\|\^_1[0] = a_len, a_\|\^_1[0] = a;
+    i_\|\^_1[1] = b_len, a_\|\^_1[1] = b;
+    s_cat(ret_val, a_\|\^_1, i_\|\^_1, &c_\|\^_2, ret_val_len);
+} /* cat_ */
+.P2
+Note how the return-value length
+.CW ret_val_len ) (
+and parameter lengths
+.CW a_len "" (
+and
+.CW b_len )
+are used.
+Single character operations are generally done in-line.
+For example, the body of the Fortran
+.P1
+      character*1 function lastnb(x,n)
+      character*1 x(n)
+      lastnb = ' '
+      do 10 i = n, 1, -1
+         if (x(i) .ne. ' ') then
+            lastnb = x(i)
+            return
+            end if
+ 10      continue
+      end
+.P2
+becomes
+.P1
+    *ret_val = ' ';
+    for (i = *n; i >= 1; --i) {
+	if (x[i] != ' ') {
+	    *ret_val = x[i];
+	    return ;
+	}
+/* L10: */
+    }
+.P2
+.PP
+$F2c$ uses
+.CW struct s
+and
+.CW #define s
+to translate
+.CW equivalence s.
+For a complicated example showing the interaction of
+.CW data
+with
+.CW common ,
+.CW equivalence ,
+and, for good measure, Hollerith notation,
+consider the Fortran
+.P1
+      common /cmname/ c
+      complex c(10)
+      double precision d(10)
+      real r(10)
+      integer i(10)
+      logical m(10)
+      equivalence (c(1),d(1),r(1),i(1),m(1))
+      data c(1)/(1.,0.)/
+      data d(2)/2d0/, r(5)/3e0/, i(6)/4/, m(7)/.true./
+      call sam(c,d(1),r(2),i(3),m(4),14hsome hollerith,14)
+      end
+.P2
+The resulting C is
+.P1
+\&. . .
+struct cmname_1_ {
+    complex c[10];
+};
+
+#define cmname_1 (*(struct cmname_1_ *) &cmname_)
+
+/* Initialized data */
+
+struct {
+    complex e_1;
+    doublereal e_2;
+    real e_3;
+    integer e_4;
+    logical e_5;
+    integer fill_6[13];
+    } cmname_ = { (float)1., (float)0., 2., (float)3., 4, TRUE_ };
+
+
+/* Table of constant values */
+
+static integer c_\|\^_14 = 14;
+.P2
+.P1
+/* Main program */ MAIN_\|\^_()
+{
+
+    /* Local variables */
+
+#define d ((doublereal *)&cmname_1)
+#define i ((integer *)&cmname_1)
+#define l ((logical *)&cmname_1)
+#define r ((real *)&cmname_1)
+    extern /* Subroutine */ int sam_();
+
+    sam_(cmname_1.c, d, &r[1], &i[2], &m[3], "some hollerith", &c_\|\^_14, 14L);
+} /* MAIN_\|\^_ */
+
+#undef r
+#undef l
+#undef i
+#undef d
+.P2
+As this example shows, $f2c$ turns a Fortran MAIN program into
+a C function named
+.CW MAIN_\|\^_ .
+Why not
+.CW main ?
+Well, $libF77$ contains a C main routine that arranges
+for files to be closed automatically when the Fortran program stops,
+arranges for an error message to be printed if a floating-point
+exception occurs, and arranges for the command-line argument
+accessing functions
+.CW iargc
+and
+.CW getarg
+to work properly.  This C main routine invokes
+.CW MAIN_\|\^_ .
+.SH
+6.  PORTABILITY ISSUES
+.PP
+Three portability issues are relevant to $f2c$:
+the portability of the support libraries ($libF77$ and $libI77$)
+upon which the translated C programs rely,
+that of the converter $f2c$ itself,
+and that of the C it produces.
+.PP
+Regarding the first issue,
+some vendors (e.g., Sun and MIPS) have changed the calling conventions for
+their $libI77$ from the original conventions (those of
+.[ [
+Feldman Weinberger Portable Fortran
+.]]).
+Other vendors (e.g., MIPS) have changed the $libF77$ calling conventions
+(e.g., for
+.CW complex -valued
+functions).
+Thus, having libraries $libF77$ and $libI77$
+or otherwise having library routines with the names
+that $f2c$ expects is insufficient.
+When using a machine whose vendor provides but has gratuitously changed
+$libF77$ or $libI77$, one cannot safely mix objects compiled
+from the C produced by $f2c$ with objects compiled by the vendor's
+Fortran compiler, and one must use the correct libraries with
+programs translated by $f2c$.  In such a case, the recommended procedure
+is to obtain source for the libraries (e.g. from
+.I netlib
+\(em see \(sc8), combine them into a single library, say
+.CW libf2c ,
+and install the library where it they can be conveniently accessed.
+On a UNIX system, for example, one might install
+.CW libf2c
+in
+.CW /usr/lib/libf2c.a ;
+then one could issue the command
+.P1
+cc *.c -lf2c -lm
+.P2
+to compile and link a program translated by $f2c$.
+.PP
+The converter itself is reasonably portable and has run successfully on Apollo,
+Cray, IBM, MIPS, SGI, Sun and DEC VAX equipment, all running some
+version of the UNIX operating system.
+However, we shall see that the C it produces may not be portable due to
+subtle storage management issues in Fortran 77.
+In any case, the C output of $f2c$ will run fine, at least if
+the \f(CW\%-W\fIn\fR option (see Appendix B) is used to set the
+number of characters per word correctly, and if C
+.CW double
+values may fall on an odd-word boundary.
+.PP
+The Fortran 77 standard says that \f(CWComplex\fP and \f(CWDouble Precision\fP
+objects occupy two ``units'' of space while other non-character data types
+occupy one ``unit.''
+It may be necessary to edit the header file
+.CW f2c.h
+to make these assumptions hold, if possible.
+On the Cray, for example,
+.CW float
+and
+.CW double
+are the same C types, and Fortran double precision, if
+available, would correspond to the C type
+.CW "long double" .
+In this case, changing the definition of
+.CW doublereal
+in
+.CW f2c.h
+from
+.P1
+typedef double doublereal;
+.P2
+to
+.P1
+typedef long double doublereal;
+.P2
+would be appropriate.  For the Think C compiler on the
+Macintosh, on the other hand, this line would need to become
+.P1
+typedef short double doublereal;
+.P2
+.PP
+If your C compiler predefines symbols that could clash with
+translated Fortran variable names, then you should also
+add appropriate
+.CW #undef
+lines to
+.CW f2c.h .
+The current default
+.CW f2c.h
+provides the following
+.CW #undef
+lines for the following symbols:
+.TS
+center;
+lfCW lfCW lfCW lfCW lfCW lfCW.
+cray	mc68020	sgi	sun2	u370	u3b5
+gcos	mips	sparc	sun3	u3b	unix
+mc68010	pdp11	sun	sun4	u3b2	vax
+.TE
+.PP
+As an extension to the Fortran 77 Standard, $f2c$
+allows noncharacter variables to be initialized with character
+data.  This extension is inherently nonportable, as the number
+of characters storable per ``unit'' varies from machine to machine.
+Since 32 bit machines are the most plentiful, $f2c$
+assumes 4 characters per Fortran ``unit'', but this assumption
+can be overridden by the \f(CW\%-W\fIn\fR command-line option.
+For example,
+.CW \%-W8
+is appropriate for C that is to be run on Cray computers,
+since Crays store 8 characters per word.
+An example is helpful here:  the Fortran
+.P1
+      data i/'abcd'/
+      j = i
+      end
+.P2
+turns into
+.P1
+    /* Initialized data */
+
+    static struct {
+	char e_1[4];
+	} equiv_3 = { {'a', 'b', 'c', 'd'} };
+
+#define i (*(integer *)&equiv_3)
+
+    static integer j;
+
+    j = i;
+\&. . .
+#undef i
+.P2
+(Some use of
+.CW i ,
+e.g. ``\f(CWj = i\fR'', is necessary or $f2c$
+will see that
+.CW i
+is not used and will not initialize it.)  If the target
+machine were a Cray and the string were
+.CW 'abcdefgh'
+or \f(CW"abcdefhg"\fR,
+then the Fortran would run fine, but the C produced by $f2c$ would only
+store \f(CW"abcd"\fR
+in i, $4$ being the default number of characters per word.
+The $f2c$ command-line option
+.CW \%-W8
+gives the correct initialization for a Cray.
+.PP
+The initialization above is clumsy, using $4$ separate characters.
+Using the option
+.CW -A ,
+for ANSI, produces
+.P1
+\&. . .
+	} equiv_3 = { "abcd" };
+\&. . .
+.P2
+See Appendix B.
+.PP
+The above examples explain why the Fortran 77 standard excludes
+Hollerith data statements: the number of characters per word is
+not specified and hence such code is not portable even in Fortran.
+(Fortran that conservatively assumes only 1 or 2 characters per word is
+portable but messy.  Note that Fortran 77 forbids the mixing, via
+.CW common ,
+.CW data ,
+or
+.CW equivalence ,
+of character and noncharacter types.  Like many Fortran compilers,
+$f2c$ permits such nonportable mixing;
+initialization of numeric variables with Hollerith data is one
+example of this mixing.)
+.PP
+Some Fortran 66 programs pass Hollerith strings to
+.CW integer
+variables.  $F2c$ treats a Hollerith string as a character string,
+but this may lead to bus errors on some systems if the character
+string winds up being improperly aligned.  The
+.CW \%-h
+option instructs $f2c$ to try to give character variables
+and constants the same alignment as
+.CW integer s.
+Under
+.CW \%-h ,
+for example,  the Fortran
+.P1
+      call foo("a string")
+      call goo(8ha string)
+.P2
+is translated to
+.P1
+static struct { integer fill; char val[8+1]; char fill2[3]; } c_b1_st = { 0,
+	"a string" };
+#define c_b1 c_b1_st.val
+\&. . .
+    foo_(c_b1, 8L);
+    goo_(c_b1, 8L);
+\&. . .
+.P2
+.PP
+Some systems require that C values of type
+.CW double
+be aligned on a double-word boundary.  Fortran
+.CW common
+and
+.CW equivalence
+statements may require some C
+.CW double
+values to be aligned on an odd-word boundary.
+On systems where double-word alignment is required,
+C compilers pad structures, if necessary, to arrange
+for the right alignment.  Often such padding has no effect on
+the validity of $f2c$'s
+translation, but using
+.CW common
+or
+.CW equivalence ,
+it is easy to contrive examples in which
+the translated C works incorrectly.
+$F2c$ issues a warning message when double-word alignment may
+cause trouble, but, like $f77$,
+it makes no attempt to circumvent this trouble;
+the run-time costs of circumvention would be substantial.
+.PP
+Long decimal strings in \f(CWdata\fP statements are passed to C unaltered.
+However, expressions involving long decimal strings are rounded
+in a machine-dependent manner.
+On a VAX 8550, the Fortran
+.P1
+      x=1.2**10
+      end
+.P2
+yields the C
+.P1
+    static real x;
+
+    x = (float)6.1917364224000008;
+.P2
+.PP
+ANSI C compilers require that all but one instance of any entity with external scope,
+such as the \f(CWstruct\fPs into which $f2c$ translates \f(CWcommon\fP,
+be declared \f(CWextern\fP and that exactly one declaration should define the entity,
+i.e., should not be declared \f(CWextern\fP.
+Most older C compilers have no such restriction.
+To be compatible with ANSI usage, the $f2c$
+command-line option
+.CW -ec
+causes the \f(CWstruct\fP corresponding
+to an uninitialized \f(CWcommon\fP region to be declared \f(CWextern\fP
+and makes a
+.CW union
+of all successive declarations of that
+\f(CWcommon\fP region into a defining declaration placed in a file with the
+name \f(CWcname_com.c\fR, where
+.CW cname
+is the name of the \f(CWcommon\fP region.
+For example, the Fortran
+.P1
+      common /cmname/ c
+      complex c(10)
+      c(1)=cmplx(1.,0.)
+      call sam(c)
+      end
+      subroutine sam(c)
+      complex c
+      common /cmname/ca
+      complex ca(10)
+      ca(2) = cmplx(1e0,2e0)
+      return
+      end
+.P2
+when converted by \f(CWf2c -ec\fP produces
+.P1
+/* Common Block Declarations */
+
+union {
+    struct {
+	complex c[10];
+    } _1;
+    struct {
+	complex ca[10];
+    } _2;
+} cmname_;
+
+#define cmname_1 (cmname_._1)
+#define cmname_2 (cmname_._2)
+
+/* Main program */ MAIN_\|\^_()
+{
+
+    extern /* Subroutine */ int sam_();
+
+    cmname_1.c[0].r = (float)1., cmname_1.c[0].i = (float)0.;
+    sam_(cmname_1.c);
+} /* MAIN_\|\^_ */
+
+/* Subroutine */ int sam_(c)
+complex *c;
+{
+    cmname_2.ca[1].r = (float)1., cmname_2.ca[1].i = (float)2.;
+    return 0;
+} /* sam_ */
+.P2
+as well as the file
+.CW cmname_com.c :
+.P1
+#include "f2c.h"
+union {
+    struct {
+	complex c[10];
+    } _1;
+    struct {
+	complex ca[10];
+    } _2;
+} cmname_;
+.P2
+The files
+.CW *_com.c
+may be compiled into a library
+against which one can load to satisfy overly fastidious ANSI C compilers.
+.PP
+The rules of Fortran 77 apparently permit a situation in which
+$f2c$ declares a function to be of type
+.CW int ,
+then defines it to be of another type, as illustrated by the
+first example in \(sc7.  In that example, $f2c$ discovers too late that
+.CW f
+is not a subroutine.  With some C compilers, this causes nothing
+worse than a warning message; with others, it causes the compilation
+to be aborted.  With unforgiving C compilers, one can usually avoid
+trouble by splitting the Fortran source into one file per
+procedure, e.g., with the
+.I fsplit (1)
+command, and converting each procedure separately.
+Another solution is to use prototypes, as discussed in \(sc7.
+.PP
+With an ANSI C system that enforced consistent
+prototype declarations across separate compilations,
+it would be impossible to translate the main program correctly
+in the last example just by looking at the main program.
+Recent C++ compilers do enforce the consistency of
+prototype declarations across separate compilations,
+e.g., by encoding calling sequences into the translated names of functions,
+except for functions that are declared \f(CWextern "C"\fR and
+compiled separately.
+$F2c$ allows one to use this escape hatch:  under
+.CW -C++ ,
+$f2c$ inserts
+.P1
+#ifdef _\|\^_cplusplus
+extern "C" {
+#endif
+.P2
+at the beginning of its C++ output and places
+.P1
+#ifdef _\|\^_cplusplus
+	}
+#endif
+.P2
+at the end of its C++ output.  The
+.CW "#ifdef _\|\^_cplusplus"
+lines are for the benefit of older C++ compilers that
+do not recognize \f(CWextern "C"\fR.
+.SH
+7. PROTOTYPES
+.PP
+In ANSI C and C++, a
+.I prototype
+describes the calling sequence of a function.
+Prototypes can save debugging time by helping catch
+errors in calling sequences.  The
+.CW \%-P
+option instructs $f2c$ to emit prototypes for all
+the functions defined in the C it produces; specifically,
+$f2c$ creates a \fIfile\f(CW.P\fR of prototypes
+for each input \fIfile\f(CW.f\fR or \fIfile\f(CW.F\fR.
+One can then arrange for relevant prototype files
+to be seen by the C compiler.
+For instance, if $f2c$'s
+header file
+.CW f2c.h
+is installed as
+.CW /usr/include/f2c.h ,
+one could issue the UNIX command
+.P1
+cat /usr/include/f2c.h *.P >f2c.h
+.P2
+to create a local copy of
+.CW f2c.h
+that has in it all the prototypes in
+.CW *.P .
+Since the C produced by $f2c$ always specifies
+.P1
+#include "f2c.h"
+.P2
+(rather than
+.CW "#include <f2c.h>" ),
+the C compiler will look first in the current directory for
+.CW f2c.h
+and thus will find the local copy that contains the prototypes.
+.PP
+$F2c$ can also read the prototype files it writes;
+one simply specifies them as arguments to $f2c$.
+In fact, $f2c$ reads all prototype files before any
+Fortran files; although multiple Fortran files are handled
+independently, any prototype file arguments apply to all of them.
+$F2c$ has more detailed knowledge of Fortran types than it conveys
+in the C it puts out; for example,
+.CW logical
+and
+.CW integer
+are different Fortran types, but are mapped to the same C type.
+Moreover,
+.CW character ,
+.CW complex ,
+and
+.CW "double complex"
+Fortran functions are all translated to
+.CW VOID
+C functions, and, unless the
+.CW \%-R
+option is specified, both
+.CW real
+and
+.CW "double precision"
+Fortran functions are translated to
+.CW doublereal
+C functions.  Because $f2c$ denotes all these
+types differently in its prototype files, it
+can catch errors that are invisible to an ANSI C
+(or C++) compiler.
+.PP
+The following table shows the types
+that $f2c$ uses for procedure arguments:
+.TS
+center box;
+lfCW lfCW.
+C_fp	complex
+D_fp	doublereal
+E_fp	real\fR under \f(CW-!R\fR (the default)\fP
+H_fp	character
+I_fp	integer\fR or \f(CWinteger*4
+J_fp	integer*2
+K_fp	shortlogical\fR (\f(CWlogical\fR under \f(CW-i2\fR or \f(CW-I2\fR)\fP
+L_fp	logical
+R_fp	real\fR under \f(CW-R
+S_fp	subroutine\fR
+U_fp	\fRuntyped \f(CWexternal
+Z_fp	doublecomplex
+.TE
+These types are defined in
+.CW f2c.h ;
+they appear in prototypes and, under
+.CW \%-A
+or
+.CW \%-C++ ,
+in the C that $f2c$ writes.  Prototypes also use special
+.CW void
+types to denote the return values of
+.CW complex ,
+.CW "double complex",
+and
+.CW character
+functions:
+.TS
+center box;
+lfCW lfCW.
+C_f	complex
+H_f	character
+Z_f	double complex
+.TE
+.PP
+$F2c$ also writes special comments in prototype files giving
+the length of each
+.CW common
+block; when given prototype files as arguments, $f2c$ reads
+these special comments so it can issue a warning message if its
+Fortran input specifies a different length for some
+.CW common
+block.
+.PP
+Sometimes people write otherwise valid Fortran 77 that
+specifies different lengths for a
+.CW common
+block.  If such Fortran is split into several files and converted
+to C, the loader could end up giving too little space to the
+.CW common
+block in question.  One can avoid the confusion this could cause by
+running $f2c$ twice, first with
+.CW \%-P!c ,
+then with the resulting prototypes as additional arguments;
+the prototypes let $f2c$ determine (and convey to all of its
+output C files) the true length needed for
+each
+.CW common
+block.
+.PP
+One complication with prototypes comes from Fortran subprograms that
+declare a procedure to be
+.CW external
+but do not explicitly specify a type for it and only
+pass it as a parameter to another procedure.  (If the
+subprogram also invokes the
+.CW external
+procedure, then $f2c$ can tell whether the procedure is
+a subroutine or a function; in the latter case, Fortran's
+implicit typing rules specify a type for the procedure.)
+If it can do no better, then $f2c$ assumes that untyped
+.CW external
+procedures are subroutines (and hence become
+.CW int -valued
+functions in C).
+This can cause the generated C to have
+multiple and inconsistent declarations for some procedures.
+For example,
+.P1
+	external f
+	call foo(f)
+	end
+	function f(x)
+	double precision f, x
+	f = x
+	end
+.P2
+results in
+.CW MAIN_\|\^_
+declaring
+.P1
+    extern /* Subroutine */ int f_();
+.P2
+and in the subsequent definition of
+.CW "doublereal f_(x)"
+in the same C file.
+Such inconsistencies are grounds for some C compilers
+to abort compilation.
+.PP
+$F2c$'s type inferences only apply sequentially to
+the procedures in a file, because $f2c$ writes C for each procedure
+before reading the next one.  Thus, as just illustrated, if procedure
+.CW xyz
+comes after
+.CW abc
+in a Fortran input file, then $f2c$ cannot use information
+it gains when it sees the definition of
+.CW xyz
+to deduce types for
+.CW external
+procedures passed as arguments to
+.CW xyz
+by
+.CW abc .
+By using the
+.CW \%-P
+option and running $f2c$ several times, one can
+get around this deficiency.  For instance, if file
+.CW zap.f
+contains the Fortran shown above, then the commands
+.P1
+	f2c -P!c zap.f
+	f2c -A zap.[fP]
+.P2
+result in a file
+.CW zap.c
+in which
+.CW MAIN_\|\^_
+correctly types
+.CW f_
+and
+.CW foo_
+as
+.P1
+    extern doublereal f_();
+    extern /* Subroutine */ int foo_(D_fp);
+.P2
+rather than
+.P1
+    extern /* Subroutine */ int f_();
+    extern /* Subroutine */ int foo_(U_fp);
+.P2
+The first invocation of $f2c$ results in a file
+.CW zap.P
+containing
+.P1
+extern doublereal f_(doublereal *x);
+/*:ref: foo_ 10 1 200 */
+.P2
+The second invocation of $f2c$ is able to type
+.CW f_
+and
+.CW foo_
+correctly because of the first line in
+.CW zap.P .
+.PP
+The second line in
+.CW zap.P
+is a special comment that records the incomplete type
+information that $f2c$ has about
+.CW foo_ .
+$F2c$ puts one such special comment in the prototype file for each
+Fortran procedure that is referenced but not defined in the Fortran file.
+When it reads prototype files, $f2c$ deciphers these comments and
+uses them to check the consistency of calling sequences.
+As it learns more about untyped external procedures, $f2c$ updates
+the information it has on them; the
+.CW :ref:
+comments it writes in a prototype file reflect $f2c$'s latest knowledge.
+.PP
+Ordinarily $f2c$ tries to infer the type of an untyped
+.CW external
+procedure from its use as arguments to procedures of
+known argument types.  For example, if
+.CW f.f
+contains just
+.P1
+	external f
+	call foo(f)
+	end
+.P2
+and if
+.CW foo.P
+contains
+.P1
+extern int foo_(D_fp);
+.P2
+then
+.P1
+f2c -A f.f foo.P
+.P2
+results in the declaration
+.P1
+    extern doublereal f_();
+.P2
+Under unusual circumstances, such type inferences
+can lead to erroneous error messages or to incorrect typing.
+Here is an example:
+.P1
+	subroutine zoo
+	external f
+	double precision f
+	external g
+	call zap(1,f)
+	call zap(2,g)
+	end
+	subroutine goo
+	call g
+	end
+.P2
+$F2c$ first infers g to be a double precision function, then discovers
+that it must be a subroutine and issues a warning message about
+inconsistent declarations for
+.CW g .
+This example is legal Fortran 77;
+.CW zap
+could be defined, for instance, by
+.P1
+	subroutine zap(n,f)
+	external f
+	if (n .le. 1) call zap1(f)
+	if (n .ge. 2) call zap2(f)
+	end
+.P2
+In such a case one can specify the
+.CW \%-!it
+option to instruct $f2c$ not to infer the types of otherwise
+untypable
+.CW external
+procedures from their appearance as arguments to known procedures.
+Here is another (somewhat far-fetched) example where
+.CW \%-!it
+is useful:
+.P1
+	subroutine grok(f,g,h)
+	external f, g, h
+	logical g
+	call foo(1,g)
+	call foo(2,f)
+	call zit(1,f)
+	call zit(2,h)
+	call zot(f(3))
+	end
+.P2
+Without
+.CW \%-!it ,
+$f2c$ first infers
+.CW f_
+to be a
+.CW logical
+function, then discovers that Fortran's implicit typing
+rules require it to be a
+.CW real
+function.
+$F2c$ issues the
+warning message
+.CW "fixing wrong type inferred for f" '', ``
+which should serve as a warning that $f2c$ may have made some
+incorrect type inferences in the mean time.
+Indeed, $f2c$ ends up typing
+.CW h_
+as a
+.CW logical
+function; with
+.CW \%-!it
+specified, $f2c$ types
+.CW h_
+as an
+.CW external
+procedure unknown type, i.e., a
+.CW U_fp ,
+which to the C compiler appears to be a subroutine.
+(Even with
+.CW \%-!it
+specified, $f2c$ issues a warning message about inconsistent
+calling sequences for
+.CW foo .)
+.PP
+Because $f2c$ writes its latest knowledge of types into
+prototype files, it is easy to write a crude (Bourne) shell script
+that will glean the maximum possible type information:
+.P1
+>f.p
+until
+	f2c -Pit f.p f.f
+	cmp -s f.p f.P
+do
+	mv f.P f.p
+	done
+.P2
+In such scripts, use of the
+.CW \%-Ps
+option can save an iteration;
+.CW \%-Ps
+implies
+.CW \%-P
+and instructs $f2c$ to issue return code 4 if another
+iteration might change a declaration or prototype.
+Thus the following script is more efficient:
+.EQ
+delim off
+.EN
+.P1
+while :; do
+	f2c -Ps f.[fP]
+	case $? in 4) ;; *) break;; esac
+	done
+.P2
+.EQ
+delim $$
+.EN
+The number of iterations depends on the call graph of the
+procedures in
+.CW f.f
+and on their order of appearance in
+.CW f.f .
+Sorting them into topological order (so that if
+.CW abc
+calls
+.CW def ,
+then
+.CW abc
+precedes
+.CW def )
+and reverse topological order and alternating between
+the two orders
+is probably a good heuristic.
+For example, we were able to completely type
+the \s-2PORT3\s+2 subroutine library
+in two passes by first processing it in reverse topological order,
+then in forward order.  Unfortunately, one can devise situations
+where arbitrarily many iterations are required.  This is slightly
+annoying, since with appropriate data structures (in an extensively
+reorganized version of $f2c$), one could do this calculation
+in linear time.
+.SH
+8. EXPERIENCE WITH \f(BInetlib\fP
+.PP
+With the help of Eric Grosse, we arranged for the $netlib$
+.[ [
+Dongarra Grosse 1987
+.]]
+server
+.CW netlib@research.att.com
+to provide an experimental Fortran-to-C translation service
+by electronic mail.
+By executing the UNIX command
+.sp .5
+.ce
+\f(CW(echo execute f2c; cat foo.f) | mail netlib@research.att.com\fR
+.sp .5
+one submits the Fortran in
+.CW foo.f
+to $netlib$'s $f2c$ service;
+$netlib$ replies with the C and diagnostic messages produced by $f2c$ from
+.CW foo.f .
+(The
+.CW include
+mechanism described in \(sc3 makes no sense in this
+context, so it is disabled.)  To start using this service,
+one would generally execute
+.sp .5
+.ce
+\f(CWecho 'send index from f2c' | mail netlib@research.att.com\fR
+.sp .5
+to check on the current status of the service.
+Before compiling the returned C, it is necessary to get a copy of
+.CW f2c.h :
+.sp .5
+.ce
+\f(CWecho 'send f2c.h from f2c' | mail netlib@research.att.com\fR
+.sp .5
+Most likely it would also be necessary to obtain source for the
+versions of $libF77$ and $libI77$ assumed by $f2c$:
+.sp .5
+.ce
+\f(CWecho 'send libf77 libi77 from f2c' | mail netlib@research.att.com\fR
+.PP
+For testing purposes, we retain the original Fortran submitted to
+$netlib$'s
+.CW "execute f2c" '' ``
+service.  Observing $f2c$'s behavior on over 400,000 lines
+of submitted Fortran helped
+us find many obscure bugs and led us to make some of the
+extensions described in \(sc3.  For example, a
+.CW "block data"
+subprogram initializing a variable that does not appear
+in any
+.CW common
+blocks now elicits a warning message (rather than causing
+$f2c$ to drop core).  Another example is that $f2c$
+now gives the warning message
+.CW "Statement order error: declaration after DATA" '' ``
+and declines to produce any C
+if a declaration comes after a
+.CW data
+statement (for reasons discussed in \(sc9);
+$f2c$ formerly gave a more obscure error message
+and then produced invalid C.
+.PP
+Now that $netlib$ offers source for $f2c$ itself (as explained
+in the
+.CW index
+file mentioned above), we expect to curtail $netlib$'s
+.CW "execute f2c" '' ``
+service, perhaps limiting it to employees of AT&T and Bellcore;
+to learn the current state of affairs, request the current
+.CW index
+file.
+.SH
+9. POSSIBLE EXTENSIONS
+.PP
+Currently $f2c$ simplifies constant expressions.
+It would be nice if constant expressions were simply
+passed through, and if Fortran
+.CW parameter s
+were translated as
+.CW #define s.
+Unfortunately, several things conspire to make this
+nearly impossible to do in full generality.
+Perhaps worst is that
+.CW parameter s
+may be assigned
+.CW complex
+or
+.CW doublecomplex
+expressions that might, for example, involve complex division
+and exponentiation to a large integer power.
+.CW Parameter s
+may appear in
+.CW data
+statements, which may initialize
+.CW common
+variables and so be moved near the beginning of the C output.
+Arranging to have the right
+.CW #define s
+in effect for the data initialization would, in this worst case,
+be a nightmare.  Of course, one could arrange to
+handle ``easy'' cases with unsimplified constant expressions
+and
+.CW #define s
+for parameters.
+.PP
+Prototypes and the argument consistency checks currently ignore
+alternate return specifiers.  Prototypes could be adorned with
+special comments indicating where alternate return specifiers
+are supposed to come, or at least telling the number of such
+specifiers, which is all that really matters.
+Since alternate return specifiers are rarely used
+(Fortran 90 calls them ``obsolescent''),
+we have so far refrained from this exercise.
+.PP
+Fortran 90 allows
+.CW data
+statements to appear anywhere.  It would be nice if $f2c$ could
+do the same, but that would entail major rewriting of $f2c$.
+Presently
+.CW data
+values are written to a file as soon as they are seen; among
+the information in the file is the offset of each value.
+If an
+.CW equivalence
+statement could follow the
+.CW data
+statement, then the offsets would be invalidated.
+.PP
+It would be fairly straightforward to extend $f2c$'s I/O
+to encompass the new specifiers introduced by Fortran 90.
+Unfortunately, that would mean changing $libI77$ in ways
+that would make it incompatible with $f77$.
+.PP
+Of course, it would be nice to translate all of Fortran 90, but
+some of the Fortran 90 array manipulations would require new
+calling conventions and large enough revisions to $f2c$ that
+one might be better off starting from scratch.
+.PP
+With sufficient hacking,
+$f2c$ could be modified to recognize
+Fortran 90 control structures
+.CW case , (
+.CW cycle , 
+.CW exit ,
+and named loops), local arrays of
+dimensions that depend on arguments and common values,
+and such types as
+.CW logical*1 ,
+.CW logical*2 ,
+.CW integer*1
+or
+.CW byte .
+Since our main concern is with making portable Fortran 77
+libraries available to the C world, we have so far refrained
+from these further extensions.  Perhaps commercial
+vendors will wish to provide some of these extensions.
+.SH
+10. REFERENCES
+.LP
+.so tmac.sdisp1
+.[
+$LIST$
+.]

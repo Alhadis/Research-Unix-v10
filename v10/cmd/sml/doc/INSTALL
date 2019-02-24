@@ -1,0 +1,249 @@
+Installing Standard ML of New Jersey
+
+Standard ML of New Jersey currently runs on the following systems, subject
+to the noted restrictions:
+
+  Vaxes running 4.[2,3]BSD Unix, V9 Unix, or Ultrix:
+   The floating point functions will work only on Vaxes which support g_floats.
+   (This includes VAX-8xxx, MicroVAX II, and MicroVAX III machines)
+
+  Sun 3 workstations:
+   The floating point functions will work only on Suns with the MC68881 chip,
+   but the floating point coprocessor is not required to install and run
+   the compiler.
+
+  Sun 4 workstations
+
+  NeXT workstations
+
+  Encore Multimax
+
+  [DECstation {2,3}100]
+
+If you have trouble installing the system, please send us a request for
+help, including the version of the compiler (check the definition of the
+"version" variable in src/boot/perv.sml if in doubt), hardware
+configuration (machine type and memory size), operating system, and an
+input/output script showing the problem.
+
+The compiler can be used both interactively and in "batch" mode.  Batch
+mode provides an insecure precursor of separate compilation that we use to
+bootstrap the compiler.  Most users will want to use the interactive
+system, but a description of the batch system is provided in
+src/doc/BATCHINSTALL for those expert users who wish to modify the
+compiler, cross compile, or support a large program of their own.  The rest
+of this file tells you how to install the interactive version.
+
+
+Installation script -- makeml
+
+The makeml shell script (src/makeml) is described by its man page, doc/makeml.1.
+The most important options describe the hardware architecture, the operating
+system, and the sharing mode.
+
+(1) machine -- the target machine:
+
+  -sun3
+  -m68     Sun 3 workstations using the MC68020 processor (MC68881 assumed)
+
+  -vax	   Vaxes supporting g_floats
+
+  -sun4
+  -sparc   Sun 4 workstations and SPARCstations
+
+  -next	   NeXT machine
+
+  -envcore Encore Multimax (NS32032 processor)
+
+(2) os -- the operating system of the target machine:
+
+  -bsd       various BSD-based Unix systems
+  -ultrix    Ultrix on Vax or DECstations
+  -v9        a local Bell Labs Unix variety (Vax only)
+
+These options are only necessary for the Vax architecture.  The other
+architecture options imply -bsd.
+
+(3) sharing mode -- specifies whether compiler object code is sharable:
+
+  -noshare    minimize the size of the runtime system (for exportFn)
+
+By default the sml image will be built with the compiler object code
+read-only and sharable (linked into the Unix text segment of the
+runtime system, runtime/run).  This helps save memory on systems
+supporting several concurrent sml users, and also improves garbage
+collector performance.
+
+However, there is a problem when "exportFn" is used to create an
+executable image from within a sharable compiler:  the exported image
+will include the compiler object code and thus be considerably larger
+than necessary.  So when you are planning to create an image using
+exportFn you should use an sml with a minimal runtime system.  The
+"-noshare" option creates such an sml, by loading the compiler object
+code into the ML heap instead of linking it into the runtime system
+text segment.  [The batch loader can also be used to create stand-alone
+ML programs.  See doc/BATCHINSTALL.]
+
+
+Building an sml [vax and mc680x0 versions]
+
+We assume that the Standard ML distribution is set up as a directory
+mldist containing subdirectories src, mo.m68, and mo.vax.  The following
+instructions assume that mldist is the current directory.
+
+1. Go to the src subdirectory of mldist:
+
+	cd src
+
+2. Run makeml with appropriate command line options, e.g.:
+
+	makeml -sun3 -noshare	(for Sun3 workstations, not sharing)
+        makeml -vax -bsd	(for Vaxes running 4.2/4.3 BSD, shared object code)
+        makeml -vax -ultrix	(for Vaxes running V9 Unix)
+
+   NOTE: Make sure that the directories src and src/runtime are
+   writable by the user running the makeml script.
+
+The building of the sml system proceeds in three phases.  First the
+runtime system is compiled with the appropriate options.  Then the sml
+object files (from mo.vax or mo.m68 as appropriate) are loaded and
+executed.  Finally the files in src/boot are compiled to initialize
+the static environment.  Each of these phases prints characteristic
+messages on the standard output.  After the interactive sml has been
+built, an image will be exported to a file named "sml" and the makeml
+command will exit (the -i option allows one to specify a different name
+for the exported image).
+
+3. Install the executable image "sml" produced by step 2 in an
+appropriate bin directory on your machine, e.g. /usr/local/bin:
+
+	cp sml /usr/local/bin
+
+(You may need system administrator privileges for this step.)  Once
+installed, the interactive system can be run by executing the command
+"sml".  The system will start up by printing a version message, then
+the top-level prompt "-", indicating that you can now start typing to
+the interactive system.
+
+
+Cross compiling objects for other architectures
+
+If you wish to install the system on architectures other than the Vax
+or MC680x0, you will first have to build a directory containing the
+object files for that architecture (mo.sparc, mo.ns32, etc.).  The
+batch compiler instructions in doc/BATCHINSTALL explain how to do
+this.
+
+
+Managing memory use
+
+ML provides automatic storage management through a garbage-collected
+heap.  Since the heap is used intensively, choice of heap size can
+have a significant impact on performance.  The compiler determines an
+efficient heap size automatically on startup, resizes the heap up or
+down as the amount of live data changes, and complains if it runs out
+of memory (the interactive system can be booted in approximately 3
+megabytes).
+
+There are three parameters of the runtime system that help determine the
+size of the heap.  They are defined by the -h, -r, and -m command line
+options of makeml.
+
+The options are
+
+  -h i	set the initial heap size to i Kbytes (i a positive integer)
+
+  -r j  the desired ratio between the size of live data and the size
+	of the heap is set to j, a positive integer greater than or
+	equal to 3 (the default is j=5)
+	
+  -m k  set the soft maximum heap size (softmax) to k Kbytes (k a
+	positive integer), with the default being k=100,000 (i.e. 100MB)
+
+  -g l  set the g.c. message level to l, where l is 0,1,2, or 3
+
+The -h option only has an effect on the initial phase of execution up
+to the first major garbage collection, at which time the heap size
+will be automatically resized as dictated by the ratio and softmax
+parameters.  Using a large -h value can speed up the building of the
+system when lots of memory is available.
+
+The -g option specifies how much information is printed about garbage
+collections.  The value l=0 suppresses all garbage collection
+messages, l=1 causes messages to be printed for major collections, l=2
+adds messages for heap resizing, and l=3 adds messages for minor
+collections and failure to maintain the desired ratio.  The default is
+l=2.
+
+In general, the larger the heap size, the lower the garbage collection
+overhead.  In principle, heap size is limited by the total virtual memory
+available to a process.  In practice, since heavy paging will slow down a
+program drastically, it is desirable to keep heap size within the bounds of
+available physical memory, taking into account the memory requirements of
+other processes sharing the physical memory.  Setting a high ratio will
+cause the compiler to be aggressive in its use of memory, while setting a
+reasonable limit on heap size can prevent excessive paging.  The maximum
+heap size can be controlled externally by using the "limit datasize"
+command in the C shell.  For instance, on an 8MB Sun 3 you might execute
+the shell command
+
+   limit datasize 6M
+
+before running sml.  This would prevent the heap from growing larger
+than 6 MB regardless of the value of the ratio.  This is a hard limit,
+so it might cause a program to run out of memory and fail even though
+plenty of virtual memory is available.
+
+The soft maximum heap size (softmax) specified with the -m option is a
+less drastic way of controlling the system's appetite for memory.  The
+heap will grow larger than softmax only when necessary to maintain a
+ratio of 3.  Thus when softmax is reached, the heap will not grow
+until the size of live data is one third of softmax, and thereafter it
+will grow more slowly than with the default ratio of 5 (or the user
+defined ratio).  A reasonable strategy is to set softmax to the
+maximum amount of physical memory that you know will be available and
+set ratio to a high value (e.g. 20), so that the heap size will tend
+to stick at softmax, thereby taking advantage of available memory.
+
+The ratio and softmax parameters can also be changed at any time from
+within sml since they are the values of the variables
+
+   System.Control.Runtime.ratio: int ref,
+   System.Control.Runtime.softmax: int ref.
+
+For example, 
+
+   makeml ...  -r 20 -m 4096
+
+might be appropriate at a site where most users are running small to
+medium size programs on machines with 8MB physical memory. [We would
+appreciate feedback concerning which settings seem to work best in
+your situation.]  The defaults can also be changed by editing their
+definitions in the file src/runtime/run.c.
+
+The runtime system (src/runtime/run) can be exectuted directly,
+without using the makeml script, and it accepts the -h, -r, and -m options
+as well..  The command synopsis is
+
+	run [-h i] [-r j] [-m k] [-g l] module
+
+The parameter "module" is the name of a module whose object file,
+namely src/mo/<module>.mo, is to be loaded and executed (along with
+any other modules on which it depends).  IntVax and IntM68 are typical
+module arguments; they define the interactive top level loops for the
+Vax and MC68020 versions of the compiler, respectively.
+
+
+
+WARNING:  recompile runtime for different OS versions
+
+    When transferring the system between Sun 3's running different
+    versions of SunOS (say 3.x and 4.0), the sml object code files in
+    mo.m68 can be copied without change -- they do not need to be
+    regenerated.  However, the runtime system *must* be recompiled
+    when moving the system to a different version of Unix, even if the
+    same arguments would be used with makeml.  This remark also
+    applies to Vaxes running different versions of Unix (4.3BDS and
+    Ultrix, for instance).  The best approach is to transfer at least
+    the runtime sources (src/runtime) and src/boot and run the makeml
+    script with appropriate arguments on the new system.

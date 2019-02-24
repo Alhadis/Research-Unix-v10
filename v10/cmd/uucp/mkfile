@@ -1,0 +1,199 @@
+# this mkfile is full of crap
+# its more arcane options are not likely to work
+# however, `mk install' and `mk all' (and mks of the individual
+# a.out targets) will work well enough
+#
+# if you try to use mk install, do it as uucp or root
+# so the chmods and chowns will work.
+# or just don't use mk install.  i don't.
+#
+
+#
+# mk: the slow clumsy make
+#
+BUILTINS=
+%.o:	%.c
+	$CC $CFLAGS -c $stem.c
+
+#
+# -DMANYSYS includes code to search for several Systems files; see sysopen.c
+#
+
+MANYSYS= -DMANYSYS
+
+CFLAGS = -O $MANYSYS		# for normal case
+CC=cc
+IFLAG =
+LDFLAGS= $IFLAG
+
+# libraries
+# should match various defines in parms.h
+#	when UNETLIB is to be used, define UNET in parms.h
+# UNETLIB = -lunet
+DKLIB = -lipc
+# 	some sites use -lbtl for compatibility
+# BTLLIB = -lbtl
+LIBS=$BTLLIB -lipc $UNETLIB
+
+# protocols
+# should match various defines in parms.h
+# gio+pk0+pk1 == proto g
+PROTOCOLS= gio.o pk0.o pk1.o dio.o eio.o	# for datakit
+
+OWNER=uucp
+GRP=bin
+BIN=$ROOT/usr/bin
+INSDIR=$ROOT/usr/lib/uucp
+UPATH=.
+# The a.out files go to ODIR
+ODIR=.
+
+CLEAN=
+LINTOP=
+COMMANDS=uucp uux uuxqt uucico uusched uugrep
+TOOLS=uuname uucheck uustat uucleanup
+OFILES=utility.o cpmv.o expfile.o gename.o getpwinfo.o \
+	ulockf.o xqt.o logent.o versys.o gnamef.o systat.o sysopen.o
+LFILES=utility.c cpmv.c expfile.c gename.c getpwinfo.c \
+	ulockf.c xqt.c logent.c versys.c gnamef.c systat.c sysopen.c
+OUUCP=uucpdefs.o uucp.o gwd.o permission.o getargs.o uucpname.o\
+	versys.o gtcfile.o chremdir.o 
+LUUCP=uucpdefs.c uucp.c gwd.c permission.c getargs.c uucpname.c\
+	versys.c gtcfile.c chremdir.c 
+OUUX=uucpdefs.o uux.o gwd.o permission.o getargs.o getprm.o\
+	uucpname.o versys.o gtcfile.o chremdir.o
+LUUX=uucpdefs.c uux.c gwd.c permission.c getargs.c getprm.c\
+	uucpname.c versys.c gtcfile.c chremdir.c
+OUUXQT=uucpdefs.o uuxqt.o mailst.o getprm.o gnamef.o uucpname.o \
+	permission.o getargs.o gtcfile.o shio.o chremdir.o gwd.o
+LUUXQT=uucpdefs.c uuxqt.c mailst.c getprm.c gnamef.c uucpname.c \
+	permission.c getargs.c gtcfile.c shio.c chremdir.c gwd.c
+OUUCICO=uucpdefs.o cico.o conn.o callers.o cntrl.o \
+	anlwrk.o permission.o getargs.o gnamef.o \
+	gnxseq.o pkdefs.o imsg.o gtcfile.o \
+	mailst.o uucpname.o line.o chremdir.o gwd.o $PROTOCOLS
+LUUCICO=uucpdefs.c cico.c conn.c callers.c cntrl.c \
+	anlwrk.c permission.c getargs.c gnamef.c \
+	gnxseq.c pkdefs.c imsg.c gtcfile.c \
+	mailst.c uucpname.c line.c chremdir.c gwd.c eio.c dio.c
+OUUNAME=uuname.o uucpname.o uucpdefs.o sysopen.o versys.o
+LUUNAME=uuname.c uucpname.c uucpdefs.c sysopen.c versys.c
+OUUSTAT=uustat.o gnamef.o uucpdefs.o getpwinfo.o ulockf.o getargs.o \
+	utility.o uucpname.o versys.o sysopen.o 
+LUUSTAT=uustat.c gnamef.c uucpdefs.c getpwinfo.c ulockf.c getargs.c \
+	utility.c uucpname.c versys.c sysopen.c
+OUUSCHED=uusched.o gnamef.o uucpdefs.o ulockf.o \
+	systat.o getargs.o utility.o
+LUUSCHED=uusched.c gnamef.c uucpdefs.c ulockf.c \
+	systat.c getargs.c utility.c
+OUUCLEANUP=uucleanup.o gnamef.o uucpdefs.o \
+	uucpname.o getargs.o cpmv.o utility.o
+LUUCLEANUP=uucleanup.c gnamef.c uucpdefs.c \
+	uucpname.c getargs.c cpmv.c utility.c
+OUUGETTY=uugetty.o ulockf.o uucpdefs.o
+LUUGETTY=uugetty.c ulockf.c uucpdefs.c
+
+INIT=init
+
+all:N:	$INIT $COMMANDS $TOOLS 
+
+install:N:	all cp
+
+cp:
+	strip uuname uucp uux uustat
+	cp uuname uucp uux uustat $BIN
+	/etc/chown ${OWNER},$GRP $BIN/uuname $BIN/uucp $BIN/uux $BIN/uustat
+	chmod 04775 $BIN/uuname $BIN/uucp $BIN/uux $BIN/uustat
+	strip uucico uuxqt uusched uucheck uucleanup uugrep
+	cp uucico uuxqt uusched uucheck uucleanup uugrep $INSDIR
+	chown ${OWNER},$GRP $INSDIR/uucico $INSDIR/uuxqt $INSDIR/uusched $INSDIR/uucheck $INSDIR/uucleanup $INSDIR/uugrep
+	# don't suid uucleanup
+	chmod 04775 $INSDIR/uucico $INSDIR/uuxqt $INSDIR/uusched $INSDIR/uugrep
+	# shell scripts
+	cp kick debug uudemon.* uucrap remote.unknown $INSDIR
+	chown ${OWNER},$GRP $INSDIR/kick $INSDIR/debug $INSDIR/uudemon.* $INSDIR/uucrap $INSDIR/remote.unknown
+	chmod 0775 $INSDIR/kick $INSDIR/debug $INSDIR/uudemon.* $INSDIR/uucrap $INSDIR/remote.unknown
+	cp uulog uupick uuto $BIN
+	chown ${OWNER},$GRP $BIN/uulog $BIN/uupick $BIN/uuto
+	chmod 0775  $BIN/uulog $BIN/uupick $BIN/uuto
+
+clean:
+	rm -f *.o $COMMANDS $TOOLS
+
+init:N:	anlwrk.o permission.o cpmv.o expfile.o gename.o \
+	getargs.o getprm.o getpwinfo.o gnamef.o \
+	gnxseq.o gwd.o imsg.o logent.o \
+	mailst.o shio.o \
+	systat.o ulockf.o uucpname.o versys.o xqt.o
+
+uucp:	$OUUCP $OFILES
+	$CC $CFLAGS  $LDFLAGS $OUUCP $OFILES $LIBS \
+		-o $ODIR/uucp
+
+uux:	$OUUX $OFILES
+	$CC $CFLAGS  $LDFLAGS $OUUX $OFILES $LIBS \
+		-o $ODIR/uux
+
+uuxqt:	$OUUXQT $OFILES
+	$CC $CFLAGS  $LDFLAGS $OUUXQT $OFILES $LIBS \
+		-o $ODIR/uuxqt
+
+uucico:	$OUUCICO $OFILES
+	$CC $CFLAGS  $LDFLAGS $OUUCICO $OFILES $LIBS \
+		-o $ODIR/uucico
+
+uuname:	$OUUNAME
+	$CC $CFLAGS  $LDFLAGS $OUUNAME $LIBS \
+		-o $ODIR/uuname
+
+uustat:	$OUUSTAT
+	$CC $CFLAGS  $LDFLAGS $OUUSTAT $LIBS \
+		-o $ODIR/uustat
+ 
+uucleanup:	$OUUCLEANUP
+	$CC $CFLAGS $LDFLAGS $OUUCLEANUP $LIBS \
+		-o $ODIR/uucleanup
+ 
+uusched:	$OUUSCHED
+	$CC $CFLAGS  $LDFLAGS $OUUSCHED $LIBS \
+		-o $ODIR/uusched
+ 
+uucheck:	uucheck.o uucpname.o sysopen.o
+	$CC $CFLAGS  $LDFLAGS $prereq $LIBS \
+		-o $ODIR/uucheck
+
+uugrep:	uugrep.c
+	$CC -DINSDIR=\"${INSDIR}\" $CFLAGS $LDFLAGS -o uugrep uugrep.c -lcbt
+ 
+uucheck.o:	permission.c
+
+utility.o permission.o cico.o conn.o callers.o cpmv.o\
+	anlwrk.o cntrl.o expfile.o gename.o\
+	getpwinfo.o gio.o xio.o gnamef.o gnxseq.o gwd.o imsg.o ioctl.o\
+	logent.o mailst.o sdmail.o line.o shio.o\
+	systat.o ulockf.o uucpdefs.o uucpname.o uuname.o\
+	uucleanup.o uucheck.o uusched.o  uucp.o uustat.o dio.o \
+	uux.o uuxqt.o versys.o xqt.o:	uucp.h parms.h
+
+mkdirs:
+
+
+#  lint procedures
+
+lint:	lintuucp lintuucico lintuux lintuuxqt \
+	lintuuname
+
+lintuucp:
+	lint $LINTOP $LUUCP $LFILES
+
+lintuucico:
+	lint $LINTOP $LUUCICO $LFILES
+
+lintuux:
+	lint $LINTOP $LUUX $LFILES
+
+lintuuxqt:
+	lint $LINTOP $LUUXQT $LFILES
+
+lintuuname:
+	lint $LINTOP $LUUNAME

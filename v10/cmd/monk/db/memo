@@ -1,0 +1,131 @@
+|associate(author;
+incr A, clear T,
+clear string T1 T2 T3
+T4 T5 T6;
+store string A\nA T1,
+store string I\nA T2,
+store string L\nA T3,
+store string D\nA T4,
+store string E\nA T5,
+store string R\nA T6;
+[name $;
+incr T, set string T1 $;]
+[initials $;
+incr T, set string T2 $;]
+[location $;
+incr T, set string T3 $;]
+[department $;
+incr T, set string T4 $;]
+[extension $;
+incr T, set string T5 $;]
+[room $;
+incr T, set string T6 $;]
+[$;
+incr T,
+set string T\nT $;])
+|associate(document;
+incr D, clear T,
+clear string T1 T2 T3;
+store string S\nD T1,
+store string F\nD T2,
+store string W\nD T3;
+[number $;
+incr T, set string T1 $;]
+[file_case $;
+incr T, set string T2 $;]
+[work_program $;
+incr T, set string T3 $;]
+[$;
+incr T,
+set string T\nT $;])
+|environment(title;
+divert.input on TI;)
+|environment(date;
+divert.string DT;)
+|environment(abstract;
+divert.input on AS;
+sawabstract on)
+|environment(keywords;
+divert.input on KW;
+sawkeywords on)
+|environment(titlebox;
+;
+new.page, indent.line +4.375i, string LO,
+blank.lines 2, size -2, remember P0,
+page.offset -.5i, text "subject:", new.line,
+return P0, indent +4.875i, text "date:", blank.lines,
+text "from:", indent -4.875i, new.line, page.offset +.5i, size +2,
+line.length -3i, font bold, return P0, fill off,
+macro TI, fill on, line.length +3i, new.line,
+size -1,
+|for i in 1 2 3 4 5 6 7 8 9 [
+if begin "\nD>=$i",
+new.line, text "Work Program ", string W$i,
+text " File Case ", string F$i,
+if end,
+]
+size +1,
+return P0, indent +4.75i, line.length +3i,
+string DT,
+|for i in 1 2 3 4 5 6 7 8 9 [
+if begin "\nA>=$i",
+blank.lines,
+string A$i, new.line,
+string L$i, text " ",
+string D$i, new.line,
+string R$i, text " ",
+string E$i,
+if end,
+]
+line.length -3i, spacing on, blank.lines, fill off,
+string S1, fill on, indent -4.75i, blank.lines 3,
+center on, font roman, text italics "TECHNICAL MEMORANDUM",
+center off, minimum.lines 2)
+|environment(titlebox;
+;
+new.page, indent.line +4.375i, string LO,
+blank.lines 2, size -2, remember P0,
+page.offset -.5i, text "subject:", new.line,
+return P0, indent +4.875i, text "date:", blank.lines,
+text "from:", indent -4.875i, new.line, page.offset +.5i, size +2,
+line.length -3i, font bold, return P0, fill off,
+macro TI, fill on, line.length +3i, new.line,
+size -1,
+|for i in 1 2 3 4 5 6 7 8 9 [
+if begin "\nD>=$i",
+new.line, text "Work Program ", string W$i,
+text " File Case ", string F$i,
+if end,
+]
+size +1,
+return P0, indent +4.75i, line.length +3i,
+string DT,
+|for i in 1 2 3 4 5 6 7 8 9 [
+if begin "\nA>=$i",
+blank.lines,
+string A$i, new.line,
+string L$i, text " ",
+string D$i, new.line,
+string R$i, text " ",
+string E$i,
+if end,
+]
+line.length -3i, spacing on, blank.lines, fill off,
+string S1, fill on, indent -4.75i,
+minimum.lines, inline off, font roman, inline on)
+|environment(signature;
+here on, minimum.lines 1, indent +30, line.length +3i,
+|for i in 1 2 3 4 5 6 7 8 9 [
+if begin "\nA>=$i",
+blank.lines 3,
+string bold A$i,
+if end,
+]
+line.length -3i, indent -30, blank.lines -1;
+minimum.lines 3)
+|environment(:document;
+clear A D;)
+|environment(:document_save;
+;)
+|environment(:document_restore;
+;)

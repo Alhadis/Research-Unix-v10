@@ -1,0 +1,425 @@
+.TH CC 1
+.CT 1 prog_c
+.SH NAME
+cc, lcc \- C compilers
+.SH SYNOPSIS
+.B cc
+[
+.I option ...
+]
+.I file ...
+.PP
+.B lcc
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I Cc
+compiles the classic C language;
+.I lcc
+compiles
+.SM ANSI.
+They are otherwise similar.
+In the absence of options, any named source
+.I files
+are compiled into object files and then linked,
+together with any named object
+.I files,
+into a single executable file named 
+.FR a.out .
+Compilation normally has four phases: preprocessing of
+.B #
+directives, compilation to assembly language, assembly,
+and linking.
+Suffixes of
+.I file
+names determine which phases they participate in:
+.TP
+.B .c
+C source to be preprocessed and compiled.
+Object code for this file is finally placed in a
+correspondingly named
+.L .o
+file, except when exactly one file is being compiled and linked.
+.TP
+.B .i
+C source to be compiled without preprocessing;
+.B #
+directives are ignored by
+.I cc,
+forbidden by
+.I lcc.
+.TP
+.B .s
+Assembler source to be assembled, producing a
+.L .o
+file.
+.TP
+.B .o
+A preexisting object file to be linked.
+.PP
+Both compilers accept options of
+.IR ld (1),
+the most common of which are
+.B -o
+(to substitute a name for
+.BR a.out )
+and
+.BR -l 
+(to link from a library), and in addition
+.TP
+.B -c
+Suppress the linking phase, producing
+.B .o
+files but no
+.BR a.out .
+.TP
+.B -g
+Produce additional symbol table information
+for debuggers such as
+.IR pi (9.1).
+.TP
+.B -O
+Invoke an
+object-code improver; superfluous in
+.I lcc.
+.TP
+.B -w
+Suppress warning diagnostics.
+In
+.I lcc,
+.B #pragma ref
+.I variable
+supplies a dummy reference to suppress
+an unused-variable diagnostic.
+.TP
+.B -p
+Arrange for the compiler to produce code
+which counts the number of times each routine is called;
+also, if linking takes place, replace the standard startup
+routine by one which arranges to gather profiling data
+for later examination by
+.IR  prof (1).
+.TP
+.B -pg
+Like
+.B -p
+but for
+.IR gprof 
+instead of
+.IR prof (1).
+.TP
+.B -S
+Compile the named C programs, and leave the
+assembler-language output in
+.B .s
+files.
+.TP
+.B -E
+Run the preprocessor
+on the named C programs, and send the result to the
+standard output.
+.TP
+.B -C
+Prevent the preprocessor from eliding comments.
+.TP
+.BI -D\*S name=def
+.br
+.ns
+.TP
+.BI -D \*Sname
+Define the
+.I name
+to the preprocessor,
+as if by
+.LR #define .
+If no definition is given, the name is defined as
+.LR 1 .
+.I Lcc
+predefines a few symbols on most machines; option
+.B -v
+exposes them.
+.TP
+.BI -U \*Sname
+Remove any initial definition of
+.IR name .
+.TP
+.BI -I \*Sdir
+.L #include
+files whose names do not begin with 
+.L /
+are always
+sought first in the directory 
+of the
+.I file
+argument,
+then in directories named in 
+.B -I
+options,
+then in directories on a standard list.
+.PP
+These options are peculiar to
+.IR cc :
+.TP
+.B -P
+Run the preprocessor on each 
+.L .c
+file.
+Produce no line numbers.
+Place results in
+.L .i
+files.
+.TP
+.B -R
+Cause
+.IR as (1)
+to make initialized variables shared and read-only.
+.TP
+.BI -B \*Sstring
+Find substitute compiler passes in the files named
+.I string
+with the suffixes cpp, ccom and c2.
+If 
+.I string 
+is empty, use a standard backup version.
+.TP
+.BR -t [ p012 ]
+Find only the designated compiler passes in the
+files whose names are constructed by a
+.B -B
+option.
+In the absence of a
+.B -B 
+option, the
+.I string
+is taken to be
+.FR /usr/c/ .
+.PP
+These options are peculiar to
+.IR lcc :
+.TP
+.B -N
+Do not search standard directories for include files.
+Omit non-ANSI language extensions.
+.TP
+.B -A
+Warn about calls to functions without prototypes.
+.TP
+.B -b
+produce code that writes an expression-level profile into prof.out.
+.IR bprint (1)
+produces an annotated listing, and
+.B -Wf-a
+uses the profile to improve register assignments.
+.TP
+.BI \-d n
+Generate jump tables for switches with density at least
+.IR n ,
+a floating-point constant between zero and one,
+0.5 by default.
+.TP 
+.B \-P
+Write declarations for all defined globals on standard error.
+.TP
+.B \-n
+Produce code
+that reports and aborts upon dereferencing a zero pointer.
+.TP
+.B \-M
+Run only the preprocessor to generate 
+.IR make (1)
+dependencies on the standard output.
+.TP
+.B \-t
+Produce code to print trace messages at function entry and exit.
+.TP
+.BI -Wp "opt"
+Pass preprocessor option
+.I opt
+to the (Gnu) preprocessor.
+For example,
+.B -Wp-T
+allows
+.SM ANSI
+trigraph sequences.
+.HP
+.BI -Wa  opt,
+.BI -Wl  opt,
+.BI -Wf  opt
+.br
+Pass option
+.IR opt
+to the assembler
+.RI ( as (1)),
+loader
+.RI ( ld (1)),
+or compiler proper.
+.TP
+.BI \-B str
+Use the compiler
+.IB str rcc
+instead of the default version.
+.I Str
+usually ends with a slash.
+.TP
+.B \-v
+Report compiler steps (and some version numbers) as
+they are executed.
+A second
+.B \-v
+causes steps to be reported but not executed.
+.PP
+.I Lcc
+supports
+.BI asm( string ).
+The given string constant is copied to the generated
+assembly language output with occurrences of
+.BI % name
+replaced by the address or register for identifier 
+.I name 
+if it is visible.
+Otherwise,
+.BI % name
+is simply copied to the output.
+Wide-character literals are treated as plain char literals;
+ints and long ints are the same size,
+as are doubles and long doubles.
+.SH EXAMPLES
+.TP
+.L
+lcc -N -I/usr/include/libc file.c 
+Use local include files instead of
+.SM ANSI
+standard ones, which lack most functions of Section 2
+of this manual, and often disagree (especially about
+.BR const )
+with those in Section 3.
+See
+.IR intro (3).
+.SH FILES
+.PP
+Different machines use different file names, so this list is
+only representative.
+.I Lcc
+option
+.B -v
+exposes the correct names.
+.TF /usr/include/libc
+.TP
+.F a.out
+linked output
+.TP
+.F /tmp/ctm*
+temporary
+.TP
+.F /lib/cpp
+preprocessor,
+.IR cpp (8)
+.TP
+.F /usr/lib/gcc-cpp
+.SM ANSI
+preprocessor
+.TP
+.F /lib/ccom
+.I cc
+compiler proper
+.TP
+.F /lib/c2
+optional optimizer for
+.I cc
+.TP
+.F /bin/as
+assembler,
+.IR as (1)
+.TP
+.F /usr/lib/rcc
+.I lcc
+compiler proper
+.TP
+.F /lib/crt0.o
+runtime startoff
+.TP
+.F /lib/mcrt0.o
+startoff for profiling
+.TP
+.F /lib/libc.a
+standard library, see
+.IR intro (3)
+.TP
+.F /usr/include
+directory for 
+.I cc
+.L #include
+files
+.TP
+.F /usr/include/lcc
+directory for 
+.SM ANSI
+standard 
+.L #include
+files
+.TP
+.F /usr/include/libc
+directory for local
+.I lcc
+include files
+.SH "SEE ALSO"
+.IR lint (1), 
+.IR ld (1), 
+.IR strip (1),
+.IR nm (1),
+.IR prof (1), 
+.IR bprint (1), 
+.IR cin (1),
+.IR adb (1), 
+.IR pi (9.1),
+.IR c++ (1)
+.br
+B. W. Kernighan and D. M. Ritchie,
+.I The C Programming Language,
+2nd Ed., Prentice-Hall, 1988
+.SH BUGS
+.I Cc
+cannot handle the
+.L -y
+flag of
+.I ld.
+.br
+.I Lcc
+currently uses the pre-ANSI library.
+.SH MACHINE DEPENDENCIES
+.SS VAX
+.B -pg
+is unimplemented.
+.br
+.I Cc
+and
+.I lcc
+use incompatible bit-field layouts and structure return conventions.
+.SS MIPS
+.I Lcc
+does not implement
+.B -p
+or
+.BR -pg ,
+and its
+.B -g
+supports breakpoints but not the examination of variables.
+.br
+.I Cc
+and
+.I lcc
+use incompatible bit-field layouts.
+.SS Sun
+.I Lcc
+options
+.B -Bdynamic
+and
+.B -Bstatic
+give the binding strategy; see
+.IR ld (1).
+.br
+.I Cc and
+.I lcc
+use incompatible bit-field layouts and structure return conventions.

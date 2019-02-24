@@ -1,0 +1,48 @@
+'\"macro stdmacro
+.if n .pH g1a.smtp %W% of %G%
+.nr X
+.if \nX=0 .ds x} smtp 1M "" "\&"
+.if \nX=1 .ds x} smtp 1M ""
+.if \nX=2 .ds x} smtp 1M "" "\&"
+.if \nX=3 .ds x} smtp "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4smtp\fP \- send \s-1SMTP\s+1 mail to a remote host using Simple Mail Transfer Protocol
+.SH SYNOPSIS
+\f4smtp\f1 [ \f4\-D\f1 ] [ \f4\-d\f2 domain\f1 ] [ \f4\-H\f2 helohost\f1 ] \f2sender host recip ...
+.SH DESCRIPTION
+\f4smtp\fP sends a message to a remote host \f2host\fP using the Simple Mail Transfer Protocol
+(\s-1SMTP\s+1).
+The message is read from standard input.
+\f2sender\fP is used to identify the sender of the message and
+the \f2recip\fPs are used as the recipients.
+.P
+When establishing a connection, \f4smtp\fP will use the first transport for which
+\f4netdir_getbyname\fP(3) returns an address, based on hostname, transport
+[returned from \f4getnetpath\fP(3)], and service \f4smtp\fP.
+Normally, this will be the ``tcp'' transport.
+.P
+The options to \f4smtp\fP and their meanings are as follows:
+.TP 12
+\f4\-D\fP
+This option turns on debugging.
+Debugging information is printed on standard error.
+.TP 12
+\f4\-H\f2 helohost\f1
+This option can be used to set the hostname used in
+.SM SMTP
+.SM HELO
+message (this defaults to the system's name).
+.TP 12
+\f4\-d\f2 domain\f1
+This option can be used to set the domain name to be used for this host.
+.P
+\f4smtp\fP is normally run by the \f4smtpsched\fP process to
+deliver mail queued in \f4/var/spool/smtpq\fP.
+.SH FILES
+.TP
+/var/spool/smtpq		where messages are queued
+.SH "SEE ALSO"
+\f4smtpsched\fP(1M)
+.br
+RFC821 \- Simple Mail Transfer Protocol

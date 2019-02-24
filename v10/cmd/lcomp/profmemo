@@ -1,0 +1,494 @@
+.fp 1 B1
+.fp 2 B2
+.fp 3 B3
+.TM 1982-11272-1 11173 39199-11
+.ND "February 10, 1982"
+.TL
+Dynamic Statement Counting:
+A Manual for Users and Owners
+.AU MH2C522 7214
+P.J. Weinberger
+.AI
+.MH
+.OK
+Program Testing
+.AB
+Although time profiling is a standard
+.UX
+tool,
+until now there has been no convenient way to find out
+how often each line of a C or Fortran program is executed
+when the program is run.
+This memo describes a simple tool which gives statement and
+instruction execution counts at a modest cost (about 50%)
+in run-time efficiency.
+The programs works on VAXes, and can be modified to work
+on other machines with adequate address space.
+Any user can install and use the programs without
+affecting the compilers, assembler, or loader, and
+without bothering the system administrators.
+.PP
+The typical output
+.DS
+.nf
+.ft CW
+1	main(argc)
+1	{	int i;
+1		if(argc > 3)
+0			exit(1);
+1		for(i = 0; i < 100; i++)
+67			if(i % 3 == 0)
+34				i++;
+67	}
+.ft P
+.fi
+.DE
+shows how often each line was executed;
+alternative forms would show that
+of the 18 machine instructions, exactly one was never executed,
+or would say how many instructions were executed.
+.AE
+.CS 6 0 6 0 0 1
+.NH
+What is Execution Counting?
+.PP
+Dynamic execution counting provides counts of how often each part
+of a program was executed.
+The results of several tests can be combined, or the data
+can be collected one run at a time.
+Information about your program can be presented in several forms.
+.NH 2
+Summarizing Test Coverage
+.PP
+Condensed summary data like
+.DS
+.ft CW
+.nf
+1962519ie 390i 175ine 471439bbe 106bb 55bbne /usr/sys/pseki/uba.c
+16893220ie 334i 49ine 5562730bbe 115bb 21bbne /usr/sys/pseki/clock.c
+.fi
+.ft P
+.DE
+says that of the 390 instructions in \f2uba.c\fP 175 were never executed,
+and 49 of the 334 instructions in \f2clock.c\fP were never executed.
+Section 4.1 explains the output fully.
+Data like this summarizes test coverage.
+.NH 2
+Source Statement Counts
+.PP
+Compiling the program
+.KS
+.nf
+.ft CW
+main()
+{	int i;
+	for(i = 0; i < 100; i++)
+		if(i % 3 == 0)
+			i++;
+}
+.fi
+.ft P
+.KE
+with execution counting enabled (see Section 2), and running it once,
+would give the following source statement counts.
+.KS
+.nf
+.ft CW
+1	main()
+1	{	int i;
+1		for(i = 0; i < 100; i++)
+67			if(i % 3 == 0)
+34				i++;
+67	}
+.fi
+.ft P
+.KE
+Interpreting the output is discussed in section 4.
+.NH
+The Three Roads to Invoking Execution Counting
+.PP
+The statement count profiler works on C or Fortran programs.
+There are two parts to it,
+one to compile the program with execution counting enabled,
+and the other, named \f2lprint\fP, to print the results.
+The first part, a program named
+.I bb ,
+modifies the assembly language produced by the compilers
+by inserting counting instructions at the beginning of each basic block.
+(A basic block is a set of instructions that have to be executed
+if any one of them is.)
+The program described here works only on VAXes,
+but it is easy to modify it to work on almost any machine
+with an adequate address space.
+.PP
+The ease of using the program depends on how easy it is to
+get the local system to interpolate \f2bb\fP
+into the compilation process.
+There are three sorts of systems.
+.NH 2
+Good Systems
+.PP
+On friendly well-run systems the \f2cc\fP and \f2f77\fP commands
+know about \f2bb\fP.
+The \f2-L\fP (for Line-counting) flag enables execution counts, as in
+.DS
+.nf
+.I
+cc -L main.c subr.c lib.o -o xxx
+.R
+or
+.I
+cc -L -c main.c; cc -L -c subr.c;
+cc -L main.o subr.o lib.o -o xxx
+.R
+.fi
+.DE
+or similarly for \f2f77\fP.
+.PP
+In this example, statement counts will be generated for \f2main.c\fP
+and for \f2subr.c\fP,
+but not for \f2lib.c\fP,
+unless it too had been compiled with \f2-L\fP.
+.NH 2
+Adequate Systems
+.PP
+An adequate system is one which has the counting software,
+but the software is not integrated into \f2cc\fP.
+The distributed software contains two shell scripts,
+.I lcomp
+and
+.I lcc .
+The former takes any combination of C and Fortran
+source, \f2.o\fP files, and \f2.s\fP files, and produces an
+.I a.out
+file, rather like \f2cc\fP, except that it does not produce
+\&\f2.o\fP files.
+.DS
+.I
+lcomp main.c subr.c lib.o
+.R
+.DE
+has the same effect as the first \f2cc\fP example above,
+except that it produces its output in \f2a.out\fP,
+rather than in \f2xxx\fP.
+.PP
+.I lcc
+is used to prepare \f2.o\fP files,
+so that count profiling can be used with separate compilations.
+The second \f2cc\fP example above would be
+.DS
+.I
+lcc main.c; lcc subr.c; lcomp main.o subr.o lib.o
+.R
+.DE
+on merely adequate systems.
+.NH 2
+Not Yet Adequate Systems
+.PP
+Your system is less adequate if it does not have this software.
+You can get the counting software by sending mail to me at
+\f2rabbit!pjw\fP, and I will send it to you.
+It can be installed and used without any special help from
+system administrators.
+.NH
+What it Leaves Behind, and Why
+.PP
+After programs have been compiled using either of the techniques
+described above, there will be some new files,
+named \f2main.sL\fP and \f2subr.sL\fP.
+When the \f2a.out\fP executes
+it appends to a file \f2prof.out\fP in the current directory.
+.PP
+The \f2prof.out\fP file contains information on how often each
+basic block was executed.
+The various \f2.sL\fP files contain information correlating
+basic blocks with source lines, and with the instructions in
+the basic block.
+.PP
+Do not move the \f2.sL\fP files, since they are found by their
+full path names.
+.PP
+Since the \f2prof.out\fP is cumulative, it must be empty the
+first time a new version of a program is run.
+The compilation procedures try to remove a lingering \f2prof.out\fP,
+but the user should check carefully.
+.NH
+Getting Output
+.PP
+After you run your program one or more times,
+run the \f2lprint\fP command to produce a listing.
+The listing contains only those files that had some program in them
+executed, and that were compiled with count profiling.
+Here is a simple example.
+.KS
+\f(CW
+
+.nf
+1	#include "stdio.h"
+1	main()
+1	{	int n;
+81		while((n = getchar()) != EOF) putchar(n);
+1	}
+.fi
+\fP
+.KE
+.PP
+The basic information is that the program \f2main\fP was executed
+once, and the loop was executed 81 times.
+The non-executable lines seem to have been executed also, but that
+is an artifact.
+Each line in the source corresponds to zero, one, or several basic
+blocks, and basic blocks can span several lines of source.
+To each line, the program attributes the next basic block in
+the assembly language, which is usually the correct one when there
+is one basic block corresponding to a line.
+The count of 1 on the closing curly brace above is not an artifact;
+unoptimized programs contain a jump to the end at their entry point.
+These points can be seen more clearly in the following example.
+.KS
+\f(CW
+
+.nf
+1	#include "stdio.h"
+1	main()
+1	{	int n, i;
+1		for(
+1			i = 0;          /* line 5 */
+1			(n = getchar()) != EOF; i++)
+110				putchar(n);
+1		exit(0);
+1	}
+.fi
+\fP
+.KE
+For reasons known best to itself, the C compiler
+believes that no code is generated for line 5, so that the
+initialization code, which is executed only once, is associated
+with the next line.
+This flaw would be seen if the program were single-stepped using
+\f2sdb\fP, since \f2bb\fP and \f2sdb\fP use exactly the
+same line-numbers generated by the compiler.
+.PP
+By saying \f2lprint -i\fP the user gets the following, on the same
+data as above.
+.KS
+\f(CW
+
+.nf
+0i	#include "stdio.h"
+0i	main()
+1i	{	int n, i;
+0i		for(
+0i			i = 0;
+1105i			(n = getchar()) != EOF; i++)
+770i				putchar(n);
+2i		exit(0);
+3i	}
+.fi
+\fP
+.KE
+The numbers on the left are the number of instructions executed
+for each line.
+The strange attribution of the initialization code to line 6
+is still present, but it doesn't hide the 1104 other instructions
+executed in line 6.
+.PP
+The command \f2lprint -i -p\fP gets both statement counts and
+instruction counts.
+.NH 2
+Other Options
+.PP
+\f2lprint\fP has two other options.
+\f2lprint -c\fP compresses the \f2prof.out\fP file.
+After each execution of the profiled program, count data is
+written at the end of \f2prof.out\fP.
+Big programs generate a lot of counting data,
+so that compressing it back to the amount generated by one run
+will save space, and make \f2lprint\fP run faster when
+it is producing listings
+.PP
+\f2lprint -s\fP produces summary data, as in
+.KS
+\f(CW
+
+1949ie 31i 5ine 691bbe 12bb 1bbne /usr/pjw/prof/a.c
+
+\fP
+.KE
+This line says that \f2/usr/pjw/prof/a.c\fP contains
+31 assembly instructions and 12 basic blocks.
+During testing (or whatever produced \f2prof.out\fP)
+there were 1949 instruction executions, and 5 of the 31 instructions
+were never executed.
+There were 691 basic blocks executed, and 1 of the 12 basic
+blocks was never executed.
+This option is most useful for summarizing test coverage
+in programs which are made of a lot of files.
+.NH 2
+Another Peculiarity
+.PP
+The order of the listing may puzzle the user.
+The files are listed in inverse order of first use.
+.NH
+Installing the Distributed Programs
+.PP
+The distribution (mailed out as described in section 2.3)
+contains four C programs, a \f2makefile\fP,
+the two shell scripts \f2lcomp\fP and \f2lcc\fP,
+some manual pages, possibly an up-to-date version of
+this document, and a file that describes installation.
+.PP
+The two C programs \f2instr.c\fP and \f2bb.c\fP
+are to be compiled together to make the program \f2bb\fP.
+\f2bb\fP is the program that modifies the compiler's output
+and leaves behind \f2.sL\fP files for \f2lprint\fP.
+The shell scripts expect to find \f2bb\fP in the directory
+whose name is the value of the shell variable \f2DIR\fP.
+The C program \f2nexit.o\fP (obtained by compiling \f2nexit.c\fP)
+must also be in \f2DIR\fP.
+It must be loaded in place of the standard \f2exit\fP
+routine to get the \f2prof.out\fP file written when the
+program being profiled terminates.
+\f2lcomp\fP runs \f2bb\fP and loads \f2nexit.o\fP.
+.PP
+The two shell files and \f2lprint\fP (obtained by compiling
+\f2lprint.c\fP) should be put in \f2/usr/bin\fP,
+or some place where the user community can find them.
+.NH 2
+Does It Work?
+.PP
+Try it on one of the example programs given in the first section.
+If you do not get through \f2lcomp\fP because \f2bb\fP fails,
+perhaps you aren't on a VAX.
+A more likely hypothesis is that the assembly language put out
+by your version of the C compiler is incomprehensible to the program.
+This should not happen with any version of
+.UX
+now running on VAXes.
+.PP
+Now run the \f2a.out\fP, and type \f2lprint\fP.
+If you get a listing with counts, all is well.
+If you get nothing, look at the \f2.sL\fP file.
+If there are lines like \f2a.c: 1\fP interspersed with
+the assembly language, and if there is a \f2prof.out\fP
+file, but \f2lprint\fP won't produce output,
+let me know.
+If there are no such lines, then \f2bb\fP failed to find
+symbol table information describing line numbers in the
+C compiler's output.
+This will happen if your C compiler is sufficiently non-standard.
+The subroutine that recognizes file names and line numbers in
+\f2bb.c\fP will have to be changed.
+.PP
+The author would like to hear about problems.
+.NH
+Summary
+.PP
+The statement counting code works on all languages which
+use the assembler: C, Fortran, and (on some systems) Pascal.
+It works on VAXes, an earlier version was easily converted to
+work on Motorola 68000s by Tom London, and it will work on 3Bs
+and 370s soon.
+It can be installed and used without affecting any of the software
+vital to the system and without the help or approval of system
+administrators.
+In particular it renders obsolete a previous test coverage processor
+for C [1].
+.NH
+Esoterica
+.NH 2
+Programs that don't Terminate
+.PP
+Some programs, like the operating system, or network daemons,
+are not supposed to terminate, so \f2nexit\fP would never
+be called, so the \f2prof.out\fP file would never be written.
+Nonetheless it is desirable to be able to profile such programs.
+.PP
+Assuming that the programs have been compiled with the
+counting code inserted by \f2bb\fP, the problem
+is to get the counting data out of them periodically.
+Distributed with the source is a file \f2sysprof.c\fP
+which shows how to solve the problem with the kernel.
+A subroutine with the same structure would have to be included
+in a non-terminating user program,
+and invoked either periodically or by a signal.
+.NH 2
+More Detailed Output
+.PP
+\f2lprint -a\fP prints intermediate data which
+lists each instruction and how often it was executed.
+Here is a Fortran example.
+(C is exactly the same.)
+The Fortran program \f2a.f\fP is
+.KS
+.nf
+\f(CW
+	real a(100), b(100), x
+	integer i
+	do 10 i = 1, 100
+		a(i) = i
+		b(i) = i
+10	continue
+	x = 0
+	do 20 i = 1, 100
+		x = x + a(i) * b(i)
+20	continue
+	stop 12
+	end
+\fP
+.fi
+.KE
+The output from \f2lprint -a\fP is
+.DS
+\f(CW
+.nf
+a.f: 1
+1	subl2	$LF1,sp
+1	jmp	L12
+a.f: 2
+a.f: 3
+1	movl	$1,r11
+100	movl	r11,v.1
+a.f: 4
+100	cvtlf	r11,r0
+100	movf	r0,v.2+-4[r11]
+a.f: 5
+100	cvtlf	r11,r0
+100	movf	r0,v.3+-4[r11]
+a.f: 6
+100	incl	r11
+100	cmpl	r11,$100
+100	jleq	L17
+1	movl	r11,v.1
+a.f: 7
+1	clrf	v.4
+a.f: 8
+1	movl	$1,r11
+100	movl	r11,v.1
+a.f: 9
+100	mulf3	v.3+-4[r11],v.2+-4[r11],r0
+100	addf2	v.4,r0
+100	movf	r0,v.4
+a.f: 10
+100	incl	r11
+100	cmpl	r11,$100
+100	jleq	L20
+1	movl	r11,v.1
+a.f: 11
+1	pushl	$2
+1	pushl	$L21
+1	calls	$2,_s_stop
+a.f: 12
+0	ret
+1	jmp	L13
+.fi
+\fP
+.DE
+.PP
+From this level of detail, it is possible to answer most
+questions about the behavior of the program.
+.SH
+References
+.LP
+[1] Michael Lesk, A C Profiler for Test Case Verification. TM-80-1274-8.
+.SG

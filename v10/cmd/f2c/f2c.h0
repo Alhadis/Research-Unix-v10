@@ -1,0 +1,176 @@
+/* f2c.h  --  Standard Fortran to C header file */
+
+/**  barf  [ba:rf]  2.  "He suggested using FORTRAN, and everybody barfed."
+
+	- From The Shogakukan DICTIONARY OF NEW ENGLISH (Second edition) */
+
+#ifndef F2C_INCLUDE
+#define F2C_INCLUDE
+
+typedef long int integer;
+typedef char *address;
+typedef short int shortint;
+typedef float real;
+typedef double doublereal;
+typedef struct { real r, i; } complex;
+typedef struct { doublereal r, i; } doublecomplex;
+typedef long int logical;
+typedef short int shortlogical;
+
+#define TRUE_ (1)
+#define FALSE_ (0)
+
+/* Extern is for use with -E */
+#ifndef Extern
+#define Extern extern
+#endif
+
+/* I/O stuff */
+
+#ifdef f2c_i2
+/* for -i2 */
+typedef short flag;
+typedef short ftnlen;
+typedef short ftnint;
+#else
+typedef long flag;
+typedef long ftnlen;
+typedef long ftnint;
+#endif
+
+/*external read, write*/
+typedef struct
+{	flag cierr;
+	ftnint ciunit;
+	flag ciend;
+	char *cifmt;
+	ftnint cirec;
+} cilist;
+
+/*internal read, write*/
+typedef struct
+{	flag icierr;
+	char *iciunit;
+	flag iciend;
+	char *icifmt;
+	ftnint icirlen;
+	ftnint icirnum;
+} icilist;
+
+/*open*/
+typedef struct
+{	flag oerr;
+	ftnint ounit;
+	char *ofnm;
+	ftnlen ofnmlen;
+	char *osta;
+	char *oacc;
+	char *ofm;
+	ftnint orl;
+	char *oblnk;
+} olist;
+
+/*close*/
+typedef struct
+{	flag cerr;
+	ftnint cunit;
+	char *csta;
+} cllist;
+
+/*rewind, backspace, endfile*/
+typedef struct
+{	flag aerr;
+	ftnint aunit;
+} alist;
+
+/* inquire */
+typedef struct
+{	flag inerr;
+	ftnint inunit;
+	char *infile;
+	ftnlen infilen;
+	ftnint	*inex;	/*parameters in standard's order*/
+	ftnint	*inopen;
+	ftnint	*innum;
+	ftnint	*innamed;
+	char	*inname;
+	ftnlen	innamlen;
+	char	*inacc;
+	ftnlen	inacclen;
+	char	*inseq;
+	ftnlen	inseqlen;
+	char 	*indir;
+	ftnlen	indirlen;
+	char	*infmt;
+	ftnlen	infmtlen;
+	char	*inform;
+	ftnint	informlen;
+	char	*inunf;
+	ftnlen	inunflen;
+	ftnint	*inrecl;
+	ftnint	*innrec;
+	char	*inblank;
+	ftnlen	inblanklen;
+} inlist;
+
+#define VOID void
+
+union Multitype {	/* for multiple entry points */
+	shortint h;
+	integer i;
+	real r;
+	doublereal d;
+	complex c;
+	doublecomplex z;
+	};
+
+typedef union Multitype Multitype;
+	
+
+	/* fix up name clashes */
+
+#define acos__ acos_
+#define asin__ asin_
+#define asm__ asm_
+#define auto__ auto_
+#define break__ break_
+#define case__ case_
+#define char__ char_
+#define const__ const_
+#define cos__ cos_
+#define cosh__ cosh_
+#define do__ do_
+#define double__ double_
+#define else__ else_
+#define entry__ entry_
+#define enum__ enum_
+#define exp__ exp_
+#define extern__ extern_
+#define float__ float_
+#define for__ for_
+#define int__ int_
+#define log__ log_
+#define long__ long_
+#define short__ short_
+#define signed__ signed_
+#define sin__ sin_
+#define sinh__ sinh_
+#define sizeof__ sizeof_
+#define sqrt__ sqrt_
+#define static__ static_
+#define struct__ struct_
+#define switch__ switch_
+#define tan__ tan_
+#define tanh__ tanh_
+#define union__ union_
+#define void__ void_
+#define while__ while_
+#define pow_ii_ pow_ii
+#define pow_ri_ pow_ri
+#define pow_di_ pow_di
+#define pow_ci_ pow_ci
+#define pow_zi_ pow_zi
+#define pow_hh_ pow_hh
+#define pow_dd_ pow_dd
+#define pow_zz_ pow_zz
+#endif

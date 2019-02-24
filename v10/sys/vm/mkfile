@@ -1,0 +1,15 @@
+CFLAGS=-I.. -DKERNEL
+L=../lib/vm.a
+FILES=\
+	$L(vmdrum.x) $L(vmmem.x) $L(vmmon.x) $L(vmpage.x) $L(vmproc.x) \
+	$L(vmpt.x) $L(vmsched.x) $L(vmsubr.x) $L(vmswap.x) $L(vmsys.x)
+
+$L: $FILES
+	names=`membername $newprereq`
+	ar r $L $names && rm $names
+	ranlib $L
+$L(%):N: %
+%.x: %.c
+	cc $CFLAGS -S $stem.c
+	/lib/c2 <$stem.s | sed -f ../lib/asm.sed | as -o $stem.x
+	rm $stem.s

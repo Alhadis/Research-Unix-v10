@@ -1,0 +1,13 @@
+L=libcbt.a
+
+libcbt.a: $L(bdelete.o) $L(bt.o) $L(bwrite.o) $L(diskrd.o) $L(diskwrt.o) \
+	$L(lib.o) $L(seek.o) $L(tran.o)
+	unset prereq
+	names=`membername $newprereq`
+	ar rv libcbt.a $names && rm $names
+	ranlib libcbt.a
+
+$L(%.o): %.o
+
+diskrd.o diskwrt.o tran.o: cbt.h
+bdelete.o bt.o bwrite.o lib.o seek.o: cbt.h pr.h

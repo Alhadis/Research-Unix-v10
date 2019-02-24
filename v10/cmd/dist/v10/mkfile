@@ -1,0 +1,35 @@
+<../conf/mkconf.v10
+
+CC=lcc
+LPROG=connect dispatch cansys hostname
+LIB=lib-o.a
+LIBOBJ=canonsys.o lcreat.o rename.o
+
+%.o: %.c
+	$CC -c $stem.c
+
+%: %.sh
+	cp $prereq $target
+	chmod +x $target
+
+compile:V: $LPROG $LIB
+
+install:V: compile
+	test -d $LDIR || mkdir $LDIR
+	cp $LPROG $LDIR
+
+clean:V:
+	rm -f $LPROG $LIB *.o
+
+connect: connect.o
+	$CC -o $target $prereq -lipc
+
+dispatch: dispatch.o
+	$CC -o $target $prereq -lipc
+
+cansys: cansys.o $LIB
+	$CC -o $target $prereq
+
+$LIB: $LIBOBJ
+	ar r $LIB $LIBOBJ
+	ranlib $LIB

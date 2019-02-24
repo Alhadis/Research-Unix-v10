@@ -1,0 +1,48 @@
+\chapter{Reference and exception types}
+\label{reftype}
+The treatment of references and exceptions with ``open'' types
+is based on the fact that the contents of a reference
+cell cannot be constrained to be polymorphic, and so must be considered
+to be monomorphic.  The following example illustrates the problem.
+\begin{verbatim}
+let val s = ref (fn x => x)
+ in s := (fn x => x+1); (!s) true
+end
+\end{verbatim}
+If s were given the polymorphic type 
+$\forall \alpha . ( \alpha  \rightarrow \alpha ) {\bf ref}$, then this
+expression would type-check, permitting an obvious type error.  To prevent
+this, we insist that the type of an applied occurrence of the ref
+constructor should always be given a ``ground'' type (one with no locally-bound
+type variables).
+
+However, functions whose application can create
+reference variables can still have polymorphic types of a restricted
+kind.  Consider the declaration
+\begin{verbatim}
+val F = fn x => let val r = ref x
+                 in !r
+                end
+\end{verbatim}
+Here the function F can be given polymorphic type
+$\forall \alpha ^ 1 . (\alpha ^ 1 \rightarrow \alpha ^ 1)$
+where $\alpha ^ 1$
+is a special kind of type variable
+called a {\em weak} type variable (the superscript ``1'' indicates that
+there is one lambda abstraction suspending the creation of the
+ref cell).  When F is applied to an argument, a reference value
+of type $\alpha ^ 1$ is created, and hence this weak type
+variable must be instantiated to a ground type.  This means that
+an expression like \verb"(F nil)" would not be properly typed.  In contrast,
+the type 
+$\alpha ^ 1 {\bf ref}$
+assigned to r is permissible because $\alpha ^ 1$ is implicitly
+bound in an outer scope and within the scope of its binding is treated as
+a constant type.
+
+In ML, weak type variables will be written \verb"'1a", \verb"'2a",
+etc., where the integer after the apostrophe denotes the level of
+suspension.
+
+Exception declarations raise similar problems, which are handled
+by an analogous use of weak type variables.

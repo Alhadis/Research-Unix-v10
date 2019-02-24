@@ -1,0 +1,472 @@
+
+
+
+				 SML MODE
+
+				Version 2.4
+
+
+		 A major mode for editing and running SML.
+
+
+			      Lars Bo Nielsen
+			     (lbn@iesd.auc.dk)
+
+
+
+Sml-mode is a major GnuEmacs mode for editing and running (Standard) ML
+(sml). It features:
+
+      o Automatic indentation of sml code. With a number of constants to
+	customize the indentation.   
+
+      o Short cut insertion of commonly used structures, like
+        "let in end", "signature xxx = sig end", etc.
+
+      o Short cut insertion of "|". Will automaticly determine if
+        "|" is used after a "case", "fun" etc. If used after a "fun"
+        automaticly insert the name of the function, used after
+        case automaticly insert "=>" etc.
+
+      o Inferior shell running sml. No need to leave emacs, just
+        keep right on editing while sml runs in another window.
+
+      o Automatic "use file" in inferior shell. Send regions of code
+        to the running sml program.
+
+      o Parsing of errors in the inferior shell. Like the next-error
+        function used in c-mode (This will only work with SML of
+        New Jersey).
+
+
+
+1. HOW TO USE THE SML-MODE
+==========================
+
+Here is a short introduction to the mode. If you are an experienced user of
+Emacs, just skip the first section, and go straight to 1.2.
+
+If you run into any problems, your local emacs-administrator should be able
+to help you.  You are also wellcome to send me a note asking for help.
+
+
+1.1 GETTING STARTED
+-------------------
+
+The mode for sml is in the file "sml-mode.el". We will have to tell Emacs
+where to find this file and when to use it.
+
+Insert this in your "~/.emacs" file :
+
+   (setq auto-mode-alist (cons '("\\.sml$" . sml-mode) 
+                          auto-mode-alist)) 
+   (autoload 'sml-mode "sml-mode" "Major mode for editing SML." t)
+
+Now every time a file with the extension `.sml' is found, it is
+automatically started up in sml-mode.
+
+You will also have to specify the path to the "sml-mode.el" file, so you
+will have to add this as well:
+
+   (setq load-path (cons "/usr/me/emacs" load-path))
+
+where "/usr/me/emacs" is the directory where the file "sml-mode.el" is
+located.
+
+You may also want to compile the file (M-x byte-compile-file)
+for speed.
+
+You are now ready to start using sml-mode. If you have tried other
+language modes (like lisp-mode or C-mode), you should have no
+problems. There are only a few extra functions in this mode.
+
+
+1.2. EDITING COMMANDS.
+----------------------
+
+The following editing and inferior-shell commands can ONLY be issued
+from within a buffer in sml-mode. (The names in parenthesis is the
+Emacs-lisp name of the function, that is associated with the keystroke
+command).
+
+M-| (sml-electric-pipe). 
+    In the case you are typing in a case expression, a function with
+    patterns etc., this function will give you some help. First of all
+    it  will put the `|' on a line by itself. If it is used in the
+    definition of a function it inserts the functions name, else it
+    inserts `=>'. Just try it, you will like it.
+
+LFD (reindent-then-newline-and-indent).  
+    This is probably the function you will be using the most (press
+    CTRL while you press Return, press C-j or press Newline). It
+    will reindent the line, then make a new line and perform a new
+    indentation.
+
+TAB (sml-indent-line).  
+    This function indents the current line.
+
+C-c TAB (sml-indent-region).
+    This function indents the current region (be patient if the
+    region is large).
+
+M-; (indent-for-comment).
+    Like in other language modes, this command will give you a comment
+    at the of the current line. The column where the comment starts is
+    determined by the variable comment-column (default: 40).
+   
+C-c C-v (sml-mode-version). 
+    Get the version of the sml-mode.
+
+
+1.3. COMMANDS RELATED TO THE INFERIOR SHELL
+-------------------------------------------
+
+C-c C-s (sml-pop-to-shell).
+    This command starts up an inferior shell running sml. If the shell
+    is running, it will just pop up the shell window.
+
+C-c C-u (sml-save-buffer-use-file).
+    This command will save the current buffer and send a "use file",
+    where file is the file visited by the current buffer, to the
+    inferior shell running sml.
+
+C-c i (sml-import-file)
+    Will save the current buffer and send an "import file", where file
+    is the file visited by the current buffer, to the inferior shell
+    running sml. 
+
+C-c C-f (sml-run-on-file).
+    Will send a "use file" to the inferior shell running sml,
+    prompting you for the file name.
+   
+C-c ' (sml-next-error). 
+    This function parses the buffer of the inferior shell running sml,
+    and finds the errors one by one. The cursor is positioned at the
+    line of the file indicated by the error message, while the
+    inferior shell buffer running sml will be positioned at the error
+    message in another window. 
+
+C-c C-k (sml-skip-errors)
+    This function will skip past the rest of the error messages in
+    the inferior shell
+
+    IMPORTANT: These two functions only knows the syntax of error
+    messages produced by SML of New Jersey. To have these functions
+    working with other implementations of sml you will have to
+    rewrite them.
+
+C-c C-r (sml-send-region). 
+    Will send region, from point to mark, to the inferior shell
+    running sml.
+
+C-c C-c (sml-send-function). 
+    Will send function to the inferior shell running sml. (This only
+    sends the paragraph, so you might prefer the sml-send-region
+    instead. Paragraphs are separated by blank lines only).
+
+C-c C-b (sml-send-buffer). 
+    Will send whole buffer to inferior shell running sml.
+
+
+2. INDENTATION
+==============
+
+The indentation algorithm has been the hardest one to implement.
+
+        What is the standard way of indenting sml-code?
+
+The algorithm has its own view of the right way to indent code,
+according to the constants you can set to control the mode.
+
+
+2.1. CONSTANTS CONTROLLING THE INDENTATION
+------------------------------------------
+
+sml-indent-level (default 4)
+    Indentation of blocks in sml.
+
+sml-pipe-indent (default -2)
+    The amount of extra indentation (negative) of lines beginning
+    with "|". 
+
+sml-case-indent (default nil)
+    How to indent case-of expressions.
+
+    If t:   case expr              If nil:   case expr of
+              of exp1 => ...                     exp1 => ...
+               | exp2 => ...                   | exp2 => ...
+
+    The first seems to be the standard in NJ-SML. The second is the
+    default.
+
+sml-nested-if-indent (default nil)
+    If set to t, nested if-then-else expressions will have the
+    indentation:
+
+               if exp1 then exp2
+               else if exp3 then exp4
+               else if exp5 then exp6
+                    else exp7
+
+    If nil, they will be indented as:
+
+               if exp1 then exp2
+               else if exp3 then exp4
+                    else if exp5 then exp6
+                         else exp7
+
+    With the "else" at the same column as the matching "if".
+
+sml-type-of-indent (default t)
+    Determines how to indent `let', `struct' etc.
+    
+    If t:      fun foo bar = let
+                                 val p = 4
+                             in
+                                 bar + p
+                             end
+
+    If nil:    fun foo bar = let
+                   val p = 4
+               in
+                   bar + p
+               end
+
+    Will not have any effect if the starting keyword is first on the
+    line.
+
+sml-electric-semi-mode (default t)
+    If t, a ";" will reindent the current line, and make a newline. To
+    override this (to type in a ";" without a newline) just type: C-q ;
+
+sml-paren-lookback (default 200)
+    Determines how far back (in chars) the indentation algorithm
+    should look for open parenthesis. High value means slow
+    indentation algorithm. A value of 200 (being the equivalent of
+    4-6 lines) should suffice most uses. (A value of nil, means do
+    not look at all).
+
+To change these constants, See CUSTOMIZING YOUR SML-MODE below.
+
+
+3. INFERIOR SHELL.
+==================
+
+The mode for Standard ML also contains a mode for an inferior shell
+running sml. The mode is the same as the shell-mode, with just one
+extra command.
+
+
+3.1. INFERIOR SHELL COMMANDS
+----------------------------
+
+C-c C-f (sml-run-on-file).  Send a `use file' to the process running
+sml.
+
+
+3.2. CONSTANTS CONTROLLING THE INFERIOR SHELL MODE
+--------------------------------------------------
+
+Because sml is called differently on various machines, and the
+sml-systems have their own command for reading in a file, a set of
+constants controls the behavior of the inferior shell running sml (to
+change these constants: See CUSTOMIZING YOUR SML-MODE below).
+
+sml-prog-name (default "sml").
+    This constant is a string, containing the command to invoke
+    Standard ML on your system. 
+
+sml-prog-name-ask-p (default nil)
+    If t, you will be asked which program to run when the inferior
+    shell starts up. Usefull if you have exported images of sml.
+
+sml-use-right-delim (default "\"")
+sml-use-left-delim  (default "\"")
+    The left and right delimiter used by your version of sml, for
+    `use file-name'.
+
+sml-process-name (default "SML"). 
+    The name of the process running sml. (This will be the name
+    appearing on the mode line of the buffer)
+
+NOTE: The sml-mode functions: sml-send-buffer, sml-send-function and
+sml-send-region, creates temporary files (I could not figure out how
+to send large amounts of data to a process). These files will be
+removed when you leave emacs.
+
+
+4. CUSTOMIZING YOUR SML-MODE
+============================
+
+If you have to change some of the constants, you will have to add a
+`hook' to the sml-mode. Insert this in your "~/.emacs" file.
+
+   (setq sml-mode-hook 'my-sml-constants)
+
+Your function "my-sml-constants" will then be executed every time
+"sml-mode" is invoked.  Now you only have to write the emacs-lisp
+function "my-sml-constants", and put it in your "~/.emacs" file.
+
+Say you are running a version of sml that uses the syntax `use
+["file"]', is invoked by the command "OurSML" and you don't want the
+indentation algorithm to indent according to open parenthesis, your
+function should look like this:
+
+   (defun my-sml-constants ()
+      (setq sml-prog-name "OurSML")
+      (setq sml-use-left-delim "[\"")
+      (setq sml-use-right-delim "\"]")
+      (setq sml-paren-lookback nil))
+
+Other things could be added to this function. As an example:
+
+      (setq sml-paren-lookback 1000) ; Look back 1000 chars for open
+                                     ;  parenthesis.
+
+      (setq sml-case-indent t)       ; Select other type of case
+                                     ;  expressions 
+
+      (turn-on-auto-fill)            ; Turn on auto-fill
+
+      (setq sml-indent-level 8)      ; change the indentation to 8
+
+      (setq sml-prog-name-ask-p t)   ; Ask which program to run when the
+				     ;  inferior shell starts up.
+
+      (define-key sml-mode-map "|"   ; Let "|" be electric,
+          'sml-electric-pipe)        ;  like M-|
+
+The sml-shell also runs a `hook' (sml-shell-hook) when it is invoked.
+
+
+5. CHANGES FROM PREVIOUS VERSIONS
+================================
+
+For those of you who have been using sml-mode in an earlier version,
+here is a compiled list of the changes made.
+
+
+5.1 VERSION 1.0 TO 2.0
+----------------------
+
+  o Some bugs fixed.
+  
+  o The indentation algorithm has become better at determining the
+    right indentation, and faster.
+
+  o A number of constants have been introduced to customize the mode
+    to your needs.
+
+  o The indentation algorithm recognizes `else if' (nested if then
+    else), but only if the variable "sml-nested-if-indent" has been
+    set to t, the default is nil.
+
+  o By setting the variable sml-case-indent to either nil or t you now
+    can have two different indentations of case-expr-of.
+
+  o The constant sml-type-of-indent now determines the way to indent
+    blocks, if the starting keyword is not first on the line.
+
+  o The indentation algorithm now indents to same level as an open
+    parenthesis if this was left open at a previous line (the variable
+    sml-paren-lookback controls this action.)
+
+  o A couple of extra functions have been added:
+        sml-next-error and sml-save-buffer-use-file.
+
+  o If temporary files are created, these files will be removed when
+    emacs is killed.
+
+  o Thanks to Andy Norman (ange%anorman@hplabs.hp.com) you are no
+    longer placed in the inferior shell when you send a `use file' to
+    the inferior shell. The shell window will pop up, and the window
+    will scroll. He also added a shell-prompt-pattern variable for the
+    inferior sml shell mode. This will allow you to move the cursor
+    backwards in the buffer, and re-execute lines that begin with this
+    pattern (pattern is found in the variable sml-shell-prompt-pattern).
+
+
+5.2 VERSION 2.0 TO 2.1
+----------------------
+
+  o Some bugs fixed.
+  
+  o Due to a bug in the Un*x function mktemp, you could only send
+    26 temporary files. This has been fixed by adding an extra letter
+    to the file-name (sml-tmp-file-name) in the function that sends
+    the files (sml-simulate-send-region).
+
+
+5.3 VERSION 2.1 TO 2.2
+----------------------
+
+  o Some bugs fixed.
+  
+  o A new function (sml-skip-errors, bound to C-c C-k) has been
+    added. It skips the rest of the error messages. Very handy if a
+    lot of errors follows a simple mistake.
+
+  o Sending something to the process running sml, will call
+    sml-skip-errors first, so old errors will be forgotten.
+    
+  o sml-indent-line (TAB) now leaves the point where it is (unless
+    if it is before the indentation).
+
+5.3 VERSION 2.2 TO 2.3
+----------------------
+
+  o Some bugs fixed.
+
+  o New variable (sml-prog-name-ask-p). If t, you will be asked which
+    program to run when the inferior shell starts up. Usefull if you have
+    exported images of sml.
+
+5.4 VERSION 2.2 TO 2.4
+----------------------
+
+  o Some bugs fixed.
+
+  o Added sml-import-file.
+
+6. THINGS TO DO
+===============
+
+And there are still things to do:
+
+  o Find a better way to send regions to the inferior shell (the command
+    process-send-region does not work on larger regions, that is why the
+    function sml-simulate-send-region uses temporary files).
+
+  o Have sml-next-error recognizing more than just SML of New Jersey
+    syntax of error messages.
+
+  o The indentation algorithm still can be fooled. I don't know if it
+    will ever be 100% right, as this means it will have to actually
+    parse all of the buffer up to the actual line (this can get -very-
+    slow).
+
+  o Add tags.
+
+
+Thanks
+======
+
+Thanks to Andy Norman (ange%anorman@hplabs.hp.com) for helping me a
+lot. Not only did he tell me about the bugs, he also included fixes.
+
+
+Author
+======
+        Lars Bo Nielsen
+        Aalborg University
+        Computer Science Dept.
+        9000 Aalborg
+        Denmark
+
+        lbn@iesd.auc.dk
+        or: ...!mcvax!diku!iesd!lbn
+        or: mcvax!diku!iesd!lbn@uunet.uu.net
+
+Please let me know if you come up with any ideas, bugs, or fixes.
+
+

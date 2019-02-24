@@ -1,0 +1,236 @@
+#include "task.h"
+#include <assert.h>
+#include <stdio.h>
+
+// 3B frame fudger
+
+//Frames not self-describing!
+//STACK GROWS UP
+
+typedef unsigned char MACHINE_BYTE;
+
+#ifdef u3b
+
+#define OLD_FP(fp)	( *( (int*)(fp) - 11 ) )
+#define OLD_AP(fp)	( *( (int*)(fp) - 12 ) )
+#define OLD_PC(fp)	( *( (int*)(fp) - 13 ) )
+#define FIRST_SAVED_REG_P(fp)	( (int*)(fp) - 6 )
+
+const CALL_OPCODE = ((MACHINE_BYTE)0x78);
+			/* SAK:  really: 0x78 | 0x79 | 0xB9 | 0x77 */
+const SAVE_OPCODE = ((MACHINE_BYTE)0x7A);
+const BYTE_DISPL	= 0xC0;	/* SAK: WRONG for u3b! */
+const HALFWORD_DISPL	= 0xA0;	/* SAK: WRONG for u3b! */
+const WORD_DISPL	= 0x80;	/* SAK: WRONG for u3b! */
+const ABSOLUTE		= 0x70;	/* SAK: WRONG for u3b! */
+
+const N_CALL_INSTR_SIZES = 6;	/* SAK: WRONG for u3b! */
+short call_size[N_CALL_INSTR_SIZES] = {5, 6, 7, 8, 9, 11};	/* SAK: WRONG for u3b! */
+
+/* SAK: SAVE_OPERAND(instr) not needed for u3b */
+
+/* Given a pointer to a save instruction, yield the number of registers saved */
+#define N_SAVED_REGS(instr)	(((char *)(instr))[1] >> 4)
+
+/* CALL's src operand descriptor needed to determine size of src operand */
+#define SRC_OP_DESC(instr)	(((char *)(instr))[1] & 0xf0)
+#define SRC_OP_SIZE(desc) /* assumes sp-relative displacement */\
+	(((desc) == BYTE_DISPL)		? 2 :	\
+	 ((desc) == HALFWORD_DISPL)	? 3 :	\
+	 ((desc) == WORD_DISPL)		? 5 :	\
+	 ((((object*)0)->task_error(E_FRAMES)))		\
+	)
+const	OPCODE_SIZE = 1;
+const	DESC_SIZE = 1;
+
+/* SAK:  WRONG for u3b! */
+#define	DST_OP_DESC(instr)	\
+	(((char *)(instr))[OPCODE_SIZE + SRC_OP_SIZE(SRC_OP_DESC(instr))] & 0xf0)
+
+/* SAK:  WRONG for u3b! */
+#define IS_LEGAL_SRC_OP(desc)			\
+	(((desc) == BYTE_DISPL)		||	\
+	 ((desc) == HALFWORD_DISPL)	||	\
+	 ((desc) == WORD_DISPL)			\
+	)
+/* SAK:  WRONG for u3b! */
+#define IS_LEGAL_DST_OP(desc)			\
+	(((desc) == BYTE_DISPL)		||	\
+	 ((desc) == HALFWORD_DISPL)	||	\
+	 ((desc) == WORD_DISPL)		||	\
+	 ((desc) == ABSOLUTE)			\
+	)
+
+
+#else	/* m32:  u3b2, u3b5, u3b15 */
+#define OLD_FP(fp)	( *( (int*)(fp) - 7 ) )
+#define OLD_AP(fp)	( *( (int*)(fp) - 8 ) )
+#define OLD_PC(fp)	( *( (int*)(fp) - 9 ) )	
+#define FIRST_SAVED_REG_P(fp)	( (int*)(fp) - 6 )
+    /*
+     * On the 3B2, the call instruction is CALL src,dst
+     * where src is the address of the new ap (where the args were
+     * already pushed on the stack) and dst is the address of the
+     * called function.  src and dst can be various lengths:
+     * src will be a byte, halfword, or word displacement
+     * and dst will be absolute, or be a byte, halfword, or word displacement.
+     * Byte displacement = 2 bytes, halfword = 3, word = 5; the opcode = 1 byte;
+     * absolute = 5 bytes--12 possible combinations and 6 possible instr lengths.
+     */
+
+
+const CALL_OPCODE = ((MACHINE_BYTE)0x2c);
+const SAVE_OPCODE = ((MACHINE_BYTE)0x10);
+const BYTE_DISPL	= 0xC0;
+const HALFWORD_DISPL	= 0xA0;
+const WORD_DISPL	= 0x80;
+const ABSOLUTE		= 0x70;
+
+const N_CALL_INSTR_SIZES = 6;
+short call_size[N_CALL_INSTR_SIZES] = {5, 6, 7, 8, 9, 11};
+
+#define SAVE_OPERAND(instr)	(((char *)(instr))[1] & 0xf)
+
+/* Given a pointer to a save instruction, yield the number of registers saved */
+#define N_SAVED_REGS(instr)	(8 - SAVE_OPERAND(instr) + 1)
+
+/* CALL's src operand descriptor needed to determine size of src operand */
+#define SRC_OP_DESC(instr)	(((char *)(instr))[1] & 0xf0)
+#define SRC_OP_SIZE(desc) /* assumes sp-relative displacement */\
+	(((desc) == BYTE_DISPL)		? 2 :	\
+	 ((desc) == HALFWORD_DISPL)	? 3 :	\
+	 ((desc) == WORD_DISPL)		? 5 :	\
+	 ((((object*)0)->task_error(E_FRAMES)))		\
+	)
+const	OPCODE_SIZE = 1;
+const	DESC_SIZE = 1;
+
+#define	DST_OP_DESC(instr)	\
+	(((char *)(instr))[OPCODE_SIZE + SRC_OP_SIZE(SRC_OP_DESC(instr))] & 0xf0)
+
+#define IS_LEGAL_SRC_OP(desc)			\
+	(((desc) == BYTE_DISPL)		||	\
+	 ((desc) == HALFWORD_DISPL)	||	\
+	 ((desc) == WORD_DISPL)			\
+	)
+#define IS_LEGAL_DST_OP(desc)			\
+	(((desc) == BYTE_DISPL)		||	\
+	 ((desc) == HALFWORD_DISPL)	||	\
+	 ((desc) == WORD_DISPL)		||	\
+	 ((desc) == ABSOLUTE)			\
+	)
+
+/* Given a pointer to a call instruction, yield a pointer to the called function */
+unsigned int
+call_dst_ptr(unsigned char* callp)
+{
+    int sop_size = SRC_OP_SIZE(SRC_OP_DESC(callp));
+    unsigned char* dst_op_p = /* points past the dst desc, to addr or offset */
+	callp + OPCODE_SIZE + sop_size + DESC_SIZE;
+    int offset;		// offset for displacement modes
+    switch(DST_OP_DESC(callp)) {
+    case BYTE_DISPL:
+	offset = dst_op_p[0];
+	if(*dst_op_p & 0x80) {	/* negative--do sign extension for offset */
+	    offset |= 0xffffff00;
+	}
+	return (unsigned int)(callp + offset);
+    case HALFWORD_DISPL:
+	// bytes are in reverse order, must flip positions
+	offset = dst_op_p[0] | dst_op_p[1] << 8;
+	if(dst_op_p[1] & 0x80) {	/* negative--do sign extension for offset */
+	    offset |= 0xffff0000;
+	}
+	return (unsigned int)(callp + offset);
+    case WORD_DISPL:
+	// bytes are in reverse order, must flip positions
+	offset = dst_op_p[0]       |
+		 dst_op_p[1] <<  8 |
+		 dst_op_p[2] << 16 |
+		 dst_op_p[3] << 24;
+	/* don't need sign extension */
+	return (unsigned int)(callp + offset);
+    case ABSOLUTE:
+	return
+	    dst_op_p[0]       |
+	    dst_op_p[1] <<  8 |
+	    dst_op_p[2] << 16 |
+	    dst_op_p[3] << 24;
+    default:
+	((object*)0)->task_error(E_FRAMES);
+    }
+}
+
+
+#endif
+
+
+struct FrameLayout {
+    short   n_saved;	// number of registers saved in this frame.
+			// (3B's don't have masks of regs saved)
+	    FrameLayout(int*);	// called with frame pointer
+};
+
+FrameLayout::FrameLayout(int* fp)
+{
+    /*
+     * Given a frame pointer, find the number of regs saved in the frame.
+     * The idea is that the instruction immediately before the return pc
+     * is the function call, and contains a pointer to the first instruction
+     * in the function denoted by the fp, which will be a save instruction.
+     * We can decode the save instruction to find how many registers
+     * were saved.
+     */
+
+    int*   return_pc = (int*)OLD_PC(fp);
+
+    char* callp = NULL;
+    /* Because this method is nondeterministic, try all combinations
+       instead of stopping when one fits */
+    for(int i = 0; i < N_CALL_INSTR_SIZES; i++) {
+        char* poss_callp = (char *)return_pc - call_size[i];
+	if ((*poss_callp == CALL_OPCODE)
+	     && IS_LEGAL_SRC_OP((SRC_OP_DESC(poss_callp)))
+	     && IS_LEGAL_DST_OP((DST_OP_DESC(poss_callp)))) {
+	    if(!callp) callp = poss_callp;
+	    else ((object*)0)->task_error(E_FRAMES);	//ambiguous; can't tell which
+						//is real call.
+	}
+    }
+    if (callp == NULL) ((object*)0)->task_error(E_FRAMES);	//No match!
+    assert( *(char *)(call_dst_ptr(callp)) == SAVE_OPCODE);
+    n_saved = N_SAVED_REGS(call_dst_ptr(callp));
+}
+
+/*
+ * fix a frame so that it returns like the arg
+ * The idea is that task_fp points to the task::task() stack frame which
+ * contains all the saved registers.  t_framep points to the stack frame
+ * that contains the return address and old fp (and perhaps some registers).
+ * fill the frame pointed to by t_framep with the registers from task_fp.
+ */
+void
+task::fudge_return(int* task_fp, int offset, task* next)
+{
+	int*	fp = t_framep + offset;
+	task_fp += offset;		// in case this is SHARED
+	FrameLayout	this_lo(fp);
+	FrameLayout	task_lo(task_fp);
+	if (task_lo.n_saved != 6)	// task::task() saves all regs
+		task_error(E_FUDGE);
+	// copy any saved registers from this to task frame
+	register int*	task_rp = FIRST_SAVED_REG_P(task_fp) +
+			task_lo.n_saved - this_lo.n_saved;
+	register int*	this_rp = FIRST_SAVED_REG_P(fp);
+	register int	count;
+	for (count = this_lo.n_saved; count--; )
+		*task_rp++ = *this_rp++;
+	// next copy all the registers from the task frame to this
+	task_rp = FIRST_SAVED_REG_P(task_fp);
+	this_rp = FIRST_SAVED_REG_P(fp);
+	for (count = task_lo.n_saved; count--; )
+		*this_rp++ = *task_rp++;
+	if (next) next->restore();
+}
+
+

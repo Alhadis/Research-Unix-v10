@@ -1,0 +1,58 @@
+set -x
+rm -f cport.a dport.a fport.a
+
+for i in frame app1 app2 blas de fft lin linopt nl2opt nl3opt nl4opt post quad root sparse spfns util; do
+	/usr/dmg/bin/627 /n/pyxis/usr/dmg/swift/port3/p3src.$i | fsplit -i
+	if [ $i = frame ]; then
+		ed <<\!
+e r1mach.f
+/VAX/;.+2,.+6s/^C//
+w
+e d1mach.f
+/VAX/;.+2,.+6s/^C//
+w
+e i1mach.f
+/VAX/;.+2,+17s/^C//
+-10s/  4 /  1 /
+wq
+!
+	fi
+	f2c -ec *.f || { echo $i failed | mail cwf; exit 1 }
+	lcc -B/usr/src/cmd/lcc/gen2/vax/ -c    `ls *.c | sed /_com/d` || { echo $i failed | mail cwf; exit 1 }
+	ar q cport.a *.o
+	lcc -B/usr/src/cmd/lcc/gen2/vax/ -c -g `ls *.c | sed /_com/d` || { echo $i failed | mail cwf; exit 1 }
+	ar q dport.a *.o
+	f77 -c *.f
+	ar q fport.a *.o
+	rm `ls *.c | sed /_com/d` *.[fo]
+done
+lcc -B/usr/src/cmd/lcc/gen2/vax-v9/ -c -g *_com.c
+ar q cport.a *.o
+ar q dport.a *.o
+rm *_com.*
+ranlib cport.a
+ranlib dport.a
+ranlib fport.a
+
+for i in LGEA LGEB LLZA LYMB PREA PRSA PRSF PRSJ \
+	APNR BURA BURB CDEX CDLG CPLA CSPA CSPE CSPG CSPQ DDEA DESA EBEA ERRK \
+	EVAA EXTR FFTA FFTC FMTR LBAA LBAB LBAF LBAK LBAN LBAP LGEF LGEH LGEL \
+	LGEM LNAB LPSA LPSB LPSF LPSG LPSK LPSM LRPA LRPB LRPE LRPF LRPG LSFA \
+	LYMA LYMK LYMP MFTE MFTF MFTG MLLR MNNA NLSA NLSB NLSJ NLSK NLSP NLSR \
+	NMSK NP2A NP2B NP2E NP2F NSFA NSNM NTLE NTLF NTLH NTLK NTLM NTLP NTLR \
+	NTLT NTLU PDEA PDEW PRS1 PRSZ QBLA QBLC QBLG QGSG QGSH QGSJ QGSM QGSP \
+	QGSR QGST QODD QPRA RANC RNRM RPAD SDBA SPLF VDSA VDSB VDSE XKHD XKHI \
+	XKTH ZERA ZONA ZONB; do
+	run1 $i examps e || exit 1
+done
+
+for i in ERR1 ERR2 ERR3 ERRK EXTR GAMA GMAD LGAC LGAD LGEA LLZA LRAD LRPA LTQD \
+	LTSQ LYAD LYMA LYRC LYSC MACH MFED MFTE MNTB PLYA PLYC PRAC PRAD PRSA \
+	QBGD QBLG QGGD QGSG QPAD QPRA RNRM SDBA SPLE STK1 STK2 SVAD SVBD SVCD \
+	SVDA SVDB SVDC THYP VDAD VDBD VDED; do
+	run1 $i tests t || exit 1
+done
+
+echo port passed | mail cwf
+rm a.out [cdf]port.a zap
+exit 0

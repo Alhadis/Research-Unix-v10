@@ -1,0 +1,50 @@
+cc -O -c main.c
+cc -O -c 0.alloc.c
+cc -O -c 0.args.c
+cc -O -c 0.def.c
+cc -O -c 0.extr.c
+cc -O -c 0.graph.c
+cc -O -c 0.list.c
+cc -O -c 0.parts.c
+cc -O -c 0.string.c
+cc -O -c 1.finish.c
+cc -O -c 1.form.c
+cc -O -c 1.fort.c
+cc -O -c 1.hash.c
+cc -O -c 1.init.c
+cc -O -c 1.line.c
+cc -O -c 1.main.c
+cc -O -c 1.node.c
+cc -O -c 1.recog.c
+cc -O -c 1.tables.c
+cc -O -c 2.dfs.c
+cc -O -c 2.dom.c
+cc -O -c 2.head.c
+cc -O -c 2.inarc.c
+cc -O -c 2.main.c
+cc -O -c 2.tree.c
+cc -O -c 3.branch.c
+cc -O -c 3.flow.c
+cc -O -c 3.loop.c
+cc -O -c 3.main.c
+cc -O -c 3.reach.c
+cc -O -c 3.then.c
+cc -O -c 4.brace.c
+cc -O -c 4.form.c
+cc -O -c 4.main.c
+cc -O -c 4.out.c
+cc -o structure main.o 0.*.o 1.*.o 2.*.o 3.*.o 4.*.o 
+yacc -d beauty.y
+
+conflicts: 3 shift/reduce, 4 reduce/reduce
+mv y.tab.c beauty.c
+cc -O -c beauty.c
+cc -O -c tree.c
+lex  lextab.l
+cc -O -c lex.yy.c
+rm lex.yy.c
+mv lex.yy.o lextab.o
+cc -O -c bdef.c
+cc beauty.o tree.o lextab.o bdef.o -o beautify -lln
+ld:/usr/local/lib/libln.a: cannot open
+*** Error code 4

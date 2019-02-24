@@ -1,0 +1,39 @@
+# each ${exchg} bin has a full set of /usr/bin commands.
+# some machine name commands are links to /usr/bin/rx,
+# others are linked to /usr/dk/genbin/exchange-name.
+# /usr/dk/exchangesys is a list of systems in exchange.
+#
+echo -n Your distributed name?
+read name
+echo -n Your system?
+read unix
+T=/tmp/asdk$$
+rm -f $T
+trap "rm -f $T ; stty echo ; exit 0" 1 2 3 15
+stty -echo
+echo -n Key:
+read key
+stty echo
+echo
+umask 077
+trap '' 1
+echo $key >$T
+for exchg in wonder astro phone bistro
+do
+	mkpkg -D/usr/dk/${exchg}bin=/usr/bin  -D/usr/dk/genlib=/usr/lib /usr/dk/${exchg}bin/* \
+		/usr/dk/Tdcon /usr/dk/genlib/*  > /tmp/X$$
+	echo You are $unix!$name
+	seal -K $T /tmp/X$$ > /tmp/Y$$
+	rm /tmp/X$$
+	for i in `cat /usr/dk/${exchg}sys`
+	do
+		echo ${exchg}/$i
+		rx ${exchg}/$i /etc/asd/asdrcv $unix $name </tmp/Y$$
+		if [ $? != 0 ]
+		then
+			echo ${exchg}/$i not up - using uucp
+			uux - "$i!asdrcv $unix $name" < /tmp/Y$$
+		fi
+	done
+	rm /tmp/Y$$
+done

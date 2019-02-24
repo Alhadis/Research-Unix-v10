@@ -1,0 +1,49 @@
+CAVEAT:  This version of pic is written in ANSI C.
+You won't be able to compile it with an old-style
+C compiler.  You should be able to compile it with
+C++, however.  You might have to cope with minor
+header file problems.
+
+
+To make pic,
+	make
+
+The output will look something like this:
+cmp -s y.tab.h prevy.tab.h || cp y.tab.h prevy.tab.h
+y.tab.h: No such file or directory
+cp: y.tab.h: No such file or directory
+*** Error code 1(ignored)
+yacc -d picy.y
+
+conflicts: 187 shift/reduce
+cc -g       -c y.tab.c
+rm y.tab.c
+mv y.tab.o picy.o
+lex  picl.l
+1323/1700 nodes(%e), 3659/5000 positions(%p), 534/700 (%n), 29275 transitions
+, 105/120 packed char classes(%k), 1544/1800 packed transitions(%a), 1217/1500 output slots(%o)
+cc -g       -c lex.yy.c
+rm lex.yy.c
+mv lex.yy.o picl.o
+cc -g       -c main.c
+cc -g       -c print.c
+cc -g       -c misc.c
+cc -g       -c symtab.c
+cc -g       -c blockgen.c
+cc -g       -c boxgen.c
+cc -g       -c circgen.c
+cc -g       -c arcgen.c
+cc -g       -c linegen.c
+cc -g       -c movegen.c
+cc -g       -c textgen.c
+cc -g       -c input.c
+cc -g       -c for.c
+cc -g       -c pltroff.c
+cc -g       picy.o picl.o main.o print.o misc.o symtab.o blockgen.o boxgen.o  circgen.o arcgen.o linegen.o movegen.o textgen.o  input.o for.o pltroff.o  -lm
+
+The lex phase in particular takes an eon, about 2 minutes
+of cpu time on an DEC VAX 8550.  Be patient.
+
+This leaves the output in a.out.
+
+The file FIXES lists bugs fixes and a few new features.

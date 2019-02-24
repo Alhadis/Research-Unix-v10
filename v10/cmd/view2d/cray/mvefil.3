@@ -1,0 +1,62 @@
+.TH MVEFIL 3X cray
+.SH NAME
+mvefil \- movie of a function f(x, y, t)
+.SH SYNOPSIS
+.B "call mvefil(unit, time, nx, ny, fmin, fmax, outsid, f)"
+.br
+.B "integer unit, nx, ny"
+.br
+.B "real time, fmin, fmax, outsid, f(nx,ny)"
+.SH DESCRIPTION
+Each call of the FORTRAN routine
+.I mvefil
+writes a frame in a printing ascii format
+that can be converted to
+.IR view2d (5).
+When loading, use the
+.IR f77 (1)
+option
+.BR \-lspec .
+.I Unit
+is a FORTRAN logical unit number for output, typically 30.
+.I Nx, ny
+give the grid size.
+.I Time
+is a (nondecreasing) frame index, typically set to simulation time
+or iteration count.
+.I Fmin
+and
+.I fmax
+should normally be 0 on input;
+on output they will be set to the range of the data.
+If not equal on input, they will be assumed as the
+range of the data.
+.I f
+is the
+.I nx
+by
+.I ny
+array of data.
+There is a threshold for describing nonrectangular regions:
+any value less than or equal to
+.I outsid
+is treated as
+out of bounds and will appear as black.
+.PP
+After running this on
+.I 3k,
+on your local machine, type
+.br
+.BI view3k " crayfile localfile"
+.br
+where
+.I crayfile
+is typically
+.B fort.30
+and
+.I localfile
+will be created in
+.IR view2d (5)
+format.
+.SH "SEE ALSO"
+view2d(1), view2d(5)

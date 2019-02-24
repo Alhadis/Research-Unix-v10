@@ -1,0 +1,138 @@
+#
+# tables and config numbers
+# keep these at the top of the file
+# so includes will be early
+#
+proc	proc	count dupok	data struct proc proc; inc sys/vtimes.h sys/proc.h;
+inode	inode	count dupok	data struct inode inode; inc sys/inode.h;
+file	file	count dupok	data struct file file; inc sys/file.h;
+text	text	count dupok	data struct text text; inc sys/text.h;
+callout	callout	count dupok	data struct callout callout; inc sys/callout.h;
+swbuf	swbuf	count	data struct buf swapbuf, struct swapinfo swapinfo; inc sys/buf.h;
+swmap	swmap	count dupok	data struct map swapmap; inc sys/map.h;
+argmap	arg	count dupok	data struct map argmap; inc sys/map.h;
+kernelmap kernel count dupok	data struct map kernelmap; inc sys/map.h;
+bufs	nbuf	param dupok
+bufhash	bufh	count dupok	data struct bufhd bufhash; inc sys/buf.h;
+hz	hz	param dupok
+dst	dstflag	param dupok
+tz	timezone param dupok
+maxdsize maxdsize param dupok
+maxssize maxssize param dupok
+maxtsize maxtsize param dupok
+queue	queue	count dupok	data struct queue queue; inc sys/stream.h;
+block	blk	count dupok	data struct block cblock; inc sys/stream.h;
+blkbuf	blkb	count dupok	data struct buf *cblkbuf; inc sys/buf.h;
+stream	stream	count dupok	data struct stdata streams; inc sys/stream.h;
+lnode	lnode	count dupok	data struct kern_lnode lnodes; inc sys/lnode.h;
+
+#
+# io adapters
+#
+mba	mba	sbi mba data struct mba mba; inc sys/buf.h sys/mba.h sys/mbaddr.h sys/nxaddr.h;
+dw780	uba	sbi uba	rawvec	data struct uba uba, long ubazvec, char *ubavoff, long *ubavreg; inc sys/nexus.h sys/nxaddr.h sys/ubaddr.h sys/uba.h;
+dw750	uba	sbi uba		data struct uba uba; inc sys/nexus.h sys/nxaddr.h sys/ubaddr.h sys/uba.h;
+dwbua	uba	vaxbi uba	data struct uba uba; inc sys/nexus.h sys/ubaddr.h sys/uba.h;
+uvqbus	uba	nobus uba	data struct uba uba; inc sys/ubaddr.h sys/uba.h;
+bia	bia	vaxbi vaxbia	data int bianode; inc sys/nexus.h sys/biaddr.h
+uda50	ud	ub mscpa	data struct ud ud; inc sys/uda.h;
+kdb50	bd	vaxbi mscpa	vec 2 data struct bd bd; inc sys/bda.h;
+
+#
+# memory controllers
+#
+ms750	mcr	sbi vec 0 data caddr_t mcrregs, time_t mcrtime; inc sys/nxaddr.h;
+ms780	mcr	sbi vec 0 data caddr_t mcrregs, time_t mcrtime; inc sys/nxaddr.h;
+
+#
+# devices
+#
+# vax builtins and inevitables
+#
+errlog	err	count	data struct errlog errlog; inc sys/errlog.h;
+console	cn	count
+drum	sw
+cometcons ctu	nobus	vec 2
+nautcons cbs
+starcons cbs
+
+#
+# software constructs
+#
+mem	mm
+stdio	fd
+pt	sp	count	data struct queue *spipes; inc sys/stream.h;
+ip	ip	count	data struct ipif ipif, struct ipif *ipifsort; inc sys/inet/in.h sys/inet/ip_var.h;
+udp	udp	count	data struct udp udpconn; inc sys/inet/udp.h;
+tcp	tcp	count	data struct tcpcb tcpcb; inc sys/inet/tcp.h sys/inet/tcp_timer.h sys/inet/tcp_var.h;
+arp	arp	count	data struct ip_arp ip_arps; inc sys/inet/in.h sys/inet/ip_var.h;
+#
+# unibus storage devices
+#
+sc21	sc	ub	data struct scctl scctl; inc sys/up.h;
+up	up	sub	data struct updisk updisk, struct buf upbuf; inc sys/up.h sys/subaddr.h;
+#
+# other unibus devices
+#
+dz11	dz	ub 	rep 8 vec 2 data struct dz dz; inc sys/dz.h;
+dhv11	dhv	ub	rep 8 vec 2 data struct dhv dhv; inc sys/dhv11.h;
+om	om	ub	data struct om om; inc sys/om.h;
+mg	mg	ub	vec 2 data struct mg mg; inc sys/mg.h;
+rco	rco	ub	data struct rco rco; inc sys/rco.h;
+im	im	ub	data struct im im; inc sys/im.h;
+imx	imx	ub	data struct imx imx; inc sys/imx.h;
+vplot	vplot	ub	data struct vplot vplot; inc sys/vplot.h;
+gpib	gpib	ub
+pg	pg	ub	vec 0 data caddr_t pgcaddr;
+dk	dk	ub	vec 2 rep 256 data struct dk dk, char dkstate; inc sys/dk.h;
+kmc11b	kmc	ub	vec 2 data struct kmc kmc; inc sys/kmc.h;
+kdi	kdi	count	data struct kdikmc kdikmc, struct kmcdk k; inc sys/kdi.h;
+kmcdk	kb	count	data struct kb kb, char kbstate; inc sys/kb.h;
+scsi	scsi	ub	data struct scsi scsi; inc sys/uda.h; inc sys/mscp.h; inc sys/scsi.h
+cure	cure	ub 	vec 2
+rcure	rcure	ub
+dn11	dn	ub	data caddr_t dnreg
+drbit	dr	ub	vec 0 data caddr_t drreg
+ni1010a	il	ub	vec 2 data struct il il; inc sys/ni1010a.h;
+deqna	qe	ub	data struct qe qe; inc sys/deqna.h;
+#
+# mscp class drivers
+#
+ra	ra	mscp	data struct radisk radisk, struct buf rabuf; inc sys/mscp.h sys/udaioc.h sys/ra.h;
+ta	ta	mscp	data struct tatape tatape, struct buf tabuf; inc sys/mscp.h sys/ta.h;
+#
+# massbus devices
+#
+tm78	tm78	mb	data struct tm78 tm78; inc sys/tu78.h
+tu78	tu78	sub	data struct tu78 tu78, struct buf ctu78buf, struct buf rtu78buf; inc sys/tu78.h sys/subaddr.h
+tm03	tm03	mb	data struct tm03 tm03; inc sys/te16.h
+te16	te16	sub	data struct te16 te16, struct buf cte16buf, struct buf rte16buf; inc sys/te16.h sys/subaddr.h
+
+#
+# line disciplines
+#
+ttyld	tty	count data struct ttyld ttyld; inc sys/ttyio.h sys/ttyld.h;
+bufld	bufld	count data struct bufld bufld; inc sys/bufld.h;
+cdkpld	cdkp	count
+cmcld	rdk	count
+archosld adk	count
+unixpld	xp	count
+mesgld	msg	count data struct imesg mesg; inc sys/mesg.h;
+dkpld	dkp	count data struct dkp dkp; inc sys/dkp.h;
+nttyld	ntty	count data struct nttyld ntty; inc sys/nttyio.h sys/nttyld.h;
+rmesgld	rmsg
+connld	conn
+ipld	ip
+udpld	udp
+tcpld	tcp
+
+#
+# filesystems
+#
+regfs	fs	count data struct mount fsmtab; inc sys/mount.h;
+netafs	na
+netbfs	nb
+procfs	pr
+msfs	ms
+errfs	er
+pipefs	pip

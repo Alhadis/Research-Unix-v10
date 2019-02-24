@@ -1,0 +1,24 @@
+DIFF=	/bin/diff
+DIFFH=	/usr/lib/diffh
+CC=	cc
+CFLAGS=	-O -DDIFF=\"${DIFF}\" -DDIFFH=\"${DIFFH}\"
+
+SRCS=	diff.c diffdir.c diffreg.c
+HDRS=	diff.h
+OBJS=	diff.o diffdir.o diffreg.o
+
+all:N: diff diffh
+
+diff: $OBJS
+	$CC $CFLAGS -o $target $OBJS $LDFLAGS
+
+diffh: diffh.o
+	$CC -o $target diffh.o $LDFLAGS
+
+clean:
+	rm -f diff diffh $OBJS diffh.o
+
+install: all
+	strip diff diffh
+	cp diff $DIFF
+	cp diffh $DIFFH

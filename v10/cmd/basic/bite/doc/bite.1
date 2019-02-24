@@ -1,0 +1,712 @@
+.TH BITE 1 local
+.SH NAME
+bite \- Basic Interpreter for Testing & Engineering
+.SH SYNOPSIS
+.B bite
+[ - ] [prog1 prog2 prog3 .....]
+.SH DESCRIPTION
+.I Bite
+is a BASIC language interpreter.
+Its virtues are in that it is written in the Bell System 'C'
+compiler language which lends itself to
+.I portability
+and
+.I readability.
+One of the most important aspects is that the interpreter is
+.I interfaced
+with the
+.I system shell via the '!' command.
+Shell commands can be executed inmmediately or actually typed into
+the BASIC program itself!
+"bite" may also be invoked by a shell script and when given an argument
+(a program name) will automatically cause the  BASIC program to be
+executed. In that case the BASIC program should be terminated with
+a "bye" statement.
+The inclusion of the '-' option, along with a BASIC program name will
+cause "bite" to start and then "load" the BASIC program
+.I without
+running it.
+.PP
+.I Bite
+is designed so that BASIC language programs
+of the original Dartmouth syntax will be loadable
+with little or no incompatibility and extra features that do not
+follow common standards will be
+.I additions
+to, rather than
+.I exceptions
+to the syntax rules of BASIC.
+
+The commands and functions in this interpreter
+are implemented by entries into
+tables and the procedure for implementing new
+commands will be documented as another virtue of the
+configuration of this interpreter.
+.PP
+.I Bite
+was implemented
+with
+.I instrument control
+and
+.I data collection
+in mind
+for the purpose of controlling an
+.I Automated Test System (ATS).
+These functions will be available as an extended instruction set.
+Another version of "bite" is being configured for this purpose
+which will reside (initially) on an PDP-11/03 (subsequently on
+a PDP-11/23).
+.PP
+A standard string capability is implemented on the BASIC interpreter
+BITE.
+.TP 4
+.I Conventions
+.TP 8
+.I THIS DOCUMENT
+All things enclosed in [] are optional.
+.TP 8
+.I EDITING
+Editing is accomplished as it is in any BASIC language intepreter
+in that line-numbers are entered by typing a line-number followed
+by the statement and removed or deleted by merely typing the line-number.
+Listing is accomplished with the "list" command (explained under "COMMANDS").
+In addition to the above, it is possible to list single lines by typing
+the return-key in which case the program is listed one line-at-a-time,
+starting at the first. When the last one is reached, the sequence starts
+at the first line again.
+At any time it is also possible to type the '-' symbol to "backup" a line-
+at-a-time.
+Other editing facilities are "s", "delete", and "reseq" also explained
+under "COMMANDS".
+.TP 8
+.I EXPR
+Any algebraic expression which could be a constant, variable, math
+function or a combination of same, seperated by arithmetic operators
+as in: a+b*3.14*(4.4+c2*sin(b+s))+a(2,2)
+See "variables" and "math functions" below.
+.TP 8
+.I OPERATORS
++,-,*,/ or ^ for addition, subtraction, multiplication, division or
+exponentiation in order of lowest to highest precidence. + and - have
+the same precidence and * and / have the same precidence.
+.TP
+.I RELATIONALS
+<, >, =, <=, >=, <> for less than, greater than, equality, less or equal,
+greater than or equal and not equal.
+.TP 8
+.I SOURCE PATH
+When reference is made to a "bite" source file (i.e. the "old" and "load"
+command), at least two directories are searched, the first being the current
+directory and then /usr/lib/bites which is a "pool" where shared programs
+should be stored. The /usr/lib/bites directory is analogous to the
+/usr/bin directory in UNIX.
+The user may specify extra paths to be searched by defining them in
+BITEPATH and then exporting BITEPATH like:
+.br
+BITEPATH=:$HOME/BASIC:/usr/local/lib/:
+.br
+which adds the two pathnames between the ':' delimiters to the
+other paths. In this way, one may have private BITE programs
+and execute them  from any directory.
+.TP 8
+.I SOURCE PROGRAM NAME
+The source program name is twelve or less characters suffixed by a .b .
+.TP 8
+.I STATEMENT
+A basic statement consists of a line number (integer value between 1 and
+32767) followed by a command, space and operand which follows the
+syntax governed by the command as in: 100 print "hello world"
+A statement can be typed without a line number in which case it will
+execute immediately. This is true for all commands, but doesn't make
+sense for all commands such as "for". Immediate execution is handy
+for diagnostic purposes such as: print a, to find out what the value
+of a.
+.TP 8
+.I VARIABLES
+All variable names are either a lower case alpha character (a-z)
+or a lower-case alpha character followed by an integer (0-9).
+Array have the same name convention as regular variables and take
+the form varname(D1,D2,D3....D10) where D1-D10 are the dimension
+attributes of the array and can take the form of any legal expression
+(including another array) as in a(b(2,2),x).
+.TP 8
+.I STRING VARIABLE
+A string variable is any single lower case alpha character (a-z)
+followed by a '$' or any single alpha character followed by a single digit
+(1-9) then followed by a '$' like a$ or z9$.
+.TP 8
+.I STRING ARRAY VARIABLE
+A string array variable has the same naming convention as a regular string
+variable and contains one or two "subscripts" enclosed in parenthesis
+as in:
+.br
+	x1$(x,y)
+
+Like other array variables in BASIC string arrays must be declared
+in a dimension statement prior to their use: e.g. dim a$(20) or
+d$(100,3).
+.TP 8
+.I STRING EXPRESSION
+A string expression is any combination of string variables and
+literals added together by a '+' operator which indicates concatenation.
+An example of an assignment statement for string variables is:
+
+	b$="Joan"+a1$+c2$+"John"+x$(20)
+.SH COMMANDS
+.TP 8
+.I bye or q
+Exit
+the interpreter.
+.TP 8
+.I com[mon]
+Preserve
+variables for subsequent "run". Issue of the run command
+otherwise de-allocates all variables.
+.TP 8
+.I con \fR[line#]
+Continue normal execution from single step mode. See "sing" command.
+.TP 8
+.I data \fR(expr),(expr),(expr),..........
+The data statement is a string of defined constants or expressions referred
+to by the "read" statement. Unlike most BASIC interpreters, the data is
+stored only in the form of text strings which allows the read statement to
+evaluate expressions as well as constants.
+.TP 8
+.I del[ete] \fRlownum [, highnum]
+Delete line-number specified if only lownum given. Delete all lines
+between lownum and highnum if both are specified.
+See the "undo" command.
+.TP 8
+.I dim \fRvariable(expr1,expr2,....,expr10)
+Allocate space and define the dimensional characteristics of
+subscripted variable.
+.TP 8
+.I end
+Define logical end of program. Cause termination or current "run".
+.TP 8
+.I expunge
+Force all variable space, including subscripted variables to be freed.
+Or de-allocate used varriable space.
+.TP 8
+.I f
+Identify current file. Typing "f" causes the currently referenced
+file (if any) to be displayed.
+.TP 8
+.I for - next
+Cause code enclosed by this combination to be executed under the
+conditions specified in the
+.I for
+statement as in: for variable = expr1 to expr2 [step expr].
+.TP 8
+.I gosub \fRline#
+Goto subroutine, resume from following statement after "return" encountered.
+.TP 8
+.I goto \fRline#
+Force execution to continue starting at the line# specified.
+.TP 8
+.I if \fR(expr1) relational (expr2) \fIthen \fRline#
+Redirect program flow to line# if expr1 is related to expr2 by the
+specified relational.
+String expressions are also compared by the "if" statement as in:
+.br
+if a$ < "jim" goto 100
+.br
+The results of the comparison are based on alphabetical order
+of the two objects being compared.
+The "then" in the "if" statement can be optionally replaced with "goto"
+"go to" or "gosub". The "if" statement can also take the form:
+.br
+.I if \fR(expr) relatioanl (expr) \fIthen \fRvar = (expr)
+.TP 8
+.I if \fRmore _fd \fI then \fRline#
+Direct program flow to line# if there are more lines to be read
+from the file associated with fd where fd is the file designator
+between 1 and 4 inclusive. This type if statement is used to detect
+EOF (End Of File) condition.
+.br
+Example: 100 if more _2 then 200
+.br
+Note that "gosub" can be used in place of "then" in which case
+the subroutine would be one for reading another line.
+.TP 8
+.I input \fR[_fildes]var1[,var2,var3,....]
+Prompt for input and assign inputed value to variable.
+If 's' is typed program is halted.
+String variables may be specified in the "input" statement. The
+variables can be mixed like:
+.br
+input a$,a,b$(2,2)
+.br
+which will interpret the first input as a string, require the second
+input to be numerical and interpret the third as a string input.
+.TP 8
+.I [let] \fRvariable = expr
+Assign the value of expr to variable.
+The let is optional.
+The let or assignment statement also allows the assignment of
+string expressions to string variables like:
+.br
+b$="Joan"+a1$+c2$+"John"+x$(20)
+.TP 8
+.I l[ist] \fR[lownum [, highnum]]
+List the text in working storage. If lownum is given then only that number
+is listed, if lownum and highnum are specified, then a listing is
+displayed between the given statement numbers.
+.TP 8
+.I load \fR[prog-name]
+Same as the "old" command, except working storage is not cleared.
+.TP 8
+.I ls \foptions
+List directory. Same as UNIX "ls" command.
+.TP 8
+.I mov \fRstartnum,endnum,newnum [,increm]
+The mov command causes the lines beginning with
+.I startnum
+and ending with
+.I endnum
+to be moved (ie. resequenced) to the line beginning with
+.I newnum
+and incremented by
+.I increm \fR.
+The default value for
+.I increm
+is 10.
+All references to the moved lines are updated. The user is responsible to
+see that line numbers associated with moved lines do not conflict with
+existing lines which will cause loss of program text.
+.I mov
+is similar to
+.I reseq
+(see below) except that only the specified lines are resequenced.
+.TP 8
+.I n
+List the next 23 lines. Useful for paging through a listing on a CRT.
+.TP 8
+.I new
+Clear program working storage for new program to be typed.
+.TP 8
+.I old \fR[prog-name]
+Clear user space and load program. If old is typed with no argument
+it will prompt the user for a program name if not defined or load
+the last defined program name.
+.TP 8
+.I on \fR(expr) \fIgoto \fRline#,line#,.......
+Is a selective goto with multiple line number targets. The target
+branched to depends on the value of expr which is truncated.
+Control is passed to the first line# specified after goto if the
+value of the expression is 1. Control passes to the second line#
+if the value is 2, the third if 3 and so on.
+.TP 8
+.I on \fR(expr) \fIgosub \fRline#,line#,.......
+Same action as on-goto, except action taken is that of "gosub".
+.TP 8
+.I pause
+Causes execution to be suspended until a "newline" or "return" is typed.
+This is useful for programs which need to be continuously in "run", but
+need to allow a time for user action i.e. unit insertion.
+.TP 8
+.I pr[int] \fR[_fildes](expr's,quoted strings or tab operators)
+The print statment is a limited format display statement in which
+expressions are evaluated and displayed along with quoted literals.
+The tab(expr) operator causes the print head to move to the absolute
+column position computed by expr provided the current head position
+is less. The specifiers must be seperated by onee or more commas
+or semicolons.
+String expressions are also expanded by the print statement.
+.TP 8
+.I printf \fR[_fildes]"format string"[,expr1,expr2,.....,expr10]
+This is an interpretive implementation of the UNIX 'C' library
+routine, printf. It is, however restricted to only the floating
+point format control specifiers 'f' and 'g'. Use of any of the
+other specifiers such as 'o', 'd' or 's' will give erroneous results.
+Print controls such as \\b (backspace), \\n (newline), \\r (return)
+or \\t can also be used. The printf format was chosen in lieu
+of the usual "print using" command because it was felt that
+printf is not only a 'C' language standard but easier to use
+than "print using".
+.br
+Usage Example:
+.br
+100 printf "Variable a=%2.2f\\tVariable b=%g.\\n",a,b
+.TP 8
+.I randomize
+Causes "rnd" statement to start at an "unpredictable" value.
+.TP 8
+.I read \fRvar1,var2,var3,..............
+The "read" statement causes data to be assigned to each variable in the
+list from the constants or expressions contained in "data" statements. The
+reading starts where-ever the data pointer is currently at. The data pointer
+points to the last data field accessed, if a read was done, the first
+data field in the first data statment if the "restore" statment is issued
+or the program is re-run.
+The "read" statement will also assign values to string variables or
+expressions in the "data" statement.
+.TP 8
+.I rem
+The remark statement causes no operation in 
+.I bite
+but may be followed by any string of characters for the purpose of commenting
+a program. Unlike compiler languages, remarks do take up program buffer space,
+however, they are of paramount importance in making a program readable by
+human beings and are therefore strongly recommended.
+.TP 8
+.I reseq \fR[startnum [, increm]]
+The resequence command causes the statement numbers and all references
+to them (such as if's goto's, gosub's, etc) to be resequenced starting
+at
+.I startnum
+and incremented by
+.I increm.
+If startnum and/or increm are omitted, the default values are 10 and
+10 respectively.
+.TP 8
+.I restore
+Restores the data pointer to the first field of the first "data" statment.
+.TP 8
+.I return
+Return from subroutine called by "gosub" statement.
+.TP 8
+.I rm \ffilename(s)
+Remove file(s). Same as UNIX "rm" command.
+.TP 8
+.I run \fR[prog-name]
+Run basic program specified. If no argument is given, "run" attempts to
+execute whatever is currently in working storage.
+.TP 8
+.I s \fRline#/old-string/new-string[/]
+Substitute in line line# the new-string for the old-string. The last delimiter
+is optional, unless new-string is null in which case it is desired that
+old-string merely be removed.
+See the "undo" command.
+.TP 8
+.I sing \fR[line#]
+Enter the single step mode starting at the line# specified or at
+the first line of the program if no line# is specified.
+In single step mode an instruction is executed and then the prompt '^'
+is displayed.
+At this time the user may enter
+any command (i.e. print) or hit the "return" key to execute the next
+instruction.
+See the "con" instruction.
+.TP 8
+.I size
+Causes amount of storage used and remaining or free space in 
+decimal number of bytes.
+.TP 8
+.I stop
+Stop execution of program.
+.TP 8
+.I save \fR[prog-name]
+Save the contents of working storage in file-name specified by progname.
+If no progname is given last referenced file-name is used. If no file
+name was referenced, the user is prompted for a name.
+.TP 8
+.I undo
+Undo last "s" command or
+.I single line deletion.
+.TP 8
+.I ! (any shell command string)
+Unix shell command invocation allows system commands to be
+executed from the interpreter.
+Not available in restricted version.
+.SH FILE COMMANDS
+The file commands: append, openi, and openo are followed by one or more
+file-names seperated by commas, each file-name being no more that
+14 characters long. Files are assigned to designators (integer values
+between 1 and 8 inclusive) in the order that they are open.
+All commands
+such as "print" and "input" which refer to a file use the designator
+number preceded by a '_' character to refer to that file
+as in: 100 print _1"hello world" or 100 input _3a(x,y) .
+.TP 8
+.I append \fRfile1[,file2,.....,file8]
+If file exists open for output cause new data to be appended. If file
+does not exist, the named file is created.
+.TP 8
+.I openi \fRfile1[,file2,.....,file8]
+Open file for input. File must exist.
+.TP 8
+.I openo \fRfile1[,file2,.....,file8]
+Create named file(s) and open for output. If named files exist, the old
+data is destroyed.
+.TP 8
+.I seek \fR_fildes, offset, mode
+Seek to a line whose position in the file is offset.  If mode = 0 the
+offset is from the beginning, if mode = 1 then the offset is relative
+to the current file pointer.
+.br
+Usage Example: 101 seek _1, 33, 0
+.br
+would cause the file pointer to the 33rd line.
+.TP 8
+.I rewind \fR_fildes
+Rewind the file specified by fildes to the beginning (first line).
+This is effectively the same as seek _fildes, 0, 0.
+.TP 8
+.I close \fR_fildes
+Close file associated with file designator.
+.TP 8
+.I closeall
+Close all files input and output.
+.SH MATH FUNCTIONS
+.TP 8
+.I abs\fR(expr)
+Absolute value.
+.TP 8
+.I atn\fR(expr)
+Arc-tangent.
+.TP 8
+.I cos\fR(expr)
+Cosine.
+.TP 8
+.I exp\fR(expr)
+Natural exponential.
+.TP 8
+.I fact\fR(expr)
+Factorial. (Truncates fractions i.e. fact(3.22) interpreted as fact(3))
+.TP 8
+.I int\fR(expr)
+Integerize or truncate fractional part of result of expr.
+.TP 8
+.I log\fR(expr)
+Natural log.
+.TP 8
+.I rnd\fR(expr)
+Return random number between 0 and evaluated expr.
+.TP 8
+.I sin\fR(expr)
+Sine.
+.TP 8
+.I sqr\fR(expr)
+Square root.
+.SH STRING FUNCTIONS
+.TP 8
+.I asc(string)
+Returns ASCII value of first character in string.
+.TP 8
+.I chr$(expr)
+Return the character corresponding to the value of expr where expr
+is a numerical expression. If the value of the expression exceeds
+octal 177 the least significant 7 bits are used.
+.TP 8
+.I ext$(string,pos,len)
+The ext$ "extract" string function returns a substring of the
+string expression string starting at position "pos" having length "len".
+If attempt is made to extract a string beyond the end of "string" the result
+will be truncated and an error message will be displayed.
+.TP
+.I len(string)
+Return the length of the string expression "string".
+.TP
+.I left$(string,n)
+Return the leftmost n characters of the string. If the string length is
+less than n, then the string itself is returned.
+.TP
+.I loc$(string)
+Converts all upper case alphabetic characters in the string to lower case.
+.br
+EX: a$=loc$("ABCdef123#$^&*")
+.br
+returns abcdef123#$^&* to a$
+.TP
+.I mid$(string,pos,len)
+Does exactly same as ext$. Included because it is part of another
+popular dialect of BASIC.
+.TP
+.I right$(string,n)
+Return rightmost n characters of string. If string length is less than
+n the string itself is returned.
+.TP
+.I str$(expr)
+Returns value of expr (numerical expression) as an ASCII string.
+.TP
+.I string$(n,string)
+Returns n occurrences of the first character in string.
+.TP
+.I upc$(string)
+Converts all lower case alphabetic characters in the string to upper case.
+.TP
+.I val(string)
+Return numerical value represented by ASCII number.
+.br
+Ex: a=val("100.2")
+.br
+assigns the value 100.2 to variable a. This function is good for
+converting ASCII tabulations of numbers. ext$ or mid$ can be used
+to select the column.
+.SH ATS INSTRUMENT COMMANDS
+.TP 8
+.I buspr \fR'busadr(text and expressions)
+Buspr is merely an extension of the print statement which allows
+the print string which would otherwise be displayed on the tty
+to be sent via the IBV-11 bus to the bus address specified by "busadr".
+The ' preceding busadr distinguishes the following character from anything
+other than a single character to be interpreted as an address.
+.br
+Usage Example:	100 buspr '6"F2R";r
+.TP 8
+.I cmd "string"
+Send character string over IBV-11 command lines.
+.TP 8
+.I delay num
+Causes a delay of num 60ths of a second where num is an integer.
+.br
+Usage Example:	100 delay 120		(delay 2 minutes or 120/60ths sec)
+.TP 8
+.I dvminit
+Initialize Digital Voltmeter.
+.TP 8
+.I dvms \fRfunction, range
+Digital voltmeter set command, where: function is "ac", "dc" or "ohms"
+and range is .1, 1, 10, 100, 1k, 10k or "aut". i.e.
+.br
+Usage Example:	100 dvms dc,1k
+.TP 8
+.I hprintf \fR"format text"[,expr1,expr2,...,expr10]
+Formatted print to strip printer. Syntax rules are the same as
+. I printf.
+Strip printer is 20 columns wide, anything past the 20th column is
+truncated.
+.TP 8
+.I lodset \fRlodnum,mode,value
+Set load. Where lodnum an integer describing which load referred to,
+mode is the manner in which the load is set and value is an expression
+describing the current or resistance the load was set to depending on the
+mode. Mode is a single character 'r', 'R', 'i' or 'I' where 'r' is resistance
+mode (value in ohms) and 'i' is current mode (value in amperes). Small
+letter causes a hunt for the value and capital causes set on first try.
+.TP 8
+.I relay \fRfunction, relnum1[, relnum2, relnum3,... ]
+Set multiprogrammer relays. Function is m (make), b (break) or c (clear).
+Function is followed by all relay numbers to be acted upon which may
+be expressions or variables. The clear function when not followed by
+anything, simply means open all relays. When followed by relay numbers,
+clear means all relays are open EXCEPT the ones specified.
+.br
+Usage Example:	100 relay m,10,20,21,a,b,rnd(10)
+.TP 8
+.I ps \fRpsno, voltage, current limit, overvoltage
+Set power supply parameters. Psno is an integer representing the
+power supply number describing which power supply is to be used,
+voltage, current limit and overvoltage are self explanatory. Each
+one of the parameters may be a legal algebraic expression so that
+they may be controlled by the program.
+.br
+Usage Example:	100 dvms 1,10,1,11 or 100 dvms n,v1,i1,v1+1
+.SH INSTRUMENT FUNCTIONS
+.TP 8
+.I btn\fR(expr)
+Button function returns non-zero if control button number (expr) is
+depressed.
+.TP 8
+.I dvmr()
+Return digital voltmeter reading.
+.TP 8
+.I error()
+Return 1 if last instrument command caused instrument error, otherwise
+return 0.
+
+.SH AUTHORS
+Richard B. Drake & James P. Hawkins
+.SH FILES
+source.b
+.br
+/usr/lib/bites/<source>
+.br
+.SH "SEE ALSO"
+sh(1),bstring(1)
+BASIC Programming and Applications, C. Joseph Sass 1972
+.br
+.br
+BITE Users Guide, J.P.Hawkins, Bell Labs, TM-79-2425-4
+.SH DIAGNOSTICS
+Diagnostic error messages are issued by the interpreter
+which indicate syntax errors , system failure, illegal commands or expressions,etc.
+The
+.I LSI-11/03
+Version of
+.I bite
+does not issue explicit error messages, but displays an error number
+in which the meanings are listed below. This is done to regain approx.
+2Kb memory in an already tight LSI-11/03 memory.
+.nf
+.I	Standard Error Messages
+
+	NUMBER	MESSAGE TEXT
+	--------------------
+	0	REFERS TO A NON EXISTING LINE NUMBER
+	1	UNRECOGNIZABLE OPERATION
+	2	CANNOT OPEN FILE
+	3	ILLEGAL VARIABLE NAME
+	4	BAD FILENAME
+	5	WORKING STORAGE AREA EMPTY
+	6	RUNS NESTED TOO DEEPLY
+	7	UNASSIGNED VARIABLE
+	8	EXPRESSION SYNTAX
+	9	BAD KEYWORD IN STATEMENT
+	10	IMPROPER OR NO RELATIONAL OPERATOR
+	11	UNBALANCED QUOTES
+	12	FILE EDITING NOT PERMITTED IN SINGLE STEP MODE
+	13	MISSING OR ILLEGAL DELIMITER
+	14	GOSUB WITH NO RETURN
+	15	IS FATAL
+	16	UNBALANCED PARENTHESIS
+	17	UNKNOWN MATH FUNCTION
+	18	NEXT WITH NO OR WRONG FOR IN PROGRESS
+	19	CANNOT PROCESS IMAGINARY NUMBER
+	20	WHAT ?
+	21	BAD DIMENSION SYNTAX
+	22	TOO MANY DIMENSIONS
+	23	REDUNDANT DIM STATEMENT
+	24	NOT ENOUGH WORKING STORAGE SPACE
+	25	VARIABLE NOT DIMENSIONED
+	26	WRONG NUM OF DIMS
+	27	ONE OR MORE DIMS LARGER THAN ASSIGNED
+	28	NEG. OR ZERO DIMENSION ILLEGAL
+	29	DIVIDE BY ZERO
+	30	BAD TAB SPEC. IN PRINT
+	31	SYS CALL FAILED
+	32	BAD FILE DECLARE SYNTAX
+	33	OUT OF DATA
+	34	FILE-NAME TOO LONG
+	35	FILE DES. USED UP
+	36	FILE NOT OPEN FOR OUTPUT
+	37	FILE NOT OPEN FOR INPUT
+	38	EXPRESSION YIELDS AN IMPOSSIBLE VALUE
+	39	PRINTF: ARG COUNT MISMATCH
+	40	PRINTF: MORE THAN 10 ARGS
+	41	LINE TOO LONG FOR STRIP PRINTER
+	42	MOV REQUIRES 3 LINE #'s SPACING IS OPTIONAL
+.I	String error messages
+	49	STRING VARIABLE IN NUMERICAL EXPR.
+	50	NON-STRING IN STRING ASSIGNMENT
+	51	NUMERIC IN STRING EXPRESSION	
+	52	INVALID STRING OPERATOR
+	53	CANNOT COMPARE STRING WITH NUM. TYPES
+	54	UNKNOWN STRING FUNCTION
+	55	OUT OF STRING RANGE
+
+.I	Test Set and Instrument Error Messages
+
+	100	MISSING ' DELIMITER BEFORE BUS ADDR
+	101	PS: VOLTAGE OUT OF RANGE
+	102	PS: CURRENT OUT OF RANGE
+	103	PS: OVERVOLTAGE OUT OF RANGE
+	104	RELAY ERR
+	105	RELAY: INVALID FUNC.
+	106	RELAY: INVALID NUMBER
+	107	DVM: INVALID MODE
+	108	DVM: INVALID RANGE
+	109	LODSET: IMPROPER NUMBER OF ARGUMENTS
+	110	LODSET: IMPROPER MODE
+	111	LODSET: UNABLE TO SET LOAD
+.fi
+.SH BUGS
+	There are more or less common features not yet available such as
+.I string variables, multiple statment lines, matrix statements
+and the
+.I def
+statement.
+Array variables do not accept reference to 0th elements.
+Bugs will be found as local users write and execute programs and report
+their problems.

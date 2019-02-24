@@ -1,0 +1,58 @@
+-title mincpp: translate minimal conditional assembly stuff to cpp format
+*
+*	This program takes a MINIMAL program and translates all
+*	conditional assembly statements to a format acceptable to
+*	the C preprocessor (cpp).
+*
+*	MINIMAL				CPP
+*
+*	.IF	sym			#ifdef	sym
+*	.THEN				{nothing}
+*	.ELSE				#else
+*	.FI				#endif
+*	.DEF	sym			#define sym 1
+*	.UNDEF	sym			#undef	sym
+*
+*	Luckily, all MINIMAL conditional assembly statements start
+*	with a "." in column 1.
+*
+	&stlimit = -1
+	&anchor  = 1
+*
+*	build translation table.
+*
+	castbl = table( 5 )
+	castbl['IF']	   = '#ifdef'
+	castbl['ELSE']	   = '#else'
+	castbl['FI']      = '#endif'
+	castbl['DEF']	   = '#define'
+	castbl['UNDEF']   = '#undef'
+*
+*	obtain input and output files.
+*
+	terminal = 'enter minimal input file'
+	input(.in,0,terminal)
+	terminal = 'enter minimal/cpp output file'
+	output(.out,1,terminal)
+*
+*	read statements and do quick check.
+*
+main	line = in				:f(done)
+	leq( substr(line,1,1),'.' )		:s(castmt)
+	out  = line				:(main)
+*
+*	here to do real translation
+*
+castmt	opcode = symbol =
+	line len(1) ( break( ' ' ) | rem ) . opcode
++		( span( ' ' ) | '' )
++		( ( len( 1 ) | '' ) rem . symbol )	:f(error)
+	opcode = castbl[opcode]
+	out    = differ( opcode ) opcode ' ' symbol 
++		 (ident( opcode,'#define' ) ' 1','' )	:(main)
+*
+*	on error, show offensive line to person at teminal
+*
+error	terminal = 'error: ' line		:(main)
+done
+end

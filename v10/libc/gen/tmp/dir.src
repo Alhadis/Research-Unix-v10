@@ -1,0 +1,310 @@
+# To unbundle, sh this file
+echo closedir.c 1>&2
+sed 's/.//' >closedir.c <<'//GO.SYSIN DD closedir.c'
+-/* Copyright (c) 1982 Regents of the University of California */
+-
+-
+-#include <ndir.h>
+-
+-/*
+- * close a directory.
+- */
+-void
+-closedir(dirp)
+-	register DIR *dirp;
+-{
+-	close(dirp->dd_fd);
+-	free(dirp);
+-}
+//GO.SYSIN DD closedir.c
+echo ndir.h 1>&2
+sed 's/.//' >ndir.h <<'//GO.SYSIN DD ndir.h'
+-/* Copyright (c) 1982 Regents of the University of California */
+-/* and modified by pjw in 1986 */
+-
+-/*
+- * this must be a power of 2 and a multiple of all the ones in the system
+- */
+-#define DIRBLKSIZ 512
+-
+-/*
+- * This limits the directory name length. Its main constraint
+- * is that it appears twice in the user structure. (u. area) in bsd systems
+- */
+-#define MAXNAMLEN 255
+-
+-struct	direct {
+-	unsigned long	d_ino;
+-	short	d_reclen;
+-	short	d_namlen;
+-	char	d_name[MAXNAMLEN + 1];
+-	/* typically shorter */
+-};
+-
+-struct _dirdesc {
+-	int	dd_fd;
+-	long	dd_loc;		/* where we left off in dd_buf */
+-	long	dd_size;	/* bytes back from system */
+-	long	dd_offset;	/* lseek at beginning of dd_buf */
+-	char	dd_buf[DIRBLKSIZ];
+-};
+-
+-/*
+- * useful macros.
+- */
+-#define NDIRSIZ(dp) \
+-    ((sizeof(struct direct) - MAXNAMLEN + (dp)->d_namlen + sizeof(ino_t) - 1) &\
+-    ~(sizeof(ino_t) - 1))
+-typedef	struct _dirdesc DIR;
+-#ifndef	NULL
+-#define	NULL	0
+-#endif
+-
+-/*
+- * functions defined on directories
+- */
+-extern DIR *opendir();
+-extern struct direct *readdir();
+-extern long telldir();
+-extern void seekdir();
+-#define rewinddir(dirp)	seekdir((dirp), 0)
+-extern void closedir();
+//GO.SYSIN DD ndir.h
+echo opendir.c 1>&2
+sed 's/.//' >opendir.c <<'//GO.SYSIN DD opendir.c'
+-/* Copyright (c) 1982 Regents of the University of California and pjw*/
+-
+-
+-#include "errno.h"
+-#include "ndir.h"
+-
+-/*
+- * open a directory.
+- */
+-DIR *
+-opendir(name)
+-	char *name;
+-{
+-	register DIR *dirp;
+-
+-	dirp = (DIR *)malloc(sizeof(DIR));
+-	if(!dirp) {
+-		errno = ENOSPC;
+-		return(0);
+-	}
+-	dirp->dd_fd = open(name, 0);
+-	if (dirp->dd_fd == -1) {
+-		free(dirp);
+-		return NULL;
+-	}
+-	dirp->dd_loc = 0;
+-	dirp->dd_offset = 0;
+-	dirp->dd_size = 0;
+-	return dirp;
+-}
+//GO.SYSIN DD opendir.c
+echo pdirread.c 1>&2
+sed 's/.//' >pdirread.c <<'//GO.SYSIN DD pdirread.c'
+-/* simulate new system call */
+-/* output is up to cnt bytes (up to some max)
+- * each directory entry gets a string which is
+- * the ascii representation of the inode number, a tab, and the
+- * zero-terminated file name.  these zero-terminated strings are packed together
+- * This implementation freely returns short reads.  End of directory
+- * is a 0 length read, -1 and ENOSPC indicate that cnt couldn't hold
+- * even the next entry
+- */
+-#include "sys/types.h"
+-#include "sys/dir.h"
+-#include "errno.h"
+-
+-char mb[4096], ncnv[23];
+-pdirread(fd, buf, cnt)
+-char *buf;
+-{	int n, m, j, loc;
+-	char *p, *lp;
+-	struct direct *d;
+-
+-	loc = lseek(fd, 0, 1);
+-	n = read(fd, mb, sizeof(mb));
+-	if(n <= 0)
+-		return(n);
+-	lp = p = buf;
+-	d = (struct direct *) mb;
+-loop:
+-	if(d->d_ino == 0)
+-		goto incr;
+-	for(m = d->d_ino, j = 22; m; j--) {
+-		ncnv[j] = m % 10 + '0';
+-		m /= 10;
+-	}
+-	for(++j; j < 23 && p < buf + cnt; )
+-		*p++ = ncnv[j++];
+-	if(j != 23 || p >= buf + cnt)
+-		goto early;
+-	*p++ = '\t';
+-	for(j = 0; d->d_name[j] && j < DIRSIZ && p < buf + cnt; j++)
+-		*p++ = d->d_name[j];
+-	if(p >= buf + cnt)
+-		goto early;
+-	*p++ = 0;
+-incr:
+-	lp = p;
+-	n -= sizeof(*d);
+-	d++;
+-	if(lp < buf + cnt && n > 0)
+-		goto loop;
+-done:
+-	lseek(fd, loc + (char *)d - mb, 0);
+-	return(lp - buf);
+-early:
+-	*lp = 0;
+-	if((char *)d != mb)
+-		goto done;
+-	errno = ENOSPC;
+-	return(-1);
+-}
+//GO.SYSIN DD pdirread.c
+echo readdir.c 1>&2
+sed 's/.//' >readdir.c <<'//GO.SYSIN DD readdir.c'
+-/* Copyright (c) 1982 Regents of the University of California */
+-/* and modified by pjw in 1986 and 1987, dmg in 1989 */
+-
+-#include <sys/types.h>	/* only for ino_t */
+-#include "ndir.h"
+-#include <ctype.h>
+-
+-/*
+- * get next entry in a directory.
+- *
+- * subtlety:
+- * ino_t is still a 16-bit type,
+- * but i-numbers returned by dirread or pdirread may be larger.
+- * stat returns an ino_t in st_ino.
+- * d_ino is a long.
+- * if d_ino has 32 significant bits, programs like pwd may fail.
+- * if it is truncated to 16, information is lost.
+- * it would be helpful to fix stat, but it wouldn't be a magic cure;
+- * the i-number from dirread may have more than 32 bits!
+- * truncate for now, via dir.d_ino = (ino_t) ...
+- *
+- * most of the tedious code below is error checking
+- */
+-struct direct *
+-readdir(dirp)
+-register DIR *dirp;
+-{
+-	static struct direct dir;
+-	register char *p;
+-	register int i;
+-
+-loop:
+-	if (dirp->dd_size <= 0 || dirp->dd_loc >= dirp->dd_size) {
+-		dirp->dd_offset++;	/* see seekdir.c */
+-		dirp->dd_size = dirread(dirp->dd_fd, dirp->dd_buf, DIRBLKSIZ-1);
+-		if(dirp->dd_size < 0)
+-			dirp->dd_size = pdirread(dirp->dd_fd, dirp->dd_buf,
+-				DIRBLKSIZ-1);
+-		if(dirp->dd_size <= 0)
+-			return(0);
+-		dirp->dd_loc = 0;
+-		dirp->dd_buf[dirp->dd_size] = 0;	/* sentinel */
+-	}
+-	p = dirp->dd_buf + dirp->dd_loc;
+-	dir.d_ino = 0;
+-	while (isdigit(*p))
+-		dir.d_ino = dir.d_ino*10 + *p++ - '0';
+-	dir.d_ino = (ino_t)dir.d_ino;
+-	while (*p != '\t')	/* in case we add fields someday */
+-		if (*p++ == 0) {	/* badly formed */
+-			dirp->dd_loc = p - dirp->dd_buf;
+-			goto loop;
+-		}
+-	p++;
+-	for (i = 0; i < MAXNAMLEN; i++)
+-		if ((dir.d_name[i] = *p++) == 0)
+-			break;
+-	if (i >= MAXNAMLEN && *p++ != 0) {	/* name too long */
+-		while (*p++)
+-			;
+-		dirp->dd_loc = p - dirp->dd_buf;
+-		goto loop;
+-	}
+-	dir.d_name[i] = 0;
+-	dir.d_namlen = i;
+-	dir.d_reclen = sizeof(dir);	/* bogus, but who cares? */
+-	dirp->dd_loc = p - dirp->dd_buf;
+-	if (dirp->dd_loc > dirp->dd_size)	/* hit the sentinel */
+-		goto loop;
+-	return (&dir);
+-}
+//GO.SYSIN DD readdir.c
+echo seekdir.c 1>&2
+sed 's/.//' >seekdir.c <<'//GO.SYSIN DD seekdir.c'
+-/* Copyright (c) 1982 Regents of the University of California
+- * and modified by pjw in 1987 */
+-
+-#include "ndir.h"
+-
+-/*
+- * seek to an entry in a directory.
+- *
+- * offset `told' is interpreted in a non-obvious way:
+- * telldir computes it as  dd_offset*DIRBLKSIZ + dd_loc
+- * dd_loc is the byte offset into the current dd_buf contents;
+- * dd_offset is the number of times dirread(fd, buf, DIRBLKSIZ)
+- * must be called to reproduce the same buffer.
+- *
+- * Why not just use lseek?  Because told isn't a seek offset,
+- * and cannot conveniently be turned into one: the byte count
+- * in dd_loc is unrelated to the seek offset required to reach
+- * lseek(fd, 0L, 1)+dd_loc, because the seek offset refers to the raw
+- * directory, but dirread has reformatted the data.
+- * One might let dd_offset be the seek offset to the the beginning
+- * of dd_buf, compute told the same way, and let seekdir become
+- *	lseek(fd, told/DIRBLKSIZ, 0); dirp->dd_loc = told%DIRBLKSIZ;
+- * but a somewhat strident prior implementor worries that this unfairly
+- * constrains the size of directories.  This is probably a silly worry
+- * (will any real system have directories a megabyte long?) but it
+- * doesn't matter much except in programs that use seekdir a lot.
+- */
+-void
+-seekdir(dirp, told)
+-register DIR *dirp;
+-long told;
+-{	long offset;
+-
+-	offset = told / DIRBLKSIZ;
+-	dirp->dd_loc = told % DIRBLKSIZ;
+-	if (offset < dirp->dd_offset)
+-		lseek(dirp->dd_fd, dirp->dd_offset = 0L, 0);
+-	if(offset > dirp->dd_offset) {
+-		do {
+-			dirp->dd_size = dirread(dirp->dd_fd, dirp->dd_buf,
+-						DIRBLKSIZ);
+-			if(dirp->dd_size < 0)
+-				dirp->dd_size = pdirread(dirp->dd_fd,
+-					dirp->dd_buf, DIRBLKSIZ);
+-			}
+-			while(++dirp->dd_offset < offset);
+-		}
+-}
+//GO.SYSIN DD seekdir.c
+echo telldir.c 1>&2
+sed 's/.//' >telldir.c <<'//GO.SYSIN DD telldir.c'
+-/* Copyright (c) 1982 Regents of the University of California
+- * and modified by pjw in 1987 */
+-
+-#include "ndir.h"
+-
+-/*
+- * return a pointer into a directory
+- * see seekdir.c for an explanation of the return value
+- */
+-long
+-telldir(dirp)
+-	DIR *dirp;
+-{
+-	return(DIRBLKSIZ * dirp->dd_offset  +  dirp->dd_loc);
+-}
+//GO.SYSIN DD telldir.c

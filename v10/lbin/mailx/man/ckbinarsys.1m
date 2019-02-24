@@ -1,0 +1,67 @@
+'\"macro stdmacro
+.if n .pH g1.chbinarsys %W%
+.nr X
+.if \nX=0 .ds x} ckbinarsys 1M "Essential Utilities" "\&"
+.if \nX=1 .ds x} ckbinarsys 1M "Essential Utilities"
+.if \nX=2 .ds x} ckbinarsys 1M "" "\&"
+.if \nX=3 .ds x} ckbinarsys "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4ckbinarsys\f1 \- determine whether remote system can accept binary messages
+.SH SYNOPSIS
+\f4ckbinarsys\fP
+[\f4\-S\fP]
+\f4\-s\fP \f2remote_system_name\fP
+\f4\-t\fP \f2content_type\fP
+.SH DESCRIPTION
+Because \f4rmail\f1 can transport binary data, it may be important to
+determine whether a particular remote system (typically the next hop)
+can handle binary data via the chosen transport layer agent (uux, SMTP, etc.)
+.PP
+\f4ckbinarsys\fP consults the file \f4/etc/mail/binarsys\f1 for information on
+a specific remote system.
+\f4ckbinarsys\f1 returns its results via an appropriate exit code.
+An exit code of zero implies that it is OK to send a message with the
+indicated content type to the system specified.
+An exit code other than zero indicates that the
+remote system cannot properly handle messages with binary content.
+.PP
+The absence of the \f4binarsys\f1 file will cause
+\f4ckbinarsys\f1 to exit with a non-zero exit code.
+.PP
+Command-line arguments are:
+.sp .5
+.PD 0
+.TP 17
+\f4\-s\f2\0remote_system_name\f1
+Name of remote system to look up in \f4/etc/mail/binarsys\f1
+.TP
+\f4\-t\f2\0content_type\f1
+Content type of message to be sent.
+When invoked by \f4rmail\f1,
+this will be one of two strings:
+\f4text\f1 or \f4binary\f1,
+as determined by \f4mail\f1
+independent of any \f4Content-Type:\f1 header lines that may be
+present within the message header.
+All other arguments are treated as equivalent to \f4binary\f1.
+.TP
+\f4\-S\f1
+Normally, \f4ckbinarsys\fP will print a message (if the binary mail is rejected)
+which would be suitable for \f4rmail\fP to return in the negative acknowledgement mail.
+When \f4\-S\fP is specified, no message will be printed.
+.PD
+.SH FILES
+.PD 0
+.TP 27
+\f4/etc/mail/binarsys\f1
+.TP 27
+\f4/usr/lib/mail/surrcmd/ckbinarsys\f1
+.PD
+.SH SEE ALSO
+\f4mailsurr\f1(4),
+\f4binarsys\f1(4)
+.br
+\f4mail\f1(1),
+\f4uux\f1(1) in the \f2User's Reference Manual\f1.
+.Ee

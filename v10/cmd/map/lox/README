@@ -1,0 +1,35 @@
+lox deg
+computes a loxodrome inclined at angle "deg" from
+the equator; deg=45 for NE, deg=-45 for SE.
+The loxodrome begins at lat,lon=0,0 and continues
+through north latitudes.  The output fields are:
+	phi	latitude
+	x	coord of developed loxodrome
+	y	ditto
+	theta	(east!) longitude of point on loxodrome
+	chi	angle of inclination (slope) of developed loxodrome
+Both theta and chi increase continuously (beyond 360)
+
+map loxodromic deg options
+draws a map based on the developed loxodrome.  The globe is
+cut along the antipodal loxodrome and points are displayed
+at true distance from the developed central loxodrome.
+The usual map options apply.
+Latitudes beyond 85 are deemed unplottable; higher latitudes
+could be squeezed out in some instances.
+
+sh dolox deg options
+makes the map with the boundary cut drawn.
+If option -o is present, it must be first, and it should be
+-o 90 ? ?  (For uninvestigated reasons, the scale of an
+off-axis projection comes out a bit wrong, so you have to
+hand-tune the drawing of the boundaries, as has been done
+in "sh noedge"; see the differing -p options there.  One
+contributor to the discrepancy: linear interpolation.)
+
+This projection uses the heavy artillery of a general
+integrator and a general equation solver from the port 3
+library.  This triples the size of the object code of map;
+moreover it requires a corrected version of subroutine ds7grd,
+not in the publicly available Port 3.  Hence the loxodromic 
+projection is not normally included in "map".

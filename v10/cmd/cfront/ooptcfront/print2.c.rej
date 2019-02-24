@@ -1,0 +1,32 @@
+***************
+*** 1804,1816 ****
+  	      case CLASS:
+  		if(!emode) goto NON_EMODE_WIERD_BASE_ERROR;
+  		s = Pclass(this)->string;
+! 		if (s[0]=='_' &&s[1]=='_' && s[2]=='C') s="class";
+! 		if (Ptclass(this)->class_base ==
+! 		    instantiated_template_class) {
+  			Ptclass(this)->inst->print_pretty_name() ;
+  			freetbuf-- ;
+  			return ;
+! 		    } else putstring(s);
+  		break;
+  		
+  	      case ENUM:
+--- 1804,1819 ----
+  	      case CLASS:
+  		if(!emode) goto NON_EMODE_WIERD_BASE_ERROR;
+  		s = Pclass(this)->string;
+! 		if (Ptclass(this)->class_base == instantiated_template_class ||
+! 		    Ptclass(this)->class_base == uninstantiated_template_class)
+! 		    {
+  			Ptclass(this)->inst->print_pretty_name() ;
+  			freetbuf-- ;
+  			return ;
+! 		    } else { 
+! 			if (s[0]=='_' &&s[1]=='_' && s[2]=='C') s="class";
+! 			putstring(s);
+! 		    }
+  		break;
+  		
+  	      case ENUM:

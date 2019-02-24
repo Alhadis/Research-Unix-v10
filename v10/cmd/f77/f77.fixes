@@ -1,0 +1,82 @@
+Bug fixes to f77 installed 30 June 1989:
+
+1. The type of PARAMETERs is now honored.  Previously, the type was
+   deduced from the assigned constant, so, e.g.,
+	DOUBLE PRECISION ONE
+	PARAMETER (ONE = 1.0)
+   resulted in ONE being a REAL constant.
+
+2. As the Fortran 77 specifies, a comma is now allowed after the
+   label in a DO statement, e.g.
+	DO 10, i = 1, n
+
+3. A statement function argument can be subscripted variable of same
+   name as the dummy argument used in defining the statement function.
+   For example,
+
+	REAL X(5)
+	F(X) = X**2
+	...
+	Y = F(X(2))
+	
+4. The calling sequence expected by procedures (functions and subroutines)
+   has been adjusted to match the calling sequence that has long been
+   passed.  Previously, procedures expected a length parameter to
+   accompany procedure arguments.  This change only matters in an
+   example like the following, in which a CHARACTER argument follows
+   a procedure argument:
+	CHARACTER *30 TITLE
+	EXTERNAL GOO
+	TITLE = 'HERE''S ABOUT THIRTY CHARACTERS'
+	CALL FOO(GOO, TITLE)
+	END
+	SUBROUTINE FOO(GOO, T)
+	EXTERNAL GOO
+	CHARACTER *(*) T
+	WRITE(6,'(1X,2A)') 'FOO: ', T
+	CALL GOO(T)
+	END
+	SUBROUTINE GOO(T)
+	CHARACTER *(*) T
+	WRITE(*,*) 'GOO: ', T
+	END
+
+   This bug fix also eliminates the old warning
+   "Dummy procedure not declared EXTERNAL. Code may be wrong."
+	
+5. DATA statements with general implied DOs now work.  Previously only
+   an initial, singly nested DO worked.  Examples that previously
+   failed (with different error messages):
+
+        INTEGER IXVI, JXVI, KX1I(2), MX2I(2,2)
+        DATA IXVI, JXVI, KX1I(2),
+     1     ((MX2I(IVI, JVI), IVI=1,2), JVI=1,2) /5, 6, 8, 4*4/
+	write(*,*) ixvi, jxvi, kx1i(2), mx2i
+        END
+
+        integer IXVI, MX2I(2,2)
+        DATA IXVI, ((MX2I(IVI, JVI), IVI=1,2), JVI=1,2) /5, 4*4/
+	write(*,*) ixvi, mx2i
+        END
+
+6. A loop like "DO 10 i = 1, 1, -1" no longer has its range omitted.
+
+7. ASSIGNed FORMAT labels work.
+
+8. New flags -b and -B are now available: -b warns when the above bug
+   fixes affect generated objects; -B causes f77 to revert to the
+   previous buggy behavior.  These are meant as debugging aids ("Why
+   am I now getting different answers?") and as portability aids --
+   some compilers derived from f77 retain some of the above bugs.
+
+9. The default maximum number of statement labels is now larger, so
+   it should less often be necessary to rerun f77 specifying -Ns402 .
+
+10. Statement functions among executable statements are now always
+    disallowed.  Previously, if there were DATA statements, then
+    an unintended "extension" allowed statement function definitions
+    to appear among the executables.  (Statement function definitions
+    may appear among DATA statements, but not after the first
+    executable statement.)
+
+Please send further bug reports to dmg.

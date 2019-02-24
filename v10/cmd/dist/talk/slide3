@@ -1,0 +1,32 @@
+.ce
+Cascaded Redistribution
+.PS
+ellipseht = 1.8 * ellipseht
+ellipsewid = 1.8 * ellipsewid
+boxht = 1.8 * boxht
+boxwid = 1.8 * boxwid
+M: ellipse "master" "sources"
+I: box "master" "iris" at M.c + (0,-1.5 * boxht)
+V: box "master" "vax" at I.c + (-1.5 * boxwid, 0)
+S: box "master" "sun" at I.c + (1.5 * boxwid, 0)
+arrow dashed from M.sw to V.n
+arrow dashed from M.s to I.n
+arrow dashed from M.se to S.n
+boxwid = boxwid / 5
+define boxes {
+	box at ($1.c.x - 2.5 * boxwid, $1.c.y - 1.8 * boxht)
+	arrow dashed from 1/7 between $1.sw and $1.se to last box .n
+	box at ($1.c.x - 1.5 * boxwid, $1.c.y - 1.8 * boxht)
+	arrow dashed from 2/7 between $1.sw and $1.se to last box .n
+	box at ($1.c.x - .5 * boxwid, $1.c.y - 1.8 * boxht)
+	arrow dashed from 3/7 between $1.sw and $1.se to last box .n
+	box at ($1.c.x + .5 * boxwid, $1.c.y - 1.8 * boxht) invis wid 2 * boxwid
+	"..." with .c at last box.c
+	box at ($1.c.x + 2.5 * boxwid, $1.c.y - 1.8 * boxht)
+	arrow dashed from 6/7 between $1.sw and $1.se to last box .n
+	$2 at $1.s + (0, -2 * boxht)
+}
+boxes(V, "vaxes")
+boxes(I, "irises")
+boxes(S, "suns")
+.PE

@@ -1,0 +1,126 @@
+
+8 November 1989
+
+This file describes the content of the version of cfront prepared at
+ODI for transmission to AT&T.
+
+DESCRIPTION
+
+The version of cfront in this directory is a subset of the current
+development version of cfront at Object Design, Inc. Its primary
+purpose is to implement parameterized types. However, it includes a
+few other changes.
+
+The precise content of this version is a compromise between two goals.
+The first goal was to make a compiler with parameterized types
+containing as little different as possible from 2.00.  The second goal
+was to make a compiler that we were substantially confident introduced
+no bugs, either in the parameterized type area proper or in the rest
+of the language. 
+
+It would be very difficuly to demonstrate that a particular bug fix is
+not required for the template facility. Therefore, this version
+includes all of the bugfixes and imnprovements to low-level substrate
+that were either directly needed by parameterized types or difficult
+to remove without risk of breaking them.
+
+The major changes from 2.0 are listed here. Detailed descriptions of
+bug fixes are supplied in the file BUGFIXES.
+
+CHANGES
+
+1- Substrate and Debugging Support
+
+  a- tree walking and copying
+
+The parameterized type implementation depends on the ability to apply
+an procedure to each node of a tree resulting from syn() in order to
+copy it, applying the parameterization. The tree walker supplies this
+functionality. tree_walk.c and tree_walk.H contain the tree walker.
+
+In order to for the tree walker to work, it must be able to determine
+by examination which fields of any given nodes contains nodes that
+need to be walked further, and which contain other quantities. In
+2.00, several unions punned storage between nodes and other things in
+ways that were difficult or impossible to disambiguate by examination
+of the node in question. Therefore, we added some new fields to nodes
+in order to remove these ambiguities. We also changes some auxiliary
+structures to be based on node so that the tree walker could process
+them.
+
+The tree walker uses the "discriminator" member functions of the
+various nodes with unions. These functions take a node and a union
+index and return an index identifying a particular union member. 
+In fact, this is more information that the walker needs, since once it
+knows that a field contains a pointer to a subtype of node it can tell
+what kind of node it is by examining the base.
+
+The walker needs to know which base values correspond to which
+structures. node_classes.H records that information.
+
+The tree copyier is an application of the tree walker that copies a
+syn() tree. It is used directly by the template implementation.
+
+  b- tree dumping
+
+Another application of the tree walker is the tree dumper. It displays
+the tree symbolically, and can handle dcl processed trees. It is built
+to be runnable either in cfront or in a debugger. At ODI, our debugger
+has a command to print cfront nodes that makes use of this.
+
+The +OTfile control argument to cfront causes a dump of the syn() tree
+for each top level item in turn.
+
+  c- storage management
+
+There are three changes to storage management.  First, the
+constructors that assign to this are replaced by new and delete
+operators. We found this made it much easier to set breakpoints to
+discover where nodes were deleted inappropriately.
+
+Second, no storage is recycled during the compilation of one top level
+item. Deleted nodes are accumulated on the free list until the end of
+the current top level item, and then are made available to the next
+one. This reduces greatly the impact of misplaced uses of delete, and
+leaves many more tracks of problems that would otherwise be written
+over by node reuse.
+
+Finally, the +OD option forces runtime checking at a few critical
+places for processing of a node which has already been deleted.
+
+2- Parameterized Types
+
+<Sam should insert a description here>
+
+3- limit_renaming
+
+<rick can improve this I hope>
+
+To make debugging of c++ programs easier, ODI added a mode of
+operation to cfront that makes the variable names in the generated C
+code correspond much more closely to the variable names in the c++
+code.
+
+In a modern C compiler (such as Sun's), there is no need for the __N
+tags on scalar variables or the structure name tags on structure
+elements. The +Ogx argument to cfront removes these and other
+unneccessary renamings, making the resulting code much easier to read.
+
+4- constant enforcement
+
+This version of cfront enforced const in all cases that we have been
+able to test. In particular, 
+
+struct C{
+  int x;
+};
+
+   const C c;
+
+   c.x = 1;
+
+is an error as it should be.
+
+The implementation strategy is to propagate const up the expr tree
+from DOT operators as needed.
+

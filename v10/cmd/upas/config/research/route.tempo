@@ -1,0 +1,37 @@
+#!/bin/sh -p
+PATH=/bin:/usr/bin:/usr/lib/upas; export PATH
+sender=$1;shift
+system=$1;shift
+sys=`cat /etc/whoami`
+
+# save the mail
+cat > /tmp/ur$$
+
+#
+# Try direct smtp via internet.
+#
+temp=
+for i in $*; do temp="$temp $system!$i"; done
+tosmtp $sender $system $temp < /tmp/ur$$ &&
+	rm -f /tmp/ur$$ &&
+	exit 0
+
+#
+# Now try the gateways.
+#
+for gsys in bebop.tempo.nj.att.com forte.tempo.nj.att.com
+do
+	temp=
+	for i in $*; do temp="$temp $gsys!uucp!$i"; done
+	tosmtp $sender $gsys $temp < /tmp/ur$$ &&
+		rm -f /tmp/ur$$ &&
+		exit 0
+done
+
+#
+# finally try old faithful, slow, and boring: uucp to allegra.
+#
+uux - -a "$sender" "allegra!rmail" "($*)" < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+rv=$?
+rm -f /tmp/ur$$
+exit $rv

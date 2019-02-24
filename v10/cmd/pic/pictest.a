@@ -1,0 +1,5664 @@
+!<arch>
+Compare         672954389   9     1     100777  91        `
+for i in $*
+do
+	echo $i:
+	a.out $i >foo2
+	/usr/bin/pic $i >foo1
+	diff foo1 foo2 | ind
+done
+
+pt.arc          705721324   9     1     100644  1461      `
+.nf
+This should be a circle
+.PS
+arc;arc;arc;arc
+.PE
+This should be a wave
+.PS
+arc; arc cw; arc cw; arc
+.PE
+This should be an oval
+.PS
+arc; arc; line left; arc; arc; line right
+.PE
+This should be a ()
+.PS
+arc from 0,0 to 0,1.0 rad 1.0
+arc from 0,1.0 to 0,0 rad 1.0
+.PE
+This ought to be the same
+.PS
+arc to 0,1.0 rad 1.
+arc to 0,0
+.PE
+Arc down with arrow
+.PS
+arc cw ->
+.PE
+Arc up with arrow
+.PS
+arc ->
+.PE
+.bp
+.ps 18
+.vs 24
+.PS
+A: circle radius .50i "A"
+circle radius .4i at A
+move to A.e
+move right 2i
+B: circle radius .50i "B"
+move down 1.5i from B.s
+C: circle radius .50i "C"
+move left 2i from C.w
+D: circle radius .50i "D"
+arc -> cw from A.e + 0,.1i to B.w + 0,.1i radius 3i
+"a" at last arc.c + 0,3i + .1i
+arc -> cw from B.w - 0,.1i to A.e - 0,.1i radius 3i
+"a" at last arc.c - 0,3i - .1i
+arc -> cw from D.e + 0,.1i to C.w + 0,.1i radius 3i
+"a" at last arc.c + 0,3i + .1i
+arc -> cw from C.w - 0,.1i to D.e - 0,.1i radius 3i
+"a" at last arc.c - 0,3i - .1i
+arc -> from A.s - .3i,0 to D.n - .3i,0 radius 3i
+"b" at last arc.c - 3i + .2i,0
+arc -> from D.n + .3i,0 to A.s + .3i,0 radius 3i
+"b" at last arc.c + 3i + .2i,0
+arc -> from B.s - .3i,0 to C.n - .3i,0 radius 3i
+"b" at last arc.c - 3i + .2i,0
+arc -> from C.n + .3i,0 to B.s + .3i,0 radius 3i
+"b" at last arc.c + 3i + .2i,0
+.PE
+.PS 6i
+circlerad = .5
+A: circle  "A"
+arrow "i" above
+circle  "B"
+arrow "g" above
+circle "C"
+arrow "e" above
+circle  "D"
+arrow "\en" above
+E: circle  "E"
+circle radius .4i at E
+.PE
+
+pt.arrow        705721324   9     1     100644  416       `
+.sp 1i
+.PS
+define foo X
+.ps $1
+box "$1"
+arrow down .25 right .25; move right .05
+arrow right .25; move right .05
+arrow up .25; move right .05
+arc cw ->; move right .05
+arc ->; move right .05
+arc <-; move right .05
+arc cw <-; move right .05
+X
+.PE
+.PS
+foo(24)
+.PE
+.PS
+foo(16)
+.PE
+.PS
+foo(10)
+.PE
+.PS
+foo(9)
+.PE
+.PS
+foo(8)
+.PE
+.PS
+arrowhead = 7
+foo(24)
+.PE
+.PS
+foo(16)
+.PE
+.PS
+foo(10)
+.PE
+.PS
+foo(9)
+.PE
+.PS
+foo(8)
+.PE
+pt.ava          705721324   9     1     100644  407       `
+.EQ
+delim $$
+.EN
+Pictures from the dragon book.
+.sp
+Page 96:
+.nf
+.sp
+.nf
+.PS
+w = 1.; h = .75;	# for the ellipse
+Center: circle rad 0.025;
+move left .375;		# left ellipse
+ellipse wid w ht h;
+move up .1; "$N sub 1$"; move down .1;
+move left .25; circle diam .2; "$i$";
+move to Center + .375,0;	# right ellipse
+move up .1; "$N sub 2$"; move down .1;
+move right .25; circle diam .2; circle diam .25; "$f$";
+.PE
+
+pt.ava1         705721324   9     1     100644  1181      `
+.po .25i
+.PS
+h = .5i
+w = .75i
+dh = .02i
+dw = .1i
+r1 = .05i
+circlerad = r1
+
+define part /
+	Card: line from Start \
+		up dh \
+		then right w \
+		then down h \
+		then left dw
+	line from Start + (dh,dh) to Root chop 0 chop r1
+	Start: start of Card + (dw,dh)
+/
+define spce /
+	Start: Start + (dw,dh)
+/
+
+Origin: box ht h wid w
+Start: last box.nw - (0,dh)
+Top: Start + (3*w,6*h)
+circle at Top
+fixh = h/4
+define node X
+	Root: Start + (h/2, 3*h-fixh)
+	fixh = fixh + h/4
+	circle at Root
+	line from Root to Top chop
+	part; part; part; part; part; spce; part
+X
+
+Left: node; node; node; spce; spce; node; node; node
+right
+circle rad 2*r1 at Left
+circle rad 5*w/4 with .e at Origin + (-h, 6*h)
+arrow from 2nd last circle to last circle \
+	chop 2*r1 chop last circle.rad
+[
+	Ptr: [
+		boxht = h; boxwid = dw
+		A: box
+		B: box
+		C: box
+		box wid 2*boxwid "..."
+		D: box
+	]
+	Block: [
+		boxht = 2*dw; boxwid = 2*dw
+		movewid = 2*dh
+		A: box; move
+		B: box; move
+		C: box; move
+		box invis "..." wid 2*boxwid; move
+		D: box
+	] with .t at Ptr.s - (0,h/2)
+	arrow from Ptr.A to Block.A.nw
+	arrow from Ptr.B to Block.B.nw
+	arrow from Ptr.C to Block.C.nw
+	arrow from Ptr.D to Block.D.nw
+] at last circle
+.PE
+
+pt.bigdef       705721324   9     1     100644  1086      `
+.EQ
+delim $$
+.EN
+.PS
+define Flight2 %
+
+	# recompute eta because we now want to find the midpoint
+	# of the flight.  however, now the flight must take off
+	# in the direction of tau, not the direction given by h
+	# and eta, computed using sin(eta) and sin(tau)
+
+	eta = atan2(h,r/2);
+	seta = sin(eta); stau = sin(tau);
+	if seta*stau >= 0 then | side = 1 | else | side = -1 |
+	teta = h/seta; teta = max(teta,-teta);
+	ma = eta*side+theta;
+	O : "";
+	P : "" at O + px,py
+	G : "" at O + teta*cos(ma),teta*sin(ma);
+	if ctau*ceta >= 0 then
+	|
+		# take-off fly and land
+
+		ttau = h/stau; ttau = max(ttau,-ttau);
+		A : [	GuidePP(teta,eta*side+theta,ttau,tau+theta);
+		] with .O at O;
+		B : [	GuidePP(teta,pi-eta*side+theta,ttau,pi-tau+theta);
+		] with .O at Here + px,py;
+		spline $1 from A.B to A.G to B.G to B.B
+	|else
+	|
+		# take-off backwards
+
+		ceiling = max(h,-h);
+		A : [	GuidePP(ceiling,pi*side/2+theta,ceiling,tau+theta);
+		] with .O at O;
+		B : [	GuidePP(ceiling,pi*side/2+theta,ceiling,pi-tau+theta);
+		] with .O at Here + px,py;
+		spline $1 from A.B to A.G to G to B.G to B.B
+	|
+%
+.PE
+pt.blitbug      705721324   9     1     100644  1063      `
+.vg
+.ll 5i
+Blit Software
+
+.PS
+UK: line dashed from 0,0 to 3,0
+	"User" "Kernel" at UK + .4,0
+HT: line dashed from UK.end + (0,1.4) to UK.end - (0,1.4)
+	"Host  " rjust at end of last line + (0,.1)
+	"  Terminal" ljust at end of last line + (0,.1)
+U1: box ht .75 wid .75 "User" "Proc" at UK + 1,1
+U2: box same "User" "Proc" with .w at U1.e + .1,0
+Mux: box ht .5 wid .5 "mux" with .nw at U2.e + .1,0
+
+	spline from U1.s down 1 then right 1.5 then up to .33<Mux.s,Mux.sw>
+	spline from U2.s down .8 then right .55 then up to .66<Mux.s,Mux.sw>
+Muxt: box ht .75 wid .75 "mux" "term" at end of UK + (1.2,-.3)
+	spline from .5<Mux.s,Mux.se> down 1 then right to Muxt.w
+	L: line from Muxt.e right .3 down .1
+		" mouse" ljust at L.end
+	line from .5<Muxt.e,Muxt.se> right .1 down .3
+		" keyboard" ljust at end of last line
+B1:	box ht .3 wid .4 at Muxt + (-.5,1) "\s-2u1\s0"
+B2:	box ht .2 wid .5 at Muxt + (-.1,1.3) "\s-2u2\s0"
+B3:	box ht .5 wid .2 at Muxt + (.2,1) "\s-2u3\s0"
+	line from B1.s to Muxt.n - (.05,0)
+	line from B2.s to Muxt.n
+	line from B3.s to Muxt.n + (.05,0)
+.PE
+
+pt.bsb          705721324   9     1     100644  3524      `
+.EQ
+delim ``
+.EN
+.KS
+.PS 4.5i
+define Colbx %box "COL"%
+define BLbx %box "BL"%
+define Nbx %box "N"%
+u=1.
+w=6*u; t=11*u
+h = u
+e = .05
+
+line down t from 0,t
+Bot:	line right w
+line up t
+
+Box0:	BLbx wid 4*w/5 ht 3*h/2 with .sw at 0,0
+Box1:	BLbx wid 3*w/4 ht h with .sw at Box0.nw
+Box2:	BLbx wid w/2 +2*e ht 3*h/2 with .sw at Box1.nw
+Line1:	line  right w  from Box2.nw
+
+Col1:	Colbx wid 5*w/12 ht h+e with .ne at Line1.end
+Col2:	Colbx wid w/3+e ht h/4 with .ne at Col1.se
+Col3:	Colbx wid w/5+e ht h+e with .ne at Col2.se
+
+Two1:	BLbx wid w/2-e ht h with .sw at Line1.start
+Two2:	BLbx wid 5*w/12 ht 5*h/8 with .sw at Two1.se
+Two3:	BLbx wid w/3+e ht h with .sw at Two2.nw
+Two4:	BLbx wid w/3+e ht 3*h/4 with .sw at Two1.nw
+Two5:	BLbx wid w/3+e ht h with .sw at Two4.r.x,Two3.t.y
+Line2:	line  right w  from 0,Two5.t.y
+
+Col21:	Colbx wid w/4+2*e ht h/2 with .ne at Line2.end
+Col22:	Colbx wid w/4+e ht h/4+2*e with .ne at Col21.se
+
+Thr1:	BLbx wid w/3-e ht h/2 with .sw at Line2.start
+Thr2:	BLbx wid w/3-e ht 3*h/4 with .sw at Thr1.se
+Thr3:	BLbx wid w/4+e ht h/4 with .sw at Thr2.se
+Thr4:	BLbx wid w/4+e ht h/2 with .sw at Thr3.nw
+Thr5:	BLbx wid w/4+e ht 3*h/2 with .sw at Thr1.nw
+Line3:	line  right w  from Thr5.nw
+
+Col31:	Colbx wid w/4-2*e ht h/2 with .ne at Line3.end
+Col32:	Colbx wid w/5+e ht h/2 with .ne at Col31.se
+
+F1:	BLbx wid w/4-e ht h/4 with .sw at Line3.start
+F2:	BLbx wid w/5+e ht h/2 with .sw at F1.se
+F3:	BLbx wid w/5+e ht 3*h/4 with .sw at F2.se
+F4:	BLbx wid w/5+e ht h/2-2*e with .sw at F3.se
+Line4:	line  right w  from 0,F3.nw.y
+
+	hh = 3*h/2+2*e
+N1:	Nbx wid w/8 ht hh with .sw at Box0.se
+	hh=hh-2*e
+N2:	Nbx wid w/16 ht hh with .sw at N1.se
+	hh = h
+N3:	Nbx wid w/20 ht hh with .sw at Box2.r.x,N1.t.y+hh
+N21:	Nbx wid w/15 ht hh with .sw at Two2.se
+	hh = 3*h/4
+N22:	Nbx wid w/20 ht hh with .sw at Two3.r.x,N21.t.y
+	hh = hh-2*e
+N23:	Nbx wid w/12 ht hh with .sw at N22.se
+N24:	Nbx wid w/35 ht hh with .sw at Two5.r.x,N22.t.y
+
+N31:	Nbx wid w/20 ht hh with .sw at Thr3.se
+N32:	Nbx wid w/40 ht hh with .sw at N31.se
+N33:	Nbx wid w/4 ht hh with .sw at Thr5.r.x,N31.t.y+hh
+N34:	Nbx wid w/8 ht hh-e with .sw at N33.se
+N35:	Nbx wid w/12 ht hh-2*e with .sw at N34.se
+	hh=hh-2*e
+N41:	Nbx wid w/12 ht hh with .sw at F4.se
+N51:	Nbx wid w/5 ht hh with .sw at Line4.start
+N52:	Nbx wid w/12 ht hh with .sw at N51.se
+	hh = hh - e
+N53:	Nbx wid w/5 ht hh with .sw at N52.se
+	hh = hh - e
+N54:	Nbx wid w/6 ht hh with .sw at N53.se
+N55:	Nbx wid w/20 ht hh with .sw at N54.se
+	hh = hh -e
+N56:	Nbx wid w/8 ht hh with .sw at N55.se
+N57:	Nbx wid w/6 ht hh with .sw at N56.se
+	hh = hh-e
+N58:	Nbx wid w/8 ht hh with .sw at N51.nw
+N59:	Nbx wid w/40 ht hh with .sw at N58.se
+	hh = hh-e
+N510:	Nbx wid w/5 ht hh with .sw at N59.se
+Line5:	line right w-N59.r.x dashed from N59.ne
+
+H0:	line right u/2 dashed from Bot.end
+	"  `h sub 0`" at H0.end ljust
+H1:	line right u/2 dashed from Line1.end
+	"  `h sub 1`" at H1.end ljust
+H2:	line right u/2 dashed from Line2.end
+	"  `h sub 2`" at H2.end ljust
+H3:	line right u/2 dashed from Line3.end
+	"  `h sub 3`" at H3.end ljust
+H4:	line right u/2 dashed from Line4.end
+	"  `h sub 4`" at H4.end ljust
+H5:	line right u/2 dashed from Line5.end
+	"  `h sub 5`" at H5.end ljust
+
+R1:	line invis from H0.start to H1.start "  `R sub 1`" ljust
+R2:	line invis from H1.start to H2.start "  `R sub 2`" ljust
+R3:	line invis from H2.start to H3.start "  `R sub 3`" ljust
+R4:	line invis from H3.start to H4.start "  `R sub 4`" ljust
+R5:	line invis from H4.start to H5.start "  `R sub 5`" ljust
+.PE
+.sp
+.ce
+Figure 2.  A UD packing.
+.KE
+pt.bugs         705721324   9     1     100644  2708      `
+this looks like a bug in troff --
+changing the spline to line works,
+as does adding the X.  the pic output
+actually looks ok from both
+
+.PS
+Muxt: box ht .75
+	spline from Muxt.s down then right to Muxt.w; #"X"
+	L: line from Muxt.e
+.PE
+.PS
+#generated deref thru 0 on sun, 3b20:
+circle below "abc"
+.PE
+.PS
+box
+arrow right from 2/3 <last box.ne, last box.se>
+.PE
+.PS
+"x" at .5 < (0,0),(1,1) >
+.PE
+.PS 
+CRT: circle "DISK"
+"  paper" ljust at  0.25, 0.25
+.PE
+.PS
+define ur "then up right"
+define ul "then up left"
+define dr "then down right"
+define dl "then down left"
+
+spline  down right dr ur ur ur ul ul ul ul dl dl dl dl dr dr
+.PE
+.PS
+box
+.PF
+.PS
+arrow
+.PE
+.PS
+"abc" with .w at 1,2
+.PE
+.PS
+line from 1,0 to 0,0
+X: 1,0
+"x"
+.PE
+.PS
+define Lulu %
+	if "$2" == "" then || else | x = $2; |
+	if "$3" == "" then || else | y = $3; |
+	if "$4" == "" then | n = m; | else | n = $4; |
+	xx=x*hu; vx=xx*(1-n)/2; yy=y*vu; vy=yy*(1+n)/2
+	spline $1 to Here + vx,vy to Here + xx,yy
+	kx = vx/2;		ky = vy/2;
+	mx = (vx+xx)/2;		my = (vy+yy)/2;
+	mxk = mx-kx;		myk = my-ky;
+	vxk = vx-kx;		vyk = vy-ky;
+
+	b = 2*vxk; a = mxk-b;
+	d = 2*vyk; c = myk-d;
+	bcad = b*c - a*d;
+	k = .5*bcad*(a*b+c*d)/(a*a+c*c);
+	ksq = k*k;
+	ta = d*bcad-2*c*k;
+	tb = -b*bcad+2*a*k;
+	ey = (ksq+k*ta/c)/(tb+a*ta/c);
+	ex = (ksq-tb*ey)/ta;
+% x=0; y=0; m=0; # initially
+
+hu = 0.3i; vu = hu;
+define T % { Lulu(,6,3,$1);} %
+
+T(-1.5)
+T(-1)
+T(-.5)
+T(0)
+T(.5)
+T(1)
+T(1.5);
+
+.PE
+.PS
+define Lulu %
+	if "$2" == "" then || else | x = $2 * hu; |
+	if "$3" == "" then || else | y = $3 * hu; |
+	{ line $1 to Here + x,y chop c
+	} move to Here + x,y
+%
+x = 0; y = 0; c = 0
+.PE
+.PS
+define S % "$1"; { circle rad .12i at Here; } %
+define F % S($1); { circle rad .1i at Here; } %
+define T % Lulu(-> "$1" above,$2,$3); %
+c = .12; hu = .75; vu = .5
+T(start,1,0); S(0);
+{	T(<,1,1); F(1);
+	{	T(=,1,.75); F(2);
+	}{	T(>,1,-.75); F(3);
+	}
+}{	T(=,1,0); F(4);
+}{	T(>,1,-1); F(5); T(=,1,0); F(6);
+}
+.PE
+this should scale to 1 wide 2 high:
+
+.PS2 1
+box wid 1 ht 1
+circle rad .5 at last box
+.PE
+.PS
+# When the next line is in, a 60000 X 60000 picture shrunk to 7 X 7
+# problem is that size of B: [ O: 0,0 ] is zero, but it's set internally
+# to -60000
+# NOW FIXED
+
+B: [ Origin: (0,0) ]
+	#A: [ Origin: "" at (0,0) ] # This one works fine
+
+A: [ Origin: 
+	line from 0,0 to 1,1
+] with .Origin at B
+.PE
+.PS
+#	if the closing curly of { if $3 ...} is on the same line,
+#	the motion is not restored.  If I split it:
+#		{ if ...
+#		}
+#	it seems to work
+#	also if use ; or else {}
+# CAN'T SEE ANYTHING WRONG NOW
+
+define nibble {	# nibble(len, "label", offset, any)
+Nib:	box $2 $4
+	{ if $3 >= 0 then { "\s-4 $3\s0" at Nib.w + (0,boxht/3) ljust } ; }
+}
+right
+nibble(8, "label", 0000)
+nibble(8, "word 0", -1)
+.PE
+pt.chop         705721325   9     1     100644  355       `
+.PS
+circle at .25,.25
+circle at .5,1.
+line from 1st circle to last circle chop
+.PE
+.PS
+circle at 0,0
+circle at -1i,-2i
+line from 1st circle to last circle chop
+circle at 1i,-2i
+line from 1st circle to last circle chop
+.PE
+.PS
+line from 0,0 to 0,1 to 1,1 to 1,0 to 0,0 chop
+"x" at 0,0
+"y" at 1,0
+.PE
+.PS
+line from 0,0 to 1,1 chop
+"x" at 0,0
+"y" at 1,0
+.PE
+
+pt.copy         705721325   9     1     100644  88        `
+.PS
+copy thru / "abc" at 1,1 /
+x
+x
+x
+.PE
+.PS
+copy thru / box at $1,$2 /
+1 2
+3 4
+5 6
+.PE
+pt.corner       705721325   9     1     100644  303       `
+.PS 3i
+circle
+line from last circle.ne "ne"
+line from last circle.nw "nw" left
+line from last circle.sw "sw"
+line from last circle.se "se" right
+.PE
+.PS 3i
+ellipse
+line from last ellipse.ne "ne"
+line from last ellipse.nw "nw" left
+line from last ellipse.sw "sw"
+line from last ellipse.se "se" right
+.PE
+
+pt.ellipse      705721325   9     1     100644  273       `
+.PS
+ellipse wid 1i ht .1i
+.PE
+.PS
+ellipse wid 1i ht .25i
+.PE
+.PS
+ellipse wid 1i ht .5i
+.PE
+.PS
+ellipse wid 1i ht .75i
+.PE
+.PS
+ellipse wid 1i ht 1i
+.PE
+.PS
+ellipse wid .1i ht 1i
+.PE
+.PS
+ellipse wid .25i ht 1i
+.PE
+.PS
+ellipse wid .5i ht 1i
+.PE
+.PS
+ellipse wid .75i ht 1i
+.PE
+
+pt.for          705721325   9     1     100644  425       `
+.PS
+copy thru / box "$3" at $1,$2 /
+0 0 middle
+1 1 upper.right
+-1 -1 lower.left
+.PE
+
+
+===================================================================================
+
+
+.PS
+for i = 1 to 5 do X box ht i wid i at 0,0 X
+.PE
+
+
+===================================================================================
+
+
+.PS
+for i = 1 to 5 do X
+	if i % 2 == 0 then Y
+		circle rad i/2 at 0,0
+	Y else Y
+		box ht i wid i at 0,0
+	Y
+X
+.PE
+
+pt.gray         705721325   9     1     100644  207       `
+.sp
+HELLO:
+.PS
+define b /
+[ right
+  box ht .7 wid 1.5 "hello" "world" "$1" fill $1
+  circle rad .3 "hi" fill $1
+  ellipse ht .3 wid .4 "bye" fill $1 ]; move .25
+/
+down
+b(1)
+b(.9)
+b(.8)
+b(.7)
+b(.6)
+b(.5)
+.PE
+
+pt.hartwell     705721325   9     1     100644  2524      `
+.PS
+boxwid=2.0i
+psize=.06
+.ps 9
+#
+define	memsect	X	box ht $3 $4 $5 $6 $7 $8 $9 ; \
+			move to last box.nw ; \
+			move left psize/2 then down psize*3/2 ; \
+			$1 rjust ; \
+			move to last box.sw ; \
+			move left psize/2 then up psize ; \
+			$2 rjust ; \
+			move to last box.s ; \
+			down ; \
+		X
+#
+define	filler	X	box ht $1 $2 $3 $4 $5 $6 $7 $8 $9 ; \
+			move to last box.s ; \
+			down ; \
+		X
+#
+define	bracket	X	move to $1.ne then down psize*2 ; \
+			line <- right psize*5 ; \
+			move to $2.se then up psize*2 ; \
+			line <- right psize*5 ; \
+			line from 2nd last line.r to last line.r ; \
+			line right from last line.c ; \
+			$3 ljust ; \
+			move to $2.s ; \
+			down ; \
+		X
+#
+#
+#
+Traps:	memsect("0", "034", 0.4i, "Processor Traps")
+	filler(0.25i)
+	memsect("060-4", "", psize*3, "Console Interrupts")
+	filler(0.25i)
+	memsect("0100", "", psize*3, "60 Hz Line Clock")
+EndT:	memsect("0104", "0776", 0.6i)
+#
+	bracket(Traps, EndT, " Low Core Vectors")
+#
+	move down 0.1i
+Start:	memsect("01000", "", 0.25i, "start:")
+	filler(0.75i, "main()", ".", ".", "goto start;")
+	filler(0.35i, "user subroutines")
+	filler(0.35i, "device drivers")
+	filler(0.75i, "standard libraries")
+	filler(0.75i, "initialized data", "and", "BSS data")
+	filler(0.5i invis, "Available memory")
+	line <- from last box.sw to last box.nw
+	line <- from last box.se to last box.ne
+	line <- from last box.s to last box.n
+	move to last box.s
+	move down 0.2i
+EndS:	memsect("", "157776", 0.5i invis, "stack")
+	line -> from last box.sw to last box.nw
+	line -> from last box.se to last box.ne
+	line <- from last box.n to last box.s
+	line from last box.sw to last box.se
+#
+	bracket(Start, EndS, " Downloaded Program (Max 56Kb)")
+#
+	move down 0.1i
+Devs:	memsect("160000", "", 0.5i)
+	memsect("173000", "173776", 0.35i, "ROM Boot")
+	filler(0.25i)
+	memsect("177560-6", "", psize*3, "Console registers")
+EndD:	memsect("", "177776", 0.5i)
+#
+	bracket(Devs, EndD, " Device Registers")
+#
+.PE
+.PS
+Locore:	box "Low Core" "Vectors"
+	line -> right from Locore.e
+DevDr:	box "Device" "Drivers"
+	move to Locore.s
+	move down
+Init:	box "Initialize"
+	line <- left from Init.w
+Start:	circle "Start"
+	move to Init.s
+	line -> down
+Main:	box ht 2*boxht "User" "Program"
+	move to Main.ne then down Main.ht/8
+	line <-> right
+DevLib:	box "Device" "Libraries"
+	move to DevLib.n
+	line <-> to DevDr.s
+	move to Main.se then up Main.ht/8
+	line <-> right
+Libs:	box "Standard" "Libraries"
+	move to Main.s
+	line -> down
+Reset:	box "reset"
+	line down then left Reset.x - Start.x
+	line -> to Start.s
+.PE
+pt.jap          705721325   9     1     100644  9484      `
+j.a             323723756   9     1     100666  132       `
+.PS
+scale = 200
+line from 0,220 to 116,220
+arc cw to 140,152 rad 38
+arc cw to 63,108 rad 134
+line from 63,168 to 63,58
+arc cw to 7,0 rad 60
+.PE
+j.cdot          323887266   9     1     100666  82        `
+.PS
+scale = 200
+line from 52,137 to 52,103
+line to 102,103
+line to 102,137
+line to 52,137
+.PE
+j.chi           323885532   9     1     100666  120       `
+.PS
+scale = 200
+arc cw from 144,240 to 8,219 rad 402
+line from 0,131 to 154,131
+line from 88,225 to 88,89
+arc cw to 28,0 rad 97
+.PE
+j.circle        323989443   9     3     100666  32        `
+.PS
+scale = 200
+circle at 51,189 rad 51
+.PE
+j.comma         323887201   9     1     100666  94        `
+.PS
+scale = 200
+line from 24,-51 to 84,49
+line to 124,49
+line to 124,39
+line to 34,-51
+line to 24,-51
+.PE
+j.ddot          323887068   9     1     100666  62        `
+.PS
+scale = 200
+line from 0,240 to 46,144
+line from 80,234 to 126,140
+.PE
+j.e             323883213   9     1     100666  86        `
+.PS
+scale = 200
+line from 9,170 to 145,170
+line from 77,170 to 77,12
+line from 0,12 to 154,12
+.PE
+j.elong         323887237   9     1     100666  79        `
+.PS
+scale = 200
+line from 7,125 to 7,115
+line to 147,115
+line to 147,125
+line to 7,125
+.PE
+
+j.fu            323886062   9     1     100666  83        `
+.PS
+scale = 200
+line from 0,224 to 120,224
+arc cw to 148,196 rad 28
+arc cw to 32,0 rad 228
+.PE
+
+j.ha            323885981   9     1     100666  94        `
+.PS
+scale = 200
+arc cw from 28,198 to 0,0 rad 426
+arc cw from 108,228 to 154,44 rad 424
+line to 154,0
+.PE
+j.he            323886097   9     1     100666  83        `
+.PS
+scale = 200
+line from 0,144 to 23,197
+arc cw to 72,204 rad 28
+arc cw to 154,13 rad 400
+.PE
+
+j.hi            323958989   9     1     100666  116       `
+.PS
+scale = 200
+line from 23,176 to 154,176
+line from 23,240 to 23,37
+arc to 60,0 rad 37
+line to 78,0
+arc to 154,20 rad 160
+.PE
+j.ho            323886148   9     1     100666  133       `
+.PS
+scale = 200
+line from 0,184 to 154,184
+line from 77,240 to 77,0
+arc cw from 20,122 to 0,27 rad 258
+arc cw from 136,115 to 154,26 rad 255
+.PE
+
+j.i             323724624   9     1     100666  70        `
+.PS
+scale = 200
+arc cw from 154,240 to 0,130 rad 352
+line from 92,179 to 92,0
+.PE
+j.ka            323883396   9     1     100666  169       `
+.PS
+scale = 200
+line from 0,184 to 130,184
+arc cw to 154,160 rad 24
+line to 154,30
+arc cw to 124,0 rad 30
+arc cw to 89,8 rad 70
+line from 55,240 to 55,185
+arc cw to 0,8 rad 332
+.PE
+
+j.ke            323958345   9     1     100666  122       `
+.PS
+scale = 200
+arc cw from 34,240 to 0,136 rad 176
+line from 23,178 to 154,178
+line from 105,178 to 105,89
+arc cw to 16,0 rad 89
+.PE
+j.ki            323883440   9     1     100666  87        `
+.PS
+scale = 200
+line from 8,184 to 145,184
+line from 0,104 to 154,104
+line from 73,240 to 83,0
+.PE
+
+j.ko            323958455   9     1     100666  88        `
+.PS
+scale = 200
+line from 4,203 to 108,203
+arc cw to 136,175 rad 28
+line to 136,14
+line to 0,14
+.PE
+j.ku            323958154   9     1     100666  104       `
+.PS
+scale = 200
+arc from 0,136 to 46,224 rad 146
+line to 132,224
+arc cw to 154,202 rad 22
+arc cw to 0,6 rad 247
+.PE
+j.lquote        323887297   9     1     100666  63        `
+.PS
+scale = 200
+line from 47,240 to 47,100
+line from 47,240 to 154,240
+.PE
+
+j.ma            323886194   9     1     100666  108       `
+.PS
+scale = 200
+line from 0,227 to 124,227
+arc cw to 148,179 rad 30
+line to 65,63
+arc cw from 0,96 to 108,0 rad 153
+.PE
+j.me            323886329   9     1     100666  80        `
+.PS
+scale = 200
+arc cw from 122,232 to 0,0 rad 252
+arc cw from 32,146 to 144,58 rad 243
+.PE
+j.mi            323886246   9     1     100666  118       `
+.PS
+scale = 200
+arc cw from 13,223 to 136,220 rad 252
+arc cw from 24,136 to 119,132 rad 255
+arc cw from 0,24 to 154,0 rad 256
+.PE
+j.mo            323886381   9     1     100666  130       `
+.PS
+scale = 200
+line from 8,226 to 143,226
+line from 0,142 to 154,142
+line from 68,226 to 68,36
+arc to 104,0 rad 36
+arc to 154,12 rad 108
+.PE
+j.mu            323959801   9     1     100666  102       `
+.PS
+scale = 200
+line from 79,228 to 3,41
+arc to 22,8 rad 22
+line to 133,8
+arc to 152,39 rad 21
+line to 132,83
+.PE
+j.n             323970403   9     1     100666  118       `
+.PS
+scale = 200
+arc cw from 6,185 to 82,178 rad 204
+line from 3,24 to 0,0
+line to 30,0
+arc to 154,124 rad 124
+line to 154,144
+.PE
+j.na            323885746   9     1     100666  83        `
+.PS
+scale = 200
+line from 0,180 to 154,180
+line from 91,240 to 91,80
+arc cw to 22,0 rad 80
+.PE
+
+j.ne            323885877   9     1     100666  163       `
+.PS
+scale = 200
+line from 77,240 to 77,196
+line from 12,196 to 116,196
+arc cw to 131,152 rad 25
+line to 0,44
+line from 77,107 to 77,0
+arc cw from 95,122 to 154,62 rad 211
+.PE
+
+j.ni            323885775   9     1     100666  65        `
+.PS
+scale = 200
+line from 12,186 to 142,186
+line from 0,12 to 154,12
+.PE
+.PE
+
+j.no            323885910   9     1     100666  43        `
+.PS
+scale = 200
+arc cw from 145,218 to 0,0 rad 270
+.PE
+
+j.nu            323958864   9     1     100666  108       `
+.PS
+scale = 200
+line from 10,231 to 120,231
+arc cw to 140,191 rad 25
+line to 0,0
+arc cw from 0,146 to 154,0 rad 244
+.PE
+j.o             323958066   9     1     100666  98        `
+.PS
+scale = 200
+line from 0,182 to 154,182
+line from 100,240 to 100,0
+arc cw from 100,169 to 0,49 rad 384
+.PE
+j.period        323887158   9     1     100666  75        `
+.PS
+scale = 200
+line from 52,34 to 52,0
+line to 102,0
+line to 102,34
+line to 52,34
+.PE
+
+j.ra            323886583   9     1     100666  111       `
+.PS
+scale = 200
+line from 12,228 to 142,228
+line from 0,158 to 135,158
+arc cw to 154,139 rad 19
+arc cw to 36,0 rad 143
+.PE
+
+j.re            323886707   9     1     100666  85        `
+.PS
+scale = 200
+line from 12,230 to 12,0
+line to 26,0
+arc to 154,128 rad 128
+line to 154,144
+.PE
+
+j.ri            323886611   9     1     100666  87        `
+.PS
+scale = 200
+line from 30,222 to 30, 94
+line from 120,228 to 120,80
+arc cw to 84, 0 rad 108
+.PE
+
+j.ro            323962149   9     1     100666  127       `
+.PS
+scale = 200
+line from 12,12 to 4,162
+arc cw to 26,184 rad 22
+line to 128,184
+arc cw to 150,162 rad 22
+line to 142,12
+line to 12,12
+.PE
+
+j.rquote        323887313   9     1     100666  47        `
+.PS
+scale = 200
+line from 107,140 to 107,0
+line to 0,0
+.PE
+
+j.ru            323886674   9     1     100666  116       `
+.PS
+scale = 200
+line from 7,230 to 7,51
+arc cw to 0,0 rad 192
+line from 77,232 to 77,0
+arc to 154,90 rad 90
+line to 154,131
+.PE
+j.sa            323883672   9     1     100666  113       `
+.PS
+scale = 200
+line from 0,184 to 154,184
+line from 36,240 to 36,116
+line from 120,240 to 120,98
+arc cw to 56,0 rad 108
+.PE
+
+j.se            323883897   9     1     100666  154       `
+.PS
+scale = 200
+line from 0,184 to 124,184
+arc cw to 140,129 rad 30
+arc cw to 106,107 rad 165
+line from 41,240 to 41, 38
+arc to 78,0 rad 38
+arc to 150,14 rad 151
+.PE
+j.shi           323883758   9     1     100666  154       `
+.PS
+scale = 200
+line from 6,211 to 68,211
+line from 0,136 to 63,136
+line from 0,34 to 0,15
+arc to 15,0 rad 15
+line to 22,0
+arc to 154,132 rad 132
+line to 154,164
+.PE
+j.so            323885362   9     1     100666  86        `
+.PS
+scale = 200
+line from 0,206 to 34,139
+line from 154,240 to 154,207
+arc cw to 40,0 rad 245
+.PE
+j.su            323883820   9     1     100666  107       `
+.PS
+scale = 200
+line from 8,232 to 97,232
+arc cw to 117,196 rad 24
+line to 0,0
+arc cw from 79,131 to 154,0 rad 164
+.PE
+
+j.ta            323885470   9     1     100666  156       `
+.PS
+scale = 200
+arc from 0,140 to 40,231 rad 90
+line to 138,231
+arc cw to 154,215 rad 16
+line to 154,196
+arc cw to 0,0 rad 202
+arc cw from 68,136 to 150,62 rad 172
+.PE
+j.te            323958735   9     1     100666  111       `
+.PS
+scale = 200
+line from 10,221 to 144,221
+line from 0,156 to 154,156
+line from 88,156 to 88,80
+arc cw to 20,0 rad 81
+.PE
+
+j.to            323885716   9     1     100666  71        `
+.PS
+scale = 200
+line from 48,240 to 48,0
+arc cw from 48,157 to 143,111 rad 122
+.PE
+
+j.tsu           323885569   9     1     100666  113       `
+.PS
+scale = 200
+line from 0,222 to 12,146
+line from 68,229 to 78,160
+line from 154,234 to 154,161
+arc cw to 32,0 rad 167
+.PE
+
+j.u             323725379   9     1     100666  149       `
+.PS
+scale = 200
+line from 77,240 to 77,184
+line from 0,116 to 0, 160
+arc cw to 24,184 rad 24
+line to 130,184
+arc cw to 154,160 rad 24
+arc cw to 46,0 rad 148
+.PE
+
+j.wa            323886797   9     1     100666  137       `
+.PS
+scale = 200
+line from 0,128 to 0,198
+arc cw to 24,222 rad 24
+line to 130,222
+arc cw to 154,198 rad 24
+line to 154,124
+arc cw to 85,0 rad 146
+.PE
+
+j.wo            323886893   9     1     100666  127       `
+.PS
+scale = 200
+line from 0,226 to 134,226
+arc cw to 146,214 rad 12
+line to 146,165
+arc cw to 54,0 rad 195
+line from 21,128 to 143,128
+.PE
+
+j.ya            323886415   9     1     100666  101       `
+.PS
+scale = 200
+line from 0,184 to 124,184
+arc cw to 143,130 rad 30
+line to 116,105
+line from 44,240 to 64,0
+.PE
+
+j.yo            323886530   9     1     100666  128       `
+.PS
+scale = 200
+line from 6,209 to 126,209
+arc cw to 150,185 rad 24
+line to 150,12
+line from 12,119 to 150,119
+line from 0,12 to 150,12
+.PE
+j.yu            323960001   9     3     100666  99        `
+.PS
+scale = 200
+line from 14,207 to 82,207
+arc cw to 108,168 rad 28
+line to 68,12
+line from 0,12 to 154,12
+.PE
+
+pt.karen        705721325   9     1     100644  557       `
+.EQ
+delim $$
+.EN
++
+.PS
+x = .5
+# this is the start of the bottom row of box + ellipse
+arrow right x
+box wid x ht x/2 "$lambda sub n$"
+arrow
+ellipse width x ht x/2 "$mu sub n$"
+arrow
+# now start the top outer part
+line up 3*x
+arrow left 3*x/2
+box wid 2*x ht x "+++ big box +++"
+arrow left 3*x/2
+line down 3*x
+# this brings us back to A
+move up 2*x
+arrow right x
+box wid x ht x/2 "$lambda sub 1$"
+arrow
+ellipse width x ht x/2 "$mu sub 1$"
+arrow
+# this finishes the inner row
+#now to middle
+# buggy: move to 5*x/2, x
+"\s-2\(bu  \(bu  \(bu\s0" at 3*x/2, x
+.PE
++
+
+pt.knuth        708220088   9     1     100644  512       `
+.PS
+define ur "then up right"
+define ul "then up left"
+define dr "then down right"
+define dl "then down left"
+
+Center: 0,0
+move down down left left
+Start: spline down right dr ur ur ur ur ul ul ul ul dl dl dl dl dr dr fill .9
+move down right
+line down down
+move left left
+line right right right right right right
+move left left
+line up up
+
+move to Start up up up up  right
+.ps 36
+[ spline  dashed  .2 right right right down \
+then left left left left left down down \
+then right right right down ] at Center
+.PE
+pt.lasts        705721325   9     1     100644  4551      `
+.PS 3i
+.ps 8
+box invis wid .5i ht .3i "System" at 0,0
+box invis wid .2i ht .3i "User" at 2i, 3.5i
+box invis ht .3i "Builder" at 4i,0
+
+line -> from 1st box.t - .05i, 0 to 2nd box.sw - 0.05i, 0
+box invis "user" "learning" with .se at last line.c
+
+line <- from 1st box.t + .05i, 0 to 2nd box.sw + 0.05i, 0
+box invis " personalized" " uses" with .nw at last line.c
+
+line -> from 2nd box.se + .05i, 0 to 3rd box.t + .05i,0
+box invis "middle-out" "design" with .sw at last line.c
+
+line <- from 2nd box.se - .05i, 0 to 3rd box.t - .05i,0
+box invis "facilitates" "implementation" with .ne at last line.c
+
+line -> from 1st box.e + 0,0.05i to 3rd box.w + 0,0.05i \
+	"pressure for evolution" above
+
+line <- from 1st box.e - 0,0.05i to 3rd box.w - 0,0.05i \
+	"evolution of system function" below
+.ps
+.PE
+.PS
+box invis "System" ht .25i wid .4i
+move up .5i right .5i
+box invis "User" ht .25i wid .4i
+arc cw -> from top of 1st box to left of last box
+arc cw -> from bottom of last box to east of 1st box
+move to bottom of last box down .25i left .2i
+right; line right .25i
+.PE
+.PS
+circlerad = .1i
+movewid = .4i
+circle invis "S"; move; circle invis "  U"
+arc cw -> from top of 1st circle to top of 2nd circle
+arc cw -> from bottom of 2nd circle to bottom of 1st circle
+move to last circle.e + .6i,0
+circle invis "U"; move; circle invis "  B"; A:;
+arc cw -> from top of 2nd last circle to top of last circle
+arc cw -> from bottom of last circle to bottom of 2nd last circle
+move to last circle.e + .6i,0
+circle invis "S"; move; circle invis "  B"
+arc cw -> from top of 2nd last circle to top of last circle
+arc cw -> from bottom of last circle to bottom of 2nd last circle
+.PE
+.PS
+circlerad = .1i
+movewid = .4i
+circle invis "S"; move; circle invis "  U"
+arc cw -> from top of 1st circle to top of 2nd circle
+arc cw -> from bottom of 2nd circle to bottom of 1st circle
+.PE
+.PS
+circlerad = .1i
+movewid = .4i
+circle invis "U"; move; circle invis "  B"
+arc cw -> from top of 1st circle to top of 2nd circle
+arc cw -> from bottom of 2nd circle to bottom of 1st circle
+.PE
+.PS
+circlerad = .1i
+movewid = .4i
+circle invis "S"; move; circle invis "  B"
+arc cw -> from top of 1st circle to top of 2nd circle
+arc cw -> from bottom of 2nd circle to bottom of 1st circle
+.PE
+.PS
+circlerad = .1i
+movewid = .4i
+circle invis "U"; move; circle invis "  S"
+arc cw -> from top of 1st circle to top of 2nd circle
+arc cw -> from bottom of 2nd circle to bottom of 1st circle
+.PE
+.PS 3.5i
+.ps 8
+arcrad = 4i
+box invis wid .45i ht .3i "System" at 0,0
+box invis wid .4i ht .2i "User" at 2i, 3.5i
+box invis wid .45i ht .3i "Builder" at 4i,0
+box invis ht .4i "Task" "Representation" at 2i, 2i
+
+arc cw -> from 1st box.t - .05i, 0 to 2nd box.sw - 0.05i, 0
+arc cw <- from 1st box.t + .05i, 0 to 2nd box.sw + 0.05i, 0
+arc cw -> from 2nd box.se + .05i, 0 to 3rd box.t + .05i,0
+arc cw <- from 2nd box.se - .05i, 0 to 3rd box.t - .05i,0
+arc  -> from 1st box.e + 0,0.05i to 3rd box.w + 0,0.05i
+arc  <- from 1st box.e - 0,0.05i to 3rd box.w - 0,0.05i
+
+line <- from 2nd box.b to 4th box.t
+box invis "Descriptive map of" "user processes" at last line.c
+arrow from 4th box.sw to 1st box.ne
+box invis "design of" "DSS functions" "commands" with .nw at last arrow.c
+
+arrow from 4th box.se to 3rd box.nw
+box invis "Prescriptive map " "of task performance" with .ne at last arrow.c
+.ps
+.PE
+.PS 4i
+.ps 8
+arcrad = 4i
+box invis wid .5i ht .3i "System" at 0,0
+box invis wid .4i ht .25i "User" at 2i, 3.5i
+box invis ht .3i "Builder" at 4i,0
+box invis "Task" "Representation" at 2i, 2i
+box invis ht .4i "Organization's" "Technology (T)" at -1i, -1i
+arrow dashed from last box.t - .1i,0 to 1st box.b - .1i,0
+arrow dashed from 1st box.b + .1i,0 to last box.t + .1i, 0
+
+box invis ht .7i "Organizational" "Procedures and" "Systems (O)" at 2i, 4.5i
+arrow dashed from last box.b - .1i,0 to 2nd box.t - .1i, 0
+arrow <- dashed from last box.b + .1i,0 to 2nd box.t + .1i, 0
+
+box invis ht .75i "Organization" "Charter and" "Location" at 5i, -1i
+arrow dashed from last box.t - .1i,0 to 3rd box.b - .1i,0
+arrow dashed <- from last box.t + .1i,0 to 3rd box.b + .1i,0
+
+arc cw -> from 1st box.t - .05i, 0 to 2nd box.sw - 0.05i, 0
+arc cw <- from 1st box.t + .05i, 0 to 2nd box.sw + 0.05i, 0
+arc cw -> from 2nd box.se + .05i, 0 to 3rd box.t + .05i,0
+arc cw <- from 2nd box.se - .05i, 0 to 3rd box.t - .05i,0
+arc  -> from 1st box.e + 0,0.05i to 3rd box.w + 0,0.05i
+arc  <- from 1st box.e - 0,0.05i to 3rd box.w - 0,0.05i
+
+line from 2nd box.b to 4th box.t
+arrow from 4th box.sw to 1st box.ne
+
+arrow from 4th box.se to 3rd box.nw
+.ps
+.PE
+
+pt.line         705721325   9     1     100644  1891      `
+.sp 3i
+.PS
+line
+.PE
+.PS
+line right
+.PE
+.PS
+line right up
+.PE
+.PS
+line up then right then down right
+.PE
+.PS
+line
+line dotted
+line dashed
+line
+.PE
+.PS
+line right 6i dashed 1i
+.PE
+.PS
+line right 6i dashed 2i
+.PE
+.PS
+line from 0,0 by 1,0 by 0,1 by -1,0 by 0,-1
+.PE
+.PS 6i
+line from 0,0 \
+ then to 0.05774,0.00368 \
+ then to 0.11058,0.01276 \
+ then to 0.16153,0.0272 \
+ then to 0.21059,0.04689 \
+ then to 0.25728,0.07164 \
+ then to 0.30109,0.10117 \
+ then to 0.34155,0.13517 \
+ then to 0.37819,0.17324 \
+ then to 0.41061,0.21496 \
+ then to 0.43845,0.25988 \
+ then to 0.4614,0.30747 \
+ then to 0.47919,0.35723 \
+ then to 0.49164,0.40858 \
+ then to 0.4986,0.46096 \
+ then to 0.5,0.51378 \
+ then to 0.49582,0.56646 \
+ then to 0.4861,0.6184 \
+ then to 0.47095,0.66902 \
+ then to 0.45055,0.71777 \
+ then to 0.42513,0.76409 \
+ then to 0.39495,0.80747 \
+ then to 0.36037,0.84742 \
+ then to 0.32177,0.8835 \
+ then to 0.27958,0.91531 \
+ then to 0.23426,0.94249 \
+ then to 0.18634,0.96474 \
+ then to 0.13637,0.98179 \
+ then to 0.08514,0.99342 \
+ then to 0.03477,0.9994 \
+ then to 0,1 \
+ then to -0.03477,0.9994 \
+ then to -0.08514,0.99342 \
+ then to -0.13637,0.98179 \
+ then to -0.18634,0.96474 \
+ then to -0.23426,0.94249 \
+ then to -0.27958,0.91531 \
+ then to -0.32177,0.8835 \
+ then to -0.36037,0.84742 \
+ then to -0.39495,0.80747 \
+ then to -0.42513,0.76409 \
+ then to -0.45055,0.71777 \
+ then to -0.47095,0.66902 \
+ then to -0.4861,0.6184 \
+ then to -0.49582,0.56646 \
+ then to -0.5,0.51378 \
+ then to -0.4986,0.46096 \
+ then to -0.49164,0.40858 \
+ then to -0.47919,0.35723 \
+ then to -0.4614,0.30747 \
+ then to -0.43845,0.25988 \
+ then to -0.41061,0.21496 \
+ then to -0.37819,0.17324 \
+ then to -0.34155,0.13517 \
+ then to -0.30109,0.10117 \
+ then to -0.25728,0.07164 \
+ then to -0.21059,0.04689 \
+ then to -0.16153,0.0272 \
+ then to -0.11058,0.01276 \
+ then to -0.05774,0.00368 \
+ then to 0,0
+
+.PE
+
+pt.ljustbug     705721325   9     1     100644  866       `
+From houxa!wjmayer Wed Apr 27 07:38 EDT 1988
+To: research!bwk
+
+Here is an example of the problem I described.
+.nf
+
+The following should produce text left adjusted
+and right adjusted within the box.  Using the
+newer pic it is centered at the west edge and
+east edge of the box.
+
+Tnx for your help.
+
+Bill Mayer
+houxa!wjmayer
+..
+
+.nf
+.PS
+scale=100
+define t1219 |
+[ box invis ht 48 wid 70 with .sw at 0,0
+"\fH\s10\&Feature\f1\s0"  at 0,40 ljust
+"\fH\s10\&Spec.\f1\s0"  at 0,24 ljust
+"\fH\s10\&Document\f1\s0"  at 0,8 ljust
+] |
+
+define m13 |
+[ box invis ht 80 wid 80 with .sw at 0,0
+"\fH\s10\&305\f1\s0"  ljust at 4,66
+t1219 with .nw at 4,54
+box ht 80 wid 80 with .nw at 0,80 
+"\fH\s10\&C\f1\s0"  at 76,66 rjust
+] |
+
+define m14 |
+[ box invis ht 160 wid 80 with .sw at 0,0
+m13 with .nw at 0,160
+] |
+
+box invis ht 736 wid 716 with .sw at 0,0
+m14 with .nw at 56,424
+.PE
+.fi
+pt.memo         705721325   9     1     100644  5952      `
+.PS
+box invis wid .25
+ellipse "document"
+arrow
+box "PIC"
+arrow
+box "TBL/EQN" "(optional)" dashed
+arrow
+box "TROFF"
+arrow
+ellipse "typesetter"
+.PE
+.PS
+box "box"
+move
+line "line" above
+move
+arrow "arrow" above
+move
+circle "circle"
+move
+ellipse "ellipse"
+move
+arc cw "arc"
+.PE
+.PS
+	box "this is" "a box"
+.PE
+.PS
+circle "this is" "a box"
+move; move
+ellipse "this is" "a box"
+.PE
+.PS
+arrow "this is" "an arrow"
+.PE
+.PS
+line "this is" "a line"
+.PE
+.PS
+line; arc; arc cw; arrow
+.PE
+.PS
+arrow; box "input"; arrow; box "process"; arrow; box "output"; arrow
+.PE
+.PS
+box; move; box; move; box
+.PE
+.PS
+down; box; arrow; ellipse; arrow; circle
+.PE
+.PS
+left; box; arrow; ellipse; arrow; circle
+.PE
+.PS
+	box wid 3i ht 0.1i
+.PE
+.PS
+line up 1i right 2i
+arrow left 2i
+move left 0.1i
+line <-> down 1i "height"
+.PE
+.PS
+line up right; line down; line down left; line up
+.PE
+.PS
+box dotted; line dotted; move; line dashed
+.PE
+.PS
+line right 5i dashed
+.PE
+.PS
+line right 5i dashed 0.25i
+.PE
+.PS
+line right 5i dashed 0.5i
+.PE
+.PS
+line right 5i dashed 1i
+.PE
+.PS
+arrow "on top of"; move
+arrow "above" "below"; move
+arrow "above" above; move
+arrow "below" below; move
+arrow "above" "on top of" "below"
+.PE
+.PS
+down; box ht 0.2i wid 1.5i; move down 0.15i;
+ box ht 0.2i wid 1.5i; move down 0.15i; box ht 0.2i wid 1.5i
+.PE
+.PS
+x = boxwid; y = boxht
+boxwid = 0.1i; boxht = 1i
+movewid = 0.2i
+box; move; box; move; box
+boxwid = x; boxht = y
+.PE
+.PS 2
+box ht 0.2 wid 0.2 at 0,0 "1"
+move to 0.5,0	# or "move right 0.5"
+box "2" ht 0.2 wid 0.2	# use same dimensions as last box
+move right .5	# use same motion as before
+box "3" ht 0.2 wid 0.2
+.PE
+.PS
+arc from 0.5i, 0 to 0, 0.5i
+arc at 2i,0 from 2i,0.5i to 2.5i,0
+circle rad .5i invis at 2i,0	# cheating
+.PE
+.PS
+arc -> cw from 0,0 to 2i,0 rad 15i
+.PE
+.PS
+arrow left; box; arrow; circle; arrow
+.PE
+.PS 1.5
+B: box "B.c"
+" B.e" at B.e ljust
+" B.ne" at B.ne ljust
+" B.se" at B.se ljust
+"B.s" at B.s below
+"B.n" at B.n above
+"B.sw " at B.sw rjust
+"B.w " at B.w rjust
+"B.nw " at B.nw rjust
+.PE
+.PS
+box ht 0.75i wid 0.75i
+box ht 0.5i wid 0.5i with .sw at last box.se
+.PE
+.PS
+ellipse; ellipse with .nw at last ellipse.se
+.PE
+.PS
+circle "a"
+circle "b" at 1st circle - (0.75i, 1i)
+circle "c" at 1st circle + (0.75i, -1i)
+line from 1st circle to 2nd circle chop
+line from 1st circle to 3rd circle chop
+.PE
+.PS
+box
+arrow right from 1/3 of the way between last box.ne and last box.se
+arrow right from 2/3 <last box.ne, last box.se>
+.PE
+.PS
+line right 1i then down .5i left 1i then right 1i
+.PE
+.PS
+line dashed right 1i then down .5i left 1i then right 1i
+spline from start of last line\
+  right 1i then down .5i left 1i then right 1i
+.PE
+.PS
+box "1"
+[ box "2"; arrow "3" above; box "4" ] with .n at last box.s - (0,0.1)
+"thing" at last [].s
+.PE
+.PS
+h = .5i
+dh = .02i
+dw = .1i
+[
+	Ptr: [
+		boxht = h; boxwid = dw
+		A: box
+		B: box
+		C: box
+		box wid 2*boxwid "..."
+		D: box
+	]
+	Block: [
+		boxht = 2*dw; boxwid = 2*dw
+		movewid = 2*dh
+		A: box; move
+		B: box; move
+		C: box; move
+		box invis "..." wid 2*boxwid; move
+		D: box
+	] with .t at Ptr.s - (0,h/2)
+	arrow from Ptr.A to Block.A.nw
+	arrow from Ptr.B to Block.B.nw
+	arrow from Ptr.C to Block.C.nw
+	arrow from Ptr.D to Block.D.nw
+]
+box dashed ht last [].ht+dw wid last [].wid+dw at last []
+.PE
+.PS
+define square X box ht $1 wid $1  $2 X
+square(1i, "one" "inch")
+square(0.5i)
+.PE
+.PS
+.ps 24
+circle radius .4i at 0,0
+.ps 12
+circle radius .2i at 0,0
+.ps 8
+circle radius .1i at 0,0
+.ps 6
+circle radius .05i at 0,0
+.ps 10	\" don't forget to restore size
+.PE
+.PS
+ellipse "\s8\f(OESmile!\fP\s0"
+.PE
+.EQ
+delim $$
+.EN
+.PS
+arrow
+box "$space 0 {H( omega )} over {1 - H( omega )}$"
+arrow
+.PE
+.PS
+define ndblock X
+	box wid boxwid/2 ht boxht/2
+	down;  box wid boxwid/2 ht boxht/2 with .t at bottom of last box;
+	box wid boxwid/2 ht boxht/2
+X
+.ps -2
+.ft PO
+boxht = .2i; boxwid = .3i
+down; box; box; box; box ht 3*boxht "." "." "."
+L: box; box; box invis wid 2*boxwid "hashtab:" with .e at 1st box .w
+right
+Start: box wid .5i with .sw at 1st box.ne + (.4i,.2i) "..."
+N1: box wid .2i "n1";  D1: box wid .3i "d1"
+N3: box wid .4i "n3";  D3: box wid .3i "d3"
+box wid .4i "..."
+N2: box wid .5i "n2";  D2: box wid .2i "d2"
+
+arrow right from 2nd box 
+ndblock
+spline -> right .2i from 3rd last box then to N1.sw + (0.05i,0)
+spline -> right .3i from 2nd last box then to D1.sw + (0.05i,0)
+arrow right from last box
+ndblock
+spline -> right .2i from 3rd last box to N2.sw-(0.05i,.2i) to N2.sw+(0.05i,0)
+spline -> right .3i from 2nd last box to D2.sw-(0.05i,.2i) to D2.sw+(0.05i,0)
+arrow right 2*linewid from L
+ndblock
+spline -> right .2i from 3rd last box to N3.sw + (0.05i,0)
+spline -> right .3i from 2nd last box to D3.sw + (0.05i,0)
+
+circlerad = .3i
+circle invis "ndblock"  at last box.e + (.7i,.2i)
+arrow dotted from last circle to last box chop
+
+box invis wid 2*boxwid "ndtable:" with .e at Start.w
+.ps
+.ft
+.PE
+.PS 5
+.ps 8
+boxht = .5i; boxwid = .75i
+circlerad = .25i
+	arrow "source" "code"
+LA:	box "lexical" "analyzer"
+	arrow "tokens" above
+P:	box "parser"
+	arrow "intermediate" "code"
+Sem:	box "semantic" "checker"
+	arrow
+
+	arrow <-> up from top of LA
+LC:	box "lexical" "corrector"
+	arrow <-> up from top of P
+Syn:	box "syntactic" "corrector"
+	arrow up
+DMP:	box "diagnostic" "message" "printer"
+	arrow <-> right  from right of DMP
+ST:	box "symbol" "table"
+	arrow from LC.ne to DMP.sw
+	arrow from Sem.nw to DMP.se
+	arrow <-> from Sem.top to ST.bot
+.PE
+.PS 5i
+circle "DISK"
+arrow "character" "defns"
+box "CPU" "(16-bit mini)"
+{ arrow <- from top of last box up "input " rjust }
+arrow
+CRT: "   CRT" ljust
+line from CRT - 0,0.075 up 0.15 \
+then right 0.5 \
+then right 0.5 up 0.25 \
+then down 0.5+0.15 \
+then left 0.5 up 0.25 \
+then left 0.5
+
+Paper: CRT + 1.0+0.05,0
+arrow from Paper + 0,0.75 to Paper - 0,0.5
+{ move to start of last arrow down 0.25
+  { move left 0.015; circle rad 0.05 }
+  { move right 0.015; circle rad 0.05; "   rollers" ljust }
+}
+"  paper" ljust at end of last arrow + 0.25, 0.25
+line left 0.2 dotted
+.PE
+pt.napmap       705721325   9     1     100644  4296      `
+.po 0.4i
+.sp .5i
+.PS 7.3
+.ps -2
+.ft H
+define polbegin { polflag = 1; copy thru polbody until "polend" }
+define polbody {
+	if polflag == 0 then {
+		line from PolEnd to $1,$2; PolEnd: Here
+	} else {
+		PolEnd: $1,$2; polflag = 0
+	}
+}
+
+define trapbegin { trapflag = 1; copy thru trapbody until "trapend" }
+define trapbody {
+	if trapflag == 0 then {
+		ThisA: $1,$2; ThisB: $3,$4
+		n = $5
+.ps +4
+		for i = 0 to n do {
+			line from i/n <LastA,LastB> to i/n <ThisA,ThisB>
+		}
+.ps -4
+		LastA: ThisA; LastB: ThisB
+	} else {
+		LastA: $1,$2; LastB: $3, $4; trapflag = 0
+	}
+}
+
+maxx = 9.1
+B: box ht 3.2 wid maxx with .sw at 0,0
+.ps +3
+"NAPOLEON'S RUSSIAN CAMPAIGN: June to December, 1812" at B.n + (0,.3)
+.ps -3
+
+# SCALE
+line from 6.7,.4 to 8.24, .4
+line down .05 from 6.7, .4
+"0" at 6.7, .27
+line down .05 from 7.47, .4
+"50" at 7.47, .27
+line down .05 from 8.24, .4
+"100" at 8.24, .27
+"Miles" at 7.47, .5
+
+"Niemen R." ljust at .6, .1
+spline from	0,	1.5\
+	to	0.1,	1.6\
+	to	.15,	1.5\
+	to	.3,	1.5\
+	to	.4,	1.26\
+	to	.35,	1.08\
+	to	.5,	1.0\
+	to	.55,	.75\
+	to	.5,	.55\
+	to	.55,	.5\
+	to	.5,	.35\
+	to	.58,	.3\
+	to	.58,	.2\
+	to	.4,	0
+
+"Beresina R." ljust at 3.52, .1
+spline from	2.95,	.95\
+	to	3.1,	.85\
+	to	3.2,	.8\
+	to	3.3,	.8\
+	to	3.33,	.7\
+	to	3.35,	.55\
+	to	3.38,	.5\
+	to	3.36,	.4\
+	to	3.4,	.25\
+	to	3.5,	0
+
+"Moskva R." ljust at 7.3, 2.8
+spline from	7.2, 2.8\
+	to	7.45, 2.5\
+	to	7.65, 2.48\
+	to	7.73, 2.35\
+	to	7.75, 2.28
+
+"Dnieper R." ljust at 4.7, 0.1
+spline from	5,	1.08\
+	to	4.9,	1\
+	to	4.7,	1\
+	to	4.6,	.9\
+	to	4.6,	.7\
+	to	4.62,	.6\
+	to	4.68,	.58\
+	to	4.68,	.42\
+	to	4.6,	.3\
+	to	4.6,	.2\
+	to	4.63,	.11\
+	to	4.6,	0
+
+#ADVANCE
+polbegin
+.25	1.45
+.84	1.62
+.87	2.2
+.92	2.2
+.9	1.55
+1.5	1.48
+2.2	2.05
+3.52	1.9
+3.48	1.83
+2.25	1.96
+1.55	1.4
+2.9	1.7
+4.2	1.8
+4.4	1.76
+5.4	1.4
+6.3	1.7
+7.15	2.5
+7.70	2.33
+7.69	2.30
+7.85	2.26
+8.7	2.68	# Top of Moscow
+8.78	2.52	# Bottom of Moscow
+7.85	2.05
+7.23	2.2
+6.35	1.38
+5.4	1.05
+4.3	1.5
+3.0	1.25
+1.4	.8
+.9	.85
+.5	.78
+.25	1.45
+polend
+
+#RETREAT
+# Return from Western Flanking
+trapbegin
+3.52	1.9	3.48	1.83
+3.58	1.75	3.52	1.74	7
+trapend
+trapbegin
+3.65	1.36	3.69	1.37
+3.90	.6	3.94	.61	7
+trapend
+# Return from Eastern Flanking
+trapbegin
+0.83	2.22	0.83	2.22
+.77	1.62	.77	1.62	1
+trapend
+trapbegin
+.71	.8	.71	.8
+.7	.74	.7	.74	1
+trapend
+# Main route
+trapbegin
+8.78	2.52	8.86	2.35
+8.6	2.42	8.75	2.3	25
+8.57	1.85	8.7	1.7	25
+8.45	1.8	8.5	1.63	25
+7.6	2	7.6	1.84	25
+6.95	1.68	7	1.57	25
+trapend
+trapbegin
+6.95	1.68	6.98	1.60
+6.35	1.35	6.38	1.27	15
+trapend
+trapbegin
+6.35	1.35	6.37	1.30
+5.5	1.03	5.52	0.98	10
+trapend
+trapbegin
+5.5	1.03	5.515	1.00
+4.6	.88	4.615	.85	3
+3.9	.56	3.915	.53	3
+trapend
+# Where first flanking returns
+trapbegin
+3.95	.6	3.95	.52
+3.5	.5	3.5	.42	6
+3.39	.5	3.39	.43	6
+trapend
+trapbegin
+3.4	.5	3.4	.46
+2.8	.82	2.8	.79	3
+2.45	.67	2.45	.65	2
+1.5	.78	1.5	.77	1
+.7	.75	.7	.75	1
+trapend
+trapbegin
+.7	.75	.7	.72
+.5	.75	.5	.72	3
+trapend
+
+"Kovno"		ljust	at .45, 1.2
+"Vilna"			at 1.5, 1.18
+"Polotsk"	above	at 3.6, 2.0
+"Vitebsk"		at 4.2, 1.68
+"Smolensk"		at 5.4, 1.23
+"Borodino"		at 7.7, 2.2
+"MOSCOW"		at 8.7, 2.75
+"Maloyaroslavets"	at 8.6, 1.5
+"Mojaisk"	ljust	at 7.8, 2.0
+"Viasma"	ljust	at 7, 1.45
+"Mogilev"	ljust	at 4.7, .25
+"Orsha"		rjust	at 4.6, .95
+"Bobr"		ljust	at 4.05, .45
+"Studenka"	rjust	at 3.3, .4
+"Minsk"			at 2.8, .15
+"Smorgoni"	ljust	at 2, .85
+
+# SIZE OF ARMY
+copy thru { "$1" at $2, $3 } until "xxx"
+422	.5	1.65
+6	.75	2.2
+22	1.05	2.2
+400	1.25	1.6
+60	1.85	1.95
+33	2.9	2.1
+175	4.7	1.8
+145	5.8	1.65
+127	7	2.5
+100	7.82	2.4
+100	8.87	2.6
+96	8	1.6
+87	7.5	1.6
+55	6.7	1.3
+37	6	1.05
+24	5	.8
+20	4.3	.6
+50	3.7	.3
+28	3	.55
+12	2.25	.55
+14	1.8	.65
+8	1.35	.65
+4	.9	.65
+10	.65	.6
+xxx
+
+minx = 0.3
+maxx = maxx - minx
+define temp { 0.015*($1) - 0.8 }
+line from maxx, temp(40) to maxx, temp(-40)\
+	to minx, temp(-40) to minx, temp(40) to maxx, temp(40)
+copy thru {
+	" $1\(de" ljust at maxx, temp($1)
+	"$1\(de " rjust at minx, temp($1)
+} until "xxx"
+40
+20
+0
+-20
+-40
+xxx
+polflag = 1
+copy thru {
+	line dotted .05 from $1, $3 to $1, temp($2)
+	"$2\(de" at $1, temp(-49)
+	"$4 $5" at $1, temp(-58)
+	if polflag == 0 then {
+		line from PolEnd to $1,temp($2); PolEnd: Here
+	} else {
+		PolEnd: $1,temp($2); polflag = 0
+	}
+} until "xxx"
+8.7	32	1.7	18 Oct
+7.9	32	1.8	24 Oct
+6.35	12	1.3	9 Nov
+5.5	-15	1	14 Nov
+3.9	7	.5
+3.3	-13	.5	28 Nov
+2.8	-22	.8	1 Dec
+2.4	-35	.65	6 Dec
+1.3	-26	.8	7 Dec
+xxx
+.ft
+.ps +2
+.PE
+pt.parser       705721325   9     1     100644  901       `
+.nf
+.ll 5i
+Dragon book, page 388:
+.sp
+.PS
+x = .5; y = .325;	# dimensions of the boxes
+
+LA:
+	box wid x ht y "lexical" "analyzer";
+	arrow right x/2 from LA.w - x/2,0 "" "" "source" "code";
+Parser:
+	box at LA + 2*x, 0 "parser";
+	arrow from LA.e to Parser.w "" "tokens";
+Sem:
+	box at Parser + 5*x/2, 0 "semantic" "checker";
+	arrow from Parser.e to Sem.w "" "" "intermediate" "code";
+	arrow from Sem.e right x/2;
+LC:
+	box at LA + 0, 2*y "lexical" "corrector";
+	arrow from LA.t to LC.b <->;
+Syn:
+	box at LC + 2*x, 0 "syntactic" "corrector";
+	arrow from Parser.t to Syn.b <->;
+DMP:
+	box wid x ht x at Syn + 0,2*y "diagnostic" "message" "printer";
+	arrow from LC.ne to DMP.sw;
+	arrow from Syn.t to DMP.b;
+	arrow from Sem.nw to DMP.se;
+ST:
+	box at DMP + 5*x/2,0 "symbol" "table";
+	arrow <-> from Sem.t to ST.b;
+	arrow <-> from DMP.r to ST.l;
+.PE
+.sp 2
+.ce
+\f3Fig. 11.1.\fP  Plan of an error detector/corrector
+
+pt.ravi         705721325   9     1     100644  1340      `
+.EQ
+delim $$
+.EN
+.PP
+this is figure 3
+.KS
+.nf
+.PS 6i
+scale = 200
+"$upd$" at 100,300;
+line from 80,280 to 20,220;
+arc cw to 0,220;
+line to 0,360;
+arc cw to 40,400 radius 40;
+line -> to 180,400;
+"$upd$" at 200,400;
+line -> from 180,380 to 120,320;
+line -> from 100,280 to 120,220;
+"\f2L2\fP" at 100,200;
+line from 120,280 to 180,220;
+arc to 220,200;
+line to 280,200;
+arc to 320,220;
+line to 580,560;
+arc cw to 620,580;
+line -> to 680,520;
+line -> from 200,380 to 220,320;
+"\f2L1\fP" at 200,320;
+line from 220,380 to 280,320;
+arc to 320,320;
+line to 580,660;
+arc cw to 620,680;
+line -> to 680,620;
+"$a sub 1$" at 700,600;
+line -> from 700,580 to 700,520;
+"$a sub 2$" at 700,500;
+line from 700,480 to 700,420;
+"$b sub 1$" at 700,400;
+line -> from 680,380 to 620,320;
+"$app$" at 600,300;
+line from 580,280 to 520,220;
+arc cw to 480,220;
+line to 320,480;
+arc to 280,480;
+line -> to 220,420;
+line -> from 620,280 to 680,220;
+"\f2L1\fP" at 700,200;
+line -> from 720,380 to 780,320;
+"$a sub 3$" at 800,300;
+line -> from 800,280 to 800,220;
+"$b sub 2$" at 800,200;
+line -> from 780,180 to 720,120;
+"$app$" at 700,100;
+line from 680,80 to 620,20;
+arc cw to 580,0;
+line to 520,0;
+arc cw to 480,20;
+line to 320,480;
+line -> from 820,180 to 880,120;
+"$I$" at 900,100;
+line -> from 720,80 to 780,20;
+"\f2L2\fP" at 800,0;
+.PE
+.sp 2
+.ce
+Figure 3.
+.sp 2
+.KE
+pt.ravi.1       705721325   9     1     100644  2654      `
+.EQ
+delim $$
+.EN
+.KS
+.PS
+scale = 225;
+"$e$";
+line <- from Here + 20,20 up 60 right 60;
+"\f4upd\fP" at Here + 20,20;
+{
+   line -> from Here + 0,-20 down 60 right 20;
+   "\f2L2\fP" at Here + 0,-20;
+}
+{
+   line -> from Here + 20,-20 down 60 right 60;
+   "\f4app\fP" at Here + 20,-20;
+   {   line -> from Here + 20,-20 down 60 right 60; "\f2L2\fP" at Here + 20,-20;   }
+   line -> from Here + -20,-20 down 60 left 60;
+   "$e sub m$" at Here + -20,-20;
+}
+line <- from Here + 20,20 up 60 right 60;
+"\f4upd\fP" at Here + 20,20;
+{
+   line -> from Here + 0,-20 down 60 right 20;
+   "\f2L1\fP" at Here + 0,-20;
+}
+{
+   line -> from Here + 20,-20 down 160 right 60;
+   "\f4app\fP" at Here + 20,-20;
+   {   line -> from Here + 20,-20 down 60 right 60; "\f2L1\fP" at Here + 20,-20;   }
+   line -> from Here + -20,-20 down 60 left 160;
+}
+move to Here + 500,200;
+{
+   "$a sub 1$";
+   line -> from Here + 0,-20 down 60;
+   "$a sub 2$" at Here + 0,-20;
+   line -> from Here + 0,-20 down 60;
+   "$b sub 1$" at Here + 0,-20;
+   {
+      line -> from Here + -20,-20 down 60 left 60;
+      "\f4app\fP" at Here + -20,-20;
+      {
+         line -> from Here + 20,-20 down 60 right 60;
+         "\f2L1\fP" at Here + 20,-20;
+      }
+      spline -> from Here + -20,-20 to Here + -100,-100 to Here + -200,200 to Here + -380,120;
+   }
+   line -> from Here + 20,-20 down 60 right 60;
+   "$a sub 3$" at Here + 20,-20;
+   line -> from Here + 0,-20 down 60;
+   "$b sub 2$" at Here + 0,-20;
+   {
+      line -> from Here + -20,-20 down 60 left 60;
+      "\f4app\fP" at Here + -20,-20;
+      {
+         line -> from Here + 20,-20 down 60 right 60;
+         "\f2L2\fP" at Here + 20,-20;
+      }
+      spline -> from Here + -20,-20 to Here + -100,-100 to Here + -300,100 to Here + -400,400 to Here + -480,320;
+   }
+   line -> from Here + 20,-20 down 60 right 60;
+   "$I$" at Here + 20,-20;
+}
+arc <- from Here + 0,20 to Here + -80,180 radius 200;
+"\f4upd\fP" at Here + -20,20;
+{
+   {
+      line -> from Here + 0,-20 down 60 right 20;
+      "\f2L1\fP" at Here + 0,-20;
+   }
+   line -> from Here + -20,-20 down 60 left 60;
+   "\f4upd\fP" at Here + -20,-20;
+   {
+      line -> from Here + 0,-20 down 60 right 20;
+      "\f2L2\fP" at Here + 0,-20;
+   }
+   {   line -> from Here + 20,-20 down 160 right 160;   }
+   line -> from Here + -20,-20 down 60 left 60;
+   "\f4nil\fP" at Here + -20,-20;
+}
+line dashed from Here + -40,0 left 640;
+arc to Here + -20,-20 rad 20;
+line dashed down 660;
+arc to Here + 20,-20 rad 20;
+line dashed to Here + 160,0;
+.PE
+.sp 2
+.FI 5
+The dashed line connects vertices that are merged when an
+instance of the least fixed point operator is eliminated, as in
+Figure 2.
+.KE
+pt.ravi.2       705721325   9     1     100644  6377      `
+.EQ
+delim $$
+.EN
+.PS
+# u = 40;
+u = 40/200;
+boxwid = 2*u; boxht = u;
+ellipsewid = 2*u; ellipseht = u;
+d = 6*u/5;
+define test % line down u left u; line down u right u; line up u right u; line up u left u; %
+down;
+ellipse "$bi start$";
+line down d/2;
+P0:	"$\(bu$"; { move right u/2; "$p sub 0$"; }; line -> down d/2;
+	box "$f$";
+	line down d/2;
+P1:	"$\(bu$"; { move left u/2; "$p sub 1$"; }; line -> down d/2;
+B1:	test();
+	move down u;
+	"$b sub 1$";
+	{	move left u;
+		spline ->  from Here to Here + -2*u,0 to Here + -2*u,2*u+3*d/2 to P0.w;
+	}
+	move right u;
+	spline ->  from Here to Here + 2*u,0 to Here + 2*u,-u-d/2;
+P2:	"$\(bu$"; {move right u/2; "$p sub 2$";}
+	line down d/2;
+	box "$g$";
+	line -> down d;
+B2:	test();
+	move down u;
+	"$b sub 2$";
+	{	move right u;
+		spline ->  from Here to Here + 2*u,0 to Here + 2*u,3*d/2+5*u to P1.e;
+	}
+	move left u;
+	spline ->  from Here to Here + -d,0 to Here + -d,-d;
+	down;
+	box "$h$";
+	line down d/2; "$\(bu$"; { move right u/2; "$p sub 3$"; }; line -> down d/2;
+B3:	test();
+	move down u;
+	"$b sub 3$";
+	{	move left u;
+		spline -> from Here to Here + -d,0 to Here + -d,7*d/2+4*u to P2.w;
+	}
+	move right u;
+	spline ->  from Here to Here + d,0 to Here + d,-d;
+	down;
+	box "$bi out$";
+.PE
+.bp
+.PS
+.ps 9
+.sp
+u = 40;
+u = 40/200
+boxwid = 3*u; boxht = 2*u;
+ellipsewid = 3*u; ellipseht = 2*u;
+linewid = 2*u; lineht = 2*u;
+movewid = 2*u; moveht = 2*u;
+LA:	box "lexical" "analyzer"
+	arrow
+P:	box "parser," "graph" "builder"
+	arrow
+	box "reducer"
+	arrow
+	box "code" "generator"
+	arrow
+	ellipse "code"
+
+	arrow <- from LA.n up
+LX:	box "\f1LEX\fP"
+	arrow <- from LX.w left
+
+Tok:	ellipse "Ltok.r"
+	move to Tok.n
+	move up
+Sem:	ellipse "Lsem.d"
+	arrow -> from Sem.e right
+D:	box "d2y"
+
+	arrow -> right "Lsem.y" above
+Y2:	box "\f1YACC\fP"
+	arrow from Y2.s to P.n
+
+	arrow <- from LA.w left
+Prog:	ellipse "prog.L"
+	move to Prog.e
+	move right u down 2*u
+LC:	Here
+	line dotted right 15*u
+	line dotted up 12*u
+	line dotted left 15*u
+	line dotted down 12*u
+.PE
+.bp
+.EQ
+delim $$
+.EN
+.PS
+x = 15/225; y = 3*x; z = 5*x;
+
+define dr % move down x right x; line -> down y right y; move down x right x; %
+define dl % move down x left x; line -> down y left y; move down x left x; %
+define ur % move up x right x; line <- up y right y; move up x right x; %
+define ul % move up x left x; line <- up y left y; move up x left x; %
+
+move to Here + 5*z,z;
+{
+	"$b sub 1$";
+	line -> from Here + 0,-x down y;
+	"$b sub 2$" at Here + 0,-x;
+	{
+		dl;
+		"$bi app$";
+		{
+			dr; "L1";
+		}
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -2*z,2*z to Here + x-4*z,x+z;
+	}
+	spline -> from Here + x,-x to Here + z,-z to Here + z,x-2*z;
+	move down x;
+	"$b sub 3$";
+	{
+		dr; "fall";
+	}
+	{
+		dl; "$bi app$";
+		{
+			dr; "L2";
+		}
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -3*z,z to Here + -4*z,4*z to Here + x-5*z,x+3*z;
+	}
+}
+.PE
+.bp
+.PS
+x = 15/225; y = 3*x; z = 5*x;
+
+define dr % move down x right x; line -> down y right y; move down x right x; %
+define dl % move down x left x; line -> down y left y; move down x left x; %
+define ur % move up x right x; line <- up y right y; move up x right x; %
+define ul % move up x left x; line <- up y left y; move up x left x; %
+
+"e";
+ur;
+"e' $bi updl$";
+{	line -> from Here + x,-x down y+z right y;
+	"list" at Here + x,-x;
+}
+move to Here + 5*z,z;
+{
+	"$b sub 1$";
+	line -> from Here + 0,-x down y;
+	"$b sub 2$" at Here + 0,-x;
+	{
+		dl;
+		"$bi app$";
+		{
+			dr; "L1";
+		}
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -2*z,2*z to Here + x-4*z,x+z;
+	}
+	spline -> from Here + x,-x to Here + z,-z to Here + z,x-2*z;
+	move down x;
+	"$b sub 3$";
+	{
+		dr; "fall";
+	}
+	{
+		dl; "$bi app$";
+		{
+			dr; "L2";
+		}
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -3*z,z to Here + -4*z,4*z to Here + x-5*z,x+3*z;
+	}
+}
+
+move up z;
+"L1";
+move up x right x;
+line <- up y/2 right y/2;
+"$\(bu$";
+{
+	spline -> from Here to Here + z/2,-z/2 to Here + -y/2,x-3*z/2;
+}
+line <- up z/2 right z/2;
+"$\(bu$";
+{
+	line -> down z right z;
+	"$\(bu$";
+	{
+		line -> down y/2 right y/2;
+		move down x right x;
+		"$bi nil$";
+	}
+	line down z/2 left z/2;
+	"$\(bu$";
+	{
+		line -> down y/2 left y/2;
+		move down x left x;
+		"L2";
+	}
+	spline -> from Here to Here + z/2,-z/2 to Here + -z-y/2,x-3*z/2;
+}
+
+line dashed from Here + -x,0 to Here + x-8*z,0;
+arc to Here + -x,-x rad x;
+line dashed down 5*z-2*x;
+arc to Here + x,-x rad x;
+line dashed right y/2+2*z;
+.PE
+.bp
+.PS
+x = 15/225; y = 3*x; z = 5*x;
+
+define dr % move down x right x; line -> down y right y; move down x right x; %
+define dl % move down x left x; line -> down y left y; move down x left x; %
+define ur % move up x right x; line <- up y right y; move up x right x; %
+define ul % move up x left x; line <- up y left y; move up x left x; %
+
+"e";
+ur;
+"$bi upd$";
+{
+	line -> from Here + 0,-x down y right x;
+	"L2" at Here + 0,-x;
+}
+{
+	spline -> from Here + x,-x to Here + z,-z to Here + 2*z,-z to Here + 5*z,2*z to Here + 6*z-x,z+x;
+}
+ur;
+"$bi upd$";
+{
+	line -> from Here + 0,-x down y right x;
+	"L1" at Here + 0,-x;
+}
+{
+	spline -> from Here + x,-x to Here + z,-z to Here + 4*z,2*z to Here +5*z-x,z+x;
+}
+move to Here + 5*z,z;
+{
+	"$b sub 1$";
+	line -> from Here + 0,-x down y;
+	"$b sub 2$" at Here + 0,-x;
+	{
+		dl;
+		"$bi app$";
+		{
+			dr; "L1";
+		}
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -2*z,2*z to Here + x-4*z,x+z;
+	}
+	spline -> from Here + x,-x to Here + z,-z to Here + z,x-2*z;
+	move down x;
+	"$b sub 3$";
+	{
+		dr; "fall";
+	}
+	{
+		dl; "$bi app$";
+		{
+			dr; "L2";
+		}
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -3*z,z to Here + -4*z,4*z to Here + x-5*z,x+3*z;
+	}
+}
+.PE
+.bp
+.PS
+x = 15/225; y = 3*x; z = 5*x;
+
+define dr % move down x right x; line -> down y right y; move down x right x; %
+define dl % move down x left x; line -> down y left y; move down x left x; %
+define ur % move up x right x; line <- up y right y; move up x right x; %
+define ul % move up x left x; line <- up y left y; move up x left x; %
+
+{
+	"$b sub 1$";
+	line -> from Here + 0,-x down y;
+	"$b sub 2$" at Here + 0,-x;
+	{
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -2*z,0 to Here + -2*z,z to Here + -z,2*z to Here + -x,z+x;
+	}
+	spline -> from Here + x,-x to Here + z,-z to Here + z,x-2*z;
+	move down x;
+	"$b sub 3$";
+	{
+		dr; "fall";
+	}
+	{
+		spline -> from Here + -x,-x to Here + -z,-z to Here + -4*z,-z to Here + -4*z,3*z to Here + -2*z,3*z to Here + -x-z,x+2*z;
+	}
+}
+.PE
+
+pt.ravi.3       705721325   9     1     100644  809       `
+.EQ
+delim $$
+.EN
+.PS
+define L %
+	if "$2" != "" then | x = $2; |
+	if "$3" != "" then | y = $3; |
+	if "$4" != "" then | n = $4; | else | n = m; |
+	if "$5" != "" then | co = cos(2*$5); si = sin(2*$5); |\
+		else | co = cos(2*theta); si = sin(2*theta); |
+	px=x*hu; py=y*vu;
+	vx=(px+n*(px*co+py*si))/2; vy=(py+n*(px*si-py*co))/2;
+	alpha = atan2(vy,vx); beta = atan2(py-vy,px-vx);
+	 { spline $1 from Here + c*cos(alpha),c*sin(alpha)\
+		to Here + vx,vy\
+		to Here + px-c*cos(beta),py-c*sin(beta);
+	}
+	move to Here + px,py
+% x=0; y=0; m=0; theta=0; c=0; # initially
+define E %
+	 { move to Here + .25*(px/2+vx)-px,.25*(py/2+vx)-py;
+		$1;
+	}
+%
+pi = 3.1415926535; hu = 0.3i; vu = hu;
+for i = 0 to 7 do | { L(,4,4,1,i*pi/8); E(line right i);} |
+move down 2;
+for i = 0 to 7 do | { L(,6,3,1,i*pi/8); E(line right i);} |
+.PE
+
+pt.ravi.4       705721325   9     1     100644  824       `
+.EQ
+delim $$
+.EN
+.PS
+[
+	lineht = .2; ellipseht = .25; ellipsewid = .45;
+	arrowht = .08; arrowwid = .04;
+	A : [
+		down;
+		E1 :	ellipse "1,2"
+			arrow
+		E2 :	ellipse "3"
+			arrow
+		E3 : 	ellipse "4,5,6"
+			arrow
+		E4 :	ellipse wid .7 "7,8,9,10"
+
+		arc cw -> from E4.w to E1.w
+		arc cw -> from E3.nw to E2.sw
+		arc    -> from E4.ne to E3.e
+		arc    -> rad  from E4.e to E2.e
+print arcrad
+	]
+	B : [
+		down;
+		E1 :	ellipse "1,2"
+			arrow
+		E2 :	ellipse "3"
+			arrow
+		E3 : 	ellipse wid .7 "$4 ,..., 10$"
+
+		arc cw -> rad 1 from E3.w to E1.w
+		arc cw -> from E3.nw to E2.w
+	] with .nw at A.ne + .25,0
+	C : [
+		down;
+		E1 :	ellipse "1,2"
+			arrow
+		E2 :	ellipse wid .7 "$3 ,..., 10$"
+
+		arc cw -> from E2.nw to E1.w
+	] with .nw at B.ne + .25,0
+	D : [
+		down;
+		E1 :	ellipse wid .7 "$1 ,..., 10$"
+
+	] with .nw at C.ne + .25,0
+]
+.PE
+pt.ravi.b1      705721325   9     1     100644  581       `
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*1.4;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+define expr %
+	"expression";
+	{ ln(-2,-1); $1; }
+	{ ln(0,-1); "operator"; ln(0,-1); "\f8$2\f1"; }
+	{ ln(2,-1); $3; }
+%
+define id %
+{
+	"expression"
+	ln(0,-1);
+	"identifier";
+	ln(0,-1); "\f8$1\f1";
+}
+%
+"assignment"; move down 1.5*u; "statement";
+ {
+	ln(-1,-1); "identifier";
+	ln(0,-1);  "\f8position\f1";
+}{
+	ln(2,-1);
+	expr(
+		id(initial),+,expr( id(distance),*,id(time) )
+	);
+}
+.PE
+
+pt.ravi.b2      705721326   9     1     100644  8387      `
+.PS
+b = 0.1i
+a = 1.5*b
+d = a+2*b
+define lleft % move down b left b; line down a left a; move down b left b %
+define ldown % move down b; line down a; move down b %
+define lright % move down b right b; line down a right a; move down b right b %
+"$list$";
+{
+	move down b left 2*b;
+	line down a left a+d; move down b left b; "$list$";
+	{
+		lleft; "$list$"; ldown; "$digit$"; ldown; "$9$";
+	}
+	{
+		move down b; line down a+2*d; move down b; "$-$";
+	}
+	{
+		lright; "$digit$";
+		move down b; line down a+d; move down b; "$5$";
+	}
+}
+{
+	move down b; line down a+3*d; move down b; "$-$";
+}
+{
+	move right b;
+	lright; "$digit$";
+	move down b; line down a+2*d; move down b; "$2$";
+}
+.PE
+.PS
+u = 0.08i;
+h = 3*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*1.4;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+"$A$";	 { ln(-1,-1); "$X$";
+	}{ ln(0,-1); "$Y$";
+	}{ ln(1,-1); "$Z$";
+	}
+.PE
+.PS
+"$string$";
+{
+	lleft; "$string$";
+	{ lleft; "$string$"; ldown; "$9$"; }
+	{ ldown; "$-$"; }
+	{ lright; "$string$"; ldown; "$5$"; }
+}
+{
+	ldown; "$-$";
+}
+{
+	lright; "$string$";
+	ldown; "$2$";
+}
+move right 20*b;
+"$string$";
+{
+	lleft; "$string$";
+	ldown; "$9$";
+}
+{
+	ldown; "$-$";
+}
+{
+	lright; "$string$";
+	{
+		lleft; "$string$";
+		ldown; "$5$";
+	}
+	{
+		ldown; "$-$";
+	}
+	{
+		lright; "$string$";
+		ldown; "$2$";
+	}
+}
+.PE
+.PS
+b = 0.1i
+a = 1.5*b
+d = a+2*b
+define lleft % move down b left b; line down a left a; move down b left b %
+define ldown % move down b; line down a; move down b %
+define lright % move down b right b; line down a right a; move down b right b %
+"$list$";
+{
+	lleft; "$list$";
+	{
+		lleft; "$list$";
+		ldown; "$digit$"; ldown; "$9$";
+	}
+	{
+		ldown; "$-$";
+	}
+	{
+		lright; "$digit$"; ldown; "$5$";
+	}
+}
+{
+	ldown; "$-$";
+}
+{
+	lright; "$digit$"; ldown; "$2$";
+}
+move right 20*b;
+"\f2right\fP";
+{
+	lleft; "$letter$"; ldown; "$bd a $";
+}
+{
+	ldown; "$=$";
+}
+{
+	lright; "\f2right\fP";
+	{
+		lleft; "$letter$"; ldown; "$bd b$";
+	}
+	{
+		ldown; "$=$";
+	}
+	{
+		lright; "\f2right\fP";
+		ldown; "$letter$"; ldown; "$ bd c$";
+	}
+}
+.PE
+.PS
+b = 0.1i
+a = 2*b
+h = 6*b; hf = h+2*b;
+d = a+2*b
+define lleft % move down b left b; line down a left h; move down b left b %
+define ldown % move down b; line down a; move down b %
+define lright % move down b right b; line down a right h; move down b right b %
+"$expr.t^=^95-2-$";
+{
+	move down b left 2*b;
+	line down a left 2*h+2*b; move down b left 2*b;
+	"$expr.t^=^95-$";
+	{
+		lleft; "$expr.t^=^9$";
+		ldown; "$term.t^=^9$";
+		ldown; "$9$";
+	}
+	{
+		move down b; line down a+2*d; move down b; "$-$";
+	}
+	{
+		lright; "$term.t^=^5$";
+		move down b; line down a+d; move down b; "$5$";
+	}
+}
+{
+	move down b; line down a+3*d; move down b; "$-$";
+}
+{
+	move right b;
+	lright; "$term.t^=^2$";
+	move down b; line down a+2*d; move down b; "$2$";
+}
+.PE
+.PS
+scale = 50
+{
+	line down 5
+	line left 6
+	line up 7
+	line right 8
+}
+move right 50;
+{
+	line down 5
+	line left 6
+	line up 7
+	line right 8
+	line down 9
+	line left 10
+	line up 11
+	line right 12
+	line down 13
+	line left 14
+	line up 15
+	line right 16
+	line down 17
+	line left 18
+	line up 19
+	line right 20
+}
+move right 100
+{
+	line down 5
+	line left 6
+	line up 7
+	line right 8
+	line down 9
+	line left 10
+	line up 11
+	line right 12
+	line down 13
+	line left 14
+	line up 15
+	line right 16
+	line down 17
+	line left 18
+	line up 19
+	line right 20
+	line down 21
+	line left 22
+	line up 23
+	line right 24
+	line down 25
+	line left 26
+	line up 27
+	line right 28
+	line down 29
+	line left 30
+	line up 31
+	line right 32
+	line down 33
+	line left 34
+	line up 35
+	line right 36
+	line down 37
+	line left 38
+	line up 39
+	line right 40
+	line down 41
+	line left 42
+	line up 43
+	line right 44
+	line down 45
+	line left 46
+	line up 47
+	line right 48
+	line down 49
+	line left 50
+	line up 51
+	line right 52
+	line down 53
+	line left 54
+	line up 55
+	line right 56
+	line down 57
+	line left 58
+	line up 59
+	line right 60
+	line down 61
+	line left 62
+	line up 63
+	line right 64
+	line down 65
+	line left 66
+	line up 67
+	line right 68
+}
+.PE
+.PS
+scale = 1;
+b = 0.1i
+a = 1.5*b
+d = a+2*b
+define lleft % move down b left 2*b; line down 2*a+b left 2*d-b; move down b left b %
+define ldown % move down b; line down a; move down b %
+define lright % move down b right 2*b; line down 2*a+b right 2*d-b; move down b right b %
+
+"$expr$"; { move right b; " {print $-$}" ljust; }
+{
+	ldown; "$-$";
+}
+{
+	lright;
+	"$term$"; { move right b; " {print $5$}" ljust; }
+	ldown; "$9$";
+}
+
+lleft;
+"$expr$"; { move right b; " {print $-$}" ljust; }
+{
+	ldown; "$-$";
+}
+{
+	lright;
+	"$term$"; { move right b; " {print $5$}" ljust; }
+	ldown; "$5$";
+}
+
+lleft;
+"$expr$";
+ldown; "$term$"; { move right b; " {print $2$}" ljust; }
+ldown; "$2$";
+.PE
+.PS
+b = 0.1i
+a = 2*b
+h = 6*b; hf = h+2*b;
+d = a+2*b
+define lleft % move down b left b; line down a left h; move down b left b %
+define ldown % move down b; line down a; move down b %
+define lright % move down b right b; line down a right h; move down b right b %
+"$expr.t^=^95-2-$";
+{
+	move down b left 2*b;
+	line down a left 2*h+2*b; move down b left 2*b;
+	"$expr.t^=^95-$";
+	{
+		lleft; "$expr.t^=^9$";
+		ldown; "$term.t^=^9$";
+		ldown; "$9$";
+	}
+	{
+		move down b; line down a+2*d; move down b; "$-$";
+	}
+	{
+		lright; "$term.t^=^5$";
+		move down b; line down a+d; move down b; "$5$";
+	}
+}
+{
+	move down b; line down a+3*d; move down b; "$-$";
+}
+{
+	move right b;
+	lright; "$term.t^=^2$";
+	move down b; line down a+2*d; move down b; "$2$";
+}
+.PE
+.PS
+u=0.02i;
+{
+	line to Here + 0*u,-5*u
+	line to Here + -6*u,0*u
+	line to Here + 0*u,7*u
+	line to Here + 8*u,0*u
+}
+move right 1.0i;
+{
+	line to Here + 0*u,-5*u
+	line to Here + -6*u,0*u
+	line to Here + 0*u,7*u
+	line to Here + 8*u,0*u
+	line to Here + 0*u,-9*u
+	line to Here + -10*u,0*u
+	line to Here + 0*u,11*u
+	line to Here + 12*u,0*u
+	line to Here + 0*u,-13*u
+	line to Here + -14*u,0*u
+	line to Here + 0*u,15*u
+	line to Here + 16*u,0*u
+	line to Here + 0*u,-17*u
+	line to Here + -18*u,0*u
+	line to Here + 0*u,19*u
+	line to Here + 20*u,0*u
+}
+move right 2.0i
+{
+	line to Here + 0*u,-5*u
+	line to Here + -6*u,0*u
+	line to Here + 0*u,7*u
+	line to Here + 8*u,0*u
+	line to Here + 0*u,-9*u
+	line to Here + -10*u,0*u
+	line to Here + 0*u,11*u
+	line to Here + 12*u,0*u
+	line to Here + 0*u,-13*u
+	line to Here + -14*u,0*u
+	line to Here + 0*u,15*u
+	line to Here + 16*u,0*u
+	line to Here + 0*u,-17*u
+	line to Here + -18*u,0*u
+	line to Here + 0*u,19*u
+	line to Here + 20*u,0*u
+	line to Here + 0*u,-21*u
+	line to Here + -22*u,0*u
+	line to Here + 0*u,23*u
+	line to Here + 24*u,0*u
+	line to Here + 0*u,-25*u
+	line to Here + -26*u,0*u
+	line to Here + 0*u,27*u
+	line to Here + 28*u,0*u
+	line to Here + 0*u,-29*u
+	line to Here + -30*u,0*u
+	line to Here + 0*u,31*u
+	line to Here + 32*u,0*u
+	line to Here + 0*u,-33*u
+	line to Here + -34*u,0*u
+	line to Here + 0*u,35*u
+	line to Here + 36*u,0*u
+	line to Here + 0*u,-37*u
+	line to Here + -38*u,0*u
+	line to Here + 0*u,39*u
+	line to Here + 40*u,0*u
+	line to Here + 0*u,-41*u
+	line to Here + -42*u,0*u
+	line to Here + 0*u,43*u
+	line to Here + 44*u,0*u
+	line to Here + 0*u,-45*u
+	line to Here + -46*u,0*u
+	line to Here + 0*u,47*u
+	line to Here + 48*u,0*u
+	line to Here + 0*u,-49*u
+	line to Here + -50*u,0*u
+	line to Here + 0*u,51*u
+	line to Here + 52*u,0*u
+	line to Here + 0*u,-53*u
+	line to Here + -54*u,0*u
+	line to Here + 0*u,55*u
+	line to Here + 56*u,0*u
+	line to Here + 0*u,-57*u
+	line to Here + -58*u,0*u
+	line to Here + 0*u,59*u
+	line to Here + 60*u,0*u
+	line to Here + 0*u,-61*u
+	line to Here + -62*u,0*u
+	line to Here + 0*u,63*u
+	line to Here + 64*u,0*u
+	line to Here + 0*u,-65*u
+	line to Here + -66*u,0*u
+	line to Here + 0*u,67*u
+	line to Here + 68*u,0*u
+}
+.PE
+.PS
+b = 0.1i
+a = 1.5*b
+d = a+2*b
+define lleft % move down b left 2*b; line down 2*a+b left 2*d-b; move down b left b %
+define ldown % move down b; line down a; move down b %
+define lright % move down b right 2*b; line down 2*a+b right 2*d-b; move down b right b %
+
+"$expr$"; { move right b; "\f8 {\f1print\f8'-'}\fP" ljust; }
+{
+	ldown; "\f8-\fP";
+}
+{
+	lright;
+	"$term$"; { move right b; "\f8 {\f1print\f8'5'}\fP" ljust; }
+	ldown; "\f82\fP";
+}
+
+lleft;
+"$expr$"; { move right b; "\f8 {\f1print\f8'-'}\fP" ljust; }
+{
+	ldown; "\f8-\fP";
+}
+{
+	lright;
+	"$term$";"$term$"; { move right b; "\f8 {\f1print\f8'3'}\fP" ljust; }
+	ldown; "\f85\fP";
+}
+
+lleft;
+"$expr$";
+ldown; "$term$"; { move right b; "\f8 {\f1print\f8'2'}\fP" ljust; }
+ldown; "\f82\fP";
+.PE
+
+pt.ravi.b4      705721326   9     1     100644  3966      `
+.PS
+u = 0.08i;
+h = 3*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*1.4;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+.PE
+.PS
+"$A$";	 { ln(-1,-1); "$X$";
+	}{ ln(0,-1); "$Y$";
+	}{ ln(1,-1); "$Z$";
+	}
+.PE
+.PS
+define uminus %
+	"$E$"; { ln(-1,-1); "$-$"; }; ln(1,-1);
+%
+define parens %
+	"$E$"; { ln(-1,-1); "\f8(\f1"; }{ ln(1,-1);  "\f8)\f1"; };
+	ln(0,-1);
+%
+define id %
+	"$E$"; ln(0,-1); "$ID$";
+%
+uminus();
+parens();
+"$E$";	 { ln(0,-1);  "$+$";
+	}{ ln(-1,-1); id();
+	}{ ln(1,-1);  id();
+	}
+.PE
+.PS
+{	move right 2*hs;
+	"$E$"
+}
+{	move right 5*hs; "$=>$"; move right 2*hs;
+	uminus(); "$E$";
+}
+move down 2*vs;
+{	"$=>$"; move right 2*hs;
+	uminus(); parens(); "$E$";
+}
+{	move right 5*hs; "$=>$"; move right 2*hs;
+	uminus(); parens();
+	"$E$";	 { ln(0,-1);  "$+$";
+		}{ ln(-1,-1); "$E$";
+		}{ ln(1,-1);  "$E$";
+		}
+}
+move down 4*vs;
+{	"$=>$"; move right 2*hs;
+	uminus(); parens();
+	"$E$";	 { ln(0,-1);  "$+$";
+		}{ ln(-1,-1); id();
+		}{ ln(1,-1);  "$E$";
+		}
+}
+{	move right 5*hs; "$=>$"; move right 2*hs;
+	uminus(); parens();
+	"$E$";	 { ln(0,-1);  "$+$";
+		}{ ln(-1,-1); id();
+		}{ ln(1,-1);  id();
+		}
+}
+.PE
+.PS
+{
+	"$E$";	 { ln(0,-1);  "$+$";
+		}{ ln(-1,-1); id();
+		}{ ln(1,-1);"$E$";
+			 { ln(0,-1);  "$star$";
+			}{ ln(-1,-1); id();
+			}{ ln(1,-1);  id();
+			}
+		}
+	move down 4*vs; "(a)"
+}
+move right 6*hs;
+{
+	"$E$";	 { ln(0,-1);  "$star$";
+		}{ ln(1,-1); id();
+		}{ ln(-1,-1);"$E$";
+			 { ln(0,-1);  "$+$";
+			}{ ln(-1,-1); id();
+			}{ ln(1,-1);  id();
+			}
+		}
+	move down 4*vs; "(b)"
+}
+.PE
+.PS
+u = 0.08i;
+h = 3*u; hs = h+2*u;
+v = 4*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*(1.4 $4);}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+.PE
+.PS
+define tree %
+	 { "`$1`";
+	}{ move down u left 0.5*u;
+	   line left 0.6*h down 1.75*u;
+	   line right 0.6*h+0.5*u;
+		 { move down 1.2*u; "`$2 sub $3`";
+		}
+	   line right 0.6*h+0.5*u;
+	   line left 0.6*h up 1.75*u;
+	}
+%
+define ifthen %
+	 "`stmt`";
+	 { ln(-1.5,-1); "`IF`";
+	}{ ln(-0.5,-1); tree(cond,C,$1);
+	}{ ln(0.5,-1); "`THEN`";
+	}
+	ln(1.5,-1);
+%
+define ifelse %
+	 "`stmt`";
+	 { ln(-1.5,-1); "`IF`";
+	}{ ln(-0.5,-1); tree(cond,C,$1);
+	}{ ln(0.5,-1); "`THEN`";
+	}{ ln(1.5,-1); 
+	}{ ln(2.5,-1); "`ELSE`";
+	}{ ln(3.5,-1); 
+	}
+	 { move right (3.5-$3*2)*hs down vs; tree(stmt,S,$2)
+	}
+	move right (1.5+$3*2)*hs down vs;
+%
+ifelse(1,1,1);
+ifelse(2,2,1);
+tree(stmt,S,3);
+.PE
+.PS
+ifthen(1);
+ifelse(2,1,1);
+tree(stmt,S,2);
+.PE
+.PS
+ifelse(1,2,0);
+ifthen(2);
+tree(stmt,S,1);
+.PE
+.PS
+define wiggle %
+	spline $1 to Here + u/2,u/2 to Here + u,-u/2 to Here + 3*u/2,0
+%
+ { circle radius 1.3*u at Here;
+}{ "$s sub 0$";
+}{ move up vs right 2*hs; "path labeled $a sup i$";
+}{ move down vs right 2*hs; "path labeled $a sup j$";
+}
+move right 4*hs;
+ { ellipse wid 1.5*hs ht vs at Here;
+}{ "$s sub i~=~s sub j$";
+}
+move right 0.75*hs;
+wiggle();wiggle();wiggle();wiggle();wiggle();wiggle();
+spline -> to Here + u/2,u/2 to Here + u,-u/2 to Here + 3*u/2,0 to Here + 2*u,0 to Here +5*u/2,0 to Here +7*u/2,0;
+move right 0.8*u;
+ { circle radius 1.2*u at Here;
+}{ circle radius 1.4*u at Here;
+}{ "$f$";
+}
+.PE
+.PS
+u = 0.08i;
+h = 3*u; hs = h+2*u;
+v = 4*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*(1.4 $4);}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+.PE
+.PS
+define ifthen %
+	 "`S`";
+	 { ln(-1.5,-1); "`i`";
+	}{ ln(-0.5,-1); "`C`"; $1
+	}{ ln(0.5,-1); "`t`";
+	}
+	ln(1.5,-1);
+%
+define ifelse %
+	 "`stmt`";
+	 { ln(-1.5,-1); "`i`";
+	}{ ln(-0.5,-1); "`C`"; $1
+	}{ ln(0.5,-1); "`t`";
+	}{ ln(1.5,-1); "`S`"; $2
+	}{ ln(2.5,-1); "`e`";
+	}{ ln(3.5,-1);  "`S`"; $3
+	}
+%
+ifthen(ln(0,-0.5);"`b`";);
+ifelse(ln(0,-0.5);"`b`";,ln(0,-0.5);"`a`";,ln(0,-0.5);"`a`";);
+.PE
+.PS
+ifthen(); "`S`";
+.PE
+.PS
+ifthen(ln(0,-0.5); "\f8b\f1";); "`S`";
+.PE
+.PS
+ifthen(ln(0,-0.5); "\f8b\f1";);
+ifelse();
+.PE
+.PS
+ifthen( ln(0,-0.5);"\f8b\f1"; );
+ifelse( ln(0,-0.5);"\f8a\f1"; );
+.PE
+pt.ravi.b5      705721326   9     1     100644  2289      `
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop 1.4*u;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+
+define digit %
+	"`bd digit`";
+	{
+		move right 2*u; "`d = $1`" ljust;
+	}
+%
+define nont %
+	"`$1`";
+	{
+		move right 2*u; "`v = $2`" ljust;
+	}
+%
+define chain %
+	nont(exp,$1);
+	ln(0,-0.6);
+	nont(num,$2);
+	ln(0,-0.6);
+	digit($3)
+%
+
+nont(exp,119); {ln(0,-0.6); "\f8+\fP";}
+{
+	ln(1.5,-0.6);
+	chain(4,4,4);
+}
+ln(-2.5,-1.2);
+nont(exp,115); {ln(0,-0.6); "\f8*\fP";}
+{
+	ln(1.5,-0.6);
+	chain(5,5,5);
+}
+ln(-2,-1.2);
+nont(exp,23);
+ln(0,-0.6);
+nont(num,23);
+{
+	ln(1,-0.6);
+	digit(3);
+}
+ln(-1.2,-1.2);
+nont(num,2);
+ln(0,-0.6);
+digit(2);
+.PE
+.PS
+u = 0.1i;
+h = 3*u; hs = h+2*u;
+v = 4*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop 1.5*u;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+"\f8;\f1"
+{
+	ln(-2,-0.6); "\f8:=\f1";
+	{
+		ln(-0.6,-0.6); "\f8r\f1"
+	}
+	{
+		ln(0.6,-0.6); "\f8m\f1"
+	}
+}
+ln(2,-0.6); "\f8while\f1"
+{
+	ln(-1.2,-0.6); "\f8>\f1";
+	{
+		ln(-0.6,-0.6); "\f8r\f1"
+	}
+	{
+		ln(0.6,-0.6); "\f8n\f1"
+	}
+}
+ln(1.2,-0.6); "\f8:=\f1"
+{
+	ln(-0.6,-0.6); "\f8r\f1"
+}
+ln(0.6,-0.6); "\f8-\f1";
+{
+	ln(-0.6,-0.6); "\f8r\f1";
+}
+ln(0.6,-0.6); "\f8n\f1"
+.PE
+.PS
+u = 0.1i;
+h = 5*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+bs = 3*u;
+define stmt %
+	"\f8;\f1";
+	{
+		move left bs; "\(bu"; move left u; "\f2b\f1" rjust;
+	}
+%
+define while %
+	"\f8while\f1"
+	{
+		move left bs; "\(bu"; move left u; "\f2b\f1" rjust;
+	}
+	{
+		move right bs; "\(bu"; move right u; "\f2out\f1" ljust;
+	}
+%
+define pwhile %
+	while;
+	{
+		ln(1,-1,dotted);
+		move left bs;
+		line <- to Here + -hs+2*bs,vs;
+	}
+	{
+		ln(-1,-1,dotted);
+		"\f8EXP\f1";
+	}
+%
+define pseq %
+	stmt;
+	{
+		ln(-1,-1,dotted);
+		move left bs;
+		lf(1,1,<-);
+		lf(1,-1,->);
+		move right bs;
+		ln(-1,1,dotted);
+	}
+%
+
+pwhile;
+move down vs right hs;
+pseq;
+{
+	move down vs left hs; stmt;
+}
+move down vs right hs;
+pseq;
+{
+	move down vs right hs; stmt;
+}
+move down vs left hs;
+pwhile;
+move down vs right hs;
+pseq;
+{
+	move down vs right hs; stmt;
+}
+move down vs left hs;
+stmt;
+.PE
+
+pt.ravi.b6      705721326   9     1     100644  5692      `
+.EQ
+delim $$
+.EN
+.PS
+u = 0.25i;
+boxwid = 3*u; boxht = 2*u;
+ellipsewid = 3*u; ellipseht = 2*u;
+linewid = 2*u; lineht = 2*u;
+movewid = 2*u; moveht = 2*u;
+P:	box "parsing"
+	arrow
+	box "static" "checking"
+	arrow dotted
+CG:	box "code" "generation"
+.PE
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+{
+	"\f2array\f1";
+		{ ln(-1,-1); "\f8NUM\f1" }
+		{ ln(1,-1); "\f2T\f1" }
+	move down 1.5*vs; "(a)"
+}
+
+move right 5*hs
+
+{
+	"\f2pointer\f1"
+		{ ln(0,-1); "\f2T\f1" }
+	move down 1.5*vs; "(b)"
+}
+.PE
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+{
+	"\f8p\f1"; ln(1,-1,dotted);
+	{ ln(1,1,dotted); "\f8q\f1"; }
+	"\f2pointer\f1"; ln(1,-1);
+	"\f8cell\f1"; ln(1,1);
+	"\f2pointer\f1"; ln(0,1,dotted);
+	"\f8r\f1"
+}
+move right 5*hs
+{
+	"\f8next\f1"; ln(1,-1,dotted);
+	"\f8link\f1";
+	ln(1,1,dotted);
+	"\f8last\f1"
+}
+.PE
+.PS
+u = 0.08i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+{
+S:	"\f2record\f1";
+	{ ln(-1,-1); "\f8cell\f1"; }
+	ln(1,-1); "$times$";
+	{
+		ln(-1,-1); "\f2field\f1";
+		{ ln(-1,-1); "\f8info\f1";}
+		ln(1,-1); "\f2integer\f1";
+	}
+	ln(2,-2); "$times$";
+	{
+		ln(-1,-1); "\f2field\f1";
+		{ ln(-1,-1); "\f8next\f1";}
+		ln(1,-1); "\f2pointer\f1";
+		move down u;
+		spline -> to Here + 0,-vs+u to Here + -5*hs,-vs+u to Here + -5*hs,5*vs to S + -2*u,0;
+	}
+	ln(1,-1); "\f2nil\f1";
+}
+.PE
+.PS
+u = 0.1i;
+h = 3*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+	"\f8constructor\f1";
+	move right hs up v; line down 2*v; move right hs up v;
+	"\f8child1\f1";
+	{ move right 3*u; "\(bu"; line -> down vs left hs; }
+	move right hs up v; line down 2*v; move right hs up v;
+	"\f8child2\f1";
+	{ move right 3*u; "\(bu"; line -> down vs right hs; }
+	move right hs up v; line down 2*v; move right hs up v;
+	"\f8set\f1";
+	{
+		move right 2*u; "\(bu";
+		spline -> to Here + 2*u,0 to Here + 2*u,vs to Here + 4*u,vs;
+	}
+	move right hs up v;
+	line down 2*v;
+	line left 8*hs;
+	line up 2*v;
+	line right 8*hs;
+.PE
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+"$E~:$"; { move right 2*u; "\f1{$i,c$}" ljust; }
+{
+	ln(0,-1);
+	"$E~:$"; {move right 2*u; "\f1{$i$}" ljust; }
+	ln(0,-1);
+	"\f83$~:$\f1"; {move right 2*u; "\f1{$i$}" ljust; }
+}
+{
+	ln(2,-1);
+	"$E~:$"; {move right 2*u; "\f1{$i$}" ljust; }
+	ln(0,-1);
+	"\f85$~:$\f1"; {move right 2*u; "\f1{$i$}" ljust; }
+}
+{
+	ln(-2,-1);
+	move left hs down 2*u;
+	"\f8*$~:~left { lpile { {c times c~->~c,} above {i times i~->~i,} above {i times i~->~c} } right }$"
+}
+.PE
+.PS
+u = 0.1i;
+h = 4*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+move left hs;
+{ move left 2*u; "$apply~:~integer$" ljust; }
+{
+	ln(-1,-1);
+	"$cw deref sub o~:$";
+	move down 1.5*u;
+	"$pointer( alpha sub o ) -> alpha sub o$"
+}
+ln(1,-1);
+{ move left 2*u; "$apply~:~pointer(integer)$" ljust; }
+{
+	ln(-1,-1);
+	"$cw deref sub i~:$";
+	move down 1.5*u;
+	"$pointer( alpha sub i ) -> alpha sub i$"
+}
+ln(1,-1);
+"$cw q~:~pointer(pointer(integer))$" ljust;
+.PE
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*($1*$1+$2*$2+4.75)/5;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+"\f8+";
+{
+	ln(2,-1);
+	"\f8*"; { ln(1,-1); "\f8d"; }
+	ln(-2,-2);
+	"\f8-"; { ln(1,-1); "\f8c"; }
+	ln(-1,-1); "\f8b";
+}
+ln(-2,-1);
+"\f8+";
+{
+	spline from Here + -u,-u to Here + -hs,-vs to Here + -u,-2*vs+u;
+}
+ln(1,-1); 
+"\f8*"; { ln(-1,-1); "\f8a"; }
+ln(1,-1);
+.PE
+.PS
+u = 0.1i; c = u;
+h = 3*u;
+v = 3*u;
+
+define pearl %
+	{ arc cw to Here + 0,-v;}
+	arc to Here + 0,-v;
+	"\(bu";
+%
+define b1 %
+	{ line down v left  h-$1*c; "\(bu"; }
+	{ line down v right h-$2*c; "\(bu"; }
+%
+define b2 %
+	{ line down v left  h; "\(bu"; b1($1,1); }
+	{ line down v right h; "\(bu"; b1(1,$2); }
+%
+define b3 %
+	{ line down v left  2*h; "\(bu"; b2($1,1); }
+	{ line down v right 2*h; "\(bu"; b2(1,$2); }
+%
+
+"\(bu";
+pearl();
+move down v;
+"\(bu";
+pearl(); pearl();
+move down v;
+"\(bu";
+pearl(); pearl(); pearl();
+move right h up 1.5*v;
+"$=>$";
+move up 3.5*v;
+"$=>$";
+move up 2.5*v;
+"$=>$";
+move up v/2;
+
+move right 5*h;
+"\(bu";
+b1(0,0);
+move down 2*v;
+"\(bu";
+b2(0,0);
+move down 3*v;
+"\(bu";
+b3(0,0);
+.PE
+.PS
+u = 0.1i;
+h = 2*u; hs = h+2*u;
+v = 2*u; vs = v+2*u;
+
+define ln %
+	{line $3 from Here to Here + $1*hs,$2*vs chop u*1.4;}
+	move to Here + $1*hs,$2*vs
+%
+define lf %
+	line $3 to Here + $1*hs,$2*vs
+%
+define spmm %
+	{spline $3 from Here + -u,-u to Here + -hs,-vs to Here + hs*$1,vs*$2+u;}
+	move to Here + $1*hs,$2*vs
+%
+define sppm %
+	{spline $3 from Here + u,-u to Here + hs,-vs to Here + hs*$1,vs*$2+u;}
+	move to Here + $1*hs,$2*vs
+%
+"$->^:^1$"
+{	ln(-1,-1); "$times^:^2$";
+	{	ln(-1,-1); "$->^:^3$";
+		{	ln(-1,-1); "$alpha sub 1^:^4$";
+		}{	ln(2,-1); "$alpha sub 2^:^4$";
+		}
+	}{	ln(1,-1); "$list^:^6$"; ln(3,-1);
+	}
+}{	ln(1.5,-1.5); "$list^:^7$"; ln(-1.5,-1.5);
+}
+move right 6*hs;
+"$->^:^1$"
+{	ln(-1,-1); "$times^:^2$";
+	{	ln(-1,-1); "$->^:^3$";
+		{	ln(-1,-1); "$beta^:^4$";
+		}{	ln(1,-1); "$gamma^:^4$";
+		}
+	}{	ln(1,-1); "$list^:^6$"; ln(-1,-1);
+	}
+}{	ln(1,-1); "$delta^:^7$";
+}
+.PE
+pt.sally        705721326   9     1     100644  1669      `
+.PS 5.5i
+circlerad = 0.05i
+define pin | "\(bu" at end of last line |
+define node |circle|
+define chip |
+[  	N1: node
+	N2: node at N1 + (-.15i,-.2i);  line from N1.c to last circle chop
+	N3: node at N1 + (.15i,-.2i);  line from N1.c to last circle chop
+	N4: node at N2.c + (-.075i,-.2i);  line from N2.c to last circle chop
+	N5: node at N2.c + (.075i,-.2i);  line from N2.c to last circle chop
+	N6: node at N3 + (-.075i,-.2i);  line from N3.c to last circle chop
+	N7: node at N3 + (.075i,-.2i);  line from N3.c to last circle chop
+	N0: node at N1 + (.4i,0)
+	Bll: (N4.w,N4.s) - (.1i,.1i)
+	Bul: (Bll, N1.n) + (0,.1i)
+	Bur: (N0.e,Bul) + (.1i,0)
+	Blr: (Bur, Bll)	
+	line from Bll to Bul to Bur to Blr to Bll
+	line from N1.n up .1i;  SP: pin
+	line from N0.n up .1i; P: pin
+	line from N0.sw to N0.s - (.1i,0); line up .2i; L: pin
+	line from N0.se to N0.s + (.1i,0); line up .2i; R: pin
+] |
+
+define twochips |
+[	A: chip
+	BLL: A.Bll - (.1i,.1i)
+	BUL: BLL + (0,1i)
+	B: chip with .w at A.e + (.15i,0)
+	BLR: B.Blr + (.1i,-.1i); 
+	BUR: (BLR,BUL);
+	arc cw from A.SP to A.L
+	arc from B.SP to A.R
+ 	line dashed from BLL to BUL to BUR to BLR to BLL
+	line from A.P to (A.P,BUL); SP: pin
+	line from B.L to (B.L,BUL); L: pin
+	line from B.R to (B.R,BUL); R: pin
+	line from B.P to (B.P,BUL); P: pin
+] |
+
+C: twochips
+OBLL: C.BLL - (.1i,.1i)
+OBUL: OBLL + (0,1.5i)
+D: twochips with .w at C.e + (.25i,0)
+OBLR: D.BLR + (.1i,-.1i)
+OBUR: (OBLR, OBUL)
+arc cw from C.SP to C.L
+arc from D.SP to C.R
+line dotted from OBLL to OBUL to OBUR to OBLR to OBLL
+line from C.P to (C.P,OBUL); SP: pin
+line from D.L to (D.L,OBUL); L: pin
+line from D.R to (D.R,OBUL); R: pin
+line from D.P to (D.P,OBUL); P: pin
+.PE
+
+pt.spline       705721326   9     1     100644  223       `
+.nf
+.PS
+box "thing 1"
+spline -> right 1.5 down .2 then left 1 down .2 then down .2 right 1.5 
+box "thing 2"
+.PE
+.PS 4i
+box "thing 1"
+spline -> right 1.5 down .2 then left 1 down .2 then down .2 right 1.5 
+box "thing 2"
+.PE
+
+pt.statediag    705721326   9     1     100644  275       `
+.po .3i
+.fp 8 US
+.ft US
+.ps 20
+.PS
+circlerad = .8i
+circle
+arrow right 3i
+circle
+arc -> from top of last circle to top of last circle + -1.5i,1.5i rad 3i
+left
+circle
+arc -> to top of 1st circle rad 3i
+.ps 60
+"d" at 1st circle.c
+"D" at 2nd circle.c
+"v" at 3rd circle.c
+.ps
+.PE
+
+pt.stereo       705721326   9     1     100644  1282      `
+.sp 1i
+.po .3i
+.ps 12
+.vs 14p
+.PS 7
+lpicx=2
+rpicx=0
+gs=3.8
+planez=-.5
+eyey=.5
+eyez=-1
+leyex=.44
+reyex=1-leyex
+
+define bullet X "\s-4\(bu\s+4" X
+define circle X "\s-4\(de\s+4" X
+
+define p X
+  tx=$1; ty=$2; tz=$3
+  sf=gs*(planez-eyez)/(tz-eyez)
+  bullet at (lpicx,0) + (sf*(tx-leyex),sf*(ty-eyey))
+  bullet at (rpicx,0) + (sf*(tx-reyex),sf*(ty-eyey))
+X
+
+define l X
+  ax=$1; ay=$2; az=$3; bx=$4; bby=$5; bz=$6
+  sfa=gs*(planez-eyez)/(az-eyez)
+  sfb=gs*(planez-eyez)/(bz-eyez)
+  line $7 from (lpicx,0)+(sfa*(ax-leyex),sfa*(ay-eyey))\
+	  to   (lpicx,0)+(sfb*(bx-leyex),sfb*(bby-eyey))
+  line $7 from (rpicx,0)+(sfa*(ax-reyex),sfa*(ay-eyey))\
+	  to   (rpicx,0)+(sfb*(bx-reyex),sfb*(bby-eyey))
+X
+
+define frame Y
+  l(0,0,0, 0,1,0)
+  l(0,1,0, 1,1,0)
+  l(1,1,0, 1,0,0)
+  l(1,0,0, 0,0,0)
+
+  l(0,0,1, 0,1,1, dashed)
+  l(0,1,1, 1,1,1, dashed)
+  l(1,1,1, 1,0,1, dashed)
+  l(1,0,1, 0,0,1, dashed)
+
+  l(0,0,0, 0,0,1, dashed)
+  l(0,1,0, 0,1,1, dashed)
+  l(1,0,0, 1,0,1, dashed)
+  l(1,1,0, 1,1,1, dashed)
+Y
+frame
+
+tp=2*3.1415926535
+dx=.05
+ub=3
+if 1 then Y
+  for x=0 to ub by dx do X
+    p(.5+.5*cos(tp*x),x/ub,.5+.5*sin(tp*x))
+  X
+Y
+if 1 then Y
+  for x=0 to ub-dx by dx do X
+    l(.5+.5*cos(tp*x),     x/ub,     .5+.5*sin(tp*x), \
+      .5+.5*cos(tp*(x+dx)),(x+dx)/ub,.5+.5*sin(tp*(x+dx)))
+  X
+Y
+.PE
+pt.tbl          705721326   9     1     100644  185       `
+.EQ
+delim $$
+.EN
+xxxx
+.TS
+center, expand, doublebox;
+c c c.
+box	circle	ellipse
+T{
+.PS
+box "$b sub 1$"
+.PE
+T}	T{
+.PS
+circle "$c sub 1$"
+.PE
+T}	T{
+.PS
+ellipse "$e sub 1$"
+.PE
+T}
+.TE
+yyyy
+
+pt.tree         705721326   9     1     100644  849       `
+.EQ
+delim $$
+.EN
+.PS
+circlerad = .15i
+d = .5i
+s = .3i
+define tree X
+{ R: $1; move to R
+	{ line from R to R - $4,d chop; line from R to R + $4,-d chop }
+	{ move left $4 down d - circlerad; $2; }
+	{ move right $4 down d - circlerad; $3; }
+}
+X
+.PE
+This is a simple tree:
+.PS
+tree(circle "root", circle "left", circle "right", .3i)
+.PE
+This one is harder.
+.PS
+tree(circle "+", circle "$op sub 1$", tree(circle "*", circle "$op sub 2$", circle "$op sub 3$", .3i) , .3i)
+.PE
+This one is even worse:
+.PS
+tree(circle "+", tree(circle "*", circle "$op sub 1$", circle "$op sub 2$",.3i), tree(circle "+", circle "$op sub 3$", circle "$op sub 4$",.3i),.6i)
+.PE
+.PS
+tree(circle invis "+", tree(circle invis "*", circle invis "$op sub 1$", circle invis "$op sub 2$",.3i), tree(circle invis "+", circle invis "$op sub 3$", circle invis "$op sub 4$",.3i),.6i)
+.PE
+
+pt.usa          705721326   9     1     100644  20229     `
+From sid!rab Wed Jul  8 18:06 EDT 1987
+.PS
+move to 4.280, 3.592
+line to 4.287, 3.611
+line to 4.310, 3.616
+line to 4.313, 3.637
+line to 4.320, 3.656
+line to 4.344, 3.665
+line to 4.360, 3.679
+line to 4.368, 3.703
+line to 4.371, 3.723
+line to 4.369, 3.744
+line to 4.372, 3.764
+line to 4.384, 3.786
+line to 4.397, 3.813
+line to 4.391, 3.835
+line to 4.379, 3.853
+line to 4.391, 3.871
+line to 4.403, 3.853
+line to 4.414, 3.835
+line to 4.431, 3.817
+line to 4.451, 3.826
+line to 4.457, 3.804
+line to 4.480, 3.801
+line to 4.504, 3.801
+line to 4.493, 3.820
+line to 4.516, 3.820
+line to 4.515, 3.845
+line to 4.499, 3.860
+line to 4.487, 3.878
+line to 4.465, 3.893
+line to 4.448, 3.908
+line to 4.442, 3.929
+line to 4.414, 3.933
+line to 4.385, 3.937
+line to 4.363, 3.949
+line to 4.339, 3.952
+line to 4.315, 3.951
+line to 4.292, 3.958
+line to 4.268, 3.957
+line to 4.240, 3.960
+line to 4.217, 3.963
+line to 4.189, 3.970
+line to 4.176, 3.988
+line to 4.153, 3.986
+line to 4.150, 4.007
+move to 4.150, 4.007
+line to 4.142, 4.028
+line to 4.119, 4.030
+line to 4.125, 4.050
+line to 4.127, 4.070
+line to 4.109, 4.084
+line to 4.107, 4.108
+line to 4.094, 4.125
+line to 4.069, 4.116
+line to 4.041, 4.122
+line to 4.023, 4.136
+line to 4.015, 4.157
+line to 4.002, 4.182
+line to 3.989, 4.199
+line to 3.965, 4.201
+line to 3.936, 4.204
+line to 3.912, 4.205
+line to 3.888, 4.215
+line to 3.864, 4.221
+line to 3.863, 4.201
+line to 3.857, 4.181
+line to 3.833, 4.171
+line to 3.849, 4.198
+line to 3.828, 4.179
+line to 3.813, 4.160
+line to 3.814, 4.184
+line to 3.794, 4.173
+line to 3.779, 4.150
+line to 3.763, 4.135
+line to 3.744, 4.121
+line to 3.719, 4.110
+line to 3.690, 4.099
+line to 3.671, 4.088
+line to 3.647, 4.078
+line to 3.632, 4.062
+line to 3.617, 4.047
+line to 3.588, 4.024
+line to 3.569, 4.009
+line to 3.593, 4.004
+line to 3.621, 4.011
+line to 3.663, 4.021
+line to 3.658, 4.001
+line to 3.686, 3.991
+line to 3.709, 3.994
+move to 3.709, 3.994
+line to 3.729, 4.005
+line to 3.757, 4.016
+line to 3.781, 4.022
+line to 3.801, 4.033
+line to 3.821, 4.048
+line to 3.841, 4.066
+line to 3.860, 4.077
+line to 3.884, 4.079
+line to 3.869, 4.060
+line to 3.854, 4.045
+line to 3.843, 4.026
+line to 3.867, 4.028
+line to 3.890, 4.019
+line to 3.913, 4.009
+line to 3.926, 3.992
+line to 3.949, 3.986
+line to 3.977, 3.979
+line to 3.996, 3.990
+line to 4.016, 4.000
+line to 4.040, 3.998
+line to 4.063, 3.999
+line to 4.083, 4.009
+line to 4.107, 4.011
+line to 4.105, 3.991
+line to 4.128, 3.981
+line to 4.152, 3.978
+line to 4.169, 3.964
+line to 4.182, 3.946
+line to 4.166, 3.932
+line to 4.142, 3.935
+line to 4.127, 3.920
+line to 4.109, 3.934
+line to 4.087, 3.945
+line to 4.063, 3.943
+line to 4.043, 3.933
+line to 4.020, 3.931
+line to 4.000, 3.917
+line to 3.980, 3.902
+line to 3.991, 3.921
+line to 3.966, 3.907
+line to 3.958, 3.928
+line to 3.947, 3.905
+line to 3.931, 3.878
+move to 3.931, 3.878
+line to 3.916, 3.863
+line to 3.910, 3.844
+line to 3.895, 3.829
+line to 3.880, 3.810
+line to 3.903, 3.816
+line to 3.923, 3.830
+line to 3.935, 3.809
+line to 3.919, 3.782
+line to 3.918, 3.762
+line to 3.907, 3.739
+line to 3.910, 3.714
+line to 3.898, 3.687
+line to 3.892, 3.667
+line to 3.899, 3.642
+line to 3.902, 3.622
+line to 3.905, 3.597
+line to 3.899, 3.577
+line to 3.915, 3.555
+line to 3.922, 3.534
+line to 3.939, 3.521
+line to 3.966, 3.526
+line to 3.990, 3.544
+line to 4.006, 3.567
+line to 4.017, 3.594
+line to 4.023, 3.614
+line to 4.026, 3.638
+line to 4.019, 3.659
+line to 4.007, 3.681
+line to 4.000, 3.702
+line to 4.002, 3.726
+line to 3.999, 3.747
+line to 4.010, 3.770
+line to 4.017, 3.798
+line to 4.024, 3.817
+line to 4.040, 3.840
+line to 4.060, 3.854
+line to 4.062, 3.834
+line to 4.085, 3.823
+line to 4.082, 3.844
+line to 4.084, 3.864
+line to 4.104, 3.878
+line to 4.101, 3.899
+line to 4.108, 3.918
+move to 4.108, 3.918
+line to 4.135, 3.911
+line to 4.163, 3.904
+line to 4.180, 3.890
+line to 4.203, 3.883
+line to 4.226, 3.876
+line to 4.238, 3.859
+line to 4.231, 3.839
+line to 4.243, 3.817
+line to 4.245, 3.797
+line to 4.238, 3.777
+line to 4.226, 3.754
+line to 4.206, 3.745
+line to 4.199, 3.721
+line to 4.216, 3.707
+line to 4.236, 3.720
+line to 4.238, 3.741
+line to 4.263, 3.754
+line to 4.285, 3.747
+line to 4.297, 3.729
+line to 4.303, 3.703
+line to 4.309, 3.674
+line to 4.320, 3.656
+move to 4.287, 3.611
+line to 4.321, 3.594
+line to 4.302, 3.585
+line to 4.280, 3.592
+line to 4.264, 3.578
+line to 4.279, 3.555
+line to 4.311, 3.555
+line to 4.332, 3.572
+line to 4.352, 3.586
+line to 4.387, 3.609
+line to 4.407, 3.619
+line to 4.452, 3.612
+line to 4.479, 3.608
+line to 4.497, 3.634
+line to 4.522, 3.642
+line to 4.545, 3.642
+line to 4.568, 3.638
+line to 4.584, 3.648
+line to 4.578, 3.616
+line to 4.557, 3.599
+line to 4.531, 3.583
+line to 4.511, 3.573
+line to 4.495, 3.560
+line to 4.466, 3.552
+line to 4.438, 3.544
+line to 4.418, 3.535
+line to 4.394, 3.526
+line to 4.373, 3.509
+line to 4.345, 3.504
+line to 4.321, 3.496
+line to 4.295, 3.503
+line to 4.274, 3.510
+line to 4.253, 3.522
+line to 4.241, 3.540
+line to 4.257, 3.558
+line to 4.264, 3.578
+move to 4.584, 3.648
+line to 4.574, 3.675
+line to 4.532, 3.677
+line to 4.532, 3.706
+line to 4.552, 3.715
+line to 4.569, 3.729
+line to 4.589, 3.738
+line to 4.613, 3.742
+line to 4.638, 3.746
+line to 4.662, 3.746
+line to 4.682, 3.755
+line to 4.704, 3.743
+line to 4.732, 3.738
+line to 4.726, 3.760
+line to 4.702, 3.760
+line to 4.732, 3.767
+line to 4.762, 3.774
+line to 4.786, 3.773
+line to 4.807, 3.782
+line to 4.824, 3.795
+line to 4.847, 3.816
+line to 4.865, 3.829
+line to 4.887, 3.845
+line to 4.912, 3.848
+line to 4.891, 3.840
+line to 4.869, 3.828
+line to 4.851, 3.811
+line to 4.834, 3.797
+line to 4.816, 3.780
+line to 4.799, 3.767
+line to 4.775, 3.767
+line to 4.805, 3.745
+line to 4.796, 3.726
+line to 4.773, 3.701
+line to 4.755, 3.684
+line to 4.734, 3.675
+line to 4.697, 3.678
+line to 4.674, 3.682
+line to 4.628, 3.690
+line to 4.599, 3.683
+line to 4.574, 3.675
+line to 4.575, 3.679
+move to 4.912, 3.848
+line to 4.952, 3.849
+line to 4.996, 3.848
+line to 5.025, 3.846
+line to 5.065, 3.846
+line to 5.090, 3.849
+line to 5.125, 3.849
+line to 5.160, 3.850
+line to 5.170, 3.869
+line to 5.196, 3.875
+line to 5.214, 3.888
+line to 5.224, 3.907
+line to 5.242, 3.920
+line to 5.252, 3.938
+line to 5.248, 3.965
+line to 5.262, 3.982
+line to 5.268, 4.006
+line to 5.278, 4.029
+line to 5.295, 4.055
+line to 5.317, 4.083
+line to 5.339, 4.065
+line to 5.370, 4.066
+line to 5.399, 4.076
+line to 5.421, 4.063
+line to 5.441, 4.037
+line to 5.442, 4.003
+line to 5.450, 3.971
+line to 5.453, 3.945
+line to 5.453, 3.924
+line to 5.475, 3.909
+line to 5.489, 3.885
+line to 5.510, 3.866
+line to 5.520, 3.847
+line to 5.518, 3.821
+line to 5.496, 3.814
+line to 5.471, 3.800
+line to 5.445, 3.798
+line to 5.419, 3.796
+line to 5.415, 3.818
+line to 5.405, 3.800
+line to 5.404, 3.778
+line to 5.381, 3.784
+line to 5.362, 3.772
+line to 5.356, 3.748
+move to 5.356, 3.748
+line to 5.329, 3.742
+line to 5.308, 3.735
+line to 5.282, 3.732
+line to 5.282, 3.711
+line to 5.261, 3.687
+line to 5.246, 3.669
+line to 5.237, 3.650
+line to 5.236, 3.629
+line to 5.258, 3.615
+line to 5.230, 3.605
+line to 5.226, 3.584
+line to 5.248, 3.575
+line to 5.262, 3.554
+line to 5.272, 3.534
+line to 5.299, 3.527
+line to 5.304, 3.547
+line to 5.320, 3.530
+line to 5.297, 3.519
+line to 5.276, 3.512
+line to 5.255, 3.526
+line to 5.237, 3.513
+line to 5.219, 3.501
+line to 5.210, 3.520
+line to 5.195, 3.502
+line to 5.178, 3.490
+line to 5.153, 3.487
+line to 5.128, 3.485
+line to 5.104, 3.482
+line to 5.079, 3.479
+line to 5.057, 3.468
+line to 5.037, 3.460
+line to 5.016, 3.452
+line to 5.002, 3.434
+line to 4.985, 3.421
+line to 4.968, 3.408
+line to 4.990, 3.399
+line to 4.994, 3.376
+line to 4.994, 3.355
+line to 4.980, 3.337
+line to 4.980, 3.316
+line to 4.967, 3.297
+line to 4.947, 3.289
+line to 4.942, 3.269
+move to 4.942, 3.269
+line to 4.929, 3.251
+line to 4.924, 3.273
+line to 4.903, 3.278
+line to 4.888, 3.294
+line to 4.874, 3.315
+line to 4.881, 3.351
+line to 4.865, 3.317
+line to 4.878, 3.292
+line to 4.886, 3.265
+line to 4.900, 3.245
+line to 4.909, 3.226
+line to 4.919, 3.206
+line to 4.906, 3.188
+line to 4.900, 3.164
+line to 4.909, 3.183
+line to 4.892, 3.170
+line to 4.883, 3.147
+line to 4.869, 3.124
+line to 4.856, 3.106
+line to 4.847, 3.086
+line to 4.843, 3.109
+line to 4.852, 3.128
+line to 4.860, 3.148
+line to 4.856, 3.170
+line to 4.847, 3.189
+line to 4.824, 3.190
+line to 4.809, 3.206
+line to 4.818, 3.225
+line to 4.813, 3.247
+line to 4.822, 3.267
+line to 4.812, 3.286
+line to 4.829, 3.299
+line to 4.833, 3.319
+line to 4.820, 3.301
+line to 4.799, 3.289
+line to 4.795, 3.268
+line to 4.791, 3.248
+line to 4.791, 3.227
+line to 4.804, 3.203
+line to 4.809, 3.181
+line to 4.787, 3.185
+line to 4.758, 3.196
+line to 4.737, 3.205
+move to 4.737, 3.205
+line to 4.745, 3.224
+line to 4.728, 3.202
+line to 4.750, 3.202
+line to 4.760, 3.183
+line to 4.780, 3.174
+line to 4.801, 3.165
+line to 4.821, 3.152
+line to 4.812, 3.133
+line to 4.821, 3.110
+line to 4.803, 3.088
+line to 4.817, 3.072
+line to 4.795, 3.073
+line to 4.775, 3.086
+line to 4.790, 3.070
+line to 4.798, 3.046
+line to 4.819, 3.059
+line to 4.840, 3.054
+line to 4.849, 3.035
+line to 4.852, 3.008
+line to 4.861, 2.989
+line to 4.868, 2.961
+line to 4.877, 2.942
+line to 4.886, 2.922
+line to 4.886, 2.901
+line to 4.873, 2.883
+line to 4.877, 2.903
+line to 4.882, 2.923
+line to 4.874, 2.947
+line to 4.858, 2.973
+line to 4.851, 3.000
+line to 4.846, 3.018
+line to 4.845, 2.997
+line to 4.826, 2.989
+line to 4.809, 2.971
+line to 4.783, 2.973
+line to 4.807, 2.963
+line to 4.829, 2.962
+line to 4.837, 2.939
+line to 4.854, 2.956
+line to 4.858, 2.934
+line to 4.840, 2.912
+line to 4.807, 2.903
+line to 4.794, 2.923
+move to 4.794, 2.923
+line to 4.774, 2.911
+line to 4.798, 2.901
+line to 4.788, 2.877
+line to 4.761, 2.871
+line to 4.800, 2.870
+line to 4.814, 2.854
+line to 4.797, 2.837
+line to 4.813, 2.850
+line to 4.836, 2.874
+line to 4.823, 2.856
+line to 4.797, 2.837
+line to 4.773, 2.847
+line to 4.754, 2.838
+line to 4.724, 2.820
+line to 4.699, 2.804
+line to 4.691, 2.784
+line to 4.678, 2.762
+line to 4.653, 2.763
+line to 4.634, 2.754
+line to 4.611, 2.747
+line to 4.594, 2.725
+line to 4.586, 2.701
+line to 4.574, 2.682
+line to 4.555, 2.673
+line to 4.540, 2.660
+line to 4.525, 2.646
+line to 4.507, 2.637
+line to 4.492, 2.623
+line to 4.473, 2.610
+line to 4.454, 2.596
+line to 4.443, 2.577
+line to 4.427, 2.559
+line to 4.420, 2.540
+line to 4.408, 2.516
+line to 4.404, 2.496
+line to 4.397, 2.476
+line to 4.397, 2.454
+line to 4.397, 2.433
+line to 4.405, 2.410
+line to 4.409, 2.388
+line to 4.411, 2.357
+line to 4.419, 2.334
+line to 4.430, 2.310
+move to 4.430, 2.310
+line to 4.441, 2.286
+line to 4.449, 2.263
+line to 4.461, 2.247
+line to 4.453, 2.223
+line to 4.449, 2.245
+line to 4.441, 2.264
+line to 4.445, 2.242
+line to 4.447, 2.215
+line to 4.455, 2.196
+line to 4.456, 2.218
+line to 4.463, 2.198
+line to 4.471, 2.179
+line to 4.479, 2.160
+line to 4.482, 2.133
+line to 4.489, 2.114
+line to 4.497, 2.095
+line to 4.500, 2.072
+line to 4.496, 2.051
+line to 4.495, 2.029
+line to 4.487, 2.010
+line to 4.486, 1.984
+line to 4.478, 1.964
+line to 4.466, 1.945
+line to 4.462, 1.924
+line to 4.458, 1.903
+line to 4.436, 1.887
+line to 4.419, 1.878
+line to 4.403, 1.869
+line to 4.381, 1.870
+line to 4.361, 1.866
+line to 4.342, 1.861
+line to 4.361, 1.866
+line to 4.381, 1.870
+line to 4.399, 1.870
+line to 4.416, 1.879
+line to 4.432, 1.888
+line to 4.449, 1.896
+line to 4.460, 1.916
+line to 4.441, 1.912
+line to 4.419, 1.913
+line to 4.403, 1.926
+line to 4.403, 1.947
+line to 4.396, 1.966
+move to 4.396, 1.966
+line to 4.385, 1.987
+line to 4.365, 2.000
+line to 4.357, 2.019
+line to 4.354, 2.042
+line to 4.336, 2.046
+line to 4.339, 2.066
+line to 4.339, 2.088
+line to 4.321, 2.088
+line to 4.308, 2.103
+line to 4.305, 2.126
+line to 4.296, 2.145
+line to 4.304, 2.165
+line to 4.318, 2.183
+line to 4.302, 2.199
+line to 4.299, 2.179
+line to 4.286, 2.194
+line to 4.286, 2.220
+line to 4.297, 2.239
+line to 4.297, 2.261
+line to 4.297, 2.282
+line to 4.287, 2.314
+line to 4.268, 2.318
+line to 4.256, 2.341
+line to 4.244, 2.361
+line to 4.226, 2.372
+line to 4.217, 2.391
+line to 4.196, 2.407
+line to 4.173, 2.403
+line to 4.159, 2.388
+line to 4.138, 2.379
+line to 4.117, 2.366
+line to 4.094, 2.365
+line to 4.089, 2.387
+line to 4.072, 2.402
+line to 4.067, 2.424
+line to 4.048, 2.423
+line to 4.029, 2.430
+line to 4.020, 2.448
+line to 3.996, 2.443
+line to 3.969, 2.438
+line to 3.949, 2.432
+line to 3.965, 2.443
+line to 3.946, 2.437
+move to 3.946, 2.437
+line to 3.926, 2.435
+line to 3.906, 2.425
+line to 3.883, 2.424
+line to 3.903, 2.430
+line to 3.893, 2.448
+line to 3.888, 2.469
+line to 3.878, 2.449
+line to 3.862, 2.439
+line to 3.843, 2.441
+line to 3.824, 2.439
+line to 3.801, 2.437
+line to 3.781, 2.430
+line to 3.762, 2.424
+line to 3.743, 2.430
+line to 3.722, 2.444
+line to 3.709, 2.429
+line to 3.719, 2.407
+line to 3.738, 2.410
+line to 3.761, 2.420
+line to 3.745, 2.405
+line to 3.759, 2.391
+line to 3.772, 2.406
+line to 3.789, 2.392
+line to 3.777, 2.377
+line to 3.757, 2.370
+line to 3.767, 2.352
+line to 3.785, 2.338
+line to 3.806, 2.328
+line to 3.797, 2.308
+line to 3.774, 2.302
+line to 3.787, 2.317
+line to 3.769, 2.331
+line to 3.747, 2.338
+line to 3.737, 2.355
+line to 3.719, 2.361
+line to 3.733, 2.347
+line to 3.731, 2.327
+line to 3.716, 2.315
+line to 3.706, 2.337
+line to 3.687, 2.330
+line to 3.675, 2.315
+line to 3.654, 2.329
+line to 3.632, 2.335
+move to 3.632, 2.335
+line to 3.637, 2.355
+line to 3.615, 2.361
+line to 3.612, 2.382
+line to 3.594, 2.379
+line to 3.571, 2.380
+line to 3.585, 2.367
+line to 3.604, 2.362
+line to 3.585, 2.359
+line to 3.563, 2.364
+line to 3.545, 2.365
+line to 3.526, 2.370
+line to 3.504, 2.380
+line to 3.486, 2.389
+line to 3.467, 2.386
+line to 3.445, 2.382
+line to 3.419, 2.375
+line to 3.393, 2.359
+line to 3.370, 2.351
+line to 3.385, 2.363
+line to 3.367, 2.364
+line to 3.378, 2.384
+line to 3.360, 2.376
+line to 3.356, 2.356
+line to 3.352, 2.335
+line to 3.366, 2.347
+line to 3.355, 2.331
+line to 3.340, 2.314
+line to 3.318, 2.298
+line to 3.296, 2.286
+line to 3.278, 2.277
+line to 3.259, 2.273
+line to 3.241, 2.273
+line to 3.234, 2.253
+line to 3.216, 2.256
+line to 3.209, 2.236
+line to 3.187, 2.235
+line to 3.191, 2.215
+line to 3.173, 2.206
+line to 3.180, 2.185
+line to 3.166, 2.156
+line to 3.148, 2.151
+line to 3.163, 2.135
+line to 3.159, 2.114
+move to 3.159, 2.114
+line to 3.163, 2.089
+line to 3.163, 2.068
+line to 3.174, 2.048
+line to 3.177, 2.069
+line to 3.170, 2.094
+line to 3.166, 2.123
+line to 3.170, 2.152
+line to 3.177, 2.177
+line to 3.191, 2.198
+line to 3.198, 2.219
+line to 3.216, 2.232
+line to 3.230, 2.244
+line to 3.245, 2.257
+line to 3.220, 2.232
+line to 3.205, 2.219
+line to 3.194, 2.202
+line to 3.184, 2.181
+line to 3.173, 2.152
+line to 3.166, 2.127
+line to 3.170, 2.098
+line to 3.181, 2.077
+line to 3.185, 2.052
+line to 3.181, 2.031
+line to 3.185, 2.010
+line to 3.167, 2.010
+line to 3.150, 2.022
+line to 3.132, 2.026
+line to 3.115, 2.025
+line to 3.097, 2.033
+line to 3.073, 2.045
+line to 3.048, 2.060
+line to 3.033, 2.072
+line to 3.029, 2.097
+line to 3.018, 2.113
+line to 3.013, 2.138
+line to 3.009, 2.167
+line to 2.990, 2.187
+line to 2.979, 2.207
+line to 2.967, 2.223
+line to 2.956, 2.243
+line to 2.944, 2.259
+line to 2.932, 2.279
+line to 2.924, 2.299
+move to 2.924, 2.299
+line to 2.915, 2.319
+line to 2.907, 2.340
+line to 2.888, 2.355
+line to 2.876, 2.371
+line to 2.860, 2.386
+line to 2.841, 2.389
+line to 2.823, 2.387
+line to 2.800, 2.389
+line to 2.778, 2.387
+line to 2.765, 2.369
+line to 2.759, 2.348
+line to 2.746, 2.326
+line to 2.732, 2.307
+line to 2.713, 2.314
+line to 2.698, 2.324
+line to 2.678, 2.335
+line to 2.658, 2.349
+line to 2.643, 2.360
+line to 2.627, 2.371
+line to 2.617, 2.394
+line to 2.615, 2.415
+line to 2.605, 2.435
+line to 2.596, 2.455
+line to 2.579, 2.469
+line to 2.563, 2.480
+line to 2.550, 2.495
+line to 2.528, 2.517
+line to 2.511, 2.531
+line to 2.494, 2.546
+line to 2.480, 2.560
+line to 2.467, 2.575
+line to 2.343, 2.568
+line to 2.342, 2.522
+line to 2.279, 2.523
+line to 2.118, 2.522
+line to 1.824, 2.625
+line to 1.832, 2.645
+line to 1.640, 2.629
+line to 1.630, 2.652
+line to 1.629, 2.674
+line to 1.614, 2.700
+line to 1.598, 2.713
+line to 1.576, 2.733
+move to 1.576, 2.733
+line to 1.563, 2.752
+line to 1.544, 2.742
+line to 1.531, 2.760
+line to 1.510, 2.772
+line to 1.483, 2.777
+line to 1.467, 2.790
+line to 1.450, 2.803
+line to 1.422, 2.808
+line to 1.391, 2.811
+line to 1.368, 2.813
+line to 1.356, 2.841
+line to 1.353, 2.866
+line to 1.339, 2.884
+line to 1.331, 2.913
+line to 1.314, 2.925
+line to 1.296, 2.942
+line to 1.281, 2.964
+line to 1.267, 2.981
+line to 1.252, 2.999
+line to 1.244, 3.028
+line to 1.260, 3.050
+line to 1.243, 3.063
+line to 1.221, 3.074
+line to 1.214, 3.098
+line to 1.208, 3.118
+line to 1.206, 3.140
+line to 1.224, 3.128
+line to 1.242, 3.115
+line to 1.231, 3.134
+line to 1.226, 3.154
+line to 1.218, 3.179
+line to 1.207, 3.153
+line to 1.186, 3.160
+line to 1.169, 3.173
+line to 1.152, 3.212
+line to 1.130, 3.240
+line to 1.111, 3.257
+line to 1.106, 3.286
+line to 1.108, 3.313
+line to 1.106, 3.334
+line to 1.097, 3.363
+line to 1.071, 3.385
+line to 1.067, 3.415
+move to 1.067, 3.415
+line to 1.079, 3.440
+line to 1.088, 3.474
+line to 1.091, 3.496
+line to 1.089, 3.518
+line to 1.087, 3.556
+line to 1.072, 3.574
+line to 1.071, 3.595
+line to 1.074, 3.618
+line to 1.063, 3.637
+line to 1.071, 3.661
+line to 1.079, 3.684
+line to 1.088, 3.704
+line to 1.097, 3.724
+line to 1.111, 3.745
+line to 1.109, 3.766
+line to 1.113, 3.789
+line to 1.115, 3.815
+line to 1.118, 3.841
+line to 1.127, 3.861
+line to 1.131, 3.883
+line to 1.129, 3.904
+line to 1.133, 3.927
+line to 1.137, 3.949
+line to 1.140, 3.975
+line to 1.162, 3.968
+line to 1.188, 3.966
+line to 1.168, 3.982
+line to 1.143, 3.980
+line to 1.136, 4.004
+line to 1.151, 4.025
+line to 1.132, 4.037
+line to 1.124, 4.065
+line to 1.118, 4.085
+line to 1.118, 4.106
+line to 1.105, 4.133
+line to 1.094, 4.151
+line to 1.098, 4.173
+line to 1.130, 4.173
+line to 1.153, 4.165
+line to 1.179, 4.163
+line to 1.202, 4.156
+line to 1.227, 4.157
+line to 1.255, 4.151
+move to 1.255, 4.151
+line to 1.255, 4.130
+line to 1.266, 4.107
+line to 1.267, 4.086
+line to 1.244, 4.077
+line to 1.269, 4.078
+line to 1.273, 4.100
+line to 1.275, 4.130
+line to 1.261, 4.148
+line to 1.250, 4.167
+line to 1.269, 4.154
+line to 1.288, 4.142
+line to 1.283, 4.161
+line to 1.268, 4.179
+line to 1.267, 4.200
+line to 1.262, 4.220
+line to 1.252, 4.239
+line to 1.293, 4.239
+line to 1.355, 4.240
+line to 1.417, 4.236
+line to 1.474, 4.235
+line to 1.535, 4.235
+line to 1.596, 4.234
+line to 1.657, 4.233
+line to 1.693, 4.231
+line to 1.744, 4.228
+line to 1.778, 4.230
+line to 1.844, 4.228
+line to 1.898, 4.229
+line to 1.923, 4.228
+line to 1.953, 4.229
+line to 2.018, 4.226
+line to 2.072, 4.225
+line to 2.126, 4.224
+line to 2.185, 4.228
+line to 2.229, 4.225
+line to 2.303, 4.225
+line to 2.361, 4.224
+line to 2.419, 4.225
+line to 2.483, 4.223
+line to 2.541, 4.224
+line to 2.599, 4.221
+line to 2.657, 4.221
+line to 2.715, 4.221
+move to 2.715, 4.221
+line to 2.773, 4.220
+line to 2.830, 4.224
+line to 2.879, 4.222
+line to 2.941, 4.220
+line to 2.999, 4.222
+line to 3.052, 4.220
+line to 3.114, 4.221
+line to 3.171, 4.222
+line to 3.224, 4.218
+line to 3.282, 4.222
+line to 3.335, 4.218
+line to 3.334, 4.238
+line to 3.358, 4.246
+line to 3.368, 4.225
+line to 3.373, 4.202
+line to 3.397, 4.185
+line to 3.421, 4.181
+line to 3.449, 4.172
+line to 3.483, 4.179
+line to 3.511, 4.175
+line to 3.535, 4.162
+line to 3.559, 4.157
+line to 3.587, 4.148
+line to 3.606, 4.135
+line to 3.635, 4.134
+line to 3.663, 4.145
+line to 3.687, 4.136
+line to 3.711, 4.134
+line to 3.739, 4.129
+line to 3.753, 4.128
+move to 2.021, 3.431
+line to 2.013, 3.451
+line to 1.993, 3.460
+line to 1.990, 3.480
+line to 1.970, 3.489
+line to 1.970, 3.510
+line to 1.986, 3.525
+line to 1.998, 3.507
+line to 2.015, 3.489
+line to 2.035, 3.480
+line to 2.056, 3.458
+line to 2.041, 3.443
+line to 2.026, 3.428
+line to 2.021, 3.431
+move to 5.008, 3.437
+line to 4.991, 3.424
+line to 5.012, 3.415
+line to 5.036, 3.417
+line to 5.061, 3.420
+line to 5.087, 3.431
+line to 5.066, 3.423
+line to 5.036, 3.417
+line to 5.012, 3.415
+line to 5.033, 3.422
+line to 5.062, 3.424
+line to 5.082, 3.432
+line to 5.107, 3.435
+line to 5.129, 3.446
+line to 5.150, 3.454
+line to 5.126, 3.455
+line to 5.105, 3.448
+line to 5.119, 3.466
+line to 5.102, 3.453
+line to 5.077, 3.450
+line to 5.053, 3.448
+line to 5.028, 3.445
+line to 5.008, 3.437
+.PE
+
+
+pt.vap          705721327   9     1     100644  4573      `
+From research!hounx!vap Wed Feb 25 17:49 EST 1987
+Message-Version: 2
+>To: /addr=research!bwk/pn=brian.w.kernighan
+Date: Wed, 25 Feb 1987 17:49 EST
+Message-Service: Mail
+Message-Protocol: EMail
+From: hounx!vap
+End-Of-Header:
+Email-Version: 2
+X-Postmark: valerie.a.partridge attbl ho3c506a 59533 2019491448 hounx!vap
+To: research!bwk
+Subject: Curiosity
+UA-Message-ID: <post.vap.Wed, 25 Feb 1987 17:39 EST>
+End-Of-Protocol:
+
+Brian,
+  This is not a problem (the figure comes out the way I want it to),
+just a curiosity:  on the lower figure, the 1st-3rd dashed-line pairs
+have 5 dashes and the 4th & 5th sets have 4, more widely-spaced dashes.
+The dashes in the legend and in the upper figure seem to be more like the
+widely-spaced than the narrowly-spaced dashed lines.  Any ideas?
+Valerie
+
+.EQ
+delim ##
+.EN
+.PH ""
+.BS
+.ce 2
+\f3AT&T BELL LABORATORIES - PROPRIETARY\f1
+Use pursuant to G.E.I. 2.2
+.BE
+.po -0.25i
+.ce
+\f3Figure 5a:\f1  Basic Operation of SPA*
+.FS *
+Figures adapted from [15].
+.FE
+.SP 2
+.PS
+.ps 10
+define SL | circle radius 0.05i with .c at 1st line.w + ($1i,$2i) |
+define ML | box invis wid 0.1i ht 0.1i with .c at 1st line.w + ($1i,$2i)
+	line from last box.n to last box.se to last box.sw to last box.n |
+
+line right 5.75i
+line up 2.5i from 1st line.w "load       "
+line invis right 5.75i from last line.n \
+"smoothed load = forecasted load #cdot (1- alpha sub n )# + measured load #cdot ( alpha sub n )#" \
+"smoothed increment = forecasted increment #cdot (1- beta sub n )# + measured increment #cdot ( beta sub n )#"
+line up 0.1i from 1st line.w + (0.75i,0)
+box invis "previous" "year" with .n at last line.s
+SL(0.75,0.75)
+line dashed right 1.45i from last circle.e
+arrow from last circle.e to 1st line.w + (2.25i,1.05i)
+line from last line.e to last line.e + (0.05i,0.05i) to last arrow.e \
+     + (0.05i,-0.05i) to last arrow.e
+line right 0.1i from last line.c + (0.05i,0)
+box invis "forecasted" "increment" with .w at last line.e
+line up 0.1i from 1st line.w + (2.25i,0)
+box invis "base" "year" with .n at last line.s
+SL(2.25,1.5)
+ML(2.25,1.8)
+line dashed right 1.45i from last circle.e
+arrow from last circle.e to 1st line.w + (3.75i,1.8i)
+line from last line.e to last line.e + (0.05i,0.05i) to last arrow.e \
+     + (0.05i,-0.05i) to last arrow.e
+line right 0.1i from last line.c + (0.05i,0)
+box invis "smoothed" "increment" with .w at last line.e
+line from 7th last line.e - (0.05i,0) to 7th last line.e + (-0.15i,0.1i) \
+to 2nd last box.w - (0.1i,0.1i) to 2nd last box.w
+line left 0.1i from last line.c - (0.1i,0)
+box invis "measured" "increment" with .e at last line.w
+arrow from last arrow.e to 1st line.w + (5.25i,2.1i)
+line up 0.1i from 1st line.w + (3.75i,0)
+box invis "future" "year 1" with .n at last line.s
+line up 0.1i from 1st line.w + (5.25i,0)
+box invis "future" "year 2" with .n at last line.s
+SL(4.0,0.3)
+ML(4.0,0.6)
+box invis ht 0.5i wid 1.25i "measured load " "forecasted load" \
+     "smoothed load " with .w at 1st line.w + (4.05i,0.45i)
+line <- left 0.25i from last box.w
+.PE
+.ps
+.SP 2
+.ce
+\f3Figure 5b:\f1  SPA Response to Outliers (Sign Repeated)*
+.SP
+.PS
+.ps 10
+define ML | box invis wid 0.1i ht 0.1i with .c at 1st line.w + ($1i,$2i)
+	line from last box.n to last box.se to last box.sw to last box.n |
+define FL | line -> right 0.95i up 0.2i from 1st line.w + ($1i,$2i) |
+define OT | line dashed from last line.e - (0.2i,0.3i) to last line.e + (0.2i,-0.3i)
+line dashed from 2nd last line.e + (-0.2i,0.3i) to 2nd last line.e + (0.2i,0.3i) |
+define OL | box wid 0.1i ht 0.1i with .c at 1st line.w + ($1i,$2i) |
+define SL | circle radius 0.05i with .c at 1st line.w + ($1i,$2i) |
+define num | line up 0.1i from 1st line.w + ($1i,0)
+	box invis ht 0.2i wid 0.1i "$2" with .n at last line.s |
+
+line right 6.5i
+line up 3.0i from 1st line.w "load        "
+num(0.25,1)
+num(1.25,2)
+num(2.25,3)
+num(3.25,4)
+box invis ht 0.3i "year of operation" with .n at last box.s
+num(4.25,5)
+num(5.25,6)
+num(6.25,7)
+ML(0.25,0.75)
+FL(0.3,0.75)
+OT()
+ML(1.25,1.2)
+SL(1.25,1.05)
+FL(1.3,1.05)
+OT()
+OL(2.25,2.0)
+arrow from last box.s to last line.c
+SL(2.25,1.4)
+FL(2.3,1.4)
+OT()
+OL(3.25,2.2)
+arrow from last line.c to last box.s
+FL(3.3,2.2)
+OT()
+ML(4.25,2.25)
+SL(4.25,2.35)
+FL(4.3,2.35)
+OT()
+ML(5.25,2.75)
+SL(5.25,2.65)
+FL(5.3,2.65)
+
+SL(4.5,0.3)
+ML(4.5,0.9)
+OL(4.5,0.45)
+box invis ht 0.75i wid 1.4i "measured load     " "forecasted load    " \
+     "outlier threshold  " "outlier                " \
+     "smoothed load     " with .w at 1st line.w + (4.55i,0.6i)
+line dashed left 0.25i from last box.w
+line <- left 0.25i from last box.w + (0,0.15i)
+.PE
+.SP 2
+
+
+pt.with         705721327   9     1     100644  243       `
+.PS
+ellipse
+ellipse with .ne at last ellipse.sw
+.PE
+.PS
+box with .sw at 0,0
+box with .ne at last box.sw
+.PE
+.PS
+box
+box ht .25i width .25i with .sw at last box.se
+box ht .15i width .5 with .sw at last box.se
+circle with .sw at last box.ne
+.PE
+
+pt.woodall      705721327   9     1     100644  3291      `
+From research!csnet!ucl-cs.arpa!drw%maths.nottingham.ac.uk ov 85 19:31:34 UT (Fri)
+.\"pic
+.\"roff
+.\"
+.ds 1 \fI\s12
+.ds 2 \fR\s-3\v'3p'
+.ds 3 \s+3\v'-3p'
+.sp 1.25i
+.PS
+scale=1.05
+a = 0.25
+c = 0.05
+d = 1/32
+h = 2.25
+
+define Ds '(-d*dy/dist , d*dx/dist )'		# vectors
+define Dh '( c*dx/dist , c*dy/dist )'
+define Dsh '(-h*d*dy/dist , h*d*dx/dist )'	# should be able to say h*Ds
+define Dhh '( h*c*dx/dist , h*c*dy/dist )'
+
+define implies "
+dx = $2.x - $1.x			# pity: prevents args of form (a,b)
+dy = $2.y - $1.y
+dist = sqrt( dx * dx + dy * dy )
+P1: (0.25/dist) < $1 , $2 >
+P2: (0.25/dist) < $2 , $1 >
+line from P1+Ds to P2+Ds-Dh
+line from P1-Ds to P2-Ds-Dh
+line from P2+Dsh-Dhh to P2
+line from P2-Dsh-Dhh to P2
+"
+
+A:	"\*1A\*2\*3" at 0,0
+BS:	"\*1B\*2S\*3" at 1,0.5
+BW:	"\*1B\*2W\*3" at 1,-0.5
+implies(A,BS)
+implies(BS,BW)
+CS:	"\*1C\*2S\*3" at 2,0.5
+CW:	"\*1C\*2W\*3" at 2,-0.5
+implies(BS,CS)
+implies(BW,CW)
+implies(CS,CW)
+DS:	"\*1D\*2S\*3" at 3,0.5
+DW:	"\*1D\*2W\*3" at 3,-0.5
+implies(CS,DS)
+implies(CW,DW)
+implies(DS,DW)
+ES:	"\*1E\*2S\*3" at 4,0.5
+EW:	"\*1E\*2W\*3" at 4,-0.5
+implies(DS,ES)
+implies(DW,EW)
+implies(ES,EW)
+FS:	"\*1F\*2S\*3" at 5,1.375
+FW:	"\*1F\*2W\*3" at 5,0.375
+implies(ES,FS)
+implies(EW,FW)
+implies(FS,FW)
+GS:	"\*1G\*2S\*3" at 5,-0.375
+GW:	"\*1G\*2W\*3" at 5,-1.375
+implies(ES,GS)
+implies(EW,GW)
+implies(GS,GW)
+H:	"\*1H\*2\*3" at 6,0
+implies(FW,H)
+implies(GW,H)
+.PE
+.br
+.sp 1i
+.ps 10
+.ce
+Figure 1.
+.ds 1 \fI\s12
+.ds 2 \fR\z\(fm\s-3\v'3p'
+.ds 3 \s+3\v'-3p'
+.ds 4 \fR\(fm
+.sp 1.25i
+.PS
+scale=1.05
+a = 0.25
+c = 0.05
+d = 1/32
+h = 2.25
+
+define Ds '(-d*dy/dist , d*dx/dist )'
+define Dh '( c*dx/dist , c*dy/dist )'
+define Dsh '(-h*d*dy/dist , h*d*dx/dist )'
+define Dhh '( h*c*dx/dist , h*c*dy/dist )'
+
+define equiv "
+dx = $2.x - $1.x
+dy = $2.y - $1.y
+dist = sqrt( dx * dx + dy * dy )
+P1: (0.25/dist) < $1 , $2 >
+P2: (0.25/dist) < $2 , $1 >
+line from P1+Ds+Dh to P2+Ds-Dh
+line from P1-Ds+Dh to P2-Ds-Dh
+line from P2+Dsh-Dhh to P2
+line from P2-Dsh-Dhh to P2
+line from P1 to P1+Dsh+Dhh
+line from P1 to P1-Dsh+Dhh
+"
+
+b=0.35
+r=0.8
+s=1.025
+pi=3.1415926535
+c1=cos(pi/5)
+s1=sin(pi/5)
+c2=cos(2*pi/5)
+s2=sin(2*pi/5)
+
+
+A:	"\*1A\*4" at 0,0
+BS:	"\*1B\*2S\*3" at 1,0.5
+BW:	"\*1B\*2W\*3" at 1,-0.5
+Y:	BS - (0.05,0)
+implies(A,Y)
+CS:	"\*1C\*2S\*3" at 2,0.5
+CW:	"\*1C\*2W\*3" at 2,-0.5
+equiv(BS,CS)
+equiv(BW,CW)
+X:	(1.5,0.5)
+Y:	(1.5,-0.5)
+implies(X,Y)
+
+DS:	"\*1D\*2S\*3" at 3,0.5
+DW:	"\*1D\*2W\*3" at 3,-0.5
+implies(CS,DS)
+implies(CW,DW)
+ES:	"\*1E\*2S\*3" at 4,0.5
+EW:	"\*1E\*2W\*3" at 4,-0.5
+equiv(DS,ES)
+equiv(DW,EW)
+X:	(3.5,0.5)
+Y:	(3.5,-0.5)
+implies(X,Y)
+
+Pent: 5+r*c1,0
+FS:	"\*1F\*2S\*3" at Pent+(-r*c1,r*s1)
+FW:	"\*1F\*2W\*3" at Pent+(r*c2,r*s2)
+GS:	"\*1G\*2S\*3" at Pent+(-r*c1,-r*s1)
+GW:	"\*1G\*2W\*3" at Pent+(r*c2,-r*s2)
+H:	"\*1H\*4" at Pent+(r,0)
+X:	EW + (0.05,0)
+Y:	(4.95,0)
+implies(X,Y)
+equiv(FS,FW)
+equiv(GS,GW)
+equiv(FW,H)
+equiv(GW,H)
+.ps 10
+box ht b wid 1+b with .sw at BS.c-(b/2,b/2)
+box ht b wid 1+b with .sw at BW.c-(b/2,b/2)
+box ht b wid 1+b with .sw at DS.c-(b/2,b/2)
+box ht b wid 1+b with .sw at DW.c-(b/2,b/2)
+line from Pent+(-s*c1,s*s1) to Pent+(-s*c1,-s*s1)
+line from Pent+(-s*c1,s*s1) to Pent+(s*c2,s*s2)
+line from Pent+(s,0) to Pent+(s*c2,s*s2)
+line from Pent+(-s*c1,-s*s1) to Pent+(s*c2,-s*s2)
+line from Pent+(s,0) to Pent+(s*c2,-s*s2)
+.PE
+.br
+.sp 1i
+.ps 10
+.ce
+Figure 2.
+
+
+
+pt.fill         705721327   9     1     100666  2582      `
+
+.PS
+fillval = .7
+box
+"Above is an unfilled, visible box" below at last box.s
+move down
+box fill
+"Above is a filled, visible box" below at last box.s
+move down
+box fill invis
+"Above is a filled, invisible box" below at last box.s
+move down
+box invis fill
+"Above is an invisible, filled box" below at last box.s
+move down
+box invis
+"Above is an invisible box" below at last box.s
+move down
+box invis fill "invis,fill"
+"Above is an invisible, filled box with text" below at last box.s
+.PE
+
+.PS
+fillval = .7
+circle
+"Above is an unfilled, visible circle" below at last circle.s
+move down
+circle fill
+"Above is a filled, visible circle" below at last circle.s
+move down
+circle fill invis
+"Above is a filled, invisible circle" below at last circle.s
+move down
+circle invis fill
+"Above is an invisible, filled circle" below at last circle.s
+move down
+circle invis
+"Above is an invisible circle" below at last circle.s
+move down
+circle invis fill "invis,fill"
+"Above is an invisible, filled circle with text" below at last circle.s
+.PE
+
+.PS
+fillval = .7
+ellipse
+"Above is an unfilled, visible ellipse" below at last ellipse.s
+move down
+ellipse fill
+"Above is a filled, visible ellipse" below at last ellipse.s
+move down
+ellipse fill invis
+"Above is a filled, invisible ellipse" below at last ellipse.s
+move down
+ellipse invis fill
+"Above is an invisible, filled ellipse" below at last ellipse.s
+move down
+ellipse invis
+"Above is an invisible ellipse" below at last ellipse.s
+move down
+ellipse invis fill "invis,fill"
+"Above is an invisible, filled ellipse with text" below at last ellipse.s
+.PE
+
+
+.PS
+spline from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 fill "text" "here"
+.PE
+
+.PS
+spline from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 \
+       to 0,-1 to -1,-1 to -1,0 to 0,0 fill "text" "here"
+.PE
+
+.PS
+line from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 fill "text" "here"
+.PE
+
+.PS
+line from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 \
+       to 0,-1 to -1,-1 to -1,0 to 0,0 fill "text" "here"
+.PE
+
+.PS
+spline invis from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 fill "text" "here"
+.PE
+
+.PS
+spline invis from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 \
+       to 0,-1 to -1,-1 to -1,0 to 0,0 fill "text" "here"
+.PE
+
+.PS
+line invis from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 fill "text" "here"
+.PE
+
+.PS
+line invis from 0,0 to 1,0 to 1,1 to 0,1 to 0,0 \
+       to 0,-1 to -1,-1 to -1,0 to 0,0 fill "text" "here"
+.PE
+
+.PS
+arc at 0,0 from 1,0 to 0,1 fill "text" "here"
+.PE
+
+.PS
+arc invis at 0,0 from 1,0 to 0,1 fill "text" "here"
+.PE
+
+.PS
+arc cw at 0,0 from 1,0 to 0,1 fill "text" "here"
+.PE
+
+.PS
+arc cw invis at 0,0 from 1,0 to 0,1 fill "text" "here"
+.PE
+pt.edge         708205107   9     1     100666  409       `
+.sp 1i
+.PS
+box fill .7 noedge
+box fill .3
+.PE
+.PS
+circle fill .7 noedge
+circle fill .3
+.PE
+.PS
+line up right then up left then down left then down right fill .7 noedge
+move right .5
+line up right then up left then down left then down right fill .7
+.PE
+
+.PS
+box ht 1 wid 1 fill .3
+box ht .5 wid .5 at last box fill .7 noedge
+.PE
+
+.PS
+box ht 1 wid 1 fill .7
+box ht .5 wid .5 at last box fill 1 noedge "foo"
+.PE
+
+pt.ravi.fill    708211781   9     1     100666  1288      `
+.sp 1i
+.PS
+	define Big %
+		em = 12/72; vs = 15/72
+.Big
+	%
+	define Normal %
+		em = 10/72; vs = 12/72
+.Normal
+	%
+	define Small %
+		em = 9/72; vs = 11/72
+.Small
+	%
+
+	Normal()
+	arrowht = .08; arrowwid = .04; pagewid = 3
+.PE
+.PS
+[
+	define border % box ht $1.ht wid $1.wid at $1 %
+	Small()
+	u = .45*em
+	boxht = 3*u; boxwid = 40*u
+	dark = .7; medium = .9; light = .96; white = 1
+
+Floor:	[
+		box ht 60*u wid 60*u fill dark invis
+	]
+	[
+		down
+	Out:	box "output shift register" fill white invis
+	Spare:	box "spare output shift register" fill white invis
+	Column:	box ht 5*u fill medium invis
+	SRAM:	box "SRAM" "cell array" ht 20*u fill light invis
+		box "wide data transfer path" fill medium invis
+	In01:	box "input shift register \01" fill white invis
+	In02:	box "input shift register \02" fill white
+		box "..." ht 2*boxht fill white invis
+	In14:	box "input shift register 14" fill white invis
+
+		box ht 10*u wid 9*u "queue" "manager"\
+			with .e at .5<Out.nw,Column.sw> + -u,0 fill medium invis
+
+		box ht SRAM.ht wid 5*u with .e at SRAM.w fill medium invis
+
+		box ht (In01.n.y-In14.s.y) wid 4*u\
+			with .e at .5<In01.nw,In14.sw> fill medium invis
+
+		border(Out)
+		border(Spare)
+		border(In01)
+		border(In02)
+		border(In14)
+	] at Floor
+
+	"144-pin PGA package" rjust at Floor.se + -em,vs/2
+]
+.PE

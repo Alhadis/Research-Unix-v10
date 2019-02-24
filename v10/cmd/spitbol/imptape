@@ -1,0 +1,32 @@
+
+install: newspit
+	cp newspit /usr/bin/spitbol
+
+spitv35.o: spitv35.s header.s
+	as -o spitv35.o header.s spitv35.s
+
+spitv35sub.o: spitv35sub.s regmasks.s
+	cat spitv35sub.s regmasks.s | as -o spitv35sub.o
+
+spitv35.ppmin: spitv35.min
+	spitbol -d100k minpp.spt
+
+spitv35.tok: spitv35.ppmin
+	spitbol -d100k mintok.spt
+
+spitv35.src: spitv35.tok spitv35.plb
+	spitbol -d100k tokunx.spt
+
+spitv35.serr: spitv35.src
+	spitbol vaxpo1.spt
+
+spitv35.s: spitv35.serr labels.sed
+	sed -f labels.sed <spitv35.serr >spitv35.s
+
+$(COBJ): spitblks.h spitio.h
+
+clean:
+	rm -f spitbol newspit $(OBJ)
+
+clobber:	clean
+	rm -f spitv35.ppmin spitv35.tok spitv35.src spitv35.serr spitv35.s

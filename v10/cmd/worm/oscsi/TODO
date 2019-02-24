@@ -1,0 +1,10 @@
+	|	COPY drive NUMBER NUMBER drive NUMBER {/*:COPY sdrive sstart nblocks ddrive dstart:: */
+			s_copy($2, $3, $4, $5, $6);
+		}
+	|	READ drive NUMBER  {
+			struct scsi_ret output;
+			s_read($2, $3, 1, &output);
+			scsiodump(output.data, 1024);
+		}
+	|	WRITE drive NUMBER { s_write($2, $3, 1); }
+	|	WRITE drive NUMBER NUMBER { s_write($2, $3, $4); } /*:WRITE drive start n:: */

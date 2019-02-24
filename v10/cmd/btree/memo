@@ -1,0 +1,659 @@
+.fp 1 PA
+.fp 2 PI
+.fp 3 PB
+.fp 4 PX
+.EQ
+delim $$
+.EN
+.ND January 2, 1981
+.TM 81-11272-1 11173 11173-11
+.TL
+.UX
+B-trees
+.AU "MH 2C522" 7214
+P.J. Weinberger
+.AI
+.MH
+.AB
+B-trees are a good data structure for storing, retrieving,
+and updating records in files containing many records.
+Ordinary
+.UX
+tools such as
+$awk$ and $grep$ become too slow when used on files with more than
+a few hundred lines,
+and $ed$ can no longer be used for updating after a thousand or so lines.
+This memo contains descriptions of subroutines and commands
+for creating and maintaining B-trees,
+and a complete example of their use in a data base with two files.
+.AE
+.CS 5 2 7 0 0 1
+.NH
+Introduction
+.PP
+This memo contains a description of subroutines and commands
+which implement B-trees.
+(See [Comer] for a bibliography on B-trees.)
+The subroutines make the B-trees look to the user like a list
+of
+.I "key\(emvalue"
+pairs,
+sorted by
+.I key .
+The subroutines provide for positioning within the list,
+reading the next pair, deleting pairs, and writing pairs.
+The way the subroutines implement the list is by using
+a prefix-compressed B-tree,
+in which prefixes common to consecutive
+.I keys
+are factored out.
+The details of the data structures are in sections 2 and 5.
+.PP
+There are several advantages to using these B-trees as the file
+organization for data bases.
+A given key can be searched for with a small number of file system
+accesses, typically two or three.
+Since the file looks to the user as if it is sorted on the keys,
+it is easy to retrieve the lexically next key, and
+so to scan the file in lexical order.
+Because the keys are sorted,
+adjacent keys tend to have a common prefix,
+which can be compressed out.
+In the case of
+the dictionary
+.I /usr/dict/words ,
+where the
+.I values
+are all null,
+the original file consists of 24473 words and 201032 bytes,
+while the B-tree contains only 134144 bytes.
+The B-tree is significantly shorter even though it contains
+headers and other overhead.
+.PP
+Sections 3 and 4 contain descriptions of subroutines and commands.
+.PP
+There are 9 subroutines.
+4 of these correspond to
+.UX
+system calls $read$, $write$, $open$, $close$,
+with the difference that the data stored in the B-trees is not just
+a vector of bytes, but is a sequence of $key\(emvalue$ pairs.
+There is one routine for deleting,
+which has no corresponding system call.
+The remaining 4 correspond to various aspects of $lseek$:
+one positions, one reports on the position, one positions to the
+beginning, and the last gives the length of the $value$ at the
+current position.
+.PP
+The commands are utilities for building B-trees,
+dealing with them at the command level,
+and gathering statistics about them.
+.PP
+Section 6 contains a complete example constructing and using
+a small but interesting data base.
+.NH
+B-trees
+.PP
+The B-trees used by the subroutines are slightly different from
+standard B-trees.
+The resemblance would be closer if the routines did not support the
+.I value
+half of the pair.
+Then the
+.UX
+B-trees would be B-trees in which all the keys are in leaves,
+and in which the keys can be of variable length, and are stored
+with some compression.
+Adding the
+.I value
+half of a pair allows very large records to be stored.
+Further each record can be stored contiguously,
+rather than broken across tree nodes.
+.PP
+The standard definition of B-tree requires some bounds on the number
+of keys in a node,
+as in 2-3 trees, where each node has 2 or 3 keys.
+While this restriction is convenient for proving theorems
+it is silly in practice.
+Intuitively, trees which branch a lot at each node
+have more leaves for a given height,
+so that searching from the root to a leaf requires fewer file
+system accesses the bushier the tree.
+Therefore one wants as many keys as possible in each node,
+all other things being equal.
+The node size has been chosen to be the disk block size.
+Given that,
+various algorithms for data compression might be used to squeeze
+as many keys as possible into a node.
+.PP
+The method I chose maintains the keys in lexical order in the node.
+If a key begins with the same $n$ bytes as its immediate predecessor,
+it is stored with the $n$ bytes replaced by the count $n$.
+A trivial analysis shows how much space might be saved:
+Suppose that the keys are chosen at random from strings of length $m$
+in which each of $a$ characters appears with equal probability.
+Since there are no more than $a sup k$ prefixes of length $k$,
+one expects that the length of the common prefix of two of $N$
+keys is about $log ( N) / log (a)$.
+Since one byte is required to store the length of the common prefix,
+the space saving should be around
+$N( log N / log a - 1) $ bytes.
+.PP
+Using this compression technique does not make handling the keys
+much more complicated.
+The reader will have no trouble seeing that searching to find a
+key is easy, that the size of a list of keys decreases when a key
+is deleted, and that the size of a list of keys increases by no more
+than the uncompressed size of the new key when a key is inserted.
+.PP
+The neighborhood of an interior node in a B-tree looks like
+.KS
+.nf
+.so picture.out
+.fi
+.KE
+Each node which is not a leaf contains one more pointer than key:
+.EQ
+p sub 0 , ~ k sub 0 , ~  p sub 1 , ~  k sub 1 , ~  ... ,
+~ k sub n , ~  p sub n+1 .
+.EN
+Of the keys in the subtree whose root is the given node,
+$p sub j$ points to the subtree containing keys strictly greater than
+$k sub j-1$ and no greater than $k sub j$.
+$p sub 0$ points to the subtree containing keys no greater than $k sub 0$,
+and $p sub n+1$ points to the subtree containing keys strictly greater
+than $k sub n$.
+If $n$ is 0, then there is only one subtree, and $p sub 0$ points to it.
+This last case can occur when the tree is being built by the $build$
+command, which may leave a single node nearly empty at each level of
+the tree due to its zeal in making the rest of the nodes at that
+level as full as possible.
+More detail on file structure is in section 5.
+.NH
+Subroutines
+.PP
+There are 9 subroutines that C programs can use to access B-trees.
+The normal order of events would be for a program to open one or more
+B-trees using $bopen$.
+To retrieve information the program would use $bseek$ to position
+itself in the B-tree.
+It could use $breclen$ to see how much it was about to read,
+and then $bread$ to actually retrieve the data.
+If it wanted to delete information it would use $bdelete$,
+and to write new or changed information it would use $bwrite$.
+.SH
+/usr/include/cbt.h
+.LP
+contains definitions of some manifest constants and types used
+by the subroutines.
+Manifest constants are represented as CONSTANT.
+A pointer of type
+.I *bfile
+is returned by the open routine and passed to each of the other
+routines.
+Data is passed in
+an
+.I mbuf :
+.DS
+.ft 8
+typedef struct {
+	char		*mdata;
+	unsigned short	mlen;
+} mbuf;
+.ft P
+.DE
+.I mdata
+points to
+.I mlen
+bytes of data.
+.PP
+An open B-tree is either positioned at its end or at some pair.
+When the file is opened, it is positioned at the first pair.
+Reading the B-tree gets the pair at the current position.
+Each subroutine has a deterministic effect on the current position.
+.PP
+B-trees can have any one of the 4 types INDEX, READONLY, both,
+or neither.
+The type is determined when the B-tree is created.
+INDEX says that the
+.I value
+part of a pair will always be null;
+i.e.,
+.I mlen
+will be zero.
+A B-tree should be READONLY if updates are infrequent and are never done
+while someone else is reading in the B-tree.
+.SH
+bfile *bopen(b-tree-name, flag)
+char *b-tree-name;
+.LP
+returns a pointer to an internal structure if the open is
+successful, and NULL otherwise.
+The file is positioned to its first pair.
+.I flag
+should be 0 if the file is only to be read, and 2 otherwise.
+It is passed directly to the system
+.I open
+routine.
+.SH
+bclose(bf) bfile *bf;
+.LP
+closes the B-tree, flushing buffers and cleaning up in general.
+If a process updates a B-tree which is not READONLY,
+then it must call this routine before any other user can perceive
+its updates.
+.SH
+bfirst(bf) bfile *bf;
+.LP
+resets the current position in the file to the beginning.
+It returns EOF if the B-tree is empty.
+.SH
+bseek(bf, key) bfile *bf; mbuf key;
+.LP
+sets the current position in the file to the first key in the file
+which is lexically greater than or equal to
+.I key .
+The routine returns FOUND if
+.I key
+was in the file,
+EOF if
+.I key
+is greater than any key in the file,
+and NOTFOUND otherwise.
+Lexical ordering is that induced by the C type
+.I char .
+.SH
+breclen(bf) bfile *bf;
+.LP
+returns the length of the
+.I value
+at the current position in the file,
+or EOF if you are at the end of the file.
+(On a machine where
+$short$ and
+.I int
+are 16 bits long,
+EOF will be a legal value for $mlen$,
+name 65535.
+If the user is on such a machine and writes objects of this length,
+he must not rely on this subroutine to detect the end of the file.)
+.SH
+mbuf bkey(bf) bfile *bf;
+.LP
+returns the
+.I key
+at the current position of the file.
+A key cannot have
+.I mlen
+of zero, so if the returned value does,
+you are at the end of the file.
+Do not change the data pointed to by
+.I mdata
+in the returned value,
+as it is used by the subroutines.
+.SH
+bread(bf, key, rec) bfile *bf; mbuf *key, *rec;
+.LP
+returns 0 if successful and EOF otherwise.
+If
+.I key
+is not NULL,
+$ key->mlen $
+is set to the length of the key at the current position of the file,
+and the buffer pointed to by
+$ key->mdata $
+is filled with the key.
+Likewise, if
+.I rec
+is not NULL,
+$ rec->mlen $ is set to the length of the value at the current position
+of the file,
+and the buffer pointed to by
+$rec->mdata $
+is filled with the value.
+Then the current position in the file is moved to the next pair.
+It is the user's responsibility to make the buffers large enough
+to hold what is put in them.
+$breclen$ gives the necessary size for values,
+and no key can be as large as the defined constant NDSZ from
+.I /usr/include/cbt.h .
+.SH
+bdelete(bf, key) bfile *bf; mbuf key;
+.LP
+deletes the pair with the given
+.I key
+from the file if it is present.
+The routine returns EOF on error,
+FOUND if a pair was deleted,
+and NOTFOUND otherwise.
+Afterwards, the current position in the file is as if
+.I "bseek(bf, key)"
+had been called.
+.SH
+bwrite(bf, key, value) bfile *bf; mbuf key, value;
+.LP
+writes the pair
+.I "key value"
+into the file.
+It returns EOF on error, FOUND if a pair was overwritten,
+and NOTFOUND if a new pair was written.
+When the routine returns,
+the position of the file is as if
+.I "bseek(bf, key)"
+had been called.
+Keys should not be more than about 120 bytes long.
+.SH
+Error Returns
+.PP
+If an error causes a routine to return EOF,
+the external integer
+.I errno
+is set to one of the codes defined in the header file.
+BNOWRITE means you tried to write on a B-tree not opened for writing,
+BIOWRT means that the system wrote fewer bytes than requested,
+BNOMEM means that a subroutine needed more memory and couldn't get it,
+and BTALL means that the tree has grown too tall.
+.I errno
+can also be set because one of the system calls failed.
+Then it will have one of the values from
+.I /usr/include/errno.h .
+.NH
+Commands
+.PP
+The commands are all of the form
+.I "cbt command args" .
+The file
+.I cbt
+is a shell script which invokes the actual commands.
+The commands are utilites.
+$cat$ just uses the subroutines of the last section,
+but $creat$, $build$, and $report$
+require inside knowledge of data structures not available through
+the B-tree subroutines.
+This is all in the spirit of data abstraction.
+The user, through the subroutines, gets certain services,
+which are best provided through private data structures
+not available to the user.
+$build$ has another and more compelling justification;
+it creates trees that require less space than if they were constructed
+by a sequence of $bwrite$s.
+.SH
+cbt creat [flags] file
+.LP
+creates an empty B-tree.
+In
+.I flags ,
+.I -i
+makes the file have type INDEX,
+and
+.I -r
+makes the file have type READONLY.
+The
+.UX
+file created is
+.I file.T .
+If the B-tree is not of type INDEX,
+.I file.F
+is created to hold the values.
+.SH
+cbt build [-R] file
+.LP
+builds the B-tree
+.I file
+from the standard input.
+The input data must be sorted by key.
+The new file has each node as full as possible,
+given that the program decides what to do with each key
+before looking at the next.
+.PP
+If the optional argument is not present
+each line of input contains a key and value separated by a tab.
+All the bytes to the first tab on a line make up the key
+(which must not be empty),
+the tab is removed,
+and the remaining bytes, not including the trailing newline,
+make up the value.
+Thus there is no way, without the optional argument to the command, to
+get a tab or newline in a key, or a newline in a value.
+.PP
+If the optional argument is present,
+the command expects a sequence of data of the form
+.DS
+.ft 8
+struct {
+	struct
+		unsigned short klen;
+		char kdata[klen];
+	} key;
+	struct {
+		unsigned short vlen;
+		char vdata[vlen];
+	} value;
+};
+.ft P
+.DE
+The dictionary mentioned in the introduction was constructed by
+.DS
+.ft 8
+cbt creat -i foo; sort /usr/dict/words | cbt build foo
+.ft P
+.DE
+.SH
+cbt cat [flags] files
+.LP
+writes the contents of the files on its standard output.
+If the
+.I R
+flag is present the output is suitable for
+.I R
+input to
+.I build,
+otherwise the output is a sequence of `lines' of the form
+key, tab, value, newline.
+Thus the command
+.DS
+.ft 8
+cbt cat -R file | cbt build -R newfile
+.ft P
+.DE
+will compress the old file into the new file.
+.SH
+cbt report file
+.LP
+scans the file and reports on the number of pairs,
+the total size, the amount of the tree in use, and
+the amount of free space.
+.NH
+File Structure
+.PP
+The
+.I .F
+file contains the values concatenated together in the order they
+were written.
+Each time a pair is written, the new value is put on the end of
+the
+.I .F
+file.
+Deleting a pair has no effect on the
+.I .F
+file.
+Therefore as a B-tree is updated,
+the
+.I .F
+file grows.
+.PP
+The
+.I .T
+file contains the B-tree proper,
+and pointers to the
+.I .F
+file if the B-tree is not an INDEX.
+The
+.I .T
+contains only tree nodes,
+each one NDSZ bytes long.
+(NDSZ is defined in the header file.)
+Each node has the form
+.DS
+header, keys, space, addresses, trailer.
+.DE
+The trailer is a $short$ containing the number of unused bytes in the
+node,
+which is the size of $space$.
+.PP
+The form of an $address$ depends on the type of the file
+and the height of the node in the tree.
+Leaves have height 0.
+Each other node has height one greater than its children.
+B-trees have the property that each node has a well-defined
+height.
+If the node is not a leaf, each $address$ is a $short$
+which is the location of a child of the node.
+The node pointed to by $address$ is the node starting at $address * NDSZ$
+in the file.
+Leaves in files of type INDEX don't have addresses.
+Otherwise an $address$ is a structure containing the length of the
+value and its starting position in the
+.I .F
+file.
+.PP
+Each $key$ structure contains its total length in a
+one-byte field, then the number of bytes of prefix
+in common with the preceding key in the node, and then the rest of the key.
+.PP
+The $header$ contains an identifier so that a program
+can tell if it rewrote the node,
+the number of keys in the node,
+the type of the node,
+and the height of the node.
+The first node in a file is always the root.
+The identifier is made from the process id and the time.
+If a file is not READONLY the routines will not overwrite a node unless the
+node was originally written by the process,
+or unless the file is being closed and the node is the root.
+In this way a file which is not READONLY supports one writer concurrently with
+programs reading.
+.NH
+An example
+.PP
+The example is a data base with two files.
+With it the user can translate from old department numbers
+to new department numbers,
+and get the title of a department from either department number.
+The example illustrates how to construct the data base
+and suggests one way of contstructing an index.
+There is also a complete program for retrieving from the data base
+whcih illustrates using all the subroutines which don't change
+B-trees.
+.PP
+A file named $deptnos$ contains old department numbers,
+new department numbers,
+and department titles.
+It is 1124 lines long and contains 56816 bytes.
+Here are the first 4 and last 4 lines:
+.DS
+0001  00001   Chairman of the Board
+0002  20000   Executive Vice President - Corporate Studies
+0003  30000   President/Project Planning
+0004  40000   Executive Vice President - Customer Systems
+9543  59543   Demand Economics Department
+9544  59544   Computer Systems Department
+9545  59545   Advanced Software Department
+9800  59800   Transfer of Non-Incremental Cost Between BIS and AT&T
+.DE
+For the example the file will go into 2 B-trees.
+One named $dept$ will have the new department numbers as keys
+and the department titles as values.
+The other,
+$olddept$,
+will be an index which will give new department numbers as a
+function of old.
+By combining the two, a user will be able to determine
+the department title from the old department number.
+In both,
+leading zeros will be stripped off department numbers.
+The commands
+.I "cbt creat dept"
+and
+.I "cbt creat -i olddept"
+create empty B-trees.
+The bold (but correct) command
+.EQ
+delim off
+.EN
+.DS
+.ft 8
+awk < deptnos '{$1 = ""; print}' |
+sed	's/^ //
+	s/^0*//
+	s/ /\et/' | sort | cbt build dept
+.ft P
+.DE
+.EQ
+delim $$
+.EN
+builds $dept$.
+The $awk$ command deletes the old department number and
+replaces multiple blanks by a single blank.
+The $sed$ command removes the leading blank
+(which is the separator $awk$ put after the null first field)
+and replaces the single blank separating the new
+department number from the department title with a tab for
+.I "cbt build" .
+$sort$ sees 48089 bytes.
+$dept.T$ contains 13284 bytes,
+and $dept.F$ contains 39955 bytes.
+Thus the additional space required for the B-tree is(39955+13284)/48089,
+which is 1.118, about 12%.
+The command
+.EQ
+delim off
+.EN
+.DS
+.ft 8
+awk < deptnos '{print $1, $2}' |
+sed	's/^0*//
+	s/ 0*/ /' | sort | cbt build olddept
+.ft P
+.DE
+.EQ
+delim $$
+.EN
+builds $olddept$.
+The $awk $ command prints the old and new department numbers,
+separated by a space.
+Each of the strings is the key of a pair in olddept.
+The output of $sort$ is 12875 bytes long,
+and $olddept.T$ is 11776 bytes long.
+.PP
+The program in the appendix provides a simple facility for using
+$dept$ and $olddept$.
+If the user types a number, all the new department numbers
+which have that number
+as a prefix are printed,
+together with their department names.
+If the user types a number preceded with the letter O,
+then the program computes the set of old department numbers which
+begin with the typed number,
+and prints a set of lines consisting of the old and new
+department numbers and the department title.
+.NH
+Conclusion
+.PP
+The subroutines and commands described in this memo can be used
+to build and maintain data bases of moderate size.
+The subroutines give a clean interface to C programs,
+and the files themselves are efficient to use and
+reasonably economical of space.
+.SG
+.SH
+Bibliography
+.LP
+D. Comer,
+.I
+The Ubiquitous B-Tree,
+.R
+Computing Surveys
+.B (11)
+June 1979,
+pp 121-137.

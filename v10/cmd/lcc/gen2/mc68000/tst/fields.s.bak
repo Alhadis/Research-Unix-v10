@@ -1,0 +1,201 @@
+.data
+.globl _x
+.align 2; _x:long 1
+byte 2
+.skip 1
+byte 0
+byte 52
+byte 10
+byte 6
+.globl _i
+.align 2; _i:long 16
+.globl _y
+.align 2; _y:byte 224
+.skip 1
+byte 0
+byte 0
+byte 0
+byte 9
+.text
+.globl _main
+.align 2
+_main:link a6,#-40
+movm.l #0x1c,-12(a6)
+mov.l &_4,($sp)
+mov.l _x,4($sp)
+mov.b _x+4,$d4
+ext.w $d4; ext.l $d4
+mov.l $d4,8($sp)
+mov.l _x+6,$d4
+mov.l &20,$d3
+asr.l $d3,$d4
+mov.l $d4,12($sp)
+mov.l _x+6,$d4
+mov.l &12,$d3
+asl.l $d3,$d4
+mov.l &28,$d3
+asr.l $d3,$d4
+mov.l $d4,16($sp)
+mov.l _x+8,$d4
+asl.l &4,$d4
+mov.l &29,$d3
+asr.l $d3,$d4
+mov.l $d4,20($sp)
+mov.b _x+9,$d4
+ext.w $d4; ext.l $d4
+mov.l $d4,24($sp)
+jbsr _printf
+mov.l &_10,($sp)
+mov.l _y,$d4
+mov.l &30,$d3
+mov.l $d4,$d2; lsr.l $d3,$d2
+mov.l $d2,4($sp)
+lsl.l &2,$d4
+mov.l &28,$d3
+lsr.l $d3,$d4
+mov.l $d4,8($sp)
+mov.l _y+2,12($sp)
+jbsr _printf
+mov.l _x+6,$d4
+and.l &0xfff0ffff,$d4
+mov.l _i,$d3
+mov.l &28,$d2
+lsl.l $d2,$d3
+asr.l $d2,$d3
+mov.l $d3,$d3
+mov.l &16,$d2
+lsl.l $d2,$d3
+and.l &0xf0000,$d3
+or.l $d3,$d4
+mov.l $d4,_x+6
+mov.l _x+8,$d4
+and.l &0xf1ffffff,$d4
+mov.l $d4,_x+8
+mov.l &_4,($sp)
+mov.l _x,4($sp)
+mov.b _x+4,$d4
+ext.w $d4; ext.l $d4
+mov.l $d4,8($sp)
+mov.l _x+6,$d4
+mov.l &20,$d3
+asr.l $d3,$d4
+mov.l $d4,12($sp)
+mov.l _x+6,$d4
+mov.l &12,$d3
+asl.l $d3,$d4
+mov.l &28,$d3
+asr.l $d3,$d4
+mov.l $d4,16($sp)
+mov.l _x+8,$d4
+asl.l &4,$d4
+mov.l &29,$d3
+asr.l $d3,$d4
+mov.l $d4,20($sp)
+mov.b _x+9,$d4
+ext.w $d4; ext.l $d4
+mov.l $d4,24($sp)
+jbsr _printf
+mov.l _y,$d4
+and.l &0x3fffffff,$d4
+or.l &0x80000000,$d4
+mov.l $d4,_y
+mov.l _i,_y+2
+mov.l &_10,($sp)
+mov.l _y,$d4
+mov.l &30,$d3
+mov.l $d4,$d2; lsr.l $d3,$d2
+mov.l $d2,4($sp)
+lsl.l &2,$d4
+mov.l &28,$d3
+lsr.l $d3,$d4
+mov.l $d4,8($sp)
+mov.l _y+2,12($sp)
+jbsr _printf
+mov.l &_x,($sp)
+jbsr _f2
+L3:
+movm.l -12(a6),#0x1c
+unlk a6
+rts
+.globl _f1
+.align 2
+_f1:link a6,#-28
+movm.l #0x201c,-16(a6)
+mov.l 8($a6),$a5
+mov.l ($a5),$d4
+and.l &0xc3ffffff,$d4
+mov.l $d4,($a5)
+mov.l ($a5),$d4
+and.l &0x3fffffff,$d4
+clr.l $d3
+and.l &3,$d3
+mov.l &30,$d2
+lsl.l $d2,$d3
+and.l &0xc0000000,$d3
+or.l $d3,$d4
+mov.l $d4,($a5)
+mov.l ($a5),$d4
+and.l &0x3c000000,$d4
+tst.l $d4; jeq L22
+mov.l &_24,($sp)
+jbsr _printf
+L22:
+mov.l ($a5),$d4
+or.l &0xc0000000,$d4
+mov.l $d4,($a5)
+mov.l ($a5),$d4
+or.l &0x3c000000,$d4
+mov.l $d4,($a5)
+mov.l &_25,($sp)
+mov.l ($a5),$d4
+mov.l &30,$d3
+mov.l $d4,$d2; lsr.l $d3,$d2
+mov.l $d2,4($sp)
+lsl.l &2,$d4
+mov.l &28,$d3
+lsr.l $d3,$d4
+mov.l $d4,8($sp)
+jbsr _printf
+L21:
+movm.l -16(a6),#0x201c
+unlk a6
+rts
+.globl _f2
+.align 2
+_f2:link a6,#-24
+movm.l #0x209c,-20(a6)
+mov.l 8($a6),$a5
+tst.l _i; jne L28
+mov.l &1,$d7
+jra L29
+L28:
+clr.l $d7
+L29:
+mov.l ($a5),$d4
+and.l &0x3fffffff,$d4
+mov.l $d7,$d3; and.l &3,$d3
+mov.l &30,$d2
+lsl.l $d2,$d3
+and.l &0xc0000000,$d3
+or.l $d3,$d4
+mov.l $d4,($a5)
+mov.l $a5,($sp)
+jbsr _f1
+mov.l ($a5),$d4
+and.l &0xc3ffffff,$d4
+clr.l $d3
+and.l &15,$d3
+mov.l &26,$d2
+lsl.l $d2,$d3
+and.l &0x3c000000,$d3
+or.l $d3,$d4
+mov.l $d4,($a5)
+L26:
+movm.l -20(a6),#0x209c
+unlk a6
+rts
+.text
+.align 2; _25:.ascii "p->a = 0x%x, p->b = 0x%x\012\000"
+.align 2; _24:.ascii "p->b != 0!\012\000"
+.align 2; _10:.ascii "y = %d %d %d\012\000"
+.align 2; _4:.ascii "x = %d %d %d %d %d %d\012\000"

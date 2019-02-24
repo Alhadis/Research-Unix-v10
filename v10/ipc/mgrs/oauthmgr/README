@@ -1,0 +1,56 @@
+There is a man page for authmgr(8) with the authmgr paper in
+/usr/cohrs/paper.
+
+If you want to add a new challenge box type to authmgr, follow
+these steps.
+
+1) create a new .c file, containing two procedures, a foochal
+   procedure and a foocomp procedure (assuming foo is the type
+   of challenge box you are adding).
+
+   char*
+   foochal(kp)
+	struct keyinfo *kp;
+	char *login;
+   {
+	return "the challenge string, up to 60 characters login";
+   }
+
+   int
+   foocomp(kp, response)
+	struct keyinfo *kp;
+	char *response;
+   {
+	if(response is correct)
+		return 0;
+	else
+		return 1;
+   }
+
+   struct keyinfo is defined in "authmgr.h", so you'll want to include
+   this.  Look at atalla.c for an example.  Note that you can define
+   static variables if you want foochal to save stuff that foocomp
+   uses later.
+
+2) Add foo.o to the Makefile OBJS line.
+
+3) Edit keytypes.c, and, in the "keytypemap" structure, add an
+   entry for the foo box, for example:
+	"foo", foochal, foocomp,	/* a foo encryption box */
+
+   Put this entry just before the line that says "0, 0, 0". Don't
+   put it first, no matter what!
+
+   Also, on the lines just before the keytypemap structure, add
+   external refs to foochal and foocomp (look at the atalla lines
+   if you need examples).
+
+4) make authmgr
+
+You should now be able to add lines in the keys file of type "foo",
+and the foochal and foocomp routines should be used to make the
+challenge and compare the response with the correct response.
+
+If foochal ever returns a NULL pointer, authmgr assumes that it
+should prompt the user for a "Password: " instead of a normal
+challenge.  Take care to not return NULL if this isn't what you want.

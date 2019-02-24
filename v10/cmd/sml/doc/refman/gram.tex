@@ -1,0 +1,131 @@
+\chapter{Syntax of the full language}
+\label{grammar}
+{\samepage
+\renewcommand{\lhs}[1]{\pagebreak[1] \\ \vspace{2ex}
+			 #1 \  \( \rightarrow \) \' }
+\newcommand{\also}[0]{\nopagebreak[3] \\}
+\begin{tabbing}
+longword \( \rightarrow \) \= \{ lab = exp , \rep{0} , lab = exp \} \
+\ \ \ \= \kill
+\+
+\lhs{ide}        ID \> {\em symbolic or alphabetic}
+\also      \verb"*" \> {\em \verb"*" is legal as a value-identifer}
+\also      =	   \> {\em \verb"=" may be used but not rebound }
+\lhs{opid}       ide \>
+\also      \res{op} ide \> {\em removes infix status }
+\lhs{qualid}     ide
+\also      ID . qualid
+\lhs{ident}      opid
+\also      qualid
+\lhs{lab}      ID \>
+\also      INT \> {\em numeric labels}
+\lhs{const}      INT  \>
+\also      REAL   \>
+\also      STRING  \>
+\also      ()     \>
+\also      ident \> {\em nullary constructor}
+\lhs{exp}        ident \> {\em variable}
+\also      const
+\also      \# lab \> {\em field selector }
+\also      \{ lab = exp , \rep{0} , lab = exp \} \> {\em record}
+\also      ( exp , \rep{2} , exp )  \> {\em tuple }
+\also      ( exp ; \rep{1} ; exp )  \> {\em sequence }
+\also      \verb"[" exp , \rep{0} , exp \verb"]" \> {\em list}
+\also      \res{let} decs \res{in} expseq \res{end} \> {\em local
+declaration}
+\also      exp exp \> {\em application; left--associative}
+\also      exp ide exp \>{\em infixed application}
+\also      exp : ty \>{\em type constraint}
+\also      exp \res{andalso} exp \>{\em conjunction}
+\also      exp \res{orelse} exp \>{\em disjunction}
+\also      \res{fn} match \>{\em function}
+\also      \res{case} exp \res{of} match \>{\em case expression}
+\also      \res{while} exp \res{do} exp \>{\em iteration}
+\also      \res{if} exp \res{then} exp \res{else} exp \>{\em conditional}
+\also      exp \res{handle} match \>{\em handle exception; right--associative}
+\also      \res{raise} exp \>{\em raise exception}
+\lhs{match}      pat \verb"=>" exp $\mid$ \rep{1} $\mid$ pat \verb"=>" exp \>
+\lhs{apat}       ident  \>{\em  variable binding }
+\also      const \>{\em constant pattern}
+\also      \verb"_" \>{\em wildcard}
+\also      ( pat )
+\also      ( pat , \rep{2} , pat) \>{\em tuple}
+\also      \{ patfield , \rep{0} , patfield \} \>{\em record}
+\also      \{ patfield , \rep{0} , patfield , ... \} \>{\em flexible record}
+\also      \verb"[" pat , \rep{0} , pat \verb"]" \>{\em list}
+\lhs{pat}        apat \>{\em atomic}
+\also      ident apat \>{\em construction; left--associative}
+\also      pat ide pat \>{\em infixed construction}
+\also      pat : ty \>{\em type constraint}
+\also      opid constraint \res{as} pat \>{\em layered}
+\lhs{patfield}   lab = pat \>{\em normal}
+\also        ID \>{\em abbreviation}
+\also        ID \res{as} pat \>{\em abbreviation}
+\lhs{ty}         \res{tyvar} \>{\em type variable}
+\also      \{ lab : ty , \rep{0} , lab : ty \} \>{\em record type}
+\also      ( ty )
+\also      ( ty , \rep{2} , ty ) qualid \>{\em type construction}
+\also      ty qualid \>{\em unary type construction}
+\also      qualid \>{\em nullary type construction}
+\also      ty \verb"*" \rep{2} \verb"*" ty \>{\em typle type}
+\also      ty \verb"->" ty   \>{\em function type; right--associative}
+\lhs{vb}         pat = exp  \>{\em simple }
+\also vb \res{and} \rep{1} \res{and} vb \>{\em multiple}
+\lhs{constraint}       \>  {\em absent}
+\also          : ty \>{\em type constraint}
+\lhs{rvb}        opid constraint = \res{fn} match \>{\em simple recursive}
+\also rvb \res{and} \rep{1} \res{and} rvb \>{\em mutually recursive}
+\lhs{clause}     opid apat \rep{1} apat constraint = exp \>{\em prefix}
+\also      pat ide pat constraint = exp \>{\em infix}
+\lhs{fb}         clause $\mid$ \rep{1} $\mid$ clause \>{\em clausal function}
+\also fb \res{and} \rep{1} \res{and} fb \>{\em mutually recursive}
+\lhs{tb}         tyvars ID = ty  \>{\em simple }
+\also tb \res{and} \rep{1} \res{and} tb \>{\em multiple}
+\lhs{tyvars}    \> {\it absent} 
+\also      \res{tyvar} \>{\em single}
+\also      ( \res{tyvar} , \rep{2} , \res{tyvar} ) \>{\em multiple}
+\lhs{db}         tyvars ID = constr $\mid$ \rep{1} $\mid$ constr \>{\em
+simple}
+\also  db \res{and} \rep{1} \res{and} db \>{\em mutually recursive}
+\lhs{constr}     opid \>{\em nullary (constant)}
+\also      opid \res{of} ty \>{\em unary}
+\lhs{eb}         ide   \>{\em nullary (constant)}
+\also      ide \res{of} ty \>{\em unary}
+\also      ide = qualid \>{\em re--naming}
+\also eb \res{and} \rep{1} \res{and} eb \>{\em multiple}
+\lhs{ldec}       \res{val} vb \>{\em value declaration}
+\also      \res{val} \res{rec} rvb \>{\em recursive value declaration}
+\also      \res{fun} fb \>{\em function declaration}
+\also      \res{type} tb \>{\em type declaration}
+\also      \res{datatype} db \>{\em datatype declaration}
+\also      \res{exception} eb  \>{\em exception declaration}
+\also      \res{local} ldec \res{in} ldec \res{end} \>{\em local
+declaration}
+\also      \res{open} qualid \rep{1} qualid \>{\em structure visibility}
+\also      fixity ide \rep{1} ide  \>{\em directive}
+\also      ldec ldec  \>{\em declaration sequence}
+\also      ldec \verb";" \>{\em optional semicolon}
+\lhs{fixity}     \res{infix} INT \>{\em declare infix,
+left--associative}
+\also      \res{infix} \>{\em declare infix, precedence 0}
+\also      \res{infixr} INT \>{\em infix, right associative}
+\also      \res{infixr}  \>{\em infix, right assoc., prec. 0}
+\also      \res{nonfix}  \>{\em cancel infix status}
+\lhs{sgn}        ID
+\also      \res{sig} specs \res{end}
+\lhs{specs}      spec
+\also      specs spec
+\also      specs ;
+\lhs{spec}       \res{structure} ID : sgn \res{and} \rep{1} \res{and} ID : sgn
+\also      \res{datatype} db \res{and} \rep{1} \res{and} db
+\also      \res{type} tyvars ID \res{and} \rep{1} \res{and} tyvars ID
+\also      \res{val} ide : ty \res{and} \rep{1} \res{and} ide : ty
+\also      \res{exception} exnspec \res{and} \rep{1} \res{and} exnspec
+\also      \res{sharing} sharspec \res{and} \rep{1} \res{and} sharspec
+\lhs{exnspec}    ide
+\also       ide \res{of} ty
+\lhs{sharspec}   qualid = \rep{2} = qualid
+\end{tabbing}
+This description is at present incomplete, as it is missing the
+grammar rules for structures and functors.
+}

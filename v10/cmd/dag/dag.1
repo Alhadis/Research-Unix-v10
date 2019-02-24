@@ -1,0 +1,150 @@
+.TH DAG 1 "15 April 1987"
+.SH NAME
+dag \- preprocessor for DAGs and other directed graphs
+.SH SYNOPSIS
+.B dag
+[
+.B \-T\fItype\fP
+] [
+.B \-p\fIwidth\fPx\fIheight\fP
+[
+.B ,\fImarginwidth\fP
+[
+.B x\fImarginheight\fP
+] ]
+] [
+.B \-O
+] [
+.B \-l
+] [ files ]
+.SH DESCRIPTION
+.I Dag
+is a
+.IR pic (1)
+or
+.IR Postscript
+preprocessor for drawing directed graphs.  It works well on
+directed acyclic graphs and other graphs that can be drawn
+as a hierarchy.
+.IR dag
+selects coordinates for the nodes of the graph and creates a picture.
+Input graphs are surrounded by the
+.I troff
+`commands'
+.B \&.GS
+and
+.BR  \&.GE .
+The graph contains nodes, edges, and optional control statements.
+Statements are semicolon terminated.  Here is a brief summary:
+.PP
+\fBedge from\fP \fItail\fP \fBto\fP \fIhead0 edge-items, \fBto\fP head1 edge-items, \fBto\fP head2 edge-items... \fR: creates edges from the tail node
+to the head nodes (or node).  Nodes are implicitly created if they do
+not already exist.  \fIedge-items\fP (which apply to the 
+edge just made, as described below) and the noisewords \fBedge\fP,
+\fBfrom\fP, and \fBto\fP are optional.  Node names may be quoted
+to avoid conflicting with keywords.
+.PP
+\fBordered\fP \fI tail head0 head1 head2... \fR: makes edges and also
+constrains the left-to-right order of the head nodes and keeps them
+on the same rank.  May contain noisewords and edge-items.
+.PP
+\fBpath\fP \fI node0 node1 node2...\fR: creates a path of edges.
+May contain noisewords and edge-items.
+.PP
+\fBbackedge\fP \fItail head0 head1 head2...\fR: creates edges that
+point backward (up or left).
+.PP
+\fBbackpath\fP \fInode0 node1 node2...\fR: makes a path of backedges.
+.PP
+\fBdraw nodes\fP \fInode-items\fP: Changes default definition for all nodes
+subsequently created.  \fInode-items\fP are: \fBas\fP \fIshape\fP
+(standard shapes are \fBBox, Circle, Ellipse, Diamond, Square,\fP
+and \fBPlaintext\fP), \fBlabel\fR \fIstring\fP,
+\fBpointsize\fP \fIn\fP, \fBwidth\fP \fIn\fP,
+\fBheight\fP \fIn\fP, \fBcolor\fP \fIstring\fP.  Dimensions are
+in inches.  \fIcolor\fP only works with PostScript and should evaluate
+to an HSB triple.
+.PP
+\fBdraw\fP \fInodelist\fP \fInode-items\fP: controls drawing (shapes,
+labels, etc.) of nodes in the list.
+.PP
+\fBdraw edges\fP \fIedge-items\fP: Changes default definition of edges
+subsequently created.  \fIedge-items\fP are: \fBdotted, dashed, solid\fP,
+or \fBinvis\fP, \fBlabel\fP \fIstring\fP, \fBweight\fP \fIn\fP,
+\fBcolor\fP \fIstring\fP, \fBpointsize\fP \fIn\fP.
+.PP
+\fBminimum rank\fP \fInodelist\fP: constrains nodes 
+to be on the topmost rank (or leftmost if drawn with .GR).
+.PP
+\fBmaximum rank\fP \fInodelist\fP: bottommost or rightmost rank.
+.PP
+\fBsame rank\fP \fInodelist\fP: constrains nodes to be
+placed on the same rank.
+.PP
+\fBseparate ranks\fP \fIn\fP \fBequally\fP or \fBexactly\fP:
+sets separation between ranks.
+\fBexactly\fP means rank separation is fixed.
+\fBequally\fP means that all ranks have the same separation.
+.PP
+The \fB\-O\fP option requests ``optimal'' node placement.  This makes
+slightly better layouts, but is only practical for graphs of a few
+dozen nodes.
+.PP
+Output languages other than
+.IR pic
+are requested with \fB\-T\fP: \fB\-Tps\fP for PostScript, \fB\-Tsimple\fP
+for a simple format similar to that of the Ninth Edition Unix \fIgraphdraw\fP
+editor, and \fB\-Tcip\fP for a simplified form of \fIpic\fP code that
+can be read by the obsolescent \fIcip\fP editor.  PostScript drawings
+are paginated by giving the \fB\-p\fP option to set page dimensions.
+Default margins are one-half inch.
+Although the margins can be set to zero, Laserwriters have hard margins
+that prevent making seamless mosaics.
+The \fB\-p\fP option replaces the \fIPoster\fP
+program from CIA, which is inefficient for large drawings
+because of quadratic behavior.
+.PP
+The \fB\-l\fP option disables automatic loading of the
+.IR dag
+graphics library.
+.PP
+A graph is drawn with left-to-right edges by using .GR
+instead of .GS.  The maximum height and width of the drawing may
+be given on the .GS/.GR line. The optional keyword \fBfill\fP at
+the end of this line makes \fIdag\fP adjust node positions
+to fill the bounding box.
+In-line graphics code such as \fIpic\fP or PostScript macros
+may be defined in a block between \fB.PS\fP and \fB.PE\fP.
+.PP
+If \fIdag\fP is installed under EXPTOOLS, it uses the standard
+\fBTOOLS\fP environment variable to find its libraries.
+.SH "EXAMPLE"
+.br
+\&.GS 6 8 fill
+.br
+a b c;
+.br
+path a x y;
+.br
+draw nodes as Box;
+.br
+a z label "hi" weight 1000;
+.br
+draw edges dashed;
+.br
+b x;
+.br
+same rank b x;
+.br
+\&.GE
+.br
+.SH "BUGS"
+\fItroff\fP doesn't have \fBdotted\fP or \fBdashed\fP splines.
+Use PostScript.  
+.PP
+\fIdag\fP doesn't keep edge labels from accidentally overlapping.
+.SH "SEE ALSO"
+.I
+E. R. Gansner, S. C. North,  K. P. Vo, "DAG \(em A Graph Drawing Program,"
+TM 59554-871019-04TM.
+.br

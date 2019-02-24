@@ -1,0 +1,94 @@
+'\"macro stdmacro
+.if n .pH g1a.smtpqer %W% of %G%
+.nr X
+.if \nX=0 .ds x} smtpqer 1M "" "\&"
+.if \nX=1 .ds x} smtpqer 1M ""
+.if \nX=2 .ds x} smtpqer 1M "" "\&"
+.if \nX=3 .ds x} smtpqer "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4smtpqer\fP \- queue mail for delivery by \s-1SMTP\s+1
+.SH SYNOPSIS
+\f4smtpqer\f1 [ \f4\-nu\f1 ] [ \f4\-a\f2 toaddr\f1 ] [ \f4\-d\f2 domain\f1 ]
+[ \f4\-H\f2 helohost \f1]\f2 sender host recip ...
+.SH DESCRIPTION
+\f4smtpqer\fP queues the mail message it reads from standard input for
+eventual delivery by \f4smtp\fP.
+The message is queued for delivery to the host specified in the \f2to\fP address.
+.P
+\f4smtpqer\fP should normally be invoked by the \f4mail\fP command by placing
+the following line in \f4/etc/mail/mailsurr\fP:
+.P
+.nf
+ \f4\(aa.+\(aa \(aa([^!@]+)!(.+)\(aa \(aa< /usr/lib/mail/surrcmd/smtpqer %R \e\e1 \e\e2\(aa\fP
+.fi
+.P
+\f4smtpqer\fP will check the host name in the \f2to\fP address.
+If it is one that can be reached (i.e., if \f4netdir_getbyname\fP(3) can find
+it on at least one
+.SM TLI
+network), the message will be queued, and
+\f4smtpqer\fP will exit with a return code of 0 (which means the mail
+was successfully queued).
+Otherwise, it will return with an exit code of 1, and the message will
+not be queued.
+.P
+Messages that are queued are stored in a file under the
+.SM SMTP
+queue directory (\f4/var/spool/smtpq\fP).
+If the \f4\-u\fP option is not used, they are first converted to RFC822
+format, by filtering them through the program \f4tosmtp\fP.
+Finally, \f4smtpqer\fP invokes the \f4smtpsched\fP program to
+deliver the mail.
+.P
+The \f4\-H\fP option is used to specify the host name that should
+be used in the
+.SM SMTP
+.SM HELO
+message.
+This option is passed to both the \f4tosmtp\fP and \f4smtp\fP programs.
+.P
+The \f4\-d\fP option is used to specify the domain name that should
+be used for your host.
+This option is passed to the \f4tosmtp\fP program.
+If this option is not used, and a domain has been specified in the
+mail configuration file \f2mailcnfg\fP, that domain will be used instead.
+.P
+The \f4\-a\fP option is used to specify the ``to address'' that is passed
+to the \f4smtp\fP program.
+Finally, the \f4\-n\fP option is used to prevent \f4smtpqer\fP from starting
+an \f4smtpsched\fP process to deliver the mail.
+.SH FILES
+.TP 25n
+\f4/usr/bin/rmail\fP
+where mail originates from
+.TP
+\f4/etc/hosts\fP
+database of remote hosts (for \s-1TCP/IP\s+1)
+.TP
+\f4/etc/mail/mailcnfg\fP
+mail configuration file
+.TP
+\f4/etc/net/\(**/hosts\fP
+database of remote hosts (for other \s-1TLI\s+1 networks)
+.TP
+\f4/etc/mail/mailsurr\fP
+control file containing rule to invoke \f4smtpqer\fP
+.TP
+\f4/usr/lib/mail/surrcmd/smtpsched\fP
+program to process message queues
+.TP
+\f4/usr/lib/mail/surrcmd/smtp\fP
+program that passes message to remote host
+.TP
+\f4/usr/lib/mail/surrcmd/tosmtp\fP
+filter to convert to RFC822 format
+.TP
+\f4/var/spool/smtpq\fP
+where messages are queued
+.SH "SEE ALSO"
+\f4rmail\fP(1M), \f4smtpsched\fP(1M), \f4smtp\fP(1M), \f4tosmtp\fP(1M)
+.br
+\f4getdomainname\fP(3) in the \f2Programmer's Reference Manual\f1.
+.br
+RFC822 \- Standard for the Format of \s-1ARPA\s+1 Internet Text Messages

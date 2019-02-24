@@ -1,0 +1,61 @@
+From zoo.toronto.edu!henry Thu Aug 16 13:39:15 EDT 1990
+Received: by dutoit; Thu Aug 16 13:39:39 EDT 1990
+Received: by inet.att.com; Thu Aug 16 13:39 EDT 1990
+From: henry@zoo.toronto.edu
+Date: Thu, 16 Aug 90 13:39:15 EDT
+To: dmr@research.att.com
+Subject: bug fix to 11as
+
+Looks like I found a bug in the pdp11 cross-assembler.  When the second
+pass sees a change of segment, it forces dot to be even.  Unfortunately,
+the first pass is completely ignorant of this, and confusion and madness
+result.  For example, this program:
+
+	.data
+	<a>
+	.data
+b:	<c>
+
+puts the "c" at address 1, but makes "b" equal 2.  I ran into this with
+a test program that flipped back and forth between data and text while
+allocating strings.
+
+I conjecture that the old native version of the assembler may have
+done the forcing in both passes.  When I moved our major pdp11 stuff to
+the cross-compiler, one of the things I had to do to get identical bytes
+out the end was to add a ".even" in one place (after putting an odd-
+length string into the text segment).  Evidently there was a difference
+in behavior between native and cross versions, but I didn't investigate
+it closely at the time.  I assumed that the native version had forced
+alignment and the (newer) cross version had stopped doing so for some
+reason, but it may well have been this bug manifesting itself.
+
+Simply taking out the force-even code in the second pass appears to be
+a workable fix (see enclosed patch).  It cures the problem in my test
+program, and running all our major cross-compiled code through the new
+version produces byte-for-byte-identical output, so it appears not to
+be fouling up anything else.
+
+                                         Henry Spencer at U of Toronto Zoology
+                                          henry@zoo.toronto.edu   utzoo!henry
+
+*** as26.c.old	Thu Aug 16 13:27:38 1990
+--- as26.c	Thu Aug 16 13:27:18 1990
+***************
+*** 124,130 ****
+  	case T__TEXT:
+  	case T__DATA:
+  	case T__BSS:
+! 		*dot=(*dot+1)&~1;
+  		savdot[*dotrel-T_TEXT] = *dot;
+  		if (passno!=0 && t!=T__BSS) {
+  			fseek(txtf,tseek[t-T__TEXT],0);
+--- 124,130 ----
+  	case T__TEXT:
+  	case T__DATA:
+  	case T__BSS:
+! /*		*dot=(*dot+1)&~1;		*/
+  		savdot[*dotrel-T_TEXT] = *dot;
+  		if (passno!=0 && t!=T__BSS) {
+  			fseek(txtf,tseek[t-T__TEXT],0);
+

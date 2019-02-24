@@ -1,0 +1,198 @@
+.data
+.globl _in
+.align 2; _in:long 10
+long 32
+long -1
+long 567
+long 3
+long 18
+long 1
+long -51
+long 789
+long 0
+.text
+.globl _main
+.align 2
+_main:link a6,#-20
+movm.l #0x490,-12(a6)
+mov.l &_in,($sp)
+mov.l &10,4($sp)
+jbsr _sort
+clr.l $d7
+jra L5
+L2:
+lea _in,$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),($sp)
+jbsr _putd
+mov.l &10,($sp)
+jbsr _putchar
+L3:
+addq.l &1,$d7
+L5:
+cmp.l &10,$d7; jcs L2
+clr.l $d0
+L1:
+movm.l -12(a6),#0x490
+unlk a6
+rts
+.globl _putd
+.align 2
+_putd:link a6,#-16
+movm.l #0x98,-12(a6)
+mov.l 8($a6),$d7
+tst.l $d7; jge L7
+mov.l &45,($sp)
+jbsr _putchar
+mov.l $d7,$d4; neg.l $d4
+mov.l $d4,$d7
+L7:
+mov.l &10,$d4
+divs.w $d4,$d3; ext.w $d3
+tst.l $d3; jeq L9
+mov.l &10,$d4
+divs.w $d4,$d3; ext.w $d3
+mov.l $d3,($sp)
+jbsr _putd
+L9:
+mov.l &10,$d4
+divs.w $d4,$d3; swap; ext.w $d3
+mov.l $d3,$d4; add.l &48,$d4
+mov.l $d4,($sp)
+jbsr _putchar
+L6:
+movm.l -12(a6),#0x98
+unlk a6
+rts
+.globl _sort
+.align 2
+_sort:link a6,#-20
+movm.l #0x410,-8(a6)
+mov.l 8($a6),$a2
+mov.l $a2,_xx
+mov.l $a2,($sp)
+clr.l 4($sp)
+mov.l 12($a6),$d4
+subq.l &1,$d4
+mov.l $d4,12($a6)
+mov.l $d4,8($sp)
+jbsr _quick
+L11:
+movm.l -8(a6),#0x410
+unlk a6
+rts
+.globl _quick
+.align 2
+_quick:link a6,#-32
+movm.l #0x20f0,-20(a6)
+mov.l 8($a6),$a5
+mov.l 12($a6),$d7
+mov.l 16($a6),$d6
+cmp.l $d6,$d7; jlt L13
+jra L12
+L13:
+mov.l $a5,($sp)
+mov.l $d7,4($sp)
+mov.l $d6,8($sp)
+jbsr _partition
+mov.l $d0,$d5
+mov.l $a5,($sp)
+mov.l $d7,4($sp)
+mov.l $d5,$d4; subq.l &1,$d4
+mov.l $d4,8($sp)
+jbsr _quick
+mov.l $a5,($sp)
+mov.l $d5,$d4; addq.l &1,$d4
+mov.l $d4,4($sp)
+mov.l $d6,8($sp)
+jbsr _quick
+L12:
+movm.l -20(a6),#0x20f0
+unlk a6
+rts
+.globl _partition
+.align 2
+_partition:link a6,#-36
+movm.l #0x24f0,-28(a6)
+mov.l 8($a6),$a5
+mov.l 12($a6),$d7
+mov.l 16($a6),$d6
+addq.l &1,$d6
+mov.l $d7,-4($a6)
+mov.l -4($a6),$d4
+asl.l &2,$d4
+mov.l 0($a5,$d4.l),$d5
+jra L17
+L16:
+addq.l &1,$d7
+jra L20
+L19:
+addq.l &1,$d7
+L20:
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a5,$d4.l),$d4
+cmp.l $d5,$d4; jlt L19
+subq.l &1,$d6
+jra L23
+L22:
+subq.l &1,$d6
+L23:
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a5,$d4.l),$d4
+cmp.l $d5,$d4; jgt L22
+cmp.l $d6,$d7; jge L25
+mov.l $d7,$d4; asl.l &2,$d4
+lea 0($a5,$d4.l),$a2
+mov.l $a2,($sp)
+mov.l $d6,$d4; asl.l &2,$d4
+lea 0($a5,$d4.l),$a2
+mov.l $a2,4($sp)
+jbsr _exchange
+L25:
+L17:
+cmp.l $d6,$d7; jlt L16
+mov.l -4($a6),$d4
+asl.l &2,$d4
+lea 0($a5,$d4.l),$a2
+mov.l $a2,($sp)
+mov.l $d6,$d4; asl.l &2,$d4
+lea 0($a5,$d4.l),$a2
+mov.l $a2,4($sp)
+jbsr _exchange
+mov.l $d6,$d0
+L15:
+movm.l -28(a6),#0x24f0
+unlk a6
+rts
+.globl _exchange
+.align 2
+_exchange:link a6,#-36
+movm.l #0x301c,-24(a6)
+mov.l 8($a6),$a5
+mov.l 12($a6),$a4
+mov.l &_28,($sp)
+mov.l $a5,$d4
+mov.l _xx,$d3
+sub.l $d3,$d4
+mov.l $d4,$d4
+mov.l &4,$d2
+divs.w $d2,$d4; ext.w $d4
+mov.l $d4,4($sp)
+mov.l $a4,$d4
+sub.l $d3,$d4
+mov.l $d4,$d4
+divs.w $d2,$d4; ext.w $d4
+mov.l $d4,8($sp)
+jbsr _printf
+mov.l ($a5),-4($a6)
+mov.l ($a4),($a5)
+mov.l -4($a6),($a4)
+L27:
+movm.l -24(a6),#0x301c
+unlk a6
+rts
+.bss
+.globl _xx
+comm _xx,4
+.text
+.align 2; _28:.ascii "exchange(%d,%d)\012\000"

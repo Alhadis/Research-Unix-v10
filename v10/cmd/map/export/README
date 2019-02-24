@@ -1,0 +1,119 @@
+MATERIALS
+
+Manuals are included in two forms.
+	formatted ASCII file:
+		map.man
+	input for troff -man:
+		map.5, map.7, proj.3, proj.5, route.1
+
+The source directory has two subdirectories: 
+	libmap		source for all the projection subroutines
+	mapdata		World Data Bank I, etc.
+
+The source is written in ANSI C.  Check CFLAGS and CC in the
+Makefile and make them reflect your system's conventions.
+
+QUICK TEST
+
+For a quick test, to see whether you can compile and compute, try this
+test, which makes "map" and checks its output for a bit of Africa:
+
+	make quicktest
+
+PLOTTING FILTERS
+
+Map produces output for a plotting filter (not included).
+Unfortunately there is no Unix standard for plotting.
+Here are ways to compile for various filters.
+
+	make		For System V and SunOS filters plot(1)
+			or tplot(1).
+
+	make v10	For v10 research system plot(1), not
+			compatible with System V.
+
+	make ps		PostScript.  Maps are drawn in a 6.5-inch
+			square centered 1 inch from the top of an
+			8.5x11 page.  To change, edit the
+			PostScript or plotPS.c.
+
+	As map uses only simple plotting features, it is usually
+	easy to interface to other plotting packages. See
+	iplot.h (used with "make v10") for details.
+
+When you have a plotting filter, you can test map in the current
+directory as follows.  For sample arguments, see EXAMPLES on the
+map(7) man page.
+
+	MAPDIR=./mapdata MAPPROG=./map  map.sh arguments | filter
+
+INSTALLATION
+
+For real installation, examine the recipe for
+
+	make install
+
+It puts the map shell script in /usr/bin and everything else
+in /usr/lib/map.  If you want to put things elsewhere, adjust
+variables MAPDIR and MAPPROG in map.sh.  map.sh will become
+the command "map".  After installation it will be run thus:
+
+	map arguments | filter
+
+POSSIBLE PROBLEMS
+
+Options 
+	Option -f oes not work because World Data Bank II is
+	not in this distribution on account of its size (13Mb).
+
+	-y files are like v10, not Sys V, plot files.
+	The plot(5) man page from v10 is included for reference,
+	although most of it is irrelevant for this application.
+
+Library 
+	At least one version of tplot(1) has been seen to garble
+	the output.  In this case the trouble went away by
+	compiling map with -l4014 instead of -lplot; see plot(3).
+
+	Collisions with a nonstandard library function sincos()
+	have been observed.  sincos will have to be renamed 
+	in map.h and all .c files.
+
+Man pages
+	The man pages were produced with a -man macros slightly
+	different from Sys V.  If you change font L to B throughout
+	you will probably get a passable result.
+
+REFERENCES
+
+Most standard texts on cartography discuss the major projections
+and their uses.  Some thorough works:
+  
+  J. P. Snyder, An Album of Map Projections, US Geological Survey
+  Professional Paper 1453, USGPO Washington (1989)
+  
+  J. P. Snyder, Map Projections - A Working Manual, US Geological
+  Survey Professional Paper 1395, USGPO Washington (1987)
+  
+  D. H. Maling, Coordinate Systems and Map Projections, George
+  Philip and Son, London (1973)
+  
+  J. A. Steers, An Introduction to the Study of Map Projections,
+  Univ. London Press (1970)
+
+A short introduction, with 24 sample maps drawn by the "map"
+program itself and the commands to draw them:
+
+  M. D.	McIlroy, Projections: Mapmakers' Answers to the Riddle of
+  Presenting a Round Earth on Flat Paper, AT&T Bell Labs Computing
+  Science Tech. Report 140 (1987), order from Computing Science
+  Reports, Room 2C579, AT&T Bell Labs Murray Hill, NJ 07974
+
+  [In this report, option -s is used in an obsolete way.  It
+  should always be replaced by -s2, with -s1 added to the
+  preceding command.]
+
+Doug McIlroy
+201-582-6050
+research!doug
+doug@research.att.com

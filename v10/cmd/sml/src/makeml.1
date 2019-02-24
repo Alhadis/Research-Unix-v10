@@ -1,0 +1,138 @@
+.TH MAKEML 1
+.SH NAME
+makeml \- build the Standard ML of New Jersey system
+.SH SYNOPSIS
+.B makeml
+options
+.br
+.SH DESCRIPTION
+\fIMakeml\fP is a tool for building the Standard ML of New Jersey system (sml)
+from source and `.mo' files.
+For the standard installation the only options required are the machine type and
+operating system.
+There are also options to build a version with the compiler object code in the
+heap instead of the text segment and to build the batch compiler.
+For example
+.RS
+makeml \-vax \-bsd \-noshare
+.RE
+builds the vax version of the interactive system to run on bsd systems with
+the compiler object code in the heap.
+.SH OPTIONS
+The following basic options are the only ones needed for normal use.
+.TP
+.BI \-sun3
+.br
+.ns
+.TP
+.BI \-m68
+Build the sun-3 version of the system.
+An operating system option must be specified (-sunos or -mach).
+.TP
+.BI \-sun4
+.br
+.ns
+.TP
+.BI \-sparc
+Build the sun-4 version of the system.
+An operating system option must be specified (-sunos or -mach).
+.TP
+.BI \-next
+Build the NeXT version of the system (implies -m68).
+.TP
+.BI \-encore
+Build the Encore Multimax (ns32032 processor) version of the system.
+This implies the \fB-bsd\fP option.
+.TP
+.BI \-vax
+Build the vax version of the system.
+For the vax an operating system option must be specified.
+.TP
+.BI \-bsd
+Build a version that runs under bsd unix.  For the Sun-3 or Sun-4,
+you must specify either -sunos or -mach, not -bsd.
+.TP
+.BI \-sunos
+Build a version that runs under SunOS.
+.TP
+.BI \-mach
+Build a version that runs under Mach.
+.TP
+.BI \-ultrix
+Build a version that runs under Ultrix.
+.TP
+.BI \-v9
+Build a version that runs under v9 Unix.
+.TP
+.BI \-batch
+Build the batch compiler (with default name `smlc') instead of an
+interactive system.
+.TP
+.BI \-noshare
+Do not link the `.mo' files into an `a.out' format object file and include it in the
+runtime executable.
+.TP
+.BI \-i
+Make the `sml' image start out using the interpreter for faster compilation
+and slower execution (for interactive system only; can switch
+back to native code once in
+`sml' by `System.Control.interp := false').
+.TP
+.BI \-ionly
+Build an image (with default name `smli') that has only the interpreter.
+This gives fast compilation and saves space by eliminating the code
+generator from the executable, but results in slower execution.
+.TP
+.BI \-o " image"
+Use image as the name of the system image.
+The default image name is `sml' for interactive systems, `smli' for the
+interpreter only system and `smlc' for the batch compiler.
+.PP
+The following options may be used to tune garbage collection and paging performance.
+.TP
+.BI \-h " heapsize"
+Set the initial heap size to \fIheapsize\fP kilo-bytes.
+.TP
+.BI \-m " softlimit"
+Set the soft limit on the heap size to \fIsoftlimit\fP kilo-bytes.
+.TP
+.BI \-r " ratio"
+Set the ratio of the heap size to live data to \fIratio\fP.
+This must be at least 3.
+.PP
+The following options are for building and testing new versions of the system; they
+are not necessary for normal installation.
+.TP
+.BI \-run
+Build the run-time kernel (`runtime/run'), but don't build a system.
+.TP
+.BI \-noclean
+Don't remove the existing `.o' files in the runtime directory.
+.TP
+.BI \-norun
+Don't re-compile the runtime kernel.
+This implies the \fB-noclean\fP option.
+.TP
+.BI \-target " machine"
+Build a batch cross compiler for \fImachine\fP.
+For example, to build a \fBvax\fP to \fBsparc\fP cross compiler
+.ti +0.5i
+makeml \-vax \-bsd \-target sparc
+.br
+This option implies the \fB-batch\fP option.
+.TP
+.BI \-mo " path"
+Use \fIpath\fP as the directory containing the `.mo' files.
+.TP
+.BI \-runtime " path"
+Use \fIpath\fP as the source directory for the runtime code.
+.TP
+.BI \-D def
+When compiling the runtime code add ``\fB-D\fP\fIdef\fP'' as a command line option.
+.SH "SEE ALSO"
+linkdata(1)
+.SH AUTHOR
+John Reppy
+.SH BUGS
+This will not work with the sun cross-compilers (really a problem with the
+runtime makefile).

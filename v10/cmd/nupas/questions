@@ -1,0 +1,105 @@
+how much time would it take to do this?
+
+I can usually get the software up in about ten minutes (FLW).  The
+rewrite and routing files take an hour or two of deep thought
+and easy work.  I am willing to work with someone to accomplish this.
+
+does upas run on any bsd vax system already, or would
+we have to port it?
+
+It used to run on arpa, a 4.3 bsd machine.  It hasn't been run on
+one for over a year that I know of.  On the other hand, it Just Works
+on suns, MIPS, and SGI machines.
+
+does it run on any bsd-based systems where /bin/sh
+is the bourne shell (i.e. doesn't put background
+jobs into their own pgrp, meaning that all a
+user's background jobs may get signal 1 when s/he logs
+out)?
+
+I'm not sure this is a factor.  In any case, I always use the
+Bourne shell on all upas systems that I manage.
+
+what programs need to be replaced?  mail, rmail, Mail?
+
+The crucial program is /bin/rmail (linked to) /usr/lib/upas/send.  This
+is the transfer agent.  You can install our minimalist V7 mail reader
+as /bin/mail (as on many machines), use mailx supported by someone
+else in our center, or (I guess) use any mail reading program that
+delivers mail to /bin/rmail.
+
+does it create mail files that can be read by
+/usr/ucb/Mail (the From lines must be preceded by
+blanks and the date/time portion has to be one of
+a few specific formats)?
+
+I don't know.  Feel free to test it on alice.
+
+does it collapse multiple remote from xxx lines
+into a single address so that users can type 'r'
+in their favorite mail-reading program (mail, Mail, mailtool, mh,
+emacs) and have the reply go to the right place?
+
+This is a sticky one.  It derives the "From " address from the
+envelope or an RFC-specified series of header lines.  You would definitely
+want to check it out before taking the plunge.
+
+does it support hashed aliases?  if not,
+i think it might be too slow on allegra or andante.
+
+Aliases are looked up by a filter called `translate'.  The upas
+version is dirt-simple, and gives a performance hit on machines
+like 750s.  You can easily roll your own (look(1) is a big win) to do
+what you want the way you want it.
+
+what if the alias file is in the process of being written
+when mail comes in?
+
+depends on your translate program and update process.
+
+might some get bounced?
+
+This does happen on rare occassions on our machines.
+
+how secure is it?  can anyone run programs as another user
+or as root or write to another user's files?
+
+upas was written because sendmail was obviously insecure.  It tends
+to be small and modular, with easily-understandable components.  The smtp
+stuff in particular is small and has been revetted many times.  I wouldn't
+bet my daughter on it, but I probably would bet next week's salary.
+The smtp daemons run as `uucp'.  `Send' runs as root for the usual
+reasons.  It takes a lot of care before writing into a `mailbox.'
+
+can we have user-maintained mailing lists that won't
+compromise security?
+
+Obviously they could break mailing by rerouting addresses, but I can't think
+of a way they could break into the system or overwrite an inappropriate
+file.
+
+will upas let us mail to novax!user to send mail over
+uucp to atlanta, yet let us mail to user@novax to
+send mail to users on our major sun?
+
+Yes.  This is easily arranged with the rewrite rules.  The rewrite rules
+are a series of regular expressions and a few verbs, and a shell scripts
+to do the actual delivery.
+
+paul reported problems in which mail to
+paul@argo.tempo.nj.att.com get converted to argo!paul
+and then went to some unrelated system.
+has this problem been fixed?
+
+This is the result of policy decisions dealing with mapping domain and
+uucp name spaces.  Our rewrite rules implement our policy.  I am not happy
+with the current arrangement, but haven't been able to figure out how to
+do what we want without breaking other stuff.  I continue to ponder
+possible solutions.
+
+can upas send mail to user@[aa.bb.cc.dd], i.e. a dotted
+internet address?  that's the address symbolics systems present to us.
+
+Again, this can be handled with rewrite rules.  We have implemented some
+of this form with no trouble.  
+

@@ -1,0 +1,358 @@
+\magnification=1200
+\centerline{\bf Twig: A Brief Description}
+\bigskip
+Twig is a language for processing trees.  A twig program consists of a set
+of pattern-action rules together with associated declarations.  Patterns
+describe trees to be matched.  Actions calculate costs, perform tree
+manipulations and other functions such as emitting code.
+A twig program is translated by the twig
+preprocessor into subroutines and tables in the host language which is C in
+the current implementation.
+
+There are many ways to represent trees and costs.  To give the user more
+choice in representation, twig treats them as abstract data
+types (ADT).  Its manipulation of trees and costs are strictly performed
+through calls to subroutines provided by the user.
+\medskip
+\line{\bf Rules\hfil}
+The fundamental unit of a twig program is a rule.
+\medskip
+\line{\hfil\vbox{\hsize=3.5truein
+\noindent$label\_id$ {\bf :} $tree\_pattern$\quad {\bf [} $cost$ {\bf ]}
+{\bf [=} $action$ {\bf ]}}\hfil}
+\medskip
+Intuitively, the pattern is used to match a subtree.  The $cost$ code
+fragment is then evaluated.  The resulting cost is recorded by
+the matcher for use in dynamic programming.  The $action$ is executed
+if the rule is part of the least cost cover of the tree.
+
+If the $cost$ part is missing, Twig will insert default code
+that returns the special value, {\tt DEFAULT\_COST}.
+A missing $action$ part indicates that nothing will be done when a
+match is found.
+\medskip
+\line{\bf Tree Patterns\hfil}
+Tree patterns are specified
+in prefix parenthesized form and can be described by the
+following BNF:
+\medskip
+\line{\hfil\vbox{\hsize=3.5truein\obeylines\parindent=0pt\parskip=0pt
+$tree\_pattern\to node\_id\;\vert\;label\_id$
+$tree\_pattern\to node\_id \;{\bf (}\; tree\_list \;{\bf )}$
+$tree\_list \to tree \;{\bf ,}\; tree\_list \;\vert\; tree$
+}\hfil}
+
+For example, the tree,
+\midinsert
+\vskip 1.0truein
+\endinsert
+\noindent will be written in twig as
+\medskip
+\line{\hfil\vbox{\hsize=3.5truein\tt oper(leftOp, rightOp)}\hfil}
+\medskip
+There are two types of symbols: $node\_id$\/s and $label\_id$\/s
+$Node\_id$\/s are used to denote internal nodes and leaves.
+$Label\_id$\/s label tree patterns and are analogous to
+non-terminals in context free grammars.
+For example, the following twig rules without their action parts describe
+simple expression trees with the {\tt plus} operator.
+\medskip
+\line{\hfil\vbox{
+\tt\noindent\halign{ #:\quad & #\cr
+expr & plus(expr, expr)\cr
+expr & identifier\cr
+expr & constant\cr
+}}\hfil}
+\medskip
+\noindent Here, {\tt identifier} and {\tt constant} are $node\_id$\/s
+representing leaves, and
+{\tt plus} is a $node\_id$\/s representing an internal node whereas
+{\tt expr} is a
+$label\_id$.  Leaves of patterns that are $label\_id$\/s are called
+{\sl labelled leaves}.
+In the first rule, both leaves of the pattern are labelled.
+
+Twig assigns an integer to each node symbol and label symbol.  These
+integers are used by the twig pattern matcher as encodings for the
+symbols.
+As the matcher traverses the
+tree, a user supplied subroutine is called to provide an integer
+corresponding to each node.
+\medskip
+\line{\bf Costs\hfil}
+To increase the flexibility of representing costs, the tree matcher
+views costs as an ADT.
+For example, costs may be represented as an integer or
+as a vector of integers with each element representing the cost of a specific
+resource.
+A cost ADT suitable for Twig must have the following four definitions:
+\medskip
+\noindent$\bullet$ {\tt COST} is a C type.
+Although the proper functioning of the tree matcher
+does not depend on the details of the {\tt COST} type, it must have
+the type information for storage allocation purposes.
+\smallskip
+\noindent$\bullet$
+{\tt INFINITY} is the maximum attainable cost value.  The matcher uses {\tt
+INFINITY} to initialize its data structures.
+\smallskip\noindent$\bullet$
+{\tt DEFAULT\_COST} is the cost
+value returned by rules without a cost part.
+\smallskip\noindent$\bullet$
+{\tt COSTLESS} is a function of
+two cost values.  It must return true if and only if the first argument is
+less than the second.
+\medskip
+\line{\bf Trees\hfil}
+
+As with costs, Twig treats trees as an ADT.  Here, using an ADT is
+even more important because trees come in a variety of shapes and
+representations.
+Twig would be overly complicated if it had to
+know any more than the fundamental properties of trees.  Thus,
+twig treats trees as an acyclic directed
+graph of almost featureless nodes with one
+distinguished node, the root.  Each node has only one feature and that
+is an integer corresponding to the $node\_id$\/s discussed above.
+To provide this
+view to Twig, the user must provide the following definitions and
+subroutines.
+\medskip
+\noindent$\bullet$ {\tt NODE} is the type of a node.  The actual
+details of
+the NODE are irrelevant and Twig uses this definition only for storage
+allocation and declaration purposes.
+\smallskip
+\noindent$\bullet$ {\tt NONODE} is a constant of type
+{\tt NODE}.  It is a distinguished
+value returned by the routines defined below to represent a null value.
+\smallskip
+\noindent$\bullet$
+{\tt mtGetNodes$(r,n)$} returns the $n$th child of $r$ where $r$
+is a {\tt NODE}.  The
+leftmost child is {\tt mtGetNodes}$(r,1)$.  If $n > \hbox{degree}(r)$
+then the function should return {\tt NONODE}.  Twig expects the
+expression {\tt mtGetNodes}$({\tt NONODE}, 0)$
+to denote the root node of
+the subject tree.
+\smallskip
+\noindent$\bullet$
+{\tt mtValue$(r)$} returns the integer associated with $r$.
+\smallskip
+\noindent$\bullet$
+{\tt mtSetNodes$(r,n,c)$} replaces the $n$th child of $r$ with
+$c$.  This routine may be used to replace whole subtrees with others.
+\medskip
+\line{ \bf Pattern Matcher Operation \hfil}
+
+The pattern matcher operates in two phases: the costing phase and the execution
+phase.
+
+In the costing phase, the matcher performs a preorder traversal of
+a subject tree and discovers matches from the bottom up.  At the same time, it
+builds a skeleton tree that is structurally isomorphic to the subject tree.
+When a match is discovered the cost clause of the pattern is invoked to
+calculate the cost.  Many patterns with different labels could match at any
+given node but only the lowest cost pattern for each label is recorded in
+the skeleton.
+
+When a pattern is matched, its label is then used as input to the pattern
+matcher so that matching of patterns with labelled leaves can begin.
+This
+process
+is analogous to a reduce action in
+bottom up parsers.  In twig, multiple reductions are
+tracked.
+
+The cost part of a rule can also assign a {\sl mode} to a match.  The {\sl
+mode} controls how action parts are to be executed.
+Actions parts of {\sl defer} mode matches are not executed until the
+execution phase.  {\sl Rewrite} mode matches cause the action part to
+be executed immediately during the costing phase to transform the
+matched subtree.  Once the rewrite mode action is executed, the costing
+phase continues by purging all information in the skeleton for the old
+subtree and then scanning the newly transformed subtree.  {\sl
+Rewrite} actions are similar to actions that are invoked on a reduction in
+LR parsing.
+
+In the case where multiple rewrite actions are possible the one with
+the lowest cost will be executed.  Furthermore, a rewrite action is
+considered only if its cost is lower than all the defer mode actions.
+Rewrite mode actions that are not executed are treated in the same
+manner as defer mode actions in the execution phase.
+
+When the root of the subject tree is reached in the preorder
+traversal, the execution phase begins.  The lowest cost match is then
+chosen at the root and executed.  In this context, execution involves
+executing the actions of the labelled leaves before invoking the code
+in the current action.
+\medskip
+\line{\bf Lexical Issues and Conventions\hfil}
+Currently the
+following are keywords of twig in no particular order:
+\medskip
+\line{\hfil\vbox{\hsize=3.5truein\tt
+\halign{ # \hfil & # \hfil & # \hfil \cr
+label & node & cost \cr
+action & prologue & insert\cr
+}}\hfil}
+\medskip
+\noindent  They have special meanings and may not be used as
+identifiers.
+;:(),= are special characters.  All blanks, tabs, formfeeds and
+newlines are ignored by twig but they may not appear inside
+identifiers and numbers.  Identifiers are nonempty strings
+made of letters, digits or underscores and starting with a letter.
+Numbers are nonempty string of digits.  Code fragments or action parts
+are enclosed in braces.  Inside code fragments, C lexical rules must
+be obeyed except that strings of the form $\$...\$$ that are not inside C
+strings are interpreted by twig.  In the following sections, $id$
+denotes an identifier; $int_1$, $int_2$ denotes numbers; $ccode$
+denotes C code fragments; $...$ indicates repetition of the previous
+item; $[...]$ indicates that $...$ is optional.
+
+The input to the Twig program will be referred to as the subject tree.
+\medskip
+\line{\bf Prologue and Inserts\hfil}
+
+\noindent\line{\hfil \vbox{\hsize=3.5truein \tt prologue $ccode$;}\hfil}
+\medskip
+\noindent signals to twig that $ccode$ should be inserted at the
+beginning of the output source file.  $Ccode$ should contain
+definitions relevant to the C code in
+rules that are defined later in the twig source file.
+\medskip
+\noindent\line{\hfil\tt\vbox{\hsize=3.5truein insert $ccode$;}\hfil}
+\medskip
+\noindent should cause $ccode$ to be placed into the source file.
+There can be multiple inserts and they will be placed into the source
+file
+in the order that they appear.
+\medskip
+\line{\bf Declarations\hfil}
+All twig identifiers are declared before they are used.
+\medskip
+\line{\hfil \tt node $id[(int_1)] [= int_2] ...$;\hfil}
+\medskip
+\noindent A node declaration declares one or more identifier to be
+associated with nodes of the subject tree.  The identifiers are
+assigned numbers by twig but the user can overide the assigned number
+by specifying $int_2$.  The degree of the node identifer, i.e. the
+number of children, is assumed to be fixed.  Normally, twig will
+deduce the degree when $id$ is used in a rule.  However, the user may
+explicitly give the degree by specifying $int_1$.
+\medskip
+\line{\hfil\vbox{\hsize=3.5truein\tt label $id ...$;}\hfil}
+\medskip
+A label declaration indicates that the following $id$'s are to be used
+as labels of rules.
+\medskip\line{\bf Costs and Action code\hfil}
+
+Code fragments such as the $cost$ and $action$ clauses of a rule are
+specfied by enclosing C code in braces.  All legal C constructs are
+permitted in code fragments.  In addition, the following are provided
+for convenient access to the subject tree and internal data
+structures of the matcher.
+\smallskip
+{\parindent=0pt
+$\bullet$ $\$\%n\$$ denotes a pointer value to the matcher data
+structure for the $n$th labelled leaf.  Thus to access the cost value
+associated with that leaf, the notation $\$\%n\$\to${\tt cost} may be used.
+
+$\bullet$ $\$\$$ denotes a pointer value to the root of the subject
+tree.
+
+$\bullet$ $\$n_1.n_2.n_3.\, \hbox{...}\,.n_{k-1}.n_k\$$ denotes
+a pointer value to the $n_k$th child of the $n_{k-1}th$ child of the
+$n_{k-2}$th child of \hbox{...} of the $n_1$th child of the root of
+the subject tree.  Each $n_i$ is a positive non-zero integer.
+}
+\medskip
+
+Some special constructs are available to code fragments in the cost
+part of the specification.  The
+statement ``{\tt ABORT;}'' when encountered during the execution of
+the cost code, signals to the matcher that this pattern is to be
+rejected.  When a ``{\tt REWRITE;}'' statement is encountered, control
+is returned to the matcher and the rule will become a {\sl rewrite}
+mode match.  When the end of the cost code fragment is reached,
+control is returned to the matcher and the rule becomes a {\sl defer}
+mode match.  Cost values are returned to the matcher by assigning to
+the ``{\tt cost}'' variable in the cost clause.  If no assignment is
+made to the {\tt cost} variable then the returned cost will be {\tt
+DEFAULT\_COST}.
+
+Action clauses are expected to return a new tree which will replace
+the subject tree.  This is done by returning using the standard C
+``{\tt return($new\_tree$); }'' statement
+where {\tt $new\_tree$} is of type
+{\tt NODEPTR}.  When the end of the action clause is encountered, the
+matcher resumes execution and the subject tree is not replaced.
+\vfil\eject
+\line{\bf An Example\hfil}
+
+The following are examples of twig rules that generate VAX code for
+the subtract instruction:
+\midinsert
+\moveright 1truein \vbox{\settabs 9 \columns
+\+prologue & $\{$\cr
+\smallskip
+\+NODE & gettemp();\cr
+\smallskip
+\+$\}$;\cr\smallskip
+\+node&long constant sub;\cr
+\+label&operand temp;\cr
+\smallskip
+\+operand:&long;&&&$/*$ rule 1 $*/$\cr
+\+operand:&constant;&&&$/*$ rule 2 $*/$\cr
+\+operand:&temp;&&&$/*$ rule 3 $*/$\cr
+\smallskip
+\+temp:&operand&&&$/*$ rule 4 $*/$\cr
+\+&$\{$ cost = {\tt TEMP\_COST}+$\$\%1\$\to$cost;$\}$\cr
+\+&$=\{$\cr
+\+&&NODE t = gettemp();\cr
+\+&& emit(``mov'', $\$\$$, t, 0);\cr
+\+&&return(t);\cr
+\+&$\}$;\cr
+\smallskip
+\+operand:&sub(operand,operand)&&&$/*$ rule 5 $*/$\cr
+\+&$\{$cost = $\$\%1\$\to$cost + $\$\%2\$\to$cost+{\tt SUB\_COST};$\}$\cr
+\+&=$\{$\cr
+\+&&NODE t = gettemp();\cr
+\+&&emit(``sub'', $\$1\$$, $\$2\$$, t, 0);\cr
+\+&&return(t);\cr
+\+&$\}$;\cr
+\smallskip
+\+temp:&sub(temp,constant)&&&$/*$ rule 6 $*/$\cr
+\+&$\{$\cr
+\+&&if(value($\$2\$$)==1)\cr
+\+&&&cost = $\$\%1\$\to$cost+{\tt DEC\_COST};\cr
+\+&&else ABORT;\cr
+\+&$\}$=$\{$\cr
+\+&&emit(``dec'', $\$1\$$, 0);\cr
+\+&&return($\$1\$$);\cr
+\+&$\}$;\cr
+}
+\endinsert
+{\parindent=0pt
+$\bullet$ Rules 3 and 4 form a loop.
+The potential loop: temp$\to$operand$\to$temp$\to$operand$...$ is
+broken
+by the matcher recognizing that the cost of the second match of temp
+does not cost less than the first match of temp.
+
+$\bullet$ Rule 4 localizes the testing of whether an operand is a
+temporary.  It is not necessary but makes the coding of other
+cost clauses less tedious.
+
+$\bullet$ In the cost clause of rule 5, the cost is the sum of the
+leaves plus the cost of the subtract instruction.
+The action clause emits code to add the two operands
+and leave the result in a temporary location.  The temporary is
+returned as a substitution for the subject tree.
+
+$\bullet$ Rule 6 handles a special case where the left operand is
+already in a temporary and the constant is one.  In this case, the
+temporary is directly decremented and returned as the new tree.
+}\vfil\eject
+\end

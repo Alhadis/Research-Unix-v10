@@ -1,0 +1,191 @@
+.EQ
+delim $$
+define f2c % "f\|2c" %
+define F2c % "F\^2c" %
+define libF77 % "libF77" %
+define libI77 % "libI77" %
+define LibF77 % "LibF77" %
+define LibI77 % "LibI77" %
+.EN
+.nr PS 24
+.nr VS 30
+.nr PO .5i
+.nr LL 7.5i
+.LP
+.ds CH "\s8\(hy \\n(PN \(hy\s0
+.ce
+$f2c$ (Stu Feldman, Mark Maimone, Norm Schryer)
+
+.nf
+.ta .5i .8i 1.1i
+Convert Fortran 77 to C
+.sp . 5
+	\(**	Portably mix C and Fortran
+	\(**	Use Fortran source in C environments
+
+.fi
+\s20From cs.purdue.edu!peb Mon Jan 29 15:35:20 EST 1990\s0
+.sp .5
+BTW, I think f2c has the potential to be the best idea since sliced bread.
+I have tons of Fortran code, but my collaborators use C, now
+we can stop arguing about what language to use and get some work done.
+.sp 1.5
+.nf
+Seek binary compatibility with VAX f77
+		\(bu	big help in testing
+		\(bu	helped find bugs in $f2c$, $lcc$, $nCC$
+
+Useful test cases:
+		\(bu NBS tests
+		\(bu PORT3
+.bp
+Netlib's "execute f2c" taught us much
+			(starting 19 Nov. 1989):
+
+.ce
+\s22\f(CW{echo execute f2c; cat *.f} | mail netlib\fR\s0
+
+		\(bu	bugs
+		\(bu	\f(CW-z\fR (no implicit \f(CWdouble complex\fR)
+		\(bu	longer names
+		\(bu	better error messages (as late as today)
+		\(bu	args on main
+		\(bu	\f(CWblock data\fR initializing vars not in \f(CWcommon\fR
+		\(bu	\f(CWdo ... enddo\fR
+		\(bu	\f(CW!\fR comments
+		\(bu	\f(CWnamelist\fR
+
+
+	\(bx COMMON
+
+	\(bx constants (preserved until operated on)
+
+	\(bx prototypes
+.bp
+Namelist example:
+.ft CW
+.sp p.5
+		integer m(8)
+		real x(10,10)
+		namelist /xx/ m, x
+		\&. . .
+		read(*,xx)
+
+\fRcould read\fP
+
+		&xx x(1,1) = 2,
+			x(1:3,8:10:2) = 1,2,3,4,5,6
+			m(7:8) = 9,10/
+
+.ft R
+Recent lesson: many vendors expect non-8x syntax:
+
+.EQ
+delim off
+.EN
+.ft CW
+		$xx x(1,1) = 2,
+			x(1:3,8:10:2) = 1,2,3,4,5,6
+			m(7:8) = 9,10 $end
+.ft R
+.EQ
+delim $$
+.EN
+.bp
+Prototypes:
+.sp .5
+		\f(CWf2c -P foo.f\fR
+.sp .5
+creates both \f(CWfoo.c\fR and \f(CWfoo.P\fR .
+
+Examples of PORT3 prototypes:
+
+.ft CW
+	extern C_f cdotc_(complex *ret_val,
+			integer *n, complex *dx,
+			integer *incx, complex *dy,
+			integer *incy);
+
+	extern C_f mullr_(complex *ret_val,
+			C_fp f, complex *z1,
+			complex *z2, complex *z3,
+			real *epsz, real *epsf,
+			integer *maxitr, integer *iter);
+
+
+f2c.h \fRcontains\f(CW typedef\fRs.
+.bp
+Special comments for \f(CWcommon\fR lengths (read by $f2c$):
+
+.ft CW
+	/* comlen a0desp_ 4 */
+	/* comlen a10der_ 36 */
+	/* comlen a10dey_ 480 */
+.ft R
+
+
+Special comments for references:
+.ft CW
+.ps 16
+	/*:ref: odes1_ 10 11 200 4 3 4 4 4 208 4 210 8 8 */
+	/*:ref: l4ags_ 10 14 4 3 3 3 210 3 4 4 4 3 3 3 3 4 */
+	/* Rerunning f2c -P may change prototypes or declarations. */
+.ps 24
+.ft R
+
+
+Untyped \f(CWexternal\fRs
+			\(=> need to update prototypes:
+
+.EQ
+delim off
+.EN
+.ft CW
+	while :; do
+			f2c -Ps f.[fP]
+			case $? in 4) ;; *) break;; esac
+			done
+.ft R
+
+\(bx Several PORT3 bugs found.
+.bp
+Can't always infer types correctly:
+
+.ft CW
+	subroutine grok(f,g,h)
+	external f, g, h
+	logical g
+	call foo(1,g)
+	call foo(2,f)
+	call zap(1,f)
+	call zap(2,h)
+	call zot(f(3))
+	end
+.ft R
+
+Infer \f(CWf_\fR and \f(CWh_ to be \f(CWlogical\fR,
+then find \f(CWf_\fR must be \f(CWreal\fR.
+\f(CW-!it\fR turns such inferences off.
+.bp
+.ft CW
+	subroutine zap(n,f)
+	external f
+	if (n .le. 1) call zap1(f)
+	if (n .ge. 2) call zap2(f)
+	end
+.ft R
+
+
+
+
+9 Jan. 1990 \- 30 Jan. 1990 (13:00):
+
+
+	210 requests from 184 people
+		for ``\f(CWall from f2c/src\fR''
+			9 copies today
+
+
+	695 requests from 627 people
+		for ``\f(CWindex from f2c\fR''
+			22 copies today

@@ -1,0 +1,26 @@
+OBJS=main.o doconnect.o
+SECRETOBJS=secret.o
+RESOBJS=${OBJS} ${SECRETOBJS} res_tty.o
+
+all:V:	auth
+
+auth:		${OBJS} ${RESOBJS} ${SECRETOBJS}
+	${CC} ${LDFLAGS} $prereq -lipc -o $target
+
+doconnect.o:	auth.h
+main.o:		auth.h
+secret.o:	auth.h
+s5_tty.o:
+res_tty.o:
+
+
+install:V:	/usr/guard/bin/auth
+
+/usr/guard/bin/auth:	auth
+	cp auth $target.new
+	/etc/chown root,bin $target.new
+	chmod 4775 $target.new
+	mv $target $target.old && mv $target.new $target
+
+clean:V:
+	rm -f *.o auth core

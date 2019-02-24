@@ -1,0 +1,505 @@
+
+Landscape mode has been added. Use the -l option to get it.
+
+
+A few words of warning first. The i300 font and raster files have been
+changed enough so you'll need to install the new versions on ALL systems
+that can send you troff output files for post-processing. I guarantee
+you'll have problems if troff and dimpress use different sets of
+i300 font files, so install the new tables on all your systems as soon
+as you're convinced things are working properly.
+
+Check the definition of CFLAGS in makefile. If your system doesn't have
+hardware floating point you'll need the -f option. If it's already
+there and you've got hardware floating point you may want to get rid
+of it, although it apparently doesn't hurt things.
+
+I've included files that can be copied to /usr/pub and used with eqn.
+You'll find them in ./TABLES/pub. Each of the files will only be installed
+if it doesn't already exist in directory /usr/pub. I didn't do much at
+all to the i300eqnchar file, so if you've already built one of your own
+don't use mine!
+
+Find out what version of the operating system is running on your
+printer. 1.9 and later systems can use the new drawing routines in
+impdraw.c. Everyone else should compile dimpress using draw.c. Just
+change all occurrences of impdraw to draw in makefile, or replace
+impdraw.c with draw.c before you compile things. In addition if you're
+using the old drawing stuff make sure DX and DY are less than 5 or so,
+otherwise pictures will come out dotted. Decreasing DX and DY improves
+pictures drawn the old way, but increases the size and complexity of
+the output files. You can set DX and DY on the command line (-P option
+I think) so you may want to experiment a little to find the largest
+value that gives reasonable pictures. A step size of 3 seems to be
+decent on Imprint-10s. DX and DY only affect splines in impdraw.c.
+
+If your printer is running a really old operating system you may have
+problems with illegal instructions. The first place to look if there's
+trouble is in routine initialize(). Take out the two lines that set
+the pen diameter. I don't think they're legal on 1.7 or earlier
+printers. Then make sure you call Imagen about upgrading your printer!
+Sorry about setting the pen diameter in dimpress.c. Obviously it should
+have been done in impdraw.c.
+
+The Bell Laboratories logo is included in the new raster files. It's
+only available in size 36 and can be accessed using \(Lb. In addition
+the 10 line globe and AT&T are available as single characters so you
+can build other logos if you want. They're know as characters \(L2
+and \(LA respectively, and again are only available in size 36.
+
+I've also included a version of the mm macros that will automatically
+print the Bell Labs logo for device i300. I've only supplied it as
+an example, and I don't suggest you install it. I made the changes
+rather quickly and they're not guaranteed. Besides you may have your
+own local version of the mm macros. An easy way of using the macros
+that i included without actually installing them is to include the
+file on the command line and omit all other macros. For example,
+
+
+           troff -Ti300 mmt file >file.t
+
+
+will replace the -mm option. If file asks for the logo it should get
+printed - provided you've installed the new font and raster files.
+
+
+----------------------------------------
+
+
+A bunch of stuff that can be used with printers that accept Impress, whether
+they were made by Imagen or not. I've supplied raster files (in directory
+TABLES/rasti300) that were built (using buildrast) from original versions
+for the 8/300 as supplied by Imagen. They're written in Imagen's Rst format.
+File rast.h describes their structure and should be a decent introduction
+if you don't know anything about the raster files. I've also included font
+and device files for troff and dimpress in directory TABLES/devi300. Again
+they were built by buildrast at the same time the raster files were made.
+If you've got PDQs on your system you'll want to take the binary files
+from TABLES/PDQ/devi300 and install them too (probably in directory
+/usr/lib/font/PDQ/devi300).
+
+I've added printer resident fonts to dimpress. Most of the code can
+be found in res.c. The ASCII files found in /usr/lib/raster/RESIDENT
+describe the available resident fonts for different printers. Take a
+look at ./TABLES/RESIDENT/a490 if you want an example. The member maps
+were built by mkres, actually routine dump_data(), using the description
+files supplied by Imagen. I changed things a little just to eliminate
+the need for character codes greater than 127. The font and DESC files
+for lucida (./TABLES/deva490) also came from Imagen and need to agree
+with mapping file ./TABLES/RESIDENT/a490. Be careful if you decide to
+make changes to any of these files.
+
+
+----------------------------------------
+
+
+You may have some changes to make to the source code I've supplied. Most
+of them will have to be made in files init.h, dimpress.h or makefile. I'll
+list the more obvious ones, although there undoubtedly are some I've forgotten.
+
+
+FILES init.h and makefile only:
+
+    FONTDIR	- Needs to be defined as the normal troff font directory
+		  on your system. I've set it to "/usr/lib/font" which is
+		  probably correct for your system. The font directory can
+		  be set at run time (in dimpress and troff) using the -F
+		  option. If you've got all your font files hidden somewhere
+		  else make sure you make the change in both of these files.
+
+    BITDIR	- You undoubtedly won't have this directory on your system,
+		  and you may not have enough disk space to keep all the
+		  new raster files here. I've defined it to be directory
+		  "/usr/lib/raster". The post-processor (dimpress) will
+		  look for new raster files for device "xxx" in directory
+		  rastxxx located in BITDIR. The -B option can be used to
+		  do run time setting of *bitdir. The makefile will try
+		  to install all the raster files that I've supplied in
+		  appropriately named directories located in BITDIR. The
+		  raster files I've given you take up about 8000 blocks
+		  so you'll need at least that much space wherever you
+		  decide to put them.
+
+		  If really hurting for disk space the best solution is
+		  to start eliminating raster files in the largest point
+		  size first. You'd save quite a bit of space by getting
+		  rid of all the size 36 files, and that may be good
+		  enough. Remember to update the RASTERLIST file to
+		  reflect the available point sizes. Most of the output
+		  you get will look OK, but troff assumes it can print
+		  characters in any font in all the sizes listed in the
+		  DESC file. 36 is in the list even though you may have
+		  have eliminated the raster files. You could easily
+		  change the DESC size list before running makedev and
+		  things would improve - unless you're running PDQs.
+		  In that case troff will usually use the binary files
+		  I've supplied in ./TABLES/PDQ/devi300 and the change
+		  you just made to the DESC file won't fix anything.
+		  Also remember the logo is only available in a size
+		  36 raster file. Things can easily get messed up so
+		  make sure you understand what's going on before you
+		  start to make changes just to save disk space.
+
+
+		  If you're going to make a change be sure to do it in
+		  both init.h and makefile.
+
+
+FILE init.h only:
+
+    OLDBITDIR	- This is the directory where you'll find the old Imprint-10
+		  raster file directory rasti10. I've defined it to be
+		  "/usr/lib/font/devi10" because that's where the DWB package
+		  put them. Again you may have them somewhere else on your
+		  system, and if you do you'll want to change this string,
+		  otherwise the -Ti10 option won't work properly. You'll also
+		  have problems if you're not keeping the raster files in
+		  a directory that begins with "rast". The original version
+		  of the post-processor was called dcan, and it expected
+		  to find the raster files in /usr/lib/font/devcan. If
+		  that's the program you've been running you'll probably
+		  want to move the old raster files to a new directory.
+
+    IPR		- Full pathname for the ipr program on your system. I've set
+		  it to "/usr/bin/ipr" but that might not be right for you.
+		  If your not running Imagen's spooling package you don't
+		  have to worry about this guy - just make sure you always
+		  call dimpress with the -t option.
+
+
+FILE makefile only:
+
+    CFLAGS	- The drawing routines use floating point, so if you're on
+		  a system that doesn't have the hardware make sure you
+		  include the -f option. I may already have added it
+		  to your makefile, but I'd still suggest checking the
+		  definition. If it's there it shouldn't hurt anything
+		  even if you really don't need it.
+
+    BINDIR	- Set to /usr/bin by default. It's where we'll put dimpress
+		  after it's compiled - provided we're installing things.
+
+    PDQDIR	- If you're running PDQs on your system you'll need special
+		  binary versions of troff's font files. I've built them on
+		  one of our systems using the ASCII files in TABLES/dev????.
+		  If PDQDIR exists on your system the binary files from
+		  TABLES/PDQ/dev???? will be copied to PDQDIR/dev????. I've
+		  defined PDQDIR to be $(FONTDIR)/PDQ. If you're not running
+		  PDQs don't worry because PDQDIR shouldn't be there.
+
+    OWNER	- This will be the owner of any files we install.
+
+    GROUP	- And this will be the group.
+
+
+FILE dimpress.h only:
+
+    PR_INIT	- This defines the default values to use with the printers
+		  that are directly supported by dimpress. If you want to
+		  add a new printer just make up an appropriate line (look
+		  at the definition of Prdata) and add it to PR_INIT. The
+		  list must be terminated by an entry that has NULL defined
+		  for the value of prname, so make sure you don't put anything
+		  after the current last line. You also may not agree with
+		  some of the default values I've picked for the different
+		  printers. If you don't change them in PR_INIT before you
+		  compile dimpress.
+
+		  The only difference between i240 and i10 is that when you
+		  use -Ti10 dimpress looks in OLDBITDIR for a raster directory
+		  called rasti10, while with -Ti240 it looks in BITDIR for
+		  rasti240. The -Ti10 option should be used to run Imprint-10s
+		  using the old raster files. That's the only option you'll
+		  need to use if you've got OLDBITDIR defined properly.
+
+    PR_NUM	- In dimpress.c pr_num refers to the line in PR_INIT (actually
+		  the index in prdata[]) that will be used as the default
+		  printer. I've got it set to zero, which means that the
+		  8/300 will be the target printer, unless the -T option is
+		  used. If you want a different default just change the
+		  definition of PR_NUM.
+
+
+That should be most everything that needs changing. Really the most important
+thing for you to decide is where you want to keep the new raster files, and
+that means making sure you've got enough space for about 8000 blocks in
+directory BITDIR. Also if you're short on disk space you may want to make
+sure you set INS=mv when you run the makefile to do the installation. That
+will make sure the raster files will be moved instead of copied, so you'll
+just have one set of raster files lying around. Obviously the makefile will
+only work once if you move the raster files, but there's probably no other
+reason to keep two copies around.
+
+
+----------------------------------------
+
+
+If you need the -f option and don't have it included in makefile just add
+CFLAGS='-O -f' to the command lines given below - obviously before the
+target names.
+
+Once you've made all the required source code changes you can build and
+install everything by typing,
+
+
+	make clobber install
+
+
+or if you want to save disk space and only keep one copy of the raster files
+define INS to be mv on the command line like,
+
+
+	make INS=mv clobber install
+
+
+I've included clobber just to make sure dimpress is built and installed.
+Either of these should compile dimpress and makedev, install dimpress in
+BINDIR, build all the binary font files, which include files in TABLES/dev*
+and in TABLES/rast*/dev*.
+
+If you just want to compile and build all the required stuff but wait to
+install things type
+
+
+	make all
+
+
+I've already mentioned that not all the programs I've supplied will be
+compiled when you mention targets 'all' or 'install'. You'll probably only
+need the other programs if you want to do some work on the raster files.
+In that case,
+
+
+	make allprogs
+
+
+should take care of everything for you.
+
+
+----------------------------------------
+
+
+The programs included in this directory are:
+
+
+    dimpress	troff post-processor that generates version 2.0 Impress
+		commands. Code came from di10 (originally dcan) and has
+		been extensively modified. It can now generate output using
+		raster files in either the old (versetec) or new (Imagen's)
+		format. Reasonable output will be produced on any printers
+		that accept Impress, independent of the resolution of the
+		raster files being used.
+
+		By default everything's set up for the 8/300, which is
+		known as device i300. If you want to use the program to
+		generate output for another device (like i10) just use add
+		the -Ti10 option to your command line. That should take
+		care of setting up  most of the printer dependent variables.
+		The known printers are i300, i240, i480, and i10. i10 and
+		i240 are really the same printers, except that i10 assumes
+		everything is being run the old way (like di10). In other
+		words the raster files are the old format and they're hidden
+		away in the font directory. The i240 really just assumes the
+		raster files are in *bitdir/rast240.
+
+		The drawing routines have also been rewritten to take
+		advantage of graphics primitives available in Impress. You
+		should be able to use them if you're running 1.9 or any
+		newer versions. The new routines are in file impdraw.c
+		and that's the file used by makefile when you compile
+		dimpress. If you've got an older printer that doesn't
+		support the graphics commands change the makefile so it
+		uses draw.c instead.
+
+		A file called RASTDATA defines the format and resolution of
+		the raster files. dimpress expects to find it wherever it's
+		reading raster files. If the file can't be read dimpress
+		(routine rastsetup()) assumes the raster files are the old
+		format and 240 dpi resolution. It really should be an error
+		but RASTDATA is new and won't be part of the old raster file
+		directory unless you add it.
+
+		Right now RASTDATA can include two commands that are
+		understood by routine rastsetup(). The first is the string
+		"format" which should be followed by either "old" or "rst".
+		The second string is "resolution" which is followed by a
+		number that specifies the raster file resolution. Everything
+		else is skipped. Look at file TABLES/rasti300/RASTDATA if
+		you want an example.
+
+		The first example shows how you would replace di10 by
+		dimpress. In fact if you defined PR_NUM (dimpress.h) so
+		it chose i10 as the default printer you could omit the
+		-Ti10 string. That's not the way I've set things up but
+		you may want to do it on your system.
+
+		Examples: dimpress -t -Ti10 file > file.i10
+			  dimpress -t -Ti300 file > file.i300
+
+
+    makedev	Program that builds the binary font and device files from
+		the ASCII versions in TABLES/*. You undoubtedly already
+		have it available somewhere on your system, but I've
+		included it anyway just to be complete. I've heard there's
+		a new and better version of makedev floating around. This
+		one is the original program that may very well be out of
+		date by now. If you've got the new makedev use it to build
+		the binary font and device files.
+
+		Example: makedev DESC ? ??   (overkill but it works)
+
+
+    makemap	Code taken from makei10, as supplied in DWB. It's used to
+		build ASCII font and device files for other typesetters,
+		like the APS-5, that can be used by dimpress when it's
+		trying to print files using the new raster files. The
+		real problem here is that dimpress (in routine put1())
+		assumes that the code field in the font files it's using
+		is also the glyph number for the character in any raster
+		files that are being used. That's probably not true unless
+		the raster files and the font files were generated together,
+		as was done for the i300 files. If dimpress used the normal
+		APS-5 files from /usr/lib/font/devaps you'd be guaranteed
+		to get garbage.
+
+		Obviously there are a bunch of different ways to get around
+		the mapping problem. I chose to hide extra font files, built
+		from the APS-5 and i300 files, in the raster file directory.
+		When dimpress tries to process a troff output file that
+		was generated for printing on device 'xxx' it first looks
+		for a devxxx directory in the raster file directory and
+		if it doesn't find it there then it uses the normal devxxx
+		directory in /usr/lib/font.
+
+		I've used makemap to generate ASCII font and device files
+		for the APS-5 and i10. You'll find them in directory
+		TABLES/rasti300/devaps and TABLES/rasti300/devi10. That
+		means you'll be able to do APS preview work using the new
+		raster files.
+
+		If you want to do the same kind of thing for another printer,
+		say the 202, you'll need to do the following.
+
+		1: Make a dev202 directory in TABLES/rasti300
+
+		2: Build a FONTMAP file for the 202. Look at the ones in
+		   TABLES/rasti300/devaps or TABLES/rasti300/devi10.
+
+		3: Compile makemap.
+
+		4: Move makemap to directory TABLES/rasti300 and then change
+		   into that directory.
+
+		5: Run makemap using a command line something like,
+
+			makemap -mi300 -Ssource_dir -Fbinary_dir 202
+
+		   where source_dir is where the ASCII files for the 202
+		   can be found (minus string "/dev202") and binary_dir is
+		   the directory where makemap can find the binary font
+		   files for i300.
+
+
+    readrast	Simple program that reads raster files in Imagen's Rst
+		format and dumps bitmap and other glyph information to
+		stdout in ASCII. Individual glyphs can be selected using
+		the -o option. If none are selected all the glyphs in each
+		of the input files will be displayed (and that can take a
+		long time).
+
+		Example: readrast -o1,5,7-10 R.8 I.14
+
+
+    printrast	Another simple program that reads raster files in Imagen's
+		format and writes Impress commands needed to display glyph
+		bitmaps and other info on an Imagen printer. Output goes
+		to stdout. A simple document header is prepended to the file
+		if the -H option is used. The resolution of the printer we
+		want to use to print the file should be specified using the
+		-r option. Raster files are all assumed to be in the current
+		directory (actually ".").
+
+		Example: printrast -H -r300 R.10 I.10 B.10 CW.18 >xxx
+
+
+    buildrast	A fairly involved program that reads an ASCII control file
+		and raster files supplied directly from Imagen (Rst format
+		and Tex character set) and builds raster and font files that
+		that troff and dimpress use. It built all the files you'll
+		find in directories rasti300 and devi300 using RASTi300 as the
+		control file. In fact the last three programs were all used
+		to build the tables for the 8/300. printrast generated hard
+		copy listings of the characters available in Imagen's raster
+		files and that was used to build file RASTi300. buildrast
+		then read RASTi300 and the original raster files and used
+		them to put together the new files.
+
+		Individual fonts or sizes can be selected using the -f and
+		-s options respectively. If neither is used all the fonts in
+		all the point sizes listed in RASTi300 (or whatever file is
+		the argument) will be built. troff's ASCII files are only
+		built when the current size that buildrast is working on is
+		equal to the unitwidth value set in RASTi300. The DESC file
+		is built at the end after all the raster files have been
+		finished.
+
+		RASTi300 that you'll find in this directory calls for some
+		fonts that aren't part of the normal software distribution
+		tape that Imagen supplies and so probably won't work for
+		you. If you're trying to build your own raster files use
+		RASTi300 instead.
+
+		The program doesn't handle the spacewidth command properly.
+		If you use it to build font files you'll want to add an
+		appropriate spacewidth definition to the CW font file
+		after everything has been built. You'll also want to make
+		your own RASTERLIST file.
+
+		In the example below the original raster files are assumed
+		to be in the current directory. All the new stuff will be
+		put in directories ./devi300 and ./rasti300. If you're keeping
+		Imagen's raster files somewhere else, which might not be
+		all that unusual because they take up at least 17,000
+		blocks, use the '-S dir' option to set the directory.
+
+		Example: buildrast RASTi300
+
+
+
+You'll probably only need to compile dimpress and makedev unless you want
+to work on the raster files.
+
+
+----------------------------------------
+
+
+Most of the missing characters have been added to the raster files.
+The logo \(Lb is only available in size 36 as are the globe \(L1
+and the AT&T \(LA. If you want to build up your own logo you can
+use L1 and LA to do it. The only problem is finding a reasonable
+font to use for writing the company name. I'm not sure what the
+best choice is - maybe Bold.
+
+The Roman, Italic, Bold, Bold Italic, and Constant Width fonts are all
+fairly close to what you might expect, but you may not be all that happy
+with the rest of the raster files (in particular Helvetica and Palatino).
+
+In most cases dimpress can replace di10, although there are a few
+differences in the way the options are handled. The important changes are,
+
+
+ 1: The -x and -y options set offsets in inches rather than pixels, as was
+    the case in di10.
+
+ 2: The -f option used to set the raster table directory has been changed to
+    -B.
+
+ 3: The -e, -b, -h, -H, -L, and -S options in di10 have been removed.
+
+
+If you expect to replace dcan by dimpress you'll have a little more work
+to do. dcan looked for raster files in /usr/lib/font/devcan. If you expect
+things to work you'll have to move those files into a directory named
+rasti10. Once that's been done make sure OLDBITDIR (file init.h) is
+properly defined. The -Ti10 option should then work properly.
+

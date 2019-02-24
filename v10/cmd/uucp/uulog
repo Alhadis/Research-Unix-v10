@@ -1,0 +1,81 @@
+
+#! /bin/sh
+#From: ulysses!smb (Steven Bellovin)
+#
+# usage:
+# 	uulog
+# or	uulog foo
+# or	uulog -sfoo
+# or	uulog -s foo
+# or	uulog -ffoo
+# or	uulog -f foo
+#
+#	-x means check the execute file
+#	-nnn where 'nnn' is a number will do tail -nnn
+#
+LOGDIR=/usr/spool/uucp/.Log
+type=uucico
+n=""
+
+cd $LOGDIR
+
+while [ $# -gt 0 ]
+do
+	case $1 in
+	-x)	type=uuxqt
+		shift
+		;;
+
+	-[0-9]*)n=`expr $1 : '.\(.*\)'`
+		shift
+		;;
+
+	-f)	fflag=1
+		shift
+		;;
+
+	-f*)	x=`expr $1 : '..\(.*\)'`
+		shift
+		set - $x $*
+		fflag=1
+		;;
+
+	-s)	shift
+		;;
+
+	-s*)	x=`expr $1 : '..\(.*\)'`
+		shift
+		set - $x $*
+		;;
+
+	-*)	echo "Invalid flag $1" 1>&2
+		exit 1
+		;;
+
+	*)	sys="$sys $1"
+		shift
+		;;
+
+	esac
+done
+
+set - $sys
+if [ x$fflag = x ]; then
+	if [ $# = 0 ]; then
+		set - `ls $type`
+	fi
+	for i
+	do
+		if [ x$n = x ]; then
+			cat $type/$i
+		else
+			tail -$n $type/$i
+		fi
+	done
+else
+	if [ $# != 1 ]; then
+		echo "Exactly one system with -f" 1>&2
+		exit 2
+	fi
+	exec tail -${n}f $type/$1
+fi

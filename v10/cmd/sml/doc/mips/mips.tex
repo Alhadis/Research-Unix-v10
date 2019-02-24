@@ -1,0 +1,4016 @@
+\input nwmac
+\filename{mipsglue.nw}
+\begindocs{0}
+\enddocs
+\begindocs{1}
+For the Mips, all comments are no-ops, so to get diagnostics in
+assembly mode we have to slip in and define a new comment function.
+Our life is further complicated by the fact that the stream on which
+comments are to be written is bound late, so we have to save up comments
+and then write them when asked to \code{}generate\edoc{}.
+\enddocs
+\begincode{2}
+\moddef{*}\endmoddef
+structure MipsAC : ASSEMBLER = struct
+    val diag_out = ref std_out
+    structure MCN = struct
+        open MipsCoder
+        structure M = struct
+            open M
+            fun comment s = output (!diag_out) s
+        end
+    end
+        
+    structure CM = MipsCM(MCN)
+        
+    structure Gen = CPScomp(CM)
+    fun generate (lexp, stream) = (
+        diag_out := stream;
+        Gen.compile lexp;
+        MipsCoder.codestats stream;
+        Emitters.address := 0;
+        MipsCoder.codegen (Emitters.MipsAsm stream);
+        ())
+end
+
+\endcode
+\begincode{3}
+\moddef{*}\endmoddef
+structure MipsCodeStats : ASSEMBLER = struct
+    val diag_out = ref std_out
+    structure MCN = MipsCoder
+        
+    structure CM = MipsCM(MCN)
+        
+    structure Gen = CPScomp(CM)
+    fun generate (lexp, stream) = (
+        Gen.compile lexp;
+        MipsCoder.codestats stream;
+        ())
+end
+
+\endcode
+\begindocs{4}
+Mips machines come in two byte-orders, so we need two of
+every machinelike thing.
+\enddocs
+\begincode{5}
+\moddef{*}\endmoddef
+structure MipsMCBig : CODEGENERATOR = struct
+    structure CM = MipsCM(MipsCoder)
+    structure Gen = CPScomp(CM)
+ 
+    fun generate lexp = (
+        Gen.compile lexp;
+        MipsCoder.codegen (Emitters.BigEndian);
+        Emitters.emitted_string ()
+        )
+end
+
+structure MipsMCLittle : CODEGENERATOR = struct
+    structure CM = MipsCM(MipsCoder)
+    structure Gen = CPScomp(CM)
+fun diag (s : string) f x =
+        f x handle e =>
+                (print "?exception "; print (System.exn_name e);
+                 print " in mipsglue."; print s; print "\\n";
+                 raise e)
+ 
+    fun generate lexp = (
+        diag "Gen.compile" Gen.compile lexp;
+        diag "MipsCoder.codegen" MipsCoder.codegen (Emitters.LittleEndian);
+        diag "Emitters.emitted_string" Emitters.emitted_string ()
+        )
+end
+
+
+structure CompMipsLittle = Batch(structure M=MipsMCLittle and A=MipsAC)
+structure IntMipsLittle = IntShare(MipsMCLittle)
+
+structure CompMipsBig = Batch(structure M=MipsMCBig and A=MipsAC)
+structure IntMipsBig = IntShare(MipsMCBig)
+
+structure CompMipsStats = Batch(structure M=MipsMCLittle and A=MipsCodeStats)
+\endcode
+\filename{emitters.nw}
+\begindocs{0}
+\section{Emitters}
+We have an odd problem---we need to be able to emit either a 32-bit
+integer or a string.
+The order in which the bytes of the integer are emitted depends on
+whether the target machine is BigEndian or LittleEndian, but the
+bytes of the string should be emitted in the same order on both machines.
+This means that the two emission functions depend on each other, but
+in a machine-dependent way, so we bundle them up.
+We also have to be able to emit two words for floating point constants.
+The way to do this can be derived from \code{}emit_word\edoc{}, and this
+code seems to be the sensible place to do that.
+So we define a type \code{}emitter_triple\edoc{} 
+and pass them around that way.
+
+\enddocs
+\begindocs{1}
+Eventually we want to take all the words and strings that have been
+emitted and bundle them up into a single string using \code{}implode\edoc{}.
+We'll take the following tack with that:
+each emitter will squirrel some info away in a reference variable.
+A function \code{}emitted_string: unit -> string\edoc{} will take the
+squirreled information and return a string that represents
+everything emitted so far.
+As a side effect, it will reset the emitter system to its initial 
+state, where ``everything emitted so far'' is the empty string.
+
+The actual implementation will be a list of strings which is reversed 
+and imploded.
+\enddocs
+\begincode{2}
+\moddef{signature}\endmoddef
+signature EMITTERS = sig
+    type emitter_triple
+    val LittleEndian : emitter_triple
+    val BigEndian : emitter_triple
+    val emitted_string : unit -> string
+    val MipsAsm : outstream -> emitter_triple
+    val address : int ref
+end
+
+\endcode
+\begindocs{3}
+First something that's capable of emitting real code, then
+something that can print assembly code.
+We emit the assembly code to output right away, without any fooling.
+\enddocs
+\begincode{4}
+\moddef{*}\endmoddef
+structure Emitters : EMITTERS = struct
+    type emitter_triple = (int * int -> unit) * (int -> string -> unit)
+                                        * (string -> unit)
+    local 
+        \LA{}memory and basic services\RA{}
+    in
+        \LA{}string emitter\RA{}
+        \LA{}little-endian emitter\RA{}
+        \LA{}big-endian emitter\RA{}
+        fun emitted_string () =
+            let val s = implode (rev (!so_far))
+            in  so_far := nil; s
+            end
+    end
+    structure BigReal = MipsReal(struct val emit_word = emit_pair_big end)
+    structure LittleReal =MipsReal(struct val emit_word = emit_pair_little end)
+    val LittleEndian = (emit_pair_little,emit_string,LittleReal.realconst)
+    val BigEndian = (emit_pair_big,emit_string,BigReal.realconst)
+    \LA{}assembly-code emitters\RA{}
+end
+
+
+\endcode
+\begindocs{5}
+Here is a variable to remember what's been emitted so far
+\enddocs
+\begincode{6}
+\moddef{memory and basic services}\endmoddef
+val so_far = ref nil : string list ref
+fun squirrel s = so_far := s :: !so_far
+fun emit_byte n = squirrel (chr n)
+\endcode
+\begincode{7}
+\moddef{string emitter}\endmoddef
+fun emit_string n s = squirrel (substring(s,0,n))
+                handle e =>
+                        (print "?exception "; print (System.exn_name e);
+                         print (" in emitters.emit_string "^
+                                (Integer.makestring n) ^ " \\""^s^"\\"\\n");
+                         raise e)
+
+\endcode
+\begindocs{8}
+Little-endian means the little (least significant) end first,
+like the VAX.
+ We parameterize the real emitters by a function that emits a byte.
+\enddocs
+\begincode{9}
+\moddef{little-endian emitter}\endmoddef
+fun emit_pair_little(hi,lo) =
+    let open Bits
+        fun emit_word(n) =
+          (emit_byte(andb(n,255));emit_byte(andb(rshift(n,8),255)))
+    in  (emit_word(lo);emit_word(hi))
+    end
+
+\endcode
+\begincode{10}
+\moddef{big-endian emitter}\endmoddef
+fun emit_pair_big(hi,lo) =
+     let open Bits
+        fun emit_word(n) =
+          (emit_byte(andb(rshift(n,8),255));emit_byte(andb(n,255)))
+    in  (emit_word(hi);emit_word(lo))
+    end
+
+
+\endcode
+\begindocs{11}
+Now the assembly code.
+to make it easier to debug, we print out addresses in the same format
+as {\tt dbx}: we use the byte address and we print it in hex.
+
+We have to bend over backwards to handle real numbers
+
+\enddocs
+\begincode{12}
+\moddef{assembly-code emitters}\endmoddef
+val address = ref 0             (* address of next instruction in words *)
+\LA{}real number state info and \code{}decode_real_ptr\edoc{}\RA{}
+fun MipsAsm stream =
+    let fun say s = (output stream s; flush_out stream)
+        fun printaddr addrref = 
+           let val n = !addrref
+           in  (if n<10 then "  " else if n < 100 then " " else "") 
+                ^ (Integer.makestring n) 
+           end
+        local 
+            open Bits
+            fun hexdigit n = 
+                let val d = andb(n,15)
+                in  if d <= 9 then chr(d+ord("0"))
+                              else chr(d-10+ord("a"))
+                end
+            fun hex1 n = hexdigit(rshift(n,4))^hexdigit(n)
+            fun hex2 n = hex1(rshift(n,8))^hex1(n)
+            fun hex4 n = hex2(rshift(n,16))^hex2(n)
+        in
+            fun hex(hi,lo) = hex2(hi) ^ hex2(lo)
+            fun printaddr addrref = 
+                let val n = 4 * (!addrref)      (* address in bytes *)
+                in "0x" ^ (hex4 n) 
+           end
+        end
+        fun decode x = (
+                say ((printaddr address) ^ ": (" ^ (hex x) ^") " 
+                 ^ (MipsDecode.decode x));
+           address := !address + 1; ()
+           )
+        fun do_decode_real(w,s) = (
+                say ((printaddr address) ^ ": (" ^ (hex w) ^") " 
+                 ^ s ^ "\\n");
+           address := !address + 1; ()
+           )
+        fun decode_real s = (real_string := s; AsmReal.realconst s)
+        fun decode_string n s =
+            if n > 0 then
+                (say ((printaddr address) 
+                            ^ ": \\"" ^substring(s,0,4) ^"\\"\\n");
+                   address := !address + 1;
+                   decode_string (n-4) (substring(s,4,String.length(s)-4))
+                   )
+            else ()
+    in
+        decode_real_ptr := SOME do_decode_real;
+        (decode,decode_string,decode_real) : emitter_triple
+    end
+\endcode
+\begincode{13}
+\moddef{real number state info and \code{}decode_real_ptr\edoc{}}\endmoddef
+val decode_real_ptr = ref NONE : ((int * int) * string -> unit) option ref
+                                   (* used to emit asm code for a real word *)
+    
+val real_least = ref NONE : (int * int) option ref
+                                   (* least significant word of real *)
+val real_string = ref ""
+fun emit_real_word w =
+    let val decode_real = case !decode_real_ptr of 
+                  SOME f => f 
+                | NONE => ErrorMsg.impossible "missed real decoder in mips asm"
+    in
+        case !real_least of 
+            NONE => real_least := SOME w
+          | SOME least => 
+                (decode_real(least,"[low  word of "^(!real_string)^"]");
+                 decode_real(w,"[high word of "^(!real_string)^"]"))
+    end
+
+structure AsmReal = MipsReal(struct val emit_word = emit_real_word end)
+
+\endcode
+\filename{mipsreal.nw}
+\begindocs{0}
+\subsection{Handling IEEE floating point constants}
+Here we take care of converting floating point constants from
+string representation to 64-bit IEEE representation.
+We use the machinery developed for the Sparc by John Reppy.
+
+Reppy's functor accepts a simple structure with a single value,
+\code{}emitWord : int -> unit\edoc{}, which emits a 16-bit word.
+It produces a \code{}PRIMREAL\edoc{}.
+When \code{}RealConst\edoc{} is applied to the result, it produces a 
+structure containing a single function, \code{}val realconst : string -> unit\edoc{}.
+This function, when applied to a string, emits the four sixteen-bit words
+of the IEEE representation, most significant first.
+
+Our job will be to convert this to something that emits the two 32-bit
+words of the constant, least significant word first.
+First, let's consider the state information that has to be retained
+while the halfwords are being emitted, and functions that change that state.
+\enddocs
+\begincode{1}
+\moddef{state info}\endmoddef
+val halfwords = ref nil : int list ref          (* halfwords already out *)
+val count = ref 0                               (* length of halfwords *)
+fun reset_state () = (halfwords := nil; count := 0)
+fun add_half h = (count := !count + 1; halfwords := h :: (!halfwords))
+
+\endcode
+\begincode{2}
+\moddef{emitting a halfword}\endmoddef
+fun emit_half h = 
+    if !count = 3 then (emit_four (h::(!halfwords)); reset_state())
+    else add_half h
+
+\endcode
+\begindocs{3}
+To emit the whole list, we have to emit the words, one at a time.
+We use descriptive names to remind ourselves what is signficant
+(highest is most significant).
+\enddocs
+\begincode{4}
+\moddef{emitting four halfwords}\endmoddef
+fun emit_four [lowest,low,high,highest] = 
+                        (emit_word(low,lowest);emit_word(highest,high))
+  | emit_four _ = ErrorMsg.impossible "bad floating pt constant in mips"
+
+\endcode
+\begindocs{5}
+Now, we bundle up the whole thing in a functor that
+gets passed a structure holding \code{}emit_word\edoc{} and returns 
+one containing \code{}realconst\edoc{}.
+\enddocs
+\begincode{6}
+\moddef{*}\endmoddef
+functor MipsReal(E: sig val emit_word : int * int -> unit end) : REALCONST = 
+struct
+    open E
+    \LA{}state info\RA{}
+    \LA{}emitting four halfwords\RA{}
+    \LA{}emitting a halfword\RA{}
+    structure IEEERealConst =
+        RealConst(IEEEReal(struct val emitWord = emit_half end))
+    val realconst = IEEERealConst.realconst
+end
+
+
+
+
+\endcode
+\filename{mips.nw}
+\begindocs{0}
+\section{Using \code{}MIPSCODER\edoc{} to implement a \code{}CMACHINE\edoc{}}
+
+\enddocs
+\begincode{1}
+\moddef{*}\endmoddef
+functor MipsCM(MipsC : MIPSCODER) : CMACHINE = struct
+
+    open MipsC System.Tags
+
+    \LA{}utility functions\RA{}
+
+    \LA{}immediate and register functions\RA{}
+
+    \LA{}register definitions\RA{}
+
+    \LA{}move\RA{}
+    \LA{}alignment, marks, and constants\RA{}
+    \LA{}labels\RA{}
+    \LA{}record manipulation\RA{}
+    \LA{}indexed fetch and store (byte)\RA{}
+    \LA{}indexed fetch and store (word)\RA{}
+    \LA{}arithmetic\RA{}
+    \LA{}shifts\RA{}
+    \LA{}arithmetic and shifts with overflow detection\RA{}
+    \LA{}bitwise operations\RA{}
+    \LA{}branches\RA{}
+
+    \LA{}floating point\RA{}
+
+    \LA{}memory check\RA{}
+
+    \LA{}omitted functions\RA{}
+
+    val comment = M.comment
+
+(* +DEBUG *)
+    \LA{}DEBUG code\RA{}
+(* -DEBUG *)
+
+end (* MipsCM *)
+
+\endcode
+\begindocs{2}
+The debugging code replaces possibly offensive functions with functions
+that diagnose their own exceptions.
+\enddocs
+\begincode{3}
+\moddef{DEBUG code}\endmoddef
+fun diag (s : string) f x =
+        f x handle e =>
+                (print "?exception "; print (System.exn_name e);
+                 print " in mips."; print s; print "\\n";
+                 raise e)
+
+\endcode
+\begincode{4}
+\moddef{immediate and register functions}\endmoddef
+val immed = Immed
+fun isimmed(Immed i) = SOME i
+  | isimmed _ = NONE
+
+fun isreg(Direct(Reg i)) = SOME i | isreg _ = NONE
+fun eqreg (a: EA) b = a=b
+
+
+\endcode
+\begindocs{5}
+Here's what our register conventions are:
+\input regs
+\enddocs
+\begincode{6}
+\moddef{register definitions}\endmoddef
+val standardarg = Direct(Reg 2)
+val standardcont = Direct(Reg 3)
+val standardclosure = Direct(Reg 4)
+val miscregs = map (Direct o Reg) [5,6,7,8,9,10,11,12,13,14,
+                                   15,16,17,18,19]
+val storeptr as Direct storeptr' = Direct(Reg 22)
+val dataptr  as Direct dataptr'  = Direct(Reg 23)
+val exnptr = Direct(Reg 30)
+
+  (* internal use only *)
+val my_arithtemp as Direct my_arithtemp'= Direct(Reg 20) 
+val my_ptrtemp as Direct my_ptrtemp' = Direct(Reg 21)
+
+  (* exported for external use *)
+val arithtemp as Direct arithtemp' = Direct(Reg 24) 
+val arithtemp2 as Direct arithtemp2'= Direct(Reg 25)
+
+\endcode
+\begincode{7}
+\moddef{move}\endmoddef
+fun move (src,Direct dest) = M.move(src, dest)
+  | move _ = ErrorMsg.impossible "destination of move not register in mips"
+\endcode
+\begincode{8}
+\moddef{alignment, marks, and constants}\endmoddef
+val align = M.align
+val mark = M.mark
+
+val emitlong = M.emitlong
+val realconst = M.realconst
+val emitstring = M.emitstring
+
+\endcode
+\begincode{9}
+\moddef{labels}\endmoddef
+fun emitlab(i,Immedlab lab) = M.emitlab(i,lab)
+  | emitlab _ = ErrorMsg.impossible "bad emitlab arg in mips"
+fun newlabel() = Immedlab(M.newlabel())
+fun define (Immedlab lab) = M.define lab
+  | define _ = ErrorMsg.impossible "bad define arg in mips"
+\endcode
+\begincode{10}
+\moddef{DEBUG code}\endmoddef
+val emitlab = diag "emitlab" emitlab
+val define = diag "define" define
+
+
+\endcode
+\begindocs{11}
+We only ever put the address of a newly created record into a register.
+If I make this out correctly, the first word on the list of
+values \code{}vl\edoc{} is actually a descriptor.
+BUGS: The original routine put the address of the descriptor
+into \code{}z\edoc{}.  
+What needs to go into \code{}z\edoc{} is the address of the first word in the record.
+We can get this by adding 4 to the \code{}dataptr'\edoc{}.
+\enddocs
+\begincode{12}
+\moddef{record manipulation}\endmoddef
+fun record(vl, Direct z) =
+    let open CPS
+        val len = List.length vl
+        fun f(i,nil) = ()
+          | f(i,(r, SELp(j,p))::rest) = (* follow ptrs to get the item *)
+                (M.lw(my_ptrtemp', r, j*4); f(i,(my_ptrtemp,p)::rest))
+          | f(i,(Direct r,OFFp 0)::rest) =  (* simple store, last first *) 
+                (M.sw(r, dataptr, i*4); f(i-1,rest))
+          | f(i,(Direct r, OFFp j)::rest) = 
+                (M.add(r, Immed(4*j), my_ptrtemp'); 
+                                f(i,(my_ptrtemp,OFFp 0)::rest))
+          | f(i,(ea,p)::rest) = (* convert to register-based *)
+                (M.move(ea, my_ptrtemp'); f(i,(my_ptrtemp,p)::rest))
+      in f(len - 1, rev vl); (* store first word in \code{}0(dataptr')\edoc{} *)
+         M.add(dataptr', Immed 4, z);
+         M.add(dataptr', Immed(4*len), dataptr')
+     end
+   | record _ = ErrorMsg.impossible "result of record not register in mips"
+
+fun select(i, r, Direct s) = M.lw(s, r, i*4)
+  | select _ = ErrorMsg.impossible "result of select not register in mips"
+
+fun offset(i, Direct r, Direct s) = M.add(r,Immed(i*4), s)
+  | offset _ = ErrorMsg.impossible "nonregister arg to offset in mips"
+\endcode
+\begincode{13}
+\moddef{DEBUG code}\endmoddef
+val record = diag "record" record
+val select = diag "select" select
+val offset = diag "offset" offset
+
+\endcode
+\begindocs{14}
+For the indexed fetch and store, arithtemp is {\em not} tagged---the
+tags are removed at a higher level (in {\tt generic.sml}).
+These could be made faster for the case when they're called with immediate
+constants as \code{}x\edoc{}.
+\enddocs
+\begincode{15}
+\moddef{indexed fetch and store (byte)}\endmoddef
+(* fetchindexb(x,y) fetches a byte: y <- mem[x+arithtemp]
+        y cannot be arithtemp *)
+fun fetchindexb(x,Direct y) =
+    (M.add(arithtemp',x,my_arithtemp');    
+     M.lbu(y,my_arithtemp,0))
+  | fetchindexb _ = ErrorMsg.impossible "fetchb result not register in mips"
+
+(* storeindexb(x,y) stores a byte: mem[y+arithtemp] <- x; *)
+fun storeindexb(Direct x,y) =
+    (M.add(arithtemp',y,my_arithtemp');
+     M.sb(x,my_arithtemp,0))
+  | storeindexb _ = ErrorMsg.impossible "storeb arg not register in mips"
+
+(* jmpindexb(x)    pc <- (x+arithtemp) *)
+fun jmpindexb x = (M.add(arithtemp',x,my_arithtemp');
+                     M.jump(my_arithtemp'))
+
+\endcode
+\begincode{16}
+\moddef{DEBUG code}\endmoddef
+val fetchindexb = diag "fetchindexb" fetchindexb
+val storeindexb = diag "storeindexb" storeindexb
+val jmpindexb = diag "jmpindexb" jmpindexb
+
+
+\endcode
+\begindocs{17}
+Here it looks like \code{}z\edoc{} is a tagged integer number of words,
+so that \code{}2*(z-1)\edoc{} converts to the appropriate byte offset.
+But I'm just guessing.
+In any case, it saves an instruction to compute \code{}2*z\edoc{} (actually \code{}z+z\edoc{})
+and 
+load (or store) with offset \code{}~2\edoc{}.
+
+Anything stored with \code{}storeindexl\edoc{} is being put into an array, so it
+is safe to treat it as a pointer. 
+\enddocs
+\begincode{18}
+\moddef{indexed fetch and store (word)}\endmoddef
+   (* fetchindexl(x,y,z) fetches a word:   y <- mem[x+2*(z-1)] *)
+   (* storeindexl(x,y,z) stores a word:    mem[y+2*(z-1)] <- x *)
+
+fun fetchindexl(x,Direct y, Direct z) = 
+      (M.sll(Immed 1,z,my_arithtemp');
+       M.add(my_arithtemp',x,my_arithtemp');
+       M.lw(y, my_arithtemp,~2))
+  | fetchindexl(x,Direct y, Immed z) = M.lw(y, x, z+z-2)
+  | fetchindexl _ = ErrorMsg.impossible "fetchl result not register in mips"
+
+fun storeindexl(Direct x,y, Immed 1) = M.sw(x,y,0)
+  | storeindexl(Direct x,y,Direct z) = 
+    (M.sll(Immed 1,z,my_arithtemp');
+     M.add(my_arithtemp',y,my_arithtemp');
+     M.sw(x, my_arithtemp,~2))
+  | storeindexl(Direct x,y,Immed z) = M.sw(x,y,z+z-2)
+
+  | storeindexl(Direct _,_,Immedlab _) =
+        ErrorMsg.impossible "storeindexl(Direct _,_,Immedlab _) in mips"
+
+  | storeindexl(Immedlab label,y,z) =
+    (M.move(Immedlab label,my_ptrtemp');
+     storeindexl(my_ptrtemp,y,z))
+
+  | storeindexl(Immed constant,y,offset) =
+        (M.move(Immed constant,my_ptrtemp');
+         storeindexl(my_ptrtemp,y,offset))
+
+\endcode
+\begincode{19}
+\moddef{DEBUG code}\endmoddef
+val fetchindexl = diag "fetchindexl" fetchindexl
+val storeindexl = diag "storeindexl" storeindexl
+
+
+\endcode
+\begindocs{20}
+The function \code{}three\edoc{} makes commutative three-operand
+instructions easier to call.
+All three operands become \code{}EA\edoc{}s, and it is enough if either of the
+first two operands is a register.
+\enddocs
+\begincode{21}
+\moddef{utility functions}\endmoddef
+fun three f (Direct x, ea, Direct y) = f(x,ea,y)
+  | three f (ea, Direct x, Direct y) = f(x,ea,y)
+  | three f _ =ErrorMsg.impossible "neither arg to three f is register in mips"
+
+\endcode
+\begindocs{22}
+I assume that shifts are only ever done on arithmetic quantities,
+not pointers, so that I am justified in using \code{}my_arithtemp'\edoc{} to
+store intermediate values.  This is consistent with being unwilling
+to shift things matching \code{}Immedlab _\edoc{}.
+Appel agrees that pointers aren't shifted, as far as he can remember.
+\enddocs
+\begincode{23}
+\moddef{shifts}\endmoddef
+fun ashr(shamt, Direct op1, Direct result) = M.sra(shamt,op1,result)
+  | ashr(shamt, Immed op1, Direct result) = 
+        (M.move(Immed op1,my_arithtemp'); M.sra(shamt,my_arithtemp',result))
+  | ashr _ = ErrorMsg.impossible "ashr args don't match in mips"
+fun ashl(shamt, Direct op1, Direct result) = M.sll(shamt,op1,result)
+  | ashl(shamt, Immed op1, Direct result) = 
+        (M.move(Immed op1,my_arithtemp'); M.sll(shamt,my_arithtemp',result))
+  | ashl _ = ErrorMsg.impossible "ashl args don't match in mips"
+\endcode
+\begincode{24}
+\moddef{DEBUG code}\endmoddef
+val ashr = diag "ashr" ashr
+val ashl = diag "ashl" ashl
+
+\endcode
+\begincode{25}
+\moddef{bitwise operations}\endmoddef
+val orb = three M.or
+val andb = three M.and'
+fun notb (a,b) = subl3(a, Immed ~1, b) (* ~1 - a == one's complement *)
+val xorb = three M.xor
+\endcode
+\begincode{26}
+\moddef{DEBUG code}\endmoddef
+val orb = diag "orb" orb
+val andb = diag "andb" andb
+val notb = diag "notb" notb
+val xorb = diag "xorb" xorb
+
+
+\endcode
+\begindocs{27}
+Subtraction may appear a bit odd.
+The MIPS machine instruction and  \code{}MIPSCODER.sub\edoc{} both subtract
+their second operand from their first operand.
+The VAX machine instruction and \code{}CMACHINE.subl3\edoc{} both subtract
+their first operand from their second operand.
+This will certainly lead to endless confusion.
+\enddocs
+\begincode{28}
+\moddef{arithmetic}\endmoddef
+val addl3 = three M.add
+
+fun subl3(Immed k, x, y) = addl3(x, Immed(~k), y)
+  | subl3(Direct x, Direct y, Direct z) = M.sub(y,x,z)
+  | subl3(x, Immed k, dest) = 
+            (M.move(Immed k, my_arithtemp');
+             subl3(x, my_arithtemp, dest))
+  | subl3 _ = ErrorMsg.impossible "subl3 args don't match in mips"
+
+\endcode
+\begindocs{29}
+We assume that any quantities being multiplied are arithmetic
+quantities, not pointers.
+\enddocs
+\begincode{30}
+\moddef{arithmetic}\endmoddef
+fun mull2(Direct x, Direct y) = M.mult(y,x,y)
+  | mull2(Immed x, Direct y) = (M.move(Immed x,my_arithtemp');
+                                M.mult(y,my_arithtemp',y))
+  | mull2 _ = ErrorMsg.impossible "mull2 args don't match in mips"
+fun divl2(Direct x, Direct y) = M.div(y,x,y)
+  | divl2(Immed x, Direct y) = (M.move(Immed x,my_arithtemp');
+                                M.div(y,my_arithtemp',y))
+  | divl2 _ = ErrorMsg.impossible "divl2 args don't match in mips"
+
+\endcode
+\begincode{31}
+\moddef{DEBUG code}\endmoddef
+val addl3 = diag "addl3" addl3
+val subl3 = diag "subl3" subl3
+val mull2 = diag "mull2" mull2
+val divl2 = diag "divl2" divl2
+
+
+\endcode
+\begindocs{32}
+The Mips hardware detects two's complement integer overflow on 
+add and subtract instructions only.  
+The exception is not maskable (see the Mips book, page 5-18).
+At the moment we don't implement any overflow detection for multiplications
+or for left shifts.
+This has consequences only for coping with real constants and for
+compiling user programs.  
+\enddocs
+\begincode{33}
+\moddef{arithmetic and shifts with overflow detection}\endmoddef
+val addl3t = addl3
+val subl3t = subl3
+\endcode
+\begindocs{34}
+The Mips multiplies two 32-bit quantities to get a 64-bit result.
+That result fits in 32 bits if and only if the high-order word is zero or
+negative one, and it has the same sign as the low order word.
+Thus, we can add the sign bit of the low order word to the high order
+word, and we have overflow if and only if the result is nonzero.
+\enddocs
+\begincode{35}
+\moddef{arithmetic and shifts with overflow detection}\endmoddef
+fun mull2t(x,y as Direct y') = 
+    let val ok = M.newlabel()
+    in  mull2(x,y);
+        M.mfhi(my_arithtemp');
+        M.slt(y',Direct (Reg 0),my_ptrtemp'); (* 0 or 1 OK in pointer *)
+        M.add(my_arithtemp',my_ptrtemp,my_arithtemp');
+        M.beq(true,my_arithtemp',Reg 0,ok);    (* OK if not overflow *)
+        M.lui(my_arithtemp',32767);
+        M.add(my_arithtemp',my_arithtemp,my_arithtemp');  (* overflows *)
+        M.define(ok)
+    end
+  | mull2t _ = ErrorMsg.impossible "result of mull2t not register in mips"
+
+\endcode
+\begincode{36}
+\moddef{DEBUG code}\endmoddef
+val addl3t = diag "addl3t" addl3t
+val subl3t = diag "subl3t" subl3t
+val mull2t = diag "mull2t" mull2t
+val ashlt = diag "ashlt" ashlt
+
+
+\endcode
+\begindocs{37}
+We hack \code{}ibranch\edoc{} to make sure it will only reverse once.
+It's easier than thinking.
+\enddocs
+\begincode{38}
+\moddef{branches}\endmoddef
+datatype condition = NEQ | EQL | LEQ | GEQ | LSS | GTR
+local 
+fun makeibranch reverse = 
+let
+fun ibranch (cond, Immed a, Immed b, Immedlab label) =
+            if (case cond of EQL => a=b | NEQ => a<>b | LSS => a<b |
+                             LEQ => a<=b | GTR => a>b | GEQ => a>=b)
+                then M.beq(true,Reg 0, Reg 0, label) else ()
+  | ibranch (NEQ, Direct r, Direct s, Immedlab label) =
+                    M.beq(false, r, s, label)
+  | ibranch (NEQ, Direct r, x, Immedlab label) =
+                    (M.move(x, my_arithtemp');
+                     M.beq(false, r, my_arithtemp', label))
+  | ibranch (EQL, Direct r, Direct s, Immedlab label) =
+                    M.beq(true, r, s, label)
+  | ibranch (EQL, Direct r, x, Immedlab label) =
+                    (M.move(x, my_arithtemp');
+                     M.beq(true, r, my_arithtemp', label))
+  | ibranch (LSS, Direct r, x, Immedlab lab) =
+                (M.slt(r,x,my_arithtemp');
+                 M.beq(false,Reg 0, my_arithtemp',lab))
+  | ibranch (GEQ, Direct r, x, Immedlab lab) =
+                (M.slt(r,x,my_arithtemp'); 
+                 M.beq(true,Reg 0, my_arithtemp',lab))
+  | ibranch (GTR, x, Direct r, Immedlab lab) =
+                (M.slt(r,x,my_arithtemp'); 
+                 M.beq(false,Reg 0, my_arithtemp',lab))
+  | ibranch (LEQ, x, Direct r, Immedlab lab) =
+                (M.slt(r,x,my_arithtemp'); 
+                 M.beq(true,Reg 0, my_arithtemp',lab))
+(* These two cases added to prevent infinite reversal *)
+  | ibranch (GTR, Direct r, x, Immedlab lab) =
+                (M.move(x, my_arithtemp');
+                 M.slt(my_arithtemp',Direct r,my_arithtemp');
+                 M.beq(false,Reg 0,my_arithtemp',lab))
+  | ibranch (LEQ, Direct r, x, Immedlab lab) =
+                (M.move(x, my_arithtemp');
+                 M.slt(my_arithtemp',Direct r,my_arithtemp');
+                 M.beq(true,Reg 0,my_arithtemp',lab))
+  | ibranch (_, Immedlab _, Immedlab _, _) = 
+                ErrorMsg.impossible "bad ibranch args 1 in mips"
+  | ibranch (_, Immedlab _, _, _) = 
+                ErrorMsg.impossible "bad ibranch args 1a in mips"
+  | ibranch (_, _, Immedlab _, _) = 
+                ErrorMsg.impossible "bad ibranch args 1b in mips"
+  | ibranch (_, _, _, Direct _) = 
+                ErrorMsg.impossible "bad ibranch args 2 in mips"
+  | ibranch (_, _, _, Immed _) = 
+                ErrorMsg.impossible "bad ibranch args 3 in mips"
+  | ibranch (cond, x, y, l) = 
+        let fun rev LEQ = GEQ
+              | rev GEQ = LEQ
+              | rev LSS = GTR
+              | rev GTR = LSS
+              | rev NEQ = NEQ
+              | rev EQL = EQL
+        in  if reverse then (makeibranch false) (rev cond, y,x,l) 
+            else ErrorMsg.impossible "infinite ibranch reversal in mips"
+        
+        end
+in ibranch
+end
+in
+val ibranch = makeibranch true
+end
+    
+\endcode
+\begincode{39}
+\moddef{branches}\endmoddef
+fun jmp (Direct r) = M.jump(r)
+  | jmp (Immedlab lab) = M.beq(true,Reg 0,Reg 0,lab)
+  | jmp (Immed i) = ErrorMsg.impossible "jmp (Immed i) in mips"
+
+
+        (* branch on bit set *)
+fun bbs (Immed k, Direct y, Immedlab label) =
+        (M.and'(y,Immed (Bits.lshift(1,k)),my_arithtemp');
+         M.beq(false,my_arithtemp',Reg 0,label))
+  | bbs _ = ErrorMsg.impossible "bbs args don't match in mips"
+
+\endcode
+\begincode{40}
+\moddef{DEBUG code}\endmoddef
+val ibranch = diag "ibranch" ibranch
+val jmp = diag "jmp" jmp
+val bbs = diag "bbs" bbs
+
+\endcode
+\begindocs{41}
+We decided not to include floating point registers in our galaxy of
+effective addresses.
+This means that floating point registers are used only at this level, and
+only to contain intermediate results.
+All operands and final results will be stored in memory, in the usual
+ML format (i.e. as 8-byte strings).
+
+In fact, we can be much more strict than that, and claim that
+all floating point operands will live in FPR0 and FPR2, and that all 
+results will appear in FPR0.
+
+We don't make a distinction between general-purpose and floating point
+registers; it's up to the instructions to know the difference.
+\enddocs
+\begincode{42}
+\moddef{floating point}\endmoddef
+val floatop1 = Reg 0
+val floatop2 = Reg 2
+val floatresult = Reg 0
+
+\endcode
+\begindocs{43}
+One very common operation is to take the result of a floating point
+operation and put it into a fresh record, newly allocated on the heap.
+This operation is traditionally called \code{}finish_real\edoc{}, and it takes one
+argument, the destination register for the new value.
+All real values on the heap are labelled as 8-byte strings.
+To store a floating point, we store the least significant
+word in the lower address, but we store the most significant word
+first, in case that triggers a garbage collection.
+\enddocs
+\begincode{44}
+\moddef{floating point}\endmoddef
+val real_tag = Immed(8*System.Tags.power_tags + System.Tags.tag_string)
+
+fun store_float(Reg n,ea,offset) = 
+    if n mod 2 <> 0 then ErrorMsg.impossible "bad float reg in mips"
+    else (M.swc1(Reg (n+1),ea,offset+4);M.swc1(Reg n,ea,offset))
+
+fun finish_real (Direct result) = (
+    store_float(floatresult,dataptr,4);
+    M.move(real_tag,my_arithtemp');
+    M.sw(my_arithtemp',dataptr,0);
+    M.add(dataptr',Immed 4,result);
+    M.add(dataptr',Immed 12,dataptr'))
+  | finish_real _ = 
+     ErrorMsg.impossible "ptr to result of real operation not register in mips"
+
+\endcode
+\begindocs{45}
+Loading a floating point quantity is analogous.
+\enddocs
+\begincode{46}
+\moddef{floating point}\endmoddef
+fun load_float(Reg dest,src,offset) =
+    if dest mod 2 <> 0 then ErrorMsg.impossible "bad float reg in mips"
+    else (M.lwc1(Reg dest,src,offset); M.lwc1(Reg (dest+1),src,offset+4))
+
+\endcode
+\begindocs{47}
+Now we can do a general two- and three-operand floating point operationa.
+The only parameter is the function in \code{}MipsCoder\edoc{} that
+emits the floating point register operation.
+\enddocs
+\begincode{48}
+\moddef{floating point}\endmoddef
+fun two_float instruction (op1,result) = (
+    load_float(floatop1,op1,0);
+    instruction(floatop1,floatresult);
+    finish_real(result))
+
+fun three_float instruction (op1,op2,result) = (
+    load_float(floatop1,op1,0);
+    load_float(floatop2,op2,0);
+    instruction(floatop1,floatop2,floatresult);
+    finish_real(result))
+
+\endcode
+\begindocs{49}
+That takes care of everything except branch
+\enddocs
+\begincode{50}
+\moddef{floating point}\endmoddef
+val mnegg = two_float M.neg_double
+val mulg3 = three_float M.mul_double
+val divg3 = three_float M.div_double
+val addg3 = three_float M.add_double
+val subg3 = three_float M.sub_double
+
+
+\endcode
+\begindocs{51}
+The Mips doesn't provide all six comparisons in hardware, so the
+next function does the comparison using only less than and equal.
+The result tells \code{}bcop1\edoc{} whether to branch on condition true
+or condition false.
+\enddocs
+\begincode{52}
+\moddef{floating point compare}\endmoddef
+fun compare(LSS,op1,op2) = (M.slt_double(op1,op2); true)
+  | compare(GEQ,op1,op2) = (M.slt_double(op1,op2); false)
+  | compare(EQL,op1,op2) = (M.seq_double(op1,op2); true)
+  | compare(NEQ,op1,op2) = (M.seq_double(op1,op2); false)
+  | compare(LEQ,op1,op2) = compare(GEQ,op2,op1)
+  | compare(GTR,op1,op2) = compare(LSS,op2,op1)
+\endcode
+\begincode{53}
+\moddef{floating point}\endmoddef
+local
+    \LA{}floating point compare\RA{}
+in
+    fun gbranch (cond, op1, op2, Immedlab label) = (
+            load_float(floatop1,op1,0);
+            load_float(floatop2,op2,0);
+            M.bcop1(compare(cond,floatop1,floatop2),label))
+      | gbranch _ = ErrorMsg.impossible "insane gbranch target in mips.nw"
+end
+        
+
+\endcode
+\begindocs{54}
+When a function begins execution, it checks to make sure there is sufficient
+memory available that it can do all its allocation.
+generic does this by calling \code{}checkLimit : int -> unit\edoc{}.
+At the moment, we implement this check by doing a store,
+taking advantage of the virtual memory hardware, which will cause an exception
+if there's not enough memory.
+Later we will replace this store with a check against a limit register,
+which will avoid virtual memory hacking and which will have advantages
+for concurrency.
+\enddocs
+\begincode{55}
+\moddef{memory check}\endmoddef
+fun checkLimit max_allocation = M.sw(Reg 0, dataptr, max_allocation-4)
+                              (* store zero in last location to be used *)
+
+\endcode
+\begindocs{56}
+These two functions have null implementations.
+\code{}beginStdFn\edoc{} is necessary only on the SPARC, since that machine needs to get 
+its program counter, and it is awkward to do so in the middle of a function.
+
+\code{}profile\edoc{} is a mysterious relic.
+\enddocs
+\begincode{57}
+\moddef{omitted functions}\endmoddef
+fun beginStdFn _ = ()           (* do nothing, just like the Vax *)
+
+fun profile(i,incr) = ()
+
+\endcode
+\filename{mipscoder.nw}
+\begindocs{0}
+\input verbatim
+\input itemize
+\chapter{A small assembler for the MIPS}
+This is part of the code generator for Standard ML of New Jersey.
+We generate code in several stages.
+This is nearly the lowest stage; it is like an assembler.
+The user can call any function in the MIPSCODER signature.
+Each one corresponds to an assembler pseudo-instruction.
+Most correspond to single MIPS instructions.
+The assembler remembers all the instructions that have been 
+requested, and when \code{}codegen\edoc{} is called it generates MIPS
+code for them.
+
+Some other structure will be able to use the MIPS structure to implement
+a \code{}CMACHINE\edoc{}, which is the abstract machine that ML thinks it is running
+on.
+(What really happens is a functor maps some structure 
+implementing \code{}MIPSCODER\edoc{} to a different structure implementing 
+\code{}CMACHINE\edoc{}.)
+
+{\em Any function using a structure of this signature must avoid
+touching registers 1~and~31.
+Those registers are reserved for use by the assembler.}
+
+\enddocs
+\begindocs{1}
+Here is the signature of the assembler, \code{}MIPSCODER\edoc{}.
+It can be extracted from this file by
+$$\hbox{\tt notangle mipsinstr.nw -Rsignature}.$$
+\enddocs
+\begincode{2}
+\moddef{signature}\endmoddef
+signature MIPSCODER = sig
+
+(* Assembler for the MIPS chip *)
+
+eqtype Label
+datatype Register = Reg of int
+    (* Registers 1 and 31 are reserved for use by this assembler *)
+datatype EA = Direct of Register | Immed of int | Immedlab of Label
+                                (* effective address *)
+
+structure M : sig
+
+    (* Emit various constants into the code *)
+
+    val emitstring : string -> unit     (* put a literal string into the
+                                           code (null-terminated?) and
+                                           extend with nulls to 4-byte 
+                                           boundary. Just chars, no 
+                                           descriptor or length *)
+    val realconst : string -> unit      (* emit a floating pt literal *)
+                                                (* NOT RIGHT YET *)
+    val emitlong : int -> unit          (* emit a 4-byte integer literal *)
+
+
+    (* Label bindings and emissions *)
+
+    val newlabel : unit -> Label        (* new, unbound label *)
+    val define : Label -> unit          (* cause the label to be bound to
+                                           the code about to be generated *)
+    val emitlab : int * Label -> unit   (* L3: emitlab(k,L2) is equivalent to
+                                           L3: emitlong(k+L2-L3) *)
+
+    (* Control flow instructions *)
+
+    val slt : Register * EA * Register -> unit
+                (* (operand1, operand2, result) *)
+                                        (* set less than family *)
+    val beq : bool * Register * Register * Label -> unit
+                (* (beq or bne, operand1, operand2, branch address) *)
+                                        (* branch equal/not equal family *)
+    
+    val jump : Register -> unit         (* jump register instruction *)
+
+    val slt_double : Register * Register -> unit
+                                        (* floating pt set less than *)
+    val seq_double : Register * Register -> unit
+                                        (* floating pt set equal *)
+    val bcop1 : bool * Label -> unit    (* floating pt conditional branch *)
+
+
+    (* Arithmetic instructions *)
+            (* arguments are (operand1, operand2, result) *)
+
+    val add : Register * EA * Register -> unit
+    val and' : Register * EA * Register -> unit
+    val or : Register * EA * Register -> unit
+    val xor : Register * EA * Register -> unit
+    val sub : Register * Register * Register -> unit
+    val div : Register * Register * Register -> unit
+    val mult : Register * Register * Register -> unit
+    val mfhi : Register -> unit         (* high word of 64-bit multiply *)
+    
+    (* Floating point arithmetic *)
+
+    val neg_double : Register * Register -> unit
+    val mul_double : Register * Register * Register -> unit
+    val div_double : Register * Register * Register -> unit
+    val add_double : Register * Register * Register -> unit
+    val sub_double : Register * Register * Register -> unit
+
+    (* Move pseudo-instruction :  move(src,dest) *)
+
+    val move : EA * Register -> unit
+
+    (* Load and store instructions *)
+            (* arguments are (destination, source address, offset) *)
+ 
+    val lbu  : Register * EA * int -> unit (* bytes *)
+    val sb  : Register * EA * int -> unit
+    val lw  : Register * EA * int -> unit  (* words *)
+    val sw  : Register * EA * int -> unit
+    val lwc1: Register * EA * int -> unit  (* floating point coprocessor *)
+    val swc1: Register * EA * int -> unit
+    val lui : Register * int -> unit
+
+    (* Shift instructions *)
+            (* arguments are (shamt, operand, result) *)
+            (* shamt as Immedlab _ is senseless *)
+
+    val sll : EA * Register * Register -> unit
+    val sra : EA * Register * Register -> unit
+    
+
+    (* Miscellany *)
+
+    val align : unit -> unit            (* cause next data to be emitted on
+                                           a 4-byte boundary *)
+    val mark : unit -> unit             (* emit a back pointer, 
+                                           also called mark *)
+
+    val comment : string -> unit
+
+  end (* signature of structure M *)
+
+  val codegen : (int * int -> unit) * (int -> string -> unit) 
+                        * (string -> unit) -> unit
+
+  val codestats : outstream -> unit     (* write statistics on stream *)
+
+end (* signature MIPSCODER *)
+\endcode
+\begindocs{3}
+The basic strategy of the implementation is to hold on, via the \code{}kept\edoc{}
+pointer, to the list of instructions generated so far.
+We use \code{}instr\edoc{} for the type of an instruction, so
+\code{}kept\edoc{} has type \code{}instr list ref\edoc{}.
+
+The instructions will be executed in the following order: the 
+instruction at the head of the \code{}!kept\edoc{} is executed last.
+This enables us to accept calls in the order of execution but
+add the new instruction(s) to the list in constant time.
+
+
+\enddocs
+\begindocs{4}
+
+We structure the instruction stream a little bit by factoring
+out the difference between multiplication and division; these
+operations are treated identically in that the result has to be
+fetched out of the MIPS' LO register.
+
+We also factor the different of load and store instructions that can
+occur: we have load byte, load word, and load to coprocessor (floating point).
+\enddocs
+\begincode{5}
+\moddef{types auxiliary to \code{}instr\edoc{}}\endmoddef
+datatype size = Byte | Word | Floating
+datatype muldiv = MULT | DIV
+\endcode
+\begindocs{6}
+
+Here are the instructions that exist.
+We list them in more or less the order of the MIPSCODER signature.
+\enddocs
+\begincode{7}
+\moddef{definition of \code{}instr\edoc{}}\endmoddef
+\LA{}types auxiliary to \code{}instr\edoc{}\RA{}
+
+datatype instr = 
+    STRINGCONST of string               (* constants *)
+  | REALCONST of string
+  | EMITLONG of int
+
+  | DEFINE of Label                     (* labels *)
+  | EMITLAB of int * Label
+
+  | SLT of Register * EA * Register     (* control flow *)
+  | BEQ of bool * Register * Register * Label
+  | JUMP of Register 
+  | SLT_D of Register * Register
+  | SEQ_D of Register * Register
+  | BCOP1 of bool * Label
+
+  | NOP (* no-op for delay slot *)
+
+  | ADD of Register * EA * Register     (* arithmetic *)
+  | AND of Register * EA * Register
+  | OR  of Register * EA * Register
+  | XOR of Register * EA * Register
+  | SUB of Register * Register * Register
+  | MULDIV of muldiv * Register * Register
+  | MFLO of Register    (* mflo instruction used with
+                           64-bit multiply and divide *)
+  | MFHI of Register
+
+  | NEG_D of Register * Register
+  | MUL_D of Register * Register * Register
+  | DIV_D of Register * Register * Register
+  | ADD_D of Register * Register * Register
+  | SUB_D of Register * Register * Register
+
+  | MOVE of EA * Register    (* put something into a register *)
+  | LDI_32 of int * Register (* load in a big immediate constant (>16 bits) *)
+  | LUI of Register * int    (* Mips lui instruction *)
+
+  | LOAD of size * Register * EA * int  (* load and store *)
+  | STORE  of size * Register * EA * int
+
+  | SLL of EA * Register * Register     (* shift *)
+  | SRA of EA * Register * Register
+
+  | COMMENT of string                   (* generates nothing *)
+  | MARK                                (* a backpointer *)
+\endcode
+\begindocs{8}
+
+Here is the code that handles the generated stream, \code{}kept\edoc{}.
+It begins life as \code{}nil\edoc{} and returns to \code{}nil\edoc{} every time code is
+generated.
+The function \code{}keep\edoc{} is a convenient way of adding a single \code{}instr\edoc{} to
+the list; it's very terse.
+Sometimes we have to add multiple \code{}instr\edoc{}s; then we use \code{}keeplist\edoc{}.
+We also define a function \code{}delay\edoc{} that is just like a \code{}keep\edoc{} but
+it adds a NOP in the delay slot.
+\enddocs
+\begincode{9}
+\moddef{instruction stream and its functions}\endmoddef
+  val kept = ref nil : instr list ref
+  fun keep f a = kept := f a :: !kept
+  fun delay f a = kept := NOP :: f a :: !kept
+  fun keeplist l = kept := l @ !kept
+\endcode
+\begincode{10}
+\moddef{reinitialize \code{}kept\edoc{}}\endmoddef
+  kept := nil
+\endcode
+\begindocs{11}
+
+\subsection{Exporting functions for \code{}MIPSCODER\edoc{}}
+We now know enough to implement most of the functions called for in
+\code{}MIPSCODER\edoc{}.
+We still haven't decided on an implementation of labels,
+and there is one subtlety in multiplication and division,
+but the rest is set.
+\enddocs
+\begincode{12}
+\moddef{\code{}MIPSCODER\edoc{} functions}\endmoddef
+  val emitstring = keep STRINGCONST     (* literals *)
+  val realconst = keep REALCONST
+  val emitlong = keep EMITLONG
+
+  \LA{}label functions\RA{}                   (* labels *)
+
+  val slt = keep SLT                    (* control flow *)
+  val beq = delay BEQ
+  val jump = delay JUMP
+  val slt_double = delay SLT_D
+  val seq_double = delay SEQ_D
+  val bcop1 = delay BCOP1
+
+  val add = keep ADD                    (* arithmetic *)
+  val and' = keep AND
+  val or = keep OR
+  val xor = keep XOR
+  val op sub = keep SUB
+  \LA{}multiplication and division functions\RA{}
+
+  val neg_double = keep NEG_D
+  val mul_double = keep MUL_D
+  val div_double = keep DIV_D
+  val add_double = keep ADD_D
+  val sub_double = keep SUB_D
+
+  val move = keep MOVE
+
+  fun lbu (a,b,c) = delay LOAD (Byte,a,b,c) (* load and store *)
+  fun lw (a,b,c)  = delay LOAD (Word,a,b,c)
+  fun lwc1 (a,b,c)  = delay LOAD (Floating,a,b,c)
+  fun sb (a,b,c)  = keep STORE (Byte,a,b,c)
+  fun sw (a,b,c)  = keep STORE (Word,a,b,c)
+  fun swc1 (a,b,c)  = delay STORE (Floating,a,b,c)
+  val lui = keep LUI
+
+  val sll = keep SLL                    (* shift *)
+  val sra = keep SRA
+
+  fun align() = ()                      (* never need to align on MIPS *)
+  val mark = keep (fn () => MARK)
+  val comment = keep COMMENT
+\endcode
+\begindocs{13}
+
+Multiplication and division have a minor complication; the
+result has to be fetched from the LO register.
+\enddocs
+\begincode{14}
+\moddef{multiplication and division functions}\endmoddef
+  fun muldiv f (a,b,c) = keeplist [MFLO c, MULDIV (f,a,b)]
+  val op div = muldiv DIV
+  val mult = muldiv MULT
+  val mfhi = keep MFHI
+\endcode
+\begindocs{15}
+
+For now, labels are just pointers to integers.
+During code generation, those integers will be set to positions
+in the instruction stream, and then they'll be useful as addresses
+relative to the program counter pointer (to be held in \code{}Reg pcreg\edoc{}).
+\enddocs
+\begincode{16}
+\moddef{definition of \code{}Label\edoc{}}\endmoddef
+  type Label = int ref
+\endcode
+\begincode{17}
+\moddef{label functions}\endmoddef
+  fun newlabel () = ref 0
+  val define = keep DEFINE
+  val emitlab = keep EMITLAB
+\endcode
+\begindocs{18}
+
+Here's the overall plan of this structure:
+\enddocs
+\begincode{19}
+\moddef{*}\endmoddef
+structure MipsCoder : MIPSCODER = struct
+
+  \LA{}definition of \code{}Label\edoc{}\RA{}
+
+  datatype Register = Reg of int
+
+  datatype EA = Direct of Register
+              | Immed of int
+              | Immedlab of Label
+
+  \LA{}definition of \code{}instr\edoc{}\RA{}
+
+  \LA{}instruction stream and its functions\RA{}
+  
+  structure M = struct
+    \LA{}\code{}MIPSCODER\edoc{} functions\RA{}
+  end
+
+  open M
+
+  \LA{}functions that assemble \code{}instr\edoc{}s into code\RA{}
+
+  \LA{}statistics\RA{}
+
+end (* MipsInstr *)
+\endcode
+\begindocs{20}
+\subsection{Sizes of \code{}instr\edoc{}s}
+Now let's consider the correspondence between our \code{}instr\edoc{} type and the
+actual MIPS instructions we intend to emit.
+One important problem to solve is figuring out how big things are, 
+so that we know what addresses to generate for the various labels.
+We will also want to know what address is currently stored in the program
+counter regsiter (\code{}pcreg\edoc{}),
+because we'll need to know when something is close 
+enough that we can use a sixteen-bit address relative to that register.
+The kind of address we can use will determine how big things are.
+
+We'll rearrange the code so that we have a list of \code{}ref int * instr\edoc{} pairs,
+where the \code{}ref int\edoc{} stores the position in the list. 
+(Positions start at zero.)
+Since in the MIPS all instructions are the same size, we measure
+position as number of instructions.
+While we're at it, we reverse the list so that the head will execute first,
+then the rest of the list.
+
+We begin with each position set to zero, and make a pass over the list 
+trying to set the value of each position. 
+We do this by estimating the size of (number of MIPS instructions 
+generated for) each \code{}instr\edoc{}.
+Since there are forward references, we may not have all the distances right
+the first time, so we have to make a second pass.
+But during this second pass we could find that something is further
+away than we thought, and we have to switch from using a pc-relative mode to
+something else (or maybe grab the new pc?), which changes the size again,
+and moves things even further away.
+Because we can't control this process, we just keep making passes over the
+list until the process quiesces (we get the same size twice).
+
+In order to guarantee termination, we have to make sure later passes only 
+increase the sizes of things.
+This is sufficient since there is a maximum number of MIPS instructions
+we can generate for each \code{}instr\edoc{}.
+
+
+While we're at it, we might want to complicate things by making the function
+that does the passes also emit code.
+For a single pass we hand an optional triple of emitters, the initial position,
+an \code{}int option\edoc{} for the program counter pointer (if known), and the
+instructions.
+
+
+
+I'm not sure what explains the use of the \code{}ref int\edoc{} to track the position,
+instead of just an \code{}int\edoc{}---it might be a desire to avoid the
+overhead of creating a bunch of new objects, or it might be really hard
+to do the passes cheaply.
+It should think a variation on \code{}map\edoc{} would do the job, but maybe I'm
+missing something.
+
+\enddocs
+\begindocs{21}
+\code{}emitters\edoc{} is actually a triple \code{}emit,emit_string,emit_real\edoc{}.
+\code{}emit : int * int -> unit\edoc{} emits one instruction, 
+and \code{}emit_string : int -> string -> unit\edoc{} emits a string constant.
+\code{}emit_string\edoc{} could be specified as a function of \code{}emit\edoc{},
+but the nature of the function would depend on whether the target
+machine was little-endian or big-endian, and we don't want to have
+that dependency built in.
+\code{}emit_real : string -> unit\edoc{} emits two words corresponding to an IEEE
+floating point constant in string form (e.g. \code{}"3.14159"\edoc{}).
+In principle, it can always be derived from \code{}emit_word\edoc{}, but it's
+easier to pass it in because then we can use John Reppy's code;
+see the \code{}MipsReal\edoc{} functor for more details, as well as
+\code{}mipsglue.sml\edoc{}.
+
+
+ \code{}instrs\edoc{} is the
+list of instructions (in execute-head-last order).
+
+The second argument to \code{}pass\edoc{} indicates for what instructions code
+is to be generated.
+It is a record (position of next instruction, program counter pointer if any,
+remaining instructions to generate [with positions]).
+
+\indent \code{}prepare\edoc{} produces two results: the instruction stream with
+size pointers added, and the total size of code to be generated.
+We add the total size because that is the only way to find the number
+of \code{}bltzal\edoc{}s, which are implicit in the instruction stream.
+
+\enddocs
+\begincode{22}
+\moddef{assembler}\endmoddef
+fun prepare instrs =
+ let fun add_positions(done, inst::rest) =  
+                 add_positions( (ref 0, inst) :: done, rest)
+       | add_positions(done, nil) = done
+
+     val instrs' = add_positions(nil, instrs) (* reverse and add \code{}ref int\edoc{}s*)
+
+     fun passes(oldsize) = 
+                (* make passes with no emission until size is stable*)
+        let val size = pass NONE (0,NONE,instrs')
+        in  if size=oldsize then size
+            else passes size
+        end
+  in \{size = passes 0, stream = instrs'\}
+  end
+
+fun assemble emitters instrs =
+        pass (SOME emitters) (0,NONE,#stream (prepare instrs))
+
+\endcode
+\begincode{23}
+\moddef{functions that assemble \code{}instr\edoc{}s into code}\endmoddef
+fun get (SOME x) = x 
+  | get NONE = ErrorMsg.impossible "missing pcptr in mipscoder"
+
+\LA{}\code{}pcptr\edoc{} functions\RA{}
+\LA{}single pass\RA{}
+\LA{}assembler\RA{}
+
+fun codegen emitters = (
+    assemble emitters (!kept);
+    \LA{}reinitialize \code{}kept\edoc{}\RA{}
+    )
+\endcode
+\begindocs{24}
+
+The program counter pointer is a device that enables us to to addressing
+relative to the pcp register, register 31.
+The need for it arises when we want to access a data element which we know
+only by its label.
+The labels give us addresses relative to the beginning of the function,
+but we can only use addresses relative to some register.
+The answer is to set register~31 with a \code{}bltzal\edoc{} instruction,
+then use that for addressing.
+
+The function \code{}needs_a_pcptr\edoc{} determines when it is necessary
+to have a known value in register~31.
+That is, we need the program counter pointer
+\itemize
+\item 
+at \code{}NOP\edoc{} for a reason to be named later?
+\item
+at any operation that uses an effective address that refers to a label
+(since all labels have to be relative to the program counter).
+\item
+BEQ's and BCOP1's to very far away, 
+since we have to compute the address for a JUMP 
+knowing the value of the program counter pointer.
+\enditemize
+\enddocs
+\begincode{25}
+\moddef{\code{}pcptr\edoc{} functions}\endmoddef
+fun needs_a_pcptr(_,SLT(_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,ADD(_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,AND(_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,OR(_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,XOR(_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,MOVE(Immedlab _,_)) = true
+  | needs_a_pcptr(_,LOAD(_,_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,STORE(_,_,Immedlab _,_)) = true
+  | needs_a_pcptr(_,SLL(Immedlab _,_,_)) = true
+  | needs_a_pcptr(_,SRA(Immedlab _,_,_)) = true
+  | needs_a_pcptr(1, BEQ _) = false  (* small BEQ's dont need pcptr *)
+  | needs_a_pcptr(_, BEQ _) = true   (* but large ones do *)
+  | needs_a_pcptr(1, BCOP1 _) = false  (* small BCOP1's dont need pcptr *)
+  | needs_a_pcptr(_, BCOP1 _) = true   (* but large ones do *)
+  | needs_a_pcptr _ = false
+\endcode
+\begindocs{26}
+
+Creating the program counter pointer once, with a \code{}bltzal\edoc{}, is not
+enough; we have to invalidate the program counter pointer at every
+label, since control could arrive at the label from God knows where, and
+therefore we don't know what the program counter pointer is.
+
+We use the function \code{}makepcptr\edoc{} to create a new program counter pointer
+``on the fly'' while generating code for other \code{}instrs\edoc{}.
+(I chose not to create a special \code{}instr\edoc{} for \code{}bltzal\edoc{}, which I
+could have inserted at appropriate points in the instruction stream.)
+To try and find an odd bug, I'm adding no-ops after each \code{}bltzal\edoc{}.
+I don't really believe they're necessary.
+
+The function \code{}gen\edoc{}, which generates the instructions (or computes
+their size), takes three arguments.
+Third: the list of instructions to be generated (paired with pointers
+to their sizes); first: the position (in words) at which to generate 
+those instructions;  second: the current value of the program counter
+pointer (register~31), if known.
+
+The mutual recursion between \code{}gen\edoc{} and \code{}makepcptr\edoc{} maintains
+the program counter pointer.
+\code{}gen\edoc{} invalidates it at labels, and calls \code{}makepcptr\edoc{} to create a valid
+one when necessary (as determined by \code{}needs_a_pcptr\edoc{}).
+\enddocs
+\begincode{27}
+\moddef{single pass}\endmoddef
+fun pass emitters =
+let fun makepcptr(i,x) = 
+         (* may need to emit NOP for delay slot if next instr is branch *)
+  let val size = case x of ((_,BEQ _)::rest) => 2 
+                         | ((_,BCOP1 _)::rest) => 2 
+                         | _ => 1
+  in  case emitters of NONE                     => () 
+                     | SOME (emit, _, _ ) => (
+                              emit(Opcodes.bltzal(0,0));
+                              if size=2 then emit(Opcodes.add(0,0,0)) else ());
+      gen(i+size, SOME (i+2), x)
+  end
+and gen(i,_,nil) = i
+  | gen(i, _, (_,DEFINE lab) :: rest) = (lab := i; gen(i,NONE, rest))
+                        (* invalidate the pc pointer at labels *)
+  (* may want to do special fiddling with NOPs *)
+  | gen(pos, pcptr, x as ((sizeref as ref size, inst) :: rest)) =
+       if (pcptr=NONE andalso needs_a_pcptr(size, inst)) then makepcptr(pos,x)
+       else case emitters of
+          SOME (emit : int*int -> unit, emit_string : int -> string -> unit,
+                emit_real : string -> unit) =>
+             \LA{}emit MIPS instructions\RA{}
+        | NONE =>
+             \LA{}compute positions\RA{}
+in  gen
+end
+
+\endcode
+\begindocs{28}
+\subsection{Generating the instructions}
+Now we need to consider the nitty-gritty details of just what instructions
+are generated for each \code{}instr\edoc{}.
+In  early passes, we'll just need to know how many instructions are
+required (and that number may change from pass to pass, so it must be
+recomputed).
+In the last pass, the sizes are stable (by definition), so we can look
+at the sizes to see what instructions to generate.
+
+We'll consider the \code{}instrs\edoc{} in groups, but first, here's the
+way we will structure things:
+\enddocs
+\begincode{29}
+\moddef{compute positions}\endmoddef
+let \LA{}functions for computing sizes\RA{}
+    val newsize = case inst of
+        \LA{}cases for sizes to be computed\RA{}
+in  if newsize > size then sizeref := newsize else ();
+    gen(pos+(!sizeref) (* BUGS -- was pos+size*),pcptr,rest)
+end
+\endcode
+\begincode{30}
+\moddef{emit MIPS instructions}\endmoddef
+let fun gen1() = gen(pos+size,pcptr,rest) 
+                                (* generate the rest of the \code{}instr\edoc{}s *)
+    open Bits
+    open Opcodes
+    \LA{}declare reserved registers \code{}tempreg\edoc{} and \code{}pcreg\edoc{}\RA{}
+    \LA{}functions for emitting instructions\RA{}
+in  case inst of
+    \LA{}cases of instructions to be emitted\RA{}
+end
+\endcode
+\begindocs{31}
+When we get around to generating code, we may need to use a temporary
+register.
+For example, if we want to load into a register
+an immediate constant that won't fit
+into 16~bits, we will have to load the high-order part of the constant
+with \code{}lui\edoc{}, then use \code{}addi\edoc{} to add then the low-order part.
+The MIPS assembler has a similar problem, and on page D-2 of
+the MIPS book we notice that register~1 is reserved for the use of the
+assembler.
+So we do the same.
+
+We need to reserve a second register for use in pointing to the program 
+counter.
+We will use register 31 because the \code{}bltzal\edoc{} instruction automatically
+sets register 31 to the PC.
+\enddocs
+\begincode{32}
+\moddef{declare reserved registers \code{}tempreg\edoc{} and \code{}pcreg\edoc{}}\endmoddef
+val tempreg = 1
+val pcreg = 31
+\endcode
+\begindocs{33}
+
+Before showing the code for the actual instructions, we should
+point out that
+we have two different ways of emitting a long word.
+\code{}emitlong\edoc{} just splits the bits into two pieces for those cases
+when it's desirable to put a word into the memory image.
+\code{}split\edoc{} gives something that will load correctly
+when the high-order piece is loaded into a high-order halfword
+(using \code{}lui\edoc{}),
+and the low-order piece is sign-extended and then added to the 
+high-order piece.
+This is the way we load immediate constants of more than sixteen bits.
+It is also useful for generating load or store instructions with
+offsets of more than sixteen bits: we \code{}lui\edoc{} the \code{}hi\edoc{} part and
+add it to the base regsiter, then use the \code{}lo\edoc{} part as an offset.
+\enddocs
+\begincode{34}
+\moddef{functions for emitting instructions}\endmoddef
+fun emitlong i = emit(rshift(i,16), andb(i,65535))
+                                (* emit one long word (no sign fiddling) *)
+fun split i = let val hi = rshift(i,16) and lo = andb(i,65535)
+                     in if lo<32768 then (hi,lo) else (hi+1, lo-65536)
+                    end
+
+\endcode
+\begindocs{35}
+We begin implementing \code{}instrs\edoc{} by considering those that emit constants.
+String constants are padded with nulls out to a word boundary, and 
+real constants take up two words.
+{\bf At the moment real constants seem to be zeros.
+One day this will have to be fixed.}
+Integer constants are just emitted with \code{}emitlong\edoc{}.
+\enddocs
+\begincode{36}
+\moddef{cases for sizes to be computed}\endmoddef
+  STRINGCONST s => Integer.div(String.length(s)+3,4)
+| REALCONST _ => 2
+| EMITLONG _ => 1
+\endcode
+\begincode{37}
+\moddef{cases of instructions to be emitted}\endmoddef
+  STRINGCONST s => 
+        let val s' = s ^ "\\000\\000\\000\\000"
+        in  gen1(emit_string (4*size) s')
+                                      (* doesn't know Big vs Little-Endian *)
+        end
+| REALCONST s => gen1(emit_real s)  (* floating pt constant *)
+| EMITLONG i => gen1(emitlong i)
+\endcode
+\begindocs{38}
+
+Next consider the labels.
+A \code{}DEFINE\edoc{} should never reach this far, and \code{}EMITLAB\edoc{} is almost like
+an \code{}EMITLONG\edoc{}.
+\enddocs
+\begincode{39}
+\moddef{cases for sizes to be computed}\endmoddef
+| DEFINE _ => ErrorMsg.impossible "generate code for DEFINE in mipscoder"
+| EMITLAB _ => 1
+\endcode
+\begincode{40}
+\moddef{cases of instructions to be emitted}\endmoddef
+| DEFINE _ => gen1(ErrorMsg.impossible "generate code for DEFINE in mipscoder")
+| EMITLAB(i, ref d) => gen1(emitlong((d-pos)*4+i))
+\endcode
+\begindocs{41}
+
+Now we have to start worrying about instructions with \code{}EA\edoc{} in them.
+The real difficulty these things present is that they may have an
+immediate operand that won't fit in 16~bits.
+So we'll need to get this large immediate operand into a register,
+sixteen bits at a time, and then do the operation on the register.
+
+Since all of the arithmetic instructions have this difficulty, and since
+we can use them to implement the others, we'll start with those and
+catch up with the control-flow instructions later.
+\enddocs
+\begindocs{42}
+\code{}SUB\edoc{}, \code{}MULDIV\edoc{}, and \code{}MFLO\edoc{} all use registers only, so they are easy.
+The other arithmetic operations get treated exactly the same, so we'll
+use a function to compute the size.
+{\bf move this to follow the definition of \code{}arith\edoc{}?}
+\enddocs
+\begincode{43}
+\moddef{cases for sizes to be computed}\endmoddef
+| ADD(_, ea, _) => easize ea
+| AND(_, ea, _) => easize ea
+| OR (_, ea, _) => easize ea
+| XOR(_, ea, _) => easize ea
+| SUB _ => 1
+| MULDIV _ => 1 
+| MFLO _ => 1
+| MFHI _ => 1
+\endcode
+\begindocs{44}
+Register operations take one instruction.
+Immediate operations take one instruction for 16~bit constants,
+and 3 for larger constants (since it costs two instructions to load
+a big immediate constant into a register).
+An immediate instruction with \code{}Immedlab l\edoc{} means that the operand
+is intended to be the machine address associated with that label.
+To compute that address, we need to add 
+\code{}4*(l-pcptr)\edoc{} to the contents of 
+register~\code{}pcreg\edoc{} (which holds \code{}4*pcptr\edoc{}), 
+put the results in a register, and operate on that register.
+
+This tells us enough to compute the sizes.
+\enddocs
+\begincode{45}
+\moddef{functions for computing sizes}\endmoddef
+fun easize (Direct _) = 1
+  | easize (Immed i) = if abs(i)<32768 then 1 else 3
+  | easize (Immedlab(ref lab)) = 1 + easize(Immed (4*(lab-(get pcptr))))
+\endcode
+\begindocs{46}
+
+As we have seen, 
+to implement any arithmetic operation, we need to know the register 
+form and the sixteen-bit immediate form.
+We will also want the operator from \code{}instr\edoc{}, since we do the
+large immediate via a recursive call.
+We'll set up a function, \code{}arith\edoc{}, that does the job.
+\enddocs
+\begincode{47}
+\moddef{functions for emitting instructions}\endmoddef
+fun arith (opr, rform, iform) =
+   let fun ar (Reg op1, Direct (Reg op2), Reg result) = 
+                gen1(emit(rform(result,op1,op2)))
+         | ar (Reg op1, Immed op2, Reg result) =
+                (case size of
+                    1 (* 16 bits *) => gen1(emit(iform(result,op1,op2)))
+                  | 3 (* 32 bits *) => 
+                     gen(pos,pcptr,
+                          (ref 2, LDI_32(op2, Reg tempreg))::
+                          (ref 1, opr(Reg op1, Direct(Reg tempreg), Reg result))::
+                          rest)
+                  | _ => gen(ErrorMsg.impossible 
+                                "bad size in arith Immed in mipscoder")
+                )
+         | ar (Reg op1, Immedlab (ref op2), Reg result) =
+                gen(pos, pcptr, 
+                      (ref (size-1), 
+                            ADD(Reg pcreg,Immed(4*(op2-(get pcptr))), Reg tempreg))::
+                      (ref 1, opr(Reg op1, Direct(Reg tempreg), Reg result))::
+                      rest)
+   in  ar
+   end
+\endcode
+\begindocs{48}
+
+The generation itself may be a bit anticlimactic.
+The MIPS has no ``subtract immediate'' instruction, and \code{}SUB\edoc{} has
+a different type than the others, so we emit it directly.
+\enddocs
+\begincode{49}
+\moddef{cases of instructions to be emitted}\endmoddef
+| ADD stuff => arith (ADD,add,addi) stuff
+| AND stuff => arith (AND,and',andi) stuff
+| OR  stuff => arith (OR,or,ori) stuff
+| XOR stuff => arith (XOR,xor,xori) stuff
+| SUB (Reg op1, Reg op2, Reg result) => gen1(emit(sub(result,op1,op2)))
+| MULDIV(DIV, Reg op1, Reg op2) => gen1(emit(div(op1,op2)))
+| MULDIV(MULT,Reg op1, Reg op2) => gen1(emit(mult(op1,op2)))
+| MFLO(Reg result) => gen1(emit(mflo(result)))
+| MFHI(Reg result) => gen1(emit(mfhi(result)))
+\endcode
+\begindocs{50}
+Floating point arithmetic is pretty easy because we always do it in
+registers.  
+We also support only one format, double precision.
+\enddocs
+\begincode{51}
+\moddef{cases for sizes to be computed}\endmoddef
+| NEG_D _ => 1
+| MUL_D _ => 1
+| DIV_D _ => 1
+| ADD_D _ => 1
+| SUB_D _ => 1
+\endcode
+\begindocs{52}
+When emitting instructions we have to remember the Mips instructions
+use result on the left, but the \code{}MIPSCODER\edoc{} signature requires result
+on the right.
+\enddocs
+\begincode{53}
+\moddef{cases of instructions to be emitted}\endmoddef
+| NEG_D (Reg op1,Reg result) => gen1(emit(neg_fmt(D_fmt,result,op1)))
+\endcode
+\begincode{54}
+\moddef{functions for emitting instructions}\endmoddef
+fun float3double instruction (Reg op1,Reg op2,Reg result) =
+   gen1(emit(instruction(D_fmt,result,op1,op2)))
+\endcode
+\begincode{55}
+\moddef{cases of instructions to be emitted}\endmoddef
+| MUL_D x => float3double mul_fmt x
+| DIV_D x => float3double div_fmt x
+| ADD_D x => float3double add_fmt x
+| SUB_D x => float3double sub_fmt x
+
+
+\endcode
+\begindocs{56}
+We offer a separate \code{}MOVE\edoc{} instruction because of large immediate
+constants.  
+It is always possible to do \code{}move(src,dest)\edoc{} by doing 
+\code{}add(Reg 0,src,dest)\edoc{}, but the general form \code{}add(Reg i, Immed c, dest)\edoc{}
+takes three instructions when \code{}c\edoc{} is a large constant (more than 16 bits).
+Rather than clutter up the code for \code{}add\edoc{} (and \code{}or\edoc{} and \code{}xor\edoc{}) by
+trying to recognize register~0, we provide \code{}move\edoc{} explicitly.
+
+\indent \code{}LDI_32\edoc{} takes care of the particular case in which we are 
+loading a 32-bit immediate constant into a register.  
+It dates from the bad old days before \code{}MOVE\edoc{}, and it might be a good idea
+to remove it sometime.
+\enddocs
+\begincode{57}
+\moddef{functions for emitting instructions}\endmoddef
+fun domove (Direct (Reg src), Reg dest) = gen1(emit(add(dest,src,0)))
+  | domove (Immed src, Reg dest) =
+        (case size of
+            1 (* 16 bits *) => gen1(emit(addi(dest,0,src)))
+          | 2 (* 32 bits *) => 
+                        gen(pos,pcptr,(ref 2, LDI_32(src, Reg dest))::rest)
+          | _ => gen(ErrorMsg.impossible "bad size in domove Immed in mipscoder")
+        )
+  | domove (Immedlab (ref src), Reg dest) =
+        gen(pos, pcptr, 
+              (ref size, 
+                    ADD(Reg pcreg,Immed(4*(src-(get pcptr))), Reg dest))::rest)
+\endcode
+\begindocs{58}
+Notice we use \code{}easize\edoc{} and not \code{}movesize\edoc{} in the third clause
+because when we reach this point the treatment of a \code{}MOVE\edoc{} is the same
+as that of an \code{}ADD\edoc{}.
+\enddocs
+\begincode{59}
+\moddef{functions for computing sizes}\endmoddef
+fun movesize (Direct _) = 1
+  | movesize (Immed i) = if abs(i)<32768 then 1 else 2
+  | movesize (Immedlab(ref lab)) = easize(Immed (4*(lab-(get pcptr))))
+
+\endcode
+\begincode{60}
+\moddef{cases for sizes to be computed}\endmoddef
+| MOVE (src,_) => movesize src
+| LDI_32 _ => 2
+| LUI _ => 1
+\endcode
+\begincode{61}
+\moddef{cases of instructions to be emitted}\endmoddef
+| MOVE stuff => domove stuff
+| LDI_32 (immedconst, Reg dest) =>
+         let val (hi,lo) = split immedconst
+         in  gen1(emit(lui(dest,hi));emit(addi(dest,dest,lo)))
+         end 
+| LUI (Reg dest,immed16) => gen1(emit(lui(dest,immed16)))
+
+\endcode
+\begindocs{62}
+
+Now that we've done arithmetic, we can see how to do control flow without
+too much trouble.
+\code{}SLT\edoc{} can be treated just like an arithmetic operator.
+\code{}BEQ\edoc{} is simple if the address to which we branch is close enough.
+Otherwise we use the following sequence for \code{}BEQ(Reg op1, Reg op2, ref dest)\edoc{}:
+\verbatim
+        bne op1,op2,L
+        ADD (Reg pcreg, Immed (4*(dest-pcptr)), Reg tempreg)
+        jr tempreg
+     L: ...
+\endverbatim
+Notice we don't have to put a \code{}NOP\edoc{} in the delay slot of the \code{}bne\edoc{}.
+We don't need one after the jump unless we needed one after the 
+original \code{}BEQ\edoc{}, in which case one will be there.
+If the branch is taken, we're doing as well as we can.
+If the branch is not taken, we will have executed an \code{}add\edoc{} or \code{}lui\edoc{} in the 
+delay slot of the \code{}bne\edoc{}, but the results just get thrown away.
+\enddocs
+\begincode{63}
+\moddef{cases for sizes to be computed}\endmoddef
+| SLT(_, ea, _) => easize ea
+| BEQ(_,_,_,ref dest) => 
+        if abs((pos+1)-dest) < 32768 then 1 (* single instruction *)
+        else 2+easize (Immed (4*(dest-(get pcptr))))
+| JUMP _ => 1
+| SLT_D _ => 1
+| SEQ_D _ => 1
+| BCOP1(_,ref dest) => 
+        if abs((pos+1)-dest) < 32768 then 1 (* single instruction *)
+        else 2+easize (Immed (4*(dest-(get pcptr))))
+| NOP => 1
+\endcode
+\begindocs{64}
+The implementation is as described, except we use a 
+non-standard \code{}nop\edoc{}.
+There are many Mips instructions that have no effect, and the standard
+one is the word with all zeroes (\code{}sll 0,0,0\edoc{}).
+We use \code{}add\edoc{},  adding 0 to 0 and store the result in 0, because it
+will be easy to distinguish from a data word that happens to be zero.
+\enddocs
+\begincode{65}
+\moddef{cases of instructions to be emitted}\endmoddef
+| SLT stuff => arith (SLT,slt,slti) stuff
+| BEQ(b, Reg op1, Reg op2, ref dest) =>
+    if size = 1 then 
+         gen1(emit((if b then beq else bne)(op1,op2,dest-(pos+1))))
+    else gen(pos,pcptr,
+                  (ref 1, BEQ(not b, Reg op1, Reg op2, ref(pos+size)))
+                  ::(ref (size-2), 
+                      ADD(Reg pcreg, Immed(4*(dest-(get pcptr))), Reg tempreg))
+                  ::(ref 1, JUMP(Reg tempreg))
+                  ::rest)
+| JUMP(Reg dest) => gen1(emit(jr(dest)))
+| SLT_D (Reg op1, Reg op2) => 
+     gen1(emit(c_lt(D_fmt,op1,op2)))
+| SEQ_D (Reg op1, Reg op2) => 
+     gen1(emit(c_seq(D_fmt,op1,op2)))
+| BCOP1(b, ref dest) =>
+    let fun bc1f offset = cop1(8,0,offset)
+        fun bc1t offset = cop1(8,1,offset)
+    in  if size = 1 then 
+             gen1(emit((if b then bc1t else bc1f)(dest-(pos+1))))
+        else gen(pos,pcptr,
+                  (ref 1, BCOP1(not b, ref(pos+size)))
+                  ::(ref (size-2), 
+                      ADD(Reg pcreg, Immed(4*(dest-(get pcptr))), Reg tempreg))
+                  ::(ref 1, JUMP(Reg tempreg))
+                  ::rest)
+    end
+| NOP => gen1(emit(add(0,0,0)))         (* one of the many MIPS no-ops *)
+\endcode
+\begindocs{66}
+
+Our next problem is to tackle load and store.
+The major difficulty is if the offset is too large to fit in
+sixteen bits; if so, we have to create a new base register.
+If we have \code{}Immedlab\edoc{}, we do it as an offset from \code{}pcreg\edoc{}.
+\enddocs
+\begincode{67}
+\moddef{functions for emitting instructions}\endmoddef
+fun memop(rform,Reg dest, Direct (Reg base), offset) =
+      (case size
+       of 1 => gen1(emit(rform(dest,offset,base)))
+        | 3 => let val (hi,lo) = split offset
+               in  gen1(emit(lui(tempreg,hi));       (* tempreg = hi \LL{} 16 *)
+                        emit(add(tempreg,base,tempreg));(* tempreg += base *)
+                        emit(rform(dest,lo,tempreg)) (* load dest,lo(tempreg) *)
+                       )
+               end
+        | _ => gen1(ErrorMsg.impossible "bad size in memop Direct in mipscoder")
+       )
+  | memop(rform,Reg dest, Immed address, offset) =
+      (case size
+       of 1 => gen1(emit(rform(dest,offset+address,0)))
+        | 2 => let val (hi,lo) = split (offset+address)
+               in  gen1(emit(lui(tempreg,hi)); 
+                        emit(rform(dest,lo,tempreg))
+                       )
+               end
+        | _ => gen1(ErrorMsg.impossible "bad size in memop Immed in mipscoder")
+       )
+  | memop(rform,Reg dest, Immedlab (ref lab), offset) =
+      memop(rform, Reg dest, Direct (Reg pcreg), offset+4*(lab - get pcptr))
+\endcode
+\begindocs{68}
+The actual registers don't matter for computing sizes, and in fact
+the value of \code{}pcreg\edoc{} is not visible here, so we use an arbitrary
+register (\code{}Reg 0\edoc{}) to compute the size.
+\enddocs
+\begincode{69}
+\moddef{functions for computing sizes}\endmoddef
+fun adrsize(_, Reg _, Direct _, offset) = 
+            if abs(offset)<32768 then 1 else 3
+  | adrsize(_, Reg _, Immed address, offset) = 
+            if abs(address+offset) < 32768 then 1 else 2
+  | adrsize(x, Reg dest, Immedlab (ref lab), offset) =
+            adrsize(x, Reg dest, Direct (Reg 0  (* pcreg in code *) ), 
+                    offset+4*(lab-(get pcptr)))
+\endcode
+\begincode{70}
+\moddef{cases for sizes to be computed}\endmoddef
+| LOAD  x => adrsize x
+| STORE x => adrsize x
+\endcode
+\begincode{71}
+\moddef{cases of instructions to be emitted}\endmoddef
+| LOAD  (Byte,dest,address,offset) => memop(lbu,dest,address,offset)
+| LOAD  (Word,dest,address,offset) => memop(lw,dest,address,offset)
+| LOAD  (Floating,dest,address,offset) => memop(lwc1,dest,address,offset)
+| STORE (Byte,dest,address,offset) => memop(sb,dest,address,offset)
+| STORE (Word,dest,address,offset) => memop(sw,dest,address,offset)
+| STORE (Floating,dest,address,offset) => memop(swc1,dest,address,offset)
+\endcode
+\begindocs{72}
+ 
+For the shift instructions, only register and immediate operands
+make sense.
+Immediate operands make sense if and only if they are representable
+in five bits.
+If everything is right, these are single instructions.
+\enddocs
+\begincode{73}
+\moddef{cases for sizes to be computed}\endmoddef
+| SLL _ => 1  
+| SRA _ => 1
+\endcode
+\begincode{74}
+\moddef{cases of instructions to be emitted}\endmoddef
+| SLL (Immed shamt, Reg op1, Reg result) => gen1(
+        if (shamt >= 0 andalso shamt < 32) then emit(sll(result,op1,shamt))
+        else ErrorMsg.impossible ("bad sll shamt "
+                ^ (Integer.makestring shamt) ^ " in mipscoder"))
+| SLL (Direct(Reg shamt), Reg op1, Reg result) => 
+        gen1(emit(sllv(result,op1,shamt)))
+| SLL (Immedlab _,_,_) => ErrorMsg.impossible "sll shamt is Immedlab in mipscoder"
+| SRA (Immed shamt, Reg op1, Reg result) => gen1(
+        if (shamt >= 0 andalso shamt < 32) then emit(sra(result,op1,shamt))
+        else ErrorMsg.impossible ("bad sra shamt "
+                ^ (Integer.makestring shamt) ^ " in mipscoder"))
+| SRA (Direct(Reg shamt), Reg op1, Reg result) =>
+        gen1(emit(srav(result,op1,shamt)))
+| SRA (Immedlab _,_,_) => ErrorMsg.impossible "sra shamt is Immedlab in mipscoder"
+\endcode
+\begindocs{75}
+
+Finally, comments are ignored, and marks (backpointers) are written into the
+instruction stream.
+
+Comments are used by the front end to give diagnostics.
+In the bad old days we would have had two different \code{}MIPSCODER\edoc{}s, one
+which generated machine code (and ignored comments), and one which
+wrote out assembly code (and copied comments).
+Today we have just one, which means the rerouting of comments takes place
+at a much higher level.  Look in \code{}cps/mipsglue.nw\edoc{}.
+\enddocs
+\begincode{76}
+\moddef{cases for sizes to be computed}\endmoddef
+| COMMENT _ => 0
+| MARK => 1                     (* backpointer takes one word *)
+\endcode
+\begindocs{77}
+Just for the record, here's the description of what a mark (backpointer)
+is.
+``Take the byte address at which the mark resides and add 4, giving
+the byte address of the object following the mark.
+(That object is the marked object.)
+Subtract the byte address of the initial word that marks the
+start of this instruction stream.
+Now divide by 4, giving the distance in words between the
+beginning of the block and the marked object.
+Take that quantity and shift it left by multiplying by \code{}power_tags\edoc{},
+and indicate the result is a mark by adding the tag bits \code{}tag_backptr\edoc{}
+into the low order part.''
+ \code{}pos+1\edoc{} is exactly the required distance in words.
+\enddocs
+\begincode{78}
+\moddef{cases of instructions to be emitted}\endmoddef
+| COMMENT _ => gen1()
+| MARK => gen1(
+    let open System.Tags
+    in  emitlong((pos+1) * power_tags + tag_backptr)
+    end)
+\endcode
+\begindocs{79}
+
+\enddocs
+\begindocs{80}
+\subsection{Optimization}
+The first step towards optimization is to take statistics.
+We will count: \code{}instrs\edoc{}, Mips words, \code{}NOP\edoc{}s in load and branch delays,
+and \code{}bltzal\edoc{}s.
+In the current implementation the \code{}bltzal\edoc{}s are implicit, so there
+is no way to count them or optimize them.
+\enddocs
+\begincode{81}
+\moddef{statistics}\endmoddef
+fun printstats stream
+ \{inst : int, code : int, data : int, 
+  load : int, branch : int, compare : int, size : int\} =
+    let val print = output stream
+        val nop = load+branch+compare
+        val bltzal = size - (code + data)
+        val code = code + bltzal
+        \LA{}definition of \code{}sprintf\edoc{}\RA{}
+        fun P x = substring(makestring(100.0 * x),0,4)  (* percent *)
+        fun printf f d = print (sprintf f d)
+    in  printf ["Counted "," instrs in "," words (",
+                                " code, "," data)\\n" ^
+                "Used "," NOPs ("," load, "," branch,"," compare) and "," bltzals\\n" ^
+                "","% of code words were NOPs; ","% were bltzals\\n" ^
+                "","% of all words were code; ","% of all words were NOPs\\n"]
+               [I inst, I size, I code, I data, 
+                I nop, I load, I branch,  I compare, I bltzal,
+                P (real nop / real code), P (real bltzal / real code),
+                P (real code / real size), P (real nop / real size)]
+        handle Overflow => print "[Overflow in computing Mips stats]\\n"
+             | Real s => print ("[FPE ("^s^") in computing Mips stats]\\n")
+    end
+                
+\endcode
+\begincode{82}
+\moddef{statistics}\endmoddef
+\LA{}definition of \code{}iscode\edoc{}\RA{}
+fun addstats (counts as \{inst,code,data,load,branch,compare\}) =
+  fn nil => counts
+   | (sizeref,first)::(_,NOP)::rest => addstats
+          \{inst=inst+2, code=code+(!sizeref)+1, data=data,
+           load=load+ (case first of LOAD _ => 1 | _ => 0),
+           branch=branch +(case first of BEQ _ => 1 | JUMP _ => 1 
+                                       | BCOP1 _ => 1 | _ => 0),
+           compare=compare+(case first of SLT_D _ => 1 | SEQ_D _ => 1 
+                                        | _ => 0)
+          \} rest
+   | (sizeref,first)::rest => addstats
+          \{inst=inst+1, 
+           code = code + if iscode(first) then !sizeref else 0,
+           data = data + if not (iscode first) then !sizeref else 0,
+           load=load,
+           branch=branch,
+           compare=compare
+          \} rest
+
+
+fun codestats outfile =
+    let val \{size,stream=instrs\} = prepare (!kept)
+        val zero = \{inst=0, code=0, data=0, load=0, branch=0, compare=0\}
+        val counts as \{inst,code,data,load,branch,compare\} = 
+                                                addstats zero instrs
+    in  printstats outfile 
+            \{inst=inst,code=code,data=data,
+             load=load,branch=branch,compare=compare,size=size\}
+    end
+        
+\endcode
+\begincode{83}
+\moddef{definition of \code{}iscode\edoc{}}\endmoddef
+val iscode = fn
+    STRINGCONST _ => false
+  | REALCONST _ => false
+  | EMITLONG _ => false
+  | DEFINE _ => false
+  | EMITLAB _ => false
+
+  | SLT _ => true
+  | BEQ _ => true
+  | JUMP _ => true
+  | NOP => true
+  | SLT_D _ => true
+  | SEQ_D _ => true
+  | BCOP1 _ => true
+
+  | ADD _ => true
+  | AND _ => true
+  | OR  _ => true
+  | XOR _ => true
+  | SUB _ => true
+  | MULDIV _ => true
+  | MFLO _ => true
+  | MFHI _ => true
+
+  | NEG_D _ => true
+  | MUL_D _ => true
+  | DIV_D _ => true
+  | ADD_D _ => true
+  | SUB_D _ => true
+
+  | MOVE _ => true
+  | LDI_32 _ => true
+  | LUI _ => true
+
+  | LOAD _ => true
+  | STORE  _ => true
+
+  | SLL _ => true
+  | SRA _ => true
+
+  | COMMENT _ => false
+  | MARK => false
+
+\endcode
+\begincode{84}
+\moddef{definition of \code{}sprintf\edoc{}}\endmoddef
+val I = Integer.makestring
+val R = Real.makestring
+exception Printf
+fun sprintf format values =
+    let fun merge([x],nil) = [x]
+          | merge(nil,nil) = nil
+          | merge(x::y,z::w) = x::z:: merge(y,w)
+          | merge _ = raise Printf
+    in  implode(merge(format,values))
+    end
+
+\endcode
+\begindocs{85}
+
+At the moment these functions are meaningless junk.
+\enddocs
+\begincode{86}
+\moddef{functions that remove pipeline bubbles}\endmoddef
+val rec squeeze =
+
+ fn (x as LOAD(_,Reg d, m, i))::NOP::instr::rest =>
+        if use(instr,d) then ??
+        else squeeze(x::instr::rest)
+  | (x as STORE _)::(y as LOAD _)::rest => 
+        x :: squeeze(y::rest)
+  | instr::(x as LOAD(_,Reg d, Direct(Reg s), i))::NOP::rest =>
+        if use(instr, d) orelse gen(instr, s) then ??
+        else squeeze(x::instr::rest)
+  | instr::(x as LOAD(_,Reg d, _, i))::NOP::rest =>
+        if use(instr,d) then ??
+        else squeeze(x::instr::rest)
+  | (x as MFLO _):: (y as MULDIV _) :: rest =>
+        x :: squeeze (y::rest)
+  | (x as MFLO(Reg d))::instr::rest =>
+        if (use(instr,d) orelse gen(instr,d) then ??
+        else squeeze(instr::x::rest)
+  | instr :: (x as MULDIV(Reg a, Reg b)) :: rest =>
+        if gen(instr,a) orelse gen(instr,b) then ??
+        else squeeze(x::instr::rest)
+
+val rec final =
+ fn
+  | instr::(x as LOAD(_,Reg d, Direct(Reg s), i))::NOP::rest =>
+        if gen(instr, s) then instr::final(x::NOP::rest)
+        else x::instr::(final rest)
+  | instr :: (x as JUMP _) :: NOP :: rest =>
+        x :: instr :: final rest
+  | instr :: (x as BEQ(_,Reg a, Reg b, _)) :: NOP :: rest =>
+        if gen(instr,a) orelse gen(instr,b) then instr::x::NOP::(final rest)
+        else x::instr::(final rest)
+
+
+\endcode
+\filename{opcodes.nw}
+\begindocs{0}
+\chapter{Handling the MIPS opcodes}
+\section{Introduction}
+
+This file generates the code necessary to handle MIPS instructions
+in a natural, mnemonic way from within ML.
+All MIPS instructions occupy 32 bits, and since ML has no simple
+32~bit data type, we use pairs of integerss to represent MIPS instructions.
+A pair \code{}(hi,lo)\edoc{} of 16-bit integers holds the most and least significant
+halfwords of the MIPS word.
+ML integers are 31 bits, so this is more than adequate.
+
+The biggest hassle in converting between these integer pairs and more
+mnemonic representations is that it is too easy to make mistakes
+(especially typographical errors) in writing the code.
+For that reason, I have added an extra level of indirection to the
+whole business by putting all of the instruction descriptions in
+tables.
+These tables are read by an awk script, which writes two ML files:
+{\tt opcodes.sml} and {\tt mipsdecode.sml}.
+The {\tt opcodes.sml} file contains the code needed to convert from
+a mnemonic like \code{}add(3,4,9)\edoc{} (add the contents of register~3 to
+the contents of register~4, placing the result in register~9) to 
+the integer pair representation of the actual bits in that add instruction
+(in this case \code{}(137,6176)\edoc{}).
+The {\tt mipsdecode.sml} file contains a \code{}decode\edoc{} function that converts
+from the integer pair representation of instructions to a string
+representation.
+The string representation is a little hokey at the moment (that is,
+it's different from the one used in the MIPS book), but it represents
+a nice compromise between being readable and easy to generate.
+
+I have contemplating generating a third file to test the whole
+business.
+The idea would be to have a function that would write out (to files)
+two
+parallel representations of the same instruction stream (presumably
+one copy of each known instruction).
+One representation would be the binary one understood by the MIPS.
+The other representation would be a string representation.
+We could then use a tool like {\tt gdb} or {\tt adb} to print out
+the binary as an instruction sequence (i.e. convert back to
+a second string representation) and compare the string representations
+to see if they make sense.
+
+\paragraph{Possible bugs}
+This code should be gone over with care to make sure that negative
+operands (e.g. in \code{}offset\edoc{}) won't break the code.
+
+
+\enddocs
+\begindocs{1}
+
+We need a special line in the Makefile to handle this file, since
+it writes both an awk program and that program's input.  The input
+is in module {\tt \LL{}opcodes table\GG{}} so the line is
+$$\hbox{\code{}      $(NOTANGLE) '-Ropcodes table' opcodes.ow > opcodes\edoc{}}$$
+The input is nothing but a sequence of tables, each labelled, and
+processed one after anothing according to the label.
+The label is always a single word on a line by itself.
+Tables end with blank lines.
+\enddocs
+\begindocs{2}
+The opcode-to-pair code is written to the standard output, in 
+\code{}structure Opcodes\edoc{}.
+The pair-to-string code is written to \code{}"mipsdecode.sml"\edoc{}, in
+\code{}structure MipsDecode\edoc{}.
+
+We begin by defining and and shift functions.
+We make pessimistic assumptions about shifting, trying always to
+keep the arguments between 0 and 31 inclusive.
+\enddocs
+\begincode{3}
+\moddef{BEGIN}\endmoddef
+print "structure Opcodes = struct"
+print "val andb = Bits.andb"
+print "fun lshift(op1,amt) = "
+print "    if amt<0 then Bits.rshift(op1,0-amt)"
+print "    else Bits.lshift(op1,amt)"
+print "nonfix sub"      # bug fixes; want \code{}sub\edoc{} to be a MIPS opcode
+print "nonfix div"      # bug fixes; want \code{}div\edoc{} to be a MIPS opcode
+
+decode = "mipsdecode.sml";
+print "structure MipsDecode = struct" > decode
+print "val andb = Bits.andb" > decode
+print "fun rshift(op1,amt) = " > decode
+print "    if amt<0 then Bits.lshift(op1,0-amt)" > decode
+print "    else Bits.rshift(op1,amt)" > decode
+\endcode
+\begincode{4}
+\moddef{END}\endmoddef
+\LA{}write out the definitions of the decoding functions\RA{}
+print "end (* Opcodes *)"
+print "end (* Decode *)" > decode
+\endcode
+\begindocs{5}
+The sections BEGIN and END are drawn from 
+ our universal model of an awk program:
+\enddocs
+\begincode{6}
+\moddef{*}\endmoddef
+BEGIN \{
+  \LA{}BEGIN\RA{}
+\}
+\LA{}functions\RA{}
+\LA{}statements\RA{}
+END \{
+  \LA{}END\RA{}
+\}
+\endcode
+\begindocs{7}
+\section{The opcode tables}
+The numeric codes for all the MIPS opcodes are described in three
+tables in the MIPS book on page~A-87.
+Normal opcodes are six bits, and appear in the \code{}opcode\edoc{} field of the
+instruction.
+Two opcodes \code{}special\edoc{} and \code{}bcond\edoc{} stand for several instructions.
+These instructions are decoded by checking the bit-pattern in the
+\code{}funct\edoc{} and \code{}cond\edoc{} fields of the instructions, respectively.
+
+The tables show which opcodes correspond to which bit-patterns.
+For example, the \code{}slti\edoc{} corresponds to an \code{}opcode\edoc{} value of octal~12.
+The table headed \code{}opcode\edoc{} gives the mnemonics for all six-bit patterns
+in the \code{}opcode\edoc{} field.
+The \code{}special\edoc{} table shows patterns for the \code{}funct\edoc{} field, used with
+the \code{}special\edoc{} opcode.
+The \code{}bcond\edoc{} table shows five-bit patterns for the \code{}cond\edoc{} field,
+used with the \code{}bcond\edoc{} opcode.
+In all tables, stars (\code{}*\edoc{}) stand for unused fields.
+
+Each table is terminated with a blank line.
+\enddocs
+\begincode{8}
+\moddef{opcodes table}\endmoddef
+                            opcode
+special bcond   j       jal     beq     bne     blez    bgtz
+addi    addiu   slti    sltiu   andi    ori     xori    lui
+cop0    cop1    cop2    cop3    *       *       *       *
+*       *       *       *       *       *       *       *
+lb      lh      lwl     lw      lbu     lhu     lwr     *
+sb      sh      swl     sw      *       *       swr     *
+lwc0    lwc1    lwc2    lwc3    *       *       *       *
+swc0    swc1    swc2    swc3    *       *       *       *
+
+                            special
+sll     *       srl     sra     sllv    *       srlv    srav
+jr      jalr    *       *       syscall break   *       *
+mfhi    mthi    mflo    mtlo    *       *       *       *
+mult    multu   div     divu    *       *       *       *
+add     addu    sub     subu    and'    or      xor     nor
+*       *       slt     sltu    *       *       *       *
+*       *       *       *       *       *       *       *
+*       *       *       *       *       *       *       *
+
+                            bcond
+bltz    bgez    *       *       *       *       *       *
+*       *       *       *       *       *       *       *
+bltzal  bgezal  *       *       *       *       *       *
+*       *       *       *       *       *       *       *
+
+
+\endcode
+\begindocs{9}
+The instructions codes for Coprocessor 1 (floating point)
+are takin from page B-28 of the Mips book.
+\enddocs
+\begincode{10}
+\moddef{opcodes table}\endmoddef
+                            cop1
+add_fmt sub_fmt mul_fmt div_fmt *       abs_fmt mov_fmt neg_fmt
+*       *       *       *       *       *       *       *
+*       *       *       *       *       *       *       *
+*       *       *       *       *       *       *       *
+cvt_s   cvt_d   *       *       cvt_w   *       *       *
+*       *       *       *       *       *       *       *
+c_f     c_un    c_eq    c_ueq   c_olt   c_ult   c_ole   c_ule
+c_sf    c_ngle  c_seq   c_ngl   c_lt    c_nge   c_le    c_ngt
+
+\endcode
+\begindocs{11}
+
+Now we have to deal with reading these tables, and extracting the
+information stored therein.
+First of all, for each mnemonic \code{}$i\edoc{} we store the corresponding bit
+pattern (as an integer, \code{}code\edoc{}) in the array \code{}numberof[$i] \edoc{}.
+Then, we store the type of the mnemonic (ordinary \code{}OPCODE\edoc{}, 
+\code{}SPECIAL\edoc{}, \code{}BCOND\edoc{}, of \code{}COP1\edoc{}) in the array \code{}typeof[$i] \edoc{}.
+Finally, we store inverse (a map from type and bit pattern to mnemonic)
+in the \code{}opcode\edoc{} array.
+\enddocs
+\begincode{12}
+\moddef{store opcode information}\endmoddef
+if ($i != "*") \{
+        numberof[$i] = code
+        typeof[$i] = type
+        opcode[type,code] = $i
+\} else \{
+        opcode[type,code] = "reserved"
+\}
+\endcode
+\begindocs{13}
+The types are just constants set at the beginning.
+\enddocs
+\begincode{14}
+\moddef{BEGIN}\endmoddef
+OPCODE = 1 ; SPECIAL = 2 ; BCOND = 3 ; COP1 = 4
+\endcode
+\begindocs{15}
+We determine the type by scanning the header word that precedes
+each table.
+Once we see the appropriate table header, we set one of \code{}opcodes\edoc{},
+\code{}specials\edoc{}, and \code{}bconds\edoc{}, so that determining the type is easy:
+\enddocs
+\begincode{16}
+\moddef{set \code{}type\edoc{}}\endmoddef
+type = OPCODE * opcodes + SPECIAL * specials + BCOND * bconds + COP1 * cop1s
+\endcode
+\begindocs{17}
+Seeing the right table header causes us to set the right variable.
+We also remember the line number, because we use the positions of later
+lines to help extract the bit patterns from the table.
+\enddocs
+\begincode{18}
+\moddef{statements}\endmoddef
+NF == 1 && $1 == "opcode" \{
+        startline = NR
+        opcodes = 1
+        next
+\}
+NF == 1 && $1 == "special" \{
+        startline = NR
+        specials = 1
+        next
+\}
+NF == 1 && $1 == "bcond" \{
+        startline = NR
+        bconds = 1
+        next
+\}
+NF == 1 && $1 == "cop1" \{
+        startline = NR
+        cop1s = 1
+        next
+\}
+\endcode
+\begindocs{19}
+Any time we see a blank line, that ends the appropriate table.
+\enddocs
+\begincode{20}
+\moddef{statements}\endmoddef
+NF == 0 \{opcodes = 0; specials = 0; bconds = 0; cop1s = 0
+        \LA{}blank line resets\RA{}
+\}
+\endcode
+\begindocs{21}
+Here is the code that actually extracts the bit patterns from
+the opcode tables.
+The code is the same for each of the three tables.
+
+The \code{}insist_fields(8)\edoc{} issues an error message and returns false (0)
+unless there are exactly 8 fields on the input line.
+\enddocs
+\begincode{22}
+\moddef{statements}\endmoddef
+opcodes || specials || bconds || cop1s \{
+        if (!insist_fields(8)) next
+        \LA{}set \code{}type\edoc{}\RA{}
+        major = NR - startline - 1              # major octal digit from row
+        for (i=1; i<= NF; i++) \{
+                minor = i-1                     # minor octal digit from column
+                code = minor + 8 * major
+                \LA{}store opcode information\RA{}
+        \}
+\}
+\endcode
+\begindocs{23}
+\section{The instruction fields}
+Now that we've dealt with the opcodes, we'll handle other fields of
+the instruction.
+This table tells us the position of each field within the word,
+so that if we know a bit-pattern for each field, we can assemble
+all the fields into an instruction.
+
+Not all fields are used in all instructions.
+Later we'll have a table that indicates exactly which fields are used in
+which instructions.
+For now, we just list the fields and their positions with the
+understanding that some fields will overlap.
+
+The table is taken from the MIPS book, page A-3.
+The numbers are the numbers of the starting and ending bit positions,
+where 0 is the least and 31 the most significant bit.
+The names are exactly those used in the book except \code{}op'\edoc{} has been
+substituted for \code{}op\edoc{} since \code{}op\edoc{} is a reserved word in ML.
+
+If a field is signed, we put a \code{}+\edoc{}~sign as the first character
+of its name.
+The sign information is used only in decoding (I think).
+\enddocs
+\begincode{24}
+\moddef{opcodes table}\endmoddef
+                        fields
+op' 26 31
+rs 21 25
+rt 16 20
++immed 0 15
++offset 0 15
+base 21 25
+target 0 25
+rd 11 15
+shamt 6 10
+funct 0 5
+cond 16 20
+\LA{}floating point load/store fields\RA{}
+\LA{}floating point computation fields\RA{}
+
+\endcode
+\begindocs{25}
+From page B-5.  Most fields are the same as the CPU instruction formats.
+\enddocs
+\begincode{26}
+\moddef{floating point load/store fields}\endmoddef
+ft 16 20
+\endcode
+\begindocs{27}
+From page B-6.  Many fields are reused from earlier specifications.
+The computational instructions all have a one bit in position 25.
+Instead of trying to insert special code to handle that, we cheat on
+it by making that bit part of the format, and cheating on the format.
+Thus:
+\enddocs
+\begincode{28}
+\moddef{floating point computation fields}\endmoddef
+fmt 21 25
+fs 11 15
+fd 6 10
+\endcode
+\begincode{29}
+\moddef{write format info}\endmoddef
+print "val S_fmt = 16+0"
+print "val D_fmt = 16+1"
+print "val W_fmt = 16+4"
+
+\endcode
+\begindocs{30}
+The setup for the fields is similar to that used for the opcodes.
+\enddocs
+\begincode{31}
+\moddef{statements}\endmoddef
+NF == 1 && $1 == "fields" \{
+        startline = NR
+        fields = 1
+        \LA{}write format info\RA{}
+        next
+\}
+\endcode
+\begincode{32}
+\moddef{blank line resets}\endmoddef
+fields = 0
+\endcode
+\begincode{33}
+\moddef{statements}\endmoddef
+fields \{
+        if (!insist_fields(3)) next
+        fieldname = $1;  low = $2; high = $3
+        \LA{}look for sign in \code{}fieldname\edoc{} and set \code{}signed\edoc{}\RA{}
+        fieldnames[fieldname]= 1        # rememeber all the field names
+
+        \LA{}write to standard output a function to convert bit-pattern to pair\RA{}
+        \LA{}write to \code{}decode\edoc{} a function to extract field from pair\RA{}
+
+\}
+\endcode
+\begincode{34}
+\moddef{look for sign in \code{}fieldname\edoc{} and set \code{}signed\edoc{}}\endmoddef
+if (substr(fieldname,1,1)=="+") \{
+        signed = 1
+        fieldname = substr(fieldname,2)
+\} else \{
+        signed = 0
+\}
+\endcode
+\begindocs{35}
+
+The idea is that for each of these fields, we want to write a function
+that will take an integer argument and shift it by the right amount.
+Since we have to represent the 32-bit quantities as pairs of integers,
+we actually use two functions, one for the high half and one for the low.
+So, for example, for the \code{}rd\edoc{} field we will produce two function definitions,
+\code{}rdHI\edoc{} and \code{}rdLO\edoc{}.
+
+The awk function \code{}function_definition\edoc{} is used to compute ML function
+definitions.
+It takes as arguments the name of the function and the number of arguments
+to that function.
+The arguments are numbered \code{}A1\edoc{}, \code{}A2\edoc{}, et cetera.
+
+The functions themselves are all tedious combinations of ands and shifts.
+At one time I had convinced myself that this worked.
+\enddocs
+\begincode{36}
+\moddef{write to standard output a function to convert bit-pattern to pair}\endmoddef
+if (low >= 16) \{
+        printf "%s", function_definition(fieldname "LO",1); print "0"
+\} else \{
+        printf "%s", function_definition(fieldname "LO",1)
+        printf "andb(lshift(A1,%d),65535)\\n", low
+\}
+if (high < 16) \{
+        printf "%s", function_definition(fieldname "HI",1); print "0"
+\} else \{
+        printf "%s", function_definition(fieldname "HI",1)
+        printf "lshift(A1,%s)\\n", mlnumber(low - 16)
+\}
+\endcode
+\begindocs{37}
+The inverse operation is
+to extract a bit pattern from a pair.
+We'll want that if we ever care to decode instructions.
+This time, the function to extract e.g.\ field \code{}rd\edoc{} from a pair
+is the function \code{}THErd\edoc{} applied to that pair.
+
+The functions work first by extracting from the low part, then
+from the high part, and adding everything together.
+If the field is signed, we make the value negative if it is too high.
+\enddocs
+\begincode{38}
+\moddef{write to \code{}decode\edoc{} a function to extract field from pair}\endmoddef
+printf "%s", function_definition("THE" fieldname,2) > decode
+if (signed) printf "let val n = " > decode
+\LA{}print expression for unsigned value\RA{}
+if (signed) \{
+        printf "in if n < %d then n else n - %d\\nend\\n",
+                2**(high-low), 2**(high-low+1) > decode
+\}
+
+\endcode
+\begincode{39}
+\moddef{print expression for unsigned value}\endmoddef
+if (low >= 16) \{
+        printf "0" > decode
+\} else \{
+        printf "andb(rshift(A2,%d),%d)", low,
+                        (2**(min(15,high)-low+1)-1) > decode
+\}
+printf " + " > decode
+if (high < 16) \{
+        printf "0\\n" > decode
+\} else \{
+        printf "rshift(andb(A1,%d),%s)\\n", (2**(high-16+1)-1),
+                        mlnumber(low - 16) > decode
+\}
+\endcode
+\begindocs{40}
+ML uses a strange minus sign (\code{}~\edoc{} instead of \code{}-\edoc{}), 
+so we print numbers that might be negative like this:
+\enddocs
+\begincode{41}
+\moddef{functions}\endmoddef
+function mlnumber(n, s) \{
+        if (n<0) s = sprintf("~%d", -n)
+        else s = sprintf("%d", n)
+        return s
+\}
+\endcode
+\begindocs{42}
+For reasons best known to its designers, awk has no \code{}min\edoc{} function.
+\enddocs
+\begincode{43}
+\moddef{functions}\endmoddef
+function min(x,y)\{
+        if (x<y) return x
+        else return y
+\}
+\endcode
+\begindocs{44}
+\section{The list of instructions and their formats}
+This is the section that tells which fields are used in what instructions,
+and in what order the fields appear.
+The information is from Appendix A
+of the MIPS book and should be proofread.
+
+To cut down on the number of ML functions generated, we can comment out
+instructions with a \code{}#\edoc{} in the first column.
+This means that no code will be generated for the instruction, and
+it won't appear in the \code{}structure Opcodes\edoc{}.
+\enddocs
+\begincode{45}
+\moddef{opcodes table}\endmoddef
+                        instructions
+add rd rs rt
+addi rt rs immed
+addiu rt rs immed
+addu rd rs rt
+and' rd rs rt
+andi rt rs immed
+beq rs rt offset
+bgez rs offset
+bgezal rs offset
+bgtz rs offset
+blez rs offset
+bltz rs offset
+bltzal rs offset
+bne rs rt offset
+break
+div rs rt
+divu rs rt
+j target
+jal target
+jalr rs rd
+jr rs
+lb rt offset base
+lbu rt offset base
+lh rt offset base
+lb rt offset base
+lhu rt offset base
+lui rt immed
+lw rt offset base
+lwl rt offset base
+lwr rt offset base
+mfhi rd
+mflo rd
+mthi rs
+mtlo rs
+mult rs rt
+multu rs rt
+nor rd rs rt
+or rd rs rt
+ori rt rs immed
+sb rt offset base
+sh rt offset base
+sll rd rt shamt
+sllv rd rt rs
+slt rd rs rt
+slti rt rs immed
+sltiu rt rs immed
+sltu rd rs rt
+sra rd rt shamt
+srav rd rt rs
+srl rd rt shamt
+srlv rd rt rs
+sub rd rs rt
+subu rd rs rt
+sw rt offset base
+swl rt offset base
+swr rt offset base
+syscall
+xor rd rs rt
+xori rt rs immed
+\LA{}floating point instructions\RA{}
+
+
+\endcode
+\begindocs{46}
+We define only those floating point instructions we seem likely to need.
+To distinguish them as floating point we append an f to their names.
+\enddocs
+\begincode{47}
+\moddef{floating point instructions}\endmoddef
+add_fmt fmt fd fs ft
+div_fmt fmt fd fs ft
+lwc1 ft offset base
+mul_fmt fmt fd fs ft
+neg_fmt fmt fd fs
+sub_fmt fmt fd fs ft
+swc1 ft offset base
+c_seq fmt fs ft
+c_lt fmt fs ft
+\endcode
+\begindocs{48}
+
+ Here is a terrible hack to enable us to construct branch on coprocessor~1
+true or false.
+We will use \code{}fun bc1f offset = cop1(0,offset)\edoc{} and
+        \code{}fun bc1t offset = cop1(1,offset)\edoc{}.
+\enddocs
+\begincode{49}
+\moddef{floating point instructions}\endmoddef
+cop1 rs rt offset
+\endcode
+\begindocs{50}
+
+
+
+\enddocs
+\begindocs{51}
+For each instruction, we define an ML function with the appropriate
+number of arguments.
+When that function is given an integer in each argument,
+it converts the whole thing to one MIPS instruction, represented as an
+integer pair.
+
+The implementation is a bit of a grubby mess.
+Doing the fields is straightforward enough, but
+for each mnemonic we have to do something different based
+on its type, because each type of opcode goes in a different
+field.
+Moreover, for mnemonics of type \code{}SPECIAL\edoc{}, \code{}BCOND\edoc{}, and \code{}COP1\edoc{} we
+have to generate \code{}special\edoc{}, \code{}bcond\edoc{}, and \code{}cop1\edoc{} in the \code{}op'\edoc{} field.
+Finally, we have to do it all twice; once for the high order
+halfword and once for the low order halfword.
+\enddocs
+\begincode{52}
+\moddef{compute function that generates this instruction}\endmoddef
+        printf "%s", function_definition(opname, NF-1)
+        printf "("      # open parenthesis for pair
+        for (i=2; i<= NF; i++) \{
+                if (!($i in fieldnames)) \LA{}bad field name\RA{}
+                printf "%sHI(A%d)+", $i, i-1
+        \}
+        if (typeof[opname]==OPCODE) \{
+                printf "op'HI(%d)", numberof[opname]
+        \} else if (typeof[opname]==SPECIAL) \{
+                printf "op'HI(%d)+", numberof["special"]
+                printf "functHI(%d)", numberof[opname]
+        \} else if (typeof[opname]==BCOND) \{
+                printf "op'HI(%d)+", numberof["bcond"]
+                printf "condHI(%d)", numberof[opname]
+        \} else if (typeof[opname]==COP1) \{
+                printf "op'HI(%d)+", numberof["cop1"]
+                printf "functHI(%d)", numberof[opname]
+        \} else \LA{}bad operator name\RA{}
+        printf ", "
+        for (i=2; i<= NF; i++) \{
+                if (!($i in fieldnames)) \LA{}bad field name\RA{}
+                printf "%sLO(A%d)+", $i, i-1
+        \}
+        if (typeof[opname]==OPCODE) \{
+                printf "op'LO(%d)", numberof[opname]
+        \} else if (typeof[opname]==SPECIAL) \{
+                printf "op'LO(%d)+", numberof["special"]
+                printf "functLO(%d)", numberof[opname]
+        \} else if (typeof[opname]==BCOND) \{
+                printf "op'LO(%d)+", numberof["bcond"]
+                printf "condLO(%d)", numberof[opname]
+        \} else if (typeof[opname]==COP1) \{
+                printf "op'LO(%d)+", numberof["cop1"]
+                printf "functLO(%d)", numberof[opname]
+        \} else \LA{}bad operator name\RA{}
+        printf ")\\n"
+\endcode
+\begindocs{53}
+
+Setup is as before.
+\enddocs
+\begincode{54}
+\moddef{statements}\endmoddef
+NF == 1 && $1 == "instructions" \{
+        startline = NR
+        instructions = 1
+        next
+\}
+\endcode
+\begincode{55}
+\moddef{blank line resets}\endmoddef
+instructions= 0
+\endcode
+\begincode{56}
+\moddef{statements}\endmoddef
+instructions && $0 !~ /^#/ \{
+        opname = $1
+
+        \LA{}compute string displayed when this instruction is decoded\RA{}
+########        gsub("[^a-z']+"," ")   ### ill-advised
+
+        \LA{}compute function that generates this instruction\RA{}
+\}
+
+\endcode
+\begindocs{57}
+\paragraph{Decoding instructions}
+When we've decoded an instruction, we have to display some sort of
+string representation that tells us what the instruction is.
+Ideally we should display either just what the assembler expects,
+or perhaps just what dbx displays when asked about actual instructions
+in memory images.
+
+For now, we just give the mnemonic for the instruction, followed
+by a description of each field (followed by a newline).
+The fields are described as name-value pairs.
+
+We rely on the fact that for a field e.g.\ \code{}rd\edoc{}, the string
+representation of the value of that field is in \code{}Srd\edoc{}.
+\enddocs
+\begincode{58}
+\moddef{compute string displayed when this instruction is decoded}\endmoddef
+temp = "\\"" opname " \\""
+for (i=2; i<=NF; i++) \{
+        temp = sprintf( "%s ^ \\"%s = \\" ^ S%s", temp, $i, $i)
+        if (i<NF) temp = sprintf("%s ^ \\",\\" ", temp)
+\}
+displayof[opname]=temp " ^ \\"\\\\n\\""
+
+\endcode
+\begindocs{59}
+The implementation of the decoding function is split into several parts.
+First, we have to be able to extract any field from an instruction.
+Then, we have to be able to decode four kinds of opcodes:
+\code{}OPCODE\edoc{}s, \code{}BCOND\edoc{}s,  \code{}SPECIAL\edoc{}s, and \code{}COP1\edoc{}s.
+The main function is the one that does ordinary opcodes.
+The others are auxiliary.
+\enddocs
+\begincode{60}
+\moddef{write out the definitions of the decoding functions}\endmoddef
+printf "%s", function_definition("decode",2) > decode
+print "let" > decode
+  \LA{}write definitions of integer and string representations of each field\RA{}
+  \LA{}write expression that decodes the \code{}funct\edoc{} field for \code{}special\edoc{}s\RA{}
+  \LA{}write expression that decodes the \code{}cond\edoc{} field for \code{}bcond\edoc{}s\RA{}
+  \LA{}write expression that decodes the \code{}funct\edoc{} field for \code{}cop1\edoc{}s\RA{}
+print "in" > decode
+  \LA{}write \code{}case\edoc{} expression that decodes the \code{}op'\edoc{} field for each instruction\RA{}
+print "end" > decode
+\endcode
+\begindocs{61}
+We give each field its own name for an integer version, and its name
+preceded by \code{}S\edoc{} for its string version.
+These values are all computed just once, from the arguments to the
+enclosing function (\code{}decode\edoc{}).
+\enddocs
+\begincode{62}
+\moddef{write definitions of integer and string representations of each field}\endmoddef
+for (f in fieldnames) \{
+        printf "val %s = THE%s(A1,A2)\\n", f, f  > decode
+        printf "val S%s = Integer.makestring %s\\n", f, f  > decode
+\}
+\endcode
+\begindocs{63}
+The next three functions are very much of a piece.
+They are just enormous \code{}case\edoc{} expressions that match up integers
+(bit patterns) to strings.
+The fundamental operation is printing out a decimal value and a string
+for each opcode:
+\enddocs
+\begincode{64}
+\moddef{if \code{}name\edoc{} is known, display a case for it}\endmoddef
+if (name != ""  && name != "reserved") \{
+        \LA{}print space or bar (\code{}|\edoc{})\RA{}
+        disp = displayof[name]
+        if (disp=="") disp="\\"" name "(??? unknown format???)\\\\n\\""
+        printf "%d => %s\\n", code, disp > decode
+\}
+\endcode
+\begindocs{65}
+Cases must be separated by vertical bars.
+We do the separation by putting a vertical bar before each case except
+the first.
+We use a hack to discover the first; we assume that code~0 is always
+defined, and so it will always be the first.
+\enddocs
+\begincode{66}
+\moddef{print space or bar (\code{}|\edoc{})}\endmoddef
+if (code!=0) printf " | "  > decode # hack but it works
+else printf "   " > decode
+\endcode
+\begincode{67}
+\moddef{write expression that decodes the \code{}funct\edoc{} field for \code{}special\edoc{}s}\endmoddef
+print "val do_special ="  > decode
+print "(case funct of" > decode
+for (code=0; code<256; code++) \{
+        name = opcode[SPECIAL,code]
+        \LA{}if \code{}name\edoc{} is known, display a case for it\RA{}
+\}
+printf " | _ => \\"unknown special\\\\n\\"\\n" > decode
+print "   ) " > decode
+\endcode
+\begincode{68}
+\moddef{write expression that decodes the \code{}cond\edoc{} field for \code{}bcond\edoc{}s}\endmoddef
+print "val do_bcond =" > decode
+print "(case cond of" > decode
+for (code=0; code<256; code++) \{
+        name = opcode[BCOND,code]
+        \LA{}if \code{}name\edoc{} is known, display a case for it\RA{}
+\}
+printf " | _ => \\"unknown bcond\\\\n\\"\\n" > decode
+print "   ) " > decode
+\endcode
+\begincode{69}
+\moddef{write expression that decodes the \code{}funct\edoc{} field for \code{}cop1\edoc{}s}\endmoddef
+print "val do_cop1 =" > decode
+print "(case funct of" > decode
+for (code=0; code<256; code++) \{
+        name = opcode[COP1,code]
+        \LA{}if \code{}name\edoc{} is known, display a case for it\RA{}
+\}
+printf " | _ => \\"unknown cop1\\\\n\\"\\n" > decode
+print "   ) " > decode
+\endcode
+\begindocs{70}
+The major expression is a little more complicated, because it has to
+check for \code{}special\edoc{}, \code{}bcond\edoc{}, and \code{}cop1\edoc{} and handle those separately.
+\enddocs
+\begincode{71}
+\moddef{write \code{}case\edoc{} expression that decodes the \code{}op'\edoc{} field for each instruction}\endmoddef
+print "(case op' of" > decode
+for (code=0; code<256; code++) \{
+        name = opcode[OPCODE,code]
+        if (name=="special") \{
+                \LA{}print space or bar (\code{}|\edoc{})\RA{}
+                printf "%d => %s\\n", code, "do_special" > decode
+        \} else if (name=="bcond") \{
+                \LA{}print space or bar (\code{}|\edoc{})\RA{}
+                printf "%d => %s\\n", code, "do_bcond" > decode
+        \} else if (name=="cop1") \{
+                \LA{}print space or bar (\code{}|\edoc{})\RA{}
+                printf "%d => %s\\n", code, "do_cop1" > decode
+        \} else \LA{}if \code{}name\edoc{} is known, display a case for it\RA{}
+\}
+printf " | _ => \\"unknown opcode\\\\n\\"\\n" > decode
+print "   ) " > decode
+\endcode
+\begindocs{72}
+\section{testing}
+One day someone will have to modify the instruction handler so that
+it generates a test invocation of each instruction.
+Then the results can be handed to something like adb or dbx and we can
+see whether the system agrees with us about what we're generating.
+
+\enddocs
+\begindocs{73}
+\section{Defining ML functions}
+The awk function \code{}function_definition\edoc{} is used to
+come up with ML function definitions.
+It takes as arguments the name of the function and the number of arguments
+to that function, and returns a string containing the initial part of
+the function definition.
+Writing an expression following that string will result in a complete
+ML function.
+
+If we ever wanted to define these things as C preprocessor macros instead,
+we could do it by substituting \code{}macro_definition\edoc{}.
+I'm not sure it would ever make sense to do so, but I'm leaving the
+code here anyway.
+\enddocs
+\begincode{74}
+\moddef{functions}\endmoddef
+function function_definition(name, argc,  i, temp) \{
+        if (argc==0) \{
+                temp = sprintf("val %s = ", name)
+        \} else \{
+                temp = sprintf( "fun %s(", name)
+                for (i=1; i< argc; i++) temp = sprintf("%sA%d,", temp,i)
+                temp = sprintf( "%sA%d) = ", temp, argc)
+        \}
+        return temp
+\}
+\endcode
+\begincode{75}
+\moddef{useless functions}\endmoddef
+function macro_definition(name, argc,  i, temp) \{
+        if (argc==0) \{
+                temp = sprintf("#define %s ", name)
+        \} else \{
+                temp = sprintf( "#define %s(", name)
+                for (i=1; i< argc; i++) temp = sprintf("%sA%d,", temp,i)
+                temp = sprintf( "%sA%d) ", temp, argc)
+        \}
+        return temp
+\}
+\endcode
+\begindocs{76}
+\section{Handling error conditions}
+Here are a bunch of uninteresting functions and modules
+that handle error conditions.
+\enddocs
+\begincode{77}
+\moddef{bad operator name}\endmoddef
+\{
+        print "unknown opcode", opname, "on line", NR > stderr
+        next
+\}
+\endcode
+\begincode{78}
+\moddef{bad field name}\endmoddef
+\{
+        print "unknown field", $i, "on line", NR > stderr
+        next
+\}
+\endcode
+\begincode{79}
+\moddef{BEGIN}\endmoddef
+stderr="/dev/tty"
+\endcode
+\begincode{80}
+\moddef{functions}\endmoddef
+function insist_fields(n) \{
+        if (NF != n) \{
+                print "Must have", n, "fields on line",NR ":", $0 > stderr
+                return 0
+        \} else \{
+                return 1
+        \}
+\}
+\endcode
+\begindocs{81}
+\section{Leftover junk}
+Like a pack rat, I never throw out anything that might be useful again later.
+\enddocs
+\begincode{82}
+\moddef{junk}\endmoddef
+function thetype(n) \{
+        if (n==OPCODE) return "OPCODE"
+        else if (n==SPECIAL) return "SPECIAL"
+        else if (n==BCOND) return "BCOND"
+        else if (n==COP1) return "COP1"
+        else return "BADTYPE"
+\}
+\endcode
+\begincode{83}
+\moddef{decoding junk}\endmoddef
+for (f in fieldnames) \{
+        printf "^ \\"\\\\n%s = \\" ^ Integer.makestring %s\\n",f,f > decode
+\}
+printf "^\\"\\\\n\\"\\n" > decode
+\endcode
+\filename{/u/nr/sml/36/src/runtime/MIPS.prim.nw}
+\begindocs{0}
+\section{Assembly-language primitives for the run-time system}
+This file is derived from the similar file for the VAX.
+We include \code{}<regdef.h>\edoc{}, which defines names for the registers.
+\enddocs
+\begincode{1}
+\moddef{*}\endmoddef
+#include "tags.h"
+#include "prof.h"
+#include "ml.h"
+#include "prim.h"
+\LA{}register definitions\RA{}
+\LA{}\code{}String\edoc{} and \code{}Closure\edoc{} definitions\RA{}
+        .data
+\LA{}data segment items\RA{}
+        .text
+\LA{}run vector\RA{}
+\LA{}array\RA{}
+\LA{}string and bytearray\RA{}
+\LA{}C linkage\RA{}
+\LA{}calling C routines\RA{}
+\LA{}system calls\RA{}
+\LA{}floating point\RA{}
+/* this bogosity is for export.c */
+        .globl  startptr
+startptr: .word    __start      /* just a guess... */
+
+
+\endcode
+\begindocs{2}
+We define a couple of macros for creating strings and closures.
+When calling \code{}String\edoc{} we should use a literal string whose length 
+is a multiple of~4.
+
+The closure of a primitive function
+ is a record of length~1, containing a pointer to the first 
+instruction in the function.
+All closures have length~1 because there aren't any free variables in any 
+of the primitive functions.
+\enddocs
+\begincode{3}
+\moddef{\code{}String\edoc{} and \code{}Closure\edoc{} definitions}\endmoddef
+#define String(handle,len,str) .align 2;\\
+                               .set noreorder;\\
+                               .word len*power_tags+tag_string;\\
+                               handle: .ascii str;\\
+                               .set reorder
+#define Closure(name) .align    2;\\
+                      .set noreorder;\\
+                      .word     mak_desc(1,tag_record);\\
+                      name:     .word 9f; /* address of routine */ \\
+                      .word     1; /* here for historical reasons */\\
+                      .word     tag_backptr;\\
+                      .set reorder;\\
+                      9:
+\endcode
+\begindocs{4}
+\subsection{Allocation and garbage collection}
+Put a brief summary here: gc is caused by storing beyond the end of high 
+memory.
+For that reason we store the last word of objects first.
+
+\enddocs
+\begindocs{5}
+\subsection{Register usage}
+\input regs
+\enddocs
+\begincode{6}
+\moddef{register definitions}\endmoddef
+#define stdarg 2
+#define stdcont 3
+#define stdclos 4
+#define storeptr 22
+#define dataptr 23
+#define exnptr 30
+#define artemp1 24
+#define artemp2 25
+#define artemp3 20
+#define ptrtemp 21
+\endcode
+\begindocs{7}
+The MIPS version of Unix doesn't put underscores in front of global names.
+
+First we define the global \code{}runvec\edoc{}.
+This is an Ml object that represents the substructure \code{}A\edoc{} in 
+{\tt boot/assembly.sig}.
+All the ML functions will call these primitives by grabbing them
+out of this record, which contains pointers to all the primitives.
+\enddocs
+\begincode{8}
+\moddef{run vector}\endmoddef
+
+        .globl  runvec
+        .align  2
+        .word   mak_desc(8,tag_record)
+runvec:
+        .word   array_v
+        .word   callc_v
+        .word   create_b_v
+        .word   create_s_v
+        .word   floor_v
+        .word   logb_v
+        .word   scalb_v
+        .word   syscall_v
+
+\endcode
+\begindocs{9}
+\subsection{Creating arrays, strings, and bytearrays}
+\code{}array(m,x)\edoc{} creates an array of length $n$, each element initialized
+to $x$.
+(The corresponding record creation code is not implemented as a primitive; 
+the ML compiler generates that code in line.)
+$n$~is a tagged integer representing the length in words; 
+$x$ can be any value.
+This routine will loop forever (or until something strange happens
+in memory) if $n<0$.
+
+We need to be careful in the implementation to make sure all register values 
+are sensible when garbage collection might occur.
+
+If the order of instructions seems a little strange, it's because we try to
+make sensible use of load delay slots.
+\enddocs
+\begincode{10}
+\moddef{array}\endmoddef
+Closure(array_v)
+        lw $artemp1,0($stdarg)          /* tagged length in $artemp1 */
+        lw $10,4($stdarg)               /* get initial value in $10 */
+        sra $artemp1,1                  /* drop the tag bit */
+        sll $artemp2,$artemp1,width_tags /* length for descr into $artemp2 */
+        ori $artemp2,tag_array          /* complete descriptor into $artemp2 */
+        sll $artemp1,2                  /* get length in bytes into $artemp1 */
+.set noreorder  /* can't reorder because collection might occur */
+        add $artemp3,$artemp1,$dataptr  /* $artemp3 points to last word 
+                                                        of new array*/
+badgc1: sw $0,($artemp3)                        /* clear; causes allocation */
+.set reorder  /* can rearrange instructions again */
+\endcode
+\begincode{11}
+\moddef{load bad pc into \code{}$artemp2\edoc{}; branch to \code{}badpc\edoc{} if == \code{}$artemp1\edoc{}}\endmoddef
+        la $artemp2,badgc1
+        beq $artemp1,$artemp2,badpc
+\endcode
+\begindocs{12}
+At this point garbage collection may have occurred.
+Ordinarily, we couldn't rely
+on the value in \code{}$artemp3\edoc{}, because it's not forwarded.
+However, this is one of the special garbage collection locations, 
+so we do know that \code{}$artemp3\edoc{} is sensible.
+But, since we really want something larger, we recompute it, 
+using the (possibly changed) value of the data pointer.
+Extra cleverness here might enable us to save one instruction.
+\enddocs
+\begincode{13}
+\moddef{array}\endmoddef
+        sw $artemp2,0($dataptr)         /* store the descriptor */
+        add $dataptr,4                  /* points to new object */
+        add $artemp3,$artemp1,$dataptr  /* beyond last word of new array*/
+        add $stdarg,$dataptr,$0         /* put ptr in return register
+                                        (return val = arg of continuation) */
+        \LA{}store the initial value in every slot, leaving \code{}$dataptr\edoc{} pointing to the first free word\RA{}
+        lw $10,0($stdcont)              /* grab continuation */
+        j $10                           /* return */
+
+\endcode
+\begindocs{14}
+With some clever thinking, the size of this loop could probably be cut 
+from four instructions to three instructions.
+\enddocs
+\begincode{15}
+\moddef{store the initial value in every slot, leaving \code{}$dataptr\edoc{} pointing to the first free word}\endmoddef
+        b 2f
+1:      sw $10,0($dataptr)              /* store the value */
+        addi $dataptr,4                 /* on to the next word */
+2:      bne $dataptr,$artemp3,1b        /* if not off the end, repeat */
+
+
+\endcode
+\begindocs{16}
+\code{}create_b(n)\edoc{} creates a byte-array of length $n$, and
+\code{}create_s(n)\edoc{} creates a string of length $n$.
+
+We use the same code to create byte arrays and strings, since the only
+difference is in the tags.
+The odd arrangement of closures (odd because each one starts a new record)
+causes no problems because this code isn't in the garbage-collectible region.
+\enddocs
+\begincode{17}
+\moddef{string and bytearray}\endmoddef
+Closure(create_b_v)
+        addi $artemp3,$0,tag_bytearray  /* tag into $artemp3 */
+        b       2f
+Closure(create_s_v)
+        addi $artemp3,$0,tag_string     /* tag into $artemp3 */
+2:      
+\endcode
+\begindocs{18}
+The length computation may be a bit confusing.
+We are handed a tagged integer $2n+1$, and we need to compute the required
+number of words, which is $\lfloor{n+3\over 4}\rfloor$.
+This is just $\lfloor{(2n+1)+5\over 8}\rfloor$.
+However, we'll save an instruction later if we happen to have one more than 
+the number of words tucked away in a register, 
+because $1+\lfloor{n+3\over 4}\rfloor$ is the number of words
+we're taking from the data space (we include the descriptor).
+So we compute $(2n+1)+13$ and continue accordingly
+\enddocs
+\begincode{19}
+\moddef{string and bytearray}\endmoddef
+        addi    $artemp1,$stdarg,13     /* $2n+14$ */
+        sra     $artemp1,3              /* number of words in string+tag */
+        sll     $artemp1,2              /* # of bytes allocated for str+tag */
+.set noreorder /* don't cross gc boundary */
+        add     $artemp2,$artemp1,$dataptr /* beyond last word of string */
+badgc2: sw $0,-4($artemp2)              /* clear last; causes allocation */
+.set reorder
+        sra     $artemp2,$stdarg,1      /* untagged length in bytes */
+        sll     $artemp2,width_tags     /* room for descriptor */
+        or      $artemp2,$artemp3       /* descriptor */
+        sw      $artemp2,0($dataptr)    /* store descriptor */
+        addi    $stdarg,$dataptr,4      /* pointer to new string */
+        add     $dataptr,$artemp1       /* advance; save 1 instruction */
+        lw $10,0($stdcont)              /* grab continuation */
+        j $10                           /* return */
+
+\endcode
+\begincode{20}
+\moddef{load bad pc into \code{}$artemp2\edoc{}; branch to \code{}badpc\edoc{} if == \code{}$artemp1\edoc{}}\endmoddef
+        la $artemp2,badgc2
+        beq $artemp1,$artemp2,badpc
+
+\endcode
+\begindocs{21}
+\subsection{Linkage with C code}
+C always gains control first, and stuffs something appropriate into
+the register save areas before starting ML by calling \code{}restoreregs\edoc{}.
+It also puts something appropriate in the ML \code{}saved_pc\edoc{}.
+\code{}restoreregs\edoc{} squirrels away the current state of the C runtime stack,
+restores the ML registers, and finally jumps to the saved program counter.
+
+When ML wants to call C, it calls \code{}saveregs\edoc{}, which saves the ML state 
+in the appropriate save areas, then restores the C runtime stack and returns.
+Before returning to C, it sets \code{}cause\edoc{} to something appropriate.
+
+All programs must ensure that \code{}restoreregs\edoc{} {\em never} calls itself
+recursively, because it is {\em not} reentrant.
+
+The C end of this connection is on display in the \code{}runML()\edoc{} function of
+\code{}~ml/src/runtime/callgc.c\edoc{}.
+\enddocs
+\begincode{22}
+\moddef{data segment items}\endmoddef
+bottom: .word 0                 /* C's saved stack pointer */
+\endcode
+\begincode{23}
+\moddef{C linkage}\endmoddef
+        .globl saveregs
+        .globl handle_c
+        .globl return_c
+        .globl restoreregs
+.ent restoreregs
+restoreregs:
+\LA{}save caller's stuff using MIPS calling conventions\RA{}
+\LA{}enable floating point overflow and zerodivide exceptions\RA{}
+        sw      $sp,bottom      /* save C's stack pointer */
+\LA{}if \code{}saved_pc\edoc{} points to a bad spot, adjust it (destroys arithmetic temps)\RA{}
+\LA{}restore the ML registers\RA{}
+.set noat /* This trick will cause a warning, but the code is OK */
+        lw      $at,saved_pc    /* grab the saved program counter */
+        j       $at             /* and continue executing at that spot */
+.set at
+
+\endcode
+\begindocs{24}
+The next two functions are an exception handler and a continuation for
+ML programs called from C.
+Although neither appears to return any result (by manipulating \code{}$stdarg\edoc{},
+they do return results.  
+It's just that the C code on the other end gets the result out of 
+\code{}saved_ptrs[0],\edoc{} where it expects to find \code{}$stdarg\edoc{}.
+\enddocs
+\begincode{25}
+\moddef{C linkage}\endmoddef
+Closure(handle_c) /* exception handler for ML functions called from C */
+        li      $artemp1,CAUSE_EXN
+        sw      $artemp1,cause
+        b       saveregs
+Closure(return_c) /* continuation for ML functions called from C */
+        li      $artemp1,CAUSE_RET
+        sw      $artemp1,cause
+saveregs: 
+\LA{}save the ML registers\RA{}
+        lw      $sp,bottom      /* recover C's stack pointer */
+\LA{}restore caller's stuff using MIPS calling conventions\RA{}
+        j       $31     /* return to C program */
+.end restoreregs
+
+\endcode
+\begincode{26}
+\moddef{enable floating point overflow and zerodivide exceptions}\endmoddef
+.set noat
+        cfc1 $at,$31            /* grab fpa control register */
+        ori  $at,$at,0x600      /* set O and Z bits */
+        ctc1 $at,$31            /* return fpa control register */
+.set at
+
+\endcode
+\begindocs{27}
+The MIPS calling conventions are described in gory detail in Appendix~D
+of the MIPS book; pages D-18 and following.
+
+At the moment we don't save any floating point registers.
+We save (on the stack) nine general-purpose registers, the global pointer,
+ and the return address.
+
+We always have to allocate at least 16 bytes for argument build,
+because any C function might be varargs, and might begin by
+spilling all of its registers into the argument build area (Hanson).
+We allocate exactly sixteen bytes, planning to fiddle the stack if
+(God forbid) we are ever asked to issue a system call with more than
+16 bytes worth of arguments.
+
+\enddocs
+\begincode{28}
+\moddef{save caller's stuff using MIPS calling conventions}\endmoddef
+#define regspace 44
+#define localspace 4
+#define argbuild 16
+#define framesize (regspace+localspace+argbuild) /* must be multiple of 8 */
+#define frameoffset (0-localspace)
+        subu $sp,framesize
+\LA{}give .mask and save the C registers\RA{}
+
+\endcode
+\begincode{29}
+\moddef{restore caller's stuff using MIPS calling conventions}\endmoddef
+\LA{}restore the C registers\RA{}
+        addu $sp,framesize
+\endcode
+\begindocs{30}
+We don't save floating point regs yet.
+\enddocs
+\begincode{31}
+\moddef{give .mask and save the C registers}\endmoddef
+.mask 0xd0ff0000,0-localspace
+        sw      $31,argbuild+40($sp)
+        sw      $30,argbuild+36($sp)
+        sw      $gp,argbuild+32($sp)
+        sw      $23,argbuild+28($sp)
+        sw      $22,argbuild+24($sp)
+        sw      $21,argbuild+20($sp)
+        sw      $20,argbuild+16($sp)
+        sw      $19,argbuild+12($sp)
+        sw      $18,argbuild+8($sp)
+        sw      $17,argbuild+4($sp)
+        sw      $16,argbuild($sp)
+\endcode
+\begincode{32}
+\moddef{restore the C registers}\endmoddef
+        lw      $31,argbuild+40($sp)
+        lw      $30,argbuild+36($sp)
+        lw      $gp,argbuild+32($sp)
+        lw      $23,argbuild+28($sp)
+        lw      $22,argbuild+24($sp)
+        lw      $21,argbuild+20($sp)
+        lw      $20,argbuild+16($sp)
+        lw      $19,argbuild+12($sp)
+        lw      $18,argbuild+8($sp)
+        lw      $17,argbuild+4($sp)
+        lw      $16,argbuild($sp)
+
+
+\endcode
+\begindocs{33}
+There are two save areas; one for pointers and one for non-pointers.
+(The pointer area may, of course, include tagged integers.)
+The pointer area has special spots for standard argument, continuation,
+and closure.
+In addition there are special save areas for the special registers.
+Register 31 is to be maintained constant relative to the program counter,
+so we store the difference with \code{}saved_pc\edoc{}.
+\enddocs
+\begincode{34}
+\moddef{save the ML registers}\endmoddef
+                                        /* needn't save $1 */
+        /* the big three: argument, continuation, closure */
+        sw      $stdarg,saved_ptrs
+        sw      $stdcont,saved_ptrs+4
+        sw      $stdclos,saved_ptrs+8
+        
+        /* All the miscellaneous guys */
+        sw      $5,saved_ptrs+12
+        sw      $6,saved_ptrs+16
+        sw      $7,saved_ptrs+20
+        sw      $8,saved_ptrs+24
+        sw      $9,saved_ptrs+28
+        sw      $10,saved_ptrs+32
+        sw      $11,saved_ptrs+36
+        sw      $12,saved_ptrs+40
+        sw      $13,saved_ptrs+44
+        sw      $14,saved_ptrs+48
+        sw      $15,saved_ptrs+52
+        sw      $16,saved_ptrs+56
+        sw      $17,saved_ptrs+60
+        sw      $18,saved_ptrs+64
+        sw      $19,saved_ptrs+68
+
+        sw      $21, saved_ptrs+72
+
+        sw      $artemp1,saved_nonptrs
+        sw      $artemp2,saved_nonptrs+4
+        sw      $artemp3,saved_nonptrs+8
+
+        /* don't touch registers $26 and $27 */
+
+        sw      $storeptr,saved_storeptr
+        sw      $dataptr,saved_dataptr
+        sw      $exnptr,saved_exnptr
+
+\LA{}save $\code{}$31\edoc{}-\code{}saved_pc\edoc{}$ in \code{}saved_pc_diff\edoc{} (destroys \code{}$artemp1\edoc{})\RA{}
+
+
+\endcode
+\begincode{35}
+\moddef{restore the ML registers}\endmoddef
+        /* the big three: argument, continuation, closure */
+        lw      $stdarg,saved_ptrs
+        lw      $stdcont,saved_ptrs+4
+        lw      $stdclos,saved_ptrs+8
+        
+        /* All the miscellaneous guys */
+        lw      $5,saved_ptrs+12
+        lw      $6,saved_ptrs+16
+        lw      $7,saved_ptrs+20
+        lw      $8,saved_ptrs+24
+        lw      $9,saved_ptrs+28
+        lw      $10,saved_ptrs+32
+        lw      $11,saved_ptrs+36
+        lw      $12,saved_ptrs+40
+        lw      $13,saved_ptrs+44
+        lw      $14,saved_ptrs+48
+        lw      $15,saved_ptrs+52
+        lw      $16,saved_ptrs+56
+        lw      $17,saved_ptrs+60
+        lw      $18,saved_ptrs+64
+        lw      $19,saved_ptrs+68
+
+        lw      $21, saved_ptrs+72
+
+\LA{}restore \code{}$31\edoc{} from \code{}saved_pc\edoc{} \& \code{}saved_pc_diff\edoc{} (destroys \code{}$artemp1\edoc{})\RA{}
+        lw      $artemp1,saved_nonptrs
+        lw      $artemp2,saved_nonptrs+4
+        lw      $artemp3,saved_nonptrs+8
+
+        /* don't touch registers $26 and $27 */
+
+        lw      $storeptr,saved_storeptr
+        lw      $dataptr,saved_dataptr
+        lw      $exnptr,saved_exnptr
+
+\endcode
+\begincode{36}
+\moddef{save $\code{}$31\edoc{}-\code{}saved_pc\edoc{}$ in \code{}saved_pc_diff\edoc{} (destroys \code{}$artemp1\edoc{})}\endmoddef
+        lw $artemp1,saved_pc
+        subu $artemp1,$31,$artemp1      /* mustn't overflow */
+        sw $artemp1,saved_pc_diff
+\endcode
+\begincode{37}
+\moddef{restore \code{}$31\edoc{} from \code{}saved_pc\edoc{} \& \code{}saved_pc_diff\edoc{} (destroys \code{}$artemp1\edoc{})}\endmoddef
+        lw $artemp1,saved_pc
+        lw $31,saved_pc_diff
+        addu $31,$artemp1               /* mustn't overflow */
+\endcode
+\begincode{38}
+\moddef{data segment items}\endmoddef
+saved_pc_diff:  .word 0
+
+
+\endcode
+\begindocs{39}
+Because the Mips has no indexed addressing modes, there are special
+circumstances under which we have to adjust the program counter before
+a garbage collection.
+The problem arises when we want to create an object whose size is not
+known at compile time.
+In order to do that, we have to add the size of the object to \code{}$dataptr\edoc{},
+putting the result in a new register.
+We then store at offset $-4$ from that register to allocate (and possibly
+cause garbage collection).
+That register can't be a pointer, because at the time of the gc it doesn't
+point to anything sensible (in fact, by definition it points out of the
+garbage-collectible region entirely).
+If it is a nonpointer, though, it isn't changed by the garbage collection,
+so when the collection is over, we attempt once again to store in exactly
+the same place, causing another fault (unless the heap has been resized).
+
+The solution is a hack.  Since there are only two places this problem
+can occur, we check \code{}saved_pc\edoc{} against the offending program counters.
+If we find one, we reduce \code{}saved_pc\edoc{} by 4 (the size of one instruction),
+causing the addition to be repeated.
+
+\enddocs
+\begincode{40}
+\moddef{if \code{}saved_pc\edoc{} points to a bad spot, adjust it (destroys arithmetic temps)}\endmoddef
+    lw $artemp1,saved_pc
+    \LA{}load bad pc into \code{}$artemp2\edoc{}; branch to \code{}badpc\edoc{} if == \code{}$artemp1\edoc{}\RA{}
+    b 1f
+badpc:
+    subu $artemp1,4             /* adjust */
+    sw $artemp1,saved_pc        /* save */
+1:
+
+
+\endcode
+\begindocs{41}
+\code{}callc(f,a)\edoc{} calls a C-language function \code{}f\edoc{} with argument \code{}a\edoc{}.
+We don't have to save a register unless we'll need its value later.
+
+The closure of this routine is irrelevant, since \code{}callc\edoc{} doesn't
+have any free variables.
+Therefore the only things that have to be restored after the call to~C
+are the continuation, the store pointer, the data pointer, and
+the exception handler.
+If we wanted \code{}callc\edoc{} to be more efficient, we would
+rearrange things so that all those registers fell into \code{}s0\edoc{}--\code{}s8\edoc{},
+where they would automatically be preserved across procedure calls.
+As it stands, everything except the continuation is preserved,
+so we're not doing too badly.
+
+Miraculously, C routines return integer results in \code{}$2\edoc{}, which is
+exactly the register we need to pass to our continuation (in order to
+return a value).
+I decided not to rely on this, and to include a \code{}move\edoc{} instruction
+anyway.  Maybe the assembler will park it in a delay slot since it
+is a nop.
+\enddocs
+\begincode{42}
+\moddef{calling C routines}\endmoddef
+Closure(callc_v)
+        sw $stdcont,argbuild+regspace($sp) /* save continuation on stack */
+        lw $4,4($stdarg)        /* get value a into arg register */
+        lw $10,0($stdarg)       /* get address of f into misc reg */
+        jal $10                 /* call f ($31 can be trashed) */
+        move $stdarg,$2         /* return val is argument to continuation */
+        lw $stdcont,argbuild+regspace($sp) /* recover continuation */
+\LA{}put zeroes in all forwardable regs that might hold garbage\RA{}
+        lw $artemp3,cause       /* get cause */
+        bne $artemp3,$0,saveregs /* if cause != 0, save ML & return to C */
+        lw $10,0($stdcont)      /* grab continuation */
+        j $10                   /* return */
+\endcode
+\begindocs{43}
+A forwardable register can hold garbage unless it was saved
+by C (is in \code{}s0\edoc{}--\code{}s8\edoc{}) or is \code{}$stdarg\edoc{} of \code{}$stdcont\edoc{}.
+\enddocs
+\begincode{44}
+\moddef{put zeroes in all forwardable regs that might hold garbage}\endmoddef
+        move $stdclos,$0
+        move $5,$0
+        move $6,$0
+        move $7,$0
+        move $8,$0
+        move $9,$0
+        move $10,$0
+        move $11,$0
+        move $12,$0
+        move $13,$0
+        move $14,$0
+        move $15,$0
+        /* $16--$23 and $30 are saved by the callee */
+
+\endcode
+\begindocs{45}
+This interface is going to be agony, because the rules for passing
+arguments are passing strange.
+The interface is \code{}syscall_v(callnumber,argvector,argcount)\edoc{}.
+
+The system call interface is the same as the procedure call interface,
+but instead of a \code{}jal\edoc{} we use a \code{}syscall\edoc{} instruction, and
+we put the system call number in register \code{}$2\edoc{}.
+It appears that, after the execution of the \code{}syscall\edoc{} handler,
+the result is in \code{}$2\edoc{}, and \code{}$7\edoc{} is zero unless an error occurred.
+We will put all the arguments on the stack, then load the first four
+into \code{}$4\edoc{}--\code{}$7\edoc{}.
+\enddocs
+\begincode{46}
+\moddef{system calls}\endmoddef
+Closure(syscall_v)
+        sw $stdcont,argbuild+regspace($sp) /* save continuation on stack */
+        lw $artemp1,8($stdarg)  /* 2*argc+1 in $artemp1 */
+        sra $artemp1,1          /* argc in $artemp1 */
+        move $16,$sp            /* save our $sp */
+\LA{}extend argbuild area to be big enough for all arguments\RA{}
+        lw $ptrtemp,4($stdarg)  /* argv in $ptrtemp */
+\LA{}put all arguments onto the stack\RA{}
+\LA{}load first four arguments into \code{}$4\edoc{}--\code{}$7\edoc{}\RA{}
+9:      lw $2,0($stdarg)        /* get syscall # in $2; trash $stdarg */
+        sra $2,1                /* throw out the tag bit */
+        syscall
+        move $sp,$16            /* recover the good stack pointer */
+        lw $stdcont,argbuild+regspace($sp) /* recover continuation */
+        bnez $7,1f              /* if error, return ~1 */
+        move $stdarg,$2         /* return val is argument to continuation */
+        add $stdarg,$stdarg     /* double return value */
+        addi $stdarg,1          /* and add tag bit */
+        b 2f
+1:      li $stdarg,-1
+2:
+\LA{}put zeroes in all forwardable regs that might hold garbage\RA{}
+        lw $10,0($stdcont)      /* grab continuation */
+        j $10                   /* return */
+
+\endcode
+\begindocs{47}
+At this point we know that the number of arguments is in \code{}$artemp1\edoc{}.
+We have room for four arguments; if there are more 
+we'll have to increase the stack size by the appropriate multiple of 8
+so that it stays doubleword-aligned.
+\enddocs
+\begincode{48}
+\moddef{extend argbuild area to be big enough for all arguments}\endmoddef
+        ble $artemp1,4,1f               /* big enough */
+        sub $artemp2,$artemp1,3         /* (temp2 = argc - 4 + 1) > 1 */
+        sra $artemp2,1                  
+        sll $artemp2,3                  /* temp2 = 4 * roundup (argc-4,2) */
+        subu $sp,$artemp2               /* increase stack */
+1:
+
+\endcode
+\begindocs{49}
+Now we have a list of arguments pointed to by \code{}$ptrtemp\edoc{}.
+We have the count of the arguments in \code{}$artemp1\edoc{}.
+We have to put them on the stack.
+We have to remove tag bits where appropriate.
+\enddocs
+\begincode{50}
+\moddef{put all arguments onto the stack}\endmoddef
+        move $artemp2,$sp               /* destination in $artemp2 */
+        b 1f                            /* branch forward to test */
+2:      /* argc > 0 */
+        lw $artemp3,0($ptrtemp)         /* get list element */
+        andi $10,$artemp3,1             /* tagged? */
+        beqz $10,3f
+        sra $artemp3,1                  /* drop tag bit */
+3:      sw $artemp3,0($artemp2)         /* save the argument */
+        lw $ptrtemp,4($ptrtemp)         /* next element */
+        add $artemp2,4                  /* next arg build area */
+        sub $artemp1,1                  /* --argc */
+1:      bgtz $artemp1,2b                /* if argc>0, store another */
+
+\endcode
+\begindocs{51}
+It doesn't matter if we load arguments that aren't there; the
+system call will just ignore them.
+\enddocs
+\begincode{52}
+\moddef{load first four arguments into \code{}$4\edoc{}--\code{}$7\edoc{}}\endmoddef
+        lw $4,0($sp)
+        lw $5,4($sp)
+        lw $6,8($sp)
+        lw $7,12($sp)
+
+\endcode
+\begindocs{53}
+\subsection{Floating point}
+We store floating point constants in two words, with the least significant
+word first.  
+We use the 64 bit IEEE format.
+
+We begin with instructions to change the rounding modes.
+See the MIPS book, pages 6-5--6-7.
+\enddocs
+\begincode{54}
+\moddef{tell the floating point unit to round toward $-\infty$}\endmoddef
+.set noat
+        cfc1 $at,$31            /* grab fpa control register */
+        ori  $at,0x03           /* set rounding bits to 11 */
+        ctc1 $at,$31            /* return fpa control register */
+.set at
+\endcode
+\begincode{55}
+\moddef{tell the floating point unit to round to nearest}\endmoddef
+.set noat
+        cfc1 $at,$31            /* grab fpa control register */
+        ori  $at,0x03           /* set rounding bits to 11 */
+        xori $at,0x03           /* set rounding bits to 00
+        ctc1 $at,$31            /* return fpa control register */
+.set at
+\endcode
+\begindocs{56}
+These floating point functions are used int floating to integer conversion.
+\enddocs
+\begincode{57}
+\moddef{floating point}\endmoddef
+/* Floating exceptions raised (assuming ROP's are never passed to functions):
+ *      DIVIDE BY ZERO - (div)
+ *      OVERFLOW/UNDERFLOW - (add,div,sub,mul) as appropriate
+ *
+ * floor raises integer overflow if the float is out of 32-bit range,
+ * so the float is tested before conversion, to make sure it is in (31-bit)
+ * range */
+
+\endcode
+\begindocs{58}
+\code{}floor(x)\edoc{} returns the smallest integer less than or equal to \code{}x\edoc{}.
+\enddocs
+\begincode{59}
+\moddef{floating point}\endmoddef
+Closure(floor_v)
+        lwc1 $f4,0($stdarg)             /* get least significant word */
+        lwc1 $f5,4($stdarg)             /* get most significant word */
+\LA{}tell the floating point unit to round toward $-\infty$\RA{}
+        cvt.w.d $f6,$f4                 /* convert to integer */
+\LA{}tell the floating point unit to round to nearest\RA{}
+        mfc1 $stdarg,$f6                /* get in std argument register */
+        sll $stdarg,1           /* make room for tag bit */
+        add $stdarg,1           /* add the tag bit */
+        lw $10,0($stdcont)      /* grab continuation */
+        j $10                   /* return */
+
+
+\endcode
+\begindocs{60}
+\code{}logb(x)\edoc{} returns the exponent part of the floating point \code{}x\edoc{}.
+We grab the 11-bit exponent from the word, then unbias it (according
+to the IEEE standard) by subtracting 1023.
+\enddocs
+\begincode{61}
+\moddef{floating point}\endmoddef
+Closure(logb_v)
+        lw      $stdarg,4($stdarg)      /* most significant part */
+        srl     $stdarg,20              /* throw out 20 low bits */
+        andi    $stdarg,0x07ff          /* clear all but 11 low bits */
+        sub     $stdarg,1023            /* subtract 1023 */
+        sll     $stdarg,1               /* make room for tag bit */
+        add     $stdarg,1               /* add the tag bit */
+        lw      $10,0($stdcont)         /* grab continuation */
+        j       $10                     /* return */
+
+\endcode
+\begindocs{62}
+\code{}scalb(x,n)\edoc{} adds \code{}n\edoc{} to the exponent of floating
+point \code{}x\edoc{}.
+Since we don't want the resulting float to be anything
+special, we insist that the unbiased exponent of the result
+satisfy $-1022 \le E \le 1023$, i.e.\ that the biased exponent satisfy
+ $1 \le e \le 2046$.
+\enddocs
+\begincode{63}
+\moddef{floating point}\endmoddef
+Closure(scalb_v)
+        lw      $artemp1,4($stdarg)     /* get tagged n */
+        sra     $artemp1,1              /* get real n */
+        beqz    $artemp1,9f             /* if zero, return the old float */
+        lw      $ptrtemp,0($stdarg)     /* get pointer to float */
+        lw      $artemp2,4($ptrtemp)    /* most significant part */
+        srl     $artemp2,20             /* throw out 20 low bits */
+        andi    $artemp2,0x07ff         /* clear all but 11 low bits */
+        add     $artemp3,$artemp2,$artemp1      /* new := old + n */
+        blt     $artemp3,1,under        /* punt if underflow */
+        bgt     $artemp3,2046,over      /* or overflow */
+\LA{}allocate and store new floating point constant and set \code{}$stdarg\edoc{}\RA{}
+        lw      $10,0($stdcont)         /* grab continuation */
+        j       $10                     /* return */
+
+9:      lw      $stdarg,0($stdarg)      /* get old float */
+        lw      $10,0($stdcont)         /* grab continuation */
+        j       $10                     /* return */
+
+over:   la      $stdarg,1f              /* exception name in $stdarg */
+        b       raise_real
+String(1,8,"overflow")
+under:  la      $stdarg,1f              /* exception name in $stdarg */
+        b       raise_real
+String(1,9,"underflow\\0\\0\\0")
+
+raise_real:
+ /* build new record to pass to exception handler */
+ /*    [descriptor]
+ /*    [exception (string)]
+ /*    [real_e (more exception info)]
+  */
+        la      $10,real_e              /* get address of real_e */
+.set noreorder
+        sw      $10,8($dataptr)         /* allocate; may cause gc */
+.set reorder
+        sw      $stdarg,4($dataptr)
+        li      $10,mak_desc(2,tag_record)
+        sw      $10,0($dataptr)
+        add     $stdarg,$dataptr,4      /* new record is argument */
+        addi    $dataptr,12             /* $dataptr restored */
+        move    $stdclos,$exnptr        /* make sure closure is right */
+        lw      $10,0($exnptr)          /* grab handler */
+        j       $10                     /* raise the exception */
+
+\endcode
+\begindocs{64}
+Here we indulge in a little cleverness to save a couple of instructions.
+Since the old value is in \code{}$artemp2\edoc{} and the new in \code{}$artemp3\edoc{},
+we can \code{}xor\edoc{} them, then store the new one with a second \code{}xor\edoc{}.
+\enddocs
+\begincode{65}
+\moddef{allocate and store new floating point constant and set \code{}$stdarg\edoc{}}\endmoddef
+        xor     $artemp3,$artemp2       /* at3 = new xor old */
+        sll     $artemp3,20             /* put exponent in right position */
+        lw      $artemp2,4($ptrtemp)    /* most significant word */
+        xor     $artemp2,$artemp3       /* change to new exponent */
+.set noreorder
+        sw      $artemp2,8($dataptr)    /* allocate; may cause gc */
+.set reorder
+        lw      $artemp2,0($ptrtemp)    /* get least significant word */
+        li      $10,mak_desc(8,tag_string) /* make descriptor */
+        sw      $artemp2,4($dataptr)    /* save lsw */
+        sw      $10,0($dataptr)         /* save descriptor */
+        add     $stdarg,$dataptr,4      /* get pointer to new float */
+        add     $dataptr,12             /* point to new free word */
+\endcode
+\bye

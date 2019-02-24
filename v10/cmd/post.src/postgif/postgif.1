@@ -1,0 +1,157 @@
+.ds dQ /usr/lib/postscript
+.TH POSTGIF 1
+.SH NAME
+.B postgif
+\- PostScript translator for
+.SM GIF
+files
+.SH SYNOPSIS
+\*(mBpostgif\f1
+.OP "" options []
+.OP "" files []
+.SH DESCRIPTION
+.B postgif
+translates Graphics Interchange Format (\s-1GIF\s+1)
+.I files
+into PostScript and writes the results on the
+standard output.
+If no
+.I files
+are specified, or if
+.OP \-
+is one of the input
+.IR files ,
+the standard input is read.
+The following
+.I options
+are understood:
+.TP 0.75i
+.OP \-c num
+Print
+.I num
+copies of each page.
+By default only one copy is printed.
+.TP
+.OP \-f
+Flip the sense of the bits in
+.I files
+before printing the pixmaps.
+.TP
+.OP \-g
+Generate picture in gray instead of color
+.TP
+.OP \-m num
+Magnify each logical page by the factor
+.IR num .
+Pages are scaled uniformly about the origin,
+which by default is located at the center of
+each page.
+The default magnification is 1.0.
+.TP
+.OP \-n num
+Print
+.I num
+logical pages on each piece of paper,
+where
+.I num
+can be any positive integer.
+By default
+.I num
+is set to 1.
+.TP
+.OP \-o list
+Print pages whose numbers are given in the comma-separated
+.IR list .
+The list contains single numbers
+.I N
+and ranges
+.IR N1\-\|N2 .
+A missing
+.I N1
+means the lowest numbered page, a missing
+.I N2
+means the highest.
+.TP
+.OP \-p mode
+Print
+.I files
+in either \*(mBportrait\fP or \*(mBlandscape\fP
+.IR mode .
+Only the first character of
+.I mode
+is significant.
+The default
+.I mode
+is \*(mBportrait\fP.
+.TP
+.OP \-x num
+Translate the origin
+.I num
+inches along the positive x axis.
+The default
+coordinate system has the origin fixed at the
+center of the page, with positive
+x to the right and positive y up the page.
+Positive
+.I num
+moves everything right.
+The default offset is 0 inches.
+.TP
+.OP \-y num
+Translate the origin
+.I num
+inches along the positive y axis.
+Positive
+.I num
+moves everything up the page.
+The default offset is 0.
+.TP
+.OP \-L file
+Use
+.I file
+as the PostScript prologue.
+.br
+The default is
+.MR \*(dQ/postgif.ps .
+.PP
+Two options allow insertion of arbitrary PostScript
+at controlled points in the translation process:
+.TP 0.75i
+.OP \-C file
+Copy
+.I file
+to the output file;
+.I file
+must contain legitimate PostScript.
+.TP
+.OP \-P string
+Include
+.I string
+in the output file;
+.I string
+must be legitimate PostScript.
+.PP
+Only one pixmap is printed on each logical page,
+and each of the input
+.I files
+must contain complete descriptions of at least one pixmap.
+.SH DIAGNOSTICS
+A 0 exit status is returned if
+.I files
+were successfully processed.
+.br
+.ne 1i
+.SH FILES
+.MW \*(dQ/postgif.ps
+.br
+.MW \*(dQ/forms.ps
+.SH SEE ALSO
+.BR dpost (1),
+.BR postdaisy (1),
+.BR postdmd (1),
+.BR postio (1),
+.BR postmd (1),
+.BR postprint (1),
+.BR postreverse (1),
+.BR posttek (1),
+.BR psencoding (1)

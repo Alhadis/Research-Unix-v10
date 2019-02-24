@@ -1,0 +1,183 @@
+.ds dQ /usr/lib/postscript
+.TH PRINTFONT 1 "DWB 3.2"
+.SH NAME
+.B printfont
+\- font listing program for PostScript printers
+.SH SYNOPSIS
+\*(mBprintfont\f1
+.OP "" options []
+.OP "" files []
+.SH DESCRIPTION
+.B printfont
+builds a PostScript program that prints character set tables for
+one or more PostScript fonts.
+The program is written on the standard output,
+and when sent to a PostScript printer usually prints a 16\(mu16 table
+that shows the available (encoded) characters in each font.
+The following
+.I options
+are understood:
+.TP 1.0i
+.OP \-a num
+Set the character cell axes mode to
+.IR num .
+0 disables axes printing, 1 draws a baseline,
+2 adds a vertical line through the character origin,
+and 3 adds a vertical line through the next character origin.
+The default is 0.
+.TP 1.0i
+.OP \-b num
+Print each table in base
+.IR num .
+The base determines the number of rows and columns in the table.
+It also affects the character code placed in the lower left corner of each cell.
+The default is 16 (hexadecimal).
+.TP 1.0i
+.OP \-c num
+Print
+.I num
+copies of each page.
+By default only one copy is printed.
+.TP 1.0i
+.OP \-f name
+Use font
+.I name
+for labeling the tables.
+The default font is Helvetica.
+.TP 1.0i
+.OP \-g num
+Use
+.I num
+as the gray level for marking cells not currently assigned to characters.
+The gray level should fall between 0 (black) and 1 (white).
+The default is 0.85.
+.TP 1.0i
+.OP \-m num
+Magnify each logical page by the factor
+.IR num .
+Pages are scaled uniformly about the origin,
+which is located near the upper left corner of each page.
+The default is 1.0.
+.TP 1.0i
+.OP \-p mode
+Print
+.I files
+in either \*(mBportrait\fP or \*(mBlandscape\fP
+.IR mode .
+Only the first character of
+.I mode
+is significant.
+The default
+.I mode
+is \*(mBportrait\fP.
+.TP 1.0i
+.OP \-v
+Completely label each character cell.
+The full character name goes in the upper left corner and the
+character width (at point size 1) goes in the lower right corner.
+.TP 1.0i
+.OP \-w num
+Set the line width to
+.I num
+points, where a point is approximately 1/72 of an inch.
+A line width of 0 means 1 pixel.
+The default line width is resolution dependent.
+.TP 1.0i
+.OP \-x num
+Translate the origin
+.I num
+inches along the x axis.
+Positive
+.I num
+shifts the table to the right.
+The default offset is 0.
+.TP 1.0i
+.OP \-y num
+Translate the origin
+.I num
+inches along the y axis.
+Positive
+.I num
+shifts the table up the page.
+The default offset is 0.
+.TP 1.0i
+.OP \-C file
+Copy
+.I file
+to the output file;
+.B file
+must contain legitimate PostScript.
+.TP 1.0i
+.OP \-E name
+Set the character encoding for text fonts to
+.IR name .
+Requesting
+.I name
+means include file
+.MI \*(dQ/ name .enc \f1.
+A nonexistent encoding file is silently ignored.
+The default selects file
+.MR \*(dQ/Default.enc .
+.TP 1.0i
+.OP \-L file
+Use
+.I file
+as the PostScript prologue.
+.br
+The default is
+.MR \*(dQ/printfont.ps .
+.PP
+Arguments should be PostScript
+.I font
+names or the word
+.MR all ,
+which means the full set of
+.SM ROM
+and disk based fonts available on a printer.
+.B printfont
+prints one font table per page.
+Each page is labeled with the
+.I font
+name, the printer product name and interpreter version number,
+and the gray level, linewidth, and printer resolution.
+.PP
+Black cells are used to mark characters listed in the font's
+.MW Encoding
+array but missing from its
+.MW CharStrings
+dictionary.
+They usually indicate an incomplete font or a mistake in the
+.MW Encoding
+array.
+The check is skipped if the font doesn't include a
+.MW CharStrings
+dictionary.
+.br
+.ne 4v
+.SH EXAMPLES
+Print the characters available in the Times-Roman, Symbol and
+ZapfDingbats fonts:
+.EX
+printfont Times-Roman Symbol ZapfDingbats | lp ...
+.EE
+Print a baseline under each character and fully label the cells:
+.EX
+printfont -a1 -v Times-Roman Symbol ZapfDingbats | lp ...
+.EE
+Dump all the fonts available on a printer using the Latin1 character encoding:
+.EX
+printfont -ELatin1 all | lp ...
+.EE
+.SH WARNINGS
+Printing a single table can take several minutes.
+Dumping all available fonts can tie a printer up for an hour or more.
+.SH FILES
+.MW \*(dQ/printfont.ps
+.br
+.MW \*(dQ/*.enc
+.SH SEE ALSO
+buildtables(1),
+dpost(1),
+postio(1),
+psencoding(1),
+trofftable(1)

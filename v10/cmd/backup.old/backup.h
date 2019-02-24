@@ -1,0 +1,34 @@
+#include	<libc.h>
+
+#define		BACKUP		"/etc/backup"
+#define		BDBM		".db"
+#define		LOCK		"lock"
+#define		LOG		"log"
+#define		RCVDIRS		"rcvdirs"
+#define		STATLOG		"stat.log"
+#define		STATDIR		"stat.dir"
+#define		VOLMAP		"volidmap"
+
+#ifndef	S_IFMT
+#include	<sys/types.h>
+#include	<sys/stat.h>
+#endif
+#include	<label.h>
+#define		FNAMELEN	256
+
+struct backfile
+{
+	short checksum;		/* checksum of the bytes AFTER the checksum */
+	short version;
+	struct stat sbuf;	/* original inode */
+	char uname[16];		/* original user name */
+	char gname[16];		/* original group name */
+	char oname[FNAMELEN];	/* original file name */
+	char bname[FNAMELEN];	/* backup file name */
+	struct label lab;
+	char pad[378];		/* make it 1024 */
+};
+
+extern unsigned short sum();
+
+#define		CURVERSION		3

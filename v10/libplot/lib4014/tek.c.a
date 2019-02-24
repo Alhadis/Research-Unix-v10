@@ -1,0 +1,984 @@
+!<arch>
+arc.c           420388304   41    1     100664  983       `
+#include <stdio.h>
+#include <math.h>
+#include "tek.h"
+/*		arc plotting routine		*/
+/*		from x1,y1 to x2,y2		*/
+/*	with center xc,yc and radius rr	*/
+/*	integrates difference equation		*/
+/*	negative rr draws counterclockwise	*/
+#define PI4 0.7854
+arc(x1, y1, x2, y2, xc, yc, rr)
+double	x1, x2, y1, y2, xc, yc, rr;
+{
+	register double dx, dy, a, b;
+	double	ph, dph, rd, xnext;
+	register int	n;
+	dx = x1 - xc;
+	dy = y1 - yc;
+	rd = sqrt(dx * dx + dy * dy);
+	if (rd / e1->quantum < 1.0) { 
+		move(xc, yc); 
+		vec(xc, yc); 
+		return(0);
+	}
+	dph = acos(1.0 - (e1->quantum / rd));
+	if (dph > PI4) 
+		dph = PI4;
+	ph=atan2((y2-yc),(x2 - xc)) - atan2(dy, dx);
+	if (ph < 0) 
+		ph += 6.2832; 
+	if (rr < 0) 
+		ph = 6.2832 - ph;
+	if (ph < dph) 
+		line(x1, y1, x2, y2);
+	else {
+		n = ph / dph; 
+		a = cos(dph); 
+		b = sin(dph); 
+		if (rr < 0) 
+			b = -b;
+		move(x1, y1);
+		while ((n--) >= 0) {
+			xnext = dx * a - dy * b; 
+			dy = dx * b + dy * a; 
+			dx = xnext;
+			vec(dx + xc, dy + yc);
+		}
+	}
+}
+
+box.c           420388304   41    1     100664  172       `
+#include <stdio.h>
+#include "tek.h"
+#define sSTEP 20
+box(x0, y0, x1, y1) 
+double	x0, y0, x1, y1;
+{
+	move(x0, y0);
+	vec(x0, y1);
+	vec(x1, y1);
+	vec(x1, y0);
+	vec(x0, y0);
+}
+cfill.c         420388304   41    1     100664  133       `
+#include <stdio.h>
+#include "tek.h"
+cfill(s) 
+char	*s; 
+{  
+	register char a;
+	if((a=bcolor(s))!= '\0')
+		e1->pbrush = bcolor(s); 
+}
+
+circle.c        420388304   41    1     100664  141       `
+#include <stdio.h>
+#include "tek.h"
+circle(xc, yc, r) 
+double	xc, yc, r;
+{
+	if (r > 0) 
+		r = -r;
+	arc(xc + r, yc, xc + r, yc, xc, yc, r);
+}
+
+closepl.c       420388304   41    1     100664  109       `
+#include <stdio.h>
+#include "tek.h"
+closepl()
+{
+	fflush(stdout);
+	e1=e0;
+	move(5., 5.);
+	putchar(PLOTOUT);
+}
+
+color.c         420388304   41    1     100664  165       `
+#include <stdio.h>
+#include "tek.h"
+color(s) 
+char	*s; 
+{
+	register char a;
+	if((a=bcolor(s))!= '\0'){
+		e1->ppink = a; 
+		putchar(ESC); 
+		putchar(e1->ppink);
+	}
+}
+
+disc.c          420388304   41    1     100664  132       `
+#include <stdio.h>
+#include "tek.h"
+disc(xc, yc, r)
+double xc, yc, r;
+{
+	if(r > 0)
+		r = -r;
+	arc(xc+r, yc, xc+r, yc, xc, yc, r);
+}
+erase.c         424533147   41    1     100664  152       `
+#include <stdio.h>
+#include "tek.h"
+erase()
+{
+	putchar(ESC);
+	putchar(ERASE);
+	ohiy = ohix = oextra = oloy = -1;
+	fflush(stdout);
+	sleep(2);
+	return;
+}
+fill.c          420388305   41    1     100664  4817      `
+#include <stdio.h>
+#include <math.h>
+#include "tek.h"
+#define SEGS 256
+#define ROUND(a) a>0?a+.5:a-.5
+double	sinp, cosp;
+int place();
+fill(num,ff)
+int num[];
+double	*ff[];
+{
+	register struct seg *sp;
+	register double x, y;
+	int sgap;
+	double slant;
+	struct seg *in, *spend;
+	struct seg ss[4];
+	int	so;
+	double	 X, Y, xyt, **fp;
+	int ymin;
+	int	M, *n;
+	double	*xpp, *ypp;
+	int fx, fy, flag;
+
+	if(!internal){
+		in = (struct seg *)malloc((unsigned)(SEGS*sizeof(struct seg)));
+		if(in == 0){
+			fprintf(stderr,"not enough space for fill segments\n");
+			return(1);
+		}
+		spend = in + (SEGS-2);
+	}
+	else {
+		in = ss;
+		spend = &ss[3];
+	}
+	sinp = cos(e1->pslant);
+	cosp = sin(e1->pslant);
+	n = num;
+	fp = ff;
+	sp = in;
+	ymin = 4000;
+	while((M = *n++)){
+		xpp = *fp++;
+		ypp = xpp + 1;
+		x = normx(*xpp);
+		y = normy(*ypp);
+		if (cosp)  {
+			xyt = sinp * x - cosp * y;
+			y = cosp * x + sinp * y;
+			y = ROUND(y);
+			x = ROUND(xyt);
+		}
+		fx = x;
+		fy = y;
+		flag = 0;
+		while(--M){
+			xpp += 2;
+			ypp += 2;
+			X = normx(*xpp);
+			Y = normy(*ypp);
+			if (cosp)  {
+				xyt = sinp * X - cosp * Y;
+				Y = cosp * X + sinp * Y;
+				Y = ROUND(Y);
+				X = ROUND(xyt);
+			}
+	check:
+			if ( (Y > y) || (Y==y && X > x)){
+				sp->x = X;
+				sp->y = Y;
+				sp->X = x;
+				sp->Y = y;
+			}
+			else {
+				sp->x = x;
+				sp->y = y;
+				sp->X = X;
+				sp->Y = Y;
+			}
+			x=X;
+			y=Y;
+			sp->stat = 1;
+			if(Y < ymin)
+				ymin = Y;
+			if ( sp->y == sp->Y) {
+				if(sp > in){
+				if ((sp-1)->y == (sp-1)->Y && (sp-1)->y == sp->y) {
+					if (sp->x == (sp - 1)->X) {
+						(sp - 1)->X = sp->X;
+					sp--;
+					} else if (sp->X == (sp - 1)->x) {
+						(sp - 1)->x = sp->x;
+					sp--;
+					}
+				}
+				}
+			}
+			if(sp++ > spend){
+				fprintf(stderr, "Too many sides\n");
+				return(0);
+			}
+			if((M==1) && (flag == 0)){
+				X = fx;
+				Y = fy;
+				flag = 1;
+				goto check;
+			}
+		}
+	}
+	sgap = e0->pgap;
+	slant = e0->pslant;
+	e0->pgap = e1->pgap;
+	e0->pslant = e1->pgap;
+	esave = e1;
+	putchar(ESC);
+	putchar(e1->pbrush);
+	e1 = e0;
+	so = sp - in;
+	realfill(so, in, ymin);
+	e0->pgap = sgap;
+	e0->pslant = slant;
+	e1 = esave;
+	putchar(ESC);
+	putchar(e1->ppink);
+	if(!internal)
+		free(in);
+	return(1);
+}
+double	xcut();
+realfill(so, s, yymin)
+int	so, yymin;
+struct seg *s;
+{
+	register struct seg *sp, *s1, *s2, *st;
+	register int	yb;
+	struct seg *sfin;
+
+	sfin = s1 = s + so - 1;
+	for (sp = s; sp <= sfin;  sp++) {
+		if (sp->stat){
+			if (sp->y == sp->Y){
+				if (sp < sfin) {
+					s2 = sp+1;
+					while(s2<=sfin && s2->y==s2->Y){
+						if (sp->X == s2->x)
+							sp->X = s2->X;
+						else if (sp->x == s2->X)
+							sp->x = s2->x;
+						s2++->stat = 0;
+					}
+				}
+				else s2 = sp;
+				if (s1->y == sp->y &&s2->y == sp->y)
+					sp->stat = 0;
+				else if (s1->Y == sp->y && s2->Y == sp->y)
+					sp->stat = 0;
+			}
+		}
+		s1 = sp;
+	}
+
+	qsort(s, so, sizeof(struct seg), place);
+	sfin++;
+	s1 = s;
+	yb = s1->y;
+	for(sp=s; yb <= sp->y;sp++);
+	s2 = sp - 1;
+	for (; yb >= yymin; yb--) {
+		if (!(yb % e1->pgap))
+			draw(yb, s1, s2);
+		for (st = s1; st <= s2; st++) {
+			if (st->stat)
+				if (yb <= st->Y)
+					st->stat = 0;
+		}
+		if (sp >= sfin)
+			continue;
+		for (; yb <= (sp->y + 1) && sp < sfin; sp++) {
+			for (st = s1; st <= s2; st++) {
+				if (sp->y == st->Y) {
+					if (sp->x == st->X)
+						st->stat = 0;
+					else if (sp->Y == sp->y && sp->X == st->X)
+						st->stat = 0;
+				}
+			}
+		}
+
+		s2 = sp - 1;
+		while (!(s1->stat))
+			s1++;
+	}
+}
+draw(y, pr1, pr2)
+int	y;
+struct seg *pr1, *pr2;
+{
+	register struct seg *pr;
+	register double *xp;
+	double	x[32], yy, yi, yii, xi, xii, xj;
+	double *xpe;
+	for(pr=pr1, xp=x; pr <= pr2;pr++){
+		if (pr->stat)
+			if (pr->y != pr->Y){
+				*xp++ = xcut(y, pr->x, pr->y, pr->X, pr->Y);
+				if(xp > &x[31])
+					fprintf(stderr, "Too many intersections\n");
+			}
+	}
+	xpe = xp;
+	if(xpe < &x[1])
+		return;
+	do {
+		xj = 0;
+		for(xp=x+1;xp<xpe;xp++){
+			if(*(xp-1) > *xp){
+				xj = *(xp-1);
+				*(xp-1) = *xp;
+				*xp = xj;
+			}
+		}
+	} while(xj);
+	yy = y;
+	for(xp=x; xp<xpe;xp++){
+		xj = *xp++;
+		if (!cosp)
+			line(xj, unorm(yy), *xp, unorm(yy));
+		else {
+			xi = sinp * xj + cosp * yy;
+			yi = -cosp * xj + sinp * yy;
+			xii = sinp * *xp + cosp * yy;
+			yii = -cosp * *xp + sinp * yy;
+			line(xi, unorm(yi), xii, unorm(yii));
+		}
+	}
+
+}
+
+
+double	xcut(y, x1, y1, x2, y2)
+{
+	register double	dx, dy, xy, x;
+	if (y1 == y2) {
+		x = x1 > x2 ? x1 : x2;
+		return(x);
+	}
+	dy = y1 - y2;
+	dx = x1 - x2;
+	xy = (float)y1 * x2 - x1 * (float)y2;
+	x = (y * dx + xy) / dy;
+	return(x);
+}
+place(p1, p2)
+struct seg *p1, *p2;
+{
+	if(p1->y > p2->y)
+		return(-1);
+	else if(p1->y < p2->y)
+		return(1);
+	else if(p1->x > p2->x)
+		return(-1);
+	else if(p1->x < p2->x)
+		return(1);
+	else if(p1->X > p2->X)
+		return(-1);
+	else if(p1->X < p2->X)
+		return(1);
+	else if(p1->Y > p2->Y)
+		return(-1);
+	else if(p1->Y < p2->Y)
+		return(1);
+	else return(0);
+}
+
+frame.c         420388305   41    1     100664  512       `
+#include <stdio.h>
+#include "tek.h"
+frame(xs, ys, xf, yf)
+double xs, ys, xf, yf;
+{
+	register double	osidex, osidey;
+	osidex = e1->sidex;
+	osidey = e1->sidey;
+	e1->left = xs * (e0->left + e0->sidex);
+	e1->bottom = ys* (e0->bottom +  e0->sidey);
+	e1->sidex = (xf-xs) * e0->sidex;
+	e1->sidey = (yf-ys) * e0->sidey;
+	e1->scalex *= (e1->sidex / osidex);
+	e1->scaley *= (e1->sidey / osidey);
+	e1->quantum=e0->quantum/sqrt(e1->scalex*e1->scalex +
+		e1->scaley*e1->scaley);
+	if(e1->quantum < .01)
+		e1->quantum = .01;
+}
+grade.c         420388305   41    1     100664  76        `
+#include <stdio.h>
+#include "tek.h"
+grade(x) 
+double	x;
+{
+	e1->grade = x;
+}
+line.c          420388305   41    1     100664  115       `
+#include <stdio.h>
+#include "tek.h"
+line(x0, y0, x1, y1) 
+double	x0, y0, x1, y1; 
+{
+	move(x0, y0);
+	vec(x1, y1);
+}
+
+move.c          420388305   41    1     100664  102       `
+#include <stdio.h>
+#include "tek.h"
+move(xx, yy) 
+double	xx, yy; 
+{
+	putchar(PLOTIN);
+	vec(xx, yy);
+}
+openpl.c        420388305   41    1     100664  65        `
+#include <stdio.h>
+#include "tek.h"
+openpl()
+{ 
+	move(0., 0.);
+}
+
+parabola.c      420388305   41    1     100664  885       `
+#include <math.h>
+#include <stdio.h>
+#include "tek.h"
+parabola(x0, y0, x1, y1, xb, yb) 
+double	x0, y0, x1, y1, xb, yb; 
+{
+	register double x, y, t;
+	double	c0x, c0y, c1x, c1y;
+	double	dt, d2, d1;
+	d1 = sqrt((xb - x0) * (xb - x0) + (yb - y0) * (yb - y0));
+	d2 = sqrt((xb - x1) * (xb - x1) + (yb - y1) * (yb - y1));
+	if (d1 <= e1->quantum || d2 <= e1->quantum) { 
+		line(x0, y0, x1, y1); 
+		return(0); 
+	}
+	c0x = x0 + x1 - 2. * xb; 
+	c1x = 2. * (xb - x0);
+	c0y = y0 + y1 - 2. * yb; 
+	c1y = 2. * (yb - y0);
+	move(x0, y0);
+	dt = e1->quantum / d1;
+	if(e1->grade != 0.)
+		dt /= e1->grade;
+	for (t = dt; t < 0.5; t += dt) {
+		x = (c0x * t + c1x) * t + x0;
+		y = (c0y * t + c1y) * t + y0;
+		vec(x, y);
+	}
+	dt = e1->quantum / d2;
+	if(e1->grade != 0.)
+		dt /= e1->grade;
+	for (; t < 1.0; t += dt) {
+		x = (c0x * t + c1x) * t + x0;
+		y = (c0y * t + c1y) * t + y0;
+		vec(x, y);
+	}
+	vec(x1, y1);
+}
+
+pen.c           420388305   41    1     100664  72        `
+#include <stdio.h>
+#include "tek.h"
+pen(s) 
+char	*s; 
+{  
+	color(s); 
+}
+point.c         420388305   41    1     100664  100       `
+#include <stdio.h>
+#include "tek.h"
+point(xx, yy) 
+double	xx, yy; 
+{
+	move(xx, yy);
+	vec(xx, yy);
+}
+poly.c          420388305   41    1     100664  246       `
+#include <stdio.h>
+poly(num, ff)
+int num[];
+double *ff[];
+{
+	double *xp, *yp, **fp;
+	int i, *n;
+	n = num;
+	fp = ff;
+	while((i = *n++)){
+		xp = *fp++;
+		yp = xp+1;
+		move(*xp, *yp);
+		while(--i){
+			xp += 2;
+			yp += 2;
+			vec(*xp, *yp);
+		}
+	}
+}
+ppause.c        420388305   41    1     100664  106       `
+#include <stdio.h>
+#include "tek.h"
+ppause()
+{
+	char	aa[4];
+	fflush(stdout);
+	read(2, aa, 4);
+	erase();
+}
+prompt.c        420388305   41    1     100664  251       `
+#include <stdio.h>
+#include "tek.h"
+prompt(s, k) 
+char	*s; 
+int	k; 
+{
+	fflush(stdout);
+	esave = e1;
+	e1 = e0;
+	if (k) 
+		move(e1->sidex + 5, e1->sidey - 30);
+	else 
+		move(e1->sidex + 5, e1->sidey - 100);
+	putchar(PLOTOUT);
+	printf(s);
+	e1 = esave;
+}
+
+range.c         420388305   41    1     100664  326       `
+#include <stdio.h>
+#include "tek.h"
+range(x0, y0, x1, y1) 
+double	x0, y0, x1, y1; 
+{
+	e1->xmin = x0;
+	e1->ymin = y0;
+	e1->scalex = e1->sidex / (x1 - x0);
+	e1->scaley = e1->sidey / (y1 - y0);
+	e1->quantum = e0->quantum / sqrt(e1->scalex * e1->scalex +
+		 e1->scaley * e1->scaley);
+	if(e1->quantum < .01)
+		e1->quantum = .01;
+}
+restore.c       420388305   41    1     100664  122       `
+#include <stdio.h>
+#include "tek.h"
+restore()
+{
+	e1--;
+	putchar(ESC);
+	putchar(e1->ppink);
+	move(e1->copyx, e1->copyy);
+}
+rmove.c         420388305   41    1     100664  136       `
+#include <stdio.h>
+#include "tek.h"
+rmove(xx, yy) 
+double	xx, yy; 
+{
+	e1->copyx += xx;
+	e1->copyy += yy;
+	move(e1->copyx, e1->copyy);
+}
+rvec.c          420388306   41    1     100664  134       `
+#include <stdio.h>
+#include "tek.h"
+rvec(xx, yy) 
+double	xx, yy; 
+{
+	e1->copyx += xx;
+	e1->copyy += yy;
+	vec(e1->copyx, e1->copyy);
+}
+save.c          420388306   41    1     100664  77        `
+#include <stdio.h>
+#include "tek.h"
+save()
+{ 
+	sscpy(e1, e1 + 1); 
+	e1++; 
+}
+
+sbox.c          420388306   41    1     100664  281       `
+#include <stdio.h>
+#include "tek.h"
+sbox(x1, y1, x2, y2)
+double	x1, y1, x2, y2;
+{
+	double ff[8], *fp[1];
+	int i[2];
+	ff[0] = ff[6] = x1;
+	ff[1] = ff[3] = y1;
+	ff[2] = ff[4] = x2;
+	ff[5] = ff[7] = y2;
+	i[0] = 4;
+	i[1] = 0;
+	fp[0] = ff;
+	internal = 1;
+	fill(i, fp);
+	internal = 0;
+}
+
+spline.c        420388306   41    1     100664  1342      `
+/*
+Produce spline (uniform knots, second order)
+from guiding points
+*/
+
+splin(mode, num, ff) 
+int num[], mode;
+double *ff[];
+{
+	int	i,  *np, n;
+	double	xa, ya, xc, yc, *xp, *yp, *xp0, *yp0, *xpe, *ype;
+	double **fp;
+	np = num;
+	fp = ff;
+	while((n = *np++)){
+		xp = *fp++; 
+		yp = xp + 1; 
+		xp0 = xp; 
+		yp0 = yp;
+		xpe = xp0 + 2 * (n - 1); 
+		ype = yp0 + 2 * (n - 1);
+		if (n < 3) { 
+			line(*xp, *yp, *(xp + 2), *(yp + 2)); 
+			continue;
+		}
+		if (mode == 4) {	/*closed curve*/
+			xa = 0.5 * (*xpe + *(xpe - 2)); 
+			xc = 0.5 * (*xpe + *xp0);
+			ya = 0.5 * (*ype + *(ype - 2)); 
+			yc = 0.5 * (*ype + *yp0);
+			parabola(xa, ya, xc, yc, *xpe, *ype);
+			xa = 0.5 * (*xpe + *xp0); 
+			xc = 0.5 * (*(xp0 + 2) + *xp0);
+			ya = 0.5 * (*ype + *yp0); 
+			yc = 0.5 * (*(yp0 + 2) + *yp0);
+			parabola(xa, ya, xc, yc, *xp0, *yp0);
+		}
+		else {	/*open curve with multiple endpoints*/
+			if (mode % 2) /*odd mode makes first point double*/
+				line(*xp0,*yp0,0.5*(*xp0+*(xp0+2)),0.5*(*yp0+*(yp0+2)));
+		}
+		xp += 2; 
+		yp += 2;
+		for (i = 1; i < (n - 1); i++, xp += 2, yp += 2) {
+			xa = 0.5 * (*(xp - 2) + *xp); 
+			xc = 0.5 * ( *xp + *(xp + 2));
+			ya = 0.5 * (*(yp - 2) + *yp); 
+			yc = 0.5 * ( *yp + *(yp + 2));
+			parabola(xa, ya, xc, yc, *xp, *yp);
+		}
+		if(mode >= 2 && mode != 4)
+			line(0.5*(*(xpe-2)+*xpe),0.5*(*(ype-2)+*ype),*xpe,*ype);
+	}
+}
+subr.c          420388306   41    1     100664  2186      `
+#include <stdio.h>
+#include <math.h>
+#include "tek.h"
+#define pHEIGHT 3120.
+#define pWIDTH  3120.
+#define pSMALL    0.2
+struct penvir E[9] = {
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+{ 0, 0,
+0., 0., 1., 1., pWIDTH, pHEIGHT, 0., 0.,
+pSMALL, 1., 31, 0., '`', '`'},
+};
+struct penvir *e0 = E, *e1 = &E[1];
+struct penvir *esave;
+int internal = 0;
+char	bcolor(s)
+char	*s;
+{
+	register char a;
+	a = 0;
+	while (*s != NULL) {
+		switch (*s) {
+		case 'l':
+			if (!(strncmp(s, "long", 4)))
+				a = 'd';
+			break;
+		case 'd':
+			if (!(strncmp(s, "dotd", 4)))
+				a = 'b';
+			else if (!(strncmp(s, "dott", 4)))
+				a = 'a';
+			else a ='c';	/*dash default-short*/
+			break;
+		case 's':
+			if (!(strncmp(s, "solid", 5)))
+				a ='`';
+			else if (!(strncmp(s, "short", 5)))
+				a = 'c';
+			break;
+		case 'G':
+			e1->pgap = atoi(s + 1);
+			break;
+		case 'A':
+			e1->pslant = (180. - atof(s + 1)) / RADIAN;
+			break;
+		}
+		while (*++s != NULL)
+			if (*s == '/'){
+				s++;
+				break;
+			}
+	}
+	return(a);
+}
+sscpy(a, b)
+struct penvir *a, *b;
+{ /* copy 'a' onto 'b' */
+	b->left = a->left;
+	b->bottom = a->bottom;
+	b->xmin = a->xmin;
+	b->ymin = a->ymin;
+	b->scalex = a->scalex;
+	b->scaley = a->scaley;
+	b->sidex = a->sidex;
+	b->sidey = a->sidey;
+	b->copyx = a->copyx;
+	b->copyy = a->copyy;
+	b->quantum = a->quantum;
+	b->grade = a->grade;
+	b->ppink = a->ppink;
+	b->pbrush = a->pbrush;
+}
+idle(){}
+#define TRUNC(A) A>0.? A+0.5: A-0.5
+normx(x)
+double	x;
+{
+	double	xx;
+	int	k;
+	xx = SCX(x);
+	k = TRUNC(xx);
+	return(k);
+}
+
+normy(y)
+double	y;
+{
+	double	yy;
+	int	k;
+	yy = SCY(y);
+	k = TRUNC(yy);
+	return(k);
+}
+ptype(){}
+text.c          420390328   41    1     100664  1575      `
+#include <stdio.h>
+#include "tek.h"
+#define N 0104
+#define E 0101
+#define NE 0105
+#define S 0110
+#define W 0102
+#define SW 0112
+/*	arrange by incremental plotting that an initial
+ *	character such as +, X, *, etc will fall
+ *	right on the point, and undo it so that further
+ *	labels will fall properly in place
+ */
+#define POINTPL	036
+#define BACKSP	''
+char	lbl_mv[] = {
+	POINTPL,040,S,S,S,S,S,S,SW,SW,SW,SW,SW,SW,SW,SW,SW,SW,PLOTOUT,0
+};
+char	lbl_umv[] = {
+	POINTPL,040,N,N,N,N,N,N,NE,NE,NE,NE,NE,NE,NE,NE,NE,NE,PLOTOUT,0
+};
+char	plotout[] = {
+	PLOTOUT,0
+};
+text(s)
+char	*s;
+{
+	register int	n;
+	register char *p;
+	int centered, right, newline, more, tweek;
+	double y;
+
+	while(1){
+	n = centered = right = newline = more = tweek = 0;
+	for(p=s; *p != '\0'; p++){
+		if(*p == '\\'){
+			switch(*(++p)){
+			case 'C': centered++;
+				s = p+1;
+				continue;
+			case 'R': right++;
+				s = p+1;
+				continue;
+			case 'n': newline++;
+				*(p-1) = '\0';
+				if(*(p+1) != '\0')more++;
+				goto output;
+			case 'L': s=p+1;
+				continue;
+			}
+		}
+		else if( (n==0) && (*p=='+' || *p == '*' || *p == 'x' ||
+			*p == 'X' || *p == '.' || *p == 'o'))tweek++;
+		else n = 1;
+	}
+output:
+	if(tweek)
+		printf("%s",lbl_mv);
+	else printf("%s",plotout);
+	n = 0;
+	if(centered) n = (p - s)/2 + 1;
+	else if(right)n = p - s +1;
+	if(n > 0)
+		while(--n)
+			putchar(BACKSP);
+	*p = '\0';
+	printf("%s", s);
+	if(tweek)
+		printf("%s",lbl_umv);
+	if(newline){
+		y = SCY(e1->copyy) ;
+		y -= 34.;
+		e1->copyy = (y - e1->bottom)/e1->scaley + e1->ymin;
+	}
+	move(e1->copyx, e1->copyy);
+	if(!more)break;
+	s = p+1;
+	}
+}
+
+vec.c           420388306   41    1     100664  890       `
+#include <stdio.h>
+#include "tek.h"
+int	oloy = -1;
+int	ohiy = -1;
+int	ohix = -1;
+int	oextra = -1;
+
+vec(xx, yy) 
+double	xx, yy; 
+{
+	int	x, y, hix, hiy, lox, loy, extra;
+	int	n;
+	e1->copyx = xx; 
+	e1->copyy = yy;
+	x = SCX(xx);
+	y = SCY(yy);
+	hix = (x >> 7) & 037;
+	hiy = (y >> 7) & 037;
+	lox = (x >> 2) & 037;
+	loy = (y >> 2) & 037;
+	extra = (x & 03) + ((y << 2) & 014);
+	n = (abs(hix - ohix) + abs(hiy - ohiy) + 6) / 12;
+	if (hiy != ohiy) {
+		putchar(hiy | 040);
+		ohiy = hiy;
+	}
+	if (hix != ohix) {
+		if (extra != oextra) {
+			putchar(extra | 0140);
+			oextra = extra;
+		}
+		putchar(loy | 0140);
+		putchar(hix | 040);
+		ohix = hix;
+		oloy = loy;
+	} else {
+		if (extra != oextra) {
+			putchar(extra | 0140);
+			putchar(loy | 0140);
+			oextra = extra;
+			oloy = loy;
+		} else if (loy != oloy) {
+			putchar(loy | 0140);
+			oloy = loy;
+		}
+	}
+	putchar(lox | 0100);
+	while (n--)
+		putchar(0);
+}
+tek.h           420388306   41    1     100664  586       `
+#define SCX(A) (A - e1->xmin)*e1->scalex  + e1->left;
+#define SCY(A) (A - e1->ymin)*e1->scaley + e1->bottom;
+#define unorm(y)	(double)y
+extern struct penvir {
+	double left, bottom;
+	double xmin, ymin;
+	double scalex, scaley;
+	double sidex, sidey;
+	double copyx, copyy;
+	double  quantum;
+	double grade;
+	int pgap;
+	double pslant;
+	char ppink, pbrush;
+	} *e0, *e1, *e2, *esave;
+extern int ohiy, ohix, oloy, oextra;
+extern int internal;
+char bcolor();
+#define ESC	033
+#define ERASE	014
+#define PLOTOUT	037
+#define PLOTIN	035
+#define RADIAN 57.3
+struct seg{
+	int x, y, X, Y;
+	char stat;
+};
+whoami.c        423864098   41    1     100664  35        `
+char *
+whoami(){
+	return("tek");
+}
+

@@ -1,0 +1,41 @@
+CC=lcc
+CFLAGS=-O -A -A -N -I/usr/include/lcc
+BUILTINS=
+
+OBJ = map.o index.o symbol.o libmap.a
+
+v10: mapv10 index.o symbol.o libmap.a
+	$CC $OBJ -lm -o map
+
+lplot: maplplot index.o symbol.o libmap.a
+	$CC $OBJ -lplot -lm -o map
+
+ps: maplplot plotPS.o index.o symbol.o libmap.a
+	$CC $OBJ plotPS.o -lm -o map
+
+
+mapv10: map.c iplot.h
+	$CC -c $CFLAGS -DPLOT='"iplot.h"' map.c
+
+maplplot: map.c plot.h
+	$CC -c $CFLAGS -DPLOT='"plot.h"' map.c
+
+%.o: %.c map.h
+	$CC -c $CFLAGS $stem.c
+
+libmap.a: forceit
+libmap.a forceit:
+	cd libmap
+	CC=$CC CFLAGS="-I.. $CFLAGS" mk
+
+install: map libmap.a
+	strip map 
+	cp map /usr/maps
+	cp map.sh /usr/bin/map
+	cp libmap.a /usr/lib
+	ranlib /usr/lib/libmap.a
+
+clean:
+	rm -f map *.o libmap.a new.results
+	cd libmap
+	mk clean

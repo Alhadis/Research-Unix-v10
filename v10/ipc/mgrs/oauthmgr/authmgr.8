@@ -1,0 +1,204 @@
+.TH AUTHMGR 8
+.CT 1 sa_auto secur
+.SH NAME
+authmgr \- authenticate users and make secure calls
+.SH SYNOPSIS
+.B authmgr
+.BI [ "options ..." ]
+.SH DESCRIPTION
+.I Authmgr
+receives authentication requests from the network via
+.IR svcmgr (8),
+authenticates the requesting user, and redials their
+call using one of the network interfaces, such as
+.IR dkmgr (8).
+The actual method used to authenticate the user depends
+on the command line arguments and the environment at the
+time
+.I authmgr
+is executed.
+.PP
+One mode is used when a user connects directly to the authentication
+service.
+In this mode, the user is asked to enter a login name (unless
+there is a login name present in the CSOURCE environment variable).
+The user is then challenged to encode some character string with
+their challenge box (or possibly just enter their password), and
+enter this as a response.
+If the response is correct (i.e. the user had the correct encryption
+key or password), the user is asked to enter the name of a new
+destination, and the call is redialed to this new destination.
+.PP
+The other mode is used when a call to a service using the V9 authentication
+protocol is rerouted through the authentication server (this is currently
+only possible if the call was placed over the datakit, through a trunk).
+In this case, the authentication server uses an extension of the "OK"/"NO"
+protocol used by
+.IR con (1).
+Here,
+.I authmgr
+responds to a connection with a string ``CH''.
+The calling program should prompt the user for a login name, and
+send that login back, followed by a newline.
+.I Authmgr
+responds with a challenge string, up to 60 characters long, followed
+by a newline (the challenge will be printable ASCII).
+The calling process must encode this string (unless it is blank; then
+it should obtain the user's password), and send this response back, also
+terminated by a newline.
+If the response is correct, the "OK"/"NO" protocol continues as
+normal (that is, the call is automatically redialed by the server
+without further intervention); otherwise, the "CH" challenge is
+repeated.
+.PP
+The options are
+.TP
+.B -n
+Do not prompt the user for a new destination, even if we don't have
+one already.
+This option is useful for authenticating an entire host (or a
+powerful terminal) as one user.
+The call will automatically be redialed in a special way.
+.TP
+.BI -f file
+Use
+.I file
+as the configuration file rather than the default.
+.PP
+When a call is redialed, the security ID of the new call is that
+of the authentication server itself, rather than the original security ID.
+.PP
+Much of the operation of the server is keyed off its configuration
+file.  Each line in the file contains an initial keyword, followed
+by a number of arguments (there are no continuation lines), a line
+starting with a ``#'' is a comment.  The various keywords are:
+.TP
+.BI admin " address ..."
+This defines the names of the administrators of the authentication server.
+The addresses (up to 10 may be specified) are the electronic mail
+addresses of the administrators.  These names will received mail
+if the server detects a possibly security violation.
+.TP
+.BI failures " number"
+This sets the maximum number of failures to allow an individual
+instantiation of
+.I authmgr
+before the connection is closed and the administrators are notified.
+The default is 3.
+.TP
+.BI disallow " login"
+Defines a login name that may not authenticate itself, even if it
+exists in the keys file.
+Any number of
+.B disallow
+lines may appear in the configuration file.
+.TP
+.BI usepasswd " regexp"
+Tells
+.I authmgr
+that despite what the key file says, if the source of this call
+matches
+.IR regexp ,
+the user should be requested to enter their password from the
+/etc/passwd file, rather than doing some kind of key encryption.
+This is useful when
+.I authmgr
+is being used for authentication inside a trusted network, and
+using encryption boxes would be too cumbersome.
+.TP
+.BI setuser " regexp user"
+Map all calls from machines matching 
+.IR regexp
+to
+.IR user .
+If the
+.I user
+field is empty, prompt for the login name.  This can be useful
+for calls coming from untrusted machines.
+.TP
+.BI setsvc " regexp service"
+If a call comes from a machine matching
+.IR regexp ,
+set the default service of the redialed call to
+.IR service .
+.TP
+.BI setlog " regexp file"
+Log calls from machines matching
+.I regexp
+in
+.IR file .
+.TP
+.BI secmapid " regexp securityid"
+If the security ID of the incoming call matches
+.I regexp
+(in the format of
+.IR regexp (3))
+the outgoing security ID will be
+.IR securityid .
+There must be at least one
+.B secmapid
+lines in the configuration file, that of the default (``.*'')
+outgoing security ID.
+Because of the way the security ID mappings are stored, any
+mappings that contain wildcards should appear after those without;
+the mappings are tried against an incoming security ID in top-down
+order (this implies that the default mapping should appear last).
+.PP
+The keys are stored in a key file.
+Each line in the key file is of the form
+.RS
+.sp
+login:keytype:key encoding:
+.sp
+.RE
+Login is a usual login name.
+Keytype is the type of the key (more than one encryption box type
+are supported by
+.IR authmgr ).
+The key encoding is the key for this user; this encoding differs
+depending on the keytype.
+Currently, two key types recognized.
+One is
+.BR atalla ,
+for the Atalla Confidante style key (the key encoding for this
+type is 8 groups of octal numbers between 0 and 0377, specifying the DES
+key kept in this box, for example ``010 342 176 214 212 101 414 527'').
+The other is
+.BR passwd ,
+which means the key encoding is a standard password file 13 character
+password entry (if the key encoding is blank,
+.I authmgr
+look in the password file for the password).
+Because these keys are stored
+in the clear, this file should be well protected, and probably
+should be encrypted.
+.PP
+Currently, the authentication server may be connected to at the
+service point ``security'' on the security host.
+If you use the service ``gsecurity'', you get the no-redial
+option of the server.
+.SH FILES
+.nf
+.F /usr/net/authmgr.conf
+.F /usr/net/authmgr.keys
+.F /etc/passwd
+.fi
+.SH "SEE ALSO"
+.IR con (1),
+.IR regexp (3),
+.IR svcmgr (8),
+.IR dkmgr (8)
+.SH BUGS
+There is currently no support for encrypting the keys file.
+.br
+The only current use for this is over the datakit, and the
+regular expressions in the secmapid line are not of the same
+format as would be expected for wildcard datakit names.
+.br
+Users will still have to enter a login and password if the
+service they redial doesn't believe
+.IR authmgr .
+.br
+The
+.I secmapid
+parameter is currently ignored.

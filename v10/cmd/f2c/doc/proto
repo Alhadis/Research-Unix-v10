@@ -1,0 +1,409 @@
+.SH
+7. PROTOTYPES
+.PP
+In ANSI C and C++, a
+.I prototype
+describes the calling sequence of a function.
+Prototypes can save debugging time by helping catch
+errors in calling sequences.  The
+.CW \%-P
+option instructs $f2c$ to emit prototypes for all
+the functions defined in the C it produces; specifically,
+$f2c$ creates a \fIfile\f(CW.P\fR of prototypes
+for each input \fIfile\f(CW.f\fR or \fIfile\f(CW.F\fR.
+One can then arrange for relevant prototype files
+to be seen by the C compiler.
+For instance, if $f2c$'s
+header file
+.CW f2c.h
+is installed as
+.CW /usr/include/f2c.h ,
+one could issue the UNIX command
+.P1
+cat /usr/include/f2c.h *.P >f2c.h
+.P2
+to create a local copy of
+.CW f2c.h
+that has in it all the prototypes in
+.CW *.P .
+Since the C produced by $f2c$ always specifies
+.P1
+#include "f2c.h"
+.P2
+(rather than
+.CW "#include <f2c.h>" ),
+the C compiler will look first in the current directory for
+.CW f2c.h
+and thus will find the local copy that contains the prototypes.
+.PP
+$F2c$ can also read the prototype files it writes;
+one simply specifies them as arguments to $f2c$.
+In fact, $f2c$ reads all prototype files before any
+Fortran files; although multiple Fortran files are handled
+independently, any prototype file arguments apply to all of them.
+$F2c$ has more detailed knowledge of Fortran types than it conveys
+in the C it puts out; for example,
+.CW logical
+and
+.CW integer
+are different Fortran types, but are mapped to the same C type.
+Moreover,
+.CW character ,
+.CW complex ,
+and
+.CW "double complex"
+Fortran functions are all translated to
+.CW VOID
+C functions, and, unless the
+.CW \%-R
+option is specified, both
+.CW real
+and
+.CW "double precision"
+Fortran functions are translated to
+.CW doublereal
+C functions.  Because $f2c$ denotes all these
+types differently in its prototype files, it
+can catch errors that are invisible to an ANSI C
+(or C++) compiler.
+.PP
+The following table shows the types
+that $f2c$ uses for procedure arguments:
+.TS
+center box;
+lfCW lfCW.
+C_fp	complex
+D_fp	doublereal
+E_fp	real\fR under \f(CW-!R\fR (the default)\fP
+H_fp	character
+I_fp	integer\fR or \f(CWinteger*4
+J_fp	integer*2
+K_fp	shortlogical\fR (\f(CWlogical\fR under \f(CW-i2\fR or \f(CW-I2\fR)\fP
+L_fp	logical
+R_fp	real\fR under \f(CW-R
+S_fp	subroutine\fR
+U_fp	\fRuntyped \f(CWexternal
+Z_fp	doublecomplex
+.TE
+These types are defined in
+.CW f2c.h ;
+they appear in prototypes and, under
+.CW \%-A
+or
+.CW \%-C++ ,
+in the C that $f2c$ writes.  Prototypes also use special
+.CW void
+types to denote the return values of
+.CW complex ,
+.CW "double complex",
+and
+.CW character
+functions:
+.TS
+center box;
+lfCW lfCW.
+C_f	complex
+H_f	character
+Z_f	double complex
+.TE
+.PP
+$F2c$ also writes special comments in prototype files giving
+the length of each
+.CW common
+block; when given prototype files as arguments, $f2c$ reads
+these special comments so it can issue a warning message if its
+Fortran input specifies a different length for some
+.CW common
+block.
+.PP
+Sometimes people write otherwise valid Fortran 77 that
+specifies different lengths for a
+.CW common
+block.  If such Fortran is split into several files and converted
+to C, the loader could end up giving too little space to the
+.CW common
+block in question.  One can avoid the confusion this could cause by
+running $f2c$ twice, first with
+.CW \%-P!c ,
+then with the resulting prototypes as additional arguments;
+the prototypes let $f2c$ determine (and convey to all of its
+output C files) the true length needed for
+each
+.CW common
+block.
+.PP
+One complication with prototypes comes from Fortran subprograms that
+declare a procedure to be
+.CW external
+but do not explicitly specify a type for it and only
+pass it as a parameter to another procedure.  (If the
+subprogram also invokes the
+.CW external
+procedure, then $f2c$ can tell whether the procedure is
+a subroutine or a function; in the latter case, Fortran's
+implicit typing rules specify a type for the procedure.)
+If it can do no better, then $f2c$ assumes that untyped
+.CW external
+procedures are subroutines (and hence become
+.CW int -valued
+functions in C).
+This can cause the generated C to have
+multiple and inconsistent declarations for some procedures.
+For example,
+.P1
+	external f
+	call foo(f)
+	end
+	function f(x)
+	double precision f, x
+	f = x
+	end
+.P2
+results in
+.CW MAIN_\|_
+declaring
+.P1
+    extern /* Subroutine */ int f_();
+.P2
+and in the subsequent definition of
+.CW "doublereal f_(x)"
+in the same C file.
+Such inconsistencies are grounds for some C compilers
+to abort compilation.
+.PP
+$F2c$'s type inferences only apply sequentially to
+the procedures in a file, because $f2c$ writes C for each procedure
+before reading the next one.  Thus, as just illustrated, if procedure
+.CW xyz
+comes after
+.CW abc
+in a Fortran input file, then $f2c$ cannot use information
+it gains when it sees the definition of
+.CW xyz
+to deduce types for
+.CW external
+procedures passed as arguments to
+.CW xyz
+by
+.CW abc .
+By using the
+.CW \%-P
+option and running $f2c$ several times, one can
+get around this deficiency.  For instance, if file
+.CW zap.f
+contains the Fortran shown above, then the commands
+.P1
+	f2c -P!c zap.f
+	f2c -A zap.[fP]
+.P2
+result in a file
+.CW zap.c
+in which
+.CW MAIN_\|_
+correctly types
+.CW f_
+and
+.CW foo_
+as
+.P1
+    extern doublereal f_();
+    extern /* Subroutine */ int foo_(D_fp);
+.P2
+rather than
+.P1
+    extern /* Subroutine */ int f_();
+    extern /* Subroutine */ int foo_(U_fp);
+.P2
+The first invocation of $f2c$ results in a file
+.CW zap.P
+containing
+.P1
+extern doublereal f_(doublereal *x);
+/*:ref: foo_ 10 1 200 */
+.P2
+The second invocation of $f2c$ is able to type
+.CW f_
+and
+.CW foo_
+correctly because of the first line in
+.CW zap.P .
+.PP
+The second line in
+.CW zap.P
+is a special comment that records the incomplete type
+information that $f2c$ has about
+.CW foo_ .
+$F2c$ puts one such special comment in the prototype file for each
+Fortran procedure that is referenced but not defined in the Fortran file.
+When it reads prototype files, $f2c$ deciphers these comments and
+uses them to check the consistency of calling sequences.
+As it learns more about untyped external procedures, $f2c$ updates
+the information it has on them; the
+.CW :ref:
+comments it writes in a prototype file reflect $f2c$'s latest knowledge.
+.PP
+Ordinarily $f2c$ tries to infer the type of an untyped
+.CW external
+procedure from its use as arguments to procedures of
+known argument types.  For example, if
+.CW f.f
+contains just
+.P1
+	external f
+	call foo(f)
+	end
+.P2
+and if
+.CW foo.P
+contains
+.P1
+extern int foo_(D_fp);
+.P2
+then
+.P1
+f2c -A f.f foo.P
+.P2
+results in the declaration
+.P1
+    extern doublereal f_();
+.P2
+Under unusual circumstances, such type inferences
+can lead to erroneous error messages or to incorrect typing.
+Here is an example:
+.P1
+	subroutine zoo
+	external f
+	double precision f
+	external g
+	call zap(1,f)
+	call zap(2,g)
+	end
+	subroutine goo
+	call g
+	end
+.P2
+$F2c$ first infers g to be a double precision function, then discovers
+that it must be a subroutine and issues a warning message about
+inconsistent declarations for
+.CW g .
+This example is legal Fortran 77;
+.CW zap
+could be defined, for instance, by
+.P1
+	subroutine zap(n,f)
+	external f
+	if (n .le. 1) call zap1(f)
+	if (n .ge. 2) call zap2(f)
+	end
+.P2
+In such a case one can specify the
+.CW \%-!it
+option to instruct $f2c$ not to infer the types of otherwise
+untypable
+.CW external
+procedures from their appearance as arguments to known procedures.
+Here is another (somewhat far-fetched) example where
+.CW \%-!it
+is useful:
+.P1
+	subroutine grok(f,g,h)
+	external f, g, h
+	logical g
+	call foo(1,g)
+	call foo(2,f)
+	call zit(1,f)
+	call zit(2,h)
+	call zot(f(3))
+	end
+.P2
+Without
+.CW \%-!it ,
+$f2c$ first infers
+.CW f_
+to be a
+.CW logical
+function, then discovers that Fortran's implicit typing
+rules require it to be a
+.CW real
+function.
+$F2c$ issues the
+warning message
+.CW "fixing wrong type inferred for f" '', ``
+which should serve as a warning that $f2c$ may have made some
+incorrect type inferences in the mean time.
+Indeed, $f2c$ ends up typing
+.CW h_
+as a
+.CW logical
+function; with
+.CW \%-!it
+specified, $f2c$ types
+.CW h_
+as an
+.CW external
+procedure unknown type, i.e., a
+.CW U_fp ,
+which to the C compiler appears to be a subroutine.
+(Even with
+.CW \%-!it
+specified, $f2c$ issues a warning message about inconsistent
+calling sequences for
+.CW foo .)
+.PP
+Because $f2c$ writes its latest knowledge of types into
+prototype files, it is easy to write a crude script
+that will glean the maximum possible type information:
+.P1
+>f.p
+until
+	f2c -Pit f.p f.f
+	cmp -s f.p f.P
+do
+	mv f.P f.p
+	done
+.P2
+In such scripts, use of the
+.CW \%-Ps
+option can save an iteration;
+.CW \%-Ps
+implies
+.CW \%-P
+and instructs $f2c$ to issue return code 4 if another
+iteration might change a declaration or prototype.
+Thus the following script is more efficient:
+.EQ
+delim off
+.EN
+.P1
+while :; do
+	f2c -Ps f.[fP]
+	case $? in 4) ;; *) break;; esac
+	done
+.P2
+.EQ
+delim $$
+.EN
+The number of iterations depends on the call graph of the
+procedures in
+.CW f.f
+and on their order of appearance in
+.CW f.f .
+Sorting them into topological order (so that if
+.CW abc
+calls
+.CW def ,
+then
+.CW abc
+precedes
+.CW def )
+and reverse topological order and alternating between
+the two orders
+is probably a good heuristic.
+For example, we were able to completely type
+the \s-2PORT3\s+2 subroutine library
+in two passes by first processing it in reverse topological order,
+then in forward order.  Unfortunately, one can devise situations
+where arbitrarily many iterations are required.  This is slightly
+annoying, since with appropriate data structures (in an extensively
+reorganized version of $f2c$), one could do this calculation
+in linear time.

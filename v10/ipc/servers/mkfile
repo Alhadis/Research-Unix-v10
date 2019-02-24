@@ -1,0 +1,24 @@
+BIN=telnetd ftpd loopbackd
+CFLAGS=-g -I../h
+
+all	:	$BIN
+
+loopbackd:	loopbackd.o
+		cc $CFLAGS -o loopbackd loopbackd.o
+
+telnetd	:	telnetd.o
+		cc $CFLAGS -o telnetd telnetd.o
+
+ftpd	:	ftpd.o ftpcmd.o
+		cc -g -o ftpd ftpd.o ftpcmd.o -lin -lipc
+
+ftpcmd.o:	ftpcmd.y
+		yacc ftpcmd.y
+		cc -c $CFLAGS y.tab.c
+		mv y.tab.o ftpcmd.o
+
+install	:	$BIN
+		cp $BIN /usr/ipc/servers
+
+clean:
+	rm -f *.[oO] y.tab.c telnetd ftpd

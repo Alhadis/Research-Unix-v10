@@ -1,0 +1,35 @@
+CFLAGS=-g
+OBJ=main.o check.o adderr.o dir.o repairs.o names.o harder.o mkfs.o
+SRC=mkfile fs.h main.c check.c adderr.c dir.c repairs.c names.c harder.c mkfs.c upchuck.c
+a.out:	$OBJ
+	$CC $CFLAGS $prereq
+$OBJ:	fs.h
+upchuck:	upchuck.c
+	$CC $CFLAGS -o upchuck upchuck.c
+list:	$SRC
+	prcan $newprereq
+	touch list
+
+clean:
+	rm -f $OBJ upchuck chuck
+install:	a.out upchuck
+	if test `cat /etc/whoami` != bowell; then echo not bowell; exit 1; fi
+	cp a.out /tmp/$$
+	strip /tmp/$$
+	cp /tmp/$$ /etc/chuck
+	cp upchuck /tmp/$$
+	strip /tmp/$$
+	mv /tmp/$$ /etc/upchuck
+	touch install
+
+ship:	install
+	if test `cat /etc/whoami` != bowell; then echo not bowell; exit 1; fi
+	dest='research coma crab pipe seki phone/gauss dutoit' ship /etc/upchuck /etc/chuck
+	touch ship
+
+backup:	$SRC
+	if test `cat /etc/whoami` != bowell
+	then
+		push bowell $newprereq /usr/src/cmd/chuck
+		touch backup
+	fi

@@ -1,0 +1,192 @@
+/*
+ * parse the permission exceptions file
+ */
+
+#include <rf.h>
+#include <stdio.h>
+#include <ctype.h>
+
+extern char *strchr();
+extern char *malloc(), *realloc();
+
+extern char rootname[];
+
+Namemap *exulist, *exglist;
+static int exuend, exgend;
+static int exulim, exglim;
+
+rdexcept(f)
+FILE *f;
+{
+	char line[200];		/* big enough, ignore */
+	char *typ, *arg;
+
+	while (fgets(line, sizeof(line), f)) {
+		if (crack(line, &typ, &arg) == 0)
+			continue;
+		if (strcmp(typ, "client") == 0
+		&&  matchclient(arg)) {
+			exclient(f);
+			return (1);
+		}
+	}
+	return (0);
+}
+
+/*
+ * parse one line from the file
+ * return 1 if it looks valid, 0 if not
+ * a valid line has
+ * at least two blank-separated tokens
+ * and does not begin with `#'
+ * the first token is a type,
+ * the second an argument;
+ * pointers to be filled in for each are supplied
+ */
+crack(line, tp, ap)
+register char *line;
+char **tp, **ap;
+{
+
+	if (line[0] == '#')
+		return (0);
+	while (isspace(*line))
+		line++;
+	if (line[0] == 0)
+		return (0);
+	*tp = line;
+	while (!isspace(*line))
+		line++;
+	if (line[0] == 0)
+		return (0);
+	*line++ = 0;
+	while (isspace(*line))
+		line++;
+	if (line[0] == 0)
+		return (0);
+	*ap = line;
+	while (*line)
+		line++;
+	if (line[-1] == '\n')
+		line[-1] = 0;
+	return (1);
+}
+
+/*
+ * is this the client section we want?
+ * -- take the first match, and no other
+ */
+matchclient(cp)
+char *cp;
+{
+	if (strcmp(cp, "*") == 0 || strcmp(cp, rfclient) == 0)
+		return (1);
+	return (0);
+}
+
+/*
+ * found the right client section;
+ * stash the info away
+ * we know that only this client section will be examined,
+ * so don't worry about the fact that the
+ * next `client' line in the file may be swallowed
+ */
+exclient(f)
+FILE *f;
+{
+	char line[200];		/* again, big enough */
+	char *typ, *arg;
+
+	while (fgets(line, sizeof(line), f)) {
+		if (crack(line, &typ, &arg) == 0)
+			continue;
+		if (strcmp(typ, "client") == 0)
+			break;		/* end of our section */
+		else if (strcmp(typ, "param") == 0)
+			exparam(arg);
+		else if (strcmp(typ, "uid") == 0)
+			exuid(arg, strchr(arg, '='));
+		else if (strcmp(typ, "gid") == 0)
+			exgid(arg);
+		else
+			rflog("unexpected except line: %s %s\n", typ, arg);
+	}
+}
+
+exparam(par)
+char *par;
+{
+	register char *val;
+	extern char *defaultuser, *defaultgroup;
+
+	if ((val = strchr(par, '=')) != NULL)
+		*val++ = 0;
+	if (strcmp(par, "root") == 0)
+		strcpy(rootname, val);
+	else if (strcmp(par, "otherok") == 0)
+		rfotherdeny = (*val != '1');	/* 1 means others OK */
+	else if (strcmp(par, "defaultuser") == 0) {
+		if ((defaultuser = (char *)malloc(strlen(val)+1)) == NULL)
+			rfpanic("no mem for defaultuser\n");
+		strcpy(defaultuser, val);
+	} else if (strcmp(par, "defaultgroup") == 0) {
+		if ((defaultgroup = (char *)malloc(strlen(val)+1)) == NULL)
+			rfpanic("no mem for defaultgroup\n");
+		strcpy(defaultgroup, val);
+	} else
+		rflog("unexpected except param %s=%s\n", par, val);
+}
+
+exuid(arg, val)
+char *arg, *val;
+{
+	register Namemap *p;
+
+	if (val == 0)
+		return;
+	if (val[0] == '=')
+		*val++ = 0;
+	if (exulist == NULL) {
+		exulim = 10;
+		if ((exulist = (Namemap *)malloc(exulim*sizeof(Namemap))) == NULL)
+			rfpanic("no mem for except uids\n");
+	}
+	if (exuend >= exulim - 1) {
+		exulim += 10;
+		if ((exulist = (Namemap *)realloc((char *)exulist, exulim*sizeof(Namemap))) == NULL)
+			rfpanic("no mem for except uids\n");
+	}
+	p = &exulist[exuend++];
+	strncpy(p->cname, arg, sizeof(p->cname)-1);
+	p->cname[sizeof(p->cname)-1] = 0;
+	strncpy(p->sname, val, sizeof(p->sname)-1);
+	p->sname[sizeof(p->sname)-1] = 0;
+	p[1].cname[0] = 0;
+}
+
+exgid(arg)
+char *arg;
+{
+	char *val;
+	register Namemap *p;
+
+	if ((val = strchr(arg, '=')) == NULL)
+		return;		/* may be wrong */
+	*val++ = 0;
+	if (exglist == NULL) {
+		exglim = 10;
+		if ((exglist = (Namemap *)malloc(exglim*sizeof(Namemap))) == NULL)
+			rfpanic("no mem for except uids\n");
+	}
+	if (exgend >= exglim-1) {
+		exglim += 10;
+		if ((exglist = (Namemap *)realloc((char *)exglist, exglim*sizeof(Namemap))) == NULL)
+			rfpanic("no mem for except uids\n");
+	}
+	p = &exglist[exgend++];
+	strncpy(p->cname, arg, sizeof(p->cname)-1);
+	p->cname[sizeof(p->cname)-1] = 0;
+	strncpy(p->sname, val, sizeof(p->sname)-1);
+	p->sname[sizeof(p->sname)-1] = 0;
+	p[1].cname[0] = 0;
+}

@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# develop: "develop fname.s" makes fname.i from fname.s
+
+# intended to be called only from movie and stills
+
+LIB=${LIB-/usr/lib/movie}
+
+case $# in
+0)	echo 'Usage: develop file.s ...' 1>&2; exit 1 ;;
+*)	;;
+esac
+
+for i in $*
+do
+	case $# in
+	1)	;;
+	*)	echo $i: ;;
+	esac
+
+	case $i in
+	*.s)	bn=`echo $i | sed s/.s$//` ;;	# foo.s; bn = foo
+	*)	echo 'Usage: develop file.s ...' 1>&2; exit 1 ;;
+	esac
+
+	if [ ! -r $bn.s ]
+	then
+		echo 1>&2 "develop: can't open $bn.s"; exit 2
+	elif [ ! -r $bn.i ] || $LIB/newer $bn.s $bn.i
+	then
+		$LIB/fdevelop $bn.s >$bn.i
+	fi
+done
+exit 0

@@ -1,0 +1,440 @@
+!<arch>
+arc.c           454268810   3     4     100664  3572      `
+#include <math.h>
+#include <stdio.h>
+#define DX 10
+#define sqr(x) ((long int)(x)*(x))
+arc(x, y, x0, y0, x1, y1)
+{
+	/* based on Bresenham, CACM, Feb 77, pp 102-3 */
+	/* by Chris Van Wyk */
+	/* capitalized vars are an internal reference frame */
+	long dotcount = 0;
+	int	xs, ys, xt, yt, Xs, Ys, qs, Xt, Yt, qt,
+	M1x, M1y, M2x, M2y, M3x, M3y,
+	Q, mymove, Xc, Yc;
+	long int	delta;
+	float	xc, yc;
+	float	radius, slope;
+	float	xstep, ystep;
+	/* a circular arc; radius is computed from center and first point */
+	xstep = ystep = 1;
+	radius = sqrt((float)sqr(x0 - x) + sqr(y0 - y));
+
+
+	xc = x0;
+	yc = y0;
+	/* now, use start and end point locations to figure out
+   the angle at which start and end happen; use these
+   angles with known radius to figure out where start
+   and end should be */
+	slope = atan2((double)(y0 - y), (double)(x0 - x)
+	    );
+	if ((slope == 0.0)
+	     && (x0 < x)
+	    )
+		slope = 3.14159265;
+	x0 = x + radius * cos(slope)
+	 + 0.5;
+	y0 = y + radius * sin(slope)
+	 + 0.5;
+	slope = atan2((double)(y1 - y), (double)(x1 - x)
+	    );
+	if ((slope == 0.0)
+	     && (x1 < x)
+	    )
+		slope = 3.14159265;
+	x1 = x + radius * cos(slope)
+	 + 0.5;
+	y1 = y + radius * sin(slope)
+	 + 0.5;
+	/* step 2: translate to zero-centered circle */
+	xs = x0 - x;
+	ys = y0 - y;
+	xt = x1 - x;
+	yt = y1 - y;
+	/* step 3: normalize to first quadrant */
+	if (xs < 0)
+		if (ys < 0) {
+			Xs = abs(ys);
+			Ys = abs(xs);
+			qs = 3;
+			M1x = 0;
+			M1y = -1;
+			M2x = 1;
+			M2y = -1;
+			M3x = 1;
+			M3y = 0;
+		} 
+		else {
+			Xs = abs(xs);
+			Ys = abs(ys);
+			qs = 2;
+			M1x = -1;
+			M1y = 0;
+			M2x = -1;
+			M2y = -1;
+			M3x = 0;
+			M3y = -1;
+		} 
+	else if (ys < 0) {
+		Xs = abs(xs);
+		Ys = abs(ys);
+		qs = 0;
+		M1x = 1;
+		M1y = 0;
+		M2x = 1;
+		M2y = 1;
+		M3x = 0;
+		M3y = 1;
+	} else {
+		Xs = abs(ys);
+		Ys = abs(xs);
+		qs = 1;
+		M1x = 0;
+		M1y = 1;
+		M2x = -1;
+		M2y = 1;
+		M3x = -1;
+		M3y = 0;
+	}
+
+
+	Xc = Xs;
+	Yc = Ys;
+	if (xt < 0)
+		if (yt < 0) {
+			Xt = abs(yt);
+			Yt = abs(xt);
+			qt = 3;
+		} 
+		else {
+			Xt = abs(xt);
+			Yt = abs(yt);
+			qt = 2;
+		} 
+	else if (yt < 0) {
+		Xt = abs(xt);
+		Yt = abs(yt);
+		qt = 0;
+	} else {
+		Xt = abs(yt);
+		Yt = abs(xt);
+		qt = 1;
+	}
+
+
+	/* step 4: calculate number of quadrant crossings */
+	if (((4 + qt - qs)
+	     % 4 == 0)
+	     && (Xt <= Xs)
+	     && (Yt >= Ys)
+	    )
+		Q = 3;
+	else
+		Q = (4 + qt - qs) % 4 - 1;
+	/* step 5: calculate initial decision difference */
+	delta = sqr(Xs + 1)
+	 + sqr(Ys - 1)
+	-sqr(xs)
+	-sqr(ys);
+	/* here begins the work of drawing
+   we hope it ends here too */
+	move ((int)xc, (int)yc);
+	while ((Q >= 0)
+	     || ((Q > -2)
+	     && ((Xt > Xc)
+	     && (Yt < Yc)
+	    )
+	    )
+	    ) {
+		if (dotcount++ % DX == 0) 
+			cont((int)xc, (int)yc);
+		if (Yc < 0.5) {
+			/* reinitialize */
+			Xs = Xc = 0;
+			Ys = Yc = sqrt((float)(sqr(xs) + sqr(ys)));
+			delta = sqr(Xs + 1) + sqr(Ys - 1) - sqr(xs) - sqr(ys);
+			Q--;
+			M1x = M3x;
+			M1y = M3y;
+			 {
+				int	T;
+				T = M2y;
+				M2y = M2x;
+				M2x = -T;
+				T = M3y;
+				M3y = M3x;
+				M3x = -T;
+			}
+		} else {
+			if (delta <= 0)
+				if (2 * delta + 2 * Yc - 1 <= 0)
+					mymove = 1;
+				else
+					mymove = 2;
+			else if (2 * delta - 2 * Xc - 1 <= 0)
+				mymove = 2;
+			else
+				mymove = 3;
+			switch (mymove) {
+			case 1:
+				Xc++;
+				delta += 2 * Xc + 1;
+				xc += M1x * xstep;
+				yc += M1y * ystep;
+				break;
+			case 2:
+				Xc++;
+				Yc--;
+				delta += 2 * Xc - 2 * Yc + 2;
+				xc += M2x * xstep;
+				yc += M2y * ystep;
+				break;
+			case 3:
+				Yc--;
+				delta -= 2 * Yc + 1;
+				xc += M3x * xstep;
+				yc += M3y * ystep;
+				break;
+			}
+		}
+	}
+	cont (x1, y1);
+
+
+}
+box.c           379733572   3     4     100664  114       `
+box(x0, y0, x1, y1)
+{
+	move(x0, y0);
+	cont(x0, y1);
+	cont(x1, y1);
+	cont(x1, y0);
+	cont(x0, y0);
+	move(x1, y1);
+}
+circle.c        379733572   3     4     100664  40        `
+circle(x,y,r){
+	arc(x,y,x+r,y,x+r,y);
+}
+closepl.c       379733574   3     4     100664  192       `
+#include <stdio.h>
+extern float obotx;
+extern float oboty;
+extern float scalex;
+extern float sidex;
+closepl(){
+	move((int)(obotx+sidex/scalex+.5), (int)oboty);
+	putch(037);
+	fflush(stdout);
+}
+dot.c           379733572   3     4     100664  9         `
+dot(){
+}
+
+erase.c         379733572   3     4     100664  230       `
+#include <stdio.h>
+
+extern int ohiy;
+extern int ohix;
+extern int oloy;
+extern int oextra;
+erase(){
+	int i;
+		putch(033);
+		putch(014);
+		ohiy= -1;
+		ohix = -1;
+		oextra = -1;
+		oloy = -1;
+		fflush(stdout);
+		sleep(2);
+		return;
+}
+label.c         454268804   3     4     100664  588       `
+#define N 0104
+#define E 0101
+#define NE 0105
+#define S 0110
+#define W 0102
+#define SW 0112
+/*	arrange by incremental plotting that an initial
+ *	character such as +, X, *, etc will fall
+ *	right on the point, and undo it so that further
+ *	labels will fall properly in place
+ */
+char lbl_mv[] ={
+	036,040,S,S,S,S,S,S,SW,SW,SW,SW,SW,SW,SW,SW,SW,SW,037,0
+};
+char lbl_umv[] ={
+	036,040,N,N,N,N,N,N,NE,NE,NE,NE,NE,NE,NE,NE,NE,NE,037,0
+};
+label(s)
+char *s;
+{
+	register i,c;
+	for(i=0; c=lbl_mv[i]; i++)
+		putch(c);
+	for(i=0; c=s[i]; i++)
+		putch(c);
+	for(i=0; c=lbl_umv[i]; i++)
+		putch(c);
+}
+line.c          379733573   3     4     100664  49        `
+line(x0,y0,x1,y1){
+	move(x0,y0);
+	cont(x1,y1);
+}
+
+linemod.c       379733573   3     4     100664  216       `
+linemod(s)
+char *s;
+{
+	char c;
+	putch(033);
+	switch(s[0]){
+	case 'l':	
+		c = 'd';
+		break;
+	case 'd':	
+		if(s[3] != 'd')c='a';
+		else c='b';
+		break;
+	case 's':
+		if(s[5] != '\0')c='c';
+		else c='`';
+	}
+	putch(c);
+}
+move.c          379733573   3     4     100664  42        `
+move(xi,yi){
+	putch(035);
+	cont(xi,yi);
+}
+open.c          379733573   3     4     100664  26        `
+openvt ()
+{
+}
+openpl(){
+}
+point.c         379733573   3     4     100664  44        `
+point(xi,yi){
+	move(xi,yi);
+	cont(xi,yi);
+}
+scale.c         454268803   3     4     100664  267       `
+extern float scalex;
+extern float scaley;
+extern int scaleflag;
+scale(i,x,y)
+char i;
+float x,y;
+{
+	switch(i) {
+	default:
+		return;
+	case 'c':
+		x *= 2.54;
+		y *= 2.54;
+	case 'i':
+		x /= 200;
+		y /= 200;
+	case 'u':
+		scalex = 1/x;
+		scaley = 1/y;
+	}
+	scaleflag = 1;
+}
+
+space.c         379733574   3     4     100664  329       `
+extern float botx;
+extern float boty;
+extern float obotx;
+extern float oboty;
+extern float scalex;
+extern float scaley;
+extern float sidex;
+extern float sidey;
+extern int scaleflag;
+space(x0,y0,x1,y1){
+	botx = 0.;
+	boty = 0.;
+	obotx = x0;
+	oboty = y0;
+	if(scaleflag)
+		return;
+	scalex = sidex/(x1-x0);
+	scaley = sidey/(y1-y0);
+}
+
+subr.c          454268970   3     4     100664  938       `
+#include <stdio.h>
+float obotx =0.;
+float oboty =0.;
+float botx =0.;
+float boty =0.;
+float scalex =1.;
+float scaley =1.;
+float sidex =3120.;
+float sidey =3120.;
+int scaleflag;
+
+int oloy = -1;
+int ohiy = -1;
+int ohix = -1;
+int oextra = -1;
+cont(x,y){
+	int hix,hiy,lox,loy,extra;
+	int n;
+	x = (x-obotx)*scalex + botx;
+	y = (y-oboty)*scaley + boty;
+	hix=(x>>7) & 037;
+	hiy=(y>>7) & 037;
+	lox = (x>>2)&037;
+	loy=(y>>2)&037;
+	extra=(x&03)|((y<<2)&014);
+	n = (abs(hix-ohix) + abs(hiy-ohiy) + 6) / 12;
+	if(hiy != ohiy){
+		putch(hiy|040);
+		ohiy=hiy;
+	}
+	if(hix != ohix){
+		if(extra != oextra){
+			putch(extra|0140);
+			oextra=extra;
+		}
+		putch(loy|0140);
+		putch(hix|040);
+		ohix=hix;
+		oloy=loy;
+	}
+	else{
+		if(extra != oextra){
+			putch(extra|0140);
+			putch(loy|0140);
+			oextra=extra;
+			oloy=loy;
+		}
+		else if(loy != oloy){
+			putch(loy|0140);
+			oloy=loy;
+		}
+	}
+	putch(lox|0100);
+	while(n--)
+		putch(0);
+}
+
+putch(c){
+	putc(c,stdout);
+}
+Makefile        379733571   3     4     100664  117       `
+lib4014.a:	*.c
+	make `ls *.c|sed 's/\.c/.o/`
+.c.o:
+	cc -c -O $*.c
+	ar r lib4014.a $@
+install:
+	cp lib4014.a /usr/lib
+

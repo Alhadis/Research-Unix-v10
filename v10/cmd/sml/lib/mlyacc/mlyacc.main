@@ -1,0 +1,13 @@
+structure ParseGen =
+   struct
+      val parseGen = fn file =>
+          let val outfile = file ^ ".sml"
+	      val in_str = open_in file
+	      val out_str = open_out outfile
+	      val lexer =  Mlex.makeLexer (input in_str)
+	      val p = (C.HDR.out := out_str; C.HDR.err_flag := false;
+		  C.HDR.infile := file; C.HDR.lineno := 0;
+		  C.parse lexer (0,0))
+	   in (close_in in_str; close_out out_str;  p)
+	   end
+   end

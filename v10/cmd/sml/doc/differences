@@ -1,0 +1,143 @@
+This file attempts to list differences between the Edinburgh compiler
+and SML of New Jersey, as an aid to converting programs to run under
+the new compiler.  Items that are likely to break old code are
+annotated with "!!!".  The version of the Edinburgh compiler we have
+used for comparison is quite old, and many of these differences may
+not apply to the latest version.  Users who find other differences can
+help keep this file up to date by sending mail to:
+
+       macqueen%research.att.com@relay.cs.net
+
+
+Pervasives
+
+* The type of use is different; it is now applied to strings instead
+  of string lists.  Users who prefer the old version of use can
+  redefine it:
+       val use = app use    !!!
+
+* Structure Byte_array has been renamed ByteArray, and there have been
+  significant changes in the structure itself, including renaming of
+  functions to parallel those in the structure Array, and the addition
+  of a new exception Range.  The new signature BYTEARRAY is defined in
+  boot/perv.sig.  As before, ByteArray is not opened by default in
+  the pervasive environment.  !!!
+
+* Strings and byte arrays are not limited to 65535 characters as they
+  were in the Edinburgh system.
+
+* There have been significant changes in the IO interface.  The BasicIO
+  and ExtendedIO structures have been replaced by structure IO, which
+  matches signatures BasicIO and IO (signature ExtendedIO has been eliminated).
+  The IO and BASICIO signatures can be found in boot/perv.sig.
+
+* IO.input and IO.output are curried. !!!
+
+* IO.can_input now returns the number of characters which can be read from
+  an instream without blocking.
+
+* List.exists has been curried. !!!
+
+* List.@ now associates to the right.
+
+* The type of exportML has changed:
+       val exportML : string -> bool
+  The string is the file to export to, and the boolean returned distinguishes
+  between a new ML process (true) and the return from exportML (false).
+  In the Edinburgh system, exportML returned the new process to top level;
+  in our system, the new process takes up exactly where exportML would have
+  returned to.
+
+* The obsolete exception Varstruct is not supported; Bind should
+  be used instead.  !!!
+
+
+Core
+
+* We use the new exception syntax.  !!!
+
+* We use the new form of numeric record labels, for example {2=5,3=true}. !!!
+
+* Record label abbreviations work only in patterns, not in expressions:  !!!
+      val a = 4 val b = {a,c=3}    
+	    does not work on our system, but these will:
+      val a = 4 val b = {a=a,c=3} 
+      fun f {a : int, c = 3} = ... 
+
+
+Modules
+
+* Functors may have free references to structures that are not parameters.
+
+* Sharing constraints are now components of signatures.
+
+* Functor parameter syntax is slightly different:  !!!
+  Two styles of functor syntax are now supported.  The parameter list following
+  the functor name in a functor declaration can consist either of a single
+  structure name with a signature, or it can consist of a sequence of specifications
+  like those in the body of a signature.  For example:
+       functor F(X: sig structure A: SA and B: SB end) =
+       struct
+	 ... X.A ... X.B ...
+       end
+   or
+       functor F'(structure A: SA and B: SB) =
+       struct
+	 ... A ... B ...
+       end
+  Corresponding functor applications would have the forms
+       F(<strexp>)
+   or
+       F'(structure A = <strexp> and B = <strexp>)
+
+
+All of the features above are documented in the manual (???).
+
+
+Undocumented features of our compiler:
+
+* val cd : string -> unit
+   allows you to change working directories without leaving ML.
+
+* val exportFn : string * (string list*string list -> unit) -> unit
+   exportFn takes a string and a function, and exports the function
+   to the file specified by the string.  Only the function itself and
+   code it is dependent on are exported; this will be much smaller
+   than the file produced by exportML (which contains the entire
+   compiler).  The exported function will be applied to a list of
+   command-line arguments and a list of the (Unix) environment on startup.
+   Because exportFn "throws away" the compiler by forcing a special
+   garbage collection, it never returns.
+
+* Two functions are provided which allow the user to construct and
+   execute ML code on the fly:
+	    val open_string : string -> instream
+	    val use_stream : instream -> unit
+   use_stream is like use except that it is applied to an instream
+   rather than a file name.  open_string converts a string to
+   an instream.
+
+* A structure System is present in the initial environment.  The structure
+  contains special values used by the compiler, which for the most
+  part should be left alone.  Two substructures may be of some
+  use: System.Control contains a number of flags which control
+	compiler behavior.  They are not documented anywhere,
+	and some have unobvious functions, so it is unwise to play
+	with those which seem cryptic.
+       System.Timer contains some elementary timing functions.
+  Both have signatures defined in boot/system.sig, and both are
+  subject to change at any time.
+
+* System.version : string
+   a string identifying the version and origin date of the compiler.
+
+* exception SystemCall of string
+   may be raised by the functions system and cd, or in
+   unusual failures of system calls.
+
+* exception Real of string
+   may be raised by generic exceptions like overflow
+   encountered in floating point operations.
+
+* exception Overflow
+   is raised by integer overflow (bigints are not supported).

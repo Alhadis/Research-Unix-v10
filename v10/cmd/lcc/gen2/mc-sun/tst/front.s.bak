@@ -1,0 +1,176 @@
+.text
+.globl _main
+.align 2
+_main:link a6,#-4
+movl #0,sp@
+jbsr _exit:l
+L1:
+unlk a6
+rts
+.globl _nested
+.align 2
+_nested:link a6,#-0
+movl a6@(8),d0
+movl a6@(12),d1
+cmpl #4,d0; jge L6
+cmpl #114,d1; jeq L9
+L6:
+cmpl #1,d0; jne L8
+cmpl #104,d1; jeq L9
+cmpl #105,d1; jeq L9
+L8:
+cmpl #2,d0; jne L3
+cmpl #111,d1; jeq L9
+cmpl #121,d1; jne L3
+L9:
+movl d1,d0
+L3:
+L2:
+unlk a6
+rts
+.globl _s
+.align 2
+_s:link a6,#-0
+L10:
+unlk a6
+rts
+.data
+.globl _Dy
+.align 2; _Dy:.long 0
+.skip 4
+.globl _Dz
+.align 2; _Dz:.long 1
+.skip 4
+.text
+.globl _Dfunc
+.align 2
+_Dfunc:link a6,#-0
+unlk a6
+rts
+.globl _f
+.align 2
+_f:link a6,#-0
+unlk a6
+rts
+.globl _f1
+.align 2
+_f1:link a6,#-0
+unlk a6
+rts
+.globl _f2
+.align 2
+_f2:link a6,#-0
+unlk a6
+rts
+.globl _g
+.align 2
+_g:link a6,#-0
+unlk a6
+rts
+.globl _h
+.align 2
+_h:link a6,#-0
+unlk a6
+rts
+.globl _h1
+.align 2
+_h1:link a6,#-0
+unlk a6
+rts
+.globl _h2
+.align 2
+_h2:link a6,#-0
+unlk a6
+rts
+.data
+.align 2; L21:.long 1
+.text
+.globl _set1
+.align 2
+_set1:link a6,#-0
+unlk a6
+rts
+.data
+.align 2; L23:.long 2
+.text
+.globl _set2
+.align 2
+_set2:link a6,#-0
+unlk a6
+rts
+.align 2
+_goo:link a6,#-0
+unlk a6
+rts
+.globl _sss
+.align 2
+_sss:link a6,#-0
+unlk a6
+rts
+.bss
+.lcomm L27,4
+.text
+.globl _rrr
+.align 2
+_rrr:link a6,#-0
+unlk a6
+rts
+.globl _setstatic
+.align 2
+_setstatic:link a6,#-0
+unlk a6
+rts
+.globl _gx1
+.align 2
+_gx1:link a6,#-0
+unlk a6
+rts
+.globl _ff1
+.align 2
+_ff1:link a6,#-0
+unlk a6
+rts
+.globl _gg1
+.align 2
+_gg1:link a6,#-0
+unlk a6
+rts
+.globl _hh1
+.align 2
+_hh1:link a6,#-0
+unlk a6
+rts
+.globl _cmp
+.align 2
+_cmp:link a6,#-0
+unlk a6
+rts
+.globl _sort
+.align 2
+_sort:link a6,#-0
+unlk a6
+rts
+.globl _onearg
+.align 2
+_onearg:link a6,#-0
+unlk a6
+rts
+.bss
+.globl _ss4
+.comm _ss4,4
+.lcomm _ss2,4
+.lcomm _ss5,4
+.globl _ss3
+.comm _ss3,4
+.lcomm _ss1,4
+.lcomm _yy,4
+.globl _z
+.comm _z,4
+.globl _y
+.comm _y,4
+.globl _x
+.comm _x,4
+.globl _b
+.comm _b,4
+.globl _a
+.comm _a,4

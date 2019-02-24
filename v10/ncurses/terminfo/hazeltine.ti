@@ -1,0 +1,69 @@
+# # --------------------------------
+#	@(#)hazeltine.ti	1.3	(1.6	8/19/82)
+#
+# hazeltine: HAZELTINE
+#
+# Since cuf1 is blank, when you want to erase something you
+# are out of luck.  You will have to do ^L's a lot to
+# redraw the screen.  h1000 is untested.  It doesn't work in
+# vi - this terminal is too limited for vi.  (The code is
+# there but it isn't debugged for this case.)
+h1000|hazeltine 1000,
+	cub1=^H, home=^K, clear=^L, cuf1= ,
+	cols#80, lines#12, cr=^M, cud1=^J, ind=^J, bel=^G,
+h1420|hazeltine 1420,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cub1=^H, am, lines#24, cols#80,
+	il1=\E^Z, dl1=\E^S, ed=\E^X, clear=\E\034, cuu1=\E^L, cuf1=^P,
+	el=\E^O, ht=^N, cup=\E^Q%p2%c%p1%' '%+%c, smso=\E\037, rmso=\E^Y,
+h1500|hazeltine 1500,
+	cr=^M, cud1=^J, ind=^J, bel=^G, il1=~^Z$<40>, am, cub1=^H, ed=~^X$<10>,
+	el=~^O, clear=~^\, cup=~^Q%p2%c%p1%c, cols#80, dl1=~^S$<40>,
+	cud1=~^K, lines#24, cuf1=^P, .rmso=~^_, .smso=~^Y, cuu1=~^L,
+# Work around the comm gear intercepting ^S
+s1500|hazeltine 1500 thru comm system that see's ^S ,
+	cr=^M, ind=^J, cud1=^J, bel=^G,
+	il1=~^Z$<40>, am, cub1=^H, ed=~^X$<10>, el=~^O,
+	clear=~^\, cup=~^Q%p2%c%p1%c, cols#80,
+	cud1=~^K, hz, lines#24, cuf1=^P, cuu1=~^L, 
+# h1510 assumed to be in sane escape mode.  Else use h1500.
+h1510|hazeltine 1510,
+	cr=^M, cud1=^J, ind=^J, bel=^G,
+	il1=\E^Z, am, cub1=^H, ed=\E^X, el=\E^O, clear=\E^\,
+	cup=\E^Q%p2%c%p1%c, cols#80, dl1=\E^S, cud1=\E^K,
+	lines#24, cuf1=^P, .rmso=\E^_, .smso=\E^Y, cuu1=\E^L,
+h1520|hazeltine 1520,
+	cr=^M, cud1=^J, ind=^J, bel=^G, il1=~^Z, am, cub1=^H,
+	ed=~^X, el=~^O, clear=~\034, cup=~^Q%p2%c%p1%c$<1>, cols#80,
+	dl1=~^S, cud1=~^K, hz, lines#24, cuf1=^P,
+	rmso=~^Y, smso=~\037, cuu1=~^L, home=~^R,
+# Note: the h1552 appears to be a Hazeltine terminal which
+# is not limited.  It has tildes and backprimes and everything!
+# Be sure the auto lf/cr switch is set to cr.
+h1552|hazeltine 1552,
+	cr=^M, cud1=^J, ind=^J, bel=^G, il1=\EE, dl1=\EO,
+	kf1=\EP, lf1=blue, kf2=\EQ, lf2=red, kf3=\ER, lf3=green, use=vt52,
+h1552-rv|hazeltine 1552 reverse video,
+	cr=^M, cud1=^J, ind=^J, bel=^G,
+	smso=\ES, rmso=\ET, use=h1552,
+# Note: h2000 won't work well because of a clash between upper case and ~'s.
+h2000|hazeltine 2000,
+	cud1=^J, ind=^J, bel=^G,
+	il1=~^z$<6>, am, cub1=^H, clear=~^\$<6>, cup=~^q%p2%c%p1%c, cols#74,
+	dl1=~^s$<6>, home=~^r, lines#27, pad=\177,
+# I tested this termcap entry for the Hazeltine Esprit with vi. It
+# seems to work ok. There is one problem though if one types a lot of
+# garbage characters very fast vi seems not able to keep up and hangs
+# while trying to insert. That's in insert mode while trying to insert in
+# the middle of a line. It might be because the Esprit doesn't have
+# insert char and delete char as a built in function. Vi has to delete to
+# end of line and then redraw the rest of the line.
+esprit|hazeltine esprit|Hazeltine Esprit I,
+	cr=^M, cud1=^J, ind=^J, bel=^G, il1=\E^Z, am, cub1=^H,
+	cbt=\E^T, bw, ed=\E^W, el=\E^O, clear=\E\034, cup=\E^Q%p2%c%p1%c,
+	cols#80, dl1=\E^S, cud1=\E^K, home=\E^R, is2=\E\077,
+	kf0=^B\060\n, kf1=^B\061\n, kf2=^B\062\n, kf3=^B\063\n,
+	kf4=^B\064\n, kf5=^B\065\n, kf6=^B\066\n, kf7=^B\067\n,
+	kf8=^B\070\n, kf9=^B\071\n, kbs=^H, kcud1=\E^K, rmkx=\E\076,
+	khome=\E^R, kcub1=^H, kcuf1=^P, smkx=\E\074, kcuu1=\E^L, lf0=0,
+	lf1=1, lf2=2, lf3=3, lf4=4, lf5=5, lf6=6, lf7=7, lf8=8, lf9=9,
+	lines#24, cuf1=^P, rmso=\E^Y, smso=\E^_, cuu1=\E^L,

@@ -1,0 +1,182 @@
+.data
+.globl _words
+.align 2; _words:long 1
+long 2
+long 3
+.ascii "if\000"
+.skip 3
+long 4
+long 5
+.skip 4
+.ascii "for"
+.skip 3
+long 6
+long 7
+long 8
+.ascii "else\000"
+.skip 1
+long 9
+long 10
+long 11
+.ascii "whil"
+.byte 101
+.skip 1
+long 0
+.skip 8
+.skip 6
+.globl _wordlist
+.align 2; _wordlist:.long _words
+.globl _x
+.align 2; _x:long 1
+long 2
+long 3
+long 4
+long 0
+long 5
+long 6
+.skip 12
+long 7
+.skip 16
+.globl _y
+.align 2; _y:.long _x
+.long _x+20
+.long _x+40
+long 0x0
+.text
+.globl _main
+.align 2
+_main:link a6,#-24
+movm.l #0x4d0,-16(a6)
+clr.l $d6
+jra L8
+L5:
+clr.l $d7
+jra L12
+L9:
+mov.l &_13,($sp)
+lea _y,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),4($sp)
+jbsr _printf
+L10:
+addq.l &1,$d7
+L12:
+lea _y,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$a2
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$d4
+tst.l $d4; jne L9
+mov.l &_14,($sp)
+jbsr _printf
+L6:
+addq.l &1,$d6
+L8:
+lea _y,$a2
+mov.l $d6,$d4; asl.l &2,$d4
+mov.l 0($a2,$d4.l),$d4
+tst.l $d4; jne L5
+jbsr _f
+mov.l _wordlist,($sp)
+jbsr _g
+clr.l $d0
+L4:
+movm.l -16(a6),#0x4d0
+unlk a6
+rts
+.data
+.align 2; _16:.long _17
+.long _18
+.long _19
+.long _20
+long 0x0
+.text
+.globl _f
+.align 2
+_f:link a6,#-12
+movm.l #0x2000,-4(a6)
+lea _16,$a5
+jra L24
+L21:
+mov.l &_25,($sp)
+mov.l ($a5),4($sp)
+jbsr _printf
+L22:
+addq.l &4,$a5
+L24:
+tst.l ($a5); jne L21
+L15:
+movm.l -4(a6),#0x2000
+unlk a6
+rts
+.globl _g
+.align 2
+_g:link a6,#-24
+movm.l #0x2490,-16(a6)
+mov.l 8($a6),$a5
+jra L30
+L27:
+clr.l $d7
+jra L34
+L31:
+mov.l &_35,($sp)
+mov.l $d7,$d4; asl.l &2,$d4
+mov.l 0($a5,$d4.l),4($sp)
+jbsr _printf
+L32:
+addq.l &1,$d7
+L34:
+cmp.l &3,$d7; jcs L31
+mov.l &_25,($sp)
+lea 12($a5),$a2
+mov.l $a2,4($sp)
+jbsr _printf
+L28:
+add.l &18,$a5
+L30:
+tst.l ($a5); jne L27
+jbsr _h
+L26:
+movm.l -16(a6),#0x2490
+unlk a6
+rts
+.globl _h
+.align 2
+_h:link a6,#-32
+movm.l #0x490,-12(a6)
+clr.l $d7
+jra L40
+L37:
+mov.l &_41,($sp)
+lea _words,$a2
+mov.l &18,$d4
+muls.w $d7,$d4
+mov.l 0($a2,$d4.l),4($sp)
+lea _words+4,$a2
+mov.l 0($a2,$d4.l),8($sp)
+lea _words+8,$a2
+mov.l 0($a2,$d4.l),12($sp)
+lea _words+12,$a2
+lea 0($a2,$d4.l),$a2
+mov.l $a2,16($sp)
+jbsr _printf
+L38:
+addq.l &1,$d7
+L40:
+cmp.l &5,$d7; jcs L37
+L36:
+movm.l -12(a6),#0x490
+unlk a6
+rts
+.text
+.align 2; _41:.ascii "%d %d %d %s\012\000"
+.align 2; _35:.ascii "%d \000"
+.align 2; _25:.byte 37,115,10,0
+.align 2; _20:.ascii "while\000"
+.align 2; _19:.ascii "else\000"
+.align 2; _18:.ascii "for\000"
+.align 2; _17:.ascii "if\000"
+.align 2; _14:.byte 10,0
+.align 2; _13:.ascii " %d\000"

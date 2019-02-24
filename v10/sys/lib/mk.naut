@@ -1,0 +1,23 @@
+LD=../lib
+LIBS=$LD/asnaut.o $LD/${cc}fs.a $LD/${cc}io.a $LD/${cc}naut.a $LD/${cc}bvax.a $LD/${cc}os.a $LD/${cc}vm.a $LD/${cc}inet.a
+LOW=../ml/param.s ../ml/logen.s
+MKDEP=$LD/devs $LD/tab $LD/conf.naut $LD/low.naut
+CFLAGS=-DKERNEL -I..
+
+%.u: %.l.o %.c.o $LIBS
+	date=`date | sed 's/....\(............\)........\(....\)/\1 \2/'`
+	echo 'char version[] = "Unix 10e '$date'";' >vers.c
+	${cc:-cc} -c vers.c
+	ld -n -X -o $target -T 80000000 -e start $prereq vers.o
+
+%.l.o: $LOW %.s.s
+	as -o $target $prereq
+
+%.s.s:N: %.c.c
+
+%.c.c: $MKDEP %.m
+	$LD/mkconf -t $LD/tab -l $LD/low.naut -d $LD/devs -s $stem.s.s -c $stem.c.c $LD/conf.naut $stem.m
+
+%.c.o: %.c.hn
+%.hn:Pexit 1: %.c
+	$LD/hupdate $target `$LD/listdep $CFLAGS $prereq`

@@ -1,0 +1,66 @@
+\def\LL{<<}
+\def\GG{>>}
+\def\LLS{[[}
+\def\RRS{]]}
+
+% make \hsize in code sufficient for 80 columns
+\setbox0=\hbox{\tt m}
+\newdimen\codehsize
+\codehsize=83\wd0 % 80 columns wasn't enough; I don't know why
+
+\chardef\other=12
+\def\setupcode{\parindent=0pt\parskip=0pt
+  \hsize=\codehsize
+  \chardef\\=`\\
+  \chardef\{=`\{
+  \chardef\}=`\}
+  \catcode`\$=\other
+  \catcode`\&=\other
+  \catcode`\#=\other
+  \catcode`\%=\other
+  \catcode`\~=\other
+  \catcode`\_=\other
+  \catcode`\^=\other
+  \obeyspaces \newlines\tt
+}
+{\catcode`\^^M=\active % make CR an active character
+  \gdef\newlines{\catcode`\^^M=\active % make CR an active character
+         \def^^M{\par\startline}}%
+  \gdef\eatline#1^^M{\relax}%
+}
+%%% DON'T   \gdef^^M{\par\startline}}% in case ^^M appears in a \write
+\def\startline{\noindent\hskip\parindent\ignorespaces}
+
+{\obeyspaces\global\let =\ } % from texbook, p 381
+\def\setupmodname{%
+  \catcode`\$=3
+  \catcode`\&=4
+  \catcode`\#=6
+  \catcode`\%=14
+  \catcode`\~=13
+  \catcode`\_=8
+  \catcode`\^=7
+  \catcode`\ =10
+  \catcode`\^^M=5
+  \rm}
+\def\LA{\begingroup\setupmodname\it$\langle${}}
+\def\RA{\/$\rangle$\endgroup}
+\def\code{\begingroup\setupcode}
+\def\edoc{\endgroup}
+
+\def\begindocs#1{\filbreak}
+\def\enddocs{\par}
+\def\begincode#1{\nobreak\begingroup\setupcode\bchack}
+{\catcode`\^^M=\active % make CR an active character
+  \gdef\bchack#1^^M{\relax}%
+}
+\def\endcode{\endgroup\filbreak}
+\newbox\equivbox
+\setbox\equivbox=\hbox{$\equiv$}
+% \moddef can't have an argument because there might be \code...\edoc
+\def\moddef{\LA}
+\def\endmoddef{\RA\unhcopy\equivbox}
+
+\def\filename#1{\vfil\eject\mark{#1}}
+
+

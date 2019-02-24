@@ -1,0 +1,13 @@
+extern int gen_inq(ClientData , Tcl_Interp *, int , char **);
+extern int gen_dev(ClientData , Tcl_Interp *, int , char **);
+extern int gen_sense(ClientData , Tcl_Interp *, int , char **);
+extern int gen_help(ClientData , Tcl_Interp *, int , char **);
+extern int gen_start(ClientData , Tcl_Interp *, int , char **);
+extern int gen_stop(ClientData , Tcl_Interp *, int , char **);
+extern int gen_capacity(ClientData , Tcl_Interp *, int , char **);
+extern int gen_display(ClientData , Tcl_Interp *, int , char **);
+extern int gen_reset(ClientData , Tcl_Interp *, int , char **);
+extern int gen_tur(ClientData , Tcl_Interp *, int , char **);
+extern int gen_scsi(ClientData , Tcl_Interp *, int , char **);
+extern int gen_readt(ClientData , Tcl_Interp *, int , char **);
+extern int gen_read(ClientData , Tcl_Interp *, int , char **);

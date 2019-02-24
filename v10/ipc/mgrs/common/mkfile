@@ -1,0 +1,26 @@
+INCS=-I. -I../../h
+CFLAGS=-g $INCS
+L=libcommon.a
+OBJS=$L(detach.o) $L(dialin.o) $L(dialout.o) $L(log.o)
+COBJS=detach.O dialin.O dialout.O log.O
+NPROC=2
+
+all:V: cyntax $L
+
+cyntax: $COBJS
+	cyntax -Vlogconsole:1 -Vlogevent:1 $COBJS && touch cyntax
+
+$L: $OBJS
+	ar rv $L *.o && rm *.o
+	ranlib $L
+
+clean:V:
+	rm -f *.[oOa] cyntax
+
+$L(%.o):N: %.o
+%.o: %.c ../../h/defs.h ../../h/ipc.h
+%.O: %.c ../../h/defs.h ../../h/ipc.h
+	cyntax -Vlogevent:1 -Vlogconsole:1 -DLINT $INCS $stem.c
+
+install:V: all
+

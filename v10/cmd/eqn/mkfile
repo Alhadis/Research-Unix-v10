@@ -1,0 +1,44 @@
+CFLAGS = -g
+YFLAGS = -d
+
+SOURCE = eqn.y e.h main.c tuning.c diacrit.c eqnbox.c font.c fromto.c funny.c glob.c integral.c \
+ input.c lex.c lookup.c mark.c matrix.c move.c over.c paren.c \
+ pile.c shift.c size.c sqrt.c text.c
+
+FILES =  main.o tuning.o diacrit.o eqnbox.o font.o fromto.o funny.o glob.o integral.o \
+ input.o lex.o lookup.o mark.o matrix.o move.o over.o paren.o \
+ pile.o shift.o size.o sqrt.o text.o eqn.o
+
+a.out:	$FILES
+	cc $CFLAGS $FILES 
+
+y.tab.h eqn.o:	eqn.y
+	$YACC $YFLAGS eqn.y
+	$CC $CFLAGS -c y.tab.c && mv y.tab.o eqn.o
+
+prevy.tab.h:	y.tab.h
+	cmp -s y.tab.h prevy.tab.h || cp y.tab.h prevy.tab.h
+
+$FILES:	e.h prevy.tab.h
+
+prcan:	README $SOURCE makefile
+	prcan $?
+	touch prcan
+
+bundle:
+	bundle $SOURCE makefile README
+
+backup:	README $SOURCE makefile eqntest.a
+	push snb $? eqn
+	touch backup
+
+bowell:	README $SOURCE makefile eqntest.a
+	push bowell $? /src/cmd/eqn
+	touch bowell
+
+install:
+	cp a.out /usr/bin/eqn
+	strip /usr/bin/eqn
+
+clean:
+	rm a.out *.o make.out *y.tab.h

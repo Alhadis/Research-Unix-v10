@@ -1,0 +1,193 @@
+.P
+The parms.h header file is used to set up local site
+options before a ``make'' command is attempted.
+The file is set up with default settings for a standard
+UNIX distribution, however, there are some options that
+the local administrator might want to use.
+The file has comments to briefly describe the options;
+this section contains more details.
+.BL
+.LI
+ATTSV, V7, BSD4_2:
+One of these three should be defined:
+.DL
+.LI
+ATTSV for standard UNIX systems.
+.LI
+V7 for Version 7 based systems like 32V, Berkeley 4.1 systems.
+.LI
+BSD4_2 for Berkeley 4.2 systems.
+.LE
+.LI
+UUCPUID:
+There are several places in the code where the uid of ``uucp'',
+the owner of the uucp programs, files, and directories,
+must be used.
+In most cases, the uid can be obtained, but on some systems, when
+running as root, the info will not be forthcoming, so this
+manifest is used;
+it is the uid of the uucp login (again, the owner) from the /etc/passwd
+file.
+.LI
+ATTSVKILL:
+The new lock-file mechanism uses the system call ``kill(0, pid)''
+to determine if a process-id in a LCK file is still active.
+Standard UNIX systems provide this facility, but some do not
+support it.
+Define ATTSVKILL if you system supports the kill(0, pid) call.
+(Note that this is automatically defined if ATTSV is defined).
+NONAP:
+Define NONAP if you have no high-resolution sleep call.
+Standard UNIX does not have this high-resolution sleep, so this
+must be defined.
+.LI
+FASTTIMER:
+This is the device that goes along with the high-resolution timer.
+Not available on standard UNIX systems;
+don't define it.
+.LI
+V7USTAT 
+Uucp use ``ustat'' to decide whether there's enough space to receive a
+file.
+If you're not ATTSV, you can use a setgid program to read the
+number of free blocks and free inodes directly off the disk.
+If you
+choose this course, do not define NOUSTAT;
+rather, define V7USTAT to
+be the name of that program.
+Be sure it accepts 2 args, major and minor
+device numbers, and returns two numbers, blocks and inodes,
+in "%d %d" format, or you'll never receive another file.
+.LI
+NOUSTAT:
+Define this if your system does not have a ustat() system call.
+Standard UNIX has the call;
+don't define it for those systems.
+.LI
+GRPCHK, GRPMIN, GRPMAX:
+Define GRPCHK if you want to restrict the ability to read
+Systems information by way of the DEBUG flags.
+If you define GRPCHK, then the group-ids GRPMIN and GRPMAX limit
+the group-ids for which the Systems file password information will be
+displayed when the DEBUG option is used.
+.LI
+UNET:
+Use this to include code for 3com ethernet media.
+Appropriate changes must be made in the ``makefile''
+to include the needed routines.
+See comments in the makefile.
+.LI
+DATAKIT:
+Define DATAKIT if your system is connected to a DATAKIT VCS.
+If you use this option, you must also make the appropriate
+changes in the ``makefile'' to access the dk library and loading
+of the dio.o routine\(emsee the comments in the makefile.
+.LI
+TCP:
+Define TCP for BSD systems that have TCP or UNET.
+.LI
+SYTEK:
+Define SYTEK for systems that access a Sytek network.
+.LI
+TDK_DATAKIT:
+Define this for the few systems that have the old tdk
+Datakit interface.
+.LI
+DIAL801:
+This is defined for the standard 801/212-103 dialer interface.
+If will be defined by default.
+.LI
+X25:
+Use this to include code for the X25 media.
+Appropriate changes must be made in the ``makefile''
+to include the needed routines.
+See comments in the makefile.
+.LI
+DUMB_DN:
+Define DUMB_DN if your dn driver (801 acu) can't handle '=' character
+to wait for dialtone.
+.LI
+DEFAULT_BAUDRATE:
+This is the baud rate you want to use when both
+Systems file and 
+Devices file allow "Any"
+.LI
+UUSTAT_TBL:
+There is a table in uustat.c that can hold all machine names that currently
+have work or execute files (C. or X.) or have a status file.
+If necessary, the table size can be changed.
+For machines
+with much memory, a large number like 1000 will not hurt much since the
+program is not executed often.
+For small machines, 256K memory, the number should be much smaller
+like 100.
+.LI
+UNAME:
+Define UNAME if uname() should be used to get uucpname;
+this will be defined automatically if ATTSV is defined.
+.LI
+RETRYTIME:
+This is the initial retry after failure time.
+Each successive failure will double the current retry time.
+Time is given in minutes.
+.LI
+MAXRETRYTIME:
+This is the high limit to the retry backoff.
+.LI
+PATH:
+This is the path that will be used for uuxqt command executions.
+.LI
+DEFAULTCMDS:
+This is the set of default commands that can be executed 
+if none is given for the system name in PERMISSIONS file.
+It is a colon separated list as in PERMISSIONS file .
+.LI
+HZ:
+Define HZ to be the number of clock ticks per second;
+not needed for standard UNIX system.
+.LI
+MYNAME:
+Put in local uucp name of this machine if there is no "/etc/whoami"
+and no uname() call.
+This is not needed for standard UNIX systems.
+.LI
+NOSTRANGERS:
+Define NOSTRANGERS if you want to reject calls from systems that
+are not in your Systems file.
+If defined, NOSTRANGERS should be the name
+of the program to execute when such a system dials in.
+The argument
+to the program will be the name of the calling system.
+A shell procedure (remote.unknown) is supplied and installed in
+/usr/lib/uucp.
+.LI
+LMTUUXQT:
+Define LMTUUXQT to be the name of a file that contains the number
+(in ascii) of simultaneous uuxqt's that you will permit.
+If it is
+not defined, there may be "many" uuxqt's running.
+2 is reasonable number.
+The system will create the default file
+and set the limit to 2.
+.LI
+LMTUUSCHED:
+Define LMTUUSCHED to be the name of a file that contains the number
+(in ascii) of simultaneous uusched's that you will permit.
+If it is
+not defined, there may be "many" uusched's running.
+2 is reasonable number.
+The system will create the default file
+and set the limit to 2.
+The more you permit the higher the load on the system;
+each uusched has one uusched associated with it.
+.LI
+USRSPOOLLOCKS:
+Define USRSPOOLLOCKS if you like your lock files in /usr/spool/locks.
+Be sure other programs such as 'cu' and 'ct' know about this.
+.LI
+ASCIILOCKS:
+Define ASCIILOCKS if you like your lock files to contain ascii pids
+rather than binary representations.
+Remember cu and ct
+need to understand this.
+.LE

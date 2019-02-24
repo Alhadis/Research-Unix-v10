@@ -1,0 +1,77 @@
+.text
+.globl _main
+.align 1
+_main:.word 0xf00
+cmpl 4(ap),$1
+jgtr L1
+movf L3,r8
+jbr L2
+L1:
+movl 8(ap),r5
+pushl 4(r5)
+calls $4/4,_atof
+divf3 L4,r0,r8
+L2:
+clrl r11
+L5:
+movab (r11)+,r5
+movf L3,_f[r5]
+L6:
+cmpl r11,$127
+jleq L5
+clrl r10
+jbr L10
+L9:
+addf2 L12,_f[r9]
+incl r10
+L10:
+calls $0/4,_getchar
+movl r0,r9
+cmpl r0,$-1
+jneq L9
+pushal L13
+calls $4/4,_printf
+clrl r11
+L14:
+movf _f[r11],r5
+cmpf r5,L3
+jeql L18
+cvtlf r10,r4
+divf2 r4,r5
+cmpf r5,r8
+jlss L18
+cmpl r11,$32
+jgtr L20
+pushl r11
+pushal L22
+calls $8/4,_printf
+jbr L21
+L20:
+pushl r11
+pushal L23
+calls $8/4,_printf
+L21:
+mulf3 _f[r11],L4,r5
+cvtlf r10,r4
+divf2 r4,r5
+cvtfd r5,-(sp)
+pushal L24
+calls $12/4,_printf
+L18:
+L15:
+incl r11
+cmpl r11,$127
+jleq L14
+clrl r0
+ret
+.data
+.globl _f
+.comm _f,512
+.text 1
+L24:.ascii "\011%.1f\012\000"
+L23:.byte 37,99,0
+L22:.ascii "%03o\000"
+L13:.ascii "char\011freq\012\000"
+.align 2; L12:.long 0x4080
+.align 2; L4:.long 0x43c8
+.align 2; L3:.long 0x0

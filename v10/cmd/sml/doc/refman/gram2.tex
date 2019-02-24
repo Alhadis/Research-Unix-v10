@@ -1,0 +1,82 @@
+\label{bare}
+\twocolumn[Figure \protect\ref{bare}: Syntax of the Bare Language \\ \\]
+{\samepage
+\begin{list}{}{\setlength{\listparindent}{0pt}
+               \setlength{\labelwidth}{5em}
+%              \setlength{\parsep}{0pt}
+               \setlength{\labelsep}{0.5em}}
+\lhs{lab}       INT
+\\      id
+\lhs{const}     INT
+\\      REAL
+\\      STRING
+\lhs{exp}       id
+\\      const
+\\      \{ lab%
+\verb"="%
+exp , \rep{0} , lab%
+\verb"="%
+exp \}
+\\      \res{let} dec \res{in} exp \res{end}
+\\      exp exp
+\\      exp : ty
+\\      \res{fn} match
+\\      \res{raise} exp
+\\      exp \res{handle} match
+\lhs{match}     pat \verb"=>" exp $\mid$ \rep{1} $\mid$ pat \verb"=>" exp
+\lhs{apat}      id
+\\      const
+\\      \verb"_"
+\\      ( pat )
+\\      \{ lab%
+\verb"="%
+pat , \rep{0} , lab%
+\verb"="%
+pat \}
+\\      \{ lab%
+\verb"="%
+pat , \rep{0} , lab%
+\verb"="%
+pat , ... \}
+\lhs{pat}       apat
+\\      id apat
+\\      pat : ty
+\\      id constraint \res{as} pat
+\lhs{ty}        \res{tyvar}
+\\      \{ lab : ty , \rep{0} , lab : ty \}
+\\      ( ty )
+\\      ( ty , \rep{2} , ty ) id
+\\      ty id
+\\      id
+\\      ty \verb"->" ty
+\lhs{vb}        pat \verb"=" exp
+\\ vb \res{and} \rep{1} \res{and} vb
+\lhs{constraint}        {\it empty}
+\\          : ty
+\lhs{rvb}       id constraint \verb"=" \res{fn} match
+\\              rvb \res{and} \rep{1} \res{and} rvb
+\lhs{tb}        tyvars id \verb"=" ty
+\\              tb \res{and} \rep{1} \res{and} tb
+\lhs{tyvars}    {\it empty}
+\\      \res{tyvar}
+\\      ( \res{tyvar} , \rep{2} , \res{tyvar} )
+\lhs{db}        tyvars id \verb"=" constr $\mid$ \rep{1} $\mid$ constr
+\\ db \res{and} \rep{1} \res{and} db
+\lhs{constr}    id
+\\      id \res{of} ty
+\lhs{eb}        id
+\\      id \res{of} ty
+\\      id \verb"=" id
+\\       eb  \res{and} \rep{1} \res{and} eb
+\lhs{dec}       \res{val} vb
+\\      \res{val} \res{rec} rvb
+\\      \res{type} tb
+\\      \res{datatype} db
+\\      \res{exception} eb
+\\      \res{local} dec \res{in} dec \res{end}
+\\      dec ;
+\\      dec dec
+
+\end{list}
+}
+\onecolumn

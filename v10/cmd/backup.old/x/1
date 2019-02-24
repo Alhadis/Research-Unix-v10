@@ -1,0 +1,28 @@
+#define		BACKUP		"/etc/backup"
+#define		BDBM		".db"
+#define		LOCK		"lock"
+#define		LOG		"log"
+#define		RCVDIRS		"rcvdirs"
+
+#ifndef	S_IFMT
+#include	<sys/types.h>
+#include	<sys/stat.h>
+#endif
+#define		FNAMELEN	256
+
+struct backfile
+{
+	short checksum;		/* checksum of the bytes AFTER the checksum */
+	short version;
+	struct stat sbuf;	/* original inode */
+	char uname[16];		/* original user name */
+	char gname[16];		/* original group name */
+	char oname[FNAMELEN];	/* original file name */
+	char bname[FNAMELEN];	/* backup file name */
+	char pad[444];		/* make it 1024 */
+};
+
+extern char *backupdir();
+extern unsigned sum();
+
+#define		CURVERSION		2

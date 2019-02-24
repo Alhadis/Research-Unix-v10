@@ -1,0 +1,91 @@
+#!/bin/sh
+# This shell tries to set up all needed uucp system files.
+# Since the names changed from previous versions, it copies those.
+# For the Permissions, it will generate one if none exists
+
+LIB=/usr/lib/uucp
+PERM=$LIB/Permissions
+LPERM=$LIB/PERMISSIONS
+DEVICES=$LIB/Devices
+DIAL=$LIB/Dialcodes
+DIALERS=$LIB/Dialers
+SYSTEM=$LIB/Systems
+LSYS=$LIB/L.sys
+LDIAL=$LIB/L-dialcodes
+LDEVICES=$LIB/L-devices
+LDIALERS=$LIB/L-dialers
+POLL=$LIB/Poll
+UUCP=uucp
+
+if [ ! -f $SYSTEM ]
+then
+	if [ -f $LSYS ]; then
+		cp $LSYS $SYSTEM
+	else
+		cp Systems ${SYSTEM}
+	fi
+	chown $UUCP $SYSTEM
+	chmod 400 $SYSTEM
+fi
+
+if [ ! -f $DIAL ]; then
+	if [ -f $LDIAL ]; then
+		cp $LDIAL $DIAL
+	else
+		cp Dialcodes ${DIAL}
+	fi
+	chown $UUCP $DIAL
+	chmod 444 $DIAL
+fi
+
+if [ ! -f $DIALERS ]; then
+	if [ -f $LDIALERS ]; then
+		cp $LDIALERS $DIALERS
+	else
+		cp Dialers $DIALERS
+
+	fi
+	chown $UUCP $DIALERS
+	chmod 444 $DIALERS
+fi
+
+if [ ! -f $DEVICES ]; then
+	if [ -f $LDEVICES ]; then
+		cp $LDEVICES $DEVICES
+	else
+		cp Devices ${DEVICES}
+	fi
+	chown $UUCP $DEVICES
+	chmod 444 $DEVICES
+fi
+
+if [ ! -f $POLL ]; then
+	cp Poll ${POLL}
+	chown $UUCP $POLL
+	chmod 644 $POLL
+fi
+
+if [ ! -f $PERM ]; then
+	if [ -f $LPERM ]; then
+		cp $LPERM $PERM
+		chown $UUCP $PERM
+		chmod 400 $PERM
+	fi
+fi
+
+if [ -f $PERM ]; then
+	exit
+fi
+
+# Try to generate a Permissions file using uucp entries in /etc/passwd
+
+> $PERM
+set - `sed -n "/uucico/s/:.*//p" /etc/passwd`
+
+for i
+do
+	echo "\tLOGNAME=$i\n"
+done > $PERM
+
+chown $UUCP $PERM
+chmod 400 $PERM

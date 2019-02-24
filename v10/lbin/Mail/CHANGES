@@ -1,0 +1,46 @@
+7/23/87:	[mjm]
+	Fix so it always replies to the "From" field; never the "From:" field.
+	aux.c --
+	Kludge to do this was there, but didn't work because of two bugs.
+		#ifdef	defined(USGFROM) --> #if defined(USGFROM)
+		strncmp(linebuf, "FROM:", 5)) --> strncmp(linebuf, "From:", 5)
+
+10/8/86:	[mjm]
+	cmd1.c -- if PAGER in the environment, use it.
+
+9/30/86:	[mjm]
+	popen.c -- pipe using "/bin/sh" instead of "/bin/csh":
+	v7.local.h -- #define stty() and gtty() in terms of ioctl().
+
+	To "make"  -- since libjobs.a not installed officially:
+		make LIBES=/n/bowell/usr/src/lbin/libjobs/libjobs.a
+
+10/31/85:	mjm changes so Mail works with /bin/mail "namefiles" aliasing.
+
+	(1) lock.c:
+		<stat.h>  -->  <sys/stat.h>
+
+	(2) names.c:
+		Unless "namecheck" (a new .mailrc set option) is set,
+		"Mail" passes all names onto /bin/mail without checking.
+		(Put "set namecheck" in your .mailrc to get previous behavior.)
+
+		Unless SENDMAIL is #defined (which it is not by default),
+		argv[0] for the exec'd /bin/mail is now "mail" instead of
+		"send-mail".  This is necessary to get Presotto's /bin/mail
+		to search $HOME/lib/names.  (It will search the files in
+		/usr/lib/upas/namefiles regardless of argv[0]).  It also
+		causes /bin/mail to drop a dead.letter for a bad name.
+
+7/28/84		added parameter "warn".  Used to warn reader that there
+		is another mail process in existance.  If set to a value,
+		that value is name of file which contains process id and
+		tty name.  Otherwise $home/.Maillock is the default.
+
+				ber
+
+		added 'b' command which is identical to 'R' but uses
+		the UNIX from line rather than the sendmail from line.
+
+				ber
+

@@ -1,0 +1,203 @@
+Help:  A few hints for beginning users of SML of NJ
+
+1. running Standard ML
+
+   Type "sml".  This puts you into the interactive system.  The top level
+   prompt is "- ", and the secondary prompt (printed when input is
+   incomplete) is "= ".  If you get the secondary prompt when you don't
+   expect it, typing ";<return>" will often complete your input, or type
+   your interrupt character (e.g. ^C) to cancel your input and return you
+   to top level.
+
+   If "sml" doesn't work, ask where sml has been installed on your machine
+   and use the appropriate path name or redefine your PATH environment variable.
+
+2. interactive input
+
+   Input to the top level interpreter (i.e. declarations and expressions)
+   must be terminated by a semicolon (and carriage return) before the
+   system will evaluate it.  The system then prints out a response
+   indicating the effect of the evaluation.  Expressions are treated as
+   implicit declarations of a standard variable "it".  For example,
+
+       - 3; <return>	    <- user input after prompt
+       val it  = 3 : int    <- system response
+
+   This means that the value of the last top level expression evaluated
+   can be referred to using the variable "it".
+
+2. changing the prompts
+
+   The primary and secondary prompt strings are the contents of the
+   references
+
+     System.Control.primaryPrompt
+     System.Control.secondaryPrompt
+
+   These can be redefined by assignment, e.g.:
+
+     - System.Control.secondaryPrompt := "(**)";
+
+3. interrupting parsing or computation
+
+   Typing your interrupt character should interrupt the compiler and
+   return you to top level, unless some function is catching the
+   Interrupt exception (a dangerous thing to do).
+
+4. exiting the interactive system
+
+   Typing ^D (EOF) at top level will cause an exit to the shell (or the
+   parent process from which sml was run).
+
+5. loading ML source text from a file
+
+   The operator use: string->unit interprets its argument as a Unix file
+   name relative to sml's current directory and loads the text from that
+   file as though it had been typed in.  "use" should normally be
+   executed at top level, but the loaded files can also contain calls of
+   use to recursively load other files.  It is a bad idea to call use
+   within an expression or declaration, because the effects are not
+   well-defined.
+
+6. saving an image of the system
+
+   Use the function exportML: string->bool to dump an image of the
+   current sml system including the environment that you have built.  The
+   argument is the path name of the image file that is created.  The
+   result false is returned in the original system, while in the saved
+   image the value returned is true.  The call of exportML can be
+   embedded in an expression which will continue evaluation (e.g. to
+   print a message) in both the original system and in the image when it
+   is run, and its effect can depend on the result of the exportML call.
+   For example:
+
+     if exportML("saved")
+     then print "this is the saved image\n"
+     else print "this is the original process\n"
+
+   The saved image file is an executable binary, and can be run by typing
+   the file name as a command to the shell.  (Access to command-line
+   arguments and Unix environment variables when running the saved image
+   may be accomplished by System.argv and System.environ.)
+
+7. executing System commands and changing directories
+
+   The function system : string->unit spawns a process to execute its argument
+   string as a shell command.  Thus to find out what the current directory is
+   within sml you can evaluate the expression
+
+     system "pwd";
+
+   which will cause the current directory to be printed out (there is no
+   way at the moment to return the current directory as a string).  To
+   change the current working directory of sml use the function
+   cd :string -> unit, whose argument should be a path name denoting a
+   directory.
+
+8. error messages
+
+   The error messages produced by the compiler are not always as helpful
+   as they should be, and there are often too many of them.
+
+   The compiler attempts to recover from syntactic and type errors so
+   that it can detect as many errors as possible during a compilation.
+   Unfortunately, it is not very graceful in recovery, and the process
+   can cause numerous spurious secondary error messages.
+
+   When compiling files, the error messages include a line number.  For
+   simple syntactic errors this line number is often accurate or off by
+   just one line.  For other classes of errors, including type errors,
+   the line number may not be very useful, since it will often just
+   indicate the end of the declaration containing the error, and this
+   declaration can be quite large.
+
+   There are a number of different forms of type error message, and it
+   may require some practice before you become adept at interpreting
+   them.  The most common form indicates a mismatch between the type of a
+   function (or operator) and its argument (or operand).  A
+   representation of the offending expression is usually included, but
+   this is an image of the internal abstract syntax for the expression
+   and may differ significantly from the original source code.  For
+   instance, an "if...then...else..." expression is represented
+   internally as a case expression over a boolean value: 
+   "case ... of true => ... | false => ...".
+
+9. useful system flags
+
+   There are a number of useful system flags and variables, which are
+   found in the structure System.Control and its substructures.  The
+   primary and secondary prompt variable have already been mentioned;
+   here are some more:
+
+   Printing:  System.Control.Print. ...
+   
+      printDepth : int ref 
+        controls depth to which complex values and syntax trees are printed
+	(default 5)
+
+      stringDepth : int ref
+        controls how much of a long string will be printed (default 70)
+
+      signatures : bool ref
+        when true, signatures, and the signatures of structures, will be
+        printed when these are defined at top level (default true)
+
+   Garbage collection messages: 
+
+      System.Control.Runtime.gcmessages: int ref
+        when 0, no messages are printed
+	when 1, only major collections are reported  (the default)
+	when 2, major collections and heap resizings are reported
+	when 3, minor and major collections and heap resizings are reported
+
+   Memory use:
+
+      System.Control.Runtime.ratio : int ref
+        determines the desired ratio between size of live data and total heap
+	size.  Default is 5, and 3 is the smallest acceptable value.  A higher
+	ratio causes more aggressive use of memory (up to the softmax bound).
+
+      System.Control.Runtime.softmax : int ref
+        suggested ceiling on heap size, in bytes.  Heap size will not grow
+	beyond this value except to maintain the "minimum" ratio of 3.  Actually,
+	when hard limits are reached (e.g. as determined by limit datasize), the
+	system can continue to run as long as the actual ratio is greater than 2.
+	A good value for softmax is one that reflects the amount of physical
+	(not virtual) memory that is expected to be available for the sml process,
+	for instance, 5000000 (5MB) might be appropriate on an 8MB Sun 3.
+
+10. Timing
+
+   The structure System.Timer, which has the signature 
+
+      signature TIMER =
+	sig  
+	  datatype time = TIME of {sec : int, usec : int}
+	  type timer
+	  val start_timer : unit -> timer
+	  val check_timer : timer -> time
+	  val makestring : time -> string
+	  val add_time : time * time -> time
+	end
+
+   provides basic facilities for timing your code.  Here is how a typical
+   timing function could be implemented:
+
+     fun timeit (f: unit->'a) =
+	 let open System.Timer
+	     val start = start_timer()
+	     val result = f()
+	  in print(makestring(check_timer(start)));
+	     print "\n";
+	     result
+	 end;
+
+11. Profiling
+
+   See the file doc/profiling for instructions on using the built-in
+   profiling facilities.
+
+12. Basic ML environment
+
+   Look at the files src/boot/perv.sig and src/boot/system.sig
+   for signatures that specify what is available in the basic environment.

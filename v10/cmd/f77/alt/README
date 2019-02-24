@@ -1,0 +1,44 @@
+this is a bit of a horror.
+
+the stab interface (to sdb and pi) has been hacked mercilessly until it works.
+it's all pretty fragile, and probably somewhat buggy.  things to beware
+especially:
+
+f77 is a pcc1 compiler.  c is a pcc2 compiler these days.  over the years,
+c has gained types, sort of; the pcc internal representation of types (which
+is put out in the type field of the stab) has changed too.  (and the printed
+V8 manuals get it wrong, by the way; the online manual is correct.)  f77,
+being an old compiler, uses the old representation; it has to convert it
+to the new one when it prints stabs.
+
+pcc1 used to put out symbols at the top of each block, followed by the
+line number markers (N_SLINEs).  f77 used some horrible hackery to make
+that happen, as it didn't know enough about symbols until the end (think
+about implicit declarations).  pcc2 puts symbols after N_SLINEs.  sdb now
+wants things that way too.  f77 has followed along.
+
+common and equivalence are nightmares.  one would like to simply spit out
+a stab for each piece of the common, pointing at the address of that piece;
+unfortunately, offsets to commons don't work in the symbol table (it
+requires the relocation info to make it work, and there's no relocation
+data for symbols, logically enough).  hence these monsters are put out as
+crypto-structures, in the following format:
+	.stabs	"cname",N_BCOMM,0,0,0
+	.stabs	"element",N_SSYM,0,type,offset
+	...
+	.stabs	"cname",N_ECOMM,0,0,0
+when a debugger wants the address of `element', having noted that it is
+a N_SSYM within the BCOMM/ECOMM (or BCOMM/ECOML, see below) brackets, it
+should pick up `cname' from the ECOMM, prepend an `_' to make an external
+name of it, look that name up in the symbol table to find the address of
+the common region, and add the offset.
+
+sometimes the endmarker isn't an ECOML, but is
+	.stabs	"",N_ECOML,0,0,addr
+e.g. when you've equivalenced two non-common variables together.  this
+means `element's address is addr+offset.
+
+enough.  sdb works, sort of.  pi works, but not on commons nor equivalences.
+(tough.)
+
+it is probably impossible to make a pdp11 compiler without lots of work.

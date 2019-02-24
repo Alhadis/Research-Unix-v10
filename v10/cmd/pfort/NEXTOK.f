@@ -1,0 +1,48 @@
+      SUBROUTINE NEXTOK(K1, K2, CODE)
+      INTEGER STMT, CODE, PSTMT
+      COMMON /INPUT/ NSTMT, PSTMT, STMT(1327)
+C
+C     NEXT TOKEN IN STMT(K1)-STMT(K2-1). CODES ARE:
+C     DIGIT STRING(1)
+C     HOLLERITH(2)
+C     IDENTIFIER(0)
+C     SPECIAL CHARACTER(3)
+C
+      IF (STMT(K1).LT.0) GO TO 50
+      IF (STMT(K1).GT.9) GO TO 20
+C
+C     DIGIT STRING
+C
+      CODE = 1
+      K2 = K1 + 1
+   10 IF (K2.EQ.NSTMT) GO TO 60
+      IF ((STMT(K2).GT.9) .OR. (STMT(K2).LT.0)) GO TO 60
+      K2 = K2 + 1
+      GO TO 10
+   20 IF (STMT(K1).GT.55) GO TO 40
+C
+C     IDENTIFIER
+C
+      CODE = 0
+      K4 = K1 + 1
+      K2 = K4
+      DO 30 I=K4,NSTMT
+        IF (STMT(I).GT.55 .OR. STMT(I).LT.0) GO TO 60
+        K2 = K2 + 1
+   30 CONTINUE
+C
+C
+C     SPECIAL CHARACTER
+C
+   40 K2 = K1 + 1
+      CODE = 3
+      IF (STMT(K1).NE.66) GO TO 60
+      IF (STMT(K2).EQ.66) K2 = K2 + 1
+      GO TO 60
+C
+C     HOLLERITH
+C
+   50 CODE = 2
+      K2 = K1 + 1
+   60 RETURN
+      END

@@ -1,0 +1,102 @@
+BUILTINS=""
+IN=/usr/bin
+LIB=/usr/lib
+BIN=/usr/bin
+TARGETS=./con ./push ./pull ./rx ./nrx ./rcp ./loopback ./telnet ./qns ./rsh
+INSTALL=$BIN/dcon $BIN/ndcon $BIN/rogin $BIN/rlogin $BIN/nogin $BIN/con\
+	$BIN/push $BIN/pull $LIB/Rpush $LIB/Rpull $BIN/rx $BIN/nrx $BIN/rcp\
+	$BIN/loopback $BIN/telnet $BIN/scriptcon $BIN/qns
+CLIBS=../libipc/ipcopen.O ../libipc/ipccreat.O ../libipc/ipcpath.O\
+	../libipc/ipcexec.O ../libipc/ipclogin.O 
+INCS=-I../h -I../internet
+LIBIPC=../libipc/libipc.a								
+
+all:V: $TARGETS
+install:V: $INSTALL
+
+%.o: %.c
+	$CC -c $INCS $CFLAGS $stem.c
+%.O: %.c
+	cyntax -c -DLINT $INCS $CFLAGS $stem.c
+%.OO: %.O $CLIBS
+	cyntax $CFLAGS $prereq
+$BIN/%:	./%
+	rm -f $target
+	cp $stem $target
+	/etc/chown bin,bin $target
+	chmod 775 $target
+./%: %.OO %.o $LIBIPC
+	$CC $stem.o $LIBIPC -o $stem
+
+rcp.OO: rcp.O $CLIBS
+	cyntax -Verror:1 $CFLAGS $prereq
+rcp.O: rcp.c
+	cyntax -Verror:1 $CFLAGS -c rcp.c
+scriptcon.OO: scriptcon.O $CLIBS
+	echo do nothing
+scriptcon.O: scriptcon.c
+	echo do nothing
+./telnet: telnet.o ../libin/libin.a ../libipc/libipc.a
+	$CC -o telnet $prereq
+./ftp: ftpcmds.o ftpcmdtab.o ftp.o ftpmain.o ../libin/libin.a ../libipc/libipc.a
+	$CC -o ftp $prereq
+telnet.O: telnet.c ../h/telnet.h 
+	cyntax -Vcall:1 -c $CFLAGS -I../h telnet.c
+ftp.O:	ftp.c ../h/ftp.h ../h/ftp_var.h
+	cyntax -Vcommand:1 -c $CFLAGS -I../h ftp.c
+telnet.o: telnet.c ../h/telnet.h 
+	$CC -c $CFLAGS -I ../h telnet.c
+ftp.o:	ftp.c ../h/ftp.h ../h/ftp_var.h
+	$CC -c $CFLAGS -I ../h ftp.c
+ftpcmds.o:	ftpcmds.c ../h/ftp.h ../h/ftp_var.h
+	$CC -c $CFLAGS -I ../h ftpcmds.c
+ftpcmdtab.o: ftpcmdtab.c ../h/ftp_var.h
+	$CC -c $CFLAGS -I ../h ftpcmdtab.c
+ftpmain.o: ftpmain.c ../h/ftp_var.h
+	$CC -c $CFLAGS -I ../h ftpmain.c
+
+$BIN/dcon: $BIN/con
+	rm -f $target
+	ln $BIN/con $target
+
+$BIN/ndcon: $BIN/con
+	rm -f $target
+	ln $BIN/con $target
+
+$BIN/rogin: $BIN/con
+	rm -f $target
+	ln $BIN/con $target
+
+$BIN/rlogin: $BIN/con
+	rm -f $target
+	ln $BIN/con $target
+
+$BIN/nogin: $BIN/con
+	rm -f $target
+	ln $BIN/con $target
+
+$BIN/rsh: $BIN/rx
+	rm -f $target
+	ln $BIN/rx $target
+
+$LIB/Rpull: $BIN/pull
+	rm -f $target
+	ln $BIN/pull $target
+	/etc/chown bin,bin $target
+	chmod 775 $target
+
+$LIB/Rpush: $BIN/push
+	rm -f $target
+	ln $BIN/push $target
+	/etc/chown bin,bin $target
+	chmod 775 $target
+
+clean:
+	/bin/rm -f *.[Oo] core $TARGETS
+
+ship:V: all
+	ship $BIN/con $BIN/dcon $BIN/ndcon $BIN/rogin $BIN/rlogin $BIN/nogin
+	ship $BIN/scriptcon
+	ship $BIN/push $BIN/pull $LIB/Rpush $LIB/Rpull
+	ship $BIN/rsh $BIN/rx
+	ship $BIN/telnet $BIN/ftp

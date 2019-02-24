@@ -1,0 +1,285 @@
+Jul 14, 1987:
+	Fixed obscure bug causing incorrect indentation of .mc output.
+
+Jul 2, 1988:
+	\X now preserves spaces even when contents are diverted.
+
+	\N code safer -- NTRTAB and NWIDCACHE enlarged.
+
+Jul 4, 1988:
+	replaced the sbrk nonsense in n3.c by calls to malloc.
+
+	\N now tests against proper font size.
+
+	installed Jaap Akkerhuis's code (mutatis mutandis) for
+	permitting up to 99 fonts, swapping them into font pos 0
+	as needed.  fixes the long-standing problem of having
+	multiple font changes on a single output line.
+
+Sep 19, 1988:
+	added abortive code to handle built-up characters by
+	passing something through as \D'b...'.  never used.
+
+Oct 2, 1988:
+	default is now -Tpost
+
+Feb 1, 1989:
+	wait for .pi pipe to empty before exiting
+
+Apr 5, 1989:
+	.fl and \X now cause output of size, font, hpos and vpos.
+	this is necesary for postprocessors that intend to insert
+	independent material, such as postscript.
+
+Apr 12, 1989:
+	fixed bug in n2 that failed to suppress printing of \!
+	output when a -o was in effect.
+
+Apr 23, 1989:
+	Fixed bug in n9 that caused core dump with unterminated
+	\l command, like \l'1.5i
+
+	ptflush no longer called when -a is on.
+
+May 25, 1989:
+	Another bug in \l, this time when width is 0.  Not installed,
+	since it's in the new font version.
+
+July, 1989:
+	A major internal change:  font information is read in ascii
+	instead of the weird binary format of makedev (which is now dead).
+	character names need not all appear in DESC;  new names that
+	appear when a font is used become part of the set of known names.
+
+	There are some flaky bits here (it's conceivable that some \N
+	number will collide with a real name), and it's probably 10-15%
+	slower.  Tant pis.
+
+	As a by-product, nroff no longer compiles.  I'll probably get
+	back to this, but an alternative is to bag it once and for all.
+
+Aug 9, 1989:
+	Changed .tm so it outputs \e, \%, \-, \&, \(blank).
+	This might break indexing code.
+	Only in the new version, as are all subsequent fixes.
+
+Sep 9, 1989:
+	Fixed internal representation of \D'~...' so that it
+	is immune to .tr ~ and variations.  No external change.
+
+Oct 10, 1989:
+	Modified flush code to always put out \nH instead of sometimes h.
+	This makes it easier to parse the output for positioning.
+
+Oct 11, 1989:
+	It is now permitted to do an explicit change to font S.
+	It is not clear what will break (though nothing seems to have).
+
+Nov 7, 1989:
+	Fixed hyphenation for nov-ice, ad-vice, de-vice, ser-vice, *-vice.
+
+Nov 17, 1989:
+	A number of small changes preparatory to getting rid of nroff.
+	The argument -Tnroff or -Tnroff-12 changes some internal values
+	so that the predicate .if n is true and certain arithmetic operations
+	are done as if nroff.  This design is not yet final.
+
+Dec 4, 1989:
+	Another wart to the \X code, to try to preserve blanks in all situations.
+
+Dec 12, 1989:
+	Removed the .! command, an undocumented synonym for .sy.
+
+Dec 7, 1990:
+	.fp 3 V VERYLONGNAME used to truncate the name to 10 chars; fixed.
+
+	increased the limit on FBUFSZ for tables with very long fields.
+
+	changed atoi1() to use double to avoid intermediate overflow.
+
+	moved filenames like /usr/lib/font into tdef.h for easy change.
+	removed some dreggish definitions.
+
+	cleaned up non-portable error printing stuff;  fixed up some messages.
+
+Dec 27, 1990:
+	converted to ansi c, based on some work by ken thompson, but not
+	as thoroughly as he did.  there is a shell script unansi and an awk
+	program cvt that will help you step back in time if you do not have
+	an ansi c compiler.
+
+	moved the special-name characters up to 256 instead of 128, although
+	done in terms of ALPHABET, so one can pass 8 bit characters through.
+	removed lots of 0177's and similar numbers.  input is now not filtered,
+	and if a character with the 8th bit on comes in, it will go out again.
+
+	fixed t11.c to read character names in hex or octal as well as
+	single-character ascii.
+
+	unknown characters are now carried through with width = spacewidth.
+	needs a way to set widths.
+
+	removed all signal handling from troff.  you signal, you die.
+
+	added -d option to print version number.
+
+Jan, 1991:
+	added tex hyphenation, using standard tex data files, but not the
+	elaborate compressed trie, which is a lot of trouble to save maybe
+	40k bytes.  this appears to run at exactly the same speed as before.
+
+	so far this stuff reads into a fixed size array; that should change.
+	it should also be possible to deal with multiple languages.
+
+	the command .ha sets the algorithm.  .ha 1 => tex, with troff rules
+	if tex doesn't hyphenate;  .ha 0 gives troff rules, and .ha resets
+	to the default, which is tex.  the hyphenation algorithm is part of
+	the environment, a nod to a future in which i handle more than one
+	language.
+
+	replaced the fixed size corebuf array for string/macro storage by
+	a dynamic structure that can grow.
+
+	this appears to slow things down by maybe 3%.  the code is about
+	the same complexity.
+
+Feb ??, 1991:
+	working on dealing with large alphabets, notably kanji.
+	added "defaultwidth" to font descriptions, for characters
+	not given an explicit width.
+
+Mar 5, 1991:
+	huge table sizes for kanji.
+
+Mar 19, 1991:
+	fixed bug that prevented .rd from working with new corebuf organization.
+
+	fixed bug that caused .ig inside diversions to give bad storage
+	allocation.  thanks to arthur david olson, whose fix was on netnews
+	3 years earlier.
+
+Apr 14, 1991:
+	added an extra redundant call of ptfont in setfp, since it appears
+	that some versions of adobe transcript assume that an "x font" command
+	means to change the actual font as well.  the fix preserves the current font.
+	thanks to david brailsford and friends for spotting the problem.
+
+	fixed up tests in alpha() in n8 to defend isalpha() against too-big inputs.
+	punct() argument had wrong type too.  thanks to rich drexler and peter nelson.
+
+May 6, 1991:
+	increased size of hyphenation exception buffer to 512 from 128
+
+May 13, 1991:
+	moved evaluation of \(xx from copy mode to non-copy mode, so that
+	weird character names wouldn't get reevaluated in argument parsing.
+	installed july 27.
+
+July 27, 1991:
+	added test in setn in n4 to fix bug that permitted things like
+	\n (ab to work "properly".  thanks to jaap for finding and fixing.
+
+	added paranoid testing in t11 to make sure font files look ok.
+
+Nov 2, 1991:
+	merged nroff into troff, based on Ken's plan 9 version.
+	merged nii.c into ni.c, removed tw.h, etc.  more work needed
+	to make this stuff cleaner.
+
+Nov 8, 1991:
+	add a maplow(towlower...) in n8.c to handle brain-damaged libraries.
+
+Dec 13, 1991:
+	parameterize the font directories, etc., so can be set in makefiles.
+	added -N argument to run as nroff.
+
+Dec 17, 1991:
+	copy 3rd argument in .fp commands to x font ... lines when it contains
+	a /, for testing fonts locally.
+
+Jan 2, 1992:
+	fiddle setfp so doesn't put out font stuff if -a turned on.
+
+Jan 28, 1992:
+	fixed .tm \(mi to print something sensible.  thanks to jaap.
+
+Mar 1, 1992:
+	input mechanism rearranged to use getc() instead of stack of
+	explicit input buffers.  5-10% slowdown.
+
+Mar 12, 1992:
+	rearranged tests in popf so that .so is closed properly before
+	moving on to the next macro package.
+
+Mar 13, 1992:
+	\n(sb initialized wrong in setwd().
+
+	TYPESETTER=foo troff -Tpost used foo instead of post.
+
+Mar 30, 1992:
+	added test in getword to avoid hyphenating things with motions
+	(and avoid a core dump sometimes too).
+
+Apr 5, 1992:
+	fiddled n7.c and added _nmwid to the environment, to add a
+	5th argument to .nm:  the maximum number of digits in any
+	line number.  default is 3, which was previously hardwired in.
+
+	added jaap's code for yet another register which actually delivers
+	a string, called .S (so it can easily go in the switch in setn()
+	in n4.c); it delivers the current tabstop and alignment modes in
+	a format suitable for a subsequent .ta \n(.S command:
+		.ds T \n(.S
+		...
+		.ta \*T
+
+Apr 17, 1992:
+	casefi(), n5.c: .u register should be 0 or 1, not incremented
+	with each .fi.
+
+May 12, 1992:
+	n1.c: need p++ after strrchr to skip / in program name.
+	thanks to Rich Drechsler.
+
+May 22, 1992:
+	added extern decls to e.g., void Tchar (*hmot)(void) in tdef.h
+	and added definition to ni.c, so pointers are defined explicitly.
+	makes it work on turbo c++ and probably others.
+
+	changed a couple of isdigit's and isgraph(getch()) to avoid
+	multiple evaluation (even though it shouldn't happen).
+
+	Made /usr/bin/nroff a shell script.
+
+Jun 5, 1992:
+	added tests to t.twrest and t.twinit to avoid 0 deref in
+	n2 and n10, for nroff -t xxxxx.  thanks to Rich Drechsler.
+
+Jul 12, 1992:
+	added .pt request to trace macros and requests (from jaap).
+	.pt N Print trace of macros (N=1), requests (N=2) or both (N=3)
+
+Jul 21, 1992:
+	added extra test in nextfile() to pop current input file
+	only if not in .nx command.  thanks to jaap.
+
+	added test in getword() to avoid hyphenating after \z character,
+	which prevents any hyphenation inside \X'...'.  thanks to jaap.
+
+	added, then removed, code in getword() to prevent hyphenating
+	anything shorter than 6 characters.  looks like it changed a
+	lot more than i thought.
+
+Aug 28, 1992:
+	removed call to popi from rdtty();  it was eating up the
+	rest of the macro if it was used from within one.  (thanks, jaap)
+
+Oct 18, 1992:
+	replaced 32767 by INT_MAX in several places to allow for long pages.
+	tnx, jaap.
+
+Dec 1, 1992:
+	attempt to get back to clean state of Oct 18 after inserting
+	and backing out changes to detect bad conversions in .nr.
+
+	cleanup of makefile, editing of README, to get rid of old drivers.

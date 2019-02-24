@@ -1,0 +1,79 @@
+Feb. 1988: dmg modified f77pass1 to put out stab info to make .o's
+compiled by f77 -g look like corresponding .o's from cc -g , with the
+conventions described by Feldman and Weinberger in the Fortran 77
+section of Volume 2B of the Seventh Edition UNIX PROGRAMMER'S
+MANUAL.  This makes pi useful with f77 -g.
+
+COMPLEX variables appear to be
+	struct complex { float real, imag; };
+DOUBLE COMPLEX variables similarly appear to be
+	struct dcomplex { double real, imag; };
+
+Norman's COMMON stab entries are retained (in hopes that some day
+pi -- or some other debugger -- might be made to exploit them);
+see alt/README.  In addition, COMMON blocks are made to appear as
+global structs:
+	COMMON /ABC/ N, X
+looks like
+	extern struct abc_COMMON_ {int n; float x;} abc_;
+
+If the same COMMON block occurs in 
+
+CHARACTER variables are uniformly made to appear as char* or char[] ,
+so one can easily see more than the first character with pi.
+
+Omission: stab entries for the implicit length parameters associated
+with CHARACTER arguments are currently omitted.  (But CHARACTER functions
+have stabs entries for their return value and return value lengths.)
+
+Regarding what follows, also read Norman's comments in alt/README.
+
+Thanks to changes in pi by Tom Cargill, COMMON variables appear
+to be local variables in each subprogram in which they are used.
+COMMON blocks also appear in pi's Globals menu.  If several
+subprograms use different names for the components of a COMMON
+block, then f77 merges these into the global struct that describes
+the COMMON block, honoring only the first occurrence of each name.
+
+EQUIVALENCEs involving COMMON blocks are handled as above: the
+global struct for the COMMON block gets more components, and all
+components appear as local variables.  EQUIVALENCEd local variables
+also simply appeared in pi's local variable menu.  This required
+more tinkering by tac and emission by f77 of a stab sequence of
+the form
+
+	.stabn	0xe2,0,0		#0xe2 = BCOMM
+	.stabn	symtype,0,address	#symtype = STSYM (0x26) or LCSYM (0x28)
+	.stabs	"vname1",0,type,offset
+	# type modifiers (SSYM, DIM), if required
+	.stabs	"vname2",0,type,offset
+	# type modifiers (SSYM, DIM), if required
+	....
+	.stabn	0xe8,0,0,0		#0xe8 = ECOML
+
+This departs from Norman's scheme by moving the address from the
+ECOML line (where we can't get it right without tinkering /bin/as
+and /bin/ld) to a separate STSYM or LCSYM line right after the BCOMM
+(in which we get the right address).  This differs from COMMON in
+that the name field of the BCOMM is null.  (It would be nicer if
+COMMON and EQUIVALENCE could be handled uniformly, but the addressing
+restrictions of /bin/as and /bin/ld prevent this.)
+
+
+Bug fixes made 30 June 1989 to /n/bowell/usr/src/cmd/f77:
+1. Type of PARAMETERs honored.
+2. Comma allowed in DO: do 10, i = 1, n
+3. Stmt function actual arg can be subscripted var of same name as the dummy.
+4. Calling sequence expected by functions and subroutines adjusted to
+   match the calling sequence passed to same.  Previously, procedures
+   expected a length parameter to accompany procedure arguments.  This
+   change eliminates the old "bad code may have been generated" warning.
+5. DATA statements with general implied DOs now work.  Previously only
+   an initial, singly nested DO worked.
+6. A loop like "DO 10 i = 1, 1, -1" no longer has its range omitted.
+7. ASSIGNed FORMAT labels work.
+8. New flags -b and -B added: -b warns when the above bug fixes affect
+   generated objects; -B reverts to the previous buggy behavior.
+9. Default max number of statement labels increased (from 201 to 801).
+10. Disallow statement functions among executables, even when there
+    are DATA statements.

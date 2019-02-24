@@ -1,0 +1,101 @@
+#!/usr/bin/awk -f
+BEGIN {
+	files = "files";
+	templ = "templ";
+#	out = stdout;
+	if (ARGC == 2 && ARGV[1] == "-")	# ugh
+		ARGC--;
+	if (ARGC < 2) {
+		printf "usage: %s pat ...\n", ARGV[0];
+		exit
+	}
+	for (i = 1; i < ARGC; i++)
+		atags[ARGV[i]] = ARGV[i];
+	rdfiles(files, atags);
+	putmake(templ, out);
+	exit
+}
+
+#
+# read the list of component files
+# pick out the ones we care about
+# return
+#	src	array of source filenames
+#	obj	array of objects
+#	typ	array of types
+#	nf	number of names in the above arrays
+# to preserve order, the arrays are indexed by numbers
+#
+
+func rdfiles(files, atags)
+{
+	nf = 0;
+	while ((getline f <files) > 0) {
+		if (split(f, ff, ":[ \t]*") != 4) {
+			printf "bad files line: %s\n", f;
+			continue;
+		}
+		if (split(ff[4], tags, "[ \t]+") < 1) {
+			printf "bad files line: %s\n", f;
+			continue;
+		}
+		mat = 0;
+		for (t in tags)
+			if (atags[tags[t]] != "") {
+				mat = 1;
+				break;
+			}
+		if (mat == 0)
+			continue;
+		nf++;
+		obj[nf] = ff[1];
+		src[nf] = ff[2];	# perhaps a list
+		typ[nf] = ff[3];
+	}
+	for (i = 1; i < nf; i++)
+		allobj=allobj " " obj[i];
+}
+
+#
+# read the template makefile
+# scoop up the rules;
+# spit out lists;
+# copy the literal part;
+# spit out rules for our files
+#
+
+func putmake(templ, out)
+{
+	while ((getline l <templ) > 0) {
+		if (l == "%%")
+			break;
+		if (l ~ /^#/)
+			continue;
+		if ((i = index(l, ":")) == 0) {
+			printf "bad line in template: %s\n", l;
+			continue;
+		}
+		t = substr(l, 1, i - 1);
+		rule = "";
+		while ((getline r <templ) > 0) {
+			if (r == "")
+				break;
+			rule = rule "\n" r;
+		}
+		if (rules[t] != "")
+			printf "dup rule for %s ignored\n", t;
+		else {
+			rules[t] = rule;
+			extra[t] = substr(l, i + 1, length(l));
+		}
+	}
+	print "FILES=" allobj	# >out
+	while ((getline l <templ) > 0)
+		print l		# >out
+	print 			# >out
+	for (i = 1; i < nf; i++)
+		if (rules[typ[i]] == "")
+			print obj[i] ": " src[i];
+		else
+			print obj[i] ": " src[i] " " extra[typ[i]] rules[typ[i]];
+}

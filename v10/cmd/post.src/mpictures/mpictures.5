@@ -1,0 +1,220 @@
+.ds dT /usr/lib/tmac
+.TH MPICTURES 5
+.SH NAME
+.B mpictures
+\- picture inclusion macros
+.SH SYNOPSIS
+\*(mBtroff \-mpictures\f1
+.OP "" options []
+.OP "" files []
+.SH DESCRIPTION
+.B mpictures
+is a macro package used to include PostScript pictures in
+.B troff
+documents.
+The package is compatible with many existing
+.B troff
+macro packages and includes the following three macros:
+.TP
+.MI .BP "\0file\0height\0width\0position\0offset\0flags\0label"
+.sp 0.3v
+Places the picture
+.I file
+in the space set aside by
+.IR height ,
+.IR width ,
+.IR position ,
+and
+.IR offset ,
+which together define and position the picture frame.
+The macro arguments are:
+.in +0.75i
+.de XX
+.sp 3p
+.ti -0.75i
+\f2\\$1\fP
+.sp -1v
+..
+.XX file
+Pathname of a PostScript picture
+.IR file .
+Appending
+.MI ( n )
+to
+.I file
+selects page number
+.I n
+from a multiple-page picture
+.IR file .
+By default the first page in
+.I file
+is selected.
+.XX height
+Vertical extent of the frame.
+The default is
+.MR 3i .
+.XX width
+Horizontal extent of the frame.
+The default is the current length of a line of text.
+.XX position
+One of
+.MR l ,
+.MR c ,
+or
+.MW r
+used to align the left, center, or
+right of the frame with the corresponding position
+on the current line of text.
+The default is
+.MR l .
+.XX offset
+Moves the frame right (positive) or left (negative)
+from the selected
+.IR position .
+The default is
+.MR 0i .
+.XX flags
+A string built from one or more of the following:
+.in +0.5i
+.sp 3p
+.de YY
+.br
+.ti -0.5i
+\*(mW\\$1\f1
+.sp -1v
+..
+.YY a[\f2d\*(mW]
+Rotate the picture clockwise
+.I d
+degrees.
+If
+.I d
+is omitted, 90 degrees is added to the
+current angle, which starts at zero.
+.YY o
+Outline the picture with a box.
+.YY s
+Freely scale both picture dimensions.
+.YY w
+White out (erase) the area to be occupied by the picture.
+.YY l
+Attach the picture to the left side of the frame.
+.YY r
+Attach the picture to the right side of the frame.
+.YY t
+Attach the picture to the top of the frame.
+.YY b
+Attach the picture to the bottom of the frame.
+.in -0.5i
+.XX label
+Place
+.I label
+1.5 vertical lines below the frame.
+.in -0.75i
+.sp 0.3v
+If there is room
+.MW .BP
+fills text around the frame.
+Everything destined for either side of the frame first
+goes into a diversion and only reappears when the accumulated
+text sweeps past the trap set by
+.MW .BP
+or when the diversion is explicitly closed
+by the
+.MW .EP
+macro (see below).
+.sp 0.5v
+Null arguments, represented by
+.MR \&"" ,
+are replaced by the defaults as noted above.
+.TP
+.MI .PI "\0file\0height,\|width,\|yoffset,\|xoffset\0flags"
+.sp 0.3v
+A low level macro used by
+.MR .BP .
+It can help if you are trying to do things that
+.MW .BP
+will not allow or does not do well.
+The two arguments not already described are:
+.in +0.75i
+.XX xoffset
+Moves the frame right (positive) or left (negative) from the
+left margin.
+The default is
+.MR 0i .
+.XX yoffset
+Moves the frame down (positive) or up (negative) from
+the current baseline.
+The default is
+.MR 0i .
+.in -0.75i
+.sp 0.3v
+The second argument is a comma separated list of four numbers,
+and although defaults are available, supplying values for all
+four numbers is recommended.
+.br
+.ne 2v
+.TP
+.MW .EP
+Ends a picture started by
+.MW .BP .
+An explicit
+.MW .EP
+call is not often required.
+Instead
+.MW .EP
+is usually called by
+.MW .BP
+at the bottom of each frame.
+.PP
+Much of what is done depends on file structuring comments
+commonly found in PostScript files.
+If the comments needed to isolate a particular page are missing
+the entire
+.I file
+is included.
+If a
+.MW %%BoundingBox
+comment is missing the picture is
+assumed to fill an 8.5\(mu11-inch page.
+A picture
+.I file
+that cannot be read when the
+.B troff
+postprocessor runs is replaced by white space.
+Nothing done in
+.MW .BP
+or
+.MW .PI
+guarantees the picture has not been placed off the page.
+All dimensions should be explicitly given in inches.
+.SH BUGS
+A picture and associated text can silently disappear if
+the diversion trap set by
+.MW .BP
+is not reached.
+Including a call to
+.MW .EP
+at the end of the paper
+should recover whatever appears to be missing.
+.PP
+Macros in other packages occasionally break the adjustments
+made to the line length and indent when text is being placed
+around a picture.
+.PP
+A missing or improper
+.MW %%BoundingBox
+comment often
+explains why a picture does not properly fill the space
+that has been set aside.
+.SH FILES
+.MW \*(dT/tmac.pictures
+.SH SEE ALSO
+.BR troff (1),
+.BR dpost (1),
+.BR picpack (1),
+.BR mps (5)
+.SH REFERENCE
+R. L. Drechsler and A. R. Wilks,
+.ul
+PostScript Pictures in Troff Documents

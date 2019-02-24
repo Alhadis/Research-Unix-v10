@@ -1,0 +1,28 @@
+| Assembly support for SUNs.
+|
+| HISTORY
+|  8-Apr-86  Rafael Bracho (rxb) at Schlumberger Palo Alto Research
+|	Created.
+|  13-Feb-87  Jonathan Shopiro (shopiro) at AT&T Bell Labs
+|	Fixed sswap.
+|  17-Nov-87  Jonathan Shopiro (shopiro) at AT&T Bell Labs
+|	Removed sswap.  replaced the return sequence with that from task::task()
+|	and sched::schedule()
+|
+
+| TFRAME is the displacement of t_frame in the task class.
+TFRAME = 20
+
+| TH is the displacement of th in the task class.
+TH = 24
+
+	.text
+	.globl	_swap
+_swap:
+	movl	sp@(4),a0		| a0 = this
+	movl	a0@(TFRAME),a6		| a6 (fp) = this -> t_framep
+	movl	a0@(TH),d0		| return this -> th
+	moveml  a6@(-0x2c),#0x3cfc	| size of frame from task__ctor and sched_schedule
+	unlk    a6
+	rts
+

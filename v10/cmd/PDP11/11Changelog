@@ -1,0 +1,52 @@
+a.out.h:
+	Header structure: ints -> unsigned short
+nm.c:
+	added static char *progname = argv[0], made error messages
+	printf(stderr, "%s: ....", progname, ....);  This is because
+	PDP11-on-VAX system will call it 11nm.  All the other programs
+	below do this, too.
+	Added #ifndef A_DOT_OUT lines to default, as always, to "a.out",
+	but now this is tweakable by the PDP11-on-VAX package. Same is true
+	for all other programs which use a.out as a file name.
+ar.c:
+	Added char *progname = argv[0] for error messages.  On PDP11-on-VAX,
+	without standard character archiver, ar will be called "car",
+	character archiver.
+arcv.c:
+	same as ar.c above.  Also, sections have #ifdef vax lines which will
+	fix the reverse longs and use manifest constants instead of sizeof's
+	in the old binary pdp11-format archive.
+ld.c:
+	Slightly overkilled by globally changing all ints into shorts.
+	char *progname = argv[0]; is used, and added to error messages.
+	A_DOT_OUT is #defined as "a.out", is tweakable.
+	One problem overcome was the search path for libraries.  Previously,
+	a manifest constant string "/usr/lib/libxxxxx..." was used for the
+	prefix path name;  an fopen was done on this string+4 ("/lib...")
+	then on string+0 ("/usr/lib...").  This was changed to select
+	colon-separated names such as the shell PATH variable in a
+	#define LIBPATH "/lib:/usr/lib"
+	The reason for this was that the string+4 convention was difficult
+	to get around portably;  now the PDP11-on-VAX package can tweak this.
+	It is NOT taken from the environment (by design decision) but can
+	be replaced by a command option -Lstring, where string specifies
+	the complete path.
+	There is also a #define LIBPREFIX "/lib" in there which is
+	tweakable by the VAX package, which would want "/11lib"
+	there.  Lib files for the 11 on the vax are prefixed by "11".
+	The lib file name when selected by the -l option is constructed as:
+	    {an element of LIBPATH} + LIBPREFIX + {-l arg} + ".a"
+ranlib.c:
+	ranlib needs to know what the name of the archiver is.  If your
+	standard system archiver is not char-type (such as USG machines)
+	then the archiver is called "car"; else the default is "ar".
+	ranlib also stores progname for error messages.
+as:
+	Uses two #define's: A_DOT_OUT "a.out" and PASS2PGM "/lib/as2".
+	These need to be changed by the PDP11-on-VAX package, but are
+	the standard as defaults if left alone.
+c:
+	No changes by S. Hartwell.  Makefile added.
+crt:
+	No changes.  Copied from research; the lmul and ldiv routines
+	distributed in V7 were buggy.  Note: also includes csav.s

@@ -1,0 +1,139 @@
+.TH F2C 1
+.CT 1 prog_other
+.SH NAME
+f\^2c \(mi Convert Fortran 77 to C
+.SH SYNOPSIS
+.B f\^2c
+[
+.I option ...
+]
+.I file ...
+.SH DESCRIPTION
+.I F2c
+converts Fortran 77 source code to C.
+Arguments that end with
+.L .f
+or
+.L .F
+are taken to be
+Fortran 77 source programs;
+each is converted to a C source file in the
+current directory
+whose name is that of the source with 
+.L .c
+substituted
+for the final
+.L .f
+or
+.LR .F .
+If no
+.I file
+arguments are given, then
+.I f\^2c
+reads Fortran 77 on its standard input and
+writes the resulting C on its standard output.
+.PP
+The following options have the same meaning as in
+.IR f\^77 (1).
+.TP
+.B -w
+Suppress all warning messages.
+.TP
+.B -w66
+Suppress Fortran 66 compatibility warnings.
+.TP
+.B -onetrip
+Compile DO loops that are performed at least once if reached.
+(Fortran 77 DO loops are not performed at all if the upper limit is smaller than the lower limit.)
+.TP
+.B -u
+Make the default type of a variable `undefined' rather than using the default Fortran rules.
+.TP
+.B -C
+Compile code to check that subscripts are within declared array bounds.
+.TP
+.B -I2
+Render INTEGER and LOGICAL as short,
+INTEGER\(**4 as long int.  Assume the default \fIlibF77\fR
+and \fIlibI77\fR:  allow only INTEGER\(**4 (and no LOGICAL)
+variables in INQUIREs.
+.TP
+.B -U
+Honor the case of variable and external names.  Fortran keywords must be in
+.I
+lower
+case.
+.PP
+The following options are peculiar to
+.IR f\^2c .
+.TP
+.B -A
+Use ANSI C constructs.  The default is old-style (pre-ANSI) C.
+.TP
+.B -R
+Do not promote REAL functions and operations to DOUBLE PRECISION (as
+.I f\^77
+does).
+. \".TP
+. \".B -ext
+. \"Complain about f77 extensions.
+.TP
+.B -i2
+Similar to \f(CW-I2\fR, but assume a modified \fIlibF77\fR and \fIlibI77\fR
+(compiled with \f(CW-Df2c_i2\fR),
+so INTEGER and LOGICAL variables may be assigned in INQUIREs.
+.TP
+.B -a
+Give local variables automatic (rather than static) storage
+unless they appear in a DATA, EQUIVALENCE, or SAVE statement.
+.TP
+.B -r8
+Promote REAL to DOUBLE PRECISION, COMPLEX to DOUBLE COMPLEX.
+.TP
+.B -z
+Do not implicitly recognize DOUBLE COMPLEX.
+.PP
+The resulting C invokes routines from
+.IR f\^77 's
+support libraries,
+.I libI77
+and
+.IR libF77 ;
+programs should be loaded by  \f(CWf77 \fR...  or
+by  \f(CWcc \fR...\f(CW -lI77 -lF77 -lm\fR .  Calling conventions
+are those of
+.IR f\&77 :
+see the reference below.
+.SH FILES
+.TF /usr/lib/libF77.a
+.TP
+.IB file .[fF]
+input file
+.TP
+.B *.c
+output file
+.TP
+.F /usr/include/f2c.h
+header file
+.TP
+.F /usr/lib/libF77.a
+intrinsic function library
+.TP
+.F /usr/lib/libI77.a
+Fortran I/O library
+.TP
+.F /lib/libc.a
+C library, see section 3
+.SH "SEE ALSO"
+S. I. Feldman and
+P. J. Weinberger,
+`A Portable Fortran 77 Compiler',
+this manual, Volume 2
+.SH DIAGNOSTICS
+The diagnostics produced by
+.I f\^2c
+are intended to be
+self-explanatory.
+.SH BUGS
+Floating-point constants of over 17 significant digits are rounded to 17
+significant digits.

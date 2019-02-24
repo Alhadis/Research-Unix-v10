@@ -1,0 +1,916 @@
+# 1 "acct.c"
+
+
+# 1 "../sys/param.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 1 "/usr/include/signal.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+typedef int	(*SIG_TYP)();
+# 42 "/usr/include/signal.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 39 "../sys/param.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+					
+
+
+
+
+
+
+
+
+# 1 "../sys/types.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+typedef	unsigned char	u_char;
+typedef	unsigned short	u_short;
+typedef	unsigned int	u_int;
+typedef	unsigned long	u_long;
+
+typedef	long	daddr_t;
+typedef	char *	caddr_t;
+typedef	u_short	ino_t;
+typedef	long	swblk_t;
+
+
+typedef	long	size_t;
+
+typedef	long	time_t;
+typedef	long	label_t[14];
+typedef	u_short	dev_t;
+typedef	long	off_t;
+typedef	struct { unsigned long lo; long hi; } Long;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+typedef struct		fd_set { unsigned int fds_bits[(128+sizeof(int)*8-1)/(sizeof(int)*8)]; } fd_set;
+
+
+
+
+# 132 "../sys/param.h"
+
+
+
+
+
+Long	ltoL();
+Long	Lladd();
+Long	Luadd();
+Long	LLadd();
+
+unsigned Lshift();
+# 4 "acct.c"
+# 1 "../sys/systm.h"
+
+
+
+
+
+int	lbolt;			
+time_t	time;			
+char	runin;			
+char	runout;			
+int	runrun;			
+int	noproc;			
+char	curpri;			
+int	maxmem;			
+int	physmem;		
+int	wantin;
+
+daddr_t	rablock;		
+dev_t	rootdev;		
+extern dev_t swapdev;		
+dev_t	argdev;			
+
+daddr_t	bmap();
+unsigned max();
+unsigned min();
+
+
+
+
+extern struct sysent
+{
+	int	sy_narg;		
+	int	(*sy_call)();		
+} sysent[];
+
+# 5 "acct.c"
+# 1 "../sys/acct.h"
+
+
+
+
+
+typedef	u_short comp_t;
+
+struct	acct
+{
+	char	ac_comm[10];		
+	comp_t	ac_utime;		
+	comp_t	ac_stime;		
+	comp_t	ac_etime;		
+	time_t	ac_btime;		
+	short	ac_uid;			
+	short	ac_gid;			
+	short	ac_mem;			
+	comp_t	ac_io;			
+	dev_t	ac_tty;			
+	char	ac_flag;		
+};
+
+
+
+
+# 6 "acct.c"
+# 1 "../sys/user.h"
+# 1 "../sys/pcb.h"
+
+
+
+
+struct pcb
+{
+	int	pcb_ksp; 	
+	int	pcb_esp; 	
+	int	pcb_ssp; 	
+	int	pcb_usp; 	
+	int	pcb_r0; 
+	int	pcb_r1; 
+	int	pcb_r2; 
+	int	pcb_r3; 
+	int	pcb_r4; 
+	int	pcb_r5; 
+	int	pcb_r6; 
+	int	pcb_r7; 
+	int	pcb_r8; 
+	int	pcb_r9; 
+	int	pcb_r10; 
+	int	pcb_r11; 
+	int	pcb_r12; 
+
+	int	pcb_r13; 
+
+	int	pcb_pc; 	
+	int	pcb_psl; 	
+	struct  pte *pcb_p0br; 	
+	int	pcb_p0lr; 	
+	struct  pte *pcb_p1br; 	
+	int	pcb_p1lr; 	
+
+
+
+	long	*pcb_sswap;	
+	int	pcb_szpt; 	
+	int	pcb_sigc[3];
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 2 "../sys/user.h"
+# 1 "../sys/dmap.h"
+
+
+
+
+
+
+
+struct	dmap
+{
+	swblk_t	dm_size;	
+	swblk_t	dm_alloc;	
+	swblk_t	dm_map[64];	
+};
+
+extern struct	dmap zdmap;
+extern int dmmin;		
+extern int dmmax;		
+
+
+
+
+
+
+struct	dblock
+{
+	swblk_t	db_base;	
+	swblk_t	db_size;	
+};
+# 3 "../sys/user.h"
+# 1 "../sys/vtimes.h"
+
+
+
+
+
+
+struct vtimes {
+	int	vm_utime;		
+	int	vm_stime;		
+	
+	unsigned vm_idsrss;		
+	unsigned vm_ixrss;		
+	int	vm_maxrss;		
+	int	vm_majflt;		
+	int	vm_minflt;		
+	int	vm_nswap;		
+	int	vm_inblk;		
+	int	vm_oublk;		
+};
+
+
+struct vtimes zvms;			
+
+# 4 "../sys/user.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+ 
+struct	user
+{
+	struct	pcb u_pcb;
+	int	junk1;			
+	int	u_arg[5];		
+	label_t	u_qsav;			
+	char	u_segflg;		
+
+
+
+	char	u_error;		
+	short	u_uid;			
+	short	u_gid;			
+	short	u_ruid;			
+	short	u_rgid;			
+	short	u_groups[32];	
+	struct	proc *u_procp;		
+	int	*u_ap;			
+	union {				
+		struct	{
+			int	R_val1;
+			int	R_val2;
+		} u_rv;
+
+
+		off_t	r_off;
+		time_t	r_time;
+	} u_r;
+	caddr_t	u_base;			
+	unsigned int u_count;		
+	Long	u_offset;		
+	struct	inode *u_cdir;		
+	struct	inode *u_rdir;		
+	char	junk2[14];		
+	char	junk4[14+2];		
+	struct	file *u_ofile[128];	
+	char	u_pofile[128];	
+
+	label_t u_ssav;			
+	int	(*u_signal[32])();	
+	int	u_code;			
+
+
+	int	*u_ar0;			
+	struct uprof {			
+		short	*pr_base;	
+		unsigned pr_size;	
+		unsigned pr_off;	
+		unsigned pr_scale;	
+	} u_prof;
+	short	junk5;		
+	dev_t	u_ttydev;		
+	ino_t	u_ttyino;
+	union {
+	   struct {			
+		int	Ux_mag;		
+		unsigned Ux_tsize;	
+		unsigned Ux_dsize;	
+		unsigned Ux_bsize;	
+		unsigned Ux_ssize;	
+		unsigned Ux_entloc;	
+		unsigned Ux_unused;
+		unsigned Ux_relflg;
+	   } Ux_A;
+	   char ux_shell[32];	
+	} u_exdata;
+
+
+
+
+
+
+
+
+
+	char	u_comm[14];		
+	time_t	u_start;
+	char	u_acflag;
+	short	junk6;		
+	short	u_cmask;		
+	size_t	u_tsize;		
+	size_t	u_dsize;		
+	size_t	u_ssize;		
+	struct	vtimes u_vm;		
+	struct	vtimes u_cvm;		
+	struct	dmap u_dmap;		
+	struct	dmap u_smap;		
+	struct	dmap u_cdmap, u_csmap;	
+
+	time_t	u_outime;		
+	size_t	u_odsize, u_ossize;	
+	int	u_limit[8];		
+	int	u_nbadio;		
+	char	u_logname[8];		
+	int	u_stack[1];
+
+					
+
+
+
+
+};
+
+
+
+
+
+
+
+# 1 "/usr/include/errno.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 56 "/usr/include/errno.h"
+
+# 132 "../sys/user.h"
+
+
+extern	struct user u;
+extern	struct user *swaputl;
+extern	struct user *forkutl;
+extern	struct user *xswaputl;
+extern	struct user *xswap2utl;
+extern	struct user *pushutl;
+extern	struct user *prusrutl;
+
+# 7 "acct.c"
+# 1 "../sys/inode.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct	inode
+{
+	short	i_flag;
+	dev_t	i_dev;		
+	char	i_fstyp;	
+	unsigned short i_count;	
+	long	i_number;	
+	unsigned short i_mode;
+	short	i_nlink;	
+	short	i_uid;		
+	short	i_gid;		
+	off_t	i_size;		
+	struct	inode *i_mroot;	
+	struct	inode *i_mpoint;	
+	struct	stdata *i_sptr;	
+	union {
+		struct {
+			daddr_t	I_addr[13];	
+			daddr_t	I_lastr;	
+			struct buf *I_bufp;	
+		} i_f;
+
+
+
+		struct {
+			daddr_t	I_rdev;		
+		} i_d;
+
+		struct {
+			long I_tag;
+			struct inode *I_cip;	
+			int I_fsflags;		
+			time_t I_atime;
+			time_t I_mtime;
+			time_t I_ctime;
+			dev_t I_rdev;
+		} i_a;		
+
+
+
+
+
+
+
+		struct {
+			struct proc *I_proc;	
+			int	    I_sigmask;	
+		} i_p;
+
+
+	} i_un;
+	struct inode *i_hlink;	
+};
+
+
+struct	inode inode[];
+extern struct inode *inodeNINODE;
+extern int inodecnt;
+
+struct	inode *rootdir;		
+
+struct	inode *ialloc();
+struct	inode *ifind();
+struct	inode *iget();
+struct	inode *iuniq();
+struct	inode *namei();
+struct	inode *openi();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct argnamei {	
+	short flag;	
+	short len;	
+	union {
+		short	mode;		
+		struct inode *il;	
+		caddr_t	buf;		
+	} un;
+};
+
+
+
+
+
+
+
+
+
+extern struct argnamei nilargnamei;
+
+struct nx {	
+	struct inode *dp;	
+	char *cp;		
+	char *nbuf;		
+	short nlen;		
+	short nlink;		
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 8 "acct.c"
+
+struct	inode *acctp;
+
+
+
+
+sysacct()
+{
+	register struct inode *ip;
+	register struct a {
+		char	*fname;
+	} *uap;
+
+	uap = (struct a *)u.u_ap;
+	if (suser() == 0)
+		return;
+	if (uap->fname==0) {
+		if (ip = acctp) {
+			{ while ((ip)->i_flag & 01) { (ip)->i_flag |= 020; sleep((caddr_t)(ip), 10); } (ip)->i_flag |= 01; };
+			iput(ip);
+			acctp = 0;
+		}
+		return;
+	}
+	if (acctp) {
+		u.u_error = 16;
+		return;
+	}
+	ip = namei(uap->fname, 0, &nilargnamei, 1);
+	if(ip == 0)
+		return;
+	if((ip->i_mode & 0170000) != 0100000) {
+		u.u_error = 13;
+		iput(ip);
+		return;
+	}
+	if (access(ip, 0200)) {
+		iput(ip);
+		return;
+	}
+	acctp = ip;
+	{ (ip)->i_flag &= ~01; if ((ip)->i_flag&020) { (ip)->i_flag &= ~020; wakeup((caddr_t)(ip)); } };
+}
+
+struct	acct acctbuf;
+
+
+
+acct()
+{
+	register i;
+	register struct inode *ip;
+	off_t siz;
+	register struct acct *ap = &acctbuf;
+
+	if ((ip=acctp)==0)
+		return;
+	{ while ((ip)->i_flag & 01) { (ip)->i_flag |= 020; sleep((caddr_t)(ip), 10); } (ip)->i_flag |= 01; };
+	for (i=0; i<sizeof(ap->ac_comm); i++)
+		ap->ac_comm[i] = u.u_comm[i];
+	ap->ac_utime = compress((long)u.u_vm.vm_utime);
+	ap->ac_stime = compress((long)u.u_vm.vm_stime);
+	ap->ac_etime = compress((long)(time - u.u_start));
+	ap->ac_btime = u.u_start;
+	ap->ac_uid = u.u_ruid;
+	ap->ac_gid = u.u_rgid;
+	ap->ac_mem = 0;
+	if (i = u.u_vm.vm_utime + u.u_vm.vm_stime)
+		ap->ac_mem = (u.u_vm.vm_ixrss + u.u_vm.vm_idsrss) / i;
+	ap->ac_io = compress((long)(u.u_vm.vm_inblk + u.u_vm.vm_oublk));
+	ap->ac_tty = u.u_ttyino;
+	ap->ac_flag = u.u_acflag;
+	siz = ip->i_size;
+	u.u_offset = ltoL(siz);
+	u.u_base = (caddr_t)ap;
+	u.u_count = sizeof(acctbuf);
+	u.u_segflg = 1;
+	u.u_error = 0;
+	writei(ip);
+	if(u.u_error)
+		ip->i_size = siz;
+	{ (ip)->i_flag &= ~01; if ((ip)->i_flag&020) { (ip)->i_flag &= ~020; wakeup((caddr_t)(ip)); } };
+}
+
+
+
+
+
+compress(t)
+register long t;
+{
+	register exp = 0, round = 0;
+
+	while (t >= 8192) {
+		exp++;
+		round = t&04;
+		t >>= 3;
+	}
+	if (round) {
+		t++;
+		if (t >= 8192) {
+			t >>= 3;
+			exp++;
+		}
+	}
+	return((exp<<13) + t);
+}

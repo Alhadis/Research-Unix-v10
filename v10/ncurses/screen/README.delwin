@@ -1,0 +1,22 @@
+Symtoms:
+
+Programs that use curses can grow when windows are added (addwin) but
+not free up all the space when the windows are deleted (delwin).
+
+Cause:
+
+Looking at the code, addwin() allocates some space. If the allocation
+fails, it frees up some data structures. The delwin() function does
+something similar but does not do a complete job. The additional lines
+have been added.
+
+Installation:
+
+This file should be installed in /usr/src/lib/libcurses/screen/delwin.c .
+After that, the curses library needs to be remade, then all affected
+application programs need to be recompiled.
+
+sum -r:
+
+	42129     1 delwin.c
+

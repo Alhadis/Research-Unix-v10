@@ -1,0 +1,34 @@
+.TH LINKDATA 1
+.SH NAME
+link \- group data files into the text segment of a .o file
+.SH SYNOPSIS
+.B linkdata file1 file2 ...
+.br
+.SH DESCRIPTION
+.PP
+.IR linkdata
+reads the named files and generates an a.out-format file on the
+standard output.  The resulting file is as if it were assembled from
+the following .s file.  (The files can be rather long, so it's not
+a good idea to make an actual assembly language file.)
+.DS L
+.ft C
+    .text
+    .globl datalist
+    .set datalist, 1f+4   # if there are no files, use  ".set datalist, 1"
+
+# repeat the following for each file
+    .align 2
+1:  .long 0x31
+    .long 2f+4
+    .long 3f+4
+    .long 1f+4  # for the last file, use   .long 1   instead
+2:  .long strlen("filename")*16+15
+    .ascii "filename"
+    .align 2
+3:  .word  length(contents of file1)*16+15
+    .byte  [contents of file 1]
+    .align 2
+
+.ft R
+.DE

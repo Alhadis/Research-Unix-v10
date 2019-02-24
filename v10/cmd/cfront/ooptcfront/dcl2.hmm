@@ -1,0 +1,120 @@
+*** /tmp/,RCSt1a13342	Tue Nov  7 13:12:12 1989
+--- /tmp/,RCSt2a13342	Tue Nov  7 13:12:14 1989
+***************
+*** 2,8 ****
+  /*ident	"@(#)ctrans:src/dcl2.c	1.3.4.21" */
+  /*
+  	$Source: /usr3/lang/benson/work/stripped_cfront/O/RCS/dcl2.c,v $ $RCSfile: dcl2.c,v $
+! 	$Revision: 1.13 $		$Date: 89/10/20 14:27:49 $
+  	$Author: benson $		$Locker:  $
+  	$State: Exp $
+  */
+--- 2,8 ----
+  /*ident	"@(#)ctrans:src/dcl2.c	1.3.4.21" */
+  /*
+  	$Source: /usr3/lang/benson/work/stripped_cfront/O/RCS/dcl2.c,v $ $RCSfile: dcl2.c,v $
+! 	$Revision: 1.14 $		$Date: 89/10/26 16:49:46 $
+  	$Author: benson $		$Locker:  $
+  	$State: Exp $
+  */
+***************
+*** 1221,1226 ****
+--- 1221,1228 ----
+      d = 0;
+  }
+  
++ extern int ZB_BOUNDARY;
++ 
+  void 
+  name::field_align()
+  /*
+***************
+*** 1229,1250 ****
+  {
+      Pbase           fld = (Pbase) tp;
+  
+!     int             a = (F_SENSITIVE) ? fld->b_fieldtype->align() : SZ_WORD;
+      if (max_align < a)
+  	max_align = a;
+  
+      if (fld->b_bits == 0) {	/* # force word alignment # */
+  	int             b;
+! 	if (bit_offset)
+! 	    fld->b_bits = BI_IN_WORD - bit_offset;
+! 	else if (b = byte_offset % SZ_WORD)
+  	    fld->b_bits = b * BI_IN_BYTE;
+  	/* #	else # */
+  	/* #		fld->b_bits = BI_IN_WORD; # */
+! 	if (max_align < SZ_WORD)
+! 	    max_align = SZ_WORD;
+      } else if (bit_offset == 0) {	/* # take care of part of word # */
+! 	int             b = byte_offset % SZ_WORD;
+  	if (b) {
+  	    byte_offset -= b;
+  	    bit_offset = b * BI_IN_BYTE;
+--- 1231,1253 ----
+  {
+      Pbase           fld = (Pbase) tp;
+  
+!     int             a;
+!     a = (F_SENSITIVE) ? fld->b_fieldtype->align() : ZB_BOUNDARY;
+      if (max_align < a)
+  	max_align = a;
+  
+      if (fld->b_bits == 0) {	/* # force word alignment # */
+  	int             b;
+! 	if (bit_offset && bit_offset != ZB_BOUNDARY * BI_IN_BYTE)
+! 	    fld->b_bits = (BI_IN_BYTE * ZB_BOUNDARY) - bit_offset;
+! 	else if (b = byte_offset % ZB_BOUNDARY)
+  	    fld->b_bits = b * BI_IN_BYTE;
+  	/* #	else # */
+  	/* #		fld->b_bits = BI_IN_WORD; # */
+! 	if (max_align < ZB_BOUNDARY)
+! 	    max_align = ZB_BOUNDARY;
+      } else if (bit_offset == 0) {	/* # take care of part of word # */
+! 	int             b = byte_offset % ZB_BOUNDARY;
+  	if (b) {
+  	    byte_offset -= b;
+  	    bit_offset = b * BI_IN_BYTE;
+***************
+*** 1252,1257 ****
+--- 1255,1261 ----
+      }
+  /*#error('d',"byteoff %d bitoff %d bits %d",byte_offset,bit_offset,fld->b_bits); #*/
+      int             x = (bit_offset += fld->b_bits);
++ 
+      if (BI_IN_WORD < x) {
+  	fld->b_offset = 0;
+  	byte_offset += SZ_WORD;
+***************
+*** 1266,1276 ****
+      }
+      n_offset = byte_offset;
+  }
+- static char     rcsinfo[] = "$Header: /usr3/lang/benson/work/stripped_cfront/O/RCS/dcl2.c,v 1.13 89/10/20 14:27:49 benson Exp $";
+  
+  
+  
+  /* $Log:	dcl2.c,v $
+   * Revision 1.13  89/10/20  14:27:49  benson
+   * fixes to go with the error signalling stuff.
+   * 
+--- 1270,1287 ----
+      }
+      n_offset = byte_offset;
+  }
+  
++ static char     rcsinfo[] = "$Header: /usr3/lang/benson/work/stripped_cfront/O/RCS/dcl2.c,v 1.14 89/10/26 16:49:46 benson Exp $";
+  
+  
++ 
+  /* $Log:	dcl2.c,v $
++  * Revision 1.14  89/10/26  16:49:46  benson
++  * fix bit offset layout. On the 68K (at least on a sun)
++  * the "word" for the purposes of bitfields is 32 bits, but
++  * it can begin on a 16 bit boundary. See size.c/h for the
++  * new size parameter, ZB_BOUNDARY.
++  * 
+   * Revision 1.13  89/10/20  14:27:49  benson
+   * fixes to go with the error signalling stuff.
+   * 

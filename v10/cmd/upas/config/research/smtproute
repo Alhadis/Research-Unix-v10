@@ -1,0 +1,23 @@
+#!/bin/sh -p
+PATH=/bin:/usr/bin:/usr/lib/upas; export PATH
+sender=$1;shift
+system=$1;shift
+sys=`cat /etc/whoami`
+
+# first try smtp from this machine
+cat > /tmp/ur$$
+smtp $sender $system $* < /tmp/ur$$ && rm -f /tmp/ur$$ && exit 0
+
+# get gateway system
+gateway=`cat /usr/lib/upas/gateway`
+case $gateway in
+"") gateway=research ;;
+esac
+
+# then hand it off to the gateway
+temp=
+for i in $*; do temp="$temp smtp!$system!$i"; done
+uux - -a "$sender" "$gateway!rmail" "($temp)" </tmp/ur$$
+rv=$?
+rm -f /tmp/ur$$
+exit $rv

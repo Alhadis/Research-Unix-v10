@@ -1,0 +1,12 @@
+lox $1 </dev/null | sed '/^85/,$d' |awk '{print $1, -$4}' >$$a
+awk '{print -$1, -$2}' $$a >$$b
+awk '{print $1, $2+179.5}' $$a >edge$$aa
+awk '{print $1, $2-179.5}' $$a >edge$$ab
+awk '{print $1, $2+179.5}' $$b >edge$$ba
+awk '{print $1, $2-179.5}' $$b >edge$$bb
+MAPPROG=./map /usr/bin/map loxodromic $1 -d 5 -g -b -o 5 -150 180 \
+-p 85 30 360
+
+MAPPROG=./map /usr/bin/map loxodromic $1 -d 20 -g -b -t edge$$?? -m \
+-p 0 0 328 | sed '1,3d'
+rm $$*

@@ -1,0 +1,32 @@
+<../conf/mkconf.sgi
+
+CC=cc
+LPROG=cansys connect dispatch
+LIB=lib-o.a
+LIBOBJ=canonsys.o lcreat.o memmove.o
+
+%: %.sh
+	cp $stem.sh $target
+	chmod +x $target
+
+connect: connect.o
+	$CC $CFLAGS -o connect connect.o
+
+dispatch: dispatch.o
+	$CC $CFLAGS -o dispatch dispatch.o
+
+cansys: cansys.o $LIB
+	$CC $CFLAGS -o cansys $prereq
+
+compile:V: $LPROG $LIB
+
+install:V:
+	test -d $LDIR || mkdir $LDIR
+	cp $LPROG $LDIR
+	chown root $LDIR/connect && chmod 4755 $LDIR/connect
+
+$LIB: $LIBOBJ
+	ar r $LIB $LIBOBJ
+
+clean:V:
+	rm -f $LPROG $LIB *.o

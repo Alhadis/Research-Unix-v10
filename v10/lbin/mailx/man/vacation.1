@@ -1,0 +1,104 @@
+'\"macro stdmacro
+.if n .pH g1.vacation %W% of %G%
+.nr X
+.if \nX=0 .ds x} vacation 1 "Essential Utilities" "\&"
+.if \nX=1 .ds x} vacation 1 "Essential Utilities"
+.if \nX=2 .ds x} vacation 1 "" "\&"
+.if \nX=3 .ds x} vacation "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4vacation\f1 \- automatically respond to incoming mail messages.
+.SH SYNOPSIS
+\f4vacation\fP
+[\f4\-l\fP \f2logfile\fP]
+[\f4\-m\fP \f2mailfile\fP]
+[\f4\-M\fP \f2canned_msg_file\fP]
+[\f4\-F\fP \f2failsafe\fP]
+.SH DESCRIPTION
+.PP
+When a new mail message arrives,
+the \f4mail\fP command first checks if the recipient's mailbox indicates
+that the message is to be forwarded elsewhere (to some other recipient or
+as the input to some command).
+\f4vacation\fP is used to set up forwarding on the user's mailbox so that
+the new message is saved into an alternative mailbox and
+a canned response is sent to the message's originator.
+.PP
+Command-line options are:
+.PP
+.TP 12
+\f4\-l\f2\0logfile\f1
+.PD 0
+File to keep track of which originators have already seen the canned
+response.
+If not specified, it defaults to \f4$HOME/.maillog\fP.
+.TP
+\f4\-m\f2\0mailfile\f1
+Alternate mailbox to save new messages into.
+If not specified, it defaults to \f4$HOME/.mailfile\fP.
+.TP
+\f4\-M\f2\0canned_msg_file\f1
+File to send back as the canned response.
+If
+.I canned_msg_file
+is not specified, it defaults to \f4/usr/lib/mail/std_vac_msg\fP,
+which contains:
+.PD
+.sp .5
+.in +1
+.nf
+\f4Subject: AUTOANSWERED!!!
+.sp
+I am on vacation. I will read (and answer if necessary)
+your e-mail message when I return.
+.sp
+This message was generated automatically and you will
+receive it only once, although all messages you send
+me while I am away WILL be saved.\f1
+.in -1
+.fi
+.TP
+\f4\-F\f2\0failsafe\f1
+If mail has troubles delivering to the mailfile specified, it may optionally
+be forwarded to another login id (\f2failsafe\fP) instead of being returned
+to the sender.
+.TP
+\f4\-d\f1
+The log file will have the day's date appended.
+.PP
+To remove the \f4vacation\fP functionality, use
+.sp .5
+.RS 12
+\f4mail\0\-F\0"\^"\fP\0
+.RE
+.SH FILES
+.PD 0
+.TP 30
+\f4/tmp/notif\(**\fP
+temporary file
+.TP
+\f4/usr/share/lib/mail/std_vac_msg\fP
+default canned response
+.TP
+\f4/var/mail/\(**\fP
+users' standard mailboxes
+.TP
+\f4/usr/lib/mail/vacation2\fP
+program that actually sends back the canned response
+.PD
+.SH SEE ALSO
+\f4mail\fP(1)
+.br
+.IR "User\'s Guide" .
+.br
+.ne 8
+.SH NOTES
+Because \f4vacation\fP uses the ``\f4Forward to \(bv\f2command\f1'' facility of
+\f4mail\fP to implement notifications,
+\f4/var/mail/\f2username\f1 should \f4not\fP be specified as the place
+to put newly arrived messages via the \f4\-m\fP invocation option.
+The \f4mail\fP command uses
+\f4/var/mail/\f2username\f1 to hold either mail messages,
+\f4or\fP indications of mail forwarding,
+but not both simultaneously.
+.Ee

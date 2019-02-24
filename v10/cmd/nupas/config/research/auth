@@ -1,0 +1,114 @@
+#! /bin/sh
+#
+#	auth - check forwarding authorization for a mail message
+#
+#	mail "from_addr" "to_addr"
+#
+#	The message is authorized if any one of the following is true:
+#		- the last hop was a gateway machine (meaning the mail
+#			has already been approved
+#		- the path is two hops away, and we trust the
+#			first hop.  (This is for unregistered PCs, etc.)
+#			Warning: the list appears in two different case statements!
+#		- all hops in the "from_addr" are AT&T machines
+#		- all hops in the "to_addr" are AT&T machines
+#
+#	The addresses are in `!' notation.  We return 0 if the
+#	forwarding is approved, 1 if not approved.
+
+ATTLIST=/usr/lib/upas/attlist
+GATES=/usr/lib/upas/gatemachines
+AUTHREJECTS=/usr/spool/mail/authrejects
+
+
+case $# in
+1)	exit 0;;	# testing a forwarding address, accepted.
+2)	;;
+*)	echo "$0: usage: from_addr to_addr"
+	exit 255;;
+esac
+
+from_addr="$1";	shift
+to_addr="$1";	shift
+
+IFS="$IFS!"
+
+set empty $from_addr
+shift			# remove empty
+
+case $# in
+1)	exit 0;;	# local sender
+esac
+
+case "$1" in
+arpa|coma|research)	exit 0;;	# our most common gates
+esac
+look -xf "$1" $GATES >/dev/null &&  exit 0	# already checked
+
+from_inside="true"
+
+while :
+do
+	case $# in
+		1)	break;;		# don't check sender's user name
+	esac
+
+	case "$1" in
+		arpa|coma|uucp|tempo|*.att.com|*.ATT.COM|sf???)
+			shift	# count this machine
+			continue;;
+		gauss|cuuxb|mtune|attunix)
+			shift		# we trust these guys for one more hop
+			case "$1" in
+				uucp)	shift;;
+			esac
+			case $# in
+				0|1|2)	exit 0;;
+			esac
+			continue;;
+		*)
+			look -xf "$1" $ATTLIST >/dev/null || {
+				from_inside=false
+				unknown_from="$1"
+				break}
+			shift
+			continue;;
+	esac
+done
+
+case $from_inside in
+	true)	exit 0;;
+esac
+
+set empty $to_addr
+shift
+
+while :
+do
+	case $# in
+		1)	break;;		# don't check receiver's user name
+	esac
+
+	case "$1" in
+		arpa|coma|uucp|*.att.com|*.ATT.COM|tempo|sf???)
+			shift	# count this machine
+			continue;;
+		gauss|cuuxb|mtune|attunix)
+			shift		# we trust these guys for one more hop
+			case "$1" in
+				uucp)	shift;;
+			esac
+			case $# in
+				0|1|2)	exit 0;;
+			esac
+			continue;;
+		*)
+			look -xf "$1" $ATTLIST >/dev/null || {
+				echo Won\'t forward to non-AT\&T machines: "$unknown_from", "$1" >&2
+				exit 1}
+			shift
+			continue;;
+	esac
+done
+
+exit 0

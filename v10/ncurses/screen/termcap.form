@@ -1,0 +1,84 @@
+/*
+ * Simulation of termcap using terminfo.
+ */
+
+#include "curses.ext"
+
+static char *sccsid = "@(#)termcap.form	1.1	1.8	3/6/83";
+
+char *UP;
+char *BC;
+char PC;
+short ospeed;
+
+int
+tgetent(bp, name)
+char *bp, *name;
+{
+	int rv;
+
+	if (setupterm(name, 1, &rv) >= 0)
+		/* Leave things as they were (for compatibility) */
+		reset_shell_mode();
+	return rv;
+}
+
+/* Make a 2 letter code into an integer we can switch on easily */
+#define two(s1, s2) (s1 + 256*s2)
+#define twostr(str) two(*str, str[1])
+
+int
+tgetflag(id)
+char *id;
+{
+	register int rv;
+	register char *p;
+
+	switch (twostr(id)) {
+	BOOLS
+	case two('b','s'):
+		p = cursor_left;
+		rv = p && *p==8 && p[1] == 0;
+		break;
+	case two('p','t'):
+		p = tab;
+		rv = p && *p==9 && p[1] == 0;
+		break;
+	case two('n','c'):
+		p = carriage_return;
+		rv = ! (p && *p==13 && p[1] == 0);
+		break;
+	case two('n','s'):
+		p = scroll_forward;
+		rv = ! (p && *p==10 && p[1] == 0);
+		break;
+	default: rv = 0;
+	}
+	return rv;
+}
+
+int
+tgetnum(id)
+char *id;
+{
+	int rv;
+
+	switch (twostr(id)) {
+	NUMS
+	default: rv = -1;
+	}
+	return rv;
+}
+
+char *
+tgetstr(id, area)
+char *id, *area;
+{
+	char *rv;
+
+	switch (twostr(id)) {
+	STRS
+	default: rv = NULL;
+	}
+	return rv;
+}

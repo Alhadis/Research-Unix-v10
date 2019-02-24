@@ -1,0 +1,33 @@
+<../mkconf.$SYS
+<../mkrules.$SYS
+
+LPROG=tarc tarf tarx
+
+LIBOBJ=ftwlk.$O id.$O sub.$O tarhdr.$O util.$O
+
+%.$O: %.c
+	$CC -c $stem.c
+
+compile:V: $LPROG
+
+install:V: compile
+	test -d $LDIR || mkdir $LDIR
+	cp $LPROG $LDIR
+
+tarc: tarc.$O lib.a
+	$CC -o tarc $prereq
+
+tarf: tarf.$O lib.a
+	$CC -o tarf $prereq
+
+tarx: tarx.$O lib.a
+	$CC -o tarx $prereq
+
+lib.a: ${LIBOBJ:%=lib.a(%)}
+	$RL lib.a
+
+lib.a(%): %
+	ar r lib.a $stem
+
+clean:V:
+	rm -f $LPROG *.[$OS] lib.a

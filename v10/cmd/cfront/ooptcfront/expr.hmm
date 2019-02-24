@@ -1,0 +1,270 @@
+*** /tmp/,RCSt1a12446	Tue Nov  7 09:28:11 1989
+--- /tmp/,RCSt2a12446	Tue Nov  7 09:28:14 1989
+***************
+*** 2,8 ****
+  /*ident	"@(#)ctrans:src/expr.c	1.1.5.30" */
+  /*
+  	$Source: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr.c,v $ $RCSfile: expr.c,v $
+! 	$Revision: 1.12 $		$Date: 89/10/10 08:39:50 $
+  	$Author: benson $		$Locker:  $
+  	$State: Exp $
+  */
+--- 2,8 ----
+  /*ident	"@(#)ctrans:src/expr.c	1.1.5.30" */
+  /*
+  	$Source: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr.c,v $ $RCSfile: expr.c,v $
+! 	$Revision: 1.15 $		$Date: 89/10/20 14:29:13 $
+  	$Author: benson $		$Locker:  $
+  	$State: Exp $
+  */
+***************
+*** 166,171 ****
+--- 166,172 ----
+  extern		ignore_const;
+  extern int	logical_context;
+  extern		ref_initializer;
++ extern int	refd;
+  
+  class expr_undo : public basic_undo {
+      extended_error_state * ees;
+***************
+*** 176,181 ****
+--- 177,186 ----
+      int ref_cast;
+      int logical_context;
+      int ref_initializer;
++     dcl_context * cc;
++     int refd;
++     int extended_error_state_stack_ptr;
++ 
+    public:
+      expr_undo (Pexpr msg_expr) {
+  	doing_index_maint = :: doing_index_maint;
+***************
+*** 185,190 ****
+--- 190,198 ----
+  	ref_cast = :: ref_cast;
+  	ref_initializer = :: ref_initializer;
+  	logical_context = :: logical_context;
++ 	cc = :: cc;
++ 	refd = :: refd;
++ 	extended_error_state_stack_ptr = extended_error_state::stack_ptr;
+  	if(msg_expr) ees = extended_error_state::push(msg_expr);
+      };
+      virtual ~expr_undo () {
+***************
+*** 195,201 ****
+  	:: ref_cast = ref_cast;
+          :: ref_initializer = ref_initializer;
+          :: logical_context = logical_context;
+! 	if(ees) extended_error_state::pop ();
+        };
+  };
+  
+--- 203,211 ----
+  	:: ref_cast = ref_cast;
+          :: ref_initializer = ref_initializer;
+          :: logical_context = logical_context;
+! 	:: cc = cc;
+! 	:: refd = refd;
+! 	extended_error_state::pop_to(extended_error_state_stack_ptr);
+        };
+  };
+  
+***************
+*** 203,213 ****
+    public:
+      static int level;
+      expr_undo0 () { level ++; };
+!    ~expr_undo0 () { level --; };
+  };
+  
+  int expr_undo0::level = 0;
+  
+  Pexpr expr::typ (Ptable tbl)
+  {
+      Pexpr	    original;
+--- 213,263 ----
+    public:
+      static int level;
+      expr_undo0 () { level ++; };
+!     virtual ~expr_undo0 () { level --; };
+  };
+  
+  int expr_undo0::level = 0;
+  
++ int in_expr_typ ()
++ {
++     return expr_undo0::level > 0;
++ }
++ 
++ extern Pname indexable_member_reference (Pexpr, int);
++ 
++ Ptype add_idx_or_const_to_type(Ptype t, int cnst, int idx)
++ {
++     if(cnst) idx = 0;		/* const is stronger, we never bother to add both */
++ 
++     switch(t->base) {
++       case RPTR:
++ 	if(idx) err::print ('i', "Indexable REFERENCE. Not supported.");
++ 	Pptr(t)->rdo = cnst;
++ 	return t;
++       case VEC:
++ 	if(idx) err::print ('i', "Indexable VECTOR. Not supported.");
++ 	return t;		/* already const, can't be indexable */
++       case PTR:
++ 	Pptr p = Pptr(t);
++ 	Pptr np = new ptr(p->base, p->typ);
++ 	*np = *p;
++ 	np->rdo = cnst;
++ 	np->rdo_indexable = idx;
++ 	return np;
++       case FCT:
++       case OVERLOAD:
++ 	return t;			/* should never get called on one of these,
++ 					   but don't take chances */
++       default:
++ 	Pbase b = Pbase(t);
++ 	Pbase nb = new basetype (0, 0);
++ 	*nb = *b;
++ 	nb->b_const = cnst;
++ 	nb->b_indexable = idx;
++ 	return nb;
++     }
++ }
++ 
+  Pexpr expr::typ (Ptable tbl)
+  {
+      Pexpr	    original;
+***************
+*** 230,235 ****
+--- 280,286 ----
+  	expr_undo Undo (this);
+  	return_value = typ0(tbl);
+      }
++ 
+      if(original) dcl_capture::expr_typ(original, return_value);
+      return return_value;
+  }
+***************
+*** 710,719 ****
+  		}
+  	    }
+  
+- /*
+- 	x.m is not a const even if x is a const object, this case is handled
+- 	by lval() rejecting it
+- */
+  
+  	    if (mem->tp) {
+  		tp = mem->tp;
+--- 761,766 ----
+***************
+*** 752,758 ****
+  		}
+  	    }
+  	    /* function or static member */
+! 	    return e->tp->base == RPTR ? e->contents() : e;
+  	}
+  
+  /*??	case G_CALL: */
+--- 799,831 ----
+  		}
+  	    }
+  	    /* function or static member */
+! 	    Pexpr result = e->tp->base == RPTR ? e->contents() : e;
+! 
+! 	    /* Now propagate const from the LHS to the result */
+! 
+! 	    /* can't have fct or vec as e1 of DOT or REF */
+! 	    int e1_const = e1 && e1->tp->tconst(const_const);
+! 	    int e1_idx = e1 && e1->tp->tconst(const_idx);
+! 	    Pptr e1_ptr;
+! 	    if (e1 && e1->tp) e1_ptr = e1->tp->is_ptr ();
+! 	    /* const foo * C; C->bar; is a const */
+! 	    int e1_pt_const = e1_ptr && e1_ptr->typ->tconst (const_const);
+! 
+! 	    /* if something is const without indexable, 
+! 	       there is no earthly reason to propagage indexable
+! 	       since const is the stronger restriction. */
+! 
+! 	    if((e1_const && base == DOT) || e1_pt_const)
+! 		result->tp = add_idx_or_const_to_type(result->tp, 1, 0);
+! 	    else if(e1_idx)
+! 		result->tp = add_idx_or_const_to_type(result->tp, 0, 1);
+! 	    /* an indexable member can be ->'ed, but something
+! 	       that inherited indexable cannot be ->'ed */
+! 	    else if (indexable_member_reference(result, 0) && base == DOT
+! 		     && !doing_index_maint)
+! 		result->tp = add_idx_or_const_to_type(result->tp, 0, 1);
+! 	    
+! 	    return result;
+  	}
+  
+  /*??	case G_CALL: */
+***************
+*** 1100,1110 ****
+  	    }
+  	}
+  
+  	if (tp->is_ref())
+! 	    return contents();
+  
+! 	return this;
+  
+       case G_ADDROF:
+       case ADDROF:
+  /*error('d',"addrof(%d) %k %d",base,e2->base,e2->base); */
+--- 1173,1190 ----
+  	    }
+  	}
+  
++ 	Pexpr result;
+  	if (tp->is_ref())
+! 	    result = contents();
+! 	else result = this;
+  
+! 	/* For a deref, if the ptr dereffed is indexable,
+! 	   the result is also indexable. But const is not carried. */
+! 	if(e1 && e1->tp->tconst(const_idx))
+! 	    result->tp = add_idx_or_const_to_type(result->tp, 0, 1);
+  
++ 	return result;
++ 
+       case G_ADDROF:
+       case ADDROF:
+  /*error('d',"addrof(%d) %k %d",base,e2->base,e2->base); */
+***************
+*** 1906,1916 ****
+  }
+  
+  
+! static char     rcsinfo[] = "$Header: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr.c,v 1.12 89/10/10 08:39:50 benson Exp $";
+  
+  
+  
+  /* $Log:	expr.c,v $
+   * Revision 1.12  89/10/10  08:39:50  benson
+   * tix error handler for malformed expressions.
+   * 
+--- 1986,2005 ----
+  }
+  
+  
+! static char     rcsinfo[] = "$Header: /usr3/lang/benson/work/stripped_cfront/O/RCS/expr.c,v 1.15 89/10/20 14:29:13 benson Exp $";
+  
+  
+  
+  /* $Log:	expr.c,v $
++  * Revision 1.15  89/10/20  14:29:13  benson
++  * get const and indexable propagation closer to right.
++  * 
++  * Revision 1.14  89/10/16  08:14:09  benson
++  * support for prohibiting some assignments to indexable items.
++  * 
++  * Revision 1.13  89/10/11  15:55:34  benson
++  * enforce enherited const. enforce restrictions on indexable data members.,
++  * 
+   * Revision 1.12  89/10/10  08:39:50  benson
+   * tix error handler for malformed expressions.
+   * 

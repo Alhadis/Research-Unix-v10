@@ -1,0 +1,304 @@
+.TH SORT 1 
+.CT 1 files
+.SH NAME
+sort \- sort and/or merge files
+.SH SYNOPSIS
+.B sort
+[
+.BI -cmusMbdf\&inrt x
+]
+[
+.B -o
+.I output
+]
+[
+.I option ...
+]
+[
+.I file ...
+]
+.SH DESCRIPTION
+.I Sort\^
+sorts
+lines of all the
+.I files
+together and writes the result on
+the standard output.
+The name
+.B -
+means
+the standard input.
+If no input files are named, the standard input is sorted.
+.PP
+The default sort key is an entire line.
+Default ordering is
+lexicographic by bytes in machine
+collating sequence.
+The ordering is affected globally by the following options,
+one or more of which may appear.
+.TP
+.B -b
+Ignore leading white space (spaces and tabs) in field comparisons.
+.TP
+.B -d
+`Phone directory' order: only letters, digits and white space
+are significant in string comparisons.
+.TP
+.B -f
+Fold lower case
+letters onto upper case.
+.TP
+.B -i
+Ignore characters outside the
+.SM ASCII
+range 040-0176
+in string comparisons.
+.TP
+.B -n
+An initial numeric string,
+consisting of optional white space, optional sign, and
+a nonempty string of digits with optional decimal point,
+is sorted by value.
+.TP
+.B -g
+Numeric, like
+.BR -n ,
+with
+.BR e -style
+exponents allowed.
+.TP
+.B -M
+Compare as month names.
+The first three
+characters after optional white space
+are folded to lower case and compared.
+Invalid fields compare low to
+.LR jan .
+.TP
+.B -r
+Reverse the sense of comparisons.
+.TP
+.BI -t x\^
+`Tab character' separating fields is
+.IR x .
+.TP
+.BI -k " pos1" , pos2
+Restrict the sort key to a string beginning at
+.I pos1\^
+and ending at
+.IR pos2 .
+.I Pos1\^
+and
+.I pos2\^
+each have the form
+.IB m . n ,
+optionally followed by one or more of the flags
+.BR Mbdfginr ;
+.I m\^
+counts fields from the beginning of the line and
+.I n\^
+counts characters from the beginning of the field.
+If any flags are present they override all the global
+ordering options for this key.
+If
+.BI \&. n\^
+is missing from 
+.I pos1,
+it is taken to be 1; if missing from
+.IR pos2, 
+it is taken to be the end of the field.
+If 
+.I pos2
+is missing, it is taken to be end of line.
+.TP
+.BI -a " pos1" , pos2
+.IB Pos1 , pos2
+designates an accumulating 
+.BR -n -style
+field, disjoint from the sort key.
+When the keys of two records compare equal,
+discard the second and replace the
+accumulating field in the first with the sum of
+that field in both.
+The receiving field must be large enough for the sum
+to fit without destroying any field separator.
+The sum has a ones digit always, a decimal point if
+either addend has one, a fraction part as long as
+that of either addend, leading zeros padded to full
+field width if either addend has a leading zero 
+before the ones digit, and a
+.B +
+sign if either addend has a
+.B +
+sign and the sum is not negative.
+.PP
+Under option
+.BI -t x\^
+fields are strings separated by
+.IR x ;
+otherwise fields are
+non-empty strings separated by white space.
+White space before a field
+is part of the field, except under option
+.BR -b .
+A
+.B b
+flag may be attached independently to
+.IR pos1
+and
+.IR pos2.
+.PP
+When there are multiple sort keys, later keys
+are compared only after all earlier keys
+compare equal.
+Except under option 
+.BR -s ,
+lines with all keys equal are ordered
+with all bytes significant.
+.PP
+Single-letter options may be combined into a single
+string, such as
+.BR -cnrt: .
+The option combination
+.B -di
+and the combination of
+.B -n
+with any of
+.BR -diM 
+are improper.
+.PP
+These option arguments are also understood:
+.TP
+.B -c
+Check that the single input file is sorted according to the ordering rules;
+give no output unless the file is out of sort.
+.TP
+.B -m
+Merge; the input files are already sorted.
+.TP
+.B -u
+Unique.  Keep only the first of two lines 
+that compare equal on all keys.
+Implies
+.BR -s .
+.TP
+.B -s
+Stable sort.
+When all keys compare equal, preserve input order.
+Unaffected by
+.BR -r .
+.TP
+.BI -o " output
+Place output in a designated file
+instead of on the standard output.
+This file may be the same as one of the inputs.
+The option may appear among the
+.I file
+arguments, except after 
+.BR -- .
+.TP
+.BI + pos1 " -" pos2
+Classical alternative to
+.BR -k ,
+with counting from 0 instead of 1, and
+.I pos2
+designating next-after-last instead of last character of the key.
+A missing character count in
+.I pos2
+means 0, which in turn excludes any 
+.B -t
+tab character from the end of the key.
+Thus
+.B "+1\ -1.3"
+means the same as 
+.B -k\ 2,2.3
+and
+.B "+1r\ -3"
+means the same as
+.BR "-k\ 2r,3" .
+.PP
+Options
+.BR -a ,
+.BR -g ,
+.BR -M ,
+and
+.BR -s
+are not in the Posix standard, nor are
+the following tuning options.
+.TP
+.BI -T " tempdir
+Put temporary files in
+.I tempdir
+rather than in
+.BR /usr/tmp .
+.TP
+.BI -y " n"
+Use up to 
+.I n
+bytes of internal store, or a huge number if
+.IR n =0.
+.TP
+.B -w " n"
+Merge up to
+.I n
+files at a time.
+.ig
+.TP
+.BI -z recsize
+Provide for abnormally large records;
+useful only with
+.B -c
+and
+.B -m
+..
+.SH EXAMPLES
+.TP
+.B sort -u -k1f -k1 list
+Print in alphabetical order all the unique spellings
+in a list of words
+where capitalized words differ from uncapitalized.
+.TP
+.B sort -t: -k3n /etc/passwd
+Print the password file
+.RI ( passwd (5))
+sorted by userid
+(the third colon-separated field).
+.TP
+.B sort -umM dates
+Print the first instance of each month in an already sorted file.
+.TP
+.B sort -k1,1 -a2,2 items_and_costs
+Reduce a file of items (field 1) and costs (field 2) to
+a summary file of total cost per type of item.
+.SH FILES
+.F /usr/tmp/stm???
+.SH SEE ALSO
+.IR comm (1),
+.IR join (1),
+.IR uniq (1),
+.IR look (1)
+.SH DIAGNOSTICS
+.I Sort
+comments and exits with non-zero status for various trouble
+conditions and for disorder discovered under option
+.BR -c .
+Overflow in a
+.B -a
+field warns and leaves
+the record uncombined.
+.SH BUGS
+When 
+.BR -o
+overwrites an input file,
+premature termination by interrupt,
+crash or file-system overflow can destroy data.
+.br
+Overflow in any but the first of multiple
+.B -a
+fields is fatal.
+.br
+Perhaps fields delimited by
+.BR -t
+should grow to avoid 
+.B -a
+overflows.

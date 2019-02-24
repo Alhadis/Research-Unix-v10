@@ -1,0 +1,100 @@
+# # --------------------------------
+#	@(#)teletype.ti	1.5	(1.22	3/22/83)
+#
+# teletype: TELETYPE
+#
+blit|jerq|blit running teletype rom,
+	cr=^M, ind=^J, bel=^G, am, ht=^I, it#8, ul, eo,
+	cud1=^J, cuf1=\EC, cuu1=\EA, cub1=\ED,
+	cols#87, lines#72, clear=^L, el=\EK,
+	cup=\EY%p2%' '%+%c%p1%' '%+%c,
+	il1=\EF!, dl1=\EE!, ich1=\Ef!, dch1=\Ee!,
+	il=\EF%p1%' '%+%c, dl=\EE%p1%' '%+%c,
+	ich=\Ef%p1%' '%+%c, dch=\Ee%p1%' '%+%c,
+	kcuu1=\EA, kcud1=\EB, kcuf1=\EC, kcub1=\ED, kbs=^H,
+cbblit|fixterm|blit running columbus code,
+	smso=\EU!, rmso=\EV!, smul=\EU", rmul=\EV",
+	flash=\E^G, ed=\EJ, smir=\EQ, rmir=\ER, ich1@, cols#88,
+	mc5=^R, mc4=^T, mc5p=\EP%p1%03d, use=blit
+oblit|ojerq|first version of blit rom,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cols#88, lines#72, it#8, ht=^I,
+	am, ul, eo, mir, il=\Ef%p1%' '%+%c, dl=\Ee%p1%' '%+%c,
+	dl1=\EE, rmir=\ER, smir=\EQ, dch1=\EO, cub1=\ED, da, db,
+	il1=\EF, ed=\EJ, el=\EK, clear=^L, cup=\EY%p2%' '%+%c%p1%' '%+%c,
+	cuf1=\EC, cuu1=\EA, flash=\E^G, kbs=^H,
+# This is an old version of vitty reentered.  It is used when running
+# the vitty program outside a blit layer.
+blitlayer|layer|vitty,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cols#87, lines#72, it#8, ht=^I,
+	am, clear=^L, cup=\EY%p2%' '%+%c%p1%' '%+%c, el=\EK, il=\EI, dl=\ED,
+	flash=\E^G, cuu1=^K,
+33|tty33|tty|model 33 teletype,
+	cr=^M, cud1=^J, ind=^J, bel=^G, cols#72, hc, os,
+# The Dataspeed 40's have limitations, such as xmc (?) and printing
+# a visible newline indicator after each newline.  The 40-1 is a half duplex
+# terminal.  The 40-2 is limited; it is
+# described here.  The 40-4 is a 3270 lookalike.
+# The terminal has blinking standout.  It also has visible bell but I don't
+# know it - it's null here to prevent it from showing the BL character.
+# I am not sure if the 40 has xmc or not, it looked like it didn't.
+# Note also that the control characters have been rearranged,
+# for example, to get escape you type control-P!
+40|tty40|ds40|ds40-2|dataspeed40|teletype dataspeed 40/2,
+	clear=\ER$<160>, ed=\EJ$<160>, il1=\EL$<160>, dl1=\EM$<160>,
+	dch1=\EP$<50>, ich1=\E\^$<50>, cuf1=\EC, cuu1=\E7, cub1=^H, cr=\EG,
+	ind=^J, cud1=\EB, cols#80, lines#24, flash=, smso=\E3, rmso=\E4,
+43|tty43|model 43 teletype,
+	cr=^M, cud1=^J, ind=^J, bel=^G,
+	kbs=^h, am, cub1=^H, hc, os, cols#132,
+37|tty37|model 37 teletype,
+	cr=^M, cud1=^J, ind=^J, bel=^G,
+	cub1=^H, hc, hu=\E8, hd=\E9, cuu1=\E7, os,
+# ========================================================
+ansi|generic ansi standard terminal,
+	cr=^M, cud1=^J, ind=^J, bel=^G, il1=\E[L, am, cub1=^H, ed=\E[J,
+	el=\E[K, clear=\E[H\E[J, cup=\E[%i%p1%d;%p2%dH, cols#80, lines#24,
+	dch1=\E[P, dl1=\E[M, home=\E[H,
+	ich=\E[%p1%d@, ich1=\E[@, smir=\E6, rmir=\E6,
+	bold=\E[1m, rev=\E[7m, blink=\E[5m, invis=\E[8m, sgr0=\E[0m,
+	sgr=\E[%?%p1%t7;%;%?%p2%t4;%;%?%p3%t7;%;%?%p4%t5;%;%?%p6%t1;%;m,
+	kcuu1=\E[A, kcud1=\E[B, kcub1=\E[D, kcuf1=\E[C, khome=\E[H, kbs=^H,
+	cuf1=\E[C, ht=^I, cuu1=\E[A, xon, rep=%p1%c\E[%p2%{1}%-%db,
+	rmul=\E[m, smul=\E[4m, rmso=\E[m, smso=\E[7m,
+# ========================================================
+# 
+# The following is a termcap entry for the Teletype 4424
+# asyncronous keyboard-display terminal.  It supports
+# the vi editor.  The terminal must be "set up" as follows, 
+# 
+#	HIGHLIGHT DEFINITION	3-TONE
+#	DISPLAY FUNCTION	GROUP III
+# 
+# The second entry below provides limited (a la adm3a)
+# operation under GROUP II.
+# 
+# This must be used with DISPLAY FUNCTION GROUP I or III
+4424|tty4424|teletype 4424,
+	cr=^M, ind=^J, bel=^G, cols#80, lines#24, am, da, db,
+	smso=\E3, rmso=\E4, rev=\E}, smul=\E\\, rmul=\EZ, ri=\ET,
+	ht=^I, cbt=\EO, home=\E[H, cuu1=\EA, cuu=\E[%p1%dA,
+	cud1=\EB, cud=\E[%p1%dB, cuf1=\EC, cuf=\E[%p1%dC,
+	cub1=^H, cub=\E[%p1%dD, cup=\E[%i%p1%d;%p2%dH,
+	clear=\E[H\E[2J, ed=\EJ, el=\Ez, nel=\EE, hts=\EH, tbc=\EF,
+	smacs=\E(0, rmacs=\E(B, smcup=\E[20l\E[?7h,
+	csr=\E[%i%p1%d;%p2%dr, ich1=\E\^, il1=\EL, il=\E[%p1%dL,
+	dl1=\EM, dl=\E[%p1%dM, ich=\E[%p1%d@, dch1=\EP, dch=\E[%p1%dP,
+	sgr=\E[%?%p1%t7;%;%?%p2%t4;%;%?%p3%t7;%;%?%p4%t5;%;%?%p6%t1;%;m,
+	kcuu1=\EA, kcud1=\EB, kcub1=\ED, kcuf1=\EC, khome=\E[H, kbs=^H,
+	kf1=^B1\r, kf2=^B2\r, kf3=^B3\r, kf4=^B4\r,
+	kf5=^B5\r, kf6=^B6\r, kf7=^B7\r, kf8=^B8\r,
+# Note: cub1 may also be set as: cub1=\ED,
+#
+4424-2|tty4424-2|teletype 4424 in display function group ii,
+	sgr@, rev@, smul@, use=4424,
+#
+# This is to be used with DISPLAY FUNCTION GROUP II
+4424-el-2|tty4424-el-2|teletype 4424M-2,
+	cols#80, lines#24, am, clear=\E[2J\E[H, cub1=^H, cup=\E[%i%2;%2H,
+	cuf1=\EC, cuu1=\EA, home=\E[H,
+	el=\Ez, ed=\EJ,
+	ri=\ET\E[0K, ind=\ES\E[0K, da, db,

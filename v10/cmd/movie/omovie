@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# movie: "movie fname" projects movie stored in fname.s/fname.i
+
+LIB=${LIB-/usr/lib/movie}
+MEM=${MEM-65000}
+
+case $# in
+1)	;;
+0)	trap "rm -f /tmp/movie$$.i" 0 1 2 15
+	$LIB/fdevelop >/tmp/movie$$.i
+	$LIB/anim -t $LIB/animterm -m$MEM /tmp/movie$$.i
+	exit 0
+	;;
+*)	echo 'Usage: movie file.s' 1>&2; exit 1
+esac
+
+case $1 in
+*.i)
+	$LIB/anim -t $LIB/animterm -m$MEM $1 ;;
+*.s)
+	bn=`echo $1 | sed s/.s$//`
+	$LIB/develop $bn.s
+	$LIB/anim -t $LIB/animterm -m$MEM $bn.i ;;
+*)
+	echo 'Usage: movie file.s' 1>&2; exit 1
+esac
+
+exit 0

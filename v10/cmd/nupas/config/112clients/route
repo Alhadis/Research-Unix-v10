@@ -1,0 +1,115 @@
+#!/bin/sh
+PATH=/bin:/usr/bin:/usr/lib/upas; export PATH
+sender=$1;shift
+system=$1;shift
+sys=`cat /etc/whoami`
+
+# save the mail
+cat > /tmp/ur$$ || exit 1
+
+#
+# Try smtp via datakit.
+# 
+mydname=`qns value dk $sys,name`
+#hisdname=`qns value dk $system,name |
+#	egrep 'nj/((mercury|astro|phone)/.*|garage/(europa|bartok)$|zither/trevor$)' |
+#	egrep -v 'nj/astro/3k|nj/astro/arpa|nj/mercury/mharit'`
+hisdname=`qns value dk $system,name dksmtp,svc`
+case $hisdname in
+"")	;;
+*)	case $mydname in
+	"")	;;
+	*)	smtpqer -u -a dk!$hisdname!smtp $sender $system $* < /tmp/ur$$
+		rv=$?
+		rm -f /tmp/ur$$
+		exit $rv ;;
+	esac ;;
+esac
+
+egrep "^$system[ 	]" /usr/lib/upas/tcpsmtpaddrs  2>/dev/null >/dev/null && {
+	smtpqer -a "tcp!$system" "$sender" "$system" $* </tmp/ur$$
+	rv=$?
+	rm -f /tmp/ur$$
+	exit $rv
+}
+
+#
+# Try queuing via uucp
+#
+uux - -a "$sender" "$system!rmail" "($*)" < /tmp/ur$$ &&
+	rm -f /tmp/ur$$ &&
+	exit 0
+
+#
+# Try queuing smtp via internet.
+# 
+myiname=`qns value dom $sys,dom`
+lsystem=`echo $system | tr [A-Z] [a-z]`
+hisiname=`((qns value dom $lsystem,dom |
+	egrep '(.+\.)?(tempo|mercury|phone|astro|lc|research)(\.nj)?(\.att\.com)') ||
+		qns value dom $lsystem,dom tcpsmtp,svc)				|
+	sed 's/\.$//'`
+case $hisiname in
+"")	;;
+*)	case $myiname in
+	"")	;;
+	*)	smtpqer $sender $hisiname $* < /tmp/ur$$
+		rv=$?
+		rm -f /tmp/ur$$
+		exit $rv ;;
+	esac ;;
+esac
+
+# get gateway system
+gateway=`cat /usr/lib/upas/gateway`
+case $gateway in
+"") gateway=research ;;
+esac
+case $sys in
+$gateway) rm -f /tmp/ur$$
+	  echo no route from gateway > /dev/stderr
+	  exit 1
+esac
+
+# expand the destination
+expdest=
+for i in $*; do expdest="$expdest $system!$i"; done
+
+#
+# Try smtp via datakit to gateway.
+# 
+hisdname=`qns value dk $gateway,name | egrep 'nj/((mercury|astro|phone)/.*|garage/(europa|bartok)$|zither/trevor$)'`
+case $hisdname in
+"")	;;
+*)	case $mydname in
+	"")	;;
+	*)	smtpqer -u -a dk!$hisdname!smtp $sender $gateway $expdest < /tmp/ur$$
+		rv=$?
+		rm -f /tmp/ur$$
+		exit $rv ;;
+	esac ;;
+esac
+
+#
+# Try smtp via internet to gateway.
+# 
+myiname=`qns value dom $sys,dom`
+hisiname=`qns value dom $gateway,dom'`
+case $hisiname in
+*research*)	case $myiname in
+	"")	;;
+	*)	smtpqer -u $sender $gateway $expdest < /tmp/ur$$
+		rv=$?
+		rm -f /tmp/ur$$
+		exit $rv ;;
+	esac ;;
+esac
+
+#
+# Try queuing via uucp if all else fails
+#
+uux - -a "$sender" "$gateway!rmail" "($expdest)" < /tmp/ur$$
+
+rv=$?
+rm -f /tmp/ur$$
+exit $rv

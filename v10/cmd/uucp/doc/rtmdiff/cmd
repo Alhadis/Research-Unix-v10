@@ -1,0 +1,167 @@
+.Bh
+Commands
+.PP
+All of the new commands
+have more options
+(sigh);
+most of the old flags remain.
+.Sh
+Uucp,
+uux,
+and friends
+.PP
+Old
+.I uux
+had a
+.B \-m
+flag,
+which caused the standard output
+of the remote command
+to be mailed back.
+The new version has no equivalent.
+.PP
+Old
+.I uucp
+and
+.I uux
+accepted both
+.B \-r
+and
+.B \-N
+as a request
+not to start transferring files
+immediately.
+In the new system,
+only
+.B \-r
+works.
+.PP
+The
+.I system!filename
+syntax has returned to
+.I uux .
+Hence remote command arguments
+which contain
+`\c
+.B ! '
+must be quoted with
+parentheses.
+Old
+.I uux
+accepted and ignored
+such quoting;
+new
+.I uux
+requires it.
+.PP
+In the old system,
+files could be sent to a user
+by copying them to
+.I ~user ;
+the person named
+retrieved them with
+.I uuget .
+This mechanism has been replaced
+by two new commands:
+.I uuto
+sends files to a user,
+and
+.I uupick
+fetches them back.
+The new mechanism is rather slow
+and a bit clumsier.
+.PP
+Old
+.I uucp
+copied files
+to the spool directory immediately.
+The new version
+doesn't,
+unless
+.B \-C
+is specified.
+.Sh
+Uulog
+.PP
+.I Uulog
+disappeared in the
+Morris version of
+.I uucp ,
+as it did nothing that
+.I grep
+and
+.I tail
+couldn't do better.
+(An antique
+.I uulog
+existed on many 1127 machines,
+but it didn't work.)\0
+It has been reinstated
+in the new
+version,
+apparently because
+the spool directory
+has been reorganized,
+and it's now rather messier to find
+the log file you want by hand.
+It still doesn't do much
+that
+.I grep
+and
+.I tail
+can't.
+.Sh
+Uustat
+.PP
+.I Uustat
+is very different;
+it has a number of flags
+and much new functionality
+(listing and removing
+pending jobs).
+An approximation of
+the old
+.I uustat
+may be had with
+the
+.B \-m
+flag
+(list the status of many machines,
+including some whose status is `OK');
+and
+.B \-q
+(list only those machines
+for whom work is waiting).
+There's no built-in equivalent
+to the old
+`\c
+.B uustat
+sysname;'
+use
+`\c
+.B "uustat \-m | grep
+sysname'
+instead.
+.Sh
+Other stuff
+.PP
+The
+.I debug
+and
+.I kick
+scripts
+which lived in
+.I /usr/spool/uucp
+have been moved to
+.I /usr/lib/uucp
+(mostly for ease of packaging).
+`\c
+.B Kick
+system'
+causes a call to
+.I system ;
+`\c
+.B debug
+system'
+calls with a moderate amount
+of debugging output enabled.

@@ -1,0 +1,57 @@
+# This file contains contains a collection of tests for the "error"
+# and "catch" commands in Tcl.  If everything is OK then it finishes
+# silently.  If a problem is detected then it generates a Tcl error
+# with a cryptic message.  To trace the error you'll have to read
+# through the commands in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/error.test,v 1.3 90/03/21 10:29:57 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {Catch/error error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+proc foo {} {
+    global errorInfo
+    set a [catch {format [error glorp2]} b]
+    error {Human-generated}
+}
+
+proc foo2 {} {
+    global errorInfo
+    set a [catch {format [error glorp2]} b]
+    error {Human-generated} $errorInfo
+}
+
+# Catch command-generated errors and errors from "error command"
+
+set a [catch {format [string compare]} b]
+check $a 1 1.1
+check $b {wrong # args: should be "string option a b"} 1.2
+check $errorInfo {wrong # args: should be "string option a b", while executing
+"string compare]", invoked from within
+"format [string compare]"} 1.3
+
+# Catch nested errors from procedure
+
+set a [catch {error glorp}]
+check $a 1 2.1
+check [catch {catch a b c} b] 1 2.2
+check $b {wrong # args: should be "catch command [varName]"} 2.3
+check [catch catch] 1 2.4
+
+# Catch an error in a procedure, and use the optional arg to "error"
+# to generate a new error trace
+
+check [catch foo b] 1 3.1
+check $b {Human-generated} 3.2
+check $errorInfo {Human-generated, while executing
+"error {Human-generated}" (procedure "foo" line 4), invoked from within
+"foo"} 3.3
+
+check [catch foo2 b] 1 4.1
+check $b {Human-generated} 4.2
+check $errorInfo {glorp2, while executing
+"error glorp2]", invoked from within
+"format [error glorp2]" (procedure "foo2" line 1), invoked from within
+"foo2"} 4.3

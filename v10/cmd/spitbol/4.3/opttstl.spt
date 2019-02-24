@@ -1,0 +1,54 @@
+-IN80
+-TITLE OPTIMIZE OUT REDUNDANT TSTL OPS FROM MACRO SOURCE
+-STITL PREAMBLE
+*
+*	This Spitbol program is a quick&dirty pass over the
+*	translated Minimal source (MACRO-32) to remove the
+*	obviously unneeded TSTL comparison instructions.
+*	A TSTL is unnecessary when it follows a MOVL, ADDL2, SUBL2,
+*	BISL2 or BICL2 in the program. (There are others, but they
+*	occur infrequently or not at all).  If the operand of the
+*	TSTL is a register that is the same as the second operand
+*	register of one of these op-codes that immediately precedes the
+*	TSTL & the TSTL is not labelled, then it clearly can be dumped.
+*
+*	Steve Duff April 1980
+*
+-STITL INITIALIZATION
+*
+*	Keywords...
+*
+	&STLIMIT = 10000000;  &TRIM = 1;  &ANCHOR = 1
+*
+*	Patterns...
+*
+	REG	= 'R' (ANY('23456789') | ('1' ANY('01')))
+	SB	= SPAN(' 	')
+	LABEL	= LEN(5) '::'
+	OPTPATT	= (LABEL | '')  SB
++			('MOVL' | 'ADDL2' | 'SUBL2' | 'BICL2' | 'BISL2')
++			SB  BREAK(',') LEN(1)  REG . OPTREG  (SB | RPOS(0))
+	TSTLPATT = SB 'TSTL' SB *OPTREG  (SB | RPOS(0))
+*
+*	I/O
+*
+	TERMINAL = 'Enter Name Of .MAR File, Sans Extension.'
+	FILENAME = TERMINAL
+	INPUT(.INFILE,1,FILENAME '.MAR')	:F(NOFILE_ERROR)
+	OUTPUT(.OUTFILE,2,FILENAME '.MAR')
+-STITL PROGRAM
+LOOP
+	CARD1	= INFILE		:F(EXIT)
+	CARD1	ANY(';')		:S(FLUSH1)
+	CARD1	OPTPATT			:F(FLUSH1)
+	CARD2	= INFILE
+	CARD2	TSTLPATT		:F(FLUSH2)
+	COUNT	= COUNT + 1
+FLUSH1
+	OUTFILE = CARD1			:(LOOP)
+FLUSH2
+	OUTFILE	= CARD1
+	OUTFILE	= CARD2			:(LOOP)
+EXIT
+	TERMINAL = COUNT ' TSTL OPCODES REMOVED.'
+END

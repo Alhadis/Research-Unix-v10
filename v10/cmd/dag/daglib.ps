@@ -1,0 +1,318 @@
+/dagnodefont /Times-Roman findfont Reset_Node_Pointsize scalefont def
+/dagedgefont /Times-Roman findfont Reset_Edge_Pointsize scalefont def
+
+% interface to set color 
+/setdagcolor {aload pop sethsbcolor} bind def
+
+% draw label in bounding box over current point
+/daglabel {
+	/height exch .8 mul def
+	/width exch .9 mul def
+	/nodename exch def
+	gsave
+		currentpoint newpath
+		0 0 moveto (X) false charpath flattenpath pathbbox
+		exch pop exch sub /fontheight exch def pop
+		newpath moveto
+		nodename stringwidth pop
+		-2 div fontheight -2 div rmoveto
+		nodename show
+	grestore
+} bind def
+
+/midpoint {
+	exch 4 -1 roll add 2 div
+	3 1 roll add 2 div
+} bind def
+
+% takes an angle and draws an arrowhead at current point
+/arrowhead {
+	gsave
+	rotate
+	currentpoint
+	newpath
+		moveto
+		arrowlength arrowwidth 2 div rlineto
+		0 arrowwidth neg rlineto
+	closepath fill
+	grestore
+} bind def
+
+% takes a point, draws an arrowhead at currentpoint on ray from other point
+/makearrow {
+	currentpoint exch pop sub exch currentpoint pop sub atan
+	arrowhead
+} bind def
+
+% --- shapes ---
+
+/Box {
+	/height exch def
+	/width exch def
+	/nodename exch def
+	currentpoint 2 copy
+	newpath
+		moveto
+		width -2 div
+		height -2 div
+		rmoveto
+		width 0 rlineto
+		0 height rlineto
+		width neg 0 rlineto
+	closepath
+	stroke
+	moveto 
+	nodename width .9 mul height .9 mul daglabel
+} bind def
+
+/Box_clip {	% height width x0 y0 x1 y1 -> x1 y1
+	6 2 roll
+	pop pop pop pop
+} bind def
+
+/Square {
+	2 copy
+	gt {exch pop dup} {pop dup} ifelse
+	Box
+} bind def
+
+/Square_clip {
+	Box_clip
+} bind def
+
+/Plaintext {
+	daglabel
+} bind def
+
+/Plaintext_clip {
+	Box_clip
+} bind def
+
+
+/Diamond {
+	/height exch def
+	/width exch def
+	/nodename exch def
+	/hh height 2 div def
+	/hw width 2 div def
+	currentpoint 2 copy
+	newpath
+		moveto
+		0 hh neg rmoveto
+		hw hh rlineto
+		hw neg hh rlineto
+		hw neg hh neg rlineto
+	closepath
+	stroke
+	moveto 
+	nodename width .9 mul height .9 mul daglabel
+} bind def
+
+/between {
+	sub 3 1 roll sub mul 0 ge
+} bind def
+
+/seginter { % x2 y2 x3 y3 -> false  OR  xinter yinter true
+	% use x0 y0 x1 y1 of current dict
+	/y3 exch def
+	/x3 exch def
+	/y2 exch def
+	/x2 exch def
+	x0 x1 ne x2 x3 ne or
+	{
+		x2 x3 eq {	/x2 x0 /x0 x2 def def
+				/y2 y0 /y0 y2 def def
+				/x1 x3 /x3 x1 def def
+				/y1 y3 /y3 y1 def def
+		} if
+
+		x0 x1 eq {
+			/x x0 def false
+		} 
+		{
+			/m0 y1 y0 sub x1 x0 sub div def
+			/b0 y0 m0 x0 mul sub def
+			/m1 y3 y2 sub x3 x2 sub div def
+			/b1 y2 m1 x2 mul sub def
+			m1 m0 eq {
+				b0 b1 ne {false} 
+				{	/l0lowx x0 x1 min def
+				 	/l0highx x0 x1 max def
+					/l1lowx x2 x3 min def
+					/l1highx x2 x3 max def
+					l0lowx l1lowx dup l0highx between
+					{/x l1lowx def true}
+					{
+						l0lowx l1highx dup l0highx between
+						{/x l1highx def true}
+						{
+							l1lowx l0lowx dup l1highx between
+							{/x l0lowx def true}
+							{false} ifelse
+						} ifelse
+					} ifelse
+				} ifelse
+			}
+			{
+				/x b1 b0 sub m0 m1 sub div def true
+			} ifelse
+		} ifelse
+		{
+			x2 x x x3 between
+			{
+				y2 m1 x mul b1 add dup y3 between
+				{
+					x
+					m1 x mul b1 add 
+					true
+				}
+				{
+					false
+				} ifelse
+			}
+			{ false } ifelse
+		}
+		{false} ifelse
+	}
+	{false} ifelse
+} bind def
+
+/Diamond_clip {
+	/y1 exch def
+	/x1 exch def
+	/y0 exch def
+	/x0 exch def
+	2 div /height2 exch def
+	2 div /width2  exch def
+	x0 x1 eq y0 y1 eq and {x1 y1} {
+		x0 0 ge y0 0 ge and {
+			width2 0 0 height2 seginter
+		}
+		{
+			x0 0 le y0 0 ge and {
+				0 height2 width2 neg 0 seginter
+			}
+			{
+				x0 0 le y0 0 le and {
+					width2 neg 0 0 height2 neg seginter
+				}
+				{
+					0 height2 neg width2 0 seginter
+				} ifelse
+			} ifelse
+		} ifelse
+		not {x1 y1} if
+	} ifelse
+} bind def
+
+/Circle {
+	/y exch def
+	/x exch def
+	/nodename exch def
+	currentpoint 2 copy 2 copy
+	newpath
+	moveto
+	/rad x y lt {x} {y} ifelse 2 div def
+	rad 0 rmoveto
+	rad 0 360 arc stroke
+	moveto
+	nodename x .85 mul y .85 mul daglabel
+} bind def
+
+/Circle_clip {
+	Ellipse_clip
+} bind def
+
+/Doublecircle {
+	/height exch def
+	/width exch def
+	/nodename exch def
+	currentpoint 2 copy 2 copy 2 copy
+	newpath
+	moveto
+	width height lt {width} {height} ifelse
+	2 div /rad exch def
+	rad 0 rmoveto
+	rad 0 360 arc stroke
+	rad .9 mul 0 360 arc stroke
+	moveto
+	nodename width .85 mul height .85 mul daglabel
+} bind def
+
+/Doublecircle_clip {
+	Circle_clip
+} bind def
+
+/Ellipse {
+	/height exch def
+	/width exch def
+	/nodename exch def
+	currentpoint			% save for label
+	% distort user space
+	gsave
+		currentpoint translate
+		0 0 moveto
+		width height div 1 scale	% scale in x
+		height 2 div 0 rmoveto
+		newpath 0 0 height 2 div 0 360 arc stroke
+	grestore
+	moveto nodename width height daglabel
+} bind def
+
+/Ellipse_clip {
+	/y1 exch def
+	/x1 exch def
+	/y0 exch def
+	/x0 exch def
+	2 div /ry exch def
+	2 div /rx exch def
+	x0 x1 eq 
+	{	% degenerate case
+		x1 y1
+	} 
+	{	% normal case
+		{
+			/gotanswer false def
+			/m y1 y0 sub x1 x0 sub div def	% m = (y1 - y0)/(x1 - x0);
+			/b y0 x0 m mul sub def		% b = y0 - m * x0
+			% aa = 1/(rx*rx)+ (m*m)/(ry*ry);
+			/aa 1 rx rx mul div m m mul ry ry mul div add def
+			% bb = (2*m*b)/(ry*ry);
+			/bb 2 m b mul mul ry ry mul div def 
+			% cc = (b*b)/(ry*ry) - 1;
+			/cc b b mul ry ry mul div 1 sub def
+			m 0 eq {
+				/s0 rx def
+				/s1 rx neg def
+				/gotanswer true def
+			}
+			{
+				% t = b^2 - 4ac
+				/t bb bb mul 4 aa cc mul mul sub def
+				t 0 lt {
+					x1 0 ne y1 0 ne or {
+						% try again, aim at origin
+						/x1 0 def
+						/y1 0 def
+					}
+					{
+						% give up
+						x1 y1
+						exit
+					} ifelse
+				}
+				{
+					/s0 bb neg t sqrt add 2 aa mul div def
+					/s1 bb neg t sqrt sub 2 aa mul div def
+					/gotanswer true def
+				} ifelse
+			} ifelse
+			gotanswer {
+				% by here, s0 and s1 are set.
+				s0 x0 sub abs s1 x0 sub abs le {s0} {s1} ifelse
+				dup m mul b add
+				exit
+			} if
+		} loop
+	} ifelse
+} bind def

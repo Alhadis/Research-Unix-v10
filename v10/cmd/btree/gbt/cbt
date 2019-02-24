@@ -1,0 +1,36 @@
+LIB=.
+if test $# = 0
+then
+	echo 'cbt add|build|cat|creat|delete|report|squash ...'
+	exit 1
+fi
+x=$1
+shift
+case $x in
+add)	case $1 in
+	-*)	shift
+		$LIB/btadd $* ;;
+	*)	$LIB/btran | $LIB/btadd $* ;;
+	esac ;;
+build)	case $1 in
+	-*)	shift
+		$LIB/btbuild $* ;;
+	*)	$LIB/btran | $LIB/btbuild $* ;;
+	esac ;;
+cat)	$LIB/btcat $* ;;
+creat)	$LIB/btcreat $* ;;
+delete)	case $1 in
+	-*)	shift
+		$LIB/btdelete $* ;;
+	*)	$LIB/btran | $LIB/btdelete $* ;;
+	esac ;;
+grep)	$LIB/btgrep $* ;;
+report)	$LIB/btreport $* ;;
+squash)	if test $# != 1
+	then
+		echo usage cbt squash file-name
+		exit 1
+	fi
+	$LIB/btsquash $1 ;;
+*)	echo 1>&2 unknown command $x
+esac

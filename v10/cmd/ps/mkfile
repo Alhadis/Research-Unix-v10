@@ -1,0 +1,17 @@
+CFLAGS=-O
+OBJ=ps.o doselect.o printp.o fdprint.o \
+getargs.o gettty.o getuname.o getfs.o kmem.o proca.o memrd.o ftab.o
+
+ps:	$OBJ
+	$CC $CFLAGS -o $target $OBJ
+
+$OBJ: ps.h
+
+install: ps
+	cp ps /bin
+	strip /bin/ps
+	/etc/chown root /bin/ps
+	chmod a=rx,u+ws /bin/ps
+
+clean:
+	rm -f a.out *.o ps core

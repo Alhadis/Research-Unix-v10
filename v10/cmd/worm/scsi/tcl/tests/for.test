@@ -1,0 +1,101 @@
+# This file contains contains a collection of tests for the "for",
+# "foreach", "break", and "continue" commands in Tcl.  If everything
+# is OK then it finishes silently.  If a problem is detected then
+# it generates a Tcl error with a cryptic message.  To trace the error
+# you'll have to read through the commands in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/for.test,v 1.1 90/03/25 17:00:56 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {For error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+# Basic "foreach" operation.
+
+set a {}
+foreach i {a b c d} {
+    set a [concat $a $i]
+}
+check $a { a b c d} 1.1
+set a {}
+foreach i {a b {{c d} e} {123 {{x}}}} {
+    set a [concat $a $i]
+}
+check $a { a b {c d} e 123 {{x}}} 1.2
+check [catch {foreach} msg] 1 1.3
+check $msg {wrong # args: should be "foreach varName list command"} 1.4
+check [catch {foreach i} msg] 1 1.5
+check $msg {wrong # args: should be "foreach varName list command"} 1.6
+check [catch {foreach i j} msg] 1 1.7
+check $msg {wrong # args: should be "foreach varName list command"} 1.8
+check [catch {foreach i j k l} msg] 1 1.9
+check $msg {wrong # args: should be "foreach varName list command"} 1.10
+set a {}
+foreach i {} {
+    set a [concat $a $i]
+}
+check $a {} 1.11
+
+# Check "continue".
+
+check [catch continue] 4 2.1
+set a {}
+foreach i {a b c d} {
+    if {[string compare $i "b"] == 0} continue
+    set a [concat $a $i]
+}
+check $a { a c d} 2.2
+set a {}
+foreach i {a b c d} {
+    if {[string compare $i "b"] != 0} continue
+    set a [concat $a $i]
+}
+check $a { b} 2.3
+check [catch {continue foo} msg] 1 2.4
+check $msg {too many args: should be "continue"} 2.5
+
+# Check "break".
+
+check [catch break] 3 3.1
+set a {}
+foreach i {a b c d} {
+    if {[string compare $i "c"] == 0} break
+    set a [concat $a $i]
+}
+check $a { a b} 3.2
+check [catch {break foo} msg] 1 3.3
+
+check $msg {too many args: should be "break"} 3.4
+
+# Check "for" and its use of continue and break.
+
+set a {}
+for {set i 1} {$i<6} {set i [expr $i+1]} {
+    set a [concat $a $i]
+}
+check $a { 1 2 3 4 5} 4.1
+set a {}
+for {set i 1} {$i<6} {set i [expr $i+1]} {
+    if $i==4 continue
+    set a [concat $a $i]
+}
+check $a { 1 2 3 5} 4.2
+set a {}
+for {set i 1} {$i<6} {set i [expr $i+1]} {
+    if $i==4 break
+    set a [concat $a $i]
+}
+check $a { 1 2 3} 4.3
+check [catch {for 1 2 3} msg] 1 4.4
+check $msg {wrong # args: should be "for start test next command"} 4.5
+check [catch {for 1 2 3 4 5} msg] 1 4.5
+check $msg {wrong # args: should be "for start test next command"} 4.6
+set a {xyz}
+for {set i 1} {$i<6} {set i [expr $i+1]} {}
+check $a xyz 4.6
+set a {}
+for {set i 1} {$i<6} {set i [expr $i+1]; if $i==4 break} {
+    set a [concat $a $i]
+}
+check $a { 1 2 3} 4.7

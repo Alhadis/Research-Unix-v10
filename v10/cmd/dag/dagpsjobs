@@ -1,0 +1,36 @@
+awk '
+# new awk script that makes seperate print jobs of large dag PS files.
+# you may optionally set "jobname" and "jobpages" on the awk command line.
+#
+#	dag -Tps -p8.5x11 huge.dag >huge.ps
+#	awk -f makejobs.awk jobpages=4 <huge.ps
+#   for psfile in job*.ps
+#	do
+#		lpr $psfile
+#	done
+BEGIN		{
+				printf("job pages are %s\n",jobpages);
+				if (jobname=="") jobname = "job";
+				if (jobpages==0) jobpages=1;
+				job = 0;
+			}
+(currentpage == 0 && $0 !~ "%%Page") {
+				nhline = NR;
+				header[nhline] = $0;
+				next;
+			}
+/%%Page/	{
+				currentpage = $3;
+				if (jobpages == 1 || currentpage % jobpages == 1) {
+					if (ofile != "") close(ofile);
+					ofile = jobname job ".ps";
+					job++;
+					print header[1] > ofile;
+					for (i = 2; i <= nhline; i++) print header[i] >> ofile;
+				}
+			}
+
+			{
+				print $0 >> ofile;
+			}
+' $@

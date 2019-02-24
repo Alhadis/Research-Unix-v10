@@ -1,0 +1,1913 @@
+.\" pic dag.doc | tbl | eqn | troff -mm
+.\"  a recent kernighan pic is needed.
+.\"  Definitions for all documents.
+.\"
+.\"  EQN definitions
+.lf
+.EQ
+delim $$
+.EN
+.\"
+.\" Set the page length to 10.5 inches.
+.pl 10.5i
+.\"
+.\"  .fp 1 CR
+.\"  .fp 2 CI
+.\"  .fp 3 CB
+.HM I 1 a i
+.ds DG \s-2DAG\s+2
+.ds PO P\s-2OST\s+2S\s-2CRIPT\s+2
+.ds PC \s-2PIC\s+2
+.nr Pt 1
+.nr Pi 5
+.nr Si 5
+.fp 5 CO
+.\"
+.\" Define the top of page processing (to reduce top margin).
+.de TP
+'sp 2
+.tl \\*(}t
+.if e 'tl \\*(}e
+.if o 'tl \\*(}o
+'sp 1
+..
+.\"
+.\"
+.PH "'''Page \\\\nP'"
+.\"
+.ND "October 19, 1987"
+.TL "311531-0101" "49059-6"
+DAG\(em A Program that Draws Directed Graphs
+.AU "\s10E.R. Gansner\s0" "ERG" MH 59554 3864 3C-532B "ulysses!erg"
+.AU "\s10S.C. North\s0" "SCN" MH 59554 7392 3C-539 "ulysses!north"
+.AU "\s10K.P. Vo\s0" "kpv" MH 59554 4869 3C-533 "ulysses!kpv"
+.TM 59554-871019-04TM
+.AS 2 5
+\*(DG is a program that draws directed graphs.  It reads a list of 
+nodes and edges, and writes a \*(PC or \*(PO description of a picture.
+Optional drawing instructions specify node shapes and sizes,
+attach labels, and control spacing.
+\*(DG works best on directed acyclic graphs,
+which are often used to represent hierarchical relationships.
+Here is a drawing of a graph from Forrester's book, \fIWorld Dynamics\fP
+(Wright-Allen, Cambridge, MA, 1971).  It took 2.1 CPU seconds on a VAX-8650 to
+make this drawing.
+.sp -.25i
+.PS 3.5 3
+arrowht = 0.111111;
+arrowwid  = 0.055556;
+define Ellipse	% [ellipse wid $2 ht $3 $1] %
+.ps 6
+Node0: Ellipse("S8",0.750000,0.500000) at (3.125000,7.250000);
+Node1: Ellipse("9",0.750000,0.500000) at (3.125000,6.250000);
+Node2: Ellipse("S24",0.750000,0.500000) at (0.375000,7.250000);
+Node3: Ellipse("25",0.750000,0.500000) at (2.125000,6.250000);
+Node4: Ellipse("27",0.750000,0.500000) at (0.375000,3.250000);
+Node5: Ellipse("S1",0.750000,0.500000) at (14.375000,8.250000);
+Node6: Ellipse("2",0.750000,0.500000) at (14.375000,7.250000);
+Node7: Ellipse("10",0.750000,0.500000) at (15.875000,7.250000);
+Node8: Ellipse("S35",0.750000,0.500000) at (10.875000,8.250000);
+Node9: Ellipse("43",0.750000,0.500000) at (8.375000,7.250000);
+Node10: Ellipse("36",0.750000,0.500000) at (10.875000,7.250000);
+Node11: Ellipse("S30",0.750000,0.500000) at (7.625000,6.250000);
+Node12: Ellipse("31",0.750000,0.500000) at (5.875000,4.250000);
+Node13: Ellipse("33",0.750000,0.500000) at (8.375000,5.250000);
+Node14: Ellipse("42",0.750000,0.500000) at (4.375000,5.250000);
+Node15: Ellipse("T1",0.750000,0.500000) at (6.125000,1.250000);
+Node16: Ellipse("26",0.750000,0.500000) at (3.375000,5.250000);
+Node17: Ellipse("T24",0.750000,0.500000) at (2.125000,1.250000);
+Node18: Ellipse("3",0.750000,0.500000) at (5.875000,5.250000);
+Node19: Ellipse("16",0.750000,0.500000) at (14.375000,5.250000);
+Node20: Ellipse("17",0.750000,0.500000) at (11.625000,6.250000);
+Node21: Ellipse("18",0.750000,0.500000) at (12.125000,5.250000);
+Node22: Ellipse("11",0.750000,0.500000) at (6.875000,5.250000);
+Node23: Ellipse("14",0.750000,0.500000) at (16.625000,5.250000);
+Node24: Ellipse("13",0.750000,0.500000) at (13.625000,6.250000);
+Node25: Ellipse("12",0.750000,0.500000) at (12.875000,4.250000);
+Node26: Ellipse("32",0.750000,0.500000) at (5.375000,3.250000);
+Node27: Ellipse("T30",0.750000,0.500000) at (6.875000,2.250000);
+Node28: Ellipse("34",0.750000,0.500000) at (7.375000,4.250000);
+Node29: Ellipse("4",0.750000,0.500000) at (4.875000,4.250000);
+Node30: Ellipse("15",0.750000,0.500000) at (13.625000,3.250000);
+Node31: Ellipse("19",0.750000,0.500000) at (10.875000,5.250000);
+Node32: Ellipse("29",0.750000,0.500000) at (10.375000,3.250000);
+Node33: Ellipse("37",0.750000,0.500000) at (9.375000,7.250000);
+Node34: Ellipse("39",0.750000,0.500000) at (12.625000,6.250000);
+Node35: Ellipse("41",0.750000,0.500000) at (9.375000,4.250000);
+Node36: Ellipse("38",0.750000,0.500000) at (5.125000,6.250000);
+Node37: Ellipse("40",0.750000,0.500000) at (10.125000,6.250000);
+Node38: Ellipse("23",0.750000,0.500000) at (4.375000,2.250000);
+Node39: Ellipse("5",0.750000,0.500000) at (3.375000,3.250000);
+Node40: Ellipse("21",0.750000,0.500000) at (8.375000,4.250000);
+Node41: Ellipse("20",0.750000,0.500000) at (11.375000,4.250000);
+Node42: Ellipse("28",0.750000,0.500000) at (10.375000,4.250000);
+Node43: Ellipse("6",0.750000,0.500000) at (1.125000,2.250000);
+Node44: Ellipse("T35",0.750000,0.500000) at (3.375000,2.250000);
+Node45: Ellipse("22",0.750000,0.500000) at (4.375000,3.250000);
+Node46: Ellipse("7",0.750000,0.500000) at (1.125000,1.250000);
+Node47: Ellipse("T8",0.750000,0.500000) at (1.125000,0.250000);
+.ps
+.ps 14
+spline -> solid from (3.125000,7.000000) to (3.125000,6.500000);
+spline -> solid from (3.416667,6.097222) to (4.152778,5.444444);
+spline -> solid from (2.972222,6.027778) to (2.694444,5.402778) to (2.666667,5.194444) to (2.625000,5.000000) to (2.625000,2.500000) to (2.736111,2.194444) to (2.847222,1.888889) to (3.000000,1.875000) to (5.763889,1.319444);
+spline -> solid from (0.694444,7.111111) to (1.847222,6.416667);
+spline -> solid from (0.375000,7.000000) to (0.375000,3.500000);
+spline -> solid from (2.125000,6.000000) to (2.125000,2.500000) to (2.277778,2.194444) to (2.416667,1.902778) to (2.625000,1.875000) to (5.763889,1.319444);
+spline -> solid from (2.416667,6.097222) to (3.152778,5.444444);
+spline -> solid from (0.375000,3.000000) to (0.375000,2.500000) to (0.486111,2.208333) to (0.597222,1.916667) to (0.750000,1.875000) to (1.958333,1.472222);
+spline -> solid from (14.375000,8.000000) to (14.375000,7.500000);
+spline -> solid from (14.680556,8.111111) to (15.625000,7.430556);
+spline -> solid from (14.111111,7.069444) to (6.541667,6.611111) to (6.305556,6.444444) to (6.055556,6.277778) to (5.916667,5.500000);
+spline -> solid from (14.527778,7.027778) to (14.805556,6.402778) to (14.805556,6.263889) to (14.805556,6.138889) to (14.500000,5.486111);
+spline -> solid from (14.138889,7.055556) to (11.694444,6.500000);
+spline -> solid from (14.638889,7.069444) to (15.305556,6.333333) to (15.347222,6.166667) to (15.375000,6.000000) to (15.375000,2.500000) to (15.347222,2.375000) to (15.305556,2.250000) to (6.500000,1.291667);
+spline -> solid from (14.375000,7.000000) to (14.375000,6.500000) to (14.263889,6.194444) to (14.152778,5.902778) to (14.000000,5.875000) to (12.458333,5.361111);
+spline -> solid from (15.875000,7.000000) to (15.125000,6.888889) to (7.250000,6.625000) to (7.097222,6.625000) to (6.986111,6.305556) to (6.875000,6.000000) to (6.875000,5.500000);
+spline -> solid from (16.097222,7.041667) to (16.555556,6.347222) to (16.597222,6.166667) to (16.625000,6.000000) to (16.625000,5.500000);
+spline -> solid from (16.180556,7.111111) to (17.083333,6.458333) to (17.236111,6.222222) to (17.375000,6.000000) to (17.375000,2.500000) to (16.861111,2.208333) to (16.347222,1.916667) to (15.375000,1.875000) to (6.500000,1.277778);
+spline -> solid from (15.875000,7.000000) to (13.958333,6.361111);
+spline -> solid from (15.875000,7.000000) to (15.875000,5.500000) to (15.847222,5.291667) to (15.805556,5.083333) to (15.375000,5.000000) to (13.222222,4.347222);
+spline -> solid from (10.527778,8.152778) to (8.555556,7.472222);
+spline -> solid from (10.875000,8.000000) to (10.875000,7.500000);
+spline -> solid from (8.013889,7.166667) to (5.125000,6.500000);
+spline -> solid from (8.555556,7.027778) to (9.819444,6.388889);
+spline -> solid from (10.875000,7.000000) to (10.875000,5.500000);
+spline -> solid from (7.625000,6.000000) to (7.625000,5.500000) to (7.513889,5.208333) to (7.402778,4.916667) to (7.250000,4.875000) to (6.138889,4.430556);
+spline -> solid from (7.847222,6.041667) to (8.222222,5.472222);
+spline -> solid from (5.958333,4.000000) to (6.069444,3.500000) to (6.097222,3.250000) to (6.125000,3.000000) to (6.125000,1.500000);
+spline -> solid from (5.722222,4.027778) to (5.486111,3.486111);
+spline -> solid from (8.125000,5.069444) to (7.000000,4.625000) to (6.680556,4.500000) to (6.680556,4.250000) to (6.666667,4.000000) to (6.847222,2.500000);
+spline -> solid from (8.166667,5.041667) to (7.583333,4.458333);
+spline -> solid from (4.527778,5.027778) to (4.763889,4.486111);
+spline -> solid from (3.611111,5.055556) to (4.611111,4.416667);
+spline -> solid from (5.625000,5.069444) to (4.944444,4.500000);
+spline -> solid from (14.333333,5.000000) to (14.277778,4.500000) to (14.236111,4.333333) to (14.180556,4.166667) to (13.750000,3.486111);
+spline -> solid from (11.416667,6.041667) to (10.916667,5.500000);
+spline -> solid from (12.125000,5.000000) to (12.125000,4.500000) to (12.013889,4.208333) to (11.902778,3.916667) to (11.750000,3.875000) to (10.694444,3.388889);
+spline -> solid from (6.750000,5.013889) to (5.027778,4.472222);
+spline -> solid from (16.361111,5.069444) to (15.027778,4.333333) to (14.916667,4.263889) to (14.805556,4.208333) to (13.861111,3.444444);
+spline -> solid from (13.625000,6.000000) to (13.125000,5.902778) to (11.027778,5.486111);
+spline -> solid from (12.750000,4.013889) to (10.708333,3.361111);
+spline -> solid from (5.111111,3.069444) to (4.569444,2.458333);
+spline -> solid from (7.375000,4.000000) to (7.875000,3.888889) to (10.027778,3.347222);
+spline -> solid from (4.569444,4.111111) to (3.625000,3.430556);
+spline -> solid from (13.263889,3.180556) to (6.472222,1.347222);
+spline -> solid from (10.527778,5.152778) to (8.555556,4.472222);
+spline -> solid from (11.027778,5.027778) to (11.263889,4.486111);
+spline -> solid from (10.722222,5.027778) to (10.486111,4.486111);
+spline -> solid from (10.013889,3.166667) to (7.222222,2.347222);
+spline -> solid from (9.583333,7.041667) to (12.125000,6.597222) to (12.625000,6.500000);
+spline -> solid from (9.375000,7.000000) to (9.375000,4.500000);
+spline -> solid from (9.375000,7.000000) to (8.875000,6.888889) to (5.819444,6.597222) to (5.125000,6.500000);
+spline -> solid from (9.472222,7.013889) to (9.944444,6.472222);
+spline -> solid from (12.791667,6.027778) to (13.555556,4.402778) to (13.597222,4.194444) to (13.625000,4.000000) to (13.625000,3.500000);
+spline -> solid from (9.638889,4.069444) to (10.180556,3.458333);
+spline -> solid from (5.125000,6.000000) to (5.125000,5.500000) to (5.083333,5.250000) to (5.041667,5.000000) to (4.888889,4.500000);
+spline -> solid from (10.347222,6.041667) to (10.722222,5.472222);
+spline -> solid from (4.305556,2.000000) to (2.458333,1.361111);
+spline -> solid from (4.694444,2.111111) to (5.847222,1.416667);
+spline -> solid from (3.041667,3.138889) to (1.430556,2.402778);
+spline -> solid from (3.375000,3.000000) to (3.375000,2.500000);
+spline -> solid from (3.638889,3.069444) to (4.180556,2.458333);
+spline -> solid from (8.375000,4.000000) to (7.875000,3.888889) to (4.875000,3.611111) to (4.375000,3.500000);
+spline -> solid from (11.708333,4.138889) to (13.319444,3.402778);
+spline -> solid from (10.375000,4.000000) to (10.375000,3.500000);
+spline -> solid from (1.125000,2.000000) to (1.125000,1.500000);
+spline -> solid from (4.375000,3.000000) to (4.375000,2.500000);
+spline -> solid from (4.111111,3.069444) to (3.569444,2.458333);
+spline -> solid from (1.125000,1.000000) to (1.125000,0.500000);
+.ps
+.PE
+.AE
+.MT 1
+.\" Point size 10 on 16
+.S 10 16
+.H 1 "Introduction"
+.P
+Directed graphs are useful for describing relationships.
+They have many applications in computer programming, including
+the representation of data structures,
+finite automata, data flow, procedure calls, and software
+configuration dependencies.  They frequently arise in other disciplines.
+.P
+A picture is a good way of representing many kinds of data, including
+directed graphs.  It is seldom easy to understand a graph from a list of edges.
+But with a picture, one can quickly find individual nodes,
+groups of related nodes, and trace paths in the graph.
+The main obstacle is that it can be difficult and tedious to make
+good drawings of graphs by hand.
+.P
+\*(DG is a program that automatically draws directed graphs from edge lists.
+It does particularly well on acyclic graphs such as trees or partially ordered sets.
+\*(DG reads descriptions in a concise language, and makes pictures in \*(PC [K82]
+or \*(PO [A85].
+As a \*(PC pre-processor, \*(DG fits in the troff pipeline:
+.P
+.ce
+.ft 5
+dag file | pic | troff
+.ft
+.H 1 "Basics"
+.P
+Figure 1 shows a \*(DG description, and a reduced copy of the resulting picture:
+.PS 6.5 4.5
+arrowht = 0.111111;
+arrowwid  = 0.055556;
+define Ellipse	% [ellipse wid $2 ht $3 $1] %
+.ps 4
+box invis at (-10,0);
+Node0: Ellipse("5th Edition",1.819444,0.500000) at (4.402778,10.250000);
+Node1: Ellipse("6th Edition",1.819444,0.500000) at (4.402778,9.250000);
+Node2: Ellipse("PWB 1.0",1.250000,0.500000) at (9.666667,9.250000);
+Node3: Ellipse("Interdata",1.527778,0.500000) at (8.027778,8.250000);
+Node4: Ellipse("Wollongong",1.666667,0.500000) at (4.402778,8.250000);
+Node5: Ellipse("Mini Unix",1.527778,0.500000) at (6.250000,8.250000);
+Node6: Ellipse("1 BSD",0.972222,0.500000) at (1.472222,8.250000);
+Node7: Ellipse("LSX",0.750000,0.500000) at (2.944444,8.250000);
+Node8: Ellipse("7th Edition",1.819444,0.500000) at (5.611111,7.250000);
+Node9: Ellipse("Unix/TS 3.0",1.819444,0.500000) at (8.750000,5.250000);
+Node10: Ellipse("PWB 2.0",1.250000,0.500000) at (9.027778,7.250000);
+Node11: Ellipse("8th Edition",1.819444,0.500000) at (7.611111,2.250000);
+Node12: Ellipse("32V",0.750000,0.500000) at (6.722222,6.250000);
+Node13: Ellipse("V7M",0.750000,0.500000) at (2.333333,3.250000);
+Node14: Ellipse("Ultrix-11",1.527778,0.500000) at (0.916667,1.250000);
+Node15: Ellipse("Xenix",0.972222,0.500000) at (5.611111,6.250000);
+Node16: Ellipse("UniPlus+",1.388889,0.500000) at (4.180556,6.250000);
+Node17: Ellipse("9th Edition",1.819444,0.500000) at (7.611111,1.250000);
+Node18: Ellipse("2 BSD",0.972222,0.500000) at (1.472222,5.250000);
+Node19: Ellipse("2.8 BSD",1.250000,0.500000) at (4.333333,2.250000);
+Node20: Ellipse("2.9 BSD",1.250000,0.500000) at (2.555556,1.250000);
+Node21: Ellipse("3 BSD",0.972222,0.500000) at (4.750000,5.250000);
+Node22: Ellipse("4 BSD",0.972222,0.500000) at (4.750000,4.250000);
+Node23: Ellipse("4.1 BSD",1.250000,0.500000) at (4.833333,3.250000);
+Node24: Ellipse("4.2 BSD",1.250000,0.500000) at (5.833333,2.250000);
+Node25: Ellipse("4.3 BSD",1.250000,0.500000) at (5.833333,1.250000);
+Node26: Ellipse("Ultrix-32",1.527778,0.500000) at (4.194444,1.250000);
+Node27: Ellipse("PWB 1.2",1.250000,0.500000) at (9.666667,8.250000);
+Node28: Ellipse("USG 1.0",1.250000,0.500000) at (11.597222,8.250000);
+Node29: Ellipse("CB Unix 1",1.527778,0.500000) at (13.236111,7.250000);
+Node30: Ellipse("USG 2.0",1.250000,0.500000) at (11.597222,7.250000);
+Node31: Ellipse("CB Unix 2",1.527778,0.500000) at (13.236111,6.250000);
+Node32: Ellipse("CB Unix 3",1.527778,0.500000) at (13.222222,5.250000);
+Node33: Ellipse("Unix/TS++",1.527778,0.500000) at (9.888889,4.250000);
+Node34: Ellipse("PDP-11 Sys V",1.958333,0.500000) at (11.875000,4.250000);
+Node35: Ellipse("USG 3.0",1.250000,0.500000) at (11.597222,6.250000);
+Node36: Ellipse("Unix/TS 1.0",1.819444,0.500000) at (9.805556,6.250000);
+Node37: Ellipse("TS 4.0",1.111111,0.500000) at (9.888889,3.250000);
+Node38: Ellipse("System V.0",1.666667,0.500000) at (9.888889,2.250000);
+Node39: Ellipse("System V.2",1.666667,0.500000) at (9.888889,1.250000);
+Node40: Ellipse("System V.3",1.666667,0.500000) at (9.888889,0.250000);
+.ps
+.ps 14
+spline -> solid from (4.402778,10.000000) to (4.402778,9.500000);
+spline -> solid from (5.222222,10.138889) to (9.111111,9.361111);
+spline -> solid from (5.152778,9.111111) to (7.638889,8.458333);
+spline -> solid from (4.402778,9.000000) to (4.402778,8.500000);
+spline -> solid from (4.930556,9.041667) to (5.888889,8.472222);
+spline -> solid from (3.708333,9.097222) to (1.861111,8.402778);
+spline -> solid from (3.958333,9.027778) to (3.180556,8.444444);
+spline -> solid from (9.666667,9.000000) to (9.666667,8.500000);
+spline -> solid from (10.152778,9.097222) to (11.236111,8.458333);
+spline -> solid from (7.597222,8.041667) to (6.125000,7.458333);
+spline -> solid from (8.027778,8.000000) to (8.027778,6.500000) to (8.069444,6.333333) to (8.097222,6.180556) to (8.569444,5.500000);
+spline -> solid from (8.347222,8.027778) to (8.819444,7.486111);
+spline -> solid from (1.472222,8.000000) to (1.472222,5.500000);
+spline -> solid from (6.138889,7.041667) to (7.097222,6.625000) to (7.388889,6.500000) to (7.430556,6.250000) to (7.472222,6.000000) to (7.472222,4.500000) to (7.486111,4.250000) to (7.486111,4.000000) to (7.597222,2.500000);
+spline -> solid from (5.972222,7.013889) to (6.513889,6.458333);
+spline -> solid from (4.902778,7.097222) to (2.402778,6.444444) to (2.375000,6.222222) to (2.333333,6.000000) to (2.333333,3.500000);
+spline -> solid from (5.000000,7.069444) to (3.486111,6.625000) to (3.333333,6.583333) to (3.236111,6.291667) to (3.138889,6.000000) to (3.305556,4.500000) to (3.319444,4.250000) to (3.333333,4.000000) to (3.333333,3.500000) to (3.291667,3.250000) to (3.250000,3.000000) to (3.138889,2.500000) to (3.083333,2.361111) to (3.013889,2.222222) to (1.083333,1.500000);
+spline -> solid from (5.611111,7.000000) to (5.611111,6.500000);
+spline -> solid from (5.180556,7.027778) to (4.472222,6.472222);
+spline -> solid from (8.750000,5.000000) to (8.750000,4.500000) to (8.791667,4.263889) to (8.819444,4.027778) to (9.125000,3.875000) to (9.625000,3.472222);
+spline -> solid from (8.861111,7.013889) to (8.597222,6.402778) to (8.597222,6.194444) to (8.597222,6.000000) to (8.694444,5.500000);
+spline -> solid from (7.611111,2.000000) to (7.611111,1.500000);
+spline -> solid from (6.583333,6.013889) to (5.125000,5.416667);
+spline -> solid from (2.125000,3.041667) to (0.972222,1.500000);
+spline -> solid from (1.833333,5.083333) to (2.666667,4.388889) to (2.791667,4.291667) to (2.902778,4.194444) to (3.666667,3.416667) to (3.791667,3.277778) to (3.902778,3.138889) to (4.208333,2.500000);
+spline -> solid from (4.083333,2.027778) to (2.944444,1.444444);
+spline -> solid from (4.000000,2.041667) to (1.208333,1.486111);
+spline -> solid from (4.750000,5.000000) to (4.750000,4.500000);
+spline -> solid from (4.777778,4.000000) to (4.819444,3.500000);
+spline -> solid from (5.138889,3.027778) to (5.625000,2.486111);
+spline -> solid from (4.666667,3.013889) to (4.444444,2.500000);
+spline -> solid from (5.361111,3.125000) to (7.083333,2.458333);
+spline -> solid from (5.833333,2.000000) to (5.833333,1.500000);
+spline -> solid from (5.402778,2.069444) to (4.513889,1.472222);
+spline -> solid from (9.472222,8.013889) to (9.166667,7.500000);
+spline -> solid from (12.027778,8.069444) to (12.916667,7.472222);
+spline -> solid from (11.597222,8.000000) to (11.597222,7.500000);
+spline -> solid from (13.236111,7.000000) to (13.236111,6.500000);
+spline -> solid from (11.597222,7.000000) to (11.597222,6.500000);
+spline -> solid from (13.236111,6.000000) to (13.222222,5.500000);
+spline -> solid from (13.222222,5.000000) to (13.222222,4.500000) to (13.111111,4.194444) to (13.000000,3.888889) to (12.847222,3.875000) to (10.402778,3.347222);
+spline -> solid from (12.569444,5.111111) to (10.319444,4.458333);
+spline -> solid from (12.819444,5.041667) to (12.166667,4.486111);
+spline -> solid from (9.888889,4.000000) to (9.888889,3.500000);
+spline -> solid from (11.402778,6.013889) to (9.375000,5.430556);
+spline -> solid from (9.472222,6.013889) to (8.972222,5.486111);
+spline -> solid from (9.888889,3.000000) to (9.888889,2.500000);
+spline -> solid from (9.888889,2.000000) to (9.888889,1.500000);
+spline -> solid from (9.888889,1.000000) to (9.888889,0.500000);
+.ps
+.PE
+.sp -4i
+.DS IN
+.S 7 9
+.ft 5
+\&.GS 4 4
+"5th Edition"	"6th Edition" "PWB 1.0";
+"6th Edition"	"Interdata" "Wollongong"
+		"Mini Unix" "1 BSD" "LSX";
+"Interdata"	"7th Edition" "Unix/TS 3.0"
+		"PWB 2.0";
+"7th Edition"	"8th Edition" "32V" "V7M"
+		"Ultrix-11" "Xenix" "UniPlus+";
+"V7M"		"Ultrix-11";
+"8th Edition"	"9th Edition";
+"1 BSD"		"2 BSD";
+"2 BSD"		"2.8 BSD";
+"2.8 BSD"	"2.9 BSD" "Ultrix-11";
+"32V"		"3 BSD";
+"3 BSD"		"4 BSD";
+"4 BSD"		"4.1 BSD";
+"4.1 BSD"	"4.2 BSD" "2.8 BSD" "8th Edition";
+"4.2 BSD"	"4.3 BSD" "Ultrix-32";
+"PWB 1.0"	"PWB 1.2" "USG 1.0";
+"PWB 1.2"	"PWB 2.0";
+"USG 1.0"	"CB Unix 1" "USG 2.0";
+"CB Unix 1"	"CB Unix 2";
+"CB Unix 2"	"CB Unix 3";
+"CB Unix 3"	"Unix/TS++" "PDP-11 Sys V";
+"USG 2.0"	"USG 3.0";
+"USG 3.0"	"Unix/TS 3.0";
+"PWB 2.0"	"Unix/TS 3.0";
+"Unix/TS 1.0"	"Unix/TS 3.0";
+"Unix/TS 3.0"	"TS 4.0";
+"Unix/TS++"	"TS 4.0";
+"CB Unix 3"	"TS 4.0";
+"TS 4.0"		"System V.0";
+"System V.0"	"System V.2";
+"System V.2"	"System V.3";
+\&.GE
+.S 10 16
+.ft
+.DE
+.ce
+Figure 1
+.P
+The graph description of Figure 1 is a sequence of edge statements.
+An edge statement names a tail node and a list of head nodes.
+Arrows point from tail nodes to head nodes.
+The statement \f5"5th Edition" "6th Edition" "PWB 1.0";\fP
+declares an edge from \f55th Edition\fP to \f56th Edition\fP,
+and another edge from \f55th Edition\fP to \f5PWB 1.0\fP.
+Because the syntax of edge statements is simple, graph descriptions can be
+generated from the output of other tools, such as \fBcflow\fP, profilers,
+or \fBmake\fP utilities, without much effort.
+.P
+A graph description begins with \f5.GS\fP and ends with \f5.GE\fP.
+A file may contain more than one graph; each is drawn separately.
+Optional arguments on the \f5.GS\fP line set the width and height of
+bounding box of the drawing.  The drawing is scaled if necessary.
+.P
+Notice how \*(DG positions the nodes in the drawing of Figure 1.
+Nodes are placed in ranks, so that edges point downward.
+Within a rank nodes are placed from left to right to reduce crossings and long edges.
+In some graphs it is not possible for all edges to point downward because there are cycles.
+To draw such cyclic graphs, some edges are necessarily inverted.
+For instance, the following graph contains a cycle $a -> b ->c -> a$,
+so the edge $c -> a$ points upward.
+.DS I N
+.ft 5
+.S 10 12
+.sp .5i
+.in 1i
+\&.GS
+edge from a to b;
+edge from b to c;
+edge from c to a;
+\&.GE
+.sp .5i
+.in
+.S 10 16
+.ft
+.ce
+Figure 2
+.DE
+.sp -2.5i
+.P
+.PS 10 1.5
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+box invis at (-3.5,0);
+.ps 10
+Node0: Ellipse(a,0.750000,0.500000) at (0.375000,2.250000);
+Node1: Ellipse(b,0.750000,0.500000) at (1.125000,1.250000);
+Node2: Ellipse(c,0.750000,0.500000) at (1.125000,0.250000);
+spline -> solid from (0.597222,2.041667) to (0.972222,1.486111);
+spline -> solid from (1.125000,1.000000) to (1.125000,0.500000);
+spline -> solid from (0.958333,0.472222) to (0.500000,1.180556) to (0.458333,1.347222) to (0.416667,1.500000) to (0.388889,2.000000);
+.ps
+.PE
+This example uses the alternative, verbose style for edge statements.
+It's safe to drop the quotes from node names here, because
+they don't contain white space, punctuation, or \*(DG keywords.
+There is also a way to make certain edges point backward:
+.DS I N
+.ft 5
+.S 10 12
+.sp .5i
+.in 1i
+\&.GS
+backedge from a to b;
+edge from b to c;
+edge from c to a;
+\&.GE
+.sp .5i
+.in
+.S 10 16
+.ft
+.ce
+Figure 3
+.DE
+.sp -2.5i
+.PS 10 1.5
+.ps 10
+box invis at (-3.5,0);
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+.ps 10
+Node0: Ellipse(a,0.750000,0.500000) at (1.125000,0.250000);
+Node1: Ellipse(b,0.750000,0.500000) at (0.375000,2.250000);
+Node2: Ellipse(c,0.750000,0.500000) at (1.125000,1.250000);
+spline -> solid from (0.597222,2.041667) to (0.972222,1.486111);
+spline <- solid from (0.388889,2.000000) to (0.416667,1.500000) to (0.458333,1.347222) to (0.500000,1.180556) to (0.958333,0.472222);
+spline -> solid from (1.125000,1.000000) to (1.125000,0.500000);
+.ps
+.PE
+.P
+Sometimes it is more appropriate for the ranks to go from left to right,
+instead of from top to bottom.  
+Replacing \f5.GS\fP with \f5.GR\fP, for ``graph rotated,''
+requests a left to right drawing, as in Figure 4.
+.P
+You can list a path in a single statement.
+A ``backpath'' is a sequence of back-edges.
+.DS I N
+.ft 5
+.nf
+path from Newton to Moore to Veblen to Church;
+backpath from Subaru to Honda to Ferrari;
+.fi
+.ft
+.DE
+.PS 5
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+.ps 12
+Node0: Ellipse(Newton,1.111111,0.500000) at (0.555556,2.500000);
+Node1: Ellipse(Moore,0.972222,0.500000) at (2.097222,2.500000);
+Node2: Ellipse(Veblen,1.111111,0.500000) at (3.777778,1.750000);
+Node3: Ellipse(Birkhoff,1.388889,0.500000) at (3.777778,2.500000);
+Node4: Ellipse(Whitney,1.250000,0.500000) at (5.597222,2.500000);
+Node5: Ellipse(Church,1.111111,0.500000) at (5.597222,1.750000);
+Node6: Ellipse(Turing,1.111111,0.500000) at (7.347222,0.250000);
+Node7: Ellipse(Rosser,1.111111,0.500000) at (7.347222,3.250000);
+Node8: Ellipse(Ritchie,1.250000,0.500000) at (7.347222,2.500000);
+Node9: Ellipse(Kleene,1.111111,0.500000) at (7.347222,1.750000);
+Node10: Ellipse(Scott,0.972222,0.500000) at (7.347222,1.000000);
+spline -> solid from (1.111111,2.500000) to (1.611111,2.500000);
+spline -> solid from (2.583333,2.500000) to (3.083333,2.500000);
+spline -> solid from (2.361111,2.291667) to (3.347222,1.916667);
+spline -> solid from (4.333333,1.750000) to (5.041667,1.750000);
+spline -> solid from (4.472222,2.500000) to (4.972222,2.500000);
+spline -> solid from (5.902778,1.541667) to (6.958333,1.138889);
+spline -> solid from (6.152778,1.750000) to (6.791667,1.750000);
+spline -> solid from (6.097222,1.861111) to (6.958333,2.305556);
+spline -> solid from (6.069444,1.875000) to (6.902778,3.097222);
+spline -> solid from (5.777778,1.513889) to (7.069444,0.472222);
+.ps
+.PE
+.sp -.5i
+.ce
+Figure 4
+.H 1 "Node Attributes"
+.P
+The attributes of a node are its shape, size, label,
+the pointsize of the label, and color.
+.P
+By default, \*(DG draws nodes as ellipses, with labels in 14-point type.
+The default node size is \(12\(aa\(aa by \(34\(aa\(aa, but it may be
+increased to fit the label.  The default label is the node name.
+.P
+The \fIdraw\fP statement changes attributes of specific nodes.
+The keyword \f5nodes\fP indicates a change to the default attributes of nodes introduced subsequently.
+(That is, nodes that have already been named are not changed.)
+Some examples follow:
+.P
+.DS I N
+.ft 5
+.S 10 12
+.EQ
+delim off
+.EN
+draw a,b,c as Box;
+draw nodes as Box;
+draw tinyvertex as {circle rad .25 "$NAME"} ;
+draw nodes width 1.5 height 1;
+draw gate18 label "NAND";
+draw Newton, Moore pointsize 16;
+draw "main" color red;
+.S 10 16
+.ft
+.DE
+.P
+.H 2 "Node Shapes"
+There are seven pre-defined shapes: \f5Box\fP, \f5Square\fP, \f5Circle\fP, \f5Doublecircle\fP, \f5Ellipse\fP, \f5Diamond\fP, and \f5Plaintext\fP.
+If you need a node shape that is not one of these seven, you can define your own
+by writing a macro in the target graphics language.
+The macro must take as arguments: the string label of the node,
+the width, and the height.  In \*(PC, these are \f5$1, $2,\fP and \f5$3\fP.
+When \*(DG draws a node, it expands the shape macro over the center point of the node.
+You can place the definition of a shape macro in a block between \f5.PS\fP and \f5.PE\fP.
+The contents of this block are passed straight through to the graphics output.
+.P
+There are two limitations on user-defined shapes as contrasted with pre-defined shapes.
+First, \&\*(DG assumes that the height and width of the user-defined shape may be set independently.
+If a user-defined shape (such as some variation of a circle) has a fixed aspect ratio,
+some fine-turning of the drawing may be needed to make it look right.
+Second, \*(DG does not know the boundary of user-defined shapes,
+and \*(PC is not general enough for writing functions to define shape boundaries.
+Therefore, edges are clipped to the shape's bounding rectangle.
+This second limitation does not apply to shapes written in \*(PO,
+since the user also supplies a procedure to perform the clipping (see Appendix B).
+.P
+Here's a plausible example of a shape macro definition:
+.DS I N
+.S 10 12
+.ft 5
+\&.GS
+\&.PS
+define Triplecircle % [
+		circle rad .5   * $2;
+		circle rad .475 * $2 at last circle.c;
+		circle rad .45  * $2 at last circle.c;
+		$1 at last circle.c;
+	] %
+\&.PE
+edge from 1 to 2;
+draw 1 as Triplecircle height 1 width 1;
+draw 2 as Circle height 1 width 1;
+\&.GE
+.ft
+.S 10 16
+.DE
+.sp -3i
+.DF
+.PS 6
+box invis at (-5,0);
+arrowht = 0.111111;
+arrowwid  = 0.055556;
+define Circle	% [circle rad $2/2; $1 at last circle.c] %
+define Triplecircle % [ circle rad .5   * $2; circle rad .475 * $2 at last circle.c; circle rad .45  * $2 at last circle.c; $1 at last circle.c; ] %
+.ps 14
+Node0: Triplecircle("1",1.000000,1.000000) at (0.500000,2.000000);
+Node1: Circle("2",1.000000,1.000000) at (0.500000,0.500000);
+spline -> solid from (0.500000,1.500000) to (0.500000,1.000000);
+.ps
+.PE
+.ce
+.sp -.25i
+Figure 5
+.DE
+.P
+A shape can also be given by in-line graphics code, as shown in the
+third line above, where the default node shape was changed to a small circle.
+The drawing code is enclosed in curly braces.
+For these examples we assume the output language is \*(PC.
+The inline drawing code may use the variables \f5$NAME\fP (the node label),
+\&\f5$WIDTH\fP and \f5$HEIGHT\fP.  A slightly better definition for the third
+line above might be:
+.P
+.ft 5
+draw tinyvertex as {circle "$NAME" rad $WIDTH/2} ;
+.ft
+.P
+.H 2 "Node Labels"
+The default node label is its name.
+You can set the label to a different string.
+By this means you can create many nodes that share a common label.
+.P
+You can also give graphics code as a label instead of text.
+The graphics code is executed at the center of the node.
+Here's an example of a box labeled with \*(PC graphics code.
+The initial statement of the code writes an empty string
+to make an invisible reference point at the center of the
+node for the following ``move'' command.
+.DS I N
+.S 10 12
+.ft 5
+draw database label { ""; up .25; "sloppy"; down .5; "disk"} ;
+.ft 
+.S 10 16
+.DE
+.EQ
+delim $$
+.EN
+.H 2 "Node Colors"
+A color value is a string. Currently, only the \*(PO code generator uses color.
+It assumes the color value encodes an array of three
+floating point values for hue, saturation, and brightness.
+The user can define common colors within a \f5.PS/.PE\fP block.
+For \f5dag -Tps\fP, one might want to define:
+.DS I N
+.S 10 12
+.ft 5
+.nf
+\&.PS
+/red [.1 1 1] def
+\&.PE
+.fi
+.ft
+.S 10 16
+.DE
+Appendix B explains how to redefine the interpretation of color values
+to support gray-scale shading of nodes or other models.
+.H 1 "Edge Attributes"
+.P
+The attributes of an edge are its weight, label,
+the pointsize of the label, ink style,  and color.
+.P
+.DS I N
+.ft 5
+.S 10 12
+edge from a to b label "x" ;
+edge from b to c label {circle rad .1};
+.S 10 16
+.ft
+.DE
+.P
+The label can be a piece of text, or drawing code to be executed
+at the midpoint of the edge.
+Figure 6 is the description of a finite automaton and its picture.
+Note the labeled edges.
+.EQ
+delim off
+.EN
+.DF
+.S 8 10
+.ft 5
+\&.GR 6
+draw nodes as Circle width .5 height .5;
+draw LR_0 LR_3 LR_4 LR_8 as Doublecircle width .5 height .5;
+draw edges pointsize 8;
+LR_0 LR_2 label "SS(B)";
+LR_0 LR_1 label "SS(S)";
+LR_1 LR_3 label "S($end)";
+LR_2 LR_6 label "SS(b)";
+LR_2 LR_5 label "SS(a)";
+LR_2 LR_4 label "S(A)";
+LR_5 LR_7 label "S(b)";
+LR_5 LR_5 label "S(a)";
+LR_6 LR_6 label "S(b)";
+LR_6 LR_5 label "S(a)";
+LR_7 LR_8 label "S(b)";
+LR_7 LR_5 label "S(a)";
+LR_8 LR_6 label "S(b)";
+LR_8 LR_5 label "S(a)";
+.GE
+\&.GE
+.ft
+.S 10 16
+.PS 6.000000 3.233333
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 $1] %
+define Square	% [box wid $2 ht $2 $1] %
+define Circle	% [circle rad $2/2; $1 at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 $1] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; $1;] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; $1 at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 $1] %
+.ps 11
+Node0: Doublecircle("LR_0",0.833333,0.833333) at (0.416667,3.625000);
+Node1: Doublecircle("LR_3",0.833333,0.833333) at (3.083333,3.625000);
+Node2: Doublecircle("LR_4",0.833333,0.833333) at (3.083333,1.208333);
+Node3: Doublecircle("LR_8",0.833333,0.833333) at (5.750000,1.708333);
+Node4: Circle("LR_2",0.833333,0.833333) at (1.750000,1.208333);
+Node5: Circle("LR_1",0.833333,0.833333) at (1.750000,3.625000);
+Node6: Circle("LR_6",0.833333,0.833333) at (7.083333,0.916667);
+Node7: Circle("LR_5",0.833333,0.833333) at (3.083333,2.291667);
+Node8: Circle("LR_7",0.833333,0.833333) at (4.416667,2.416667);
+.ps
+.ps 8
+spline -> solid from (0.833333,3.625000) to (1.333333,3.625000);
+move to (1.083333,3.625000); "SS(S)";
+spline -> solid from (0.555556,3.236111) to (1.541667,1.569444);
+move to (1.027778,2.416667); "SS(B)";
+spline -> solid from (5.333333,1.694444) to (4.833333,1.666667) to (4.555556,1.680556) to (4.263889,1.694444) to (3.430556,2.069444);
+move to (4.416667,1.680556); "S(a)";
+spline -> solid from (6.041667,1.402778) to (6.708333,1.097222);
+move to (6.416667,1.222222); "S(b)";
+spline -> solid from (2.166667,1.208333) to (2.666667,1.208333);
+move to (2.416667,1.208333); "S(A)";
+spline -> solid from (1.986111,1.555556) to (2.736111,2.055556);
+move to (2.375000,1.805556); "SS(a)";
+spline -> solid from (2.041667,0.902778) to (2.930556,0.486111) to (3.222222,0.458333) to (3.500000,0.416667) to (5.333333,0.416667) to (5.611111,0.458333) to (5.875000,0.486111) to (6.694444,0.777778);
+move to (4.416667,0.416667); "SS(b)";
+spline -> solid from (2.166667,3.625000) to (2.666667,3.625000);
+move to (2.416667,3.625000); "S($end)";
+spline -> solid from (6.666667,0.916667) to (6.166667,0.916667) to (5.750000,0.930556) to (5.333333,0.944444) to (4.833333,0.972222) to (4.597222,1.027778) to (4.347222,1.083333) to (3.361111,1.972222);
+move to (5.069444,0.958333); "S(a)";
+spline -> solid from (6.986111,1.319444) to (6.930556,1.458333) to (7.083333,1.583333) to (7.236111,1.458333) to (7.180556,1.319444);
+move to (7.083333,1.583333); "S(b)";
+spline -> solid from (2.986111,2.694444) to (2.930556,2.833333) to (3.083333,2.958333) to (3.236111,2.833333) to (3.180556,2.694444);
+move to (3.083333,2.958333); "S(a)";
+spline -> solid from (3.500000,2.347222) to (3.750000,2.277778) to (4.000000,2.388889);
+move to (3.750000,2.277778); "S(b)";
+spline -> solid from (4.000000,2.388889) to (3.750000,2.472222) to (3.500000,2.347222);
+move to (3.750000,2.472222); "S(a)";
+spline -> solid from (4.722222,2.138889) to (5.361111,1.875000);
+move to (5.083333,1.986111); "S(b)";
+.ps
+.PE
+.sp -.25i
+.ce
+Figure 6
+.DE
+.EQ
+delim $$
+.EN
+.P
+.H 2 "Edge Weights"
+Edge weights (or costs) are integers.
+Increasing the weight of an edge makes \*(DG try to shorten it.
+The default edge weight is 1.  Internally, \*(DG may increase the
+weight of certain edges to improve the drawing.
+In the Unix History graph of Figure 1, we might decide
+that the edge between \f52 BSD\fP and \f52.8 BSD\fP should be favored
+over the edge between \f54.1 BSD\fP and \f52.8 BSD\fP.  This suggests:
+.P
+.ft 5
+edge from "2 BSD" to "2.8 BSD" weight 1000;
+.ft
+.P
+Internally, \*(DG increases the weight of some edges as part of its drawing algorithm.
+You may need to experiment with weight values a little to overcome these adjustments.
+.H 2 "Edge Styles"
+The user may also name the ``ink'' for drawing edges: \f5solid\fP, \f5dotted\fP, \f5dashed\fP, or \f5invis\fP.
+.P
+.ft 5
+edge from "2 BSD" to "2.8 BSD" dashed;
+.ft
+.H 2 "Edge Colors"
+Edge colors are specified like node colors.
+.DS I N
+.S 10 12
+.ft 5
+.nf
+edge from "2 BSD" to "2.8 BSD" color "[.2 1 1 ]";
+draw edges "[.3 .5 .5]";
+.fi
+.ft
+.S 10 16
+.DE
+.H 1 "Supplementary Commands"
+.P
+\*(DG has other commands for setting global attributes and fine-tuning drawings.
+The global attributes set the spacing between adjacent nodes and ranks.
+The \f5separate\fP command controls this spacing.
+The distance is given in inches.
+.DS I N
+.ft 5
+.S 10 12
+separate nodes .75;
+separate ranks 2;
+separate ranks 2 exactly;
+separate ranks 2 equally;
+.S 10 16
+.ft
+.DE
+.P
+The value given to ``\f5separate ranks\fP'' specifies the minimum separation.
+Often, when there are edges between nodes that are far apart horizontally,
+the connecting edges are nearly horizontal and are hard to read.
+In such cases, \*(DG may increase the separation between certain adjacent
+levels to improve the drawing.
+As a side effect, ranks are not equally spaced.
+The last two \f5separate\fP commands above show how to avoid this side-effect.
+The adverb ``\f5exactly\fP'' forces ranks to be separated by exactly 2 inches.
+On the other hand, ``\f5equally\fP'' tells \*(DG to do its best to reduce
+node-edge intersection while maintaining evenly separated ranks, which may be
+more aesthetically pleasing and readable.
+.P
+You can force \*(DG to fill the bounding box by giving the optional command
+\f5fill\fP at the end of the \f5.GS\fP or \f5.GR\fP line:
+.DS I N
+.ft 5
+\&.GS 6 8 fill
+.ft
+.DE
+\&\*(DG fills the box by increasing the spacing between nodes.  It does not
+change the node sizes.
+.P
+There are also commands to control the rank assignments of individual nodes.
+A graph description can specify that
+certain nodes should be placed on the minimum or maximum rank,
+or that a group of nodes should be kept together on the same rank.
+.DS I N
+.ft 5
+.S 10 12
+minimum rank root1 root2 root3;
+maximum rank leaf38 leaf39;
+same rank add sub mul div shift;
+.S 10 16
+.ft
+.DE
+.P
+Following is another drawing of Forrester's \fIWorld Dynamics\fP graph.
+In this drawing, (1) source nodes
+\fIS1, S8, S24, S30\fP and \fIS35\fP
+are constrained to appear at the minimum rank, (2) target nodes 
+\fIT1, T8, T24, T30\fP and \fIT35\fP are to appear at the maximum rank, and (3)
+all other nodes stay at the same ranks as in the drawing of the abstract.
+.DF
+.PS 3.5 2.5
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+.ps 6
+Node0: Ellipse(S8,0.750000,0.500000) at (2.875000,7.250000);
+Node1: Ellipse(S24,0.750000,0.500000) at (1.125000,7.250000);
+Node2: Ellipse(S1,0.750000,0.500000) at (8.625000,7.250000);
+Node3: Ellipse(S35,0.750000,0.500000) at (9.625000,7.250000);
+Node4: Ellipse(S30,0.750000,0.500000) at (16.375000,7.250000);
+Node5: Ellipse(T8,0.750000,0.500000) at (0.375000,0.250000);
+Node6: Ellipse(T24,0.750000,0.500000) at (1.875000,0.250000);
+Node7: Ellipse(T1,0.750000,0.500000) at (7.375000,0.250000);
+Node8: Ellipse(T35,0.750000,0.500000) at (3.625000,0.250000);
+Node9: Ellipse(T30,0.750000,0.500000) at (18.125000,0.250000);
+Node10: Ellipse(9,0.750000,0.500000) at (2.875000,6.250000);
+Node11: Ellipse(25,0.750000,0.500000) at (1.875000,6.250000);
+Node12: Ellipse(27,0.750000,0.500000) at (1.875000,1.250000);
+Node13: Ellipse(2,0.750000,0.500000) at (7.875000,6.250000);
+Node14: Ellipse(10,0.750000,0.500000) at (13.875000,6.250000);
+Node15: Ellipse(43,0.750000,0.500000) at (10.625000,6.250000);
+Node16: Ellipse(36,0.750000,0.500000) at (9.625000,6.250000);
+Node17: Ellipse(31,0.750000,0.500000) at (17.375000,3.250000);
+Node18: Ellipse(33,0.750000,0.500000) at (17.125000,4.250000);
+Node19: Ellipse(42,0.750000,0.500000) at (4.625000,5.250000);
+Node20: Ellipse(26,0.750000,0.500000) at (3.125000,5.250000);
+Node21: Ellipse(3,0.750000,0.500000) at (5.625000,5.250000);
+Node22: Ellipse(16,0.750000,0.500000) at (8.125000,4.250000);
+Node23: Ellipse(17,0.750000,0.500000) at (9.125000,5.250000);
+Node24: Ellipse(18,0.750000,0.500000) at (9.125000,4.250000);
+Node25: Ellipse(11,0.750000,0.500000) at (6.625000,5.250000);
+Node26: Ellipse(14,0.750000,0.500000) at (11.125000,4.250000);
+Node27: Ellipse(13,0.750000,0.500000) at (13.125000,5.250000);
+Node28: Ellipse(12,0.750000,0.500000) at (15.625000,4.250000);
+Node29: Ellipse(32,0.750000,0.500000) at (12.625000,2.250000);
+Node30: Ellipse(34,0.750000,0.500000) at (16.375000,3.250000);
+Node31: Ellipse(4,0.750000,0.500000) at (4.625000,4.250000);
+Node32: Ellipse(15,0.750000,0.500000) at (10.125000,2.250000);
+Node33: Ellipse(19,0.750000,0.500000) at (10.125000,4.250000);
+Node34: Ellipse(29,0.750000,0.500000) at (11.625000,2.250000);
+Node35: Ellipse(37,0.750000,0.500000) at (12.375000,6.250000);
+Node36: Ellipse(39,0.750000,0.500000) at (12.375000,3.250000);
+Node37: Ellipse(41,0.750000,0.500000) at (14.125000,4.250000);
+Node38: Ellipse(38,0.750000,0.500000) at (10.625000,5.250000);
+Node39: Ellipse(40,0.750000,0.500000) at (11.625000,5.250000);
+Node40: Ellipse(23,0.750000,0.500000) at (4.375000,1.250000);
+Node41: Ellipse(5,0.750000,0.500000) at (2.625000,3.250000);
+Node42: Ellipse(21,0.750000,0.500000) at (4.125000,3.250000);
+Node43: Ellipse(20,0.750000,0.500000) at (10.125000,3.250000);
+Node44: Ellipse(28,0.750000,0.500000) at (13.375000,3.250000);
+Node45: Ellipse(6,0.750000,0.500000) at (0.375000,2.250000);
+Node46: Ellipse(22,0.750000,0.500000) at (4.125000,2.250000);
+Node47: Ellipse(7,0.750000,0.500000) at (0.375000,1.250000);
+.ps
+.ps 14
+spline -> solid from (2.875000,7.000000) to (2.875000,6.500000);
+spline -> solid from (1.347222,7.041667) to (1.722222,6.486111);
+spline -> solid from (1.125000,7.000000) to (1.125000,3.500000) to (1.152778,3.305556) to (1.194444,3.097222) to (1.777778,1.500000);
+spline -> solid from (8.402778,7.041667) to (8.027778,6.486111);
+spline -> solid from (8.652778,7.000000) to (13.680556,6.472222);
+spline -> solid from (9.888889,7.083333) to (10.430556,6.472222);
+spline -> solid from (9.625000,7.000000) to (9.625000,6.500000);
+spline -> solid from (16.277778,7.000000) to (16.152778,6.500000) to (16.138889,6.250000) to (16.125000,6.000000) to (16.333333,4.500000) to (16.388889,4.333333) to (16.444444,4.166667) to (17.152778,3.458333);
+spline -> solid from (16.458333,7.000000) to (17.055556,4.500000);
+spline -> solid from (3.208333,6.125000) to (4.347222,5.430556);
+spline -> solid from (3.138889,6.083333) to (3.805556,5.333333) to (3.833333,5.166667) to (3.875000,5.000000) to (3.875000,4.500000) to (3.902778,4.333333) to (3.944444,4.166667) to (4.805556,3.319444) to (4.875000,3.250000) to (4.944444,3.180556) to (7.194444,0.472222);
+spline -> solid from (1.875000,6.000000) to (1.875000,5.500000) to (1.902778,5.347222) to (1.944444,5.180556) to (3.305556,3.194444) to (3.375000,3.125000) to (3.444444,3.055556) to (4.986111,2.333333) to (5.041667,2.166667) to (5.097222,2.000000) to (5.152778,1.500000) to (5.194444,1.375000) to (5.250000,1.236111) to (7.069444,0.402778);
+spline -> solid from (2.166667,6.097222) to (2.888889,5.444444);
+spline -> solid from (1.875000,1.000000) to (1.875000,0.500000);
+spline -> solid from (7.541667,6.138889) to (5.916667,5.402778);
+spline -> solid from (7.916667,6.000000) to (8.083333,4.500000);
+spline -> solid from (8.166667,6.097222) to (8.888889,5.444444);
+spline -> solid from (7.736111,6.041667) to (7.500000,5.430556) to (7.458333,5.222222) to (7.416667,5.000000) to (7.375000,0.500000);
+spline -> solid from (8.027778,6.027778) to (8.305556,5.416667) to (8.375000,5.305556) to (8.444444,5.180556) to (8.944444,4.486111);
+spline -> solid from (13.722222,6.013889) to (6.930556,5.402778);
+spline -> solid from (13.875000,6.000000) to (13.875000,5.500000) to (13.833333,5.250000) to (13.791667,5.000000) to (11.472222,4.347222);
+spline -> solid from (14.138889,6.083333) to (14.805556,5.333333) to (14.833333,5.166667) to (14.875000,5.000000) to (14.875000,2.500000) to (14.833333,2.305556) to (14.805556,2.111111) to (14.583333,1.500000) to (14.500000,1.375000) to (14.430556,1.250000) to (7.736111,0.305556);
+spline -> solid from (13.833333,6.000000) to (13.319444,5.458333);
+spline -> solid from (14.194444,6.111111) to (15.305556,5.305556) to (15.375000,5.152778) to (15.458333,5.000000) to (15.569444,4.500000);
+spline -> solid from (10.625000,6.000000) to (10.625000,5.500000);
+spline -> solid from (10.888889,6.083333) to (11.430556,5.472222);
+spline -> solid from (9.708333,6.000000) to (10.055556,4.500000);
+spline -> solid from (17.375000,3.000000) to (17.375000,2.500000) to (17.333333,2.361111) to (17.305556,2.208333) to (16.375000,1.152778) to (16.305556,1.111111) to (16.236111,1.055556) to (7.750000,0.291667);
+spline -> solid from (17.291667,3.000000) to (12.986111,2.319444);
+spline -> solid from (17.388889,4.083333) to (18.055556,3.333333) to (18.083333,3.166667) to (18.125000,3.000000) to (18.125000,0.500000);
+spline -> solid from (16.902778,4.041667) to (16.527778,3.486111);
+spline -> solid from (4.625000,5.000000) to (4.625000,4.500000);
+spline -> solid from (3.444444,5.111111) to (4.375000,4.430556);
+spline -> solid from (5.361111,5.083333) to (4.819444,4.472222);
+spline -> solid from (8.263889,4.027778) to (8.513889,3.430556) to (8.583333,3.333333) to (8.652778,3.222222) to (9.847222,2.430556);
+spline -> solid from (9.388889,5.083333) to (9.930556,4.472222);
+spline -> solid from (9.361111,4.055556) to (11.500000,3.277778) to (11.541667,3.138889) to (11.583333,3.000000) to (11.611111,2.500000);
+spline -> solid from (6.347222,5.069444) to (4.930556,4.402778);
+spline -> solid from (11.083333,4.000000) to (11.041667,3.500000) to (11.000000,3.347222) to (10.958333,3.194444) to (10.305556,2.472222);
+spline -> solid from (12.791667,5.138889) to (10.361111,4.444444);
+spline -> solid from (15.555556,4.000000) to (15.472222,3.500000) to (15.416667,3.333333) to (15.375000,3.166667) to (11.680556,2.500000);
+spline -> solid from (12.625000,2.000000) to (12.125000,1.958333) to (4.750000,1.291667);
+spline -> solid from (16.138889,3.055556) to (11.736111,2.486111);
+spline -> solid from (4.291667,4.138889) to (2.916667,3.416667);
+spline -> solid from (9.819444,2.111111) to (7.611111,0.430556);
+spline -> solid from (10.125000,4.000000) to (9.625000,3.958333) to (4.486111,3.305556);
+spline -> solid from (10.125000,4.000000) to (10.125000,3.500000);
+spline -> solid from (10.291667,4.027778) to (13.194444,3.472222);
+spline -> solid from (11.625000,2.000000) to (11.625000,1.500000) to (11.652778,1.375000) to (11.694444,1.250000) to (17.763889,0.319444);
+spline -> solid from (12.375000,6.000000) to (12.375000,3.500000);
+spline -> solid from (12.708333,6.138889) to (14.305556,5.291667) to (14.291667,5.152778) to (14.291667,5.000000) to (14.180556,4.500000);
+spline -> solid from (12.041667,6.125000) to (10.902778,5.430556);
+spline -> solid from (12.152778,6.041667) to (11.777778,5.486111);
+spline -> solid from (12.041667,3.138889) to (10.430556,2.402778);
+spline -> solid from (14.125000,4.000000) to (14.125000,3.500000) to (14.083333,3.263889) to (14.055556,3.013889) to (11.666667,2.500000);
+spline -> solid from (10.430556,5.041667) to (4.986111,4.305556);
+spline -> solid from (11.305556,5.125000) to (10.263889,4.486111);
+spline -> solid from (4.027778,1.152778) to (2.180556,0.388889);
+spline -> solid from (4.666667,1.097222) to (7.041667,0.361111);
+spline -> solid from (2.291667,3.138889) to (0.680556,2.402778);
+spline -> solid from (2.625000,3.000000) to (2.625000,2.500000) to (2.652778,2.319444) to (2.694444,2.138889) to (3.500000,0.500000);
+spline -> solid from (2.847222,3.041667) to (3.305556,2.361111) to (3.375000,2.263889) to (3.444444,2.166667) to (4.152778,1.458333);
+spline -> solid from (4.125000,3.000000) to (4.125000,2.500000);
+spline -> solid from (10.125000,3.000000) to (10.125000,2.500000);
+spline -> solid from (13.069444,3.097222) to (11.652778,2.500000);
+spline -> solid from (0.375000,2.000000) to (0.375000,1.500000);
+spline -> solid from (4.208333,2.000000) to (4.319444,1.500000);
+spline -> solid from (3.972222,2.027778) to (3.694444,1.416667) to (3.652778,1.208333) to (3.625000,1.000000) to (3.625000,0.500000);
+spline -> solid from (0.375000,1.000000) to (0.375000,0.500000);
+.ps
+.PE
+.ce
+Figure 7
+.DE
+.P
+Forcing a group of nodes to be on the same rank can cause \fIflat\fP-edges, i.e.,
+edges that point side ways instead of downward. If possible,
+\*(DG draws flat-edges from left to right.
+As a side effect, left-to-right order in a rank can be controlled by
+creating invisible flat-edges. Figure 8 shows a graph description
+in which the relative placements of nodes are completely specified.
+Note that the edge crossing is unavoidable.
+.DS I N
+.ft 5
+.S 10 12
+.sp .25i
+.in 1i
+\&.GS
+same rank 1 2;
+same rank 3 4;
+1 4;
+2 3;
+1 2 invis;
+3 4 invis;
+\&.GE
+.sp .25i
+.in
+.S 10 16
+.ft
+.ce
+Figure 8
+.DE
+.sp -2.5i
+.P
+.PS 10 1.5
+.ps 10
+box invis at (-3.5,0);
+arrowwid = 0.050000;
+arrowht  = 0.150000;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+Box0: Ellipse(1,0.750000,0.500000) at (0.375000,1.250000);
+Box1: Ellipse(2,0.750000,0.500000) at (1.375000,1.250000);
+Box2: Ellipse(3,0.750000,0.500000) at (0.375000,0.250000);
+Box3: Ellipse(4,0.750000,0.500000) at (1.375000,0.250000);
+spline -> solid from (0.583333,1.041667) to (1.166667,0.458333);
+spline -> solid from (1.166667,1.041667) to (0.583333,0.458333);
+.ps
+.PE
+.P
+As a short-cut, \*(DG automatically places nodes on the same rank and creates
+invisible flat-edges if edges are \fIordered\fP.  The following example
+is a small part of a parse tree.  Because the left-to-right order of
+sibling nodes is fixed, the edges are ordered.
+.DS I N
+.ft 5
+.S 10 12
+\&.GS
+ordered edge from "for-stmt" to "for" "var" "=" "expr1" "to" "expr2";
+ordered edge from "expr1" to "left_op" "*" "right_op";
+\&.GE
+.S 10 16
+.ft
+.DE
+.PS 4.000000 1.535181
+arrowht = 0.111111;
+arrowwid  = 0.055556;
+define Box	% [box wid $2 ht $3 $1] %
+.ps 8
+Node0: Box("for-stmt",1.388889,0.500000) at (2.694444,2.250000);
+Node1: Box("for",0.750000,0.500000) at (0.694444,1.250000);
+Node2: Box("var",0.750000,0.500000) at (1.694444,1.250000);
+Node3: Box("=",0.750000,0.500000) at (2.694444,1.250000);
+Node4: Box("expr1",0.972222,0.500000) at (3.805556,1.250000);
+Node5: Box("to",0.750000,0.500000) at (4.916667,1.250000);
+Node6: Box("expr2",0.972222,0.500000) at (6.027778,1.250000);
+Node7: Box("left_op",1.250000,0.500000) at (2.555556,0.250000);
+Node8: Box("*",0.750000,0.500000) at (3.805556,0.250000);
+Node9: Box("right_op",1.388889,0.500000) at (5.125000,0.250000);
+spline ->  from (2.027778,2.000000) to (1.083333,1.500000);
+spline ->  from (2.361111,2.000000) to (1.916667,1.500000);
+spline ->  from (2.694444,2.000000) to (2.694444,1.500000);
+spline ->  from (3.069444,2.000000) to (3.555556,1.500000);
+spline ->  from (3.388889,2.013889) to (4.583333,1.500000);
+spline ->  from (3.388889,2.097222) to (5.791667,1.500000);
+spline ->  from (3.388889,1.000000) to (2.833333,0.500000);
+spline ->  from (3.805556,1.000000) to (3.805556,0.500000);
+spline ->  from (4.250000,1.000000) to (4.833333,0.500000);
+.ps
+.PE
+.ce
+Figure 8
+.P
+There are many other ways one might want to control a drawing,
+but it is difficult to build a satisfactory tool that achieves
+many, possibly conflicting, aesthetic goals.  Users can exercise
+some control over node placement by setting edge weights and creating
+invisible edges.
+For finer control over drawings we suggest
+changing the drawing with a graphical editor or by modifying
+the generated code itself.
+We also refer the interested reader to [T88] for a different approach.
+.P
+There are no absolute restrictions on the graphs that \*(DG can draw.
+Self-edges and multi-edges are allowed.
+For picture clarity, it's best to avoid nodes with many incident edges.
+For instance, in procedure call graphs, it is a good idea to eliminate common
+library calls (\fIe.g.\fP, \f5stdio\fP) before making the drawing.
+Removing these less interesting nodes both yields a more informative drawing and
+reduces run time.
+.H 1 "Drawing Algorithms"
+.P
+\*(DG has three main components: the parser, \fIdraw_dag\fP,
+and the code generator.  The parser is written in \s-2YACC\s+2.
+It builds an input graph of attributed nodes and edges.
+The graph is passed to the drawing procedure \fIdraw_dag\fP,
+which creates the layout by setting $X$ and $Y$ coordinates of nodes,
+and finding spline control points for drawing edges.
+The code generator traverses the attributed graph to emit target code.
+.P
+To design algorithms for drawing graphs, we need to define what makes a 
+``good'' drawing.
+We have chosen three desirable properties for drawings of directed graphs:
+.P
+.B P1.
+The drawing should respect the partial order implied by edges of the graph.
+For example, nodes are placed in ranks so that a tail node is above its
+corresponding head node.
+If the graph is not acyclic, we break cycles by
+reversing some edges in the computation of the layout.  
+.P
+.B P2.
+The drawing should not be cluttered with irrelevance.  For example,
+edges connect at nodes.  Therefore, edge crossings in the drawing are undesirable
+and misleading because they do not represent information about the
+underlying abstract graph.
+.P
+.B P3.
+The drawing should reveal the relationships implied by the edges, by placing
+adjacent nodes close together.
+.P
+Unfortunately, these goals conflict.
+For instance,
+the placement of nodes in ranks may make it impossible to avoid edge crossings.
+Also, the minimization of edge-crossings in a layout is computationally intractable for relevant definitions of this problem.
+So we are satisfied to find heuristics that run quickly and make good layouts in common cases.
+These techniques are described in depth in [GNV87a]; here we sketch them
+briefly as an aid to understanding the layouts made by \*(DG.
+.P
+.I draw_dag
+has four passes.  The first pass finds an optimal rank assignment for the
+nodes, satisfying P1 and P3.  The optimal rank assignment problem
+is to assign integer ranks to nodes such that the sum of the costs of the
+edges is minimized.  The cost of an edge is the product of its weight and
+its length,  where the length is the difference in the rank
+assignments of its head and tail.  The optimal rank assignment problem
+can be formulated as an integer program.
+Because of the special nature of the problem, the simplex method
+for linear programming can be used to solve the integer program.
+We have developed a
+combinatorial algorithm that finds the solution 
+in a factor of $O(|E|)$ less time than the standard simplex algorithm
+and uses only $O(|E|)$ space [GNV87b].
+Following rank assignment, \fIdraw_dag\fP
+creates dummy nodes where long edges cross ranks.  The placement of dummy
+nodes determines edge crossings and is also 
+an aid to drawing splines for long edges.  Consequently,
+optimal rank assignment is important not only for its
+contribution to drawing quality, 
+but also because it minimizes the number of dummy nodes.
+This reduces the number of edge crossings
+and the cost of subsequent passes, which have a factor of
+$O(|V|)$ in their running time.
+.P
+The second pass orders nodes from left to right within ranks.
+The order respects any flat-edges joining nodes in the same ranks (P1).
+This pass minimizes the number of edge crossings (P2),
+and determines how closely connected nodes may be placed (P3).
+It is based on an iterative technique like that of [S81][R86].
+The key improvements are a new weight function, and local optimizations.
+We call the weight function the ``weighted median'';
+it produces less crossings by reducing the effects of widely spread nodes,
+and is inexpensive to compute.
+Informally, the weighted median 
+of a node with respect to an adjacent rank is defined as follows.
+When the number of neighbors of a node in the concerned adjacent rank
+is odd, the weighted median is simply the median position of its
+neighbors. When the number of neighbors is even, the weighted median
+is in between the left and the right median positions.
+The exact value is tilted toward the side where neighbor nodes are
+more tightly packed.
+.P
+The weighted median heuristic (and other similar heuristics)
+tends to work better if the initial order of nodes is good.
+To enhance this condition,
+we apply transpositions of
+adjacent nodes to precondition the inputs to the weighted median method and to
+further optimize its solutions.
+The transposition heuristic
+can be viewed as a descent method to find local optima.
+.P
+The third pass assigns absolute coordinates to nodes,
+respecting the ordering determined by the previous pass (P3).
+The optimal assignment can be formulated as a set of linear
+constraints and an objective function involving absolute values.
+There is a way to transform this to a linear program by introducing
+extra variables.  Since this is the bottleneck in \fIdraw_dag\fP,
+we have developed a fast heuristic 
+based on computation of the weighted median positions of adjacent nodes
+with additional local optimizations.
+.P
+The final pass finds the spline control points for edge placement.
+There are several cases to consider, including self-edges, edges between
+nodes on the same rank, adjacent ranks, or nonadjacent ranks, possibly
+in the presence of multi-edges.
+Short edges are easy to draw; we use a single B-spline [M85] that is
+shaped according to the number of parallel multi-edges being drawn.
+Long edges, which have endpoints on nonadjacent ranks,
+are more difficult since they may
+pass near other nodes and change direction.
+The B-spline control points are chosen for
+.BL 15 0
+.LI
+smoothness,
+.LI
+avoiding node intersections, and
+.LI
+avoiding edge crossings.
+.LE
+.P
+The dummy nodes are created with a
+height a little larger than the highest non-dummy node in the same rank,
+and width usually twice the default node separation.  This is big enough
+to make a spline inside the boundaries of the dummy node, if necessary.
+On the other hand, if there is space next to the dummy node, it is
+often preferable to encroach on it to draw a smoother spline.
+.P
+The edge drawing procedure in \fIdraw_dag\fP visits each dummy node to
+choose its spline control points.  If a straight line between the neighbors
+of the dummy node does not intersect any other node, nor change the order of
+edge crossings, then the dummy node is deleted (Figure 9a).
+This removes small bumps in the edges.
+Next, \fIdraw_dag\fP aims the incident edges as close to the center of the dummy node
+box as possible, without intersecting adjacent nodes.
+\&\fIdraw_dag\fP uses the points where the edges intersect the dummy node
+as spline control points.  It also finds a third point to determine
+how the spline bends as it passes through the dummy node.
+If the intersection of the edges lies inside the dummy node (Figure 9b),
+\fIdraw_dag\fP chooses it as the third control point.
+Otherwise, \fIdraw_dag\fP tries to move the edges toward each other
+so they do intersect (Figure 9c) and
+again takes the intersection as the third control point.
+If the edges can't be made to intersect, but the angle between them is acute, \fIdraw_dag\fP can still make a smooth spline by choosing the midpoint of the opposite side.
+When the angle is obtuse, that is, the edges are close to being parallel,
+then it chooses the midpoint of the dummy node box.
+In the latter case the spline has two points of inflection
+as it passes through the dummy node, which is not as smooth as the
+other cases which have only one,
+but the extra turn is necessary when an edge
+makes a ``jog'' as it passes through a rank near other nodes (Figure 9d).
+.P
+Moving an edge may create an edge intersection
+near an incident real (non-dummy) node, as in Figure 9e.
+Such intersections are eliminated by sorting the incident edges according
+to the $X$ coordinates of the other endpoints, and moving their nearby
+endpoints slightly (Figure 9f).
+.DF
+.PS 6.5
+scale=250
+box ht 100 wid 75 at (0,0);
+line dashed from last box.c + 200,120 to last box.c to last box.c + -200,-190;
+line from last box.c + 200,120 to last box.c + -200,-190;
+"(a)" at last box.c +0,-300;
+box ht 100 wid 75 at (500,0);
+line from last box.c + 200,156.7 to last box.c  to last box.c + -33.3,-200;
+"\(bu" at last box.c + 37.5,27;
+"\(bu" at last box.c+ -8.3333333,-51;
+"\(bu" at last box.c + 0,-2;
+"(b)" at last box.c +0,-300;
+box ht 100 wid 75 at (1000,0);
+line from last box.c + 200,60 to last box.c + -37.5,40;
+line dashed from last box.c + -200,-40 to last box.c+ 37.5,7.5;
+line from last box.c + -200,-40 to last box.c + 0,42.22222;
+"\(bu" at last box.c + 0,40;
+"\(bu" at last box.c + -37.5,26;
+"\(bu" at last box.c + 37.5,42;
+"(c)" at last box.c +0,-300;
+.PE
+.sp -.5i
+.PS 6.5
+box ht 100 wid 75 at 0,0;
+line from last box.c + 200,40 to last box.c + -37.5,-6.66666;
+line from last box.c + -200,-40 to last box.c + 37.5,-20;
+"\(bu" at last box.c + 0,-2;
+"\(bu" at last box.c + 37.5,7;
+"\(bu" at last box.c + -37.5,-30;
+"(d)" at last box +0,-300;
+box ht 100 wid 75 at 500,0;
+line from last box.c + 116.7,-200 to last box.c + 37.5,-40;
+line from last box.c + 200,-83.3 to last box.c + 0,-50;
+"(e)" at last box +0,-300;
+box ht 100 wid 75 at 1000,0;
+line from last box.c + 116,-200 to last box.c + 0,-50;
+line from last box.c + 200,-83.3 to last box.c + 0,-50;
+"(f)" at last box +0,-300;
+.PE
+.ce
+Figure 9
+.DE
+.P
+Tables 1-3 show the performance of \fIdraw_dag\fP using
+various node placement methods.
+The tables list the time spent in the three node placement
+passes: time spent on level (or rank) assignment $t sub level$,
+time spent ordering nodes within ranks to reduce edge crossings $t sub cross$,
+and time spent finding final coordinates $t sub  coord$.
+The total time $t sub total$ is the sum of these plus time spent in initialization
+and creating splines.
+The times were measured on a VAX-8650 under the 4.3BSD UNIX System and
+averaged over 5 runs to reduce statistical fluctuation.
+Times were measured on three graphs,
+the \fIWorld Dynamics\fP graph from the abstract of this paper and
+two procedure call graphs from \fBC\fP programs.
+\&\fIWorld Dynamics \fP has 48 nodes and 69 edges.
+The initial placement has 121 crossings.
+\&\fICallGraph-1\fP is the graph of Figure 10, a good test case.
+It has 54 nodes and 90 edges, and the initial placement has 222 crossings.
+\&\fICallGraph-2\fP is shown in Figure 11.  It has 38 nodes, 58 edges, and
+the initial placement has 70 crossings.
+.P
+We tried three algorithms for ordering of nodes within ranks:
+(1) \&\fIwmedian\fP is \*(DG's weighted median algorithm,
+(2) \&\fIbcenter\fP is the barycenter method described in [S81],
+and (3) \fIrmedian\fP is the ``right median'' [E86], which orders nodes using
+the position of the median neighbor when the number of neighbors is odd,
+and the right median neighbor otherwise.
+We also tried all three methods in combination with transposition of
+adjacent nodes.
+To simplify the comparison of relative performance,
+the iterative loop for minimizing edge crossing is set to terminate
+after exactly 24 iterations.
+In practice, the loop termination is determined by an adaptive parameter
+that depends on the convergent rate of a solution [GNV87a].
+Thus, for example, the total time for the \fIWorld Dynamics\fP
+graph using \fIwmedian+\fP
+is slightly higher than it would be in an actual run.
+The experiments show that weighted median finds the drawings with
+the fewest number of crossings, and in about the same run-time as the other methods.
+All three methods improved by adding transposition, which seems well worth
+the extra computational expense.  For instance, in \fICallGraph-1\fP drawn
+by weighted median, transposition reduced the number of crossings from 61 to 32,
+nearly 50%.
+.DS C
+.sp 1
+.TS
+allbox;
+c s s s s s
+c c c c c c
+l n n n n n.
+World Dynamics
+Method	$n sub  cross$	$t sub level$	$t sub crossing$	$t sub coord$	$t sub total$
+wmedian	59	.08	.54	.46	1.13
+bcenter	59	.08	.56	.50	1.20
+rmedian	62	.08	.57	.54	1.24
+wmedian+	41	.08	1.29	.46	1.90
+bcenter+	43	.08	1.31	.46	1.91
+rmedian+	47	.08	1.26	.49	1.89
+.TE
+.ce
+Table 1
+.DE
+.PS 6.000000 1.990274
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+.ps 2
+Node0: Ellipse(aoutput,1.791667,0.500000) at (17.902778,10.750000);
+Node1: Ellipse(arout,1.388889,0.500000) at (14.902778,7.250000);
+Node2: Ellipse(callopt,1.791667,0.500000) at (24.583333,14.250000);
+Node3: Ellipse(fopen,1.388889,0.500000) at (27.569444,10.750000);
+Node4: Ellipse(gtnm,1.194444,0.500000) at (19.638889,10.750000);
+Node5: Ellipse(nxti,1.194444,0.500000) at (26.027778,10.750000);
+Node6: Ellipse(stin,1.194444,0.500000) at (24.583333,10.750000);
+Node7: Ellipse(gin,1.000000,0.500000) at (23.236111,10.750000);
+Node8: Ellipse(osummary,2.000000,0.500000) at (21.486111,10.750000);
+Node9: Ellipse(unlink,1.597222,0.500000) at (29.305556,10.750000);
+Node10: Ellipse(cempty,1.597222,0.500000) at (36.875000,14.250000);
+Node11: Ellipse(aryfil,1.597222,0.500000) at (35.305556,7.250000);
+Node12: Ellipse(summary,1.791667,0.500000) at (34.069444,10.750000);
+Node13: Ellipse(exit,1.194444,0.500000) at (36.319444,10.750000);
+Node14: Ellipse(chfind,1.597222,0.500000) at (7.013889,10.750000);
+Node15: Ellipse(strcmp,1.597222,0.500000) at (7.013889,3.750000);
+Node16: Ellipse(defin,1.388889,0.500000) at (9.263889,7.250000);
+Node17: Ellipse(closure,1.791667,0.500000) at (42.527778,10.750000);
+Node18: Ellipse(setunion,2.000000,0.500000) at (44.291667,7.250000);
+Node19: Ellipse(writem,1.597222,0.500000) at (47.847222,3.750000);
+Node20: Ellipse(prlook,1.597222,0.500000) at (37.152778,7.250000);
+Node21: Ellipse(cpfir,1.388889,0.500000) at (44.375000,10.750000);
+Node22: Ellipse(flset,1.388889,0.500000) at (46.236111,7.250000);
+Node23: Ellipse(cpres,1.388889,0.500000) at (35.138889,14.250000);
+Node24: Ellipse(cpyact,1.597222,0.500000) at (2.833333,10.750000);
+Node25: Ellipse(ungetc,1.597222,0.500000) at (2.833333,3.750000);
+Node26: Ellipse(gettok,1.597222,0.500000) at (5.847222,7.250000);
+Node27: Ellipse(fdtype,1.597222,0.500000) at (4.000000,7.250000);
+Node28: Ellipse(cstash,1.597222,0.500000) at (9.263889,3.750000);
+Node29: Ellipse(finact,1.597222,0.500000) at (15.472222,10.750000);
+Node30: Ellipse(fclose,1.597222,0.500000) at (16.638889,7.250000);
+Node31: Ellipse(skipcom,1.791667,0.500000) at (5.069444,3.750000);
+Node32: Ellipse(go2gen,1.597222,0.500000) at (37.958333,10.750000);
+Node33: Ellipse(go2out,1.597222,0.500000) at (39.222222,14.250000);
+Node34: Ellipse(hideprod,2.000000,0.500000) at (50.555556,14.250000);
+Node35: Ellipse(main,1.194444,0.500000) at (38.055556,17.750000);
+Node36: Ellipse(setup,1.388889,0.500000) at (11.194444,14.250000);
+Node37: Ellipse(stagen,1.597222,0.500000) at (41.069444,14.250000);
+Node38: Ellipse(output,1.597222,0.500000) at (47.847222,14.250000);
+Node39: Ellipse(others,1.597222,0.500000) at (32.305556,14.250000);
+Node40: Ellipse(warray,1.597222,0.500000) at (31.138889,10.750000);
+Node41: Ellipse(putitem,1.791667,0.500000) at (47.847222,10.750000);
+Node42: Ellipse(state,1.388889,0.500000) at (46.013889,10.750000);
+Node43: Ellipse(symnam,1.597222,0.500000) at (51.791667,0.250000);
+Node44: Ellipse(precftn,1.791667,0.500000) at (53.055556,3.750000);
+Node45: Ellipse(wract,1.388889,0.500000) at (51.625000,10.750000);
+Node46: Ellipse(wdef,1.194444,0.500000) at (49.583333,10.750000);
+Node47: Ellipse(cpyunion,2.000000,0.500000) at (9.055556,10.750000);
+Node48: Ellipse(defout,1.597222,0.500000) at (13.125000,10.750000);
+Node49: Ellipse(cpycode,1.791667,0.500000) at (11.194444,10.750000);
+Node50: Ellipse(sprintf,1.791667,0.500000) at (0.902778,0.250000);
+Node51: Ellipse(apack,1.388889,0.500000) at (40.194444,10.750000);
+Node52: Ellipse(wrstate,1.791667,0.500000) at (51.291667,7.250000);
+Node53: Ellipse(chcopy,1.597222,0.500000) at (47.847222,0.250000);
+.ps
+.ps 14
+spline -> solid from (17.680556,10.513889) to (15.097222,7.486111);
+spline -> solid from (24.916667,14.013889) to (28.986111,10.986111);
+spline -> solid from (24.347222,14.013889) to (21.694444,11.000000);
+spline -> solid from (24.138889,14.041667) to (18.319444,10.972222);
+spline -> solid from (24.472222,14.000000) to (23.319444,11.000000);
+spline -> solid from (24.583333,14.000000) to (24.583333,11.000000);
+spline -> solid from (24.694444,14.000000) to (25.916667,11.000000);
+spline -> solid from (24.222222,14.013889) to (19.944444,10.972222);
+spline -> solid from (24.805556,14.000000) to (27.444444,11.000000);
+spline -> solid from (36.819444,14.000000) to (36.347222,11.000000);
+spline -> solid from (36.666667,14.013889) to (34.263889,11.000000);
+spline -> solid from (36.750000,14.000000) to (35.402778,10.916667) to (35.361111,10.708333) to (35.319444,10.500000) to (35.305556,7.500000);
+spline -> solid from (33.305556,10.625000) to (17.305556,7.388889);
+spline -> solid from (7.180556,10.500000) to (9.097222,7.500000);
+spline -> solid from (7.013889,10.500000) to (7.013889,4.000000);
+spline -> solid from (9.263889,7.000000) to (9.263889,4.000000);
+spline -> solid from (42.152778,10.527778) to (37.486111,7.472222);
+spline -> solid from (42.527778,10.500000) to (42.527778,7.500000) to (42.555556,7.361111) to (42.597222,7.208333) to (47.500000,3.972222);
+spline -> solid from (42.652778,10.500000) to (44.152778,7.500000);
+spline -> solid from (42.055556,10.541667) to (35.722222,7.458333);
+spline -> solid from (47.055556,3.708333) to (1.763889,0.319444);
+spline -> solid from (48.125000,3.513889) to (51.513889,0.486111);
+spline -> solid from (47.847222,3.500000) to (47.847222,0.500000);
+spline -> solid from (37.611111,7.041667) to (51.347222,0.458333);
+spline -> solid from (43.930556,10.555556) to (37.569444,7.458333);
+spline -> solid from (44.513889,10.500000) to (46.097222,7.500000);
+spline -> solid from (44.361111,10.500000) to (44.291667,7.500000);
+spline -> solid from (43.875000,10.583333) to (35.805556,7.444444);
+spline -> solid from (35.222222,14.000000) to (36.222222,11.000000);
+spline -> solid from (35.055556,14.000000) to (34.138889,11.000000);
+spline -> solid from (2.916667,10.500000) to (3.916667,7.500000);
+spline -> solid from (3.041667,10.513889) to (5.638889,7.486111);
+spline -> solid from (2.833333,10.500000) to (2.833333,4.000000);
+spline -> solid from (6.083333,7.013889) to (9.027778,3.986111);
+spline -> solid from (5.930556,7.000000) to (6.930556,4.000000);
+spline -> solid from (5.625000,7.013889) to (3.041667,4.000000);
+spline -> solid from (5.777778,7.000000) to (5.111111,4.000000);
+spline -> solid from (15.555556,10.500000) to (16.555556,7.500000);
+spline -> solid from (37.750000,10.500000) to (35.486111,7.500000);
+spline -> solid from (39.125000,14.000000) to (38.041667,11.000000);
+spline -> solid from (50.555556,14.000000) to (50.555556,11.000000) to (50.513889,10.791667) to (50.486111,10.583333) to (47.930556,4.000000);
+spline -> solid from (38.041667,17.500000) to (38.041667,14.500000) to (38.000000,14.319444) to (37.972222,14.125000) to (36.430556,11.000000);
+spline -> solid from (37.694444,17.555556) to (32.666667,14.472222);
+spline -> solid from (37.527778,17.625000) to (25.236111,14.430556);
+spline -> solid from (37.763889,17.527778) to (34.138889,14.319444) to (34.097222,14.166667) to (34.069444,14.000000) to (34.069444,11.000000);
+spline -> solid from (38.569444,17.625000) to (49.888889,14.430556);
+spline -> solid from (38.138889,17.500000) to (39.138889,14.500000);
+spline -> solid from (38.527778,17.597222) to (47.319444,14.430556);
+spline -> solid from (38.263889,17.513889) to (40.861111,14.486111);
+spline -> solid from (38.444444,17.555556) to (44.305556,14.291667) to (44.333333,14.152778) to (44.375000,14.000000) to (44.375000,11.000000);
+spline -> solid from (37.958333,17.500000) to (36.958333,14.500000);
+spline -> solid from (37.833333,17.513889) to (35.319444,14.486111);
+spline -> solid from (37.486111,17.680556) to (11.847222,14.347222);
+spline -> solid from (11.555556,14.027778) to (16.569444,10.944444) to (16.597222,10.722222) to (16.638889,10.500000) to (16.638889,7.500000);
+spline -> solid from (11.486111,14.027778) to (15.180556,10.986111);
+spline -> solid from (10.666667,14.083333) to (1.416667,10.916667) to (1.375000,10.708333) to (1.333333,10.500000) to (0.902778,0.500000);
+spline -> solid from (10.708333,14.069444) to (3.305556,10.958333);
+spline -> solid from (11.194444,14.000000) to (11.194444,11.000000);
+spline -> solid from (11.333333,14.000000) to (12.986111,11.000000);
+spline -> solid from (11.027778,14.000000) to (9.194444,11.000000);
+spline -> solid from (10.888889,14.027778) to (7.291667,10.986111);
+spline -> solid from (10.833333,14.041667) to (5.916667,10.944444) to (5.875000,10.722222) to (5.847222,10.500000) to (5.847222,7.500000);
+spline -> solid from (11.416667,14.013889) to (14.222222,10.833333) to (14.222222,10.708333) to (14.222222,10.569444) to (9.583333,7.472222);
+spline -> solid from (11.819444,14.138889) to (27.138889,10.944444);
+spline -> solid from (41.000000,14.000000) to (40.250000,11.000000);
+spline -> solid from (41.416667,14.013889) to (45.694444,10.972222);
+spline -> solid from (41.180556,14.000000) to (42.416667,11.000000);
+spline -> solid from (41.500000,14.041667) to (47.416667,10.972222);
+spline -> solid from (40.916667,14.000000) to (39.194444,10.888889) to (39.125000,10.763889) to (39.055556,10.638889) to (35.555556,7.486111);
+spline -> solid from (47.972222,14.000000) to (49.458333,11.000000);
+spline -> solid from (48.111111,14.013889) to (51.361111,10.986111);
+spline -> solid from (48.263889,14.041667) to (54.250000,10.791667) to (54.250000,10.652778) to (54.263889,10.500000) to (53.097222,4.000000);
+spline -> solid from (48.194444,14.027778) to (52.986111,10.805556) to (53.013889,10.652778) to (53.041667,10.500000) to (52.930556,7.500000) to (52.888889,7.277778) to (52.861111,7.055556) to (51.861111,4.000000) to (51.819444,3.750000) to (51.791667,3.500000) to (51.791667,0.500000);
+spline -> solid from (47.694444,14.000000) to (46.138889,11.000000);
+spline -> solid from (47.847222,14.000000) to (47.847222,11.000000);
+spline -> solid from (47.416667,14.041667) to (41.333333,10.972222) to (41.263889,10.763889) to (41.194444,10.541667) to (35.694444,7.472222);
+spline -> solid from (47.472222,14.027778) to (42.875000,10.986111);
+spline -> solid from (32.083333,14.013889) to (29.513889,11.000000);
+spline -> solid from (32.305556,14.000000) to (32.305556,11.000000) to (32.194444,10.708333) to (32.083333,10.416667) to (17.305556,7.388889);
+spline -> solid from (32.333333,14.000000) to (32.763889,11.000000) to (32.819444,10.833333) to (32.875000,10.666667) to (35.125000,7.500000);
+spline -> solid from (32.208333,14.000000) to (31.208333,11.000000);
+spline -> solid from (31.958333,14.013889) to (27.875000,10.986111);
+spline -> solid from (47.722222,10.500000) to (46.347222,7.500000);
+spline -> solid from (47.847222,10.500000) to (47.847222,4.000000);
+spline -> solid from (46.027778,10.500000) to (46.208333,7.500000);
+spline -> solid from (45.875000,10.500000) to (44.402778,7.500000);
+spline -> solid from (52.958333,3.500000) to (51.875000,0.500000);
+spline -> solid from (51.597222,10.500000) to (51.305556,7.500000);
+spline -> solid from (51.291667,7.000000) to (51.291667,4.000000) to (51.305556,3.750000) to (51.319444,3.500000) to (51.750000,0.500000);
+spline -> solid from (51.027778,7.013889) to (48.069444,3.986111);
+.ps
+.PE
+.ce
+Figure 10
+.DS C
+.TS
+allbox;
+c s s s s s
+c c c c c c
+l n n n n n.
+CallGraph-1
+Method	$ n sub cross$	$t sub level$	$t sub crossing$	$t sub coord$	$t sub total$
+wmedian	61	.10	.71	.60	1.48
+bcenter	72	.10	.67	.50	1.34
+rmedian	85	.10	.75	.68	1.60
+wmedian+	32	.10	1.57	.79	2.52
+bcenter+	35	.10	1.49	.67	2.32
+rmedian+	43	.10	1.40	1.10	2.67
+.TE
+.ce
+Table 2
+.DE
+.PS 6.000000 2.587564
+arrowht = 0.069444;
+arrowwid  = 0.027778;
+define Box	% [box wid $2 ht $3 "$1"] %
+define Square	% [box wid $2 ht $2 "$1"] %
+define Circle	% [circle rad $2/2; "$1" at last circle.c] %
+define Ellipse	% [ellipse wid $2 ht $3 "$1"] %
+define Diamond	% [move down $3/2; line up $3/2 right $2/2 then up $3/2 left $2/2 then down $3/2 left $2/2 then down $3/2 right $2/2; move up $3/2; "$1";] %
+define Doublecircle % [circle rad $2/2; circle rad .9*$2/2 at last circle.c; "$1" at last circle.c] %
+define Plaintext % [box invis wid $2 ht $3 "$1"] %
+.ps 3
+Node0: Ellipse(progen,1.111111,0.500000) at (9.972222,10.250000);
+Node1: Ellipse(xmalloc,1.250000,0.500000) at (17.250000,2.250000);
+Node2: Ellipse(setbuf,1.111111,0.500000) at (9.972222,9.250000);
+Node3: Ellipse(initsymtbl,1.666667,0.500000) at (11.611111,9.250000);
+Node4: Ellipse(scanner,1.250000,0.500000) at (8.541667,9.250000);
+Node5: Ellipse(put_one,1.250000,0.500000) at (6.111111,8.250000);
+Node6: Ellipse(setblkval,1.527778,0.500000) at (10.680556,5.250000);
+Node7: Ellipse(Mapblk,1.111111,0.500000) at (13.388889,3.250000);
+Node8: Ellipse(bhash,0.972222,0.500000) at (14.944444,2.250000);
+Node9: Ellipse(token_fetch,1.819444,0.500000) at (10.805556,4.250000);
+Node10: Ellipse(unget_one,1.527778,0.500000) at (5.666667,1.250000);
+Node11: Ellipse(ungetc,1.111111,0.500000) at (5.666667,0.250000);
+Node12: Ellipse(look_ahead,1.666667,0.500000) at (3.902778,8.250000);
+Node13: Ellipse(comment_scan,1.958333,0.500000) at (3.902778,7.250000);
+Node14: Ellipse(tree_walker,1.819444,0.500000) at (8.541667,4.250000);
+Node15: Ellipse(dnfeval,1.250000,0.500000) at (8.416667,3.250000);
+Node16: Ellipse(tilde_token,1.819444,0.500000) at (6.944444,2.250000);
+Node17: Ellipse(q_token,1.250000,0.500000) at (11.805556,2.250000);
+Node18: Ellipse(get_ch,1.111111,0.500000) at (14.944444,1.250000);
+Node19: Ellipse(unget_ch,1.388889,0.500000) at (13.444444,1.250000);
+Node20: Ellipse(atol,0.833333,0.500000) at (8.513889,2.250000);
+Node21: Ellipse(next_or,1.250000,0.500000) at (9.805556,2.250000);
+Node22: Ellipse(ret_token,1.527778,0.500000) at (13.444444,2.250000);
+Node23: Ellipse(range_walker,1.958333,0.500000) at (11.972222,8.250000);
+Node24: Ellipse(expreval,1.388889,0.500000) at (11.972222,7.250000);
+Node25: Ellipse(next_val,1.388889,0.500000) at (12.375000,6.250000);
+Node26: Ellipse(mcprse,1.111111,0.500000) at (12.250000,5.250000);
+Node27: Ellipse(refblkval,1.527778,0.500000) at (13.388889,4.250000);
+Node28: Ellipse(setsymval,1.527778,0.500000) at (18.388889,4.250000);
+Node29: Ellipse(Mapsym,1.111111,0.500000) at (20.166667,3.250000);
+Node30: Ellipse(hash,0.833333,0.500000) at (20.166667,2.250000);
+Node31: Ellipse(randstr,1.250000,0.500000) at (23.722222,2.250000);
+Node32: Ellipse(incrsymval,1.666667,0.500000) at (22.013889,4.250000);
+Node33: Ellipse(refsymval,1.527778,0.500000) at (20.166667,4.250000);
+Node34: Ellipse(echo_of,1.250000,0.500000) at (15.027778,4.250000);
+Node35: Ellipse(mclex,0.972222,0.500000) at (16.388889,4.250000);
+Node36: Ellipse(next_op,1.250000,0.500000) at (10.805556,6.250000);
+Node37: Ellipse(quote_token,1.819444,0.500000) at (0.916667,7.250000);
+.ps
+.ps 14
+spline -> solid from (9.583333,10.069444) to (8.819444,9.472222);
+spline -> solid from (10.388889,10.083333) to (11.263889,9.486111);
+spline -> solid from (9.972222,10.000000) to (9.972222,9.500000);
+spline -> solid from (10.500000,10.166667) to (20.041667,7.277778) to (20.111111,7.236111) to (20.180556,7.194444) to (23.152778,4.319444) to (23.152778,4.263889) to (23.152778,4.208333) to (22.277778,3.222222) to (22.208333,3.180556) to (22.138889,3.138889) to (17.805556,2.361111);
+spline -> solid from (7.930556,9.194444) to (1.486111,8.486111) to (1.416667,8.416667) to (1.347222,8.347222) to (1.013889,7.500000);
+spline -> solid from (8.763889,9.013889) to (13.305556,8.500000) to (13.305556,8.250000) to (13.319444,8.000000) to (13.319444,6.500000) to (13.222222,6.277778) to (13.125000,6.055556) to (12.513889,5.472222);
+spline -> solid from (7.986111,9.138889) to (5.180556,8.486111) to (4.944444,8.375000) to (5.180556,8.152778) to (6.097222,7.319444) to (6.138889,7.166667) to (6.194444,7.000000) to (6.902778,2.500000);
+spline -> solid from (7.944444,9.180556) to (2.916667,8.541667) to (2.472222,8.375000) to (2.763889,8.111111) to (3.583333,7.486111);
+spline -> solid from (8.750000,9.013889) to (9.763889,8.750000) to (11.263889,8.416667);
+spline -> solid from (8.541667,9.000000) to (8.666667,6.750000) to (8.541667,4.500000);
+spline -> solid from (7.958333,9.166667) to (4.555556,8.402778);
+spline -> solid from (7.944444,9.180556) to (2.222222,8.500000) to (2.208333,8.250000) to (2.194444,8.000000) to (2.194444,3.500000) to (2.222222,3.319444) to (2.263889,3.125000) to (2.541667,2.430556) to (2.611111,2.333333) to (2.680556,2.236111) to (5.125000,1.430556);
+spline -> solid from (8.708333,9.000000) to (8.986111,8.402778) to (9.013889,8.208333) to (9.055556,8.000000) to (9.055556,6.500000) to (9.083333,6.250000) to (9.125000,6.000000) to (9.236111,5.500000) to (9.291667,5.361111) to (9.361111,5.222222) to (10.458333,4.486111);
+spline -> solid from (8.611111,9.000000) to (9.486111,8.305556) to (9.513889,8.152778) to (9.555556,8.000000) to (9.555556,7.500000) to (9.555556,7.250000) to (9.569444,7.000000) to (9.597222,6.500000) to (9.638889,6.361111) to (9.694444,6.208333) to (10.430556,5.486111);
+spline -> solid from (8.013889,9.111111) to (6.513889,8.430556);
+spline -> solid from (11.111111,5.041667) to (12.097222,4.277778) to (12.166667,4.236111) to (12.236111,4.180556) to (13.111111,3.472222);
+spline -> solid from (13.902778,3.166667) to (16.958333,2.472222);
+spline -> solid from (13.791667,3.083333) to (14.666667,2.444444);
+spline -> solid from (10.805556,4.000000) to (10.805556,2.500000) to (10.763889,2.250000) to (10.736111,1.986111) to (6.361111,1.347222);
+spline -> solid from (5.666667,1.000000) to (5.666667,0.500000);
+spline -> solid from (4.375000,8.041667) to (5.444444,7.305556) to (5.472222,7.152778) to (5.513889,7.000000) to (5.652778,1.500000);
+spline -> solid from (3.902778,8.000000) to (3.902778,7.500000);
+spline -> solid from (3.930556,7.000000) to (4.208333,3.500000) to (4.250000,3.333333) to (4.305556,3.166667) to (5.486111,1.500000);
+spline -> solid from (8.541667,4.500000) to (8.402778,6.750000) to (8.541667,9.000000);
+spline -> solid from (8.500000,4.000000) to (8.444444,3.500000);
+spline -> solid from (9.027778,3.194444) to (9.166667,3.125000) to (9.305556,3.250000) to (9.166667,3.375000) to (9.027778,3.305556);
+spline -> solid from (8.944444,3.111111) to (13.027778,2.458333);
+spline -> solid from (8.125000,3.472222) to (7.194444,4.222222) to (7.166667,4.361111) to (7.152778,4.500000) to (7.208333,5.000000) to (7.250000,5.250000) to (7.291667,5.500000) to (7.513889,7.000000) to (7.569444,7.208333) to (7.625000,7.416667) to (8.347222,9.000000);
+spline -> solid from (8.736111,3.027778) to (9.500000,2.472222);
+spline -> solid from (8.444444,3.000000) to (8.486111,2.500000);
+spline -> solid from (8.902778,3.097222) to (11.319444,2.402778);
+spline -> solid from (8.000000,3.069444) to (7.250000,2.486111);
+spline -> solid from (8.972222,3.125000) to (16.847222,2.444444);
+spline -> solid from (6.541667,2.027778) to (5.930556,1.486111);
+spline -> solid from (12.083333,2.027778) to (13.069444,1.458333);
+spline -> solid from (12.180556,2.055556) to (14.597222,1.444444);
+spline -> solid from (13.444444,2.000000) to (13.444444,1.500000);
+spline -> solid from (13.888889,2.041667) to (14.750000,1.486111);
+spline -> solid from (11.291667,8.430556) to (10.180556,8.750000) to (8.916667,9.041667);
+spline -> solid from (11.972222,8.000000) to (11.972222,7.500000);
+spline -> solid from (11.625000,7.041667) to (11.041667,6.486111);
+spline -> solid from (12.097222,7.000000) to (12.277778,6.500000);
+spline -> solid from (12.333333,6.000000) to (12.277778,5.500000);
+spline -> solid from (12.694444,5.097222) to (16.138889,4.458333);
+spline -> solid from (12.513889,5.472222) to (13.388889,6.055556) to (13.486111,6.277778) to (13.583333,6.500000) to (13.583333,8.000000) to (13.569444,8.250000) to (13.569444,8.500000) to (8.763889,9.013889);
+spline -> solid from (12.666667,5.083333) to (14.583333,4.416667);
+spline -> solid from (12.736111,5.125000) to (19.916667,4.486111);
+spline -> solid from (12.736111,5.125000) to (21.819444,4.500000);
+spline -> solid from (12.722222,5.125000) to (17.916667,4.444444);
+spline -> solid from (11.958333,5.041667) to (9.236111,4.416667);
+spline -> solid from (12.083333,5.013889) to (11.180556,4.472222);
+spline -> solid from (12.500000,5.027778) to (13.111111,4.486111);
+spline -> solid from (12.791667,5.194444) to (12.930556,5.125000) to (13.069444,5.250000) to (12.930556,5.375000) to (12.791667,5.305556);
+spline -> solid from (12.708333,5.111111) to (17.027778,4.541667) to (17.138889,4.277778) to (17.250000,4.000000) to (17.250000,2.500000);
+spline -> solid from (13.388889,4.000000) to (13.388889,3.500000);
+spline -> solid from (18.875000,4.055556) to (19.833333,3.458333);
+spline -> solid from (20.680556,3.152778) to (23.236111,2.402778);
+spline -> solid from (19.680556,3.138889) to (17.694444,2.416667);
+spline -> solid from (20.166667,3.000000) to (20.166667,2.500000);
+spline -> solid from (22.277778,4.013889) to (23.527778,2.486111);
+spline -> solid from (21.486111,4.055556) to (20.486111,3.444444);
+spline -> solid from (20.166667,4.000000) to (20.166667,3.500000);
+spline -> solid from (0.916667,7.000000) to (0.916667,3.500000) to (0.944444,3.347222) to (0.986111,3.180556) to (1.555556,2.222222) to (1.625000,2.152778) to (1.694444,2.083333) to (5.027778,1.388889);
+.ps
+.PE
+.ce
+Figure 11
+.DS C
+.TS
+allbox;
+c s s s s s
+c c c c c c
+l n n n n n.
+CallGraph-2
+Method	$ n sub cross$	$t sub level$	$t sub crossing$	$t sub coord$	$t sub total$
+wmedian	12	.05	.51	.78	1.42
+bcenter	12	.05	.50	.64	1.24
+rmedian	13	.05	.51	.68	1.30
+wmedian+	11	.05	.78	.64	1.53
+bcenter+	11	.05	.82	.71	1.63
+rmedian+	11	.05	.81	.73	1.66
+.TE
+.ce
+Table 3
+.DE
+.H 1 "Conclusions"
+.P
+\*(DG is a tool for creating drawings of directed graphs.
+We have favored ease of use
+over low-level drawing control, by choosing a simple graph
+description language and a few well-tuned heuristics that produce
+good drawings quickly in common cases.
+.sp
+.SG \"
+.nr zz \n% \" record the number of regular pages for the cover sheet.
+.S 10
+.nr Hu 1
+.H 1 "References"
+.VL 15 0
+.LI [A85]
+Adobe Systems. \fI Postscript Language Reference Manual,\fP Addison-Wesley (1985).
+.LI [E85]
+Eades, Peter, Brendan McKay, and Nicholas Wormald
+``An NP-Complete Crossing Number Problem for Bipartite Graphs,''
+University of Queensland, Dept. of Computer Science, Technical Report No. 60,
+St. Lucia, Queensland, 4067, Australia (1985).
+.LI [E86]
+Eades, Peter, and David Kelly.  ``Heuristics for Drawing 2-Layered Networks,'' \fIARS Combinatoria\fP, \fB21\fP:A, pp.89-98 (1986).
+.LI [GNV87a]
+Gansner, Emden R., Stephen C. North, and Kiem Phong Vo.
+``Methods for Drawing Directed Graphs,'' in preparation.
+.LI [GNV87b]
+Gansner, Emden R., Stephen C. North, and Kiem Phong Vo.
+``On the Level Assignment Problem,'' in preparation.
+.LI [K82]
+Kernighan, Brian W.  ``PIC: A Language for Typesetting Graphics'', \fI Software:
+Practice and Experience\fP \fB12\fP:1, pp. 1-21 (1982).
+.LI [M85]
+Mortenson, Michael E.  \fI Geometric Modeling,\fP Wiley and Sons (1985).
+.LI [R86] Rowe, L. A., Michael Davis, Eli Messinger, Carl Meyer,
+Charles Spirakis, and Allen Tuan. ``A Brower for Directed Graphs,'' \fI Software: Practice and Experience\fP \fB17\fP:1, pp. 61-76 (1986).
+.LI [S81]
+Sugiyama, K.,S. Tagawa, and M. Toda.
+``Methods for Visual Understanding of Hierarchical System Structures'', \fI IEEE Transactions on Systems, Man, and Cybernetics\fP \fBSMC-11\fP:2, pp. 109-125
+(February 1981).
+.LI [T88]
+Trickey, Howard.  ``Drag: A Graph Drawing System'', International Conference
+on Electronic Publishing, Document Manipulation and Typography,
+Nice, France, April 1988.  Cambridge University Press.
+.LE
+.SK
+.nr Pt 0
+.nr Pi 0
+.HU "Appendix A.  DAG Syntax"
+.nf
+\fI
+.P
+program		\fR:\fP	statement-list
+		\fR;\fP
+
+statement-list	\fR:\fP	statement-list statement
+		\fR|\fP	\f5/* empty */\fP
+		\fR;\fP
+
+statement	\fR:\fP	draw-statement
+		\fR|\fP	edge-statement
+		\fR|\fP	control-statement
+		\fR;\fP
+
+draw-statement	\fR:\fP	\f5draw \fPnode-list node-desc \f5;\fP
+		\fR|\fP	\f5draw nodes \fPnode-desc \f5;\fP
+		\fR|\fP	\f5draw edges \fPedge-desc \f5;\fP
+		\fR;\fP
+
+node-list		\fR:\fP	node-list \fR[\fP\f5,\fP\fR]\fP node-name
+		\fR|\fP	node-name
+		\fR;\fP
+
+node-desc	\fR:\fP	node-desc-item
+		\fR|\fP	node-desc node-desc-item
+		\fR;\fP
+
+node-desc-item	\fR:\fP	\f5width\fP float
+		\fR|\fP	\f5height\fP float
+		\fR|\fP	\f5pointsize\fP integer
+		\fR|\fP	\f5label\fP string
+		\fR|\fP	\f5label\fP \f5 { \fPdrawing-code\f5 } \fP
+		\fR|\fP	\f5as { \fPdrawing-code\f5 } \fP
+		\fR|\fP	\f5as\fP string
+		\fR|\fP	\f5color\fP string
+		\fR;\fP
+
+edge-statement	\fR:\fP	\fR[\fP\f5ordered\fP\fR]\fP \fR[[\fP\f5back\fR]\fPedge from\fP\fR]\fP node-name \fR[\fP\f5to\fP\fR]\fP head-list \f5;\fP
+		\fR|\fP	\fR[\fP\f5back\fP\fR]\fP\f5path\fP \fR[\fP\f5from\fP\fR]\fP node-name \fR[\fP\f5to\fP\fR]\fP head-list \f5;\fP
+		\fR;\fP
+
+head-list		\fR|\fP	head-list head
+		\fR|\fP	head-list \fR[\fP\f5,\fP\fR]\fP \fR[\fP\f5to\fP\fR]\fP head
+		\fR|\fP	\f5/* empty */\fP
+		\fR;\fP
+
+head		\fR:\fP	node-name edge-desc
+		\fR|\fP	node-name
+		\fR;\fP
+
+edge-desc	\fR:\fP	edge-desc-item
+		\fR|\fP	edge-desc edge-desc-item
+		\fR;\fP
+.bp
+
+edge-desc-item	\fR:\fP	\f5weight \fP integer
+		\fR|\fP	\f5label \fPstring
+		\fR|\fP	\f5label { \fPdrawing-code\f5 }\fP
+		\fR|\fP	\f5pointsize\fP integer
+		\fR|\fP	\f5color\fP string
+		\fR|\fP	inkvalue
+		\fR;\fP
+
+inkvalue		\fR:\fP	\f5solid\fP
+		\fR|\fP	\f5dashed\fP
+		\fR|\fP	\f5dotted\fP
+		\fR|\fP	\f5invis\fP
+		\fR;\fP
+
+control-statement	\fR:\fP	\f5separate\fP sep-list \f5;\fP
+		\fR|\fP	\f5minimum rank\fP node-list \f5;\fP
+		\fR|\fP	\f5maximum rank\fP node-list \f5;\fP
+		\fR|\fP	\f5same rank\fP node-list \f5;\fP
+		\fR;\fP
+
+sep-list		\fR:\fP	sep-list sep-item
+		\fR|\fP	\f5/* empty */\fP
+		\fR;\fP
+
+sep-item		\fR:\fP	\f5nodes\fP float
+		\fR|\fP	\f5ranks\fP float
+		\fR|\fP	\f5ranks\fP float \f5exactly\fP
+		\fR|\fP	\f5ranks\fP float \f5equally\fP
+		\fR;\fP
+
+node-name	\fR:\fP	string
+		\fR;\fP
+
+.fi
+\fR
+.nr Pt
+.nr Pi
+.P
+A \fIstring\fP is any sequence of non-whitespace, non-punctuation characters,
+or any quoted string not containing newline.
+.P
+\fIdrawing-code\fP is any sequence of characters containing balanced 
+left and right curly braces.
+.HU "Appendix B.  \*(PO Interface"
+
+\f5dag -Tps\fP generates \*(PO\ code.
+The \*(PO code generator makes slightly better pictures that
+incorporate user-defined nodes, if you are willing to spend the effort
+to write \*(PO procedures to draw nodes and clip incident edges.
+The drawing is in the default \*(PO\ coordinate system [A85],
+and uses 14 point Times Roman fonts.
+.P
+To define a new node shape, you need to write two procedures.
+The first procedure draws the shape over the current point.
+It must take three values off the stack:
+the node width, height, and name.
+The second procedure determines where edges intersect the shape.
+It takes the $x$ and $y$ dimensions of a shape, and a ray.
+It returns the point where the ray first
+intersects the shape when the shape is placed at $(0,0)$.
+The ray is passed by giving its origin and another point on the ray.
+The second point is always on the bounding box of the \*(DG node,
+and the points are always in the same quadrant.
+If the ray does not intersect the shape, the clip function should
+give the nearest point, or at least return the bounding box point.
+.P
+For some examples of shape-drawing procedures, look at the
+output of \f5dag -Tps\fP for definitions of procedures such
+as \f5Ellipse\fP and \f5Ellipse_clip\fP.
+.P
+If you don't have a color output device, you might want to draw
+shaded nodes instead.  Here is an example.
+.nf
+.ft 5
+.S 10 12
+\&.GR
+\&.PS
+/setdagcolor {/daggrayscale exch def} def
+
+/ShadedBox {
+    /height exch def
+    /width exch def
+    /nodename exch def
+    currentpoint 2 copy
+    newpath
+        moveto
+        width -2 div
+        height -2 div
+        rmoveto
+        width 0 rlineto
+        0 height rlineto
+        width neg 0 rlineto
+    closepath
+    gsave
+        daggrayscale setgray
+        fill
+    grestore
+    stroke
+    moveto 
+    nodename width .9 mul height .9 mul daglabel
+} def
+
+/ShadedBox_clip { Box_clip } def
+\&.PE
+draw nodes as ShadedBox;
+draw nodes color "1";
+draw a color ".7";
+draw b color ".9";
+a b c;
+\&.GE
+.S 10 16
+.ft
+.fi
+.P
+The procedure \f5setdagcolor\fP sets the current color when a node or
+edge is drawn.  The user's color value is emitted as \*(PO code,
+which presumably pushes objects on the stack for interpretation by \f5setdagcolor\fP.
+For drawing shaded boxes, we will define color to be a floating point
+number from 0 to 1, where 0 is black and 1 is white.  So in our
+example we re-define \f5setdagcolor\fP to take this floating point value
+and store it in the global variable \f5daggrayscale\fP for later use.
+.P
+Next comes the definition of the \f5ShadedBox\fP node shape.
+After making the path of the rectangle, the sequence \f5daggrayscale
+setgray fill\fP does the shading.  The shading must be done within
+its own \f5gsave/grestore\fP context, so that the outline of the box
+and its labels are not also shaded.  Since \f5ShadedBox\fP has
+the same outline as \f5Box\fP, we borrow \f5Box_clip\fP
+for \f5ShadedBox_clip\fP.
+.P

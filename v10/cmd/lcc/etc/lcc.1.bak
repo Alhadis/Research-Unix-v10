@@ -1,0 +1,474 @@
+.TH LCC 1 "local \- 5/10/89"
+.SH NAME
+lcc \- local ANSI C compiler
+.SH SYNOPSIS
+.B lcc
+[ option ]... file...
+.br
+.SH DESCRIPTION
+.PP
+.I lcc
+is a local ANSI C compiler for the VAX, MIPS, and Motorola MC68020.
+.PP
+Arguments whose names end with `.c' are taken to be
+C source programs; they are preprocessed, compiled, and
+each object program is left on the file
+whose name is that of the source with `.o' substituted for `.c'.
+The `.o' file is normally deleted, however, if a single
+C program is compiled and loaded all at one go.
+Arguments whose names end with `.i' are treated similarly,
+except they are not preprocessed.
+.PP
+In the same way,
+arguments whose names end with `.s' are taken to be assembly source programs
+and are assembled, producing a `.o' file.
+.PP
+.I lcc
+uses ANSI standard header files
+in preference to the `old-style' header files normally found in
+.B /usr/include
+(see `FILES' below).
+Include files not found in the ANSI header files
+are taken from the normal default include areas,
+which usually includes
+.BR /usr/include .
+.I lcc
+predefines the macros `unix' and `__LCC__';
+other, system-dependent, predefined macros
+are listed in the `FILES' section below.
+.PP
+The following options are interpreted by all versions of
+.IR lcc .
+See
+.IR ld (1)
+for load-time options.
+.TP
+.B \-c
+Suppress the loading phase of the compilation, and force
+an object file to be produced even if only one program is compiled.
+.TP
+.B \-g
+Produce additional symbol table information for the local debuggers.
+Not yet supported on the MIPS.
+.TP
+.B \-w
+Suppress warning diagnostics, such as those
+announcing unreferenced statics, locals, and parameters.
+The line
+.I
+#pragma ref id
+simulates a reference to the variable 
+.IR id .
+.TP
+.BI \-d n
+Generate jump tables for switches whose density is at least
+.IR n ,
+a floating point constant between zero and one.
+The default is 0.5.
+.TP
+.B \-A
+Issue warnings for calls to functions without prototypes.
+.TP
+.B \-P
+Writes declarations for all defined globals on standard error.
+Function declarations include prototypes;
+editing this output can simplify conversion to ANSI C.
+This output may not correspond to the input when
+there are several typedef's for the same type.
+.TP
+.B \-n
+Arrange for the compiler to produce code
+that tests for dereferencing zero pointers.
+The code reports the offending file and line number and calls
+.IR abort (3).
+.TP
+.SM
+.B \-O
+is ignored.
+.TP
+.SM
+.B \-S
+Compile the named C programs, and leave the
+assembler-language output on corresponding files suffixed `.s'.
+.TP
+.SM
+.B \-E
+Run only the preprocessor on the named C programs,
+and send the result to the standard output.
+.TP
+.SM
+.B \-C
+Prevent the preprocessor from eliding comments.
+.TP
+.BI \-o "  output"
+Name the final output file
+.IR output .
+If this option is used, the file `a.out' is left undisturbed.
+.TP
+.SM
+.BI \-D \*Sname=def
+.br
+.ns
+.TP
+.SM
+.BI \-D \*Sname
+Define the
+.I name
+to the preprocessor, as if by `#define'.
+If no definition is given, the name is defined as "1".
+.TP
+.SM
+.BI \-U \*Sname
+Remove any initial definition of
+.IR name .
+.TP
+.SM
+.BI \-I \*Sdir
+`#include' files
+whose names do not begin with `/' are always
+sought first in the directory  of the
+.I file
+arguments, then in directories named in 
+.B \-I
+options, then in directories on a standard list.
+.TP
+.SM
+.B \-N
+Do not search
+.I any
+of the standard directories for `#include' files.
+Only those directories specified by explicit
+.B \-I
+options will be searched, in the order given.
+Omit non-ANSI language extensions.
+.TP
+.SM
+.B \-M
+Run only the preprocessor on the named C programs,
+requesting it to generate Makefile dependencies
+and send the result to the standard output.
+.TP
+.SM
+.B \-T
+Allow ANSI standard trigraph sequences.
+.TP
+.SM
+.BI \-B \*Sstr
+Use the compiler \fIstr\fP\fBrcc\fP instead of the default version.
+Note that
+.I str
+often requires a trailing slash.
+.TP
+.B \-v
+Print commands as they are executed; some of the executed
+programs are directed to print their version numbers.
+More than one occurrence of
+.B \-v
+causes the commands to be printed, but
+.I not
+executed.
+.PP
+On the VAX and on the MC68020 under Sun UNIX,
+.I lcc
+also accepts the following option.
+.TP
+.B \-p
+Produce code that counts the number of times each function is called.
+If loading takes place, replace the standard startup
+routine by one that automatically calls
+.IR monitor (3)
+at the start and arranges to write out a
+.B mon.out
+file at normal termination of execution of the object program.
+An execution profile can then be generated with
+.IR prof (1).
+.PP
+On the VAX under 4.3BSD UNIX or Ultrix and on the MC68020 under Sun UNIX,
+.I lcc
+also accepts the following option.
+.TP
+.B \-pg
+Causes the compiler to produce counting code like
+.BR \-p ,
+but invokes a run-time recording mechanism that keeps more
+extensive statistics and produces a 
+.B gmon.out
+file at normal termination.
+Also, a profiling library is searched, in lieu of the standard C library.
+An execution profile can then be generated with
+.IR gprof (1).
+.PP
+On the MC68020 under SunOS,
+.I lcc
+also accepts the following options.
+.TP
+.SM
+.B \-B\*Sstatic
+.br
+.ns
+.TP
+.SM
+.B \-B\*Sdynamic
+Specifies the binding strategy for symbolic references to the loader; see
+.IR ld (1).
+This option is accepted but ignored on SunOS 3.5 systems.
+.TP
+.B \-f68881
+is accepted but ignored because
+.I lcc
+supports no alternative.
+.PP
+Other arguments
+are taken to be either loader option arguments, or C-compatible
+object programs, typically produced by an earlier
+.I lcc
+run, or perhaps libraries of C-compatible routines.
+These programs, together with the results of any
+compilations specified, are loaded (in the order
+given) to produce an executable program with name
+.BR a.out .
+.PP
+.I lcc
+assigns frequently referenced scalar parameters and
+locals to registers whenever possible.
+If there are explicit register declarations, they are obeyed first, and remaining
+registers are assigned to automatic locals if they
+are `referenced' at least 3 times.
+Each top-level occurrence of an identifier
+counts as 1 reference. Occurrences in a loop,
+either of the then/else arms of an if statement, or a case in a
+in a switch statement each count, respectively, as 10, 1/2, or 1/10 references.
+These values are increased accordingly for nested control structures.
+.PP
+.I lcc
+supports
+.IR asm(string) ;
+the given string constant is copied to the generated
+assembly language output with occurrences of
+.I %name
+replaced by the address or register denotation for the identifier given by
+.IR name ,
+if
+.I name
+is visible. Otherwise,
+.I %name
+is simply copied to the output. No syntax checking
+of the assembly language is attempted.
+.SH LIMITATIONS
+.PP
+.I lcc
+accepts the C programming language
+as described in the proposed ANSI standard
+and in the second edition of Kernighan and Ritchie.
+.I lcc
+is intended to be used with the GNU C preprocessor, which supports the
+preprocessing features introduced by the ANSI standard.
+The
+.B \-T
+option is required to enable trigraph sequences.
+.PP
+Wide-character literals are accepted
+but are treated as plain char literals.
+Plain chars are signed chars,
+ints and long ints are the same size
+as are doubles and long doubles.
+Bit fields are aligned like unsigned integers but are otherwise laid out
+as if by the standard C compiler,
+.IR cc (1).
+Other compilers, such as the GNU C compiler,
+.IR gcc (1),
+may choose other, incompatible layouts.
+.PP
+Likewise, calling conventions are intended to be compatible with
+.IR cc (1),
+with one possible exception.
+Many C compilers based on the Portable C Compiler,
+.IR pcc ,
+use a non-reentrant method for returning structures.
+Consequently, calls to/from structure-returning functions compiled with
+.I pcc
+do not work.
+If
+.I f
+is a
+.IR pcc -compiled
+function returning a
+.I struct
+.IR foo ,
+it can be called from a
+.IR lcc -compiled
+function by wrapping the call in a function
+.I f1
+that accounts for the implementation differences:
+.PP
+\h'.5i'\fIstruct foo f1() { struct foo *f(); return *f(); }\fP
+.PP
+.IR lcc 's
+convention for returning structures
+.I is
+compatible with that used by
+.IR gcc (1)
+on the VAX for structures longer than eight bytes;
+.I gcc
+returns small structures in registers, which is incompatible with
+.IR lcc .
+.PP
+Calling a function that returns
+a structure without declaring it as such violates
+the ANSI standard and may cause a core dump.
+.SH FILES
+.ta \w'/usr/local/gnu/lib/gcc-cppxx'u
+.nf
+file.c	input file
+file.o	object file
+a.out	loaded output
+/tmp/ctm?	temporary
+.PP
+On `notecnirp' (VAX; 4.3bsd UNIX) and `phoenix' (VAX; ULTRIX):
+.PP
+.nf
+/usr/local/gnu/lib/gcc-cpp	preprocessor; -Dvax
+/usr/local/lib/rcc	compiler
+/lib/crt0.o	runtime startoff
+/lib/mcrt0.o	startoff for profiling
+/usr/lib/gcrt0.o	startoff for gprof-profiling
+/usr/lib/libc_p.a	profiling library
+/lib/libc.a	standard library
+/usr/local/include/ansi	ANSI standard headers
+/usr/include	traditional headers
+mon.out	file produced for \fIprof\fR(1)
+gmon.out	file produced for \fIgprof\fR(1)
+.PP
+On the V9 VAXes:
+.PP
+.nf
+/usr/lib/gcc-cpp	preprocessor; -Dvax -DV9
+/usr/lib/rcc	compiler
+/lib/crt0.o	runtime startoff
+/lib/mcrt0.o	startoff for profiling
+/lib/libc.a	standard library
+/usr/include/lcc	ANSI standard headers
+/usr/include/libc	local ANSI headers
+/usr/include	traditional headers
+mon.out	file produced for \fIprof\fR(1)
+.PP
+On `tempel' and `tuttle' (MIPS; UNIX System V):
+.PP
+.nf
+/usr/v9/lib/gcc-cpp	preprocessor;
+	-Dmips -DMIPSEB -DLANGUAGE_C
+/usr/v9/lib/rcc	compiler
+/lib/crt[1n].o	runtime startoff
+/lib/libc.a	standard library
+/usr/v9/include/lcc	ANSI standard headers
+/usr/v9/include/libc	local ANSI headers
+/usr/v9/include	traditional headers
+/usr/include	traditional headers
+.PP
+On `oyoy' (SGI/MIPS; UNIX System V):
+.PP
+.nf
+/usr/local/gnu/lib/gcc-cpp	preprocessor;
+	-Dmips -DMIPSEB -DLANGUAGE_C
+/usr/local/lib/rcc	compiler
+/usr/lib/crt[1n].o	runtime startoff
+/usr/lib/libc.a	standard library
+/usr/local/include/ansi	ANSI standard headers
+/usr/include	traditional headers
+.PP
+On `notavax' (DECStation 3100 MIPS; ULTRIX):
+.PP
+.nf
+/usr/local/gnu/lib/gcc-cpp	preprocessor;
+	-Dmips -DMIPSEL -DLANGUAGE_C
+/usr/local/lib/rcc	compiler
+/usr/lib/crt0.o	runtime startoff
+/lib/libc.a	standard library
+/usr/local/include/ansi	ANSI standard headers
+/usr/include	traditional headers
+.PP
+On `nassau' and its clients (MC68020; SunOS 4.0):
+.PP
+.nf
+/usr/local/gnu/lib/gcc-cpp	preprocessor; -Dsun -Dmc68020
+/usr/local/lib/rcc	compiler
+/usr/lib/crt0.o	runtime startoff
+/usr/lib/Mcrt1.o
+/usr/lib/mcrt0.o	startoff for profiling
+/usr/lib/gcrt0.o	startoff for gprof-profiling
+/usr/lib/libc_p.a	profiling library
+lib/libc.a	standard library
+/usr/lib/f68881	MC68881 library
+/usr/local/include/ansi	ANSI standard headers
+/usr/include	traditional headers
+mon.out	file produced for \fIprof\fR(1)
+gmon.out	file produced for \fIgprof\fR(1)
+.PP
+On `idunno' and its clients (MC68020; SunOS 3.5):
+.PP
+.nf
+/usr/princeton/lib/gcc/gcc-cpp	preprocessor; -Dsun -Dmc68020
+/usr/princeton/lib/rcc	compiler
+/lib/crt0.o	runtime startoff
+/lib/Mcrt1.o
+/lib/mcrt0.o	startoff for profiling
+/lib/gcrt0.o	startoff for gprof-profiling
+/lib/libc_p.a	profiling library
+lib/libc.a	standard library
+/usr/princeton/include/ansi	ANSI standard headers
+/usr/include	traditional headers
+mon.out	file produced for \fIprof\fR(1)
+gmon.out	file produced for \fIgprof\fR(1)
+.SH "SEE ALSO"
+B. W. Kernighan and D. M. Ritchie,
+.I The C Programming Language,
+Prentice-Hall, Second Edition 1988.
+.br
+cc(1)
+.br
+.SH DIAGNOSTICS
+For non-integer functions,
+.I lcc
+warns about missing expressions on explicit returns,
+but not on the implicit return supplied at the end of each function.
+Calls to functions that return structures
+in which the value returned is not used elicit a warning as well;
+this warning can be suppressed by casting the call to void.
+.SH BUGS
+Since
+.I lcc
+is a new compiler, there are undoubtedly bugs.
+Mail bug reports along with the shortest program
+that exposes them to research!cwf (or cwf@research.att.com)
+and princeton!drh (or drh@princeton.edu).
+.PP
+The `ANSI standard headers' conform to the specifications in
+the standard, which may be too restrictive for some applications,
+but necessary for portability.
+Functions given in the ANSI headers may be missing from
+in the local C library (e.g., `wide character' functions)
+or may not correspond exactly to the local version;
+for example, the ANSI standard
+.B stdio.h
+specifies that
+.IR printf ,
+.IR fprintf ,
+and
+.I sprintf
+return the number of characters written to the file or array,
+but few existing libraries implement this convention.
+.PP
+On VAXes running 4.3bsd UNIX,
+the definitions of
+.I tolower
+and
+.I toupper
+erroneously return bad values for non-letter arguments.
+.PP
+Old-style, variadic, tail-recursive functions are optimized incorrectly;
+give a prototype.
+On the MIPS, old-style variadic functions must use
+.B varargs.h
+from MIPS. New-style is recommended.
+.PP
+The Sun assembler version 3.5 or later is required on the MC68020.

@@ -1,0 +1,115 @@
+.TH INTERNAL 3
+.CT 2 file_io
+.SH NAME
+jukebox routines
+.tr %"
+.SH SYNOPSIS
+.B "#include %hdr.h%"
+.PP
+.tr %%
+.B "int j_shelf_to_drive(int sh, Side side, int dr, char *err)"
+.PP
+.B "int j_drive_to_shelf(int dr, int sh, Side side, char *err)"
+.PP
+.B "int j_empty_drive(int tlim, char *buf)"
+.PP
+.B "void j_rdshelves(char *buf)"
+.PP
+.B "int j_getstatus(char *buf)"
+.PP
+.B "int j_scsiio(struct scsi_cmd *cmd, int ncmd,"
+.br
+.B "\ \ \ \ \ \ struct scsi_return *ret, int nret, char *err)"
+.PP
+.B "int j_shelfof(char *vol_id)"
+.PP
+.B "int j_volid(int dr, char *err)"
+.PP
+.B "extern char *j_shelf[NSHELF];"
+.PP
+.B "extern void pperror(char *buf, char *mesg);
+.SH DESCRIPTION
+.I J_shelf_to_drive
+places the disk in shelf
+.I sh
+in logical drive
+.IR dr .
+It returns 0 on success;
+otherwise an error message is placed in
+.I err .
+.PP
+.I J_drive_to_shelf
+places the disk
+in logical drive
+.IR dr
+in shelf
+.IR sh .
+If
+.I sh
+is negative,
+the disk is returned to its home shelf.
+It returns 0 on success;
+otherwise an error message is placed in
+.IR err .
+.PP
+.I J_rdshelves
+initializes each element of
+.I j_shelf
+to the volid of the disk on that shelf.
+A zero pointer means there is no disk;
+a name of
+.B UNALLOCATED
+means the disk has not been allocated a name yet.
+It returns 0 on success;
+otherwise an error message is placed in
+.IR err .
+.PP
+.I J_getstatus
+initializes
+.B j_status
+which include the following fields:
+.EX
+	struct Lunstatus lun[NLUN]; /* disk status */
+	uchar shelf[NSHELF];	/* shelf status */
+	uchar iounit;		/* I/O unit status */
+	uchar carrier;		/* carrier status */
+	uchar udrive;		/* upper drive status */
+	uchar ldrive;		/* lower drive status */
+.EE
+A return value of 0 implies success;
+otherwise \-1 is returned and an error message is placed in
+.IR err .
+.PP
+.I J_scsiio
+performs a SCSI transaction.
+It sends the command in
+.I cmd
+and
+.I ncmd
+data bytes and stores the return status in
+.IR ret .
+A return value of 0 implies success;
+otherwise \-1 is returned and an error message is placed in
+.IR err .
+.PP
+.I J_shelfof
+returns the shelf number of the disk labelled
+.IR vol_id .
+If there is no such disk,
+\-1 is returned.
+.PP
+.I J_volid
+returns the volid of the disk on drive
+.I dr
+in
+.IR err .
+A return value of 0 implies success;
+otherwise \-1 is returned and an error message is placed in
+.IR err .
+.PP
+.I Pperror 
+returns an error message that is contained in 
+.IR buf.
+.PP
+.SH "SEE ALSO"
+.SH DIAGNOSTICS

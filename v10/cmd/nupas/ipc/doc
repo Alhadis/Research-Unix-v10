@@ -1,0 +1,36 @@
+There are two routines implemented: ipcpath and ipcopen.  Both appear to
+work pretty much the same as the V10 versions.  ipcpath converts
+a destination with default network and service name to a string
+useable by ipcopen.  Ipcopen processes destinations with the
+following format:
+
+	dialer!destination
+
+The following networks are supported:
+
+	dk  - connect through datakit dkdial(2) call.  Host address
+		must be a valid datakit string.
+
+	tcp - connect through a socket.  Host address is obtained
+		by gethostbyname.  Format of destination is
+		host!service.  If the service name is the form
+		tcp.nn or nn, call service nn.  If it is an alphabetic,
+		obtain the port number through getservbyname.
+
+	mx - same as tcp, except ask the resolver for MX records
+		and try those addresses.  If no MX records work,
+		try the A address of the host.
+
+	proxy - connect to the Internet through the gateway proxy
+		service whose
+		address is given in the ipcopen.c source.  The
+		connection may be through datakit or tcp.
+
+	(others)	some synonyms for various proxy destinations.
+
+All the code is contained in a directory named `ipc'.  The command
+	make init net1 net2 ... lib
+will install code to call the networks requested from the network names
+given above.  Uninstalled networks will call a stub that aborts
+if the network is tried.
+

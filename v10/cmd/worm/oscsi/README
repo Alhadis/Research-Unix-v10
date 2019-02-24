@@ -1,0 +1,28 @@
+	This is a simple extensible shell (scsish) for poking at scsi
+devices, particularly the simpler kinds commonly called toasters.
+it is supposed to be self-documenting in use; try the help command.
+my use of the moran-dronek /dev/scsi library is still imperfect;
+there is still some some debugging showing.
+
+	To compile, you first need mk. you then have to pick a system type
+to set some flags; currently we support research and sgi.
+yours may differ, particularly as no one else has our ansi C compiler for the sgi.
+the only problem i would expect is the normal header file crap you get
+mixing ansi and non-ansi files. i recommend setting NPROC=1 while debugging hdr files.
+if you change (header) files, try putting them in the directory inc
+(then others may benefit). To support a new system (say sgi-gcc), just create
+a new file sgi-gcc.mk and so on. you may be missing some devices in
+your /dev/scsi; the script scsi/gendev may help (but check the major/minor
+numbers and permissions).
+
+	As for modifying/extending scsish, it has been designed to be not too hard.
+Adding a new device means adding a new set of rules (like the other rules)
+to mkfile and creating a new directory (say exabyte) and at least two files in it
+(dev.c and fns.h). The wren directory is a small example you can clone.
+Adding new functions to any device means updating a file list in mkfile,
+updating dev.c and fns.h in the device directory. The argument syntax
+scheme is arguably pokey, but liveable. at some future point we should probably
+switch over to osterhout's tcl.
+
+	as always, i invite you send extensions/fixes etc back to
+andrew@research.att.com

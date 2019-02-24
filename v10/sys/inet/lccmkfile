@@ -1,0 +1,18 @@
+CFLAGS=-I.. -I/usr/include -DKERNEL $gflag
+L=../lib/lccinet.a
+IPFILES=$L(ip_arp.x) $L(ip_device.x) $L(ip_input.x) $L(ip_ld.x) $L(ip_output.x) $L(ip_subr.x) \
+	$L(vecadd.z) $L(goo.z)
+TCPFILES=$L(tcp_device.x) $L(tcp_input.x) $L(tcp_ld.x) $L(tcp_output.x) $L(tcp_subr.x) $L(tcp_timer.x)
+UDPFILES=$L(udp_device.x) $L(udp_input.x) $L(udp_ld.x) $L(udp_output.x)
+
+$L: $IPFILES $UDPFILES $TCPFILES
+	names=`membername $newprereq`
+	ar r $L $names && rm $names
+	ranlib $L
+$L(%):N: %
+%.x: %.c
+	lcc $CFLAGS -S $stem.c
+	sed -f ../lib/lccasm.sed <$stem.s | as -o $stem.x
+	rm $stem.s
+%.z: %.s
+	 sed -f ../lib/lccasm.sed <$stem.s | as -o $stem.z

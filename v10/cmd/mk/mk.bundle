@@ -1,0 +1,8542 @@
+mkdir math fio libc
+# To unbundle, sh this file
+echo ./libc/README 1>&2
+sed 's/.//' >./libc/README <<'//GO.SYSIN DD ./libc/README'
+-here (as in ../fio) you have to add whatever commands
+-you need to set up an archive in the shell file `gen'.
+//GO.SYSIN DD ./libc/README
+echo ./libc/doprint.c 1>&2
+sed 's/.//' >./libc/doprint.c <<'//GO.SYSIN DD ./libc/doprint.c'
+-#include <varargs.h>
+-
+-#define	SIZE	1024
+-#define	FUNSIGN	4
+-#define	FSHORT	2
+-#define	FLONG	1
+-#define	PTR	sizeof (char *)
+-#define	SHORT	sizeof (int)
+-#define	INT	sizeof (int)
+-#define	LONG	sizeof (long)
+-#define	FLOAT	sizeof (double)
+-#define	FDIGIT	30
+-#define	FDEFLT	8
+-#define	IDIGIT	40
+-#define	MAXCONV	30
+-
+-static char	*out, *eout;
+-static		convcount  = { 13 };
+-
+-static	noconv();
+-static	cconv(), dconv(), hconv(), lconv();
+-static	oconv(), sconv(), uconv(), xconv();
+-
+-static	econv(), fconv(), gconv(), percent();
+-int	printcol;
+-static
+-int	(*fmtconv[MAXCONV])() =
+-{
+-	noconv,
+-	cconv, dconv, hconv, lconv,
+-	oconv, sconv, uconv, xconv,
+-	econv, fconv, gconv, percent,
+-};
+-static
+-char	fmtindex[128] =
+-{
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0,12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 1, 2, 9,10,11, 3, 0, 0, 0, 4, 0, 0, 5,
+-	0, 0, 0, 6, 0, 7, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0,
+-};
+-
+-fmtinstall(c, f)
+-char c;
+-int (*f)();
+-{
+-
+-	c &= 0177;
+-	if(fmtindex[c] == 0) {
+-		if(convcount >= MAXCONV)
+-			return 1;
+-		fmtindex[c] = convcount++;
+-	}
+-	fmtconv[fmtindex[c]] = f;
+-	return 0;
+-}
+-
+-char*
+-donprint(s, es, fmt, argpp)
+-char *s, *es;
+-register char *fmt;
+-va_list *argpp;
+-{
+-	register int f1, f2, f3, sf1, c;
+-	char *sout, *seout;
+-
+-	sout = out;
+-	seout = eout;
+-	out = s;
+-	eout = es-1;
+-loop:
+-	c = *fmt++;
+-	if(c != '%') {
+-		if(c == 0) {
+-			*out = 0;
+-			s = out;
+-			out = sout;
+-			eout = seout;
+-			return s;
+-		}
+-		if(out < eout)
+-			*out++ = c;
+-		printcol++;
+-		if(c == '\n')
+-			printcol = 0; else
+-		if(c == '\t')
+-			printcol = (printcol+7) & ~7;
+-		goto loop;
+-	}
+-	f1 = 0;
+-	f2 = -1;
+-	f3 = 0;
+-	c = *fmt++;
+-	sf1 = 0;
+-	if(c == '-') {
+-		sf1 = 1;
+-		c = *fmt++;
+-	}
+-	while(c >= '0' && c <= '9') {
+-		f1 = f1*10 + c-'0';
+-		c = *fmt++;
+-	}
+-	if(sf1)
+-		f1 = -f1;
+-	if(c != '.')
+-		goto l1;
+-	c = *fmt++;
+-	while(c >= '0' && c <= '9') {
+-		if(f2 < 0)
+-			f2 = 0;
+-		f2 = f2*10 + c-'0';
+-		c = *fmt++;
+-	}
+-l1:
+-	if(c == 0)
+-		fmt--;
+-	/* NB: first arg is now a (va_list *) */
+-	c = (*fmtconv[fmtindex[c&0177]])(argpp, f1, f2, f3);
+-	if(c < 0) {
+-		f3 |= -c;
+-		c = *fmt++;
+-		goto l1;
+-	}
+-#ifdef notdef
+-	argp += c;	/* increment is now done in called routine by va_arg() */
+-#endif
+-	goto loop;
+-}
+-
+-numbconv(o, f1, f2, f3, b)
+-va_list *o;
+-{
+-	char s[IDIGIT];
+-	register long v;
+-	register int i, f, n, r;
+-
+-	switch(f3 & (FLONG|FSHORT|FUNSIGN)) {
+-	case FLONG:
+-		v = va_arg(*o, long);
+-		r = LONG;
+-		break;
+-
+-	case FUNSIGN|FLONG:
+-		v = va_arg(*o, unsigned long);
+-		r = LONG;
+-		break;
+-
+-	/* NB: a (unsigned) short argument is promoted to an (unsigned) int arg. */
+-	case FSHORT:
+-		v = (short)va_arg(*o, int);
+-		r = SHORT;
+-		break;
+-
+-	case FUNSIGN|FSHORT:
+-		v = (unsigned short)va_arg(*o, unsigned);
+-		r = SHORT;
+-		break;
+-
+-	default:
+-		v = va_arg(*o, int);
+-		r = INT;
+-		break;
+-
+-	case FUNSIGN:
+-		v = va_arg(*o, unsigned);
+-		r = INT;
+-		break;
+-	}
+-	f = 0;
+-	if(!(f3 & FUNSIGN) && v < 0) {
+-		v = -v;
+-		f = 1;
+-	}
+-	s[IDIGIT-1] = 0;
+-	for(i = IDIGIT-2; i >= 1; i--) {
+-		n = (unsigned long)v % b;
+-		n += '0';
+-		if(n > '9')
+-			n += 'a' - ('9'+1);
+-		s[i] = n;
+-		v = (unsigned long)v / b;
+-		if(f2 >= 0 && i >= IDIGIT-f2)
+-			continue;
+-		if(v <= 0)
+-			break;
+-	}
+-	if(f)
+-		s[--i] = '-';
+-	strconv(s+i, f1, -1);
+-	return r;
+-}
+-
+-char*
+-doprint(s, fmt, argp)
+-char *s, *fmt;
+-va_list *argp;
+-{
+-
+-	return donprint(s, s+SIZE, fmt, argp);
+-}
+-
+-/*
+-	if you change this, change chconv
+-*/
+-
+-strconv(o, f1, f2)
+-char *o;
+-{
+-	register int n, c;
+-	register char *s;
+-
+-	n = 0;
+-	for(s = o; *s++;)
+-		n++;
+-	if(f1 >= 0)
+-		while(n < f1) {
+-			if(out < eout)
+-				*out++ = ' ';
+-			printcol++;
+-			n++;
+-		}
+-	for(s=o; c = *s++;)
+-		if(f2 != 0) {
+-			if(out < eout)
+-				*out++ = c;
+-			printcol++;
+-			if(c == '\n')
+-				printcol = 0; else
+-			if(c == '\t')
+-				printcol = (printcol+7) & ~7;
+-			f2--;
+-		}
+-	if(f1 < 0) {
+-		f1 = -f1;
+-		while(n < f1) {
+-			if(out < eout)
+-				*out++ = ' ';
+-			printcol++;
+-			n++;
+-		}
+-	}
+-}
+-
+-chconv(o, f1)
+-char o;
+-{
+-	register int n;
+-
+-	n = 1;
+-	if(f1 >= 0)
+-		while(n < f1) {
+-			if(out < eout)
+-				*out++ = ' ';
+-			printcol++;
+-			n++;
+-		}
+-	if(out < eout)
+-		*out++ = o;
+-	printcol++;
+-	if(o == '\n')
+-		printcol = 0; else
+-	if(o == '\t')
+-		printcol = (printcol+7) & ~7;
+-	if(f1 < 0) {
+-		f1 = -f1;
+-		while(n < f1) {
+-			if(out < eout)
+-				*out++ = ' ';
+-			printcol++;
+-			n++;
+-		}
+-	}
+-}
+-
+-/* ARGSUSED */
+-static
+-noconv(o, f1, f2, f3)
+-char *o;
+-{
+-
+-	strconv("***", 0, -1);
+-	return 0;
+-}
+-
+-/* ARGSUSED */
+-static
+-cconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-	chconv((char)va_arg(*o, int), f1);
+-	return INT;
+-}
+-
+-static
+-dconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-	int r;
+-
+-	r = numbconv(o, f1, f2, f3, 10);
+-	return r;
+-}
+-
+-/* ARGSUSED */
+-static
+-hconv(o, f1, f2, f3)
+-{
+-	return -FSHORT;
+-}
+-
+-/* ARGSUSED */
+-static
+-lconv(o, f1, f2, f3)
+-{
+-
+-	return -FLONG;
+-}
+-
+-static
+-oconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-	int r;
+-
+-	r = numbconv(o, f1, f2, f3, 8);
+-	return r;
+-}
+-
+-/* ARGSUSED */
+-static
+-sconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-
+-	strconv(va_arg(*o, char *), f1, f2);
+-	return PTR;
+-}
+-
+-/* ARGSUSED */
+-static
+-uconv(o, f1, f2, f3)
+-{
+-	return -FUNSIGN;
+-}
+-
+-static
+-xconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-	int r;
+-
+-	r = numbconv(o, f1, f2, f3, 16);
+-	return r;
+-}
+-
+-double	pow10(), frexp();
+-/* ARGSUSED */
+-fltconv(f, f1, f2, f3, c)
+-register double f;
+-{
+-	char s1[FDIGIT+10], s2[FDIGIT+10];
+-	register double g;
+-	register int d, i, n, s;
+-	double h;
+-	int e;
+-	int c1, c2, c3;
+-
+-	s = 0;
+-	if(f < 0) {
+-		f = -f;
+-		s++;
+-	}
+-
+-loop:
+-	e = 0;
+-	g = 0;
+-	if(f != 0) {
+-		g = frexp(f, &e);
+-		e = e * .30103;
+-		d = e/2;
+-		h = f * pow10(-d);		/* 10**-e in 2 parts */
+-		g = h * pow10(d-e);
+-		while(g < 1) {
+-			e--;
+-			g = h * pow10(d-e);
+-		}
+-		while(g >= 10) {
+-			e++;
+-			g = h * pow10(d-e);
+-		}
+-	}
+-	if(f2 < 0)
+-		f2 = FDEFLT;
+-	if(c == 'g' && f2 > 0)
+-		f2--;
+-	if(f2 > FDIGIT)
+-		f2 = FDIGIT;
+-	/*
+-	 * n is number of digits to convert
+-	 * 1 before, f2 after, 1 extra for rounding
+-	 */
+-	n = f2 + 2;
+-	if(c == 'f') {
+-		/*
+-		 * e+1 before, f2 after, 1 extra
+-		 */
+-		n += e;
+-		if(n <= 0) {
+-			n = 1;
+-			g = 0;
+-		}
+-	}
+-	if(n >= FDIGIT+2) {
+-		if(c == 'e')
+-			f2 = -1;
+-		c = 'e';
+-		goto loop;
+-	}
+-	/*
+-	 * convert n digits
+-	 */
+-	for(i=0; i<n; i++) {
+-		d = g;
+-		if(d > g)
+-			d--;
+-		g -= d;
+-		s1[i+1] = d + '0';
+-		g *= 10;
+-	}
+-	/*
+-	 * round by adding .5 into extra digit
+-	 */
+-	d = 5;
+-	for(i=n-1; i>=0; i--) {
+-		s1[i+1] += d;
+-		d = 0;
+-		if(s1[i+1] > '9') {
+-			s1[i+1] -= 10;
+-			d++;
+-		}
+-	}
+-	i = 1;
+-	if(d) {
+-		s1[0] = '1';
+-		e++;
+-		i = 0;
+-	} 
+-	/*
+-	 * copy into final place
+-	 * c1 digits of leading '0'
+-	 * c2 digits from conversion
+-	 * c3 digits after '.'
+-	 */
+-	d = 0;
+-	if(s)
+-		s2[d++] = '-';
+-	c1 = 0;
+-	c2 = f2 + 1;
+-	c3 = f2;
+-	if(c == 'g')
+-	if(e >= -5 && e <= f2) {
+-		c1 = -e - 1;
+-		c3 = c1;
+-		if(c1 < 0)
+-			c1 = 0;
+-		c3 = f2 - e;
+-		c = 'h';
+-	}
+-	if(c == 'f') {
+-		c1 = -e;
+-		if(c1 < 0)
+-			c1 = 0;
+-		if(c1 > f2)
+-			c1 = c2;
+-		c2 += e;
+-		if(c2 < 0)
+-			c2 = 0;
+-	}
+-	while(c1 > 0) {
+-		if(c1+c2 == c3)
+-			s2[d++] = '.';
+-		s2[d++] = '0';
+-		c1--;
+-	}
+-	while(c2 > 0) {
+-		if(c1+c2 == c3)
+-			s2[d++] = '.';
+-		s2[d++] = s1[i++];
+-		c2--;
+-	}
+-	/*
+-	 * strip trailing '0' on g conv
+-	 */
+-	if(c == 'g' || c == 'h') {
+-		for(n=d-1; n>=0; n--)
+-			if(s2[n] != '0')
+-				break;
+-		for(i=n; i>=0; i--)
+-			if(s2[i] == '.') {
+-				d = n;
+-				if(i != n)
+-					d++;
+-				break;
+-			}
+-	}
+-	if(c == 'e' || c == 'g') {
+-		s2[d++] = 'e';
+-		s2[d++] = '+';
+-		c1 = e;
+-		if(c1 < 0) {
+-			s2[d-1] = '-';
+-			c1 = -c1;
+-		}
+-		if(c1 >= 100) {
+-			s2[d++] = c1/100 + '0';
+-			c1 %= 100;
+-		}
+-		s2[d++] = c1/10 + '0';
+-		s2[d++] = c1%10 + '0';
+-	}
+-	s2[d] = 0;
+-	strconv(s2, f1, -1);
+-	return FLOAT;
+-}
+-
+-static
+-econv(o, f1, f2, f3)
+-va_list *o;
+-{
+-
+-	return fltconv(va_arg(*o, double), f1, f2, f3, 'e');
+-}
+-
+-static
+-fconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-
+-	return fltconv(va_arg(*o, double), f1, f2, f3, 'f');
+-}
+-
+-static
+-gconv(o, f1, f2, f3)
+-va_list *o;
+-{
+-
+-	return fltconv(va_arg(*o, double), f1, f2, f3, 'g');
+-}
+-
+-static
+-percent()
+-{
+-
+-	if(out < eout)
+-		*out++ = '%';
+-	return 0;
+-}
+//GO.SYSIN DD ./libc/doprint.c
+echo ./libc/exit.c 1>&2
+sed 's/.//' >./libc/exit.c <<'//GO.SYSIN DD ./libc/exit.c'
+-#include	<libc.h>
+-
+-extern int (*_onexitfns[])();
+-
+-void
+-exit(status)
+-{
+-	int i, (*f)();
+-
+-	for(i = NONEXIT-1; i >= 0; i--)
+-		if(_onexitfns[i]){
+-			f = _onexitfns[i];
+-			_onexitfns[i] = 0;	/* self defense against bozos */
+-			(*f)();
+-		}
+-	_exit(status);
+-}
+//GO.SYSIN DD ./libc/exit.c
+echo ./libc/regcomp.c 1>&2
+sed 's/.//' >./libc/regcomp.c <<'//GO.SYSIN DD ./libc/regcomp.c'
+-#include <libc.h>
+-#include "regprog.h"
+-
+-/*
+- * Parser Information
+- */
+-typedef struct Node{
+-	Inst	*first;
+-	Inst	*last;
+-}Node;
+-#define	NSTACK	20
+-static Node	andstack[NSTACK];
+-static Node	*andp;
+-static int	atorstack[NSTACK];
+-static int	*atorp;
+-static int	cursubid;		/* id of current subexpression */
+-static int	subidstack[NSTACK];	/* parallel to atorstack */
+-static int	*subidp;
+-static int	lastwasand;	/* Last token was operand */
+-static int	nbra;
+-static char	*exprp;		/* pointer to next character in source expression */
+-static int	nclass;
+-static Class	*classp;
+-static Inst	*freep;
+-static int	errors;
+-
+-/* predeclared crap */
+-static void operator();
+-static void pushand();
+-static void pushator();
+-static void evaluntil();
+-static void bldcclass();
+-
+-static void
+-rcerror(s)
+-	char *s;
+-{
+-	errors++;
+-	regerror(s);
+-}
+-
+-static Inst *
+-newinst(t)
+-	int t;
+-{
+-	freep->type=t;
+-	freep->left=0;
+-	freep->right=0;
+-	return freep++;
+-}
+-
+-static void
+-operand(t)
+-	int t;
+-{
+-	register Inst *i;
+-	if(lastwasand)
+-		operator(CAT);	/* catenate is implicit */
+-	i=newinst(t);
+-	if(t==CCLASS)	/* ugh */
+-		i->right=(Inst *)&(classp[nclass-1]);	/* UGH! */
+-	pushand(i, i);
+-	lastwasand=TRUE;
+-}
+-
+-static void
+-operator(t)
+-	int t;
+-{
+-	if(t==RBRA && --nbra<0)
+-		rcerror("unmatched right paren");
+-	if(t==LBRA) {
+-		if (++cursubid >= NSUBEXP)
+-			rcerror ("too many subexpressions");
+-		nbra++;
+-		if (lastwasand)
+-			operator(CAT);
+-	} else
+-		evaluntil(t);
+-	if(t!=RBRA)
+-		pushator(t);
+-	lastwasand=FALSE;
+-	if(t==STAR || t==QUEST || t==PLUS || t==RBRA)
+-		lastwasand=TRUE;	/* these look like operands */
+-}
+-
+-static void
+-regerr2(s, c)
+-	char *s;
+-{
+-	char buf[100];
+-	char *cp = buf;
+-	while(*s)
+-		*cp++ = *s++;
+-	*cp++ = c;
+-	*cp = '\0'; 
+-	rcerror(buf);
+-}
+-
+-static void
+-cant(s)
+-	char *s;
+-{
+-	char buf[100];
+-	strcpy(buf, "can't happen: ");
+-	strcat(buf, s);
+-	rcerror(buf);
+-}
+-
+-static void
+-pushand(f, l)
+-	Inst *f, *l;
+-{
+-	if(andp >= &andstack[NSTACK])
+-		cant("operand stack overflow");
+-	andp->first=f;
+-	andp->last=l;
+-	andp++;
+-}
+-
+-static void
+-pushator(t)
+-	int t;
+-{
+-	if(atorp >= &atorstack[NSTACK])
+-		cant("operator stack overflow");
+-	*atorp++=t;
+-	*subidp++=cursubid;
+-}
+-
+-static Node *
+-popand(op)
+-{
+-	register Inst *inst;
+-
+-	if(andp <= &andstack[0]) {
+-		regerr2("missing operand for ", op);
+-		inst=newinst(NOP);
+-		pushand(inst,inst);
+-	}
+-	return --andp;
+-}
+-
+-static int
+-popator()
+-{
+-	if(atorp <= &atorstack[0])
+-		cant("operator stack underflow");
+-	--subidp;
+-	return *--atorp;
+-}
+-
+-static void
+-evaluntil(pri)
+-	register pri;
+-{
+-	register Node *op1, *op2;
+-	register Inst *inst1, *inst2;
+-
+-	while(pri==RBRA || atorp[-1]>=pri){
+-		switch(popator()){
+-		default:
+-			rcerror("unknown operator in evaluntil");
+-			break;
+-		case LBRA:		/* must have been RBRA */
+-			op1=popand('(');
+-			inst2=newinst(RBRA);
+-			inst2->subid = *subidp;
+-			op1->last->next = inst2;
+-			inst1=newinst(LBRA);
+-			inst1->subid = *subidp;
+-			inst1->next=op1->first;
+-			pushand(inst1, inst2);
+-			return;
+-		case OR:
+-			op2=popand('|');
+-			op1=popand('|');
+-			inst2=newinst(NOP);
+-			op2->last->next=inst2;
+-			op1->last->next=inst2;
+-			inst1=newinst(OR);
+-			inst1->right=op1->first;
+-			inst1->left=op2->first;
+-			pushand(inst1, inst2);
+-			break;
+-		case CAT:
+-			op2=popand(0);
+-			op1=popand(0);
+-			op1->last->next=op2->first;
+-			pushand(op1->first, op2->last);
+-			break;
+-		case STAR:
+-			op2=popand('*');
+-			inst1=newinst(OR);
+-			op2->last->next=inst1;
+-			inst1->right=op2->first;
+-			pushand(inst1, inst1);
+-			break;
+-		case PLUS:
+-			op2=popand('+');
+-			inst1=newinst(OR);
+-			op2->last->next=inst1;
+-			inst1->right=op2->first;
+-			pushand(op2->first, inst1);
+-			break;
+-		case QUEST:
+-			op2=popand('?');
+-			inst1=newinst(OR);
+-			inst2=newinst(NOP);
+-			inst1->left=inst2;
+-			inst1->right=op2->first;
+-			op2->last->next=inst2;
+-			pushand(inst1, inst2);
+-			break;
+-		}
+-	}
+-}
+-
+-static Prog *
+-optimize(pp)
+-	Prog *pp;
+-{
+-	register Inst *inst, *target;
+-	int size;
+-	Prog *npp;
+-	int diff;
+-
+-	/*
+-	 *  get rid of NOOP chains
+-	 */
+-	for(inst=pp->firstinst; inst->type!=END; inst++){
+-		target=inst->next;
+-		while(target->type == NOP)
+-			target=target->next;
+-		inst->next=target;
+-	}
+-
+-	/*
+-	 *  The original allocation is for an area larger than
+-	 *  necessary.  Reallocate to the actual space used
+-	 *  and then relocate the code.
+-	 */
+-	size = sizeof(Prog) + (freep - pp->firstinst)*sizeof(Inst);
+-	npp = (Prog *)realloc((char *)pp, size);
+-	if(npp==NULL || npp==pp)
+-		return(pp);
+-	diff = (char *)npp - (char *)pp;
+-	freep = (Inst *)((char *)freep + diff);
+-	for(inst=npp->firstinst; inst<freep; inst++){
+-		switch(inst->type){
+-		case OR:
+-		case STAR:
+-		case PLUS:
+-		case QUEST:
+-		case CCLASS:
+-			*(char **)&inst->right += diff;
+-			break;
+-		}
+-		*(char **)&inst->left += diff;
+-	}
+-	*(char **)&npp->startinst += diff;
+-	return(npp);
+-}
+-
+-#ifdef	DEBUG
+-static void
+-dumpstack(){
+-	Node *stk;
+-	int *ip;
+-
+-	printf("operators\n");
+-	for(ip=atorstack; ip<atorp; ip++)
+-		printf("0%o\n", *ip);
+-	printf("operands\n");
+-	for(stk=andstack; stk<andp; stk++)
+-		printf("0%o\t0%o\n", stk->first->type, stk->last->type);
+-}
+-
+-static void
+-dump(pp)
+-	Prog *pp;
+-{
+-	Inst *l;
+-
+-	l=pp->firstinst;
+-	do{
+-		printf("%d:\t0%o\t%d\t%d\n", l-pp->firstinst, l->type,
+-			l->left-pp->firstinst, l->right-pp->firstinst);
+-	}while(l++->type);
+-}
+-#endif
+-
+-static void
+-startlex(s)
+-	char *s;
+-{
+-	exprp=s;
+-	nclass=0;
+-	nbra=0;
+-}
+-
+-static Class *
+-newclass(){
+-	register Class *p;
+-	register n;
+-
+-	if(nclass >= NCLASS)
+-		regerr2("too many character classes; limit", NCLASS+'0');
+-	p = &(classp[nclass++]);
+-	for(n=0; n<16; n++)
+-		p->map[n]=0;
+-	return p;
+-}
+-
+-static int
+-lex(){
+-	register c= *exprp++;
+-
+-	switch(c){
+-	case '\\':
+-		if(*exprp)
+-			c= *exprp++;
+-		break;
+-	case 0:
+-		c=END;
+-		--exprp;	/* In case we come here again */
+-		break;
+-	case '*':
+-		c=STAR;
+-		break;
+-	case '?':
+-		c=QUEST;
+-		break;
+-	case '+':
+-		c=PLUS;
+-		break;
+-	case '|':
+-		c=OR;
+-		break;
+-	case '.':
+-		c=ANY;
+-		break;
+-	case '(':
+-		c=LBRA;
+-		break;
+-	case ')':
+-		c=RBRA;
+-		break;
+-	case '^':
+-		c=BOL;
+-		break;
+-	case '$':
+-		c=EOL;
+-		break;
+-	case '[':
+-		c=CCLASS;
+-		bldcclass();
+-		break;
+-	}
+-	return c;
+-}
+-
+-static int
+-nextc(){
+-	if(exprp[0]==0 || (exprp[0]=='\\' && exprp[1]==0))
+-		rcerror("malformed '[]'");
+-	if(exprp[0]=='\\'){
+-		exprp++;
+-		return *exprp++|0200;
+-	}
+-	return *exprp++;
+-}
+-
+-static void
+-bldcclass(){
+-	register c1, c2;
+-	register Class *classp;
+-	register negate=FALSE;
+-
+-	classp=newclass();
+-	/* we have already seen the '[' */
+-	if(*exprp=='^'){
+-		negate=TRUE;
+-		exprp++;
+-	}
+-	while((c1=c2=nextc()) != ']'){
+-		if(*exprp=='-'){
+-			exprp++;	/* eat '-' */
+-			if((c2=nextc()) == ']')
+-				rcerror("malformed '[]'");
+-		}
+-		for((c1&=0177), (c2&=0177); c1<=c2; c1++)
+-			classp->map[c1/8] |= 1<<(c1&07);
+-	}
+-	if(negate)
+-		for(c1=0; c1<16; c1++)
+-			classp->map[c1]^=0377;
+-	classp->map[0] &= 0376;		/* exclude NUL */
+-}
+-
+-extern regexp *
+-regcomp(s)
+-	char *s;
+-{
+-	register token;
+-	Prog *pp;
+-
+-	/* get memory for the program */
+-	pp = (Prog *)malloc(sizeof(Prog) + 3*sizeof(Inst)*strlen(s));
+-	if (pp == NULL) {
+-		rcerror("out of memory");
+-		return NULL;
+-	}
+-	freep = pp->firstinst;
+-	classp = pp->class;
+-	errors = 0;
+-
+-	/* go compile the sucker */
+-	startlex(s);
+-	atorp=atorstack;
+-	andp=andstack;
+-	subidp=subidstack;
+-	lastwasand=FALSE;
+-	cursubid=0;
+-
+-	/* Start with a low priority operator to prime parser */
+-	pushator(START-1);
+-	while((token=lex()) != END){
+-		if((token&0300) == OPERATOR)
+-			operator(token);
+-		else
+-			operand(token);
+-	}
+-
+-	/* Close with a low priority operator */
+-	evaluntil(START);
+-
+-	/* Force END */
+-	operand(END);
+-	evaluntil(START);
+-#ifdef DEBUG
+-	dumpstack();
+-#endif
+-	if(nbra)
+-		rcerror("unmatched left paren");
+-	--andp;	/* points to first and only operand */
+-	pp->startinst=andp->first;
+-#ifdef DEBUG
+-	dump(pp);
+-#endif
+-	pp = optimize(pp);
+-#ifdef DEBUG
+-	printf("start: %d\n", andp->first-pp->firstinst);
+-	dump(pp);
+-#endif
+-	if (errors) {
+-		free((char *)pp);
+-		pp = NULL;
+-	}
+-	return (regexp *)pp;
+-}
+//GO.SYSIN DD ./libc/regcomp.c
+echo ./libc/getfields.c 1>&2
+sed 's/.//' >./libc/getfields.c <<'//GO.SYSIN DD ./libc/getfields.c'
+-#include	<libc.h>
+-
+-static char is_sep[256] = {
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-};
+-static char is_field[256] = {
+-	0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-};
+-static char last_sep[256];
+-
+-char *
+-setfields(arg)
+-	char *arg;
+-{
+-	register unsigned char *s;
+-	register i;
+-
+-	for(i = 1, s = (unsigned char *)last_sep; i < 256; i++)
+-		if(is_sep[i])
+-			*s++ = i;
+-	*s = 0;
+-	memset(is_sep, 0, sizeof is_sep);
+-	memset(is_field, 1, sizeof is_field);
+-	for(s = (unsigned char *)arg; *s;){
+-		is_sep[*s] = 1;
+-		is_field[*s++] = 0;
+-	}
+-	is_field[0] = 0;
+-	return(last_sep);
+-}
+-
+-getfields(ss, sp, nptrs)
+-	char *ss;
+-	char **sp;
+-{
+-	register unsigned char *s = (unsigned char *)ss;
+-	register unsigned char **p = (unsigned char **)sp;
+-	register unsigned c;
+-
+-	for(;;){
+-		if(--nptrs < 0) break;
+-		*p++ = s;
+-		while(is_field[c = *s++])
+-			;
+-		if(c == 0) break;
+-		s[-1] = 0;
+-	}
+-	if(nptrs > 0)
+-		*p = 0;
+-	else if(--s >= (unsigned char *)ss)
+-		*s = c;
+-	return(p - (unsigned char **)sp);
+-}
+-
+-getmfields(ss, sp, nptrs)
+-	char *ss;
+-	char **sp;
+-{
+-	register unsigned char *s = (unsigned char *)ss;
+-	register unsigned char **p = (unsigned char **)sp;
+-	register unsigned c;
+-	register unsigned d;
+-
+-	if(nptrs <= 0)
+-		return(0);
+-	goto flushdelim;
+-	for(;;){
+-		*p++ = s;
+-		if(--nptrs == 0) break;
+-		while(is_field[c = *s++])
+-			;
+-		/*
+-		 *  s is now pointing 1 past the delimiter of the last field
+-		 *  c is the delimiter
+-		 */
+-		if(c == 0) break;
+-		s[-1] = 0;
+-	flushdelim:
+-		while(is_sep[c = *s++])
+-			;
+-		/*
+-		 *  s is now pointing 1 past the beginning of the next field
+-		 *  c is the first letter of the field
+-		 */
+-		if(c == 0) break;
+-		s--;
+-		/*
+-		 *  s is now pointing to the beginning of the next field
+-		 *  c is the first letter of the field
+-		 */
+-	}
+-	if(nptrs > 0)
+-		*p = 0;
+-	return(p - (unsigned char **)sp);
+-}
+-
+-#ifdef	MAIN
+-#include	<fio.h>
+-
+-main()
+-{
+-	char *fields[256];
+-	char *s;
+-	int n, i;
+-	char buf[1024];
+-
+-	print("go:\n");
+-	while(s = Frdline(0)){
+-		strcpy(buf, s);
+-		Fprint(1, "getf:");
+-		n = getfields(s, fields, 4);
+-		for(i = 0; i < n; i++)
+-			Fprint(1, " >%s<", fields[i]);
+-		Fputc(1, '\n');
+-		Fprint(1, "getmf:");
+-		n = getmfields(buf, fields, 4);
+-		for(i = 0; i < n; i++)
+-			Fprint(1, " >%s<", fields[i]);
+-		Fputc(1, '\n');
+-		Fflush(1);
+-	}
+-	exit(0);
+-}
+-#endif
+//GO.SYSIN DD ./libc/getfields.c
+echo ./libc/libc.h 1>&2
+sed 's/.//' >./libc/libc.h <<'//GO.SYSIN DD ./libc/libc.h'
+-/* system calls */
+-extern unsigned alarm();
+-extern void nap(), pause();
+-extern char *sbrk();
+-extern void exit(), _exit();
+-extern long lseek();
+-extern void nice();
+-extern void profil();
+-extern unsigned long settod();
+-extern void sync();
+-extern long time();
+-
+-/* libc et al */
+-extern long lcm();
+-extern double atof(), strtod();
+-extern long atol();
+-extern char *crypt();
+-extern char *ctime();
+-extern char *ecvt(), *fcvt(), *gcvt();
+-extern char *galloc();
+-extern char *getenv();
+-extern char *getlogin();
+-extern char *getpass();
+-extern char *getwd(), *getcwd();
+-extern char *malloc(), *realloc(), *calloc();
+-extern char *memcpy(), *memchr(), *memccpy(), *memset();
+-extern char *mktemp();
+-extern double frand();
+-extern char *setfields();
+-extern char *strcpy(), *strncpy(), *strcat(), *strncat(), *strchr(), *strrchr();
+-extern char *strpbrk(), *strtok(), *strdup();
+-extern int atoi();
+-extern char *tgetstr(), tgoto();
+-extern char *ttyname(), *cttyname();
+-
+-#define	NONEXIT		33
+//GO.SYSIN DD ./libc/libc.h
+echo ./libc/onexit.c 1>&2
+sed 's/.//' >./libc/onexit.c <<'//GO.SYSIN DD ./libc/onexit.c'
+-#include	<libc.h>
+-
+-int (*_onexitfns[NONEXIT])();
+-
+-atexit(f)
+-int (*f)();
+-{
+-	onexit(f);
+-}
+-
+-onexit(f)
+-int (*f)();
+-{
+-	int i;
+-
+-	for(i=0; i<NONEXIT; i++)
+-		if(!_onexitfns[i]){
+-			_onexitfns[i] = f;
+-			return(1);
+-		}
+-	return(0);
+-}
+//GO.SYSIN DD ./libc/onexit.c
+echo ./libc/regexp.h 1>&2
+sed 's/.//' >./libc/regexp.h <<'//GO.SYSIN DD ./libc/regexp.h'
+-/* the structure describing a sub-expression match */
+-typedef struct {
+-	char *sp;
+-	char *ep;
+-} regsubexp;
+-
+-/* a compiled regular expression */
+-typedef char *regexp;
+-
+-/* the routines */
+-extern regexp *regcomp();
+-extern int regexec();
+-extern void regsub();
+//GO.SYSIN DD ./libc/regexp.h
+echo ./libc/print.c 1>&2
+sed 's/.//' >./libc/print.c <<'//GO.SYSIN DD ./libc/print.c'
+-#include <varargs.h>
+-
+-#define	SIZE	1024
+-extern int	printcol;
+-
+-char	*doprint();
+-
+-/* VARARGS 1 */
+-print(fmt, va_alist)
+-char *fmt;
+-va_dcl
+-{
+-	char buf[SIZE], *out;
+-	va_list ap;
+-
+-	va_start(ap);
+-	out = doprint(buf, fmt, &ap);
+-	va_end(ap);
+-	return write(1, buf, (int)(out-buf));
+-}
+-
+-/* VARARGS 2 */
+-fprint(fd, fmt, va_alist)
+-char *fmt;
+-va_dcl
+-{
+-	char buf[SIZE], *out;
+-	va_list ap;
+-
+-	va_start(ap);
+-	out = doprint(buf, fmt, &ap);
+-	va_end(ap);
+-	return write(fd, buf, (int)(out-buf));
+-}
+-
+-/* VARARGS 2 */
+-sprint(buf, fmt, va_alist)
+-char *buf;
+-char *fmt;
+-va_dcl
+-{
+-	char *out;
+-	int scol;
+-	va_list ap;
+-
+-	scol = printcol;
+-	va_start(ap);
+-	out = doprint(buf, fmt, &ap);
+-	va_end(ap);
+-	printcol = scol;
+-	return out-buf;
+-}
+//GO.SYSIN DD ./libc/print.c
+echo ./libc/strdup.c 1>&2
+sed 's/.//' >./libc/strdup.c <<'//GO.SYSIN DD ./libc/strdup.c'
+-/*	@(#)strdup.c	1.2	*/
+-/*LINTLIBRARY*/
+-/* string duplication
+-   returns pointer to a new string which is the duplicate of string
+-   pointed to by s1
+-   NULL is returned if new string can't be created
+-*/
+-
+-#include <string.h>
+-#ifndef NULL
+-#define NULL	0
+-#endif
+-
+-extern int strlen();
+-extern char *malloc();
+-
+-char *
+-strdup(s1) 
+-
+-   char * s1;
+-
+-{  
+-   char * s2;
+-
+-   s2 = malloc((unsigned) strlen(s1)+1) ;
+-   return(s2==NULL ? NULL : strcpy(s2,s1) );
+-}
+//GO.SYSIN DD ./libc/strdup.c
+echo ./libc/Makefile 1>&2
+sed 's/.//' >./libc/Makefile <<'//GO.SYSIN DD ./libc/Makefile'
+-OBJ=doprint.o exit.o getfields.o onexit.o print.o strdup.o regcomp.o regexec.o regsub.o dup2.o
+-
+-libc.a:	$(OBJ)
+-	ar r libc.a $(OBJ)
+-	$(RANLIB) libc.a
+-
+-cray:	libc.o
+-
+-libc.o:	$(OBJ)
+-	cat $(OBJ) > libc.o
+//GO.SYSIN DD ./libc/Makefile
+echo ./libc/regexec.c 1>&2
+sed 's/.//' >./libc/regexec.c <<'//GO.SYSIN DD ./libc/regexec.c'
+-#include "regprog.h"
+-
+-/*
+- *	Machine state
+- */
+-#define LISTINCREMENT 8
+-typedef struct List{
+-	Inst	*inst;		/* Instruction of the thread */
+-	Subexp	se;		/* matched subexpressions in this thread */
+-}List;
+-static List	*tl, *nl;	/* This list, next list */
+-static List	*tle, *nle;	/* ends of this and next list */
+-static List	*list[2];
+-static List	*liste[2];
+-static int	listsize = LISTINCREMENT;
+-
+-static Subexp sempty;		/* empty set of matches */
+-static int match;		/* true if match is found */
+-
+-/*
+- * Note optimization in addinst:
+- * 	*lp must be pending when addinst called; if *l has been looked
+- *		at already, the optimization is a bug.
+- */
+-static List *
+-newthread(lp, ip, sep)
+-	List *lp;	/* list to add to */
+-	Inst *ip;	/* instruction to add */
+-	register Subexp *sep;	/* pointers to subexpressions */
+-{
+-	register List *p;
+-
+-	for(p=lp; p->inst != NULL; p++){
+-		if(p->inst==ip){
+-			if((sep)->m[0].sp < p->se.m[0].sp)
+-				p->se = *sep;
+-			return NULL;
+-		}
+-	}
+-	p->inst = ip;
+-	p->se = *sep;
+-	(++p)->inst = NULL;
+-	return p;
+-}
+-
+-static void
+-newmatch(mp, ms, sp)
+-	regsubexp *mp;
+-	int ms;	
+-	register Subexp *sp;
+-{
+-	register int i;
+-
+-	if (mp==NULL || ms <=0)
+-		return;
+-	if(mp[0].sp==0 || sp->m[0].sp<mp[0].sp ||
+-	   (sp->m[0].sp==mp[0].sp && sp->m[0].ep>mp[0].ep)) {
+-		for (i=0; i<ms && i<NSUBEXP; i++)
+-			mp[i] = sp->m[i];
+-		for (; i<ms; i++)
+-			mp[i].sp = mp[i].ep = NULL;
+-	}
+-}
+-
+-extern int
+-regexec(progp, starts, mp, ms)
+-	Prog *progp;	/* program to run */
+-	char *starts;	/* string to run machine on */
+-	regsubexp *mp;	/* subexpression elements */
+-	int ms;		/* number of elements pointed to by mp */
+-{
+-	register flag=0;
+-	register Inst *inst;
+-	register List *tlp;
+-	register char *s;
+-	int startchar=progp->startinst->type<OPERATOR? progp->startinst->type : 0;
+-	int i, checkstart;
+-
+-restart:
+-	match = 0;
+-	checkstart = startchar;
+-	sempty.m[0].sp = NULL;
+-	if (mp!=NULL && ms >0)
+-		mp[0].sp = mp[0].ep = NULL;
+-	if (list[0] == NULL) {
+-		list[0] = (List *)malloc(2*listsize*sizeof(List));
+-		list[1] = list[0] + listsize;
+-		liste[0] = list[0] + listsize - 1;
+-		liste[1] = list[1] + listsize - 1;
+-		if (list[0] == NULL)
+-			regerror("list overflow");
+-	}
+-	list[0][0].inst = list[1][0].inst = NULL;
+-
+-	/* Execute machine once for each character, including terminal NUL */
+-	s=starts;
+-	do{
+-		/* fast check for first char */
+-		if(checkstart && *s!=startchar)
+-			continue;
+-		tl=list[flag];
+-		tle=liste[flag];
+-		nl=list[flag^=1];
+-		nle=liste[flag];
+-		nl->inst=0;
+-		/* Add first instruction to this list */
+-		sempty.m[0].sp = s;
+-		(void)newthread(tl, progp->startinst, &sempty);
+-		/* Execute machine until this list is empty */
+-		for(tlp=tl; inst=tlp->inst; tlp++){	/* assignment = */
+-	Switchstmt:
+-			switch(inst->type){
+-			default:	/* regular character */
+-				if(inst->type == *s){
+-	Addinst:
+-					if(newthread(nl, inst->next, &tlp->se)==nle)
+-						goto realloc;
+-				}
+-				break;
+-			case LBRA:
+-				tlp->se.m[inst->subid].sp = s;
+-				inst=inst->next;
+-				goto Switchstmt;
+-			case RBRA:
+-				tlp->se.m[inst->subid].ep = s;
+-				inst=inst->next;
+-				goto Switchstmt;
+-			case ANY:
+-				goto Addinst;
+-			case BOL:
+-				if(s == starts){
+-					inst=inst->next;
+-					goto Switchstmt;
+-				}
+-				break;
+-			case EOL:
+-				if(*s=='\0'){
+-					inst=inst->next;
+-					goto Switchstmt;
+-				}
+-				break;
+-			case CCLASS:
+-				if(((char *)inst->right)[*s/8]&(1<<(*s&07)))
+-					goto Addinst;
+-				break;
+-			case OR:
+-				/* evaluate right choice later */
+-				if (newthread(tlp, inst->right, &tlp->se) == tle)
+-					goto realloc;
+-				/* efficiency: advance and re-evaluate */
+-				inst=inst->left;
+-				goto Switchstmt;
+-			case END:	/* Match! */
+-				match = 1;
+-				tlp->se.m[0].ep = s;
+-				if (mp != NULL && ms > 0)									newmatch(mp, ms, &tlp->se);
+-				break;
+-			}
+-		}
+-		checkstart = startchar && nl->inst==NULL;
+-	}while(*s++);
+-	return match;
+-realloc:
+-	free(list[0]);
+-	list[0] = NULL;
+-	listsize += LISTINCREMENT;
+-	goto restart;
+-}
+-
+//GO.SYSIN DD ./libc/regexec.c
+echo ./libc/regprog.h 1>&2
+sed 's/.//' >./libc/regprog.h <<'//GO.SYSIN DD ./libc/regprog.h'
+-#include <regexp.h>
+-
+-/* useful constants */
+-#define NULL 0
+-#define	TRUE	1
+-#define	FALSE	0
+-#define	HAT	'\177'		/* character to mark real beg. of line */
+-
+-/*
+- *	Sub expression matches
+- */
+-#define NSUBEXP 10
+-typedef struct {
+-	regsubexp m[NSUBEXP];
+-}Subexp;
+-
+-/*
+- *	character class
+- */
+-typedef struct {
+-	char	map[16];	/* 16 bytes == 128 bits, one bit per char */
+-}Class;
+-
+-/*
+- *	Machine instructions
+- */
+-typedef struct Inst{
+-	int	type;			/* < 0200 ==> literal, otherwise action */
+-	union	{
+-		int sid;		/* sub-expression id for RBRA and LBRA */
+-		struct Inst *other;	/* instructions pointer */
+-	} u;
+-	struct Inst *left;
+-}Inst;
+-#define	next	left	/* Left branch is usually just next ptr */
+-#define	subid	u.sid
+-#define right	u.other
+-
+-/*
+- *	Program definition
+- */
+-#define	NCLASS	16
+-typedef struct Program{
+-	Inst	*startinst;	/* start pc */
+-	Class	class[NCLASS];	/* .data */
+-	Inst	firstinst[5];	/* .text */
+-}Prog;
+-
+-/*
+- * Actions and Tokens
+- *
+- *	02xx are operators, value == precedence
+- *	03xx are tokens, i.e. operands for operators
+- */
+-#define	OPERATOR	0200	/* Bitmask of all operators */
+-#define	START		0200	/* Start, used for marker on stack */
+-#define	RBRA		0201	/* Right bracket, ) */
+-#define	LBRA		0202	/* Left bracket, ( */
+-#define	OR		0203	/* Alternation, | */
+-#define	CAT		0204	/* Concatentation, implicit operator */
+-#define	STAR		0205	/* Closure, * */
+-#define	PLUS		0206	/* a+ == aa* */
+-#define	QUEST		0207	/* a? == a|nothing, i.e. 0 or 1 a's */
+-#define	ANY		0300	/* Any character, . */
+-#define	NOP		0301	/* No operation, internal use only */
+-#define	BOL		0302	/* Beginning of line, ^ */
+-#define	EOL		0303	/* End of line, $ */
+-#define	CCLASS		0304	/* Character class, [] */
+-#define	END		0377	/* Terminate: match found */
+//GO.SYSIN DD ./libc/regprog.h
+echo ./libc/regsub.c 1>&2
+sed 's/.//' >./libc/regsub.c <<'//GO.SYSIN DD ./libc/regsub.c'
+-#include "regprog.h"
+-
+-/* substitute into one string using the matches from the last regexec() */
+-extern void
+-regsub (sp, dp, mp, ms)
+-	char *sp;	/* source string */
+-	char *dp;	/* destination string */
+-	regsubexp *mp;	/* subexpression elements */
+-	int ms;		/* number of elements pointed to by mp */
+-{
+-	char *ssp;
+-	register int i;
+-
+-	while (*sp != '\0') {
+-		if (*sp == '\\') {
+-			switch (*++sp) {
+-			case '0':
+-			case '1':
+-			case '2':
+-			case '3':
+-			case '4':
+-			case '5':
+-			case '6':
+-			case '7':
+-			case '8':
+-			case '9':
+-				i = *sp-'0';
+-				if (mp[i].sp != NULL && mp!=NULL && ms>i)
+-					for (ssp = mp[i].sp;
+-					     ssp < mp[i].ep;
+-					     ssp++)
+-						*dp++ = *ssp;
+-				break;
+-			case '\\':
+-				*dp++ = '\\';
+-				break;
+-			case '\0':
+-				sp--;
+-				break;
+-			default:
+-				*dp++ = *sp;
+-				break;
+-			}
+-		} else if (*sp == '&') {				
+-			if (mp[0].sp != NULL && mp!=NULL && ms>0)
+-			if (mp[0].sp != NULL)
+-				for (ssp = mp[0].sp;
+-				     ssp < mp[0].ep; ssp++)
+-					*dp++ = *ssp;
+-		} else
+-			*dp++ = *sp;
+-		sp++;
+-	}
+-	*dp = '\0';
+-}
+//GO.SYSIN DD ./libc/regsub.c
+echo ./libc/dup2.c 1>&2
+sed 's/.//' >./libc/dup2.c <<'//GO.SYSIN DD ./libc/dup2.c'
+-#ifdef	SYSV
+-/*
+-	dup2(a, b)
+-
+-	dup a as value b
+-*/
+-
+-dup2(a, b)
+-{
+-	int poot[256];		/* greater than NFILES i hope! */
+-	register i, ret;
+-
+-	close(b);
+-	for(i = 0; (poot[i] = dup(a)) >= 0; i++)
+-		if(poot[i] == b) break;
+-	ret = i;
+-	while(--i >= 0)
+-		close(poot[i]);		/* don't need 'em anymore */
+-	return(poot[ret]);
+-}
+-#endif
+//GO.SYSIN DD ./libc/dup2.c
+echo ./libc/new.mk 1>&2
+sed 's/.//' >./libc/new.mk <<'//GO.SYSIN DD ./libc/new.mk'
+-#ifdef DEBUG
+-#include <stdio.h>
+-#endif
+-#include <libc.h>
+-#include "regprog.h"
+-
+-/*
+- * Parser Information
+- */
+-typedef struct Node{
+-	Inst	*first;
+-	Inst	*last;
+-}Node;
+-#define	NSTACK	20
+-static Node	andstack[NSTACK];
+-static Node	*andp;
+-static int	atorstack[NSTACK];
+-static int	*atorp;
+-static int	cursubid;		/* id of current subexpression */
+-static int	subidstack[NSTACK];	/* parallel to atorstack */
+-static int	*subidp;
+-static int	lastwasand;	/* Last token was operand */
+-static int	nbra;
+-static char	*exprp;		/* pointer to next character in source expression */
+-static int	nclass;
+-static Class	*classp;
+-static Inst	*freep;
+-static int	errors;
+-
+-/* predeclared crap */
+-static void operator();
+-static void pushand();
+-static void pushator();
+-static void evaluntil();
+-static void bldcclass();
+-
+-static void
+-rcerror(s)
+-	char *s;
+-{
+-	errors++;
+-	regerror(s);
+-}
+-
+-static Inst *
+-newinst(t)
+-	int t;
+-{
+-	freep->type=t;
+-	freep->left=0;
+-	freep->right=0;
+-	return freep++;
+-}
+-
+-static void
+-operand(t)
+-	int t;
+-{
+-	register Inst *i;
+-	if(lastwasand)
+-		operator(CAT);	/* catenate is implicit */
+-	i=newinst(t);
+-	if(t==CCLASS)	/* ugh */
+-		i->right=(Inst *)&(classp[nclass-1]);	/* UGH! */
+-	pushand(i, i);
+-	lastwasand=TRUE;
+-}
+-
+-static void
+-operator(t)
+-	int t;
+-{
+-	if(t==RBRA && --nbra<0)
+-		rcerror("unmatched right paren");
+-	if(t==LBRA) {
+-		if (++cursubid >= NSUBEXP)
+-			rcerror ("too many subexpressions");
+-		nbra++;
+-		if (lastwasand)
+-			operator(CAT);
+-	} else
+-		evaluntil(t);
+-	if(t!=RBRA)
+-		pushator(t);
+-	lastwasand=FALSE;
+-	if(t==STAR || t==QUEST || t==PLUS || t==RBRA)
+-		lastwasand=TRUE;	/* these look like operands */
+-}
+-
+-static void
+-regerr2(s, c)
+-	char *s;
+-{
+-	char buf[100];
+-	char *cp = buf;
+-	while(*s)
+-		*cp++ = *s++;
+-	*cp++ = c;
+-	*cp = '\0'; 
+-	rcerror(buf);
+-}
+-
+-static void
+-cant(s)
+-	char *s;
+-{
+-	char buf[100];
+-	strcpy(buf, "can't happen: ");
+-	strcat(buf, s);
+-	rcerror(buf);
+-}
+-
+-static void
+-pushand(f, l)
+-	Inst *f, *l;
+-{
+-	if(andp >= &andstack[NSTACK])
+-		cant("operand stack overflow");
+-	andp->first=f;
+-	andp->last=l;
+-	andp++;
+-}
+-
+-static void
+-pushator(t)
+-	int t;
+-{
+-	if(atorp >= &atorstack[NSTACK])
+-		cant("operator stack overflow");
+-	*atorp++=t;
+-	*subidp++=cursubid;
+-}
+-
+-static Node *
+-popand(op)
+-{
+-	register Inst *inst;
+-
+-	if(andp <= &andstack[0]) {
+-		regerr2("missing operand for ", op);
+-		inst=newinst(NOP);
+-		pushand(inst,inst);
+-	}
+-	return --andp;
+-}
+-
+-static int
+-popator()
+-{
+-	if(atorp <= &atorstack[0])
+-		cant("operator stack underflow");
+-	--subidp;
+-	return *--atorp;
+-}
+-
+-static void
+-evaluntil(pri)
+-	register pri;
+-{
+-	register Node *op1, *op2;
+-	register Inst *inst1, *inst2;
+-
+-	while(pri==RBRA || atorp[-1]>=pri){
+-		switch(popator()){
+-		default:
+-			rcerror("unknown operator in evaluntil");
+-			break;
+-		case LBRA:		/* must have been RBRA */
+-			op1=popand('(');
+-			inst2=newinst(RBRA);
+-			inst2->subid = *subidp;
+-			op1->last->next = inst2;
+-			inst1=newinst(LBRA);
+-			inst1->subid = *subidp;
+-			inst1->next=op1->first;
+-			pushand(inst1, inst2);
+-			return;
+-		case OR:
+-			op2=popand('|');
+-			op1=popand('|');
+-			inst2=newinst(NOP);
+-			op2->last->next=inst2;
+-			op1->last->next=inst2;
+-			inst1=newinst(OR);
+-			inst1->right=op1->first;
+-			inst1->left=op2->first;
+-			pushand(inst1, inst2);
+-			break;
+-		case CAT:
+-			op2=popand(0);
+-			op1=popand(0);
+-			op1->last->next=op2->first;
+-			pushand(op1->first, op2->last);
+-			break;
+-		case STAR:
+-			op2=popand('*');
+-			inst1=newinst(OR);
+-			op2->last->next=inst1;
+-			inst1->right=op2->first;
+-			pushand(inst1, inst1);
+-			break;
+-		case PLUS:
+-			op2=popand('+');
+-			inst1=newinst(OR);
+-			op2->last->next=inst1;
+-			inst1->right=op2->first;
+-			pushand(op2->first, inst1);
+-			break;
+-		case QUEST:
+-			op2=popand('?');
+-			inst1=newinst(OR);
+-			inst2=newinst(NOP);
+-			inst1->left=inst2;
+-			inst1->right=op2->first;
+-			op2->last->next=inst2;
+-			pushand(inst1, inst2);
+-			break;
+-		}
+-	}
+-}
+-
+-static Prog *
+-optimize(pp)
+-	Prog *pp;
+-{
+-	register Inst *inst, *target;
+-	int size;
+-	Prog *npp;
+-
+-	/*
+-	 *  get rid of NOOP chains
+-	 */
+-	for(inst=pp->firstinst; inst->type!=END; inst++){
+-		target=inst->next;
+-		while(target->type == NOP)
+-			target=target->next;
+-		inst->next=target;
+-	}
+-
+-	/*
+-	 *  The original allocation is for an area larger than
+-	 *  necessary.  Reallocate to the actual space used
+-	 *  and then relocate the code.
+-	 */
+-	size = sizeof(Prog) + (freep - pp->firstinst)*sizeof(Inst);
+-	npp = (Prog *)realloc((char *)pp, size);
+-	if(npp==NULL || npp==pp)
+-		return(pp);
+-	freep = &npp->firstinst[freep - pp->firstinst];
+-	npp->startinst = &npp->firstinst[pp->startinst - pp->firstinst];
+-	for(inst=npp->firstinst; inst<freep; inst++){
+-		switch(inst->type){
+-		case OR:
+-		case STAR:
+-		case PLUS:
+-		case QUEST:
+-			inst->right = &npp->firstinst[inst->right - pp->firstinst];
+-			break;
+-		case CCLASS:
+-			inst->right = (Inst *) &npp->class[(Class*)inst->right - pp->class];
+-			break;
+-		}
+-		inst->left = &npp->firstinst[inst->left - pp->firstinst];
+-	}
+-	return(npp);
+-}
+-
+-#ifdef	DEBUG
+-static char *
+-dumptype(t){
+-	static char ordinary[4] = "'.'";
+-
+-	switch(t){
+-	case START:	return "START";
+-	case RBRA:	return "RBRA";
+-	case LBRA:	return "LBRA";
+-	case OR:	return "OR";
+-	case CAT:	return "CAT";
+-	case STAR:	return "STAR";
+-	case PLUS:	return "PLUS";
+-	case QUEST:	return "QUEST";
+-	case ANY:	return "ANY";
+-	case NOP:	return "NOP";
+-	case BOL:	return "BOL";
+-	case EOL:	return "EOL";
+-	case CCLASS:	return "CCLASS";
+-	case END:	return "END";
+-	default:
+-		ordinary[1] = t;
+-		return ordinary;
+-	}
+-}
+-
+-static void
+-dumpstack(){
+-	Node *stk;
+-	int *ip;
+-
+-	printf("operators\n");
+-	for(ip=atorstack; ip<atorp; ip++)
+-		printf("0%o\n", *ip);
+-	printf("operands\n");
+-	for(stk=andstack; stk<andp; stk++){
+-		printf("%s\t", dumptype(stk->first->type));
+-		printf("%s\n", dumptype(stk->last->type));
+-	}
+-}
+-
+-static void
+-putC(c)
+-{
+-	if(c < ' ' || '~' < c){
+-		switch(c){
+-		default:
+-			putchar('^');
+-			putchar((c + '@') & 0x7f);
+-			return;
+-		case '\b':
+-			c = 'b';
+-			break;
+-		case '\t':
+-			c = 't';
+-			break;
+-		case '\n':
+-			c = 'n';
+-			break;
+-		case '\v':
+-			c = 'v';
+-			break;
+-		case '\f':
+-			c = 'f';
+-			break;
+-		case '\r':
+-			c = 'r';
+-			break;
+-		}
+-		putchar('\\');
+-	}
+-	putchar(c);
+-}
+-
+-static void
+-putCHAR(from, to)
+-{
+-	if(from != 0)
+-		if(from == to)
+-			putC(from);
+-		else{
+-			putC(from);
+-			putchar('-');
+-			putC(to);
+-		}
+-}
+-
+-static void
+-dump(pp)
+-	Prog *pp;
+-{
+-	int c, from;
+-	Inst *l;
+-	Class *classp;
+-
+-	l=pp->firstinst;
+-	do{
+-		printf("%d:\t%s\t%d\t", l-pp->firstinst, dumptype(l->type),
+-			l->left-pp->firstinst);
+-		if(l->type == CCLASS){
+-			classp = (Class*) l->right;
+-			putchar('[');
+-			if(classp->map[0] & 02){	/* ^A? */
+-				putchar('^');		/* assume negation */
+-				for(from=0, c=1; c < 128; ++c){
+-					if(classp->map[c/8] & (1<<(c&07))){
+-						putCHAR(from, c-1);
+-						from = 0;
+-					} else {
+-						if(from == 0)
+-							from = c;
+-					}
+-				}
+-				putCHAR(from, c-1);
+-			} else {
+-				for(from=0, c=1; c < 128; ++c){
+-					if(classp->map[c/8] & (1<<(c&07))){
+-						if(from == 0)
+-							from = c;
+-					} else {
+-						putCHAR(from, c-1);
+-						from = 0;
+-					}
+-				}
+-				putCHAR(from, c-1);
+-			}
+-			putchar(']');
+-		} else
+-			printf("%d", l->right-pp->firstinst);
+-		putchar('\n');
+-	}while(l++->type);
+-}
+-#endif
+-
+-static void
+-startlex(s)
+-	char *s;
+-{
+-	exprp=s;
+-	nclass=0;
+-	nbra=0;
+-}
+-
+-static Class *
+-newclass(){
+-	register Class *p;
+-	register n;
+-
+-	if(nclass >= NCLASS)
+-		regerr2("too many character classes; limit", NCLASS+'0');
+-	p = &(classp[nclass++]);
+-	for(n=0; n<16; n++)
+-		p->map[n]=0;
+-	return p;
+-}
+-
+-static int
+-lex(){
+-	register c= *exprp++;
+-
+-	switch(c){
+-	case '\\':
+-		if(*exprp)
+-			c= *exprp++;
+-		break;
+-	case 0:
+-		c=END;
+-		--exprp;	/* In case we come here again */
+-		break;
+-	case '*':
+-		c=STAR;
+-		break;
+-	case '?':
+-		c=QUEST;
+-		break;
+-	case '+':
+-		c=PLUS;
+-		break;
+-	case '|':
+-		c=OR;
+-		break;
+-	case '.':
+-		c=ANY;
+-		break;
+-	case '(':
+-		c=LBRA;
+-		break;
+-	case ')':
+-		c=RBRA;
+-		break;
+-	case '^':
+-		c=BOL;
+-		break;
+-	case '$':
+-		c=EOL;
+-		break;
+-	case '[':
+-		c=CCLASS;
+-		bldcclass();
+-		break;
+-	}
+-	return c;
+-}
+-
+-static int
+-nextc(){
+-	if(exprp[0]==0 || (exprp[0]=='\\' && exprp[1]==0))
+-		rcerror("malformed '[]'");
+-	if(exprp[0]=='\\'){
+-		exprp++;
+-		return *exprp++|0200;
+-	}
+-	return *exprp++;
+-}
+-
+-static void
+-bldcclass(){
+-	register c1, c2;
+-	register Class *classp;
+-	register negate=FALSE;
+-
+-	classp=newclass();
+-	/* we have already seen the '[' */
+-	if(*exprp=='^'){
+-		negate=TRUE;
+-		exprp++;
+-	}
+-	while((c1=c2=nextc()) != ']'){
+-		if(*exprp=='-'){
+-			exprp++;	/* eat '-' */
+-			if((c2=nextc()) == ']')
+-				rcerror("malformed '[]'");
+-		}
+-		for((c1&=0177), (c2&=0177); c1<=c2; c1++)
+-			classp->map[c1/8] |= 1<<(c1&07);
+-	}
+-	if(negate)
+-		for(c1=0; c1<16; c1++)
+-			classp->map[c1]^=0377;
+-	classp->map[0] &= 0376;		/* exclude NUL */
+-}
+-
+-extern regexp *
+-regcomp(s)
+-	char *s;
+-{
+-	register token;
+-	Prog *pp;
+-
+-	/* get memory for the program */
+-	pp = (Prog *)malloc(sizeof(Prog) + 3*sizeof(Inst)*strlen(s));
+-	if (pp == NULL) {
+-		rcerror("out of memory");
+-		return NULL;
+-	}
+-	freep = pp->firstinst;
+-	classp = pp->class;
+-	errors = 0;
+-
+-	/* go compile the sucker */
+-	startlex(s);
+-	atorp=atorstack;
+-	andp=andstack;
+-	subidp=subidstack;
+-	lastwasand=FALSE;
+-	cursubid=0;
+-
+-	/* Start with a low priority operator to prime parser */
+-	pushator(START-1);
+-	while((token=lex()) != END){
+-		if((token&0300) == OPERATOR)
+-			operator(token);
+-		else
+-			operand(token);
+-	}
+-
+-	/* Close with a low priority operator */
+-	evaluntil(START);
+-
+-	/* Force END */
+-	operand(END);
+-	evaluntil(START);
+-#ifdef DEBUG
+-	dumpstack();
+-#endif
+-	if(nbra)
+-		rcerror("unmatched left paren");
+-	--andp;	/* points to first and only operand */
+-	pp->startinst=andp->first;
+-#ifdef DEBUG
+-	dump(pp);
+-#endif
+-	pp = optimize(pp);
+-#ifdef DEBUG
+-	printf("start: %d\n", pp->startinst-pp->firstinst);
+-	dump(pp);
+-	fflush(stdout);
+-#endif
+-	if (errors) {
+-		free((char *)pp);
+-		pp = NULL;
+-	}
+-	return (regexp *)pp;
+-}
+-
+-#ifdef DEBUG
+-#include <setjmp.h>
+-
+-jmp_buf	jmpbuf;
+-
+-main( argc, argv )
+-	char **argv;
+-{
+-	regexp *prog = NULL;
+-	regsubexp match[NSUBEXP];
+-	char line[256];
+-	int i;
+-
+-	while( TRUE ) {
+-		setjmp( jmpbuf );
+-
+-		if(prog)
+-			free( prog );
+-
+-		do {
+-			fputs( "Enter re: ", stdout );
+-			if ( gets(line) == NULL )
+-				exit(0);
+-		} while( (prog = regcomp(line)) == NULL );
+-
+-		fputs( "Enter string: ", stdout );
+-		while( gets(line) != NULL ) {
+-			if ( !regexec(prog,line,match,NSUBEXP) )
+-				puts( "*** NO MATCH ***" );
+-			else
+-				for( i = 0; i < NSUBEXP; ++i )
+-					if ( match[i].sp )
+-						printf( "match[%d] = \"%.*s\"\n", i, match[i].ep - match[i].sp, match[i].sp );
+-		}
+-	}
+-}
+-
+-regerror( s )
+-	char *s;
+-{
+-	puts( s );
+-	longjmp( jmpbuf );
+-}
+-
+-#endif
+//GO.SYSIN DD ./libc/new.mk
+echo ./fio/README 1>&2
+sed 's/.//' >./fio/README <<'//GO.SYSIN DD ./fio/README'
+-here (as in ../libc) you have to add whatever commands
+-you need to set up an archive in the shell file `gen'.
+//GO.SYSIN DD ./fio/README
+echo ./fio/fio.h 1>&2
+sed 's/.//' >./fio/fio.h <<'//GO.SYSIN DD ./fio/fio.h'
+-#define	FIOBSIZE	4096
+-
+-typedef struct Fbuffer
+-{
+-	unsigned char *next;		/* next char to be used */
+-	unsigned char *end;		/* first invalid char */
+-	unsigned char *lnext;		/* previous value of next */
+-	unsigned short flags;		/* see FIO_.* below */
+-	short oflush;			/* if >= 0 fd to flush on read */
+-	long offset;			/* seek of end */
+-	unsigned char buf[FIOBSIZE];
+-} Fbuffer;
+-extern Fbuffer *Ffb[];
+-
+-#define	FIORESET(f)	((f)->next=(f)->lnext=(f)->end=(f)->buf, (f)->flags&= ~FIO_MALLOCED, (f)->oflush= -1)
+-#define	FIOSET(f, fd)	if((f=Ffb[fd&=0x7f]) == 0){Finit(fd,(char *)0);f=Ffb[fd];}
+-/* FIOLINELEN is length of last input */
+-#define	FIOLINELEN(fd)	(((int)(Ffb[fd]->next - Ffb[fd]->lnext))-1)
+-/* FIOSEEK is lseek of next char to be processed */
+-#define	FIOSEEK(fd)	(Ffb[fd]->offset - (Ffb[fd]->end - Ffb[fd]->next))
+-#define	FIOFLUSH(fd)	if((fd >= 0) && Ffb[fd]) Fflush(fd)
+-
+-#define	FIO_RDLAST	0x0001		/* true if last input was rdline */
+-#define	FIO_WRITING	0x0002		/* true if last action was write */
+-#define	FIO_MALLOCED	0x0004		/* set if Finit did the malloc */
+-
+-extern void Finit();
+-extern char *Frdline();
+-extern void Fundo();
+-extern int Fgetc();
+-extern long Fread();
+-extern long Fwrite();
+-extern long Fseek();
+-extern int Fflush();
+-
+-#ifdef	FIO_IMP
+-/* COUNT is the type of counts to things like read, write, memcpy etc */
+-#ifdef	GNOT
+-#define	COUNT	long
+-#define	FIOMALLOC(n)	malloc(n)
+-#define	SEEK(a,b,c)	seek(a,b,c)
+-#else
+-#define	COUNT	int
+-#define	FIOMALLOC(n)	malloc(n)
+-#define	SEEK(a,b,c)	lseek(a,b,c)
+-#endif
+-extern COUNT read(), write();
+-#endif
+//GO.SYSIN DD ./fio/fio.h
+echo ./fio/fiofillbuf.c 1>&2
+sed 's/.//' >./fio/fiofillbuf.c <<'//GO.SYSIN DD ./fio/fiofillbuf.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-Ffillbuf(fd)
+-{
+-	register COUNT n;
+-	register Fbuffer *f = Ffb[fd];
+-
+-	if(n = &f->buf[FIOBSIZE]-f->end){
+-		FIOFLUSH(f->oflush);
+-		n = read(fd, f->end, n);
+-		if(n <= 0)
+-			return(-1);
+-		f->end += n;
+-		f->offset += n;
+-	}
+-	return(1);
+-}
+//GO.SYSIN DD ./fio/fiofillbuf.c
+echo ./fio/fioflush.c 1>&2
+sed 's/.//' >./fio/fioflush.c <<'//GO.SYSIN DD ./fio/fioflush.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-Fflush(fd)
+-{
+-	register Fbuffer *f;
+-
+-	FIOSET(f, fd);
+-	if(f->flags&FIO_WRITING)
+-		return(F_flush(f, fd));
+-	else
+-		return(0);
+-}
+-
+-F_flush(f, fd)
+-	register Fbuffer *f;
+-{
+-	register COUNT n;
+-
+-	f->flags &= ~FIO_WRITING;
+-	if(n = f->next - f->buf){
+-		if(write(fd, f->buf, n) != n)
+-			return(-1);
+-		f->next = f->buf;
+-	}
+-	return(0);
+-}
+//GO.SYSIN DD ./fio/fioflush.c
+echo ./fio/fiogetc.c 1>&2
+sed 's/.//' >./fio/fiogetc.c <<'//GO.SYSIN DD ./fio/fiogetc.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-Fgetc(fd)
+-{
+-	register Fbuffer *f;
+-
+-	FIOSET(f, fd);
+-	if(f->next >= f->end){
+-		if(f->end >= &f->buf[FIOBSIZE])
+-			f->end = f->next = f->buf;
+-		else
+-			f->next = f->end;
+-		if(Ffillbuf(fd) <= 0)
+-			return(-1);
+-	}
+-	f->lnext = f->next;
+-	f->flags &= ~(FIO_RDLAST|FIO_WRITING);
+-	return(*f->next++);
+-}
+//GO.SYSIN DD ./fio/fiogetc.c
+echo ./fio/fioinit.c 1>&2
+sed 's/.//' >./fio/fioinit.c <<'//GO.SYSIN DD ./fio/fioinit.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-static Fdie()
+-{
+-	Fexit(0);
+-}
+-
+-void
+-Finit(fd, buf)
+-	char *buf;
+-{
+-	register Fbuffer *f;
+-	static setfioexit = 1;
+-
+-	if(setfioexit){
+-		setfioexit = 0;
+-		atexit(Fdie);
+-	}
+-	fd &= 0x7f;
+-	if(buf){
+-		Ffb[fd] = (Fbuffer *)buf;
+-		Ffb[fd]->flags = 0;
+-	} else if(!Ffb[fd]){
+-		Ffb[fd] = (Fbuffer *)FIOMALLOC((COUNT)sizeof(Fbuffer));
+-		Ffb[fd]->flags = FIO_MALLOCED;
+-	}
+-	f = Ffb[fd];
+-	FIORESET(f);
+-	f->offset = SEEK(fd, 0L, 1);
+-	if(f->offset < 0)
+-		f->offset = 0;		/* file not been written yet */
+-}
+-
+-#ifdef	GNOT
+-#define	NOFILE	128
+-#endif
+-#ifndef	GNOT
+-#include	<sys/param.h>
+-#endif
+-
+-Fbuffer *Ffb[NOFILE];
+-
+-Fexit(type)
+-{
+-	register n;
+-
+-	for(n = 0; n < NOFILE; n++)
+-		if(Ffb[n])
+-			if(type == 0)
+-				Fflush(n);
+-			else
+-				Fclose(n);
+-}
+//GO.SYSIN DD ./fio/fioinit.c
+echo ./fio/fioprint.c 1>&2
+sed 's/.//' >./fio/fioprint.c <<'//GO.SYSIN DD ./fio/fioprint.c'
+-#define	FIO_IMP
+-#include	<varargs.h>
+-#include	<fio.h>
+-
+-/* VARARGS 2 */
+-Fprint(f, fmt, va_alist)
+-int f;
+-char *fmt;
+-va_dcl
+-{
+-	char buf[FIOBSIZE], *out;
+-	register long n;
+-	va_list ap;
+-	extern char *doprint();
+-
+-	va_start(ap);
+-	out = doprint(buf, fmt, &ap);
+-	va_end(ap);
+-	n = out-buf;
+-	if(Fwrite(f, buf, n) != n)
+-		return(-1);
+-	else
+-		return((int)n);
+-}
+//GO.SYSIN DD ./fio/fioprint.c
+echo ./fio/fioputc.c 1>&2
+sed 's/.//' >./fio/fioputc.c <<'//GO.SYSIN DD ./fio/fioputc.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-Fputc(fd, c)
+-{
+-	register Fbuffer *f;
+-
+-	FIOSET(f, fd);
+-	if(f->next >= &f->buf[FIOBSIZE]){
+-		if(F_flush(f, fd))
+-			return(-1);
+-	}
+-	*f->next++ = c;
+-	f->end = f->next;
+-	f->offset++;
+-	f->flags |= FIO_WRITING;
+-	return(0);
+-}
+//GO.SYSIN DD ./fio/fioputc.c
+echo ./fio/fiordline.c 1>&2
+sed 's/.//' >./fio/fiordline.c <<'//GO.SYSIN DD ./fio/fiordline.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-char *
+-Frdline(fd)
+-{
+-	register unsigned char *p;
+-	register Fbuffer *f;
+-	register n;
+-	register char *nextnl;
+-
+-	FIOSET(f, fd);
+-	while((nextnl = memchr(f->next, '\n', (COUNT)(f->end-f->next))) == 0){
+-		if(f->next == f->buf){
+-			if(f->end >= &f->buf[FIOBSIZE])
+-				f->end = &f->buf[FIOBSIZE-64];	/* full buffer, no newline */
+-		} else {
+-			n = f->next-f->buf;
+-			memcpy(f->buf, f->next, (COUNT)(FIOBSIZE-n));
+-			f->next -= n;
+-			f->end -= n;
+-		}
+-		if(Ffillbuf(fd) <= 0)
+-			return((char *)0);
+-	}
+-	f->lnext = f->next;
+-	f->next = (unsigned char *)(nextnl+1);
+-	*nextnl = 0;
+-	f->flags = (f->flags|FIO_RDLAST)&~FIO_WRITING;
+-	return((char *)f->lnext);
+-}
+//GO.SYSIN DD ./fio/fiordline.c
+echo ./fio/fioread.c 1>&2
+sed 's/.//' >./fio/fioread.c <<'//GO.SYSIN DD ./fio/fioread.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-#define		MAXREAD		0xff00		/* 64K - 4K */
+-#define		FIOSHORT	100
+-
+-long
+-Fread(fd, addr, n)
+-	char *addr;
+-	long n;
+-{
+-	register unsigned char *p;
+-	register Fbuffer *f;
+-	COUNT k;
+-	char *oaddr = addr;
+-	char *goal = addr+n;
+-
+-	FIOSET(f, fd);
+-again:
+-	k = f->end - f->next;
+-	if(n < k) k = n;
+-	memcpy(addr, (char *)f->next, k);
+-	f->next += k;
+-	f->lnext = f->next;	/* effectively disable undo */
+-	n -= k;
+-	addr += k;
+-	if((n > 0) && (n < FIOSHORT)){	/* buffer reads of less than FIOSHORT */
+-		if(f->next == f->end)
+-			f->next = f->end = f->buf;
+-		if(Ffillbuf(fd) < 0)
+-			return((long)(addr - oaddr));
+-		goto again;
+-	}
+-	if(n > 0)
+-		FIOFLUSH(f->oflush);
+-	while(n > 0){	/* buffer is empty so do real reads */
+-		k = n;
+-		if(k > MAXREAD) k = MAXREAD;
+-		if((k = read(fd, addr, k)) < 0)
+-			return(-1L);
+-		if(k == 0) break;
+-		addr += k;
+-		n -= k;
+-		f->offset += k;
+-	}
+-	return((long)(addr - oaddr));
+-}
+//GO.SYSIN DD ./fio/fioread.c
+echo ./fio/fioseek.c 1>&2
+sed 's/.//' >./fio/fioseek.c <<'//GO.SYSIN DD ./fio/fioseek.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-long
+-Fseek(fd, n, cmd)
+-	long n;
+-{
+-	register Fbuffer *f;
+-	register long dest, k;
+-
+-	FIOSET(f, fd);
+-	switch(cmd)
+-	{
+-	case 0:
+-		dest = n;
+-		break;
+-	case 1:
+-		/* allow for the fact we are beyond where we think we are */
+-		dest = f->offset + n + f->next-f->end;
+-		break;
+-	case 2:
+-		if(f->flags&FIO_WRITING)
+-			F_flush(f, fd);
+-		dest = SEEK(fd, n, cmd);
+-		FIORESET(f);
+-		f->offset = dest;
+-		break;
+-	}
+-	if(dest < 0)
+-		return(dest);
+-	k = f->end - ((f->flags&FIO_WRITING)? f->buf : f->lnext);
+-	if((dest >= f->offset) || (dest < f->offset-k)){
+-		if(f->flags&FIO_WRITING)
+-			F_flush(f, fd);
+-		FIORESET(f);
+-		f->offset = dest;
+-		SEEK(fd, f->offset, 0);
+-	} else {
+-		f->next = f->lnext + (dest-(f->offset-k));
+-		if(f->flags&FIO_WRITING){
+-			f->offset -= f->end - f->next;
+-			f->end = f->next;
+-		}
+-		SEEK(fd, f->offset, 0);
+-	}
+-	return(dest);
+-}
+//GO.SYSIN DD ./fio/fioseek.c
+echo ./fio/fioundo.c 1>&2
+sed 's/.//' >./fio/fioundo.c <<'//GO.SYSIN DD ./fio/fioundo.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-void
+-Fundo(fd)
+-{
+-	register Fbuffer *f;
+-
+-	FIOSET(f, fd);
+-	if(f->flags&FIO_WRITING)
+-		return;
+-	if(f->flags&FIO_RDLAST)
+-		f->next[-1] = '\n';
+-	f->next = f->lnext;
+-}
+//GO.SYSIN DD ./fio/fioundo.c
+echo ./fio/fiowrite.c 1>&2
+sed 's/.//' >./fio/fiowrite.c <<'//GO.SYSIN DD ./fio/fiowrite.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-long
+-Fwrite(fd, addr, nbytes)
+-	register char *addr;
+-	register long nbytes;
+-{
+-	register Fbuffer *f;
+-	register COUNT n;
+-	long nnbytes = nbytes;
+-
+-	FIOSET(f, fd);
+-	f->flags |= FIO_WRITING;
+-	n = &f->buf[FIOBSIZE] - f->next;
+-	if(nbytes < n) n = nbytes;
+-	memcpy(f->next, addr, n);
+-	f->end = (f->next += n);
+-	f->offset += n;
+-	nbytes -= n;
+-	addr += n;
+-	if(nbytes){
+-		if(F_flush(f, fd))
+-			return(-1L);
+-		while(nbytes >= FIOBSIZE){
+-			if(write(fd, addr, (COUNT)FIOBSIZE) != FIOBSIZE)
+-				return(-1L);
+-			addr += FIOBSIZE;
+-			nbytes -= FIOBSIZE;
+-			f->offset += FIOBSIZE;
+-		}
+-		memcpy(f->buf, addr, (COUNT)(n = nbytes));
+-		f->end = f->next = f->buf+n;
+-		f->offset += n;
+-		f->flags |= FIO_WRITING;
+-	}
+-	return(nnbytes);
+-}
+//GO.SYSIN DD ./fio/fiowrite.c
+echo ./fio/libc.h 1>&2
+sed 's/.//' >./fio/libc.h <<'//GO.SYSIN DD ./fio/libc.h'
+-/* system calls */
+-extern unsigned alarm();
+-extern void nap(), pause();
+-extern char *sbrk();
+-extern void exit(), _exit();
+-extern long lseek();
+-extern void nice();
+-extern void profil();
+-extern unsigned long settod();
+-extern void sync();
+-extern long time();
+-
+-/* libc et al */
+-extern long lcm();
+-extern double atof(), strtod();
+-extern long atol();
+-extern char *crypt();
+-extern char *ctime();
+-extern char *ecvt(), *fcvt(), *gcvt();
+-extern char *galloc();
+-extern char *getenv();
+-extern char *getlogin();
+-extern char *getpass();
+-extern char *getwd(), *getcwd();
+-extern char *malloc(), *realloc(), *calloc();
+-extern char *memcpy(), *memchr(), *memccpy(), *memset();
+-extern char *mktemp();
+-extern double frand();
+-extern char *strcpy(), *strncpy(), *strcat(), *strncat(), *strchr(), *strrchr();
+-extern char *strpbrk(), *strtok(), *strdup();
+-extern int atoi();
+-extern char *tgetstr(), tgoto();
+-extern char *ttyname(), *cttyname();
+-
+-#define	NONEXIT		33
+//GO.SYSIN DD ./fio/libc.h
+echo ./fio/tstrd.c 1>&2
+sed 's/.//' >./fio/tstrd.c <<'//GO.SYSIN DD ./fio/tstrd.c'
+-#include	<fio.h>
+-#include	<libc.h>
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	register n, c, k;
+-	int len, fd, cd;
+-	char *b1, *b2, *p;
+-
+-	if(argc < 2){
+-		Fprint(2, "Usage: tstrd file\n");
+-		exit(1);
+-	}
+-	len = flen(argv[1]);
+-	if((fd = open(argv[1], 0)) < 0){
+-		perror(argv[1]);	
+-		exit(1);
+-	}
+-	if((b1 = malloc(len)) == 0){
+-		Fprint(2, "malloc(%d) failed\n", len);
+-		exit(1);
+-	}
+-	if(read(fd, b1, len) != len){
+-		perror("read");
+-		exit(1);
+-	}
+-	lseek(fd, 0L, 0);
+-	if((b2 = malloc(len)) == 0){
+-		Fprint(2, "malloc(%d) failed\n", len);
+-		exit(1);
+-	}
+-	for(p = b2, cd = 0; cd < len;){
+-		n = 1000*nrand(6) + nrand(199);
+-		if(n > len-cd) n = len-cd;
+-		Fprint(1, "%d getchars\n", n);
+-		cd += n;
+-		while(n--)
+-			*p++ = Fgetc(fd);
+-		if(cd == len)
+-			continue;
+-		n = 1000*nrand(12) + nrand(199);
+-		if(n > len-cd) n = len-cd;
+-		cd += n;
+-		Fprint(1, "%d read\n", n);
+-		if(Fread(fd, p, (long)n) != (long)n) break;
+-		p += n;
+-	}
+-done:
+-	if(memcmp(b1, b2, len)){
+-		Fprint(2, "memcmp failed!\n");
+-		exit(1);
+-	}
+-	Fprint(2, "tstrd: %d bytes, succeeded\n", len);
+-	exit(0);
+-}
+-
+-#include	<sys/types.h>
+-#include	<sys/stat.h>
+-
+-flen(s)
+-	char *s;
+-{
+-	struct stat sb;
+-	int n;
+-
+-	if(stat(s, &sb) < 0){
+-		perror(s);
+-		exit(1);
+-	}
+-	n = sb.st_size;
+-	if(sizeof(int) == 2)
+-		n &= 0x7FFF;
+-	return(n);
+-}
+//GO.SYSIN DD ./fio/tstrd.c
+echo ./fio/tstsk.c 1>&2
+sed 's/.//' >./fio/tstsk.c <<'//GO.SYSIN DD ./fio/tstsk.c'
+-#include	<fio.h>
+-#include	<libc.h>
+-
+-#define	TMP	"/tmp/tstsk"
+-#define	FN(x)	(unsigned char)((x&0xFF)^(x/251))
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	register n, c, k;
+-	int len, fd, cd;
+-	char *b1, *b2, *p;
+-
+-	if(argc != 1){
+-		Fprint(2, "Usage: tstsk\n");
+-		exit(1);
+-	}
+-	len = 1000000;
+-	if(sizeof(int) == 2)
+-		len &= 0x7FFF;
+-	if((fd = creat(TMP, 0666)) < 0){
+-		perror(TMP);	
+-		exit(1);
+-	}
+-	close(fd);
+-	if((fd = open(TMP, 2)) < 0){
+-		perror(TMP);	
+-		exit(1);
+-	}
+-	unlink(TMP);
+-	if((b2 = malloc(len)) == 0){
+-		Fprint(2, "malloc(%d) failed\n", len);
+-		exit(1);
+-	}
+-	for(n = 0, p = b2; n < len; n++)
+-		*p++ = FN(n);
+-	if(write(fd, b2, len) != len){
+-		perror("write");
+-		exit(1);
+-	}
+-	lseek(fd, 0L, 0);
+-	Finit(fd, (char *)0);
+-	for(n = 0; n < 500; n++){
+-		k = nrand(len);
+-		c = nrand(sizeof(Fbuffer))+100;
+-		if(k+c > len) c = len-k;
+-		test(fd, k, c, n);
+-	}
+-done:
+-	Fprint(2, "tstsk: %d bytes, %d seeks, succeeded\n", len, n);
+-	exit(0);
+-}
+-
+-test(fd, off, n, count)
+-{
+-	long offset;
+-	int c;
+-
+-	offset = off;
+-	if(Fseek(fd, offset, 0) != offset){
+-		fprint(2, "fseek(%ld) != %ld!!\n", offset, offset);
+-		exit(1);
+-	}
+-	while(n-- > 0){
+-		if((c = Fgetc(fd)) != FN(offset)){
+-			fprint(2, "tst %d: char mismatch; %ld: %x, expected %x\n",
+-				count, offset, c, FN(offset));
+-			dumpfb(fd);
+-			exit(1);
+-		}
+-		offset++;
+-	}
+-}
+-
+-dumpfb(fd)
+-{
+-	register Fbuffer *f = Ffb[fd];
+-	register unsigned char *c;
+-	register long off;
+-	int i;
+-
+-	fprint(2, "buf@%ld: next=%ld end=%ld lnext=%ld buf=%ld offset=%ld\n",
+-		f, f->next, f->end, f->lnext, f->buf, f->offset);
+-	off = f->offset - (f->end - f->buf);
+-	for(c = f->buf; c < &f->buf[64]; ){
+-		fprint(2, "%7ld:", off);
+-		for(i = 0; i < 16; i++, off++)
+-			fprint(2, " %2x", *c++);
+-		fprint(2, "\n");
+-	}
+-}
+//GO.SYSIN DD ./fio/tstsk.c
+echo ./fio/tstwr.c 1>&2
+sed 's/.//' >./fio/tstwr.c <<'//GO.SYSIN DD ./fio/tstwr.c'
+-#include	<fio.h>
+-#include	<libc.h>
+-
+-#define	TMP	"/tmp/tstwr"
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	register n, c, k;
+-	int len, fd, cd;
+-	char *b1, *b2, *p;
+-
+-	if(argc < 2){
+-		Fprint(2, "Usage: tstwr file\n");
+-		exit(1);
+-	}
+-	len = flen(argv[1]);
+-	if((fd = open(argv[1], 0)) < 0){
+-		perror(argv[1]);	
+-		exit(1);
+-	}
+-	if((b1 = malloc(len)) == 0){
+-		Fprint(2, "malloc(%d) failed\n", len);
+-		exit(1);
+-	}
+-	if(read(fd, b1, len) != len){
+-		perror("read");
+-		exit(1);
+-	}
+-	close(fd);
+-	if((fd = creat(TMP, 0666)) < 0){
+-		perror(TMP);	
+-		exit(1);
+-	}
+-	close(fd);
+-	if((fd = open(TMP, 2)) < 0){
+-		perror(TMP);	
+-		exit(1);
+-	}
+-/*	unlink(TMP);	/**/
+-	if((b2 = malloc(len)) == 0){
+-		Fprint(2, "malloc(%d) failed\n", len);
+-		exit(1);
+-	}
+-	for(p = b1, cd = 0; cd < len;){
+-		n = 1000*nrand(6) + nrand(199);
+-		if(n > len-cd) n = len-cd;
+-		Fprint(1, "%d putc's\n", n);
+-		cd += n;
+-		while(n--)
+-			Fputc(fd, *p++);
+-		if(len == cd)
+-			continue;
+-		n = 1000*nrand(12) + nrand(199);
+-		if(n > len-cd) n = len-cd;
+-		cd += n;
+-		Fprint(1, "%d write\n", n);
+-		if(Fwrite(fd, p, (long)n) != (long)n) break;
+-		p += n;
+-	}
+-done:
+-	Fflush(fd);
+-	lseek(fd, 0L, 0);
+-	if((n = read(fd, b2, len)) != len){
+-		fprint(2, "read %d, len=%d: ", n, len);
+-		perror("read2");
+-		exit(1);
+-	}
+-	if(memcmp(b1, b2, len)){
+-		Fprint(2, "memcmp failed!\n");
+-		exit(1);
+-	}
+-	Fprint(2, "tstwr: %d bytes, succeeded\n", len);
+-	exit(0);
+-}
+-
+-#include	<sys/types.h>
+-#include	<sys/stat.h>
+-
+-flen(s)
+-	char *s;
+-{
+-	struct stat sb;
+-	int n;
+-
+-	if(stat(s, &sb) < 0){
+-		perror(s);
+-		exit(1);
+-	}
+-	n = sb.st_size;
+-	if(sizeof(int) == 2)
+-		n &= 0x7FFF;
+-	return(n);
+-}
+//GO.SYSIN DD ./fio/tstwr.c
+echo ./fio/Makefile 1>&2
+sed 's/.//' >./fio/Makefile <<'//GO.SYSIN DD ./fio/Makefile'
+-OBJ=fiofillbuf.o fioflush.o fiogetc.o fioinit.o fioprint.o fioputc.o\
+-	fiordline.o fioread.o fioseek.o fioundo.o fiowrite.o fiotie.o fioclose.o
+-
+-fio.a:	$(OBJ)
+-	ar r fio.a $(OBJ)
+-	$(RANLIB) fio.a
+-
+-cray:	fio.o
+-
+-fio.o:	$(OBJ)
+-	cat $(OBJ) > fio.o
+//GO.SYSIN DD ./fio/Makefile
+echo ./fio/fiotie.c 1>&2
+sed 's/.//' >./fio/fiotie.c <<'//GO.SYSIN DD ./fio/fiotie.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-
+-void
+-Ftie(ifd, ofd)
+-{
+-	register Fbuffer *f;
+-
+-	FIOSET(f, ifd);
+-	f->oflush = ofd;
+-}
+//GO.SYSIN DD ./fio/fiotie.c
+echo ./fio/tstagh.c 1>&2
+sed 's/.//' >./fio/tstagh.c <<'//GO.SYSIN DD ./fio/tstagh.c'
+-#include	<fio.h>
+-#include	<libc.h>
+-
+-#define	TMP	"/tmp/tstsk"
+-#define	FN(x)	(unsigned char)((x&0xFF)^(x/251))
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	register n, c, k;
+-	int len, fd, cd;
+-	char *b1, *b2, *p;
+-
+-	Fprint(1, "the letter 'c' is 'c'\n");
+-	dumpfb(1);
+-	Fseek(1, -3, 1);
+-	dumpfb(1);
+-	Fputc(1, '\n');
+-	dumpfb(1);
+-	exit(0);
+-}
+-
+-dumpfb(fd)
+-{
+-	register Fbuffer *f = Ffb[fd];
+-	register unsigned char *c;
+-	register long off;
+-	int i;
+-
+-	fprint(2, "buf@%ld: next=%ld end=%ld lnext=%ld buf=%ld offset=%ld\n",
+-		f, f->next, f->end, f->lnext, f->buf, f->offset);
+-	off = f->offset - (f->end - f->buf);
+-	for(c = f->buf; c < &f->buf[64]; ){
+-		fprint(2, "%7ld:", off);
+-		for(i = 0; i < 16; i++, off++)
+-			fprint(2, " %2x", *c++);
+-		fprint(2, "\n");
+-	}
+-}
+//GO.SYSIN DD ./fio/tstagh.c
+echo ./fio/fioclose.c 1>&2
+sed 's/.//' >./fio/fioclose.c <<'//GO.SYSIN DD ./fio/fioclose.c'
+-#define	FIO_IMP
+-#include	"fio.h"
+-#include	<libc.h>
+-
+-void
+-Fclose(fd)
+-{
+-	register Fbuffer *f;
+-
+-	FIOSET(f, fd);
+-	Fflush(fd);
+-	if(f->flags&FIO_MALLOCED)
+-		free((char *)f);
+-	Ffb[fd] = 0;
+-	close(fd);
+-}
+//GO.SYSIN DD ./fio/fioclose.c
+echo ./README 1>&2
+sed 's/.//' >./README <<'//GO.SYSIN DD ./README'
+-mk runs on Unix V9. To run on other systems requires some help.
+-the help takes the form of the fast i/o library (fio) and some
+-libc routines. dir.o provides support for the directory routines
+-on V7-style filesystems; on most modern systems you should probably
+-not use dir.o.
+-
+-	- edit Makefile by setting the initial variables as
+-per the instructions.
+-
+-	- type make (unless on the cray, in which case, type make cray).
+-
+-	- everything should now be compiled and you should have a mk.
+-
+-	- edit mkfile to set the system type as in the Makefile
+-
+-as a first order test that all is well, try
+-	mk
+-which generates a `correctly compiled' mk in the file nmk.
+-
+-If things go badly, (core dump hell), try not using alloc.c. it may be
+-that your hardware needs special alloc treatment. otherwise, mail
+-research!andrew (or andrew@research.att.com).
+-
+-the manual page and a tutorial style document are included.
+//GO.SYSIN DD ./README
+echo ./fio.h 1>&2
+sed 's/.//' >./fio.h <<'//GO.SYSIN DD ./fio.h'
+-#define	FIOBSIZE	4096
+-
+-typedef struct Fbuffer
+-{
+-	unsigned char *next;		/* next char to be used */
+-	unsigned char *end;		/* first invalid char */
+-	unsigned char *lnext;		/* previous value of next */
+-	unsigned short flags;		/* see FIO_.* below */
+-	short oflush;			/* if >= 0 fd to flush on read */
+-	long offset;			/* seek of end */
+-	unsigned char buf[FIOBSIZE];
+-} Fbuffer;
+-extern Fbuffer *Ffb[];
+-
+-#define	FIORESET(f)	((f)->next=(f)->lnext=(f)->end=(f)->buf, (f)->flags&= ~FIO_MALLOCED, (f)->oflush= -1)
+-#define	FIOSET(f, fd)	if((f=Ffb[fd&=0x7f]) == 0){Finit(fd,(char *)0);f=Ffb[fd];}
+-/* FIOLINELEN is length of last input */
+-#define	FIOLINELEN(fd)	(((int)(Ffb[fd]->next - Ffb[fd]->lnext))-1)
+-/* FIOSEEK is lseek of next char to be processed */
+-#define	FIOSEEK(fd)	(Ffb[fd]->offset - (Ffb[fd]->end - Ffb[fd]->next))
+-#define	FIOFLUSH(fd)	if((fd >= 0) && Ffb[fd]) Fflush(fd)
+-
+-#define	FIO_RDLAST	0x0001		/* true if last input was rdline */
+-#define	FIO_WRITING	0x0002		/* true if last action was write */
+-#define	FIO_MALLOCED	0x0004		/* set if Finit did the malloc */
+-
+-extern void Finit();
+-extern char *Frdline();
+-extern void Fundo();
+-extern int Fgetc();
+-extern long Fread();
+-extern long Fwrite();
+-extern long Fseek();
+-extern int Fflush();
+-
+-#ifdef	FIO_IMP
+-/* COUNT is the type of counts to things like read, write, memcpy etc */
+-#ifdef	GNOT
+-#define	COUNT	long
+-#define	FIOMALLOC(n)	malloc(n)
+-#define	SEEK(a,b,c)	seek(a,b,c)
+-#else
+-#define	COUNT	int
+-#define	FIOMALLOC(n)	malloc(n)
+-#define	SEEK(a,b,c)	lseek(a,b,c)
+-#endif
+-extern COUNT read(), write();
+-#endif
+//GO.SYSIN DD ./fio.h
+echo ./regexp.h 1>&2
+sed 's/.//' >./regexp.h <<'//GO.SYSIN DD ./regexp.h'
+-/* the structure describing a sub-expression match */
+-typedef struct {
+-	char *sp;
+-	char *ep;
+-} regsubexp;
+-
+-/* a compiled regular expression */
+-typedef char *regexp;
+-
+-/* the routines */
+-extern regexp *regcomp();
+-extern int regexec();
+-extern void regsub();
+//GO.SYSIN DD ./regexp.h
+echo ./libc.h 1>&2
+sed 's/.//' >./libc.h <<'//GO.SYSIN DD ./libc.h'
+-/* system calls */
+-extern unsigned alarm();
+-extern void nap(), pause();
+-extern char *sbrk();
+-extern void exit(), _exit();
+-extern long lseek();
+-extern void nice();
+-extern void profil();
+-extern unsigned long settod();
+-extern void sync();
+-extern long time();
+-
+-/* libc et al */
+-extern long lcm();
+-extern double atof(), strtod();
+-extern long atol();
+-extern char *crypt();
+-extern char *ctime();
+-extern char *ecvt(), *fcvt(), *gcvt();
+-extern char *galloc();
+-extern char *getenv();
+-extern char *getlogin();
+-extern char *getpass();
+-extern char *getwd(), *getcwd();
+-extern char *malloc(), *realloc(), *calloc();
+-extern char *memcpy(), *memchr(), *memccpy(), *memset();
+-extern char *mktemp();
+-extern double frand();
+-extern char *setfields();
+-extern char *strcpy(), *strncpy(), *strcat(), *strncat(), *strchr(), *strrchr();
+-extern char *strpbrk(), *strtok(), *strdup();
+-extern int atoi();
+-extern char *tgetstr(), tgoto();
+-extern char *ttyname(), *cttyname();
+-
+-#define	NONEXIT		33
+//GO.SYSIN DD ./libc.h
+echo ./math/pow10.c 1>&2
+sed 's/.//' >./math/pow10.c <<'//GO.SYSIN DD ./math/pow10.c'
+-static	double	p[10] =
+-{
+-	1.0e0,
+-	1.0e1,
+-	1.0e2,
+-	1.0e3,
+-	1.0e4,
+-	1.0e5,
+-	1.0e6,
+-	1.0e7,
+-	1.0e8,
+-	1.0e9,
+-};
+-
+-double
+-pow10(e)
+-{
+-	int i;
+-
+-	if(e < 0)
+-		return 1 / pow10(-e);
+-	if(e >= 10) {
+-		i = e/2;
+-		return pow10(i) * pow10(e-i);
+-	}
+-	return p[e];
+-}
+//GO.SYSIN DD ./math/pow10.c
+echo ./math/Makefile 1>&2
+sed 's/.//' >./math/Makefile <<'//GO.SYSIN DD ./math/Makefile'
+-OBJ=pow10.o
+-
+-math.a:	$(OBJ)
+-	ar r math.a $(OBJ)
+-	$(RANLIB) math.a
+-
+-cray:	math.o
+-
+-math.o:	$(OBJ)
+-	cat $(OBJ) > math.o
+//GO.SYSIN DD ./math/Makefile
+echo ./Makefile 1>&2
+sed 's/.//' >./Makefile <<'//GO.SYSIN DD ./Makefile'
+-OBJ=alloc.o arc.o bquote.o builtins.o dir.o expand.o gen.o glob.o graph.o job.o lex.o main.o makefile.o match.o mk.o parse.o quote.o recipe.o regexp.o rule.o run.o shprint.o sig.o symtab.o t_ar.o t_driver.o t_file.o var.o word.o
+-# first define the system type from V9, BSD42, SEQUENT, SYSV
+-SYSTEM=SYSV
+-# second add any special C flags (and -DCRAY and -g if on the cray)
+-CFLAGS=-I. -D$(SYSTEM)
+-# third, if you don't have a ranlib, set RANLIB=:
+-RANLIB=:	# ranlib on other systems
+-# now, to make everything just type make
+-
+-mk:	nlib $(OBJ)
+-	$(CC) $(CFLAGS) -o mk $(OBJ) fio/fio.a libc/libc.a math/math.a
+-nlib:
+-	cd math; make CFLAGS="$(CFLAGS)" CC=$(CC) RANLIB=$(RANLIB)
+-	cd libc; make CFLAGS="$(CFLAGS)" CC=$(CC) RANLIB=$(RANLIB)
+-	cd fio; make CFLAGS="$(CFLAGS)" CC=$(CC) RANLIB=$(RANLIB)
+-
+-clean:
+-	rm -f *.o mk nmk */*.[oa]
+-alloc.o arc.o bquote.o builtins.o dir.o expand.o gen.o glob.o graph.o job.o lex.o main.o makefile.o match.o mk.o parse.o quote.o recipe.o regexp.o rule.o run.o shprint.o sig.o symtab.o t_ar.o t_driver.o t_file.o var.o word.o:	 fio.h libc.h mk.h ndir.h regexp.h
+//GO.SYSIN DD ./Makefile
+echo ./mkconv 1>&2
+sed 's/.//' >./mkconv <<'//GO.SYSIN DD ./mkconv'
+-x=/tmp/mk$$
+-trap 'rm -f $x' 0 1 2
+-tee $x < $1 | sed -e 's/$(\([^)]*\))\([        :\/]\)/$\1\2/g
+-	s/$(\([^)]*\))$/$\1/g
+-	s/$(\([^)]*\))/${\1}/g
+-	s/^     @/  /
+-	/^	-/,/[^\\]$/{
+-		/[^\\]$/s/$/; set -e/
+-	}
+-	/^	-/s/	-/	set +e; /
+-	s/:&/:/
+-	s/$% /$stem /g
+-	s/$%\./$stem\./g
+-	s/$%/${stem}/g
+-	s/$@/${target}/g
+-	s/$^/${prereq}/g
+-	s/$?/$newprereq/g'
+-if egrep -s 'cd[ 	]|make' < $x
+-then
+-	echo "Warning: recipes containing \`cd' or \`make' need attention."
+-	egrep 'cd[ 	]|make' < $x
+-fi 1>&2
+//GO.SYSIN DD ./mkconv
+echo ./membername 1>&2
+sed 's/.//' >./membername <<'//GO.SYSIN DD ./membername'
+-echo "$@" | tr " " "\012" | sed -e "s/[^(]*(\([^)]*\)).*/\1/" | tr "\012" " " 
+//GO.SYSIN DD ./membername
+echo ./mk.1 1>&2
+sed 's/.//' >./mk.1 <<'//GO.SYSIN DD ./mk.1'
+-.TH MK 1
+-.CT 1 prog_c writing_troff prog_other
+-.SH NAME
+-mk, mkconv, membername \- maintain (make) related files
+-.SH SYNOPSIS
+-.B mk
+-[
+-.B -f
+-.I mkfile
+-] ...
+-[
+-.I option ...
+-]
+-[
+-.I name ...
+-]
+-.PP
+-.B mkconv
+-.I makefile
+-.PP
+-.B membername
+-.I aggregate ...
+-.SH DESCRIPTION
+-.I Mk
+-is most often used to keep object files current with the
+-source they depend on.
+-.PP
+-.I Mk
+-reads
+-.I mkfile
+-and builds and executes dependency dags (directed acyclic graphs) for the target
+-.IR names .
+-If no target is specified, the targets of the first non-metarule in
+-the first
+-.I mkfile
+-are used.
+-If no
+-.B -f
+-option is present,
+-.L mkfile
+-is tried.
+-Other options are:
+-.TP \w'\fL-d[egp]\ 'u
+-.B -a
+-Assume all targets to be out of date.
+-Thus, everything gets made.
+-.PD 0
+-.TP
+-.BR -d [ egp ]
+-Produce debugging output
+-.RB ( p
+-is for parsing,
+-.B g
+-for graph building,
+-.B e
+-for execution).
+-.TP
+-.B -e
+-Explain why each target is made.
+-.TP
+-.B -i
+-Force any missing intermediate targets to be made.
+-.TP
+-.B -k
+-Do as much work as possible in the face of errors.
+-.TP
+-.B -m
+-Generate an equivalent makefile on standard output.
+-Recipes are not handled well.
+-.TP
+-.B -n
+-Print, but do not execute, the commands
+-needed to update the targets.
+-.TP
+-.B -t
+-Touch (update the modified date of) non-virtual targets, without
+-executing any recipes.
+-.TP
+-.B -u
+-Produce a table of clock seconds spent with
+-.I n
+-recipes running.
+-.TP
+-.BI -w name1,name2,...
+-Set the initial date stamp for each name
+-to the current time.
+-The names may also be separated by blanks or newlines.
+-(Use with
+-.B -n
+-to find what else would need to change if the named files
+-were modified.)
+-.PD
+-.PP
+-.I Mkconv
+-attempts to convert a
+-.IR make (1)
+-.I makefile
+-to a
+-.IR mkfile
+-on standard output.
+-The conversion is not likely to be faithful.
+-.PP
+-The shell script
+-.I membername
+-extracts member names
+-(see `Aggregates' below)
+-from its arguments.
+-.SS Definitions
+-A
+-.I mkfile
+-consists of
+-.I assignments
+-(described under `Environment') and
+-.IR rules .
+-A rule contains
+-.I targets
+-and a
+-.I tail.
+-A target is a literal string, or
+-.I label,
+-and is normally a file name.
+-The tail contains zero or more 
+-.I prerequisites
+-and an optional
+-.I recipe,
+-which is a shell script.
+-.PP
+-A
+-.I metarule 
+-has a target of the form
+-.IB A % B
+-where
+-.I A
+-and
+-.I B
+-are (possibly empty) strings.
+-A metarule applies to any label that matches the target with
+-.B %
+-replaced by an arbitrary string, called the
+-.IR stem .
+-In interpreting a metarule,
+-the stem is substituted for all occurrences of
+-.B %
+-in the prerequisite names.
+-A metarule may be marked as using regular expressions (described under `Syntax').
+-In this case,
+-.B %
+-has no special meaning;
+-the target is interpreted according to
+-.IR regexp (3).
+-The dependencies may refer to subexpressions in the normal way, using
+-.BI \e n.
+-The
+-.I dependency dag
+-for a target consists of
+-.I nodes
+-connected by directed
+-.IR arcs .
+-A node consists of a label
+-and a set of arcs leading to prerequisite nodes.
+-The root 
+-node is labeled with an original target
+-.I name.
+-.SS Building the Dependency Dag
+-.PP
+-Read the
+-.I mkfiles 
+-in command line order and distribute rule tails over targets
+-to get single-target rules.
+-.PP
+-For a node
+-.IR n ,
+-for every rule
+-.I r
+-that matches
+-.IR n 's
+-label generate an arc to a prerequisite node.
+-The node
+-.I n
+-is then marked as done.
+-The process is then repeated for each of the prerequisite nodes.
+-The process stops if
+-.I n
+-is already done,
+-or if
+-.I n
+-has no prerequisites,
+-or if any rule would be used more than
+-.B $NREP
+-times on the current path in the dag.
+-A probable node is one where the label exists as a file
+-or is a target of a non-metarule.
+-.PP
+-After the graph is built, it is checked for cycles,
+-and subdags containing no probable nodes are deleted.
+-Also, for any node with arcs generated by a non-metarule with a recipe,
+-arcs generated by a metarule with a recipe
+-are deleted.
+-Disconnected subdags are deleted.
+-.SS Execution
+-Labels have an associated date stamp.
+-A label is
+-.I ready
+-if it has no prerequisites, or
+-all its prerequisites are made.
+-A ready label is
+-.I trivially uptodate
+-if it is not a target and has a nonzero date stamp, or
+-it has a nonzero date stamp,
+-and all its prerequisites are made and predate the ready label.
+-A ready label is marked
+-.I made
+-(and given a date stamp)
+-if it is trivially uptodate or by executing the recipe
+-associated with the arcs leading from the node associated with the ready label.
+-The
+-.B P
+-attribute can be used to generalize
+-.IR mk 's
+-notion of determining if prerequisites predate a label.
+-Rather than comparing date stamps, it executes a specified program
+-and uses the exit status.
+-.PP
+-Date stamps are calculated differently for virtual labels,
+-for labels that correspond to extant files,
+-and for other labels.
+-If a label is
+-.I virtual
+-(target of a rule with the
+-.B V
+-attribute),
+-its date stamp is initially zero and upon being made is set to
+-the most recent date stamp of its prerequisites.
+-Otherwise, if a label is nonexistent
+-(does not exist as a file),
+-its date stamp is set to the most recent date stamp of its prerequisites,
+-or zero if it has no prerequisites.
+-Otherwise, the label is the name of a file and
+-the label's date stamp is always that file's modification date.
+-.PP
+-Nonexistent labels which have prerequisites
+-and are prerequisite to other label(s) are treated specially unless the
+-.B -i
+-flag is used.
+-Such a label
+-.I l
+-is given the date stamp of its most recent prerequisite
+-and if this causes all the labels which have
+-.I l
+-as a prerequisite to be trivially uptodate,
+-.I l
+-is considered to be trivially uptodate.
+-Otherwise,
+-.I l
+-is made in the normal fashion.
+-.PP
+-Two recipes are called identical if they arose by distribution
+-from a single rule as described above.
+-Identical recipes may be executed only when all
+-their prerequisite nodes are ready, and then just one instance of
+-the identical recipes is executed to make all their target nodes.
+-.PP
+-Files may be made in any order that respects
+-the preceding restrictions.
+-.PP
+-A recipe is executed by supplying the recipe as standard input to
+-the command
+-.B
+-        /bin/sh -e
+-.br
+-The environment is augmented by the following variables:
+-.TP 14
+-.B $alltarget
+-all the targets of this rule.
+-.TP
+-.B $newprereq
+-the prerequisites that caused this rule to execute.
+-.TP
+-.B $nproc
+-the process slot for this recipe.
+-It satisfies
+-.RB 0\(<= $nproc < $NPROC ,
+-where
+-.B $NPROC
+-is the maximum number of recipes that may be executing
+-simultaneously.
+-.TP
+-.B $pid
+-the process id for the
+-.I mk
+-forking the recipe.
+-.TP
+-.B $prereq
+-all the prerequisites for this rule.
+-.TP
+-.B $stem
+-if this is a metarule,
+-.B $stem
+-is the string that matched
+-.BR % .
+-Otherwise, it is empty.
+-For regular expression metarules, the variables
+-.LR stem0 ", ...,"
+-.L stem9
+-are set to the corresponding subexpressions.
+-.TP
+-.B $target
+-the targets for this rule that need to be remade.
+-.PP
+-Unless the rule has the
+-.B Q
+-attribute,
+-the recipe is printed prior to execution
+-with recognizable shell variables expanded.
+-To see the commands print as they execute,
+-include a
+-.L set -x
+-in your rule.
+-Commands returning nonzero status (see
+-.IR intro (1))
+-cause
+-.I mk
+-to terminate.
+-.SS Aggregates
+-Names of the form
+-.IR a ( b )
+-refer to member
+-.I b
+-of the aggregate
+-.IR a .
+-Currently, the only aggregates supported are
+-.IR ar (1)
+-archives.
+-.SS Environment
+-Rules may make use of shell (or environment) variables.
+-A legal shell variable reference of the form
+-.B $OBJ
+-or
+-.B ${name}
+-is expanded as in
+-.IR sh (1).
+-A reference of the form
+-.BI ${name: A % B = C\fB%\fID\fB}\fR,
+-where
+-.I A, B, C, D
+-are (possibly empty) strings,
+-has the value formed by expanding
+-.B $name
+-and substituting
+-.I C
+-for
+-.I A
+-and
+-.I D
+-for
+-.I B
+-in each word in
+-.B $name
+-that matches pattern
+-.IB A % B .
+-.PP
+-Variables can be set by
+-assignments of the form
+-.I
+-        var\fB=\fR[\fIattr\fB=\fR]\fItokens\fR
+-.br
+-where
+-.I tokens
+-and the optional attributes
+-are defined under `Syntax' below.
+-The environment is exported to recipe executions.
+-Variable values are taken from (in increasing order of precedence)
+-the default values below, the environment, the mkfiles,
+-and any command line assignment.
+-A variable assignment argument overrides the first (but not any subsequent)
+-assignment to that variable.
+-.br
+-.ne 1i
+-.EX
+-.ta \n(.lu/3u +\n(.lu/3u
+-.nf
+-AS=as	FFLAGS=	NPROC=1
+-CC=cc	LEX=lex	NREP=1
+-CFLAGS=	LFLAGS=	YACC=yacc
+-FC=f77	LDFLAGS=	YFLAGS=	
+-BUILTINS='
+-.ta 8n
+-%.o:	%.c
+-	$CC $CFLAGS -c $stem.c
+-%.o:	%.s
+-	$AS -o $stem.o $stem.s
+-%.o:	%.f
+-	$FC $FFLAGS -c $stem.f
+-%.o:	%.y
+-	$YACC $YFLAGS $stem.y &&
+-	$CC $CFLAGS -c y.tab.c && mv y.tab.o $stem.o; rm y.tab.c
+-%.o:	%.l
+-	$LEX $LFLAGS -t $stem.l > $stem.c &&
+-	$CC $CFLAGS -c $stem.c && rm $stem.c'
+-ENVIRON=
+-.EE
+-.PP
+-The builtin rules are obtained from the variable
+-.B BUILTINS
+-after all input has been processed.
+-The 
+-.B ENVIRON
+-variable is split into parts at control-A characters,
+-the control-A characters are deleted, and the parts are 
+-placed in the environment.
+-The variable
+-.B MKFLAGS
+-contains all the option arguments (arguments starting with
+-.L -
+-or containing
+-.LR = )
+-and
+-.B MKARGS
+-contains all the targets in the call to
+-.IR mk .
+-.SS Syntax
+-Leading white space (blank or tab) is ignored.
+-Input after an unquoted
+-.B #
+-(a comment) is ignored as are blank lines.
+-Lines can be spread over several physical lines by
+-placing a
+-.B \e
+-before newlines to be elided.
+-Non-recipe lines are processed by substituting for
+-.BI ` cmd `
+-and then substituting for variable references.
+-Finally, the filename metacharacters
+-.B []*?
+-are expanded.
+-.tr #"
+-Quoting by
+-.BR \&'' ,
+-.BR ## ,
+-and
+-.B \e
+-is supported.
+-The semantics for substitution and quoting are given in
+-.IR sh (1).
+-.PP
+-The contents of files may be included by lines beginning with
+-.B <
+-followed by a filename.
+-.PP
+-.tr ##
+-Assignments and rule header lines are distinguished by
+-the first unquoted occurrence of
+-.B :
+-(rule header)
+-or
+-.B =
+-(assignment).
+-.PP
+-A rule definition consists of a header line followed by a recipe.
+-The recipe consists of all lines following the header line
+-that start with white space.
+-The recipe may be empty.
+-The first character on every line of the recipe is elided.
+-The header line consists of at least one target followed by the rule separator
+-and a possibly empty list of prerequisites.
+-The rule separator is either a single
+-.LR : 
+-or is a 
+-.L :
+-immediately followed by attributes and another
+-.LR : .
+-If any prerequisite is more recent than any of the targets,
+-the recipe is executed.
+-This meaning is modified by the following attributes
+-.TP
+-.B <
+-The standard output of the recipe is read by
+-.I mk
+-as an additional mkfile.
+-Assignments take effect immediately.
+-Rule definitions are used when a new dependency dag is constructed.
+-.PD 0
+-.TP
+-.B D
+-If the recipe exits with an error status, the target is deleted.
+-.TP
+-.B N
+-If there is no recipe, the target has its time updated.
+-.TP
+-.B P
+-The characters after the
+-.B P
+-until the terminating
+-.B :
+-are taken as a program name.
+-It will be invoked as
+-.B "sh -c prog 'arg1' 'arg2'"
+-and should return 0 exit status
+-if and only if arg1 is not out of date with respect to arg2.
+-Date stamps are still propagated in the normal way.
+-.TP
+-.B Q
+-The recipe is not printed prior to execution.
+-.TP
+-.B R
+-The rule is a metarule using regular expressions.
+-.TP
+-.B U
+-The targets are considered to have been updated
+-even if the recipe did not do so.
+-.TP
+-.B V
+-The targets of this rule are marked as virtual.
+-They are distinct from files of the same name.
+-.PD
+-.PP
+-Similarly, assignments may have attributes terminated by
+-.BR = .
+-The only assignment attribute is
+-.TP 3
+-.B U
+-Do not export this variable to recipe executions.
+-.SH EXAMPLES
+-A simple mkfile to compile a program.
+-.IP
+-.EX
+-prog:	a.o b.o c.o
+-	$CC $CFLAGS -o $target $prereq
+-.EE
+-.PP
+-Override flag settings in the mkfile.
+-.IP
+-.EX
+-$ mk target CFLAGS='-O -s'
+-.EE
+-.PP
+-To get the prerequisites for an aggregate.
+-.IP
+-.EX
+-$ membername 'libc.a(read.o)' 'libc.a(write.o)'
+-read.o write.o
+-.EE
+-.PP
+-Maintain a library.
+-.IP
+-.EX
+-libc.a(%.o):N:	%.o
+-libc.a:	libc.a(abs.o) libc.a(access.o) libc.a(alarm.o) ...
+-	names=`membername $newprereq`
+-	ar r libc.a $names && rm $names
+-.EE
+-.PP
+-Backquotes used to derive a list from a master list.
+-.IP
+-.EX
+-NAMES=alloc arc bquote builtins expand main match mk var word
+-OBJ=`echo $NAMES|sed -e 's/[^ ][^ ]*/&.o/g'`
+-.EE
+-.PP
+-Regular expression metarules.
+-The single quotes are needed to protect the
+-.BR \e s.
+-.IP
+-.EX
+-\&'([^/]*)/(.*)\e.o':R:  '\e1/\e2.c'
+-	cd $stem1; $CC $CFLAGS -c $stem2.c
+-.EE
+-.PP
+-A correct way to deal with
+-.IR yacc (1)
+-grammars.
+-The file
+-.B lex.c
+-includes the file
+-.B x.tab.h
+-rather than
+-.B y.tab.h
+-in order to reflect changes in content, not just modification time.
+-.IP
+-.EX
+-YFLAGS=-d
+-lex.o:	x.tab.h
+-x.tab.h:	y.tab.h
+-	cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+-y.tab.c y.tab.h:	gram.y
+-	$YACC $YFLAGS gram.y
+-.EE
+-.PP
+-The above example could also use the
+-.B P
+-attribute for the
+-.B x.tab.h
+-rule:
+-.IP
+-.EX
+-x.tab.h:Pcmp -s:	y.tab.h
+-	cp y.tab.h x.tab.h
+-.EE
+-.SH SEE ALSO
+-.IR make (1),
+-.IR chdate (1),
+-.IR sh (1),
+-.IR regexp (3)
+-.br
+-A. Hume,
+-.RI ` Mk :
+-a Successor to
+-.IR Make ',
+-this manual, Volume 2
+-.SH BUGS
+-Identical recipes for regular expression metarules only have one target.
+-.br
+-Seemingly appropriate input like
+-.B CFLAGS=-DHZ=60
+-is parsed as an erroneous attribute; correct it by inserting
+-a space after the first 
+-.LR = .
+//GO.SYSIN DD ./mk.1
+echo ./alloc.c 1>&2
+sed 's/.//' >./alloc.c <<'//GO.SYSIN DD ./alloc.c'
+-#include	"libc.h"
+-
+-static int goo;		/* so no empty object on cray */
+-
+-#ifndef	CRAY
+-
+-#define	A(x)	((((long)x)+sizeof(long)-1)&~(sizeof(long)-1))
+-
+-char *next;
+-int nleft;
+-
+-char *
+-malloc(n)
+-{
+-	extern char *sbrk();
+-	char *s;
+-
+-	n = A(n);
+-	if(n > nleft){
+-		next = sbrk(nleft = A(32000));
+-		if(next == (char *)-1){
+-			perror("mk: sbrk");
+-			Exit();
+-		}
+-	}
+-	s = next;
+-	next += n;
+-	nleft -= n;
+-	return(s);
+-}
+-
+-free(s)
+-	char *s;
+-{
+-}
+-
+-char *
+-realloc(s, n)
+-	char *s;
+-	unsigned n;
+-{
+-	char *r;
+-
+-	r = malloc(n);
+-	memcpy(r, s, n);
+-	return(r);
+-}
+-
+-#endif
+//GO.SYSIN DD ./alloc.c
+echo ./arc.c 1>&2
+sed 's/.//' >./arc.c <<'//GO.SYSIN DD ./arc.c'
+-#include	"mk.h"
+-
+-Arc *
+-newarc(n, r, stem, match)
+-	Node *n;
+-	Rule *r;
+-	char *stem;
+-	regsubexp *match;
+-{
+-	register Arc *a;
+-
+-	a = (Arc *)Malloc(sizeof(Arc));
+-	a->n = n;
+-	a->r = r;
+-	a->stem = strdup(stem);
+-	memcpy((char *)a->match, (char *)match, sizeof a->match);
+-	a->next = 0;
+-	a->flag = 0;
+-	a->prog = r->prog;
+-	return(a);
+-}
+-
+-dumpa(s, a)
+-	char *s;
+-	register Arc *a;
+-{
+-	char buf[1024];
+-
+-	sprint(buf, "%s    ", (*s == ' ')? s:"");
+-	Fprint(1, "%sArc@%ld: n=%ld r=%ld flag=0x%x stem='%s'",
+-		s, a, a->n, a->r, a->flag, a->stem);
+-	if(a->prog)
+-		Fprint(1, " prog='%s'", a->prog);
+-	Fprint(1, "\n");
+-	if(a->n)
+-		dumpn(buf, a->n);
+-}
+-
+-nrep()
+-{
+-	register Symtab *sym;
+-
+-	if(sym = symlook("NREP", S_VAR, (char *)0))
+-		nreps = atoi(sym->value);
+-	if(nreps < 1)
+-		nreps = 1;
+-	if(DEBUG(D_GRAPH))
+-		Fprint(1, "nreps = %d\n", nreps);
+-}
+//GO.SYSIN DD ./arc.c
+echo ./bquote.c 1>&2
+sed 's/.//' >./bquote.c <<'//GO.SYSIN DD ./bquote.c'
+-#include	"mk.h"
+-
+-bquote(fd, src, dest)
+-	register char *src, *dest;
+-{
+-	int childin[2], childout[2], pid, i;
+-	int quotedone = 1;
+-	char *ldest, *t;
+-	char *newline = "\n";
+-	int wearedone = 0;
+-	int initdone = 0;
+-	extern char **environ;
+-
+-	while(wearedone == 0)
+-		switch(*src)
+-		{
+-		default:
+-			*dest++ = *src++;
+-			break;
+-		case 0:
+-			if(quotedone)
+-				wearedone = 1;
+-			else {
+-				if(t = Frdline(fd)){
+-					inline++;
+-					*dest++ = '\n'|EBIT;
+-					strcpy(src, t);
+-					continue;
+-				} else {
+-					SYNERR(-1); Fprint(2, "missing closing `\n");
+-					break;
+-				}
+-			}
+-			break;
+-		case '\\':
+-			if(*src)
+-				*dest++ = *src++;
+-			else
+-				if(t = Frdline(fd)){
+-					inline++;
+-					strcpy(src, t);
+-				}
+-			break;
+-		case '`':
+-			if(quotedone = 1-quotedone){
+-				if(initdone == 0){
+-					execinit();
+-					initdone = 1;
+-				}
+-				Fflush(1);
+-				Fflush(2);
+-				if(pipe(childin) < 0){
+-					SYNERR(-1); perror("pipe1");
+-					Exit();
+-				}
+-				if(pipe(childout) < 0){
+-					SYNERR(-1); perror("pipe2");
+-					Exit();
+-				}
+-				if((pid = fork()) < 0){
+-					SYNERR(-1); perror("fork");
+-					Exit();
+-				}
+-				if(pid){	/* parent */
+-					close(childin[0]);
+-					close(childout[1]);
+-					if(ldest < dest){
+-						writeout(childin[1], ldest, dest);
+-						writeout(childin[1], newline, newline+1);
+-					}
+-					close(childin[1]);
+-					dest = ldest;
+-					while((i = read(childout[0], dest, 512)) > 0)
+-						dest += i;
+-					if((dest > ldest) && (dest[-1] == '\n'))
+-						dest--;
+-					close(childout[0]);
+-				} else {
+-					dup2(childin[0], 0);
+-					dup2(childout[1], 1);
+-					close(childin[0]);
+-					close(childin[1]);
+-					close(childout[0]);
+-					close(childout[1]);
+-					if(execle(SHELL, "sh", (char *)0, environ) < 0)
+-						perror("exec");
+-					_exit(1);
+-				}
+-			} else
+-				ldest = dest;
+-			src++;
+-			break;
+-		}
+-	*dest = 0;
+-}
+-
+-writeout(fd, b, e)
+-	register char *b, *e;
+-{
+-	char buf[BIGBLOCK];
+-	register char *s;
+-
+-	for(s = buf; b < e;){
+-		if(s >= &buf[BIGBLOCK-1]){
+-			SYNERR(-1); Fprint(2, "too much text (%d chars) for `expr`\n", s-buf);
+-			Exit();
+-		}
+-		if(*b&EBIT){
+-			*s++ = '\\';
+-			*s++ = (~EBIT) & *b++;
+-		} else
+-			*s++ = *b++;
+-	}
+-	write(fd, buf, s-buf);
+-}
+//GO.SYSIN DD ./bquote.c
+echo ./builtins.c 1>&2
+sed 's/.//' >./builtins.c <<'//GO.SYSIN DD ./builtins.c'
+-#include	"mk.h"
+-
+-char *bltin[] =
+-{
+-	"AS", "as",
+-	"CC", "cc",
+-	"CFLAGS", "",
+-	"FC", "f77",
+-	"FFLAGS", "",
+-	"LDFLAGS", "",
+-	"LEX", "lex",
+-	"LFLAGS", "",
+-	"NPROC", "1",
+-	"NREP", "1",
+-	"YACC", "yacc",
+-	"YFLAGS", "",
+-	"BUILTINS", "%.o:	%.c\n\
+-	$CC $CFLAGS -c $stem.c\n\
+-%.o:	%.s\n\
+-	$AS -o $stem.o $stem.s\n\
+-%.o:	%.f\n\
+-	$FC $FFLAGS -c $stem.f\n\
+-%.o:	%.y\n\
+-	$YACC $YFLAGS $stem.y && $CC $CFLAGS -c y.tab.c && mv y.tab.o $stem.o; rm y.tab.c\n\
+-%.o:	%.l\n\
+-	$LEX $LFLAGS -t $stem.l > /tmp/$$.c && $CC $CFLAGS -c /tmp/$$.c && mv /tmp/$$.o $stem.o; rm /tmp/$$.c\n",
+-	"ENVIRON", "",
+-	0
+-};
+-
+-builtins()
+-{
+-	register char **b;
+-
+-	for(b = bltin; *b; b += 2)
+-		setvar(b[0], strdup(b[1]));
+-}
+-
+-parsebuiltins()
+-{
+-	char *s, *file;
+-	int fd;
+-	int n;
+-
+-	s = symlook("BUILTINS", S_VAR, (char *)0)->value;
+-	if(*s == 0)
+-		return;
+-	file = mktemp("/tmp/mkXXXXXX");
+-	if((fd = creat(file, 0600)) < 0){
+-		fprint(2, "mk: builtins in ");
+-		perror(file);
+-		Exit();
+-	}
+-	if(n = strlen(s)){
+-		write(fd, s, n);
+-		if(s[n-1] != '\n')
+-			write(fd, "\n", 1);
+-	}
+-	close(fd);
+-	parse("BUILTINS", open(file, 0), 0, 0);
+-	unlink(file);
+-}
+//GO.SYSIN DD ./builtins.c
+echo ./dir.c 1>&2
+sed 's/.//' >./dir.c <<'//GO.SYSIN DD ./dir.c'
+-#include	<sys/types.h>
+-#include	<sys/stat.h>
+-#ifndef SEQUENT
+-#include	<ndir.h>
+-#else
+-#include	<dir.h>
+-#endif
+-
+-#ifdef	SEQUENT
+-#define		DIRSIZE	MAXNAMELEN
+-#else
+-#define		DIRSIZE	14
+-#endif
+-#ifndef	MAXNAMELEN
+-#define	MAXNAMELEN	255
+-#endif
+-#ifndef DIRSIZ
+-#define DIRSIZ(dp) \
+-    ((sizeof(struct direct) - MAXNAMLEN + (dp)->d_namlen + sizeof(ino_t) - 1) &\
+-    ~(sizeof(ino_t) - 1))
+-#endif
+-
+-extern char *strncpy(), *malloc();
+-
+-DIR *
+-opendir(name)
+-register char *name;
+-{
+-	DIR dirbuf, *dirp;
+-	struct stat statb;
+-	char buf[MAXNAMELEN+1];
+-	register char *s;
+-
+-	strncpy(buf, name, MAXNAMELEN);
+-	buf[MAXNAMELEN-1] = 0;
+-	if ((dirbuf.dd_fd = open(buf, 0)) < 0)
+-		return((DIR *)0);
+-	if (fstat(dirbuf.dd_fd, &statb)!=0 || (statb.st_mode & S_IFMT)!=S_IFDIR){
+-		close(dirbuf.dd_fd);
+-		return((DIR *)0);
+-	}
+-	dirbuf.dd_loc = 0;
+-	dirp = (DIR *)malloc(sizeof(DIR));
+-	*dirp = dirbuf;
+-	return(dirp);
+-}
+-
+-void
+-closedir(dirp)
+-DIR *dirp;
+-{
+-	close(dirp->dd_fd);
+-	free((char *)dirp);
+-}
+-
+-/*
+- * read an old stlye directory entry and present it as a new one
+- */
+-#define	ODIRSIZ	14
+-
+-struct	olddirect {
+-	ino_t	d_ino;
+-	char	d_name[ODIRSIZ];
+-#ifdef	CRAY
+-	char	d_pad[10];
+-#endif
+-};
+-
+-/*
+- * get next entry in a directory.
+- */
+-struct direct *
+-readdir(dirp)
+-	register DIR *dirp;
+-{
+-	register struct olddirect *dp;
+-	static struct direct dir;
+-
+-	for (;;) {
+-		if (dirp->dd_loc == 0) {
+-			dirp->dd_size = read(dirp->dd_fd, dirp->dd_buf, 
+-			    DIRBLKSIZ);
+-			if (dirp->dd_size <= 0)
+-				return((struct direct *)0);
+-		}
+-		if (dirp->dd_loc >= dirp->dd_size) {
+-			dirp->dd_loc = 0;
+-			continue;
+-		}
+-		dp = (struct olddirect *)(dirp->dd_buf + dirp->dd_loc);
+-		dirp->dd_loc += sizeof(struct olddirect);
+-		if (dp->d_ino == 0)
+-			continue;
+-		dir.d_ino = dp->d_ino;
+-		strncpy(dir.d_name, dp->d_name, ODIRSIZ);
+-		dir.d_name[ODIRSIZ] = '\0'; /* insure null termination */
+-		dir.d_namlen = strlen(dir.d_name);
+-		dir.d_reclen = DIRSIZ(&dir);
+-		return (&dir);
+-	}
+-}
+//GO.SYSIN DD ./dir.c
+echo ./expand.c 1>&2
+sed 's/.//' >./expand.c <<'//GO.SYSIN DD ./expand.c'
+-#include	"mk.h"
+-#include	<ctype.h>
+-
+-static Word *bollard;
+-
+-static void
+-append(s)
+-	char *s;
+-{
+-	register Word *w;
+-	register char *p;
+-
+-	if(bollard){
+-		for(w = bollard; w->next; w = w->next)
+-			;
+-		w = w->next = stow(s);
+-	} else
+-		w = bollard = stow(s);
+-	if(w)	/* if we got a word */
+-		for(p = w->s; *p;)
+-			*p++ &= ~EBIT;
+-}
+-
+-Word *
+-expand(s)
+-	register char *s;
+-{
+-	char save;
+-	register char *t;
+-	Word *head, *w;
+-
+-	w = head = newword("");
+-	while(*s){
+-		while(SEP(*s))
+-			s++;
+-		if(*s == 0) break;
+-		for(t = s+1; *t && !SEP(*t); t++)
+-			;
+-		save = *t;
+-		*t = 0;
+-		bollard = 0;
+-		glob(s, append);
+-		w->next = bollard;
+-		while(w->next)
+-			w = w->next;
+-		*t = save;
+-		s = t;
+-	}
+-	w = head->next;
+-	delword(head);
+-	return(w);
+-}
+//GO.SYSIN DD ./expand.c
+echo ./gen.c 1>&2
+sed 's/.//' >./gen.c <<'//GO.SYSIN DD ./gen.c'
+-#include	"mk.h"
+-
+-#define	NMATCH	10
+-
+-gen(buf)
+-	char *buf;
+-{
+-	char buf1[BIGBLOCK];
+-	register char *src, *dest;
+-	register char *s1, *s2, *s3, *s4;
+-	regexp *prog;
+-	regsubexp match[NMATCH];
+-	char c;
+-
+-	if((s1 = strchr(buf, '@')) == 0)
+-			return;
+-	patrule = 0;
+-	src = buf;
+-	dest = buf1;
+-	do {
+-		while(src != s1)
+-			*dest++ = *src++;
+-		if((s2 = strchr(s1+1, '@')) && (s3 = strchr(s2+1, '@'))
+-		&& (s4 = strchr(s3+1, '@')))
+-			;
+-		else {
+-			SYNERR(-1); Fprint(2, "expected four @\n");
+-			break;
+-		}
+-		src = s4+1;
+-		*s2++ = *s3++ = *s4 = 0;
+-		prog = regcomp(s2);
+-		for(s2 = ++s1; ; s2 = s1){
+-			while((*s2 == ' ')||(*s2 == '\t'))
+-				s2++;
+-			if(s1 != s2) *dest++ = ' ';
+-			if(*s2 == 0) break;
+-			for(s1 = s2+1; *s1 && (*s1 != ' ') && (*s1 != '\t');)
+-				s1++;
+-			c = *s1;
+-			*s1 = 0;
+-			if(regexec(prog, s2, match, NMATCH)){
+-				regsub(s3, dest, match, NMATCH);
+-				while(*dest) dest++;
+-			} else
+-				while(*dest = *s2++)
+-					dest++;
+-			*s1 = c;
+-		}
+-	} while(s1 = strchr(src, '@'));
+-	while(*dest++ = *src++)
+-		;
+-	memcpy(buf, buf1, (int)(dest-buf1));
+-}
+//GO.SYSIN DD ./gen.c
+echo ./glob.c 1>&2
+sed 's/.//' >./glob.c <<'//GO.SYSIN DD ./glob.c'
+-#include	<sys/types.h>
+-#include	<sys/stat.h>
+-#ifndef SEQUENT
+-#include	<ndir.h>
+-#else
+-#include	<dir.h>
+-#endif
+-#include	<string.h>
+-#include	"mk.h"
+-
+-#define		MAXPATH		BIGBLOCK
+-
+-static char result[MAXPATH];
+-static doit();
+-
+-/*
+- * globals (file name generation)
+- *
+- * "*" in params matches r.e ".*"
+- * "?" in params matches r.e. "."
+- * "[...]" in params matches character class
+- * "[...a-z...]" in params matches a through z.
+- *
+- */
+-
+-static
+-gglob(arg, dest, fn)
+-	char *arg, *dest;
+-	void (*fn)();
+-{
+-	int meta;
+-	char *slash, *s;
+-	DIR *dirf;
+-
+-	/*
+-		check for meta chars
+-	*/
+-	for(s = arg, slash = 0, meta = 0; *s && !meta; s++)
+-		switch(*s)
+-		{
+-		case '/':
+-			slash = s+1;
+-			break;
+-		case '\\':
+-			if(s[1])
+-				s++;
+-			break;
+-		case '[':
+-		case '*':
+-		case '?':
+-			meta = 1;
+-			break;
+-		}
+-	if(meta == 0){
+-		strcpy(dest, arg);
+-		(*fn)(result);
+-		return;
+-	}
+-	if(slash){
+-		memcpy(dest, arg, slash-arg);
+-		dest += slash-arg;
+-		*dest = 0;
+-	} else
+-		slash = arg;
+-	s = strchr(slash, '/');
+-	if(dirf = opendir(result[0] ? result : ".")){
+-		struct direct *e;
+-		int found;
+-
+-		found = 0;
+-		if(s) *s = 0;
+-		/* slash is null terminated (s) pattern */
+-		while(e = readdir(dirf)){
+-			if(e->d_name[0] == '.' && *slash != '.'){
+-				if (e->d_name[1] == 0)
+-					continue;
+-				if (e->d_name[1] == '.' && e->d_name[2] == 0)
+-					continue;
+-			}
+-			if(gmatch(e->d_name, slash)){
+-				found = 1;
+-				strcpy(dest, e->d_name);
+-				doit(s, dest, fn);
+-			}
+-		}
+-		if(!found){
+-			strcpy(dest, slash);
+-			doit(s, dest, fn);
+-		}
+-		closedir(dirf);
+-	} else {
+-		if(s)
+-			*s = 0;
+-		strcpy(dest, slash);
+-		dest = strchr(dest, 0);
+-		if(s){
+-			*dest++ = '/';
+-			*dest = 0;
+-			gglob(s+1, dest, fn);
+-		} else
+-			(*fn)(result);
+-	}
+-	if(s) *s = '/';
+-}
+-
+-static
+-doit(s, dest, fn)
+-	char *s, *dest;
+-	void (*fn)();
+-{
+-	if(s){
+-		register char *ss;
+-
+-		ss = strchr(dest, 0);
+-		*ss++ = '/';
+-		*ss = 0;
+-		gglob(s+1, ss, fn);
+-	} else
+-		(*fn)(result);
+-}
+-
+-gmatch(s, p)
+-register char	*s, *p;
+-{
+-	register int scc;
+-	unsigned char c;
+-
+-	scc = *s++&(0xFF&~EBIT);
+-	switch (c = *p++)
+-	{
+-	case '[':
+-		{
+-			int ok;
+-			int lc;
+-			int notflag = 0;
+-
+-			ok = 0;
+-			lc = 077777;
+-			if (*p == '^'){
+-				notflag = 1;
+-				p++;
+-			}
+-			while (c = *p++){
+-				if (c == ']')
+-					return(ok ? gmatch(s, p) : 0);
+-				else if (c == '-'){
+-					if (notflag){
+-						if (scc < lc || scc > *(p++))
+-							ok++;
+-						else
+-							return(0);
+-					} else {
+-						if (lc <= scc && scc <= (*p++))
+-							ok++;
+-					}
+-				} else {
+-					lc = c&~EBIT;
+-					if (notflag){
+-						if (scc && scc != lc)
+-							ok++;
+-						else
+-							return(0);
+-					} else {
+-						if (scc == lc)
+-							ok++;
+-					}
+-				}
+-			}
+-			return(0);
+-		}
+-
+-	default:
+-		if ((c&~EBIT) != scc)
+-			return(0);
+-
+-	case '?':
+-		return(scc ? gmatch(s, p) : 0);
+-
+-	case '*':
+-		while (*p == '*')
+-			p++;
+-
+-		if (*p == 0)
+-			return(1);
+-		--s;
+-		while (*s){
+-			if (gmatch(s++, p))
+-				return(1);
+-		}
+-		return(0);
+-
+-	case 0:
+-		return(scc == 0);
+-	}
+-}
+-
+-glob(s, fn)
+-	char *s;
+-	void (*fn)();
+-{
+-	result[0] = 0;
+-	if(strlen(s) >= MAXPATH){
+-		SYNERR(inline-1);
+-		Fprint(2, "too much input for glob expansion; max=%d, given %d\n", MAXPATH, strlen(s));
+-		Exit();
+-	}
+-	gglob(s, result, fn);
+-}
+-
+-#ifdef	MAIN
+-
+-void
+-pr(s)
+-	char *s;
+-{
+-	Fwrite(1, s, strlen(s));
+-	Fputc(1, '\n');
+-}
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	for(argv++; *argv; argv++){
+-		Fprint(1, "<%s>:\n", *argv);
+-		glob(*argv, pr);
+-		Fprint(1, "*******\n");
+-	}
+-	exit(0);
+-}
+-#endif
+//GO.SYSIN DD ./glob.c
+echo ./graph.c 1>&2
+sed 's/.//' >./graph.c <<'//GO.SYSIN DD ./graph.c'
+-#include	"mk.h"
+-
+-static Node *newnode(), *applyrules();
+-static cyclechk(), vacuous(), ambiguous(), attribute();
+-
+-Node *
+-graph(target)
+-	char *target;
+-{
+-	Node *node;
+-	char *cnt;
+-
+-	node = applyrules(target, cnt = rulecnt());
+-	free(cnt);
+-	cyclechk(node);
+-	node->flags |= PROBABLE;	/* make sure it doesn't get deleted */
+-	(void)vacuous(node);
+-	(void)ambiguous(node);
+-	(void)attribute(node);
+-	return(node);
+-}
+-
+-static Node *
+-applyrules(target, cnt)
+-	char *target, *cnt;
+-{
+-	Symtab *sym;
+-	Node *node;
+-	Rule *r;
+-	Arc head, *a = &head;
+-	Word *w;
+-	char stem[NAMEBLOCK], buf[NAMEBLOCK];
+-	regsubexp rmatch[NREGEXP];
+-
+-/*	print("appplyrules(%ld='%s')\n", target, target);/**/
+-	if(sym = symlook(target, S_NODE, (char *)0)){
+-		node = (Node *)(sym->value);
+-		return(node);
+-	}
+-	target = strdup(target);
+-	node = newnode(target);
+-	head.n = 0;
+-	head.next = 0;
+-	sym = symlook(target, S_TARGET, (char *)0);
+-	for(r = sym? (Rule *)(sym->value):0; r; r = r->chain){
+-		if(r->attr&META) continue;
+-		if(strcmp(target, r->target)) continue;
+-		if(cnt[r->rule] >= nreps) continue;
+-		cnt[r->rule]++;
+-		node->flags |= PROBABLE;
+-		if(r->attr&VIR)
+-			node->flags |= VIRTUAL;
+-		if(r->attr&NOREC)
+-			node->flags |= NORECIPE;
+-		if(r->attr&DEL)
+-			node->flags |= DELETE;
+-		if(r->tail == 0)
+-			a = a->next = newarc((Node *)0, r, "", rmatch);
+-		else
+-			for(w = r->tail; w; w = w->next){
+-				a = a->next = newarc(applyrules(w->s, cnt), r, "", rmatch);
+-		}
+-		cnt[r->rule]--;
+-		head.n = node;
+-	}
+-	for(r = metarules; r; r = r->next){
+-		if(r->attr&REGEXP){
+-			stem[0] = 0;
+-			patrule = r;
+-			if(regexec(r->pat, node->name, rmatch, NREGEXP) == 0)
+-				continue;
+-		} else {
+-			if(!match(node->name, r->target, stem)) continue;
+-		}
+-		if(cnt[r->rule] >= nreps) continue;
+-		cnt[r->rule]++;
+-		if(r->attr&VIR)
+-			node->flags |= VIRTUAL;
+-		if(r->attr&NOREC)
+-			node->flags |= NORECIPE;
+-		if(r->attr&DEL)
+-			node->flags |= DELETE;
+-		if(r->tail == 0)
+-			a = a->next = newarc((Node *)0, r, strdup(stem), rmatch);
+-		else
+-			for(w = r->tail; w; w = w->next){
+-				if(r->attr&REGEXP)
+-					regsub(w->s, buf, rmatch, NREGEXP);
+-				else
+-					subst(stem, w->s, buf);
+-				a = a->next = newarc(applyrules(buf, cnt), r, strdup(stem), rmatch);
+-			}
+-		cnt[r->rule]--;
+-	}
+-	a->next = node->prereqs;
+-	node->prereqs = head.next;
+-	return(node);
+-}
+-
+-static
+-togo(node)
+-	register Node *node;
+-{
+-	register Arc *la, *a;
+-
+-	/* delete them now */
+-	for(a = node->prereqs; a; la = a, a = a->next)
+-		if(a->flag&TOGO){
+-			if(a == node->prereqs)
+-				node->prereqs = a->next;
+-			else
+-				la->next = a->next, a = la;
+-		}
+-}
+-
+-static
+-vacuous(node)
+-	register Node *node;
+-{
+-	register Arc *la, *a;
+-	int vac = !(node->flags&PROBABLE);
+-
+-	if(node->flags&READY)
+-		return(node->flags&VACUOUS);
+-	node->flags |= READY;
+-	for(a = node->prereqs; a; a = a->next)
+-		if(a->n && vacuous(a->n) && (a->r->attr&META))
+-			a->flag |= TOGO;
+-		else
+-			vac = 0;
+-	/* if a rule generated arcs that DON'T go; no others from that rule go */
+-	for(a = node->prereqs; a; a = a->next)
+-		if((a->flag&TOGO) == 0)
+-			for(la = node->prereqs; la; la = la->next)
+-				if((la->flag&TOGO) && (la->r == a->r)){
+-					la->flag &= ~TOGO;
+-				}
+-	togo(node);
+-	if(vac)
+-		node->flags |= VACUOUS;
+-	return(vac);
+-}
+-
+-static Node *
+-newnode(name)
+-	char *name;
+-{
+-	register Node *node;
+-
+-	node = (Node *)Malloc(sizeof(Node));
+-	symlook(name, S_NODE, (char *)node);
+-	node->name = name;
+-	node->time = timeof(name, 0);
+-	node->prereqs = 0;
+-	node->flags = node->time? PROBABLE : 0;
+-	node->next = 0;
+-	return(node);
+-}
+-
+-dumpn(s, n)
+-	char *s;
+-	register Node *n;
+-{
+-	char buf[1024];
+-	register Arc *a;
+-
+-	sprint(buf, "%s   ", (*s == ' ')? s:"");
+-	Fprint(1, "%s%s@%ld: time=%ld flags=0x%x next=%ld\n",
+-		s, n->name, n, n->time, n->flags, n->next);
+-	for(a = n->prereqs; a; a = a->next)
+-		dumpa(buf, a);
+-}
+-
+-static
+-trace(s, a)
+-	char *s;
+-	register Arc *a;
+-{
+-	Fprint(2, "\t%s", s);
+-	while(a){
+-		Fprint(2, " <-(%s:%d)- %s", a->r->file, a->r->line,
+-			a->n? a->n->name:"");
+-		if(a->n){
+-			for(a = a->n->prereqs; a; a = a->next)
+-				if(*a->r->recipe) break;
+-		} else
+-			a = 0;
+-	}
+-	Fputc(2, '\n');
+-}
+-
+-static
+-cyclechk(n)
+-	register Node *n;
+-{
+-	register Arc *a;
+-
+-	if((n->flags&CYCLE) && n->prereqs){
+-		Fprint(2, "mk: cycle in graph detected at target %s\n", n->name);
+-		Exit();
+-	}
+-	n->flags |= CYCLE;
+-	for(a = n->prereqs; a; a = a->next)
+-		if(a->n)
+-			cyclechk(a->n);
+-	n->flags &= ~CYCLE;
+-}
+-
+-static
+-ambiguous(n)
+-	register Node *n;
+-{
+-	register Arc *a;
+-	register Rule *r = 0;
+-	Arc *la;
+-	int bad = 0;
+-
+-	for(a = n->prereqs; a; a = a->next){
+-		if(a->n)
+-			ambiguous(a->n);
+-		if(*a->r->recipe == 0) continue;
+-		if(r == 0)
+-			r = a->r, la = a;
+-		else{
+-			if(r->recipe != a->r->recipe){
+-				if((r->attr&META) && !(a->r->attr&META)){
+-					la->flag |= TOGO;
+-					r = a->r, la = a;
+-				} else if(!(r->attr&META) && (a->r->attr&META)){
+-					a->flag |= TOGO;
+-					continue;
+-				}
+-			}
+-			if(r->recipe != a->r->recipe){
+-				if(bad == 0){
+-					Fprint(2, "mk: ambiguous recipes for %s:\n", n->name);
+-					bad = 1;
+-					trace(n->name, la);
+-				}
+-				trace(n->name, a);
+-			}
+-		}
+-	}
+-	if(bad)
+-		Exit();
+-	togo(n);
+-}
+-
+-static
+-attribute(n)
+-	register Node *n;
+-{
+-	register Arc *a;
+-
+-	for(a = n->prereqs; a; a = a->next){
+-		if(a->r->attr&VIR)
+-			n->flags |= VIRTUAL;
+-		if(a->r->attr&NOREC)
+-			n->flags |= NORECIPE;
+-		if(a->r->attr&DEL)
+-			n->flags |= DELETE;
+-		if(a->n)
+-			attribute(a->n);
+-	}
+-	if(n->flags&VIRTUAL)
+-		n->time = 0;
+-}
+//GO.SYSIN DD ./graph.c
+echo ./job.c 1>&2
+sed 's/.//' >./job.c <<'//GO.SYSIN DD ./job.c'
+-#include	"mk.h"
+-
+-Job *
+-newjob(r, nlist, stem, match, pre, npre, tar, atar)
+-	Rule *r;
+-	Node *nlist;
+-	char *stem;
+-	regsubexp *match;
+-	Word *pre, *npre, *tar, *atar;
+-{
+-	register Job *j;
+-
+-	j = (Job *)Malloc(sizeof(Job));
+-	j->r = r;
+-	j->n = nlist;
+-	j->stem = stem;
+-	j->match = match;
+-	j->p = pre;
+-	j->np = npre;
+-	j->t = tar;
+-	j->at = atar;
+-	j->nproc = -1;
+-	j->fd = -1;
+-	j->next = 0;
+-	return(j);
+-}
+-
+-dumpj(s, j, all)
+-	char *s;
+-	Job *j;
+-{
+-	Fprint(1, "%s\n", s);
+-	while(j){
+-		Fprint(1, "job@%ld: r=%ld n=%ld stem='%s' nproc=%d\n",
+-			j, j->r, j->n, j->stem, j->nproc);
+-		Fprint(1, "\ttarget='%s' alltarget='%s' prereq='%s' nprereq='%s'\n",
+-			wtos(j->t), wtos(j->at), wtos(j->p), wtos(j->np));
+-		j = all? j->next : 0;
+-	}
+-}
+//GO.SYSIN DD ./job.c
+echo ./lex.c 1>&2
+sed 's/.//' >./lex.c <<'//GO.SYSIN DD ./lex.c'
+-#include	"mk.h"
+-
+-lex(fd, buf)
+-	char *buf;
+-{
+-	char buf1[BIGBLOCK];
+-
+-	quote1(fd, buf, buf1);	/* '..' */
+-	bquote(fd, buf1, buf);	/* `cmd` */
+-	quote2(fd, buf, buf1);	/* ".." and variable expansion */
+-	strcpy(buf, buf1);
+-}
+//GO.SYSIN DD ./lex.c
+echo ./main.c 1>&2
+sed 's/.//' >./main.c <<'//GO.SYSIN DD ./main.c'
+-#include	"mk.h"
+-
+-#define		MKFILE		"mkfile"
+-
+-static char *version = "@(#)mk general release 3";
+-int debug;
+-Rule *rules, *metarules;
+-int nproclimit;
+-int nflag = 0;
+-int tflag = 0;
+-int iflag = 0;
+-int kflag = 0;
+-int mflag = 0;
+-int aflag = 0;
+-int uflag = 0;
+-char *explain = 0;
+-Word *target1;
+-int nreps = 1;
+-Job *jobs;
+-char *whatif = 0;
+-#ifdef	PROF
+-short buf[10000];
+-#endif
+-
+-main(argc, argv)
+-	char **argv;
+-{
+-	register Word *w;
+-	register char *s;
+-	char *files[256], **f = files, **ff;
+-	char mkargs[256], *ma = mkargs;
+-	int i;
+-	int tfd = -1;
+-	char *temp = "/tmp/mkargXXXXXX";
+-
+-	*ma = 0;
+-	for(argv++; *argv && (**argv == '-'); argv++)
+-	{
+-		for(s = argv[0]; *s; *ma++ = *s++);
+-		*ma++ = ' ';
+-		switch(argv[0][1])
+-		{
+-		case 'a':
+-			aflag = 1;
+-			break;
+-		case 'd':
+-			if(*(s = &argv[0][2]))
+-				while(*s) switch(*s++)
+-				{
+-				case 'p':	debug |= D_PARSE; break;
+-				case 'g':	debug |= D_GRAPH; break;
+-				case 'e':	debug |= D_EXEC; break;
+-				}
+-			else
+-				debug = 0xFFFF;
+-			break;
+-		case 'e':
+-			explain = &argv[0][2];
+-			break;
+-		case 'f':
+-			if(*++argv == 0)
+-				usage();
+-			*f++ = *argv;
+-			for(s = argv[0]; *s; *ma++ = *s++);
+-			*ma++ = ' ';
+-			break;
+-		case 'i':
+-			iflag = 1;
+-			break;
+-		case 'k':
+-			kflag = 1;
+-			break;
+-		case 'm':
+-			mflag = 1;
+-			aflag = nflag = 1;
+-			break;
+-		case 'n':
+-			nflag = 1;
+-			break;
+-		case 't':
+-			tflag = 1;
+-			break;
+-		case 'u':
+-			uflag = 1;
+-			break;
+-		case 'w':
+-			if(argv[0][2])
+-				whatif = &argv[0][2];
+-			else {
+-				if(*++argv == 0)
+-					usage();
+-				whatif = &argv[0][0];
+-			}
+-			break;
+-		default:
+-			usage();
+-		}
+-	}
+-#ifdef	PROF
+-	{
+-		extern etext();
+-		monitor(main, etext, buf, sizeof buf, 300);
+-	}
+-#endif
+-
+-	if(aflag)
+-		iflag = 1;
+-
+-	account();
+-	syminit();
+-	builtins();
+-	initenv();
+-
+-	/*
+-		assignment args become null strings
+-	*/
+-	for(i = 0; argv[i]; i++) if(strchr(argv[i], '=')){
+-		for(s = argv[i]; *s; *ma++ = *s++);
+-		*ma++ = ' ';
+-		if(tfd < 0){
+-			mktemp(temp);
+-			close(creat(temp, 0600));
+-			if((tfd = open(temp, 2)) < 0){
+-				perror(temp);
+-				Exit();
+-			}
+-		}
+-		Fprint(tfd, "%s\n", argv[i]);
+-		*argv[i] = 0;
+-	}
+-	if(tfd >= 0){
+-		Fflush(tfd);
+-		lseek(tfd, 0L, 0);
+-		parse("command line args", tfd, 1, 1);
+-		unlink(temp);
+-	}
+-
+-	if(ma != mkargs) ma--;
+-	*ma = 0;
+-	symlook("MKFLAGS", S_VAR, strdup(mkargs));
+-	for(ma = mkargs, i = 0; argv[i]; i++){
+-		if(*argv[i] == 0) continue;
+-		if(i) *ma++ = ' ';
+-		for(s = argv[i]; *s; *ma++ = *s++);
+-	}
+-	*ma = 0;
+-	symlook("MKARGS", S_VAR, strdup(mkargs));
+-
+-	if(f == files){
+-		if(access(MKFILE, 4) == 0)
+-			parse(MKFILE, open(MKFILE, 0), 0, 1);
+-	} else
+-		for(ff = files; ff < f; ff++)
+-			parse(*ff, open(*ff, 0), 0, 1);
+-	parsebuiltins();
+-	if(DEBUG(D_PARSE)){
+-		dumpw("default targets", target1);
+-		dumpr("rules", rules);
+-		dumpr("metarules", metarules);
+-		dumpv("variables");
+-	}
+-	if(whatif)
+-		timeinit(whatif);
+-	execinit();
+-	/* skip assignment args */
+-	while(*argv && (**argv == 0))
+-		argv++;
+-	sigcatch();
+-	if(*argv == 0){
+-		if(target1)
+-			for(w = target1; w; w = w->next)
+-				mk(w->s);
+-		else {
+-			Fprint(2, "mk: nothing to mk\n");
+-			Exit();
+-		}
+-	} else
+-		for(; *argv; argv++)
+-			if(**argv)
+-				mk(*argv);
+-	if(uflag)
+-		praccount();
+-	if(mflag)
+-		makefile();
+-	exit(0);
+-}
+-
+-usage()
+-{
+-
+-	Fprint(2, "Usage: mk [-f file] [-n] [-a] [-e] [-t] [-k] [-i] [-d[egp]] [targets ...]\n");
+-	Exit();
+-}
+-
+-char *
+-Malloc(n)
+-{
+-	register char *s;
+-
+-	if(s = malloc(n))
+-		return(s);
+-	Fprint(2, "mk: cannot alloc %d bytes\n", n);
+-	Exit();
+-	return((char *)0);	/* shut cyntax up */
+-}
+-
+-Exit()
+-{
+-	while(wait((int *)0) >= 0)
+-		;
+-	exit(1);
+-}
+-
+-char *
+-strndup(s, n)
+-	char *s;
+-{
+-	register char *goo;
+-
+-	goo = Malloc(n);
+-	memcpy(goo, s, n);
+-	return(goo);
+-}
+-
+-initenv()
+-{
+-	extern char **environ;
+-	register char **p, *s, *ss;
+-
+-	for(p = environ; *p; p++){
+-		s = shname(*p);
+-		switch(*s)
+-		{
+-		case '=':
+-			*s = 0;
+-			ss = strdup(s+1);
+-			symlook(strdup(*p), S_VAR, ss)->value = ss;
+-			*s = '=';
+-			break;
+-		case 0:
+-			ss = strdup("");
+-			symlook(strdup(*p), S_VAR, ss)->value = ss;
+-			break;
+-		}
+-	}
+-}
+-
+-assert(s, n)
+-	char *s;
+-{
+-	if(!n){
+-		Fprint(2, "mk: Assertion ``%s'' failed.\n", s);
+-		Exit();
+-	}
+-}
+//GO.SYSIN DD ./main.c
+echo ./makefile.c 1>&2
+sed 's/.//' >./makefile.c <<'//GO.SYSIN DD ./makefile.c'
+-#include	"mk.h"
+-
+-#define		FOLD	65
+-
+-static char *first = 0;
+-static didit;
+-
+-maketarget(s)
+-	char *s;
+-{
+-	if(first == 0)
+-		first = s;
+-}
+-
+-addmake(n)
+-	Node *n;
+-{
+-	symlook(n->name, S_MAKEFILE, (char *)n);
+-}
+-
+-static
+-fold(s, sep)
+-	char *s;
+-{
+-	int i = 0;
+-
+-	while(*s){
+-		i++;
+-		if((*s == ' ') && (i > FOLD)){
+-			Fprint(1, "\\\n%c", sep);
+-			i = 0;
+-		} else
+-			Fputc(1, *s++);
+-	}
+-}
+-
+-static void
+-vd(s)
+-	register Symtab *s;
+-{
+-	Fprint(1, "%s=", s->name);
+-	fold(symlook(s->name, S_VAR, (char *)0)->value, ' ');
+-	Fputc(1, '\n');
+-}
+-
+-#define	SUB(s)	{ register char *ss = s; while(*dest++ = *ss++); dest--; copy = 0; }
+-
+-static char *
+-vexpand(ww, dest, j)
+-	char **ww, *dest;
+-	Job *j;
+-{
+-	register char *s, *w = *ww;
+-	char carry, *q;
+-	int copy;
+-
+-	assert("vexpand no $", *w == '$');
+-	if(*++w == '{'){
+-		for(s = ++w; *s != '}'; s++)
+-			if(*s == 0) break;
+-	} else
+-		s = shname(w);
+-	carry = *s;
+-	*s = 0;
+-	copy = 1;
+-	if(!symlook(w, S_MAKEVAR, (char *)0)){
+-		if(strcmp(w, "target") == 0){
+-			SUB("$?")
+-		} else if(strcmp(w, "stem") == 0){
+-			SUB(j->stem)
+-		} else if(strcmp(w, "prereq") == 0){
+-			SUB("$@")
+-		} else if(strcmp(w, "pid") == 0){
+-			SUB("$$$$")
+-		} else if(strcmp(w, "newprereq") == 0){
+-			SUB(wtos(j->np))
+-		} else if(strcmp(w, "alltarget") == 0){
+-			SUB(wtos(j->at))
+-			Fprint(2, "Warning; $alltarget expanded to '%s'\n", wtos(j->at));
+-		} else if((strncmp(w, "stem", 4) == 0) && (w[4] >= '0') && (w[4] <= '9')){
+-			int i = w[4] - '0';
+-			int nb = j->match[i].ep - j->match[i].sp;
+-
+-			memcpy(dest, j->match[i].sp, nb);
+-			dest += nb;
+-		} else {
+-			SUB("1");
+-			Fprint(2, "Warning; $%s expanded to 1\n", w);
+-		}
+-	}
+-	if(copy){
+-		*dest++ = '$';
+-		*dest++ = '{';
+-		for(q = w; q != s;)
+-			*dest++ = *q++;
+-		*dest++ = '}';
+-	}
+-	*s = carry;
+-	if(carry == '}')
+-		s++;
+-	*ww = s;
+-	return(dest);
+-}
+-
+-static
+-recipepr(s, j)
+-	char *s;
+-	Job *j;
+-{
+-	char buf[BIGBLOCK];
+-	register char *q = buf;
+-
+-	while(*s)
+-		switch(*s)
+-		{
+-		case '\\':
+-			*q++ = *s++;
+-			*q++ = *s++;
+-			break;
+-		case '$':
+-			q = vexpand(&s, q, j);
+-			break;
+-		case '\n':
+-			*q = 0;
+-			Fprint(1, "\t%s\n", buf);
+-			q = buf;
+-			s++;
+-			break;
+-		default:
+-			*q++ = *s++;
+-			break;
+-		}
+-	*q = 0;
+-	if(q != buf)
+-		Fprint(1, "\t%s\n", buf);
+-}
+-
+-static void
+-nd(s)
+-	Symtab *s;
+-{
+-	Job *j = (Job *)s->value;
+-	register Node *n = j->n;
+-	Arc *a;
+-	int i;
+-	char *ss, *s, c;
+-
+-	if(strcmp(n->name, first) == 0){
+-		if(didit)
+-			return;
+-		didit = 1;
+-	}
+-	Fprint(1, "\n%s:", n->name);
+-	fold(wtos(j->p), ' ');
+-	Fputc(1, '\n');
+-	recipepr(j->r->recipe, j);
+-}
+-
+-makefile()
+-{
+-	symtraverse(S_MAKEVAR, vd);
+-	didit = 0;
+-	nd(symlook(first, S_MAKEFILE, (char *)0));
+-	symtraverse(S_MAKEFILE, nd);
+-}
+//GO.SYSIN DD ./makefile.c
+echo ./match.c 1>&2
+sed 's/.//' >./match.c <<'//GO.SYSIN DD ./match.c'
+-#include	"mk.h"
+-
+-mninlist(name, list, stem)
+-	register char *name, *stem;
+-	Word *list;
+-{
+-	for(; list; list = list->next){
+-		if(match(name, list->s, stem))
+-			return(1);
+-	}
+-	return(0);
+-}
+-
+-static
+-isatomic(p)
+-	char *p;
+-{
+-	while(*p){
+-		if((*p == '.') || (*p == '/'))
+-			return(0);
+-		p++;
+-	}
+-	return(1);
+-}
+-
+-match(name, template, stem)
+-	char *name, *template, *stem;
+-{
+-	register char *p, *q;
+-	char *b;
+-	char *ostem = stem;
+-
+-	for(p = name, q = template; *p && *q && !PERCENT(*q);)
+-		if(*p++ != *q++) return(0);
+-	if(!PERCENT(*q))
+-		return(0);
+-	b = p;
+-	while(*p) p++;
+-	while(*q) q++;
+-	for(q--; !PERCENT(*q); q--)
+-		if(*--p != *q) return(0);
+-	while(b < p)
+-		*stem++ = *b++;
+-	*stem = 0;
+-	if(*q == '&')
+-		return(isatomic(ostem));
+-	return(1);
+-}
+-
+-subst(stem, template, dest)
+-	register char *stem, *template, *dest;
+-{
+-	while(*template){
+-		if(PERCENT(*template)){
+-			template++;
+-			while(*stem)
+-				*dest++ = *stem++;
+-		} else
+-			*dest++ = *template++;
+-	}
+-	*dest = 0;
+-}
+//GO.SYSIN DD ./match.c
+echo ./mk.c 1>&2
+sed 's/.//' >./mk.c <<'//GO.SYSIN DD ./mk.c'
+-#include	"mk.h"
+-
+-int runerrs;
+-
+-mk(target)
+-	char *target;
+-{
+-	Node *node;
+-	int did = 0;
+-
+-	nproc();		/* it can be updated dynamically */
+-	nrep();			/* it can be updated dynamically */
+-	runerrs = 0;
+-	if(mflag)
+-		maketarget(target);
+-	node = graph(target);
+-	if(DEBUG(D_GRAPH)){
+-		dumpn("new target\n", node);
+-		Fflush(1);
+-	}
+-	clrmade(node);
+-	while(node->flags&NOTMADE){
+-		if(work(node, (Node *)0, (Arc *)0))
+-			did = 1;	/* found something to do */
+-		else {
+-			if(waitup(1, (int *)0) > 0){
+-				if(node->flags&(NOTMADE|BEINGMADE)){
+-					assert("must be run errors", runerrs);
+-					break;	/* nothing more waiting */
+-				}
+-			}
+-		}
+-	}
+-	if(node->flags&BEINGMADE)
+-		waitup(-1, (int *)0);
+-	while(jobs)
+-		waitup(-2, (int *)0);
+-	assert("target didn't get done", runerrs || (node->flags&MADE));
+-	if(did == 0)
+-		Fprint(1, "mk: '%s' is up to date\n", node->name);
+-}
+-
+-clrmade(n)
+-	register Node *n;
+-{
+-	register Arc *a;
+-
+-	n->flags &= ~(CANPRETEND|PRETENDING);
+-	n->flags |= CANPRETEND;
+-	MADESET(n, NOTMADE);
+-	for(a = n->prereqs; a; a = a->next)
+-		if(a->n)
+-			clrmade(a->n);
+-}
+-
+-static void
+-unpretend(n)
+-	register Node *n;
+-{
+-	MADESET(n, NOTMADE);
+-	n->flags &= ~(CANPRETEND|PRETENDING);
+-	n->time = 0;
+-}
+-
+-work(node, p, parc)
+-	Node *node, *p;
+-	Arc *parc;
+-{
+-	register Arc *a, *ra;
+-	int weoutofdate;
+-	int ready;
+-	int did = 0;
+-
+-/*	print("work(%s) flags=0x%x time=%ld\n", node->name, node->flags, node->time);/**/
+-	if(node->flags&BEINGMADE)
+-		return(did);
+-	if((node->flags&MADE) && (node->flags&PRETENDING) && p && outofdate(p, parc, 0)){
+-		if(explain)
+-			fprint(1, "unpretending %s(%ld) because %s is out of date(%ld)\n",
+-				node->name, node->time, p->name, p->time);
+-		unpretend(node);
+-	}
+-	/*
+-		have a look if we are pretending in case
+-		someone has been unpretended out from underneath us
+-	*/
+-	if(node->flags&MADE){
+-		if(node->flags&PRETENDING){
+-			node->time = 0;
+-		}else
+-			return(did);
+-	}
+-	/* consider no prerequsite case */
+-	if(node->prereqs == 0){
+-		if(node->time == 0){
+-			Fprint(2, "mk: don't know how to make '%s'\n", node->name);
+-			if(kflag){
+-				node->flags |= BEINGMADE;
+-				runerrs++;
+-			} else
+-				Exit();
+-		} else
+-			MADESET(node, MADE);
+-		return(did);
+-	}
+-	/*
+-		now see if we are out of date or what
+-	*/
+-	ready = 1;
+-	weoutofdate = aflag;
+-	ra = 0;
+-	for(a = node->prereqs; a; a = a->next)
+-		if(a->n){
+-			did = work(a->n, node, a) || did;
+-			if(a->n->flags&(NOTMADE|BEINGMADE))
+-				ready = 0;
+-			if(outofdate(node, a, 0)){
+-				weoutofdate = 1;
+-				if((ra == 0) || (ra->n == 0)
+-						|| (ra->n->time < a->n->time))
+-					ra = a;
+-			}
+-		} else {
+-			if(node->time == 0){
+-				if(ra == 0)
+-					ra = a;
+-				weoutofdate = 1;
+-			}
+-		}
+-	if(ready == 0)	/* can't do anything now */
+-		return(did);
+-	if(weoutofdate == 0){
+-		MADESET(node, MADE);
+-		return(did);
+-	}
+-	/*
+-		can we pretend to be made?
+-	*/
+-	if((iflag == 0) && (node->time == 0) && (node->flags&(PRETENDING|CANPRETEND)) && p && ra->n && !outofdate(p, ra, 0)){
+-		node->flags &= ~CANPRETEND;
+-		MADESET(node, MADE);
+-		node->time = ra->n->time;
+-		if(explain && ((node->flags&PRETENDING) == 0))
+-			fprint(1, "pretending %s has time %ld\n", node->name, node->time);
+-		node->flags |= PRETENDING;
+-		return(did);
+-	}
+-	/*
+-		node is out of date and we REALLY do have to do something.
+-		quickly rescan for pretenders
+-	*/
+-	for(a = node->prereqs; a; a = a->next)
+-		if(a->n && (a->n->flags&PRETENDING)){
+-			if(explain)
+-				Fprint(1, "unpretending %s because of %s because of %s\n",
+-				a->n->name, node->name, ra->n? ra->n->name : "rule with no prerequisites");
+-
+-			unpretend(a->n);
+-			did = work(a->n, node, a) || did;
+-			ready = 0;
+-		}
+-	if(ready == 0)	/* try later unless nothing has happened for -k's sake */
+-		return(did || work(node, p, parc));
+-	did = dorecipe(node) || did;
+-	return(did);
+-}
+-
+-update(fake, node)
+-	register Node *node;
+-{
+-	register Arc *a;
+-
+-	MADESET(node, fake? BEINGMADE : MADE);
+-	if(((node->flags&VIRTUAL) == 0) && (access(node->name, 0) == 0)){
+-		node->time = timeof(node->name, 1);
+-		node->flags &= ~(CANPRETEND|PRETENDING);
+-		for(a = node->prereqs; a; a = a->next)
+-			if(a->prog)
+-				(void)outofdate(node, a, 1);
+-	} else {
+-		node->time = 1;
+-		for(a = node->prereqs; a; a = a->next)
+-			if(a->n && outofdate(node, a, 1))
+-				node->time = a->n->time;
+-	}
+-/*	print("----node %s time=%ld flags=0x%x\n", node->name, node->time, node->flags);/**/
+-}
+-
+-static
+-pcmp(prog, n1, n2)
+-	char *prog, *n1, *n2;
+-{
+-	char buf[3*NAMEBLOCK];
+-	int ret, pid;
+-
+-	pid = fork();
+-	if(pid < 0){
+-		fprint(2, "mk: ");
+-		perror("pcmp fork");
+-		Exit();
+-	}
+-	Fexit(0);
+-	if(pid == 0){
+-		sprint(buf, "%s '%s' '%s'", prog, n1, n2);
+-		execl(SHELL, "sh", "-c", buf, (char *)0);
+-		sprint(buf, "exec %s", SHELL);
+-		perror(buf);
+-		_exit(1);
+-	} else {
+-		while(waitup(-3, &pid) >= 0)
+-			;
+-		return(pid? 2:1);
+-	}
+-}
+-
+-
+-outofdate(node, arc, eval)
+-	register Node *node;
+-	register Arc *arc;
+-{
+-	char buf[3*NAMEBLOCK], *str;
+-	Symtab *sym;
+-	int ret;
+-
+-	if(arc->prog){
+-		sprint(buf, "%s%c%s", node->name, 0377, arc->n->name);
+-		if(!(sym = symlook(buf, S_OUTOFDATE, (char *)0)) || eval){
+-			if(!sym)
+-				str = strdup(buf);
+-			ret = pcmp(arc->prog, node->name, arc->n->name);
+-			if(sym)
+-				sym->value = (char *)ret;
+-			else
+-				symlook(str, S_OUTOFDATE, (char *)ret);
+-		} else
+-			ret = (int)sym->value;
+-		return(ret-1);
+-	} else
+-		return(node->time < arc->n->time);
+-}
+-
+//GO.SYSIN DD ./mk.c
+echo ./mk.h 1>&2
+sed 's/.//' >./mk.h <<'//GO.SYSIN DD ./mk.h'
+-#include	"libc.h"
+-#include	"fio.h"
+-#include	"regexp.h"
+-
+-typedef struct Word
+-{
+-	char *s;
+-	struct Word *next;
+-} Word;
+-extern Word *newword(), *expand(), *wsubst(), *stow();
+-
+-typedef struct Rule
+-{
+-	char *target;		/* one target */
+-	Word *tail;		/* constituents of targets */
+-	char *recipe;		/* do it ! */
+-	short attr;		/* attributes */
+-	short line;		/* source line */
+-	char *file;		/* source file */
+-	Word *alltargets;	/* all the targets */
+-	int rule;		/* rule number */
+-	regexp *pat;		/* reg exp goo */
+-	char *prog;		/* to use in out of date */
+-	struct Rule *chain;	/* hashed per target */
+-	struct Rule *next;
+-} Rule;
+-extern Rule *rules, *metarules, *patrule;
+-
+-#define		META		0x0001
+-#define		SEQ		0x0002
+-#define		UPD		0x0004
+-#define		RED		0x0008
+-#define		QUIET		0x0010
+-#define		VIR		0x0020
+-#define		REGEXP		0x0040
+-#define		NOREC		0x0080
+-#define		DEL		0x0100
+-
+-#define		NREGEXP		10
+-
+-typedef struct Arc
+-{
+-	short flag;
+-	struct Node *n;
+-	Rule *r;
+-	char *stem;
+-	char *prog;
+-	regsubexp match[NREGEXP];
+-	struct Arc *next;
+-} Arc;
+-extern Arc *newarc();
+-#define		TOGO		1
+-
+-typedef struct Node
+-{
+-	char *name;
+-	long time;
+-	unsigned short flags;
+-	Arc *prereqs;
+-	struct Node *next;	/* list for a rule */
+-} Node;
+-extern Node *graph();
+-#define		VIRTUAL		0x0001
+-#define		CYCLE		0x0002
+-#define		READY		0x0004
+-#define		CANPRETEND	0x0008
+-#define		PRETENDING	0x0010
+-#define		NOTMADE		0x0020
+-#define		BEINGMADE	0x0040
+-#define		MADE		0x0080
+-#define		MADESET(n,m)	n->flags = (n->flags&~(NOTMADE|BEINGMADE|MADE))|(m)
+-#define		PROBABLE	0x0100
+-#define		VACUOUS		0x0200
+-#define		NORECIPE	0x0400
+-#define		DELETE		0x0800
+-
+-typedef struct Job
+-{
+-	Rule *r;		/* master rule for job */
+-	Node *n;		/* list of node targets */
+-	char *stem;
+-	regsubexp *match;
+-	Word *p;		/* prerequisites */
+-	Word *np;		/* new prerequisites */
+-	Word *t;		/* targets */
+-	Word *at;		/* all targets */
+-	int nproc;		/* slot number */
+-	int fd;			/* if redirecting */
+-	struct Job *next;
+-} Job;
+-extern Job *newjob(), *jobs;
+-
+-typedef struct Symtab
+-{
+-	short space;
+-	char *name;
+-	char *value;
+-	struct Symtab *next;
+-} Symtab;
+-extern Symtab *symlook();
+-enum {
+-	S_VAR,		/* variable -> value */
+-	S_TARGET,	/* target -> rule */
+-	S_TIME,		/* file -> time */
+-	S_PID,		/* pid -> products */
+-	S_NODE,		/* target name -> node */
+-	S_AGG,		/* aggregate -> time */
+-	S_BITCH,	/* bitched about aggregate not there */
+-	S_NOEXPORT,	/* var -> noexport */
+-	S_OVERRIDE,	/* can't override */
+-	S_OUTOFDATE,	/* n1\377n2 -> 2(outofdate) or 1(not outofdate) */
+-	S_MAKEFILE,	/* target -> node */
+-	S_MAKEVAR,	/* dumpable mk variable */
+-};
+-
+-extern int debug;
+-extern int nflag, tflag, iflag, kflag, aflag, mflag;
+-extern int inline;
+-extern char *infile;
+-extern char *Malloc(), *strndup();
+-extern long timeof();
+-extern void touch(), delete();
+-extern char *shname(), *vexpand();
+-extern int nproclimit;
+-extern int nreps;
+-extern char *explain;
+-extern char *envpr(), *wtos();
+-extern char *rulecnt();
+-
+-#define	SYNERR(l)	(Fprint(2, "mk: %s:%d: syntax error; ", infile, (((l)>=0)?(l):inline)))
+-#define	RERR(r)	(Fprint(2, "mk: %s:%d: rule error; ", (r)->file, (r)->line))
+-#define	NAMEBLOCK	1000
+-#define	BIGBLOCK	20000
+-
+-#ifndef	SHELL
+-#define	SHELL		"/bin/sh"		/* should be bourne-like */
+-#endif
+-
+-#define	SEP(c)	(((c)==' ')||((c)=='\t')||((c)=='\n'))
+-
+-#define	DEBUG(x)	(debug&(x))
+-#define		D_PARSE		0x01
+-#define		D_GRAPH		0x02
+-#define		D_EXEC		0x04
+-
+-#define		EBIT		0x80	/* sorry japan */
+-
+-#define	PERCENT(ch)	(((ch) == '%') || ((ch) == '&'))
+//GO.SYSIN DD ./mk.h
+echo ./parse.c 1>&2
+sed 's/.//' >./parse.c <<'//GO.SYSIN DD ./parse.c'
+-#include	"mk.h"
+-
+-char *infile;
+-int inline;
+-static longline();
+-extern Word *target1;
+-
+-parse(f, fd, varoverride, ruleoverride)
+-	char *f;
+-{
+-	int hline;
+-	char *s, *body;
+-	Word *head, *tail;
+-	int attr, set;
+-	char *prog, *inc;
+-
+-	if(fd < 0){
+-		perror(f);
+-		Exit();
+-	}
+-	ipush();
+-	infile = strdup(f);
+-	inline = 1;
+-	Finit(fd, (char *)0);
+-	while(s = Frdline(fd)){
+-		if((*s == '#') || (*s == 0)){
+-			inline++;
+-			continue;
+-		}
+-		hline = inline;
+-		switch(rhead(s, fd, &head, &tail, &attr, &prog))
+-		{
+-		case '<':
+-			if((tail == 0) || ((inc = wtos(tail)) == 0)){
+-				SYNERR(-1);
+-				Fprint(2, "missing include file name\n");
+-				Exit();
+-			}
+-			parse(inc, open(inc, 0), 0, 1);
+-			break;
+-		case ':':
+-			rbody(fd, &body);
+-			addrules(head, tail, body, attr, hline, ruleoverride, prog);
+-			break;
+-		case '=':
+-			if(head->next){
+-				SYNERR(-1);
+-				Fprint(2, "multiple vars on left side of assignment\n");
+-				Exit();
+-			}
+-			if(symlook(head->s, S_OVERRIDE, (char *)0)){
+-				set = varoverride;
+-				symdel(head->s, S_OVERRIDE);
+-			} else {
+-				set = 1;
+-				if(varoverride)
+-					symlook(head->s, S_OVERRIDE, "");
+-			}
+-			if(set)
+-				setvar(head->s, wtos(tail));
+-			if(attr)
+-				(void)symlook(head->s, S_NOEXPORT, "");
+-			break;
+-		default:
+-			SYNERR(hline);
+-			Fprint(2, "expected : or =\n");
+-			Exit();
+-			break;
+-		}
+-	}
+-	close(fd);
+-	ipop();
+-}
+-
+-addrules(head, tail, body, attr, hline, override, prog)
+-	Word *head, *tail;
+-	char *body, *prog;
+-{
+-	register Word *w;
+-
+-	assert("addrules args", head && body);
+-	if((target1 == 0) && !(attr&REGEXP))
+-		frule(head);
+-	for(w = head; w; w = w->next)
+-		addrule(w->s, tail, body, head, attr, hline, override, prog);
+-}
+-
+-rhead(s, fd, h, t, attr, prog)
+-	char *s;
+-	Word **h, **t;
+-	int *attr;
+-	char **prog;
+-{
+-	char buf[BIGBLOCK];
+-	register char *p;
+-	char *pp;
+-	int sep;
+-
+-	longline(fd, s, buf);		/* cover \\n guys */
+-	lex(fd, buf);
+-	if(p = strchr(buf, '#'))	/* comment ? */
+-		*p = 0;
+-	for(p = buf; *p; p++)
+-		if((*p == ':') || (*p == '=') || (*p == '<')) break;
+-	if(*p == 0){
+-		return('?');
+-	}
+-	sep = *p;
+-	*p++ = 0;
+-	*attr = 0;
+-	*prog = 0;
+-	if(sep == '='){
+-		char *le, *e;
+-
+-		le = strchr(p, ' ');
+-		if(e = strchr(p, '\t'))
+-			if((le == 0) || (e < le))
+-				le = e;
+-		if((e = strchr(p, '=')) && ((le == 0) || (e < le))){
+-			while(*p != '='){
+-				switch(*p++)
+-				{
+-				case 0:
+-					SYNERR(-1);
+-					Fprint(2, "missing trailing =\n");
+-					Exit();
+-				default:
+-					SYNERR(-1);
+-					Fprint(2, "unknown attribute '%c'\n", p[-1]);
+-					Exit();
+-				case 'U':
+-					*attr = 1;
+-					break;
+-				}
+-			}
+-			p++;
+-		}
+-	}
+-	if((sep == ':') && *p && (*p != ' ') && (*p != '\t')){
+-		while(*p != ':')
+-			switch(*p++)
+-			{
+-			case 0:
+-		eos:
+-				SYNERR(-1);
+-				Fprint(2, "missing trailing :\n");
+-				Exit();
+-			default:
+-				SYNERR(-1);
+-				Fprint(2, "unknown attribute '%c'\n", p[-1]);
+-				Exit();
+-			case '<':
+-				*attr |= RED;
+-				break;
+-			case 'D':
+-				*attr |= DEL;
+-				break;
+-			case 'N':
+-				*attr |= NOREC;
+-				break;
+-			case 'P':
+-				pp = p;
+-				while(*p && (*p != ':'))
+-					p++;
+-				if(*p == 0)
+-					goto eos;
+-				*p = 0;
+-				*prog = strdup(pp);
+-				*p = ':';
+-				break;
+-			case 'Q':
+-				*attr |= QUIET;
+-				break;
+-			case 'R':
+-				*attr |= REGEXP;
+-				break;
+-			case 'U':
+-				*attr |= UPD;
+-				break;
+-			case 'V':
+-				*attr |= VIR;
+-				break;
+-			}
+-		p++;
+-	}
+-	*h = expand(buf);
+-	if((*h == 0) && (sep != '<')){
+-		SYNERR(inline-1);
+-		Fprint(2, "no var on left side of assignment/rule\n");
+-		Exit();
+-	}
+-	while((*p == ' ') || (*p == '\t'))
+-		p++;
+-	*t = expand(p);
+-	return(sep);
+-}
+-
+-rbody(fd, b)
+-	char **b;
+-{
+-	char buf[BIGBLOCK];
+-	char *cp, *s;
+-	register n;
+-
+-	cp = buf;
+-	while(s = Frdline(fd)){
+-		inline++;
+-		if((*s != '\t') && (*s != ' ')){
+-			inline--;
+-			Fundo(fd);
+-			break;
+-		}
+-		memcpy(cp, s+1, n = FIOLINELEN(fd)-1);
+-		cp += n;
+-		*cp++ = '\n';
+-	}
+-	*cp++ = 0;
+-	assert("rbody overflow", cp <= &buf[BIGBLOCK]);
+-	*b = (buf[0])? strndup(buf, (int)(cp-buf)) : strdup("");
+-}
+-
+-static
+-longline(fd, line, dest)
+-	register char *line, *dest;
+-{
+-	for(;;){
+-		inline++;
+-		while(*dest++ = *line++);
+-		dest -= 2;
+-		if(*dest == '\\'){
+-			*dest = 0;
+-			if((line = Frdline(fd)) == 0){
+-				Fundo(fd);
+-				break;
+-			}
+-		} else
+-			break;
+-	}
+-}
+-
+-struct input
+-{
+-	char *file;
+-	int line;
+-	struct input *next;
+-};
+-static struct input *inputs = 0;
+-
+-ipush()
+-{
+-	register struct input *in, *me;
+-
+-	me = (struct input *)Malloc(sizeof(*me));
+-	me->file = infile;
+-	me->line = inline;
+-	me->next = 0;
+-	if(inputs == 0)
+-		inputs = me;
+-	else {
+-		for(in = inputs; in->next; )
+-			in = in->next;
+-		in->next = me;
+-	}
+-}
+-
+-ipop()
+-{
+-	register struct input *in, *me;
+-
+-	assert("pop input list", inputs != 0);
+-	if(inputs->next == 0){
+-		me = inputs;
+-		inputs = 0;
+-	} else {
+-		for(in = inputs; in->next->next; )
+-			in = in->next;
+-		me = in->next;
+-		in->next = 0;
+-	}
+-	infile = me->file;
+-	inline = me->line;
+-	free((char *)me);
+-}
+//GO.SYSIN DD ./parse.c
+echo ./quote.c 1>&2
+sed 's/.//' >./quote.c <<'//GO.SYSIN DD ./quote.c'
+-#include	"mk.h"
+-
+-/*
+-	quoted stuff gets EBIT
+-*/
+-
+-static
+-squote(fd, srcp, destp)
+-	char **srcp, **destp;
+-{
+-	register char *src = *srcp, *dest = *destp;
+-
+-	while(*src != '\''){
+-		if(*src == 0){
+-			char *s;
+-
+-			if(s = Frdline(fd)){
+-				inline++;
+-				*dest++ = '\n'|EBIT;
+-				strcpy(src, s);
+-				continue;
+-			} else {
+-				SYNERR(-1); Fprint(2, "missing closing '\n");
+-				break;
+-			}
+-		}
+-		*dest++ = *src++|EBIT;
+-	}
+-	*dest = 0;
+-	if(*src)
+-		src++;
+-	*srcp = src;
+-	*destp = dest;
+-}
+-
+-static
+-dquote(fd, src, dest)
+-	char **src, **dest;
+-{
+-	char *p = *src, *s = *dest;
+-	char *t, carry;
+-	Symtab *sym;
+-
+-	while(*p != '"'){
+-		switch(*p)
+-		{
+-		case 0:
+-			if(t = Frdline(fd)){
+-				inline++;
+-				*s++ = '\n'|EBIT;
+-				strcpy(p, t);
+-				continue;
+-			} else {
+-				SYNERR(-1); Fprint(2, "missing closing \"\n");
+-				break;
+-			}
+-			break;
+-		case '\\':
+-			switch(*++p)
+-			{
+-			default:
+-				*s++ = '\\'|EBIT;
+-			case '\\': case '"':
+-			case '\'': case '$':
+-				*s++ = *p|EBIT;
+-			}
+-			p++;
+-			break;
+-		case '$':
+-			varsub(&p, &s, EBIT);
+-			break;
+-		default:
+-			*s++ = *p++|EBIT;
+-		}
+-	}
+-	*s = 0;
+-	if(*p)
+-		p++;
+-	*src = p;
+-	*dest = s;
+-}
+-
+-quote1(fd, src, dest)
+-	char *src, *dest;
+-{
+-	char *t;
+-
+-	while(*src){
+-		switch(*src)
+-		{
+-		case '\'':
+-			src++;
+-			squote(fd, &src, &dest);
+-			break;
+-		case '\\':
+-			if(src[1]){
+-				*dest++ = *++src | EBIT;
+-				src++;
+-			} else if(t = Frdline(fd)){
+-				inline++;
+-				strcpy(src, t);
+-			}
+-			break;
+-		default:
+-			*dest++ = *src++;
+-		}
+-	}
+-	*dest = 0;
+-}
+-
+-quote2(fd, src, dest)
+-	char *src, *dest;
+-{
+-	char *t;
+-
+-	while(*src){
+-		switch(*src)
+-		{
+-		case '"':
+-			src++;
+-			dquote(fd, &src, &dest);
+-			break;
+-		case '\\':
+-			if(src[1]){
+-				*dest++ = *++src;
+-				src++;
+-			} else if(t = Frdline(fd)){
+-				inline++;
+-				strcpy(src, t);
+-			}
+-			break;
+-		case '$':
+-			varsub(&src, &dest, 0);
+-			break;
+-		default:
+-			*dest++ = *src++;
+-		}
+-	}
+-	*dest = 0;
+-}
+-
+-static char *
+-subsub(val, ext, dest, bit)
+-	char *val, *ext, *dest;
+-{
+-	register char *s;
+-	char *a, *b, *c, *d;
+-	int na, nb, nc, nd, n;
+-	int destsub = 0;
+-
+-	/* prepare literals */
+-	a = s = ext;
+-	for(; *s && (*s != '=') && !PERCENT(*s); s++)
+-		;
+-	na = s-a;
+-	if(PERCENT(*s)) s++;
+-	b = s;
+-	for(; *s && (*s != '='); s++)
+-		;
+-	nb = s-b;
+-	if(*s == '=') s++;
+-	c = s;
+-	for(; *s && !PERCENT(*s); s++)
+-		;
+-	nc = s-c;
+-	if(PERCENT(*s)) s++, destsub = 1;
+-	d = s;
+-	for(; *s; s++)
+-		;
+-	nd = s-d;
+-	/* break into words, do sub */
+-	while(*val){
+-		for(s = val; *s && !SEP(*s); s++)
+-			;
+-		/* substitute in val..s */
+-		if((memcmp(val, a, na) == 0) && (memcmp(s-nb, b, nb) == 0)){
+-#define	DEST(s,n)	if(n) memcpy(dest,s,n), dest += n
+-			DEST(c, nc);
+-			n = (s-nb) - (val+na);
+-			if(destsub)
+-				DEST(val+na, n);
+-			DEST(d, nd);
+-		} else
+-			while(val < s)
+-				*dest++ = (*val++&~EBIT)|bit;
+-		/* clean up */
+-		while(*s && SEP(*s))
+-			*dest++ = (*s++&~EBIT)|bit;
+-		val = s;
+-	}
+-	return(dest);
+-}
+-
+-varsub(psrc, pdest, bit)
+-	char **psrc, **pdest;
+-{
+-	char *t, carry;
+-	Symtab *sym;
+-	char *src = *psrc, *dest = *pdest;
+-	char *v = 0, vc;
+-
+-	if(*++src == '{'){
+-		for(t = ++src; *src != '}'; src++)
+-			if(*src == 0){
+-				SYNERR(-1);
+-				Fprint(2, "missing '}'\n");
+-				Exit();
+-			}
+-		v = shname(t);
+-		if(src == v)
+-			v = 0;
+-		else {
+-			if(*v != ':'){
+-				SYNERR(-1);
+-				Fprint(2, "bad variable name\n");
+-				Exit();
+-			}
+-			vc = *v;
+-			*v = 0;
+-		}
+-		*src++ = carry = 0;
+-	} else {
+-		src = shname(t = src);
+-		carry = *src;
+-		*src = 0;
+-	}
+-	if(sym = symlook(t, S_VAR, (char *)0)){
+-		if(v){
+-char buf[BIGBLOCK]; strcpy(buf, v+1); lex(-1, buf);
+-			dest = subsub(sym->value, buf, dest, bit);
+-			*v = vc;
+-		} else
+-			for(t = sym->value; *t; )
+-				*dest++ = *t++|bit;
+-	}
+-	if(carry)
+-		*src = carry;
+-	*psrc = src;
+-	*pdest = dest;
+-}
+//GO.SYSIN DD ./quote.c
+echo ./recipe.c 1>&2
+sed 's/.//' >./recipe.c <<'//GO.SYSIN DD ./recipe.c'
+-#include	"mk.h"
+-
+-dorecipe(node)
+-	Node *node;
+-{
+-	char buf[BIGBLOCK];
+-	register Node *n;
+-	Rule *r = 0;
+-	Arc *a, *aa;
+-	Word head, ahead, lp, ln, *w, *ww, *aw;
+-	Symtab *s;
+-	int did = 0;
+-	regexp rmatch[NREGEXP];
+-
+-	/*
+-		pick up the rule
+-	*/
+-	for(a = node->prereqs; a; a = a->next)
+-		if(*a->r->recipe)
+-			r = (aa = a)->r;
+-	/*
+-		no recipe? go to buggery!
+-	*/
+-	if(r == 0){
+-		if(!(node->flags&VIRTUAL) && !(node->flags&NORECIPE)){
+-			Fprint(2, "mk: no recipe to make '%s'\n", node->name);
+-			Exit();
+-		}
+-		update(0, node);
+-		if(tflag){
+-			if(!(node->flags&VIRTUAL))
+-				touch(node->name);
+-			else if(explain)
+-				Fprint(1, "no touch of virtual '%s'\n", node->name);
+-		}
+-		return(did);
+-	}
+-	/*
+-		build the node list
+-	*/
+-	node->next = 0;
+-	head.next = 0;
+-	ww = &head;
+-	ahead.next = 0;
+-	aw = &ahead;
+-	if(r->attr&REGEXP){
+-		ww->next = newword(node->name);
+-		aw->next = newword(node->name);
+-	} else {
+-		for(w = r->alltargets; w; w = w->next){
+-			if(r->attr&META)
+-				subst(aa->stem, w->s, buf);
+-			else
+-				strcpy(buf, w->s);
+-			aw->next = newword(buf);
+-			aw = aw->next;
+-			if((s = symlook(buf, S_NODE, (char *)0)) == 0)
+-				continue;	/* not a node we are interested in */
+-			n = (Node *)s->value;
+-			ww->next = newword(buf);
+-			ww = ww->next;
+-			if(n == node) continue;
+-			n->next = node->next;
+-			node->next = n;
+-		}
+-	}
+-	for(n = node; n; n = n->next)
+-		if((n->flags&READY) == 0)
+-			return(did);
+-	/*
+-		gather the params for the job
+-	*/
+-	lp.next = ln.next = 0;
+-	for(n = node; n; n = n->next){
+-		for(a = n->prereqs; a; a = a->next){
+-			if(a->n){
+-				addw(&lp, a->n->name);
+-				if(outofdate(n, a, 0)){
+-					addw(&ln, a->n->name);
+-					if(explain)
+-						fprint(1, "%s(%ld) < %s(%ld)\n",
+-							n->name, n->time, a->n->name, a->n->time);
+-				}
+-			} else {
+-				if(explain)
+-					fprint(1, "%s has no prerequisites\n",
+-							n->name);
+-			}
+-		}
+-		MADESET(n, BEINGMADE);
+-	}
+-/*	print("lt=%s ln=%s lp=%s\n",wtos(head.next),wtos(ln.next),wtos(lp.next));/**/
+-	run(newjob(r, node, aa->stem, aa->match, lp.next, ln.next, head.next, ahead.next));
+-	return(1);
+-}
+-
+-addw(w, s)
+-	register Word *w;
+-	char *s;
+-{
+-	register Word *lw;
+-
+-	for(lw = w; w = w->next; lw = w){
+-		if(strcmp(s, w->s) == 0)
+-			return;
+-	}
+-	lw->next = newword(s);
+-}
+//GO.SYSIN DD ./recipe.c
+echo ./regexp.c 1>&2
+sed 's/.//' >./regexp.c <<'//GO.SYSIN DD ./regexp.c'
+-#include	"mk.h"
+-
+-Rule *patrule;
+-
+-regerror(s)
+-	char *s;
+-{
+-	if(patrule)
+-		Fprint(2, "mk: %s:%d: regular expression error; %s\n",
+-			patrule->file, patrule->line, s);
+-	else
+-		Fprint(2, "mk: %s:%d: regular expression error; %s\n",
+-			infile, inline, s);
+-	Exit();
+-}
+-
+-rsub(src, r, a, proto, dest)
+-	char *src, *dest, *proto;
+-	Rule *r;
+-	Arc *a;
+-{
+-	rdump("rsub", a->match);
+-	print("rsub(src=%d '%s' proto=%d '%s')\n", src, src, proto, proto);
+-	*dest = 0;
+-}
+-
+-rdump(s, m)
+-	char *s;
+-	register regsubexp *m;
+-{
+-	register i;
+-
+-	print("rdump: %s\n", s);
+-	for(i = 0; i < NREGEXP; i++, m++)
+-		print("\t%d: %d - %d '%s'\n", i, m->sp, m->ep, m->sp);
+-}
+//GO.SYSIN DD ./regexp.c
+echo ./rule.c 1>&2
+sed 's/.//' >./rule.c <<'//GO.SYSIN DD ./rule.c'
+-#include	"mk.h"
+-
+-static Rule *lr, *lmr;
+-static rcmp();
+-static int nrules = 0;
+-
+-addrule(head, tail, body, ahead, attr, hline, override, prog)
+-	Word *tail, *ahead;
+-	char *head, *body, *prog;
+-{
+-	register Rule *r;
+-	Rule *rr;
+-	Symtab *sym;
+-	int reuse;
+-
+-	if(sym = symlook(head, S_TARGET, (char *)0)){
+-		for(r = (Rule *)sym->value; r; r = r->chain)
+-			if(rcmp(r, head, tail) == 0) break;
+-		if(r && !override)
+-			return;
+-	} else
+-		r = 0;
+-	reuse = r != 0;
+-	if(r == 0)
+-		r = (Rule *)Malloc(sizeof(Rule));
+-	r->target = head;
+-	r->tail = tail;
+-	r->recipe = body;
+-	r->line = hline;
+-	r->file = infile;
+-	r->attr = attr;
+-	r->alltargets = ahead;
+-	r->prog = prog;
+-	r->rule = nrules++;
+-	if(!reuse){
+-		rr = (Rule *)symlook(head, S_TARGET, (char *)r)->value;
+-		if(rr != r){
+-			r->chain = rr->chain;
+-			rr->chain = r;
+-		} else
+-			r->chain = 0;
+-	}
+-	if(strchr(head, '%') || strchr(head, '&') || (attr&REGEXP))
+-		goto meta;
+-	if(reuse)
+-		return;
+-	r->next = 0;
+-	r->pat = 0;
+-	if(rules == 0)
+-		rules = lr = r;
+-	else {
+-		lr->next = r;
+-		lr = r;
+-	}
+-	return;
+-meta:
+-	r->attr |= META;
+-	if(reuse)
+-		return;
+-	r->next = 0;
+-	if(r->attr&REGEXP){
+-		patrule = r;
+-		r->pat = regcomp(head);
+-	}
+-	if(metarules == 0)
+-		metarules = lmr = r;
+-	else {
+-		lmr->next = r;
+-		lmr = r;
+-	}
+-}
+-
+-dumpr(s, r)
+-	char *s;
+-	register Rule *r;
+-{
+-	Fprint(1, "%s: start=%ld\n", s, r);
+-	for(; r; r = r->next){
+-		Fprint(1, "\tRule %ld: %s[%d] attr=%x next=%ld chain=%ld alltarget='%s'",
+-			r, r->file, r->line, r->attr, r->next, r->chain, wtos(r->alltargets));
+-		if(r->prog)
+-			Fprint(1, " prog='%s'", r->prog);
+-		Fprint(1, "\n\ttarget=%s: %s\n", r->target, wtos(r->tail));
+-		Fprint(1, "\trecipe@%ld='%s'\n", r->recipe, r->recipe);
+-	}
+-}
+-
+-frule(w)
+-	Word *w;
+-{
+-	extern Word *target1;
+-	register Word *ww;
+-	register char *s;
+-
+-#define	ADD(s)	{if(target1==0)target1=ww=newword(s);else ww=ww->next=newword(s);}
+-
+-	for(ww = w; ww; ww = ww->next)
+-		if(strchr(w->s, '%') || strchr(w->s, '&'))
+-			return;	/* no metarule targets */
+-	while(w){
+-		if(s = strchr(w->s, '+')){
+-			*s++ = 0;
+-			if(*w->s)
+-				ADD(w->s);
+-			if(*s)
+-				ADD(s);
+-			s[-1] = '+';
+-		} else
+-			ADD(w->s);
+-		w = w->next;
+-	}
+-}
+-
+-static
+-rcmp(r, target, tail)
+-	register Rule *r;
+-	char *target;
+-	register Word *tail;
+-{
+-	register Word *w;
+-
+-	if(strcmp(r->target, target))
+-		return(1);
+-	for(w = r->tail; w && tail; w = w->next, tail = tail->next)
+-		if(strcmp(w->s, tail->s))
+-			return(1);
+-	return(w || tail);
+-}
+-
+-char *
+-rulecnt()
+-{
+-	register char *s;
+-
+-	s = Malloc(nrules);
+-	memset(s, 0, nrules);
+-	return(s);
+-}
+-
+-ismeta(s)
+-	register char *s;
+-{
+-	for(; *s; s++)
+-		switch(*s)
+-		{
+-		case '\\':
+-			if(s[1])
+-				s++;
+-			break;
+-		case '[':
+-		case '*':
+-		case '?':
+-			return(1);
+-			break;
+-		}
+-	return(0);
+-}
+//GO.SYSIN DD ./rule.c
+echo ./run.c 1>&2
+sed 's/.//' >./run.c <<'//GO.SYSIN DD ./run.c'
+-#include	"mk.h"
+-
+-typedef struct Event
+-{
+-	int pid;
+-	Job *job;
+-} Event;
+-static Event *events;
+-static int nevents, nrunning;
+-typedef struct Process
+-{
+-	int pid;
+-	int status;
+-	struct Process *b, *f;
+-} Process;
+-static Process *phead, *pfree;
+-static void pnew(), pdelete();
+-static char *envy[1024];
+-static char **special;
+-static pidslot();
+-
+-run(j)
+-	Job *j;
+-{
+-	register Job *jj;
+-
+-	if(jobs){
+-		for(jj = jobs; jj->next; jj = jj->next)
+-			;
+-		jj->next = j;
+-	} else 
+-		jobs = j;
+-	j->next = 0;
+-	/* this code also in waitup after parse redirect */
+-	if(nrunning < nproclimit)
+-		sched();
+-}
+-
+-sched()
+-{
+-	register Job *j;
+-	char buf[BIGBLOCK];
+-	int slot, pip[2], pid;
+-	Node *n;
+-
+-	if(jobs == 0){
+-		account();
+-		return;
+-	}
+-	j = jobs;
+-	jobs = j->next;
+-	if(DEBUG(D_EXEC))
+-		fprint(1, "firing up job for target %s\n", wtos(j->t));
+-	slot = nextslot();
+-	events[slot].job = j;
+-	dovars(j, slot);
+-	shprint(j->r->recipe, envy, buf);
+-	if(!tflag && !mflag && (nflag || !(j->r->attr&QUIET)))
+-		Fwrite(1, buf, (long)strlen(buf));
+-	if(mflag){
+-		for(n = j->n; n; n = n->next)
+-			symlook(n->name, S_MAKEFILE, (char *)j);
+-	}
+-	if(nflag||tflag){
+-		for(n = j->n; n; n = n->next){
+-			if(tflag){
+-				if(!(n->flags&VIRTUAL))
+-					touch(n->name);
+-				else if(explain)
+-					Fprint(1, "no touch of virtual '%s'\n", n->name);
+-			}
+-			n->time = time((long *)0);
+-			MADESET(n, MADE);
+-		}
+-	} else {
+-		Fexit(0);
+-		if(j->r->attr&RED){
+-			if(pipe(pip) < 0){
+-				perror("pipe");
+-				Exit();
+-			}
+-		}
+-		if((pid = fork()) < 0){
+-			perror("mk fork");
+-			Exit();
+-		}
+-		if(pid == 0){
+-			if(j->r->attr&RED){
+-				close(pip[0]);
+-				dup2(pip[1], 1);
+-				close(pip[1]);
+-			}
+-			if(pipe(pip) < 0){
+-				perror("pipe-i");
+-				Exit();
+-			}
+-			if((pid = fork()) < 0){
+-				perror("mk fork");
+-				Exit();
+-			}
+-			if(pid != 0){
+-				close(pip[1]);
+-				dup2(pip[0], 0);
+-				close(pip[0]);
+-				execle(SHELL, "sh", "-e", (char *)0, envy);
+-				perror(SHELL);
+-				_exit(1);
+-			} else {
+-				int k;
+-				char *s, *send;
+-
+-				close(pip[0]);
+-				s = j->r->recipe;
+-				send = s+strlen(s);
+-				while(s < send){
+-					if((k = write(pip[1], s, send-s)) < 0)
+-						break;
+-					s += k;
+-				}
+-				_exit(0);
+-			}
+-		}
+-		account();
+-		nrunning++;
+-		if(j->r->attr&RED)
+-			close(pip[1]), j->fd = pip[0];
+-		else
+-			j->fd = -1;
+-		if(DEBUG(D_EXEC))
+-			fprint(1, "pid for target %s = %d\n", wtos(j->t), pid);
+-		events[slot].pid = pid;
+-	}
+-}
+-
+-waitup(echildok, retstatus)
+-	int *retstatus;
+-{
+-	int status, pid;
+-	int slot;
+-	Symtab *s;
+-	Word *w;
+-	Job *j;
+-	char buf[64];
+-	char buf1[BIGBLOCK];
+-	int uarg = 0;
+-	int done;
+-	Node *n;
+-	Process *p;
+-	extern int errno, runerrs;
+-
+-	/* first check against the proces slist */
+-	if(retstatus)
+-		for(p = phead; p; p = p->f)
+-			if(p->pid == *retstatus){
+-				*retstatus = p->status;
+-				pdelete(p);
+-				return(-1);
+-			}
+-again:		/* rogue processes */
+-	if((pid = wait(&status)) < 0){
+-		if(echildok > 0){
+-			return(1);
+-		} else {
+-			fprint(2, "mk: (waitup %d) ", echildok);
+-			perror("mk wait");
+-			Exit();
+-		}
+-	}
+-	if(DEBUG(D_EXEC))
+-		fprint(1, "waitup got pid=%d, status=0x%ux\n", pid, status);
+-	if(retstatus && (pid == *retstatus)){
+-		*retstatus = status;
+-		return(-1);
+-	}
+-	slot = pidslot(pid);
+-	if(slot < 0){
+-		if(DEBUG(D_EXEC))
+-			fprint(2, "mk: wait returned unexpected process %d\n", pid);
+-		pnew(pid, status);
+-		goto again;
+-	}
+-	j = events[slot].job;
+-	account();
+-	nrunning--;
+-	events[slot].pid = -1;
+-	if(status){
+-		dovars(j, slot);
+-		shprint(j->r->recipe, envy, buf1);
+-		front(buf1);
+-		Fprint(2, "mk: %s: exit status=%d", buf1, 0xFF&(status>>8));
+-		status &= 0xFF;
+-		if(status&0x7F)
+-			Fprint(2, " signal=%d", status&0x7F);
+-		if(status&0x80)
+-			Fprint(2, ", core dumped");
+-		for(n = j->n, done = 0; n; n = n->next)
+-			if(n->flags&DELETE){
+-				if(done++ == 0)
+-					Fprint(2, ", deleting");
+-				Fprint(2, " '%s'", n->name);
+-			}
+-		Fputc(2, '\n');
+-		for(n = j->n, done = 0; n; n = n->next)
+-			if(n->flags&DELETE){
+-				if(done++ == 0)
+-					Fflush(2);
+-				delete(n->name);
+-			}
+-		if(kflag){
+-			runerrs++;
+-			uarg = 1;
+-			Fflush(2);
+-		} else {
+-			jobs = 0;
+-			Exit();
+-		}
+-	}
+-	if(j->fd >= 0){
+-		sprint(buf, "process %d", pid);
+-		parse(buf, j->fd, 0, 0);
+-		execinit();	/* reread environ */
+-		nproc();
+-		while(jobs && (nrunning < nproclimit))
+-			sched();
+-	}
+-	for(w = j->t; w; w = w->next){
+-		if((s = symlook(w->s, S_NODE, (char *)0)) == 0)
+-			continue;	/* not interested in this node */
+-		update(uarg, (Node *)s->value);
+-	}
+-	if(nrunning < nproclimit)
+-		sched();
+-	return(0);
+-}
+-
+-execinit()
+-{
+-	extern char **environ;
+-	extern char **vardump();
+-	register char *s, *ss, c;
+-	Symtab *st;
+-
+-	environ = envy;
+-	special = vardump(envy);
+-	if(st = symlook("ENVIRON", S_VAR, (char *)0))
+-		for(s = st->value; *s;){
+-			for(ss = s; *ss && (*ss != 1); ss++);
+-			c = *ss;
+-			*ss = 0;
+-			*special++ = strdup(s);
+-			s = ss;
+-			if(*ss = c)
+-				s++;
+-		}
+-	*special = 0;
+-}
+-
+-char *myenv[] =
+-{
+-	"target", "stem", "prereq", "pid", "nproc", "newprereq",
+-	"alltarget",
+-	"stem1", "stem2", "stem3", "stem4", "stem5", "stem6",
+-	"stem7", "stem8", "stem9", "stem0", 0
+-};
+-
+-dovars(j, slot)
+-	register Job *j;
+-{
+-	char buf[BIGBLOCK];
+-	char *s, *t;
+-	int i, n = 0;
+-
+-#define	SPECIAL	((sizeof myenv)/(sizeof myenv[0])-1)
+-#define	VSET(name, exp)	{strcpy(buf, "name="); strcpy(strchr(buf, 0), exp);}
+-
+-	for(i = 0; i < SPECIAL; i++)
+-		if(special[i])
+-			free(special[i]);
+-	VSET(target, s = wtos(j->t));
+-	special[n++] = strdup(buf);
+-	free(s);
+-	/* WATCH OUT; stem set below if reg exp!! */
+-	VSET(stem, j->stem);
+-	special[n++] = strdup(buf);
+-	VSET(prereq, s = wtos(j->p));
+-	special[n++] = strdup(buf);
+-	free(s);
+-	sprint(buf, "pid=%d", getpid());
+-	special[n++] = strdup(buf);
+-	sprint(buf, "nproc=%d", slot);
+-	special[n++] = strdup(buf);
+-	VSET(newprereq, s = wtos(j->np));
+-	special[n++] = strdup(buf);
+-	free(s);
+-	VSET(alltarget, s = wtos(j->at));
+-	special[n++] = strdup(buf);
+-	free(s);
+-	for(i = 0; i <= 9; i++){
+-		sprint(buf, "stem%d=", i);
+-		if(j->r->attr&REGEXP){
+-			for(s = buf; *s; s++);
+-			for(t = j->match[i].sp; t < j->match[i].ep; *s++ = *t++);
+-			*s = 0;
+-		}
+-		special[n+i] = strdup(buf);
+-		if((i == 1) && (j->r->attr&REGEXP)){
+-			buf[1] = 's'; buf[2] = 't'; buf[3] = 'e'; buf[4] = 'm';
+-			special[1] = strdup(buf+1);
+-		}
+-	}
+-	special[SPECIAL] = 0;
+-}
+-
+-nproc()
+-{
+-	register Symtab *sym;
+-
+-	if(sym = symlook("NPROC", S_VAR, (char *)0))
+-		nproclimit = atoi(sym->value);
+-	if(nproclimit < 1)
+-		nproclimit = 1;
+-	if(DEBUG(D_EXEC))
+-		fprint(1, "nprocs = %d\n", nproclimit);
+-	if(nproclimit > nevents){
+-		if(nevents)
+-			events = (Event *)realloc((char *)events, nproclimit*sizeof(Event));
+-		else
+-			events = (Event *)malloc(nproclimit*sizeof(Event));
+-		while(nevents < nproclimit)
+-			events[nevents++].pid = 0;
+-	}
+-}
+-
+-nextslot()
+-{
+-	register i;
+-
+-	for(i = 0; i < nproclimit; i++)
+-		if(events[i].pid <= 0) return(i);
+-	assert("out of slots!!", 0);
+-	return(0);	/* cyntax */
+-}
+-
+-static
+-pidslot(pid)
+-{
+-	register i;
+-
+-	for(i = 0; i < nevents; i++)
+-		if(events[i].pid == pid) return(i);
+-	return(-1);
+-}
+-
+-static void
+-pnew(pid, status)
+-{
+-	register Process *p;
+-
+-	if(pfree){
+-		p = pfree;
+-		pfree = p->f;
+-	} else
+-		p = (Process *)Malloc(sizeof(Process));
+-	p->pid = pid;
+-	p->status = status;
+-	p->f = phead;
+-	phead = p;
+-	if(p->f)
+-		p->f->b = p;
+-	p->b = 0;
+-}
+-
+-static void
+-pdelete(p)
+-	Process *p;
+-{
+-	if(p->f)
+-		p->f->b = p->b;
+-	if(p->b)
+-		p->b->f = p->f;
+-	else
+-		phead = p->f;
+-	p->f = pfree;
+-	pfree = p;
+-}
+-
+-static long tslot[1000];
+-static long tick;
+-
+-account()
+-{
+-	long t;
+-
+-	time(&t);
+-	if(tick)
+-		tslot[nrunning] += (t-tick);
+-	tick = t;
+-}
+-
+-praccount()
+-{
+-	int i;
+-
+-	account();
+-	for(i = 0; i <= nevents; i++)
+-		Fprint(1, "%d: %ld\n", i, tslot[i]);
+-}
+//GO.SYSIN DD ./run.c
+echo ./shprint.c 1>&2
+sed 's/.//' >./shprint.c <<'//GO.SYSIN DD ./shprint.c'
+-#include	"mk.h"
+-
+-shprint(s, env, dest)
+-	char *s, **env, *dest;
+-{
+-	register char *q = dest;
+-
+-	while(*s)
+-		switch(*s)
+-		{
+-		case '\\':
+-			*q++ = *s++;
+-			*q++ = *s++;
+-			break;
+-		case '$':
+-			q = vexpand(&s, q, env);
+-			break;
+-		default:
+-			*q++ = *s++;
+-			break;
+-		}
+-	*q = 0;
+-}
+-
+-char *
+-mygetenv(name, env)
+-	char *name, **env;
+-{
+-	register char *p, *q;
+-
+-	for(; *env; env++){
+-		for(p = name, q = *env; *p == *q; p++, q++)
+-			if(*p == 0) break;
+-		if((*p == 0) && (*q == '='))
+-			return(q+1);
+-	}
+-	return((char *)0);
+-}
+-
+-char *
+-vexpand(ww, dest, env)
+-	char **ww, *dest, **env;
+-{
+-	register char *s, *w = *ww;
+-	char carry, *q;
+-
+-	assert("vexpand no $", *w == '$');
+-	if(*++w == '{'){
+-		for(s = ++w; *s != '}'; s++)
+-			if(*s == 0) break;
+-	} else
+-		s = shname(w);
+-	carry = *s;
+-	*s = 0;
+-	if(q = mygetenv(w, env)){
+-		while(*q)
+-			*dest++ = *q++;
+-	} else {	/* copy name */
+-		for(q = *ww; q != s;)
+-			*dest++ = *q++;
+-		if(carry == '}')
+-			*dest++ = carry;
+-	}
+-	*s = carry;
+-	if(carry == '}')
+-		s++;
+-	*ww = s;
+-	return(dest);
+-}
+-
+-front(s)
+-	char *s;
+-{
+-	register char *t;
+-	register i, j;
+-	char *flds[512];
+-	char buf[BIGBLOCK];
+-
+-	setfields(" \t\n");
+-	strcpy(buf, s);
+-	i = getfields(buf, flds, 512);
+-	if(i > 5){
+-		flds[4] = flds[i-1];
+-		flds[3] = "...";
+-		i = 5;
+-	}
+-	t = s;
+-	for(j = 0; j < i; j++){
+-		for(s = flds[j]; *s; *t++ = *s++);
+-		*t++ = ' ';
+-	}
+-	*t = 0;
+-}
+//GO.SYSIN DD ./shprint.c
+echo ./sig.c 1>&2
+sed 's/.//' >./sig.c <<'//GO.SYSIN DD ./sig.c'
+-#include	"mk.h"
+-#include	<signal.h>
+-
+-static
+-sigint()
+-{
+-	extern errno;
+-
+-	signal(SIGINT, SIG_IGN);
+-	kflag = 1;	/* to make sure waitup doesn't exit */
+-	jobs = 0;	/* make sure no more get scheduled */
+-	while(waitup(1, (int *)0) == 0)
+-		;
+-	Fprint(1, "mk: interrupted!\n");
+-	Exit();
+-}
+-
+-sigcatch()
+-{
+-	if(signal(SIGINT, SIG_IGN) != SIG_IGN)
+-		signal(SIGINT, sigint);
+-}
+//GO.SYSIN DD ./sig.c
+echo ./symtab.c 1>&2
+sed 's/.//' >./symtab.c <<'//GO.SYSIN DD ./symtab.c'
+-#include	"mk.h"
+-
+-#define	NHASH	4099
+-#define	HASHMUL	79L	/* this is a good value */
+-static Symtab *hash[NHASH];
+-
+-syminit()
+-{
+-	register Symtab **s, *ss;
+-
+-	for(s = hash; s < &hash[NHASH]; s++){
+-		for(ss = *s; ss; ss = ss->next)
+-			free((char *)ss);
+-		*s = 0;
+-	}
+-}
+-
+-Symtab *
+-symlook(sym, space, install)
+-	char *sym;
+-	char *install;
+-{
+-	register long h;
+-	register char *p;
+-	register Symtab *s;
+-
+-	for(p = sym, h = space; *p; h += *p++)
+-		h *= HASHMUL;
+-	if(h < 0)
+-		h = ~h;
+-	h %= NHASH;
+-	for(s = hash[h]; s; s = s->next)
+-		if((s->space == space) && (strcmp(s->name, sym) == 0))
+-			return(s);
+-	if(install == 0)
+-		return((Symtab *)0);
+-	s = (Symtab *)Malloc(sizeof(Symtab));
+-	s->space = space;
+-	s->name = sym;
+-	s->value = install;
+-	s->next = hash[h];
+-	hash[h] = s;
+-	return(s);
+-}
+-
+-symdel(sym, space)
+-	char *sym;
+-{
+-	register long h;
+-	register char *p;
+-	register Symtab *s, *ls;
+-
+-	for(p = sym, h = space; *p; h += *p++)
+-		h *= HASHMUL;
+-	if(h < 0)
+-		h = ~h;
+-	h %= NHASH;
+-	for(s = hash[h], ls = 0; s; ls = s, s = s->next)
+-		if((s->space == space) && (strcmp(s->name, sym) == 0)){
+-			if(ls)
+-				ls->next = s->next;
+-			else
+-				hash[h] = s->next;
+-			free((char *)s);
+-		}
+-}
+-
+-symtraverse(space, fn)
+-	void (*fn)();
+-{
+-	register Symtab **s, *ss;
+-
+-	for(s = hash; s < &hash[NHASH]; s++)
+-		for(ss = *s; ss; ss = ss->next)
+-			if(ss->space == space)
+-				(*fn)(ss);
+-}
+-
+-symstat()
+-{
+-	register Symtab **s, *ss;
+-	register n;
+-	int l[1000];
+-
+-	memset((char *)l, 0, sizeof(l));
+-	for(s = hash; s < &hash[NHASH]; s++){
+-		for(ss = *s, n = 0; ss; ss = ss->next)
+-			n++;
+-		l[n]++;
+-	}
+-	for(n = 0; n < 1000; n++)
+-		if(l[n]) Fprint(1, "%ld of length %d\n", l[n], n);
+-}
+//GO.SYSIN DD ./symtab.c
+echo ./t_ar.c 1>&2
+sed 's/.//' >./t_ar.c <<'//GO.SYSIN DD ./t_ar.c'
+-#include	"mk.h"
+-#include	<sys/types.h>
+-#include	<sys/stat.h>
+-#include	<ar.h>
+-
+-static atimes();
+-
+-long
+-atimeof(force, name, ar, mem)
+-	char *name, *ar, *mem;
+-{
+-	struct stat sbuf;
+-	Symtab *sym;
+-
+-	if(stat(ar, &sbuf) < 0)
+-		sbuf.st_mtime = 0;
+-	if(sym = symlook(ar, S_AGG, (char *)0)){
+-		if(force || (sbuf.st_mtime > (long)sym->value)){
+-			atimes(ar);
+-			symlook(ar, S_AGG, ar)->value = (char *)sbuf.st_mtime;
+-		}
+-	} else {
+-		atimes(ar);
+-		symlook(strdup(ar), S_AGG, ar)->value = (char *)sbuf.st_mtime;
+-	}
+-	if(sym = symlook(name, S_TIME, (char *)0))
+-		sbuf.st_mtime = (long)sym->value;
+-	else
+-		sbuf.st_mtime = 0;
+-	return((long)sbuf.st_mtime);
+-}
+-
+-void
+-atouch(name, ar, mem)
+-	char *name, *ar, *mem;
+-{
+-	int fd;
+-	struct ar_hdr hdr;
+-	char *s;
+-	long t;
+-	char buf[NAMEBLOCK];
+-
+-	strcpy(buf, mem);
+-#ifdef	SYSV
+-	strcat(buf, "/");
+-#endif
+-	if((fd = open(ar, 2)) < 0){
+-		if((fd = creat(ar, 0666)) < 0){
+-			perror(ar);
+-			Exit();
+-		}
+-		write(fd, ARMAG, SARMAG);
+-	}
+-	if(symlook(name, S_TIME, (char *)0)){
+-		/* hoon off and change it in situ */
+-		lseek(fd, (long)SARMAG, 0);
+-		while(read(fd, (char *)&hdr, sizeof(hdr)) == sizeof(hdr)){
+-			for(s = &hdr.ar_name[sizeof(hdr.ar_name)]; *--s == ' ';);
+-			s[1] = 0;
+-			if(strcmp(buf, hdr.ar_name) == 0){
+-				t = sizeof(hdr.ar_name)-sizeof(hdr);
+-				lseek(fd, t, 1);
+-				fprint(fd, "%-12ld", time((long *)0));
+-				break;
+-			}
+-			t = atol(hdr.ar_size);
+-#ifdef	CRAY
+-			t = (t+7)&~7;
+-			t -= sizeof(hdr)-60;
+-#else
+-			if(t&01) t++;
+-#endif
+-			lseek(fd, t, 1);
+-		}
+-	} else {
+-		lseek(fd, 0L, 2);
+-		fprint(fd, "%-16s%-12ld%-6d%-6d%-8lo%-10ld%2s", buf, time((long *)0),
+-			getuid(), getgid(), 0100666L, 0L, ARFMAG);
+-	}
+-	close(fd);
+-}
+-
+-
+-void
+-adelete(name, ar, mem)
+-	char *name, *ar, *mem;
+-{
+-	Fprint(2, "sorry; mk doesn't know how to delete archive members yet\n");
+-}
+-
+-static
+-atimes(ar)
+-	char *ar;
+-{
+-	struct ar_hdr hdr;
+-	long t;
+-	int fd;
+-	char buf[BIGBLOCK];
+-	register char *s;
+-
+-	if((fd = open(ar, 0)) < 0)
+-		return;
+-	if(read(fd, buf, SARMAG) != SARMAG){
+-		close(fd);
+-		return;
+-	}
+-	while(read(fd, (char *)&hdr, sizeof(hdr)) == sizeof(hdr)){
+-		for(s = &hdr.ar_name[sizeof(hdr.ar_name)]; *--s == ' ';);
+-#ifdef	SYSV
+-		if(*s == '/')	/* Damn you Sytem V */
+-			s--;
+-#endif
+-		s[1] = 0;
+-		t = atol(hdr.ar_date);
+-		sprint(buf, "%s(%s)", ar, hdr.ar_name);
+-		symlook(strdup(buf), S_TIME, (char *)t)->value = (char *)t;
+-		t = atol(hdr.ar_size);
+-		if(t&01) t++;
+-		lseek(fd, t, 1);
+-	}
+-	close(fd);
+-}
+//GO.SYSIN DD ./t_ar.c
+echo ./t_driver.c 1>&2
+sed 's/.//' >./t_driver.c <<'//GO.SYSIN DD ./t_driver.c'
+-#include	"mk.h"
+-#include	<ar.h>
+-
+-#define	AR	123456L
+-
+-extern long ftimeof(), atimeof();
+-extern void ftouch(), atouch();
+-extern void fdelete(), adelete();
+-static long split();
+-
+-struct ftype
+-{
+-	long magic;
+-	long (*time)();
+-	void (*touch)();
+-	void (*delete)();
+-} ftab[] =
+-{
+-	{ 0L,	ftimeof,	ftouch,		fdelete },
+-	{ AR,	atimeof,	atouch,		adelete },
+-	{ 0L,	(long (*)())0 }
+-};
+-
+-long
+-timeof(name, force)
+-	char *name;
+-{
+-	char buf[BIGBLOCK], *part2;
+-	register struct ftype *f;
+-	long magic;
+-
+-	magic = split(name, buf, &part2);
+-	for(f = ftab; f->time; f++)
+-		if(f->magic == magic)
+-			return((*f->time)(force, name, buf, part2));
+-	Fprint(2, "mk: '%s' appears to have an unknown magic number (%ld)\n", name, magic);
+-	Exit();
+-	return(0L);	/* shut cyntax up */
+-}
+-
+-void
+-touch(name)
+-	char *name;
+-{
+-	char buf[BIGBLOCK], *part2;
+-	register struct ftype *f;
+-	long magic;
+-
+-	magic = split(name, buf, &part2);
+-	Fprint(1, "touch(%s)\n", name);
+-	if(nflag)
+-		return;
+-	for(f = ftab; f->time; f++)
+-		if(f->magic == magic){
+-			(*f->touch)(name, buf, part2);
+-			return;
+-		}
+-	Fprint(2, "mk: give me a break! I never heard of magic=%ld\n", magic);
+-	Exit();
+-}
+-
+-void
+-delete(name)
+-	char *name;
+-{
+-	char buf[BIGBLOCK], *part2;
+-	register struct ftype *f;
+-	long magic;
+-
+-	magic = split(name, buf, &part2);
+-	for(f = ftab; f->time; f++)
+-		if(f->magic == magic){
+-			(*f->delete)(name, buf, part2);
+-			return;
+-		}
+-	Fprint(2, "mk: give me a break! I never heard of magic=%ld\n", magic);
+-	Exit();
+-}
+-
+-static long
+-type(file)
+-	char *file;
+-{
+-	int fd;
+-	char buf[SARMAG];
+-	short m;
+-	long goo;
+-
+-	if(access(file, 0) < 0){
+-		if(symlook(file, S_BITCH, (char *)0) == 0){
+-			Fprint(1, "%s doesn't exist: assuming it will be an archive\n", file);
+-			(void)symlook(file, S_BITCH, file);
+-		}
+-		return(AR);
+-	}
+-	if((fd = open(file, 0)) < 0){
+-		perror(file);
+-		Exit();
+-	}
+-	if(read(fd, buf, SARMAG) != SARMAG){
+-		close(fd);
+-		return(-1L);
+-	}
+-	if(strncmp(ARMAG, buf, SARMAG) == 0)
+-		goo = AR;
+-	else {
+-		lseek(fd, 0L, 0);
+-		if(read(fd, (char *)&m, sizeof m) == sizeof m)
+-			goo = m;
+-		else
+-			goo = -1;
+-	}
+-	close(fd);
+-	return(goo);
+-}
+-
+-static long
+-split(name, buf, p2)
+-	char *name, *buf, **p2;
+-{
+-	register char *s;
+-
+-	strcpy(buf, name);
+-	if(s = strchr(buf, '(')){
+-		*s++ = 0;
+-		*p2 = s;
+-		while(*s && (*s != ')'))
+-			s++;
+-		*s = 0;
+-		return(type(buf));
+-	} else
+-		return(0L);
+-}
+//GO.SYSIN DD ./t_driver.c
+echo ./t_file.c 1>&2
+sed 's/.//' >./t_file.c <<'//GO.SYSIN DD ./t_file.c'
+-#include	"mk.h"
+-#include	<sys/types.h>
+-#include	<sys/stat.h>
+-#include	<errno.h>
+-
+-#define	MYSEP(s)	((*s == ' ') || (*s == ',') || (*s == '\n'))
+-
+-timeinit(s)
+-	register char *s;
+-{
+-	register long t;
+-	register char *os;
+-
+-	for(t = time((long *)0); *s; s = os){
+-		for(os = s; !MYSEP(os); os++)
+-			if(*os == 0){
+-				symlook(strdup(s), S_TIME, (char *)t)->value = (char *)t;
+-				return;
+-			}
+-		*os++ = 0;
+-		symlook(strdup(s), S_TIME, (char *)t)->value = (char *)t;
+-		while(MYSEP(os))
+-			os++;
+-	}
+-}
+-
+-long
+-ftimeof(force, name)
+-	char *name;
+-{
+-	struct stat sbuf;
+-	Symtab *sym;
+-
+-	if(!force && (sym = symlook(name, S_TIME, (char *)0))){
+-		return((long)sym->value);
+-	}
+-	if(stat(name, &sbuf) < 0)
+-		sbuf.st_mtime = 0;
+-	symlook(name, S_TIME, (char *)sbuf.st_mtime);
+-	return((long)sbuf.st_mtime);
+-}
+-
+-void
+-ftouch(name)
+-	char *name;
+-{
+-	int fd;
+-	char buf[1];
+-	struct stat sbuf;
+-
+-	if(stat(name, &sbuf) < 0)	/* not there and zero length are same case */
+-		sbuf.st_size = 0;
+-	if(sbuf.st_size == 0){
+-		if((fd = creat(name, 0666)) < 0){
+-	bad:
+-			perror(name);
+-			Exit();
+-		}
+-		close(fd);
+-		return;
+-	}
+-	if((fd = open(name, 2)) < 0)
+-		goto bad;
+-	if(read(fd, buf, 1) != 1)
+-		goto bad;
+-	if(lseek(fd, 0L, 0) < 0)
+-		goto bad;
+-	if(write(fd, buf, 1) != 1)
+-		goto bad;
+-	close(fd);
+-}
+-
+-void
+-fdelete(s)
+-	char *s;
+-{
+-	if(unlink(s) < 0)
+-		perror(s);
+-}
+//GO.SYSIN DD ./t_file.c
+echo ./var.c 1>&2
+sed 's/.//' >./var.c <<'//GO.SYSIN DD ./var.c'
+-#include	"mk.h"
+-
+-setvar(name, value)
+-	char *name;
+-	char *value;
+-{
+-	symlook(name, S_VAR, value)->value = value;
+-	symlook(name, S_MAKEVAR, "");
+-}
+-
+-static char **nextv;
+-
+-static void
+-vcopy(s)
+-	register Symtab *s;
+-{
+-	register char **p;
+-	extern char *myenv[];
+-
+-	if(symlook(s->name, S_NOEXPORT, (char *)0))
+-		return;
+-	for(p = myenv; *p; p++)
+-		if(strcmp(*p, s->name) == 0) return;
+-	if(*nextv)
+-		free(*nextv);
+-	*nextv++ = envpr(s->name, s->value);
+-}
+-
+-char **
+-vardump(p)
+-	char **p;
+-{
+-	nextv = p;
+-	symtraverse(S_VAR, vcopy);
+-	*nextv = 0;
+-	return(nextv);
+-}
+-
+-static void
+-print1(s)
+-	register Symtab *s;
+-{
+-	Fprint(1, "\t%s='%s'\n", s->name, s->value);
+-}
+-
+-dumpv(s)
+-	char *s;
+-{
+-	Fprint(1, "%s:\n", s);
+-	symtraverse(S_VAR, print1);
+-}
+-
+-char *
+-envpr(name, value)
+-	register char *name;
+-	register char *value;
+-{
+-	char buf[BIGBLOCK];
+-
+-	sprint(buf, "%s=", name);
+-	strcpy(strchr(buf, 0), value);
+-	return(strdup(buf));
+-}
+-
+-#include	<ctype.h>
+-
+-char *
+-shname(s)
+-	char *s;
+-{
+-	register unsigned char *a = (unsigned char *)s;
+-
+-	/* always go one !! */
+-	a++;
+-	while(isalnum(*a) || (*a == '_')) a++;
+-	return((char *)a);
+-}
+//GO.SYSIN DD ./var.c
+echo ./word.c 1>&2
+sed 's/.//' >./word.c <<'//GO.SYSIN DD ./word.c'
+-#include	"mk.h"
+-
+-Word *
+-newword(s)
+-	char *s;
+-{
+-	register Word *w = (Word *)Malloc(sizeof(Word));
+-
+-	w->s = strdup(s);
+-	w->next = 0;
+-	return(w);
+-}
+-
+-Word *
+-stow(s)
+-	char *s;
+-{
+-	char save;
+-	register char *t;
+-	Word *head, *w;
+-
+-	w = head = newword("");
+-	while(*s){
+-		while(SEP(*s))
+-			s++;
+-		if(*s == 0) break;
+-		for(t = s; *t && !SEP(*t); t++)
+-			;
+-		save = *t;
+-		*t = 0;
+-		w->next = newword(s);
+-		w = w->next;
+-		*t = save;
+-		s = t;
+-	}
+-	w = head->next;
+-	delword(head);
+-	return(w);
+-}
+-
+-char *
+-wtos(w)
+-	register Word *w;
+-{
+-	static char buf[BIGBLOCK];
+-	register char *s = buf;
+-	register char *t;
+-
+-	for(; w; w = w->next){
+-		for(t = w->s; *t;)
+-			*s++ = *t++;
+-		if(w->next)
+-			*s++ = ' ';
+-	}
+-	*s = 0;
+-	return(strdup(buf));
+-}
+-
+-delword(w)
+-	Word *w;
+-{
+-	free(w->s);
+-	free((char *)w);
+-}
+-
+-dumpw(s, w)
+-	char *s;
+-	Word *w;
+-{
+-	Fprint(1, "%s", s);
+-	for(; w; w = w->next)
+-		Fprint(1, " '%s'", w->s);
+-	Fputc(1, '\n');
+-}
+//GO.SYSIN DD ./word.c
+echo ./ndir.h 1>&2
+sed 's/.//' >./ndir.h <<'//GO.SYSIN DD ./ndir.h'
+-/* Copyright (c) 1982 Regents of the University of California */
+-/* and modified by pjw in 1986 */
+-
+-/*
+- * this must be a power of 2 and a multiple of all the ones in the system
+- */
+-#define DIRBLKSIZ 512
+-
+-/*
+- * This limits the directory name length. Its main constraint
+- * is that it appears twice in the user structure. (u. area) in bsd systems
+- */
+-#define MAXNAMLEN 255
+-
+-struct	direct {
+-	unsigned long	d_ino;
+-	short	d_reclen;
+-	short	d_namlen;
+-	char	d_name[MAXNAMLEN + 1];
+-	/* typically shorter */
+-};
+-
+-struct _dirdesc {
+-	int	dd_fd;
+-	long	dd_loc;		/* where we left off in dd_buf */
+-	long	dd_size;	/* bytes back from system */
+-	long	dd_offset;	/* lseek at beginning of dd_buf */
+-	char	dd_buf[DIRBLKSIZ];
+-};
+-
+-/*
+- * useful macros.
+- */
+-#define NDIRSIZ(dp) \
+-    ((sizeof(struct direct) - MAXNAMLEN + (dp)->d_namlen + sizeof(ino_t) - 1) &\
+-    ~(sizeof(ino_t) - 1))
+-typedef	struct _dirdesc DIR;
+-#ifndef	NULL
+-#define	NULL	0
+-#endif
+-
+-/*
+- * functions defined on directories
+- */
+-extern DIR *opendir();
+-extern struct direct *readdir();
+-extern long telldir();
+-extern void seekdir();
+-#define rewinddir(dirp)	seekdir((dirp), 0)
+-extern void closedir();
+//GO.SYSIN DD ./ndir.h
+echo ./tmac.an 1>&2
+sed 's/.//' >./tmac.an <<'//GO.SYSIN DD ./tmac.an'
+-'''\"	PWB Manual Entry Macros - 1.36 of 11/11/80
+-'''\"	Nroff/Troff Version	@(#)1.36
+-'''\"  Option -rs1 short (9") pages
+-'''\"  Option -rp# set no. of first page, put no. of pgs. on stderr
+-'''\"  Option -rd1 give modified date instead of printed date
+-.deth
+-.tmwrong version of man entry macros - use -man6
+-.ab
+-..
+-.ifn .ds Tm \uTM\d
+-.ift .ds Tm \v'-0.5m'\s-4TM\s+4\v'0.5m'
+-.de}E
+-.}f
+-.in\\n()Ru+\\n(INu
+-.ll\\n(LLu
+-.lt\\n(LLu
+-.pl\\n()Lu
+-..
+-.deDT
+-.ift .ta 3.6m 7.2m 10.8m 14.4m 18m 21.6m 25.2m 28.8m 32.4m 36m 39.6m 43.2m 46.8m
+-.ifn .ta 5n 10n 15n 20n 25n 30n 35n 40n 45n 50n 55n 60n 65n
+-..
+-.de HY
+-.hy14
+-..
+-.de}f
+-.ift .vs \\n()Vp
+-.ps\\n()S
+-.ft1
+-..
+-.de}H
+-.ev1
+-.}C
+-.}E
+-.ie\\n()s 'sp |2v
+-.el'sp |3v
+-.".ps\\n()S-1
+-.".iet .bd1 3
+-.".el.bd1 0
+-.tl \\*(]H\\*(]L\\*(]H
+-.bd1
+-.ps\\n()S
+-.ie\\n()s 'sp 1.5v
+-.el'sp 3v
+-.ev
+-.ns
+-.if \\n(CL .2C
+-..
+-.de}F
+-.ev1
+-.}E
+-.if\\n()s 'sp |\\n(.pu-1v-1p
+-.if\\n()t 'sp |\\n(.pu-3v
+-.ifn 'sp |\\n(.pu-4v
+-.ifn .tl Page %\\*(]D\\*(]W
+-.if\\n()s .tl - % -
+-.if\\n()t \{.if o .tl Page %\\*(]D\\*(]W
+-.ife .tl \\*(]W\\*(]DPage % \}
+-.ev
+-'bp
+-..
+-.ifn .ig
+-.de}C
+-.if "\\*(.T"aps"\{\
+-.	po0i
+-.	lt7.5i
+-.	if\\n()s .tl \l0.25i\l0.25i\h1i\l0.25i
+-.	if\\n()t .tl \l0.25i\l0.25i
+-.	lt
+-.	po\}
+-..
+-.de}M
+-.}N
+-.wh-.5p }C
+-.ll\\n(LLu
+-.}P
+-..
+-.de}K
+-.}N
+-.pl1
+-.ll\\n(LLu
+-..
+-.de}P
+-.nr )P \\n%+1-\\np
+-.if \\nq .tm \\n(.F \\n()P \\np
+-.bp
+-.if \\nq .nr p \\n%
+-..
+-.deTH
+-.PD
+-.nrIN \\n()Mu
+-.ift .ds ]H \\$1\^(\^\\$2\^)
+-.ifn .ds ]H \\$1(\\$2)
+-.if\\n()s .ds ]D
+-.if\\n()t .ds ]D Tenth Edition
+-.ifn .ds ]D Tenth Edition
+-.ds]L
+-.if!\\$3 .ds ]L (\^\\$3\^)
+-.if!\\$4 .ds ]D \\$4
+-.wh0 }H
+-.wh-\\n(:mu }F
+-.em}M
+-.if\\n(nl .}P
+-.nr)I \\n()Mu
+-.nr)R 0
+-.}E
+-.DT
+-.ifn \{.na
+-.nh\}
+-.ift \{.bd S 3 3
+-.HY \}
+-..
+-.deSH
+-.PD
+-.}X 0 "\\$1" smaller
+-.nr)E 2
+-\&\\$1 \|\\$2 \|\\$3 \|\\$4 \|\\$5 \|\\$6
+-..
+-.deSS
+-.}X 3n "" ""
+-.nr)E 2
+-\&\\$1 \|\\$2 \|\\$3 \|\\$4 \|\\$5 \|\\$6
+-..
+-.de}X
+-.}E
+-.ti\\$1
+-.sp\\n(PDu
+-.ne1.1v
+-.nr)R 0
+-.fi
+-'''ss12
+-'''if\\$2SYNOPSIS .ss 18
+-.it1 }N
+-.if!\\$3 .SM
+-.iet .bd1 3
+-.el.bd1 0
+-..
+-.de}2
+-.nr)E 0
+-.}E
+-.nr)I \\n()Mu
+-.ns
+-.bd1
+-..
+-.deSM
+-.nh
+-.ps\\n()S-1
+-.if!\\$1 \&\\$1
+-.if!\\$2 \&\\$2
+-.if!\\$3 \&\\$3
+-.if!\\$4 \&\\$4
+-.if!\\$5 \&\\$5
+-.if!\\$6 \&\\$6
+-.if!\\$1 .ps \\n()S
+-.if\\$1 .it 1 }N
+-.HY
+-..
+-.deI
+-.nh
+-.ft2
+-.it1 }N
+-.if!\\$1 \&\\$1 \\$2 \\$3 \\$4 \\$5 \\$6
+-.HY
+-..
+-.deB
+-.nh
+-.it1 }N
+-.ie!\\$1 \%\&\f5\\$1 \\$2 \\$3 \\$4 \\$5 \\$6
+-.el .ft5
+-.HY
+-..
+-.deL
+-.nh
+-.it1 }N
+-.ift \{.ie!\\$1 \%\&\f5\\$1 \\$2 \\$3 \\$4 \\$5 \\$6
+-.el .ft5 \}
+-.ifn \{.ft5
+-.if!\\$1 \{.ie\\$2 `\\$1'
+-.el .ie\\$3 `\\$1 \\$2'
+-.el .ie\\$4 `\\$1 \\$2 \\$3'
+-.el .ie\\$5 `\\$1 \\$2 \\$3 \\$4'
+-.el .ie\\$6 `\\$1 \\$2 \\$3 \\$4 \\$5'
+-.el `\\$1 \\$2 \\$3 \\$4 \\$5 \\$6'\}\}
+-.HY
+-..
+-.deF
+-.nh
+-.it1 }N
+-.ie!\\$1 \%\&\f5\\$1 \\$2 \\$3 \\$4 \\$5 \\$6
+-.el .ft5
+-.HY
+-..
+-.deRI
+-.nh
+-.}S 1 2 \& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.HY
+-.}f
+-..
+-.deIR
+-.nh
+-.}S 2 1 \& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.HY
+-.}f
+-..
+-.deIB
+-.nh
+-.ift .}S 2 5 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.ifn .}S 2 1 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.HY
+-.}f
+-..
+-.deRB
+-.nh
+-.ift .}S 1 5 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.ifn .}S 1 1 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.HY
+-.}f
+-..
+-.deBR
+-.nh
+-.ift .}S 5 1 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.ifn .}S 1 1 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.HY
+-.}f
+-..
+-.deBI
+-.nh
+-.ift .}S 5 2 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.ifn .}S 1 2 \%\& "\\$1" "\\$2" "\\$3" "\\$4" "\\$5" "\\$6"
+-.HY
+-.}f
+-..
+-.de LR
+-.nh
+-.ift \%\&\f5\\$1\f1\\$2
+-.ifn \%`\\$1'\\$2
+-.HY
+-..
+-.de RL
+-.nh
+-.ift \%\&\f1\\$1\\f5\\$2\\f1\\$3
+-.ifn \%\\$1`\\$2'\\$3
+-.HY
+-..
+-.de}S
+-.ds]F
+-.if\\$12 .if !\\$5 .ds ]F \^
+-.if\\$22 .if !\\$5 .ds ]F \^
+-.ie!\\$4 .}S \\$2 \\$1 "\\$3\f\\$1\\$4\\*(]F" "\\$5" "\\$6" "\\$7" "\\$8" "\\$9"
+-.el\\$3
+-.}f
+-..
+-.deFR
+-\%\&\f5\\$1\f1\\$2 \\$3 \\$4 \\$5 \\$6
+-..
+-.deRF
+-\%\&\f1\\$1\f5\\$2\f1\\$3
+-..
+-.deEX
+-.ift .ft5
+-.nf
+-..
+-.deEE
+-.ft1
+-.fi
+-..
+-.dePP
+-.sp\\n(PDu
+-.ne1.1v
+-.}E
+-.nr)I \\n()Mu
+-.ns
+-..
+-.deP
+-.PP
+-..
+-.deLP
+-.PP
+-..
+-.dePD
+-.ift .nr PD .4v
+-.ifn .nr PD 1v
+-.if!\\$1 .nr PD \\$1v
+-..
+-.deHP
+-.sp\\n(PDu
+-.ne1.1v
+-.if!\\$1 .nr )I \\$1n
+-.ll\\n(LLu
+-.in\\n()Ru+\\n(INu+\\n()Iu
+-.ti\\n()Ru+\\n(INu
+-.}f
+-..
+-.deIP
+-.ie!\\$1 \{.TP "\\$2"
+-\&\\$1\}
+-.el\{.sp\\n(PDu
+-.ne1.1v
+-.if!\\$2 .nr )I \\$2n
+-.}f
+-.ll\\n(LLu
+-.in\\n()Ru+\\n(INu+\\n()Iu
+-.lg\}
+-..
+-.deTP
+-.if!\\$1 \{.nr )I \\$1n
+-.if\\$10 .nr )I \\n()M\}
+-.sp\\n(PDu
+-.ne1.1v
+-.in\\n()Ru
+-.lg0
+-.ns
+-.it1 }N
+-.nr)E 1
+-.di]B
+-..
+-.deTF
+-.IP "" \w'\f5\\$1\ \ \fP'u
+-.PD0
+-..
+-.de}1
+-.ds]X \&\\*(]B\\
+-.rm]B
+-.nr)E 0
+-.if!\\$1 .nr )I \\$1n
+-.}f
+-.ll\\n(LLu
+-.in\\n()Ru+\\n(INu+\\n()Iu
+-.ti\\n(INu
+-.ie!\\n()Iu+\\n()Ru-\w\\*(]Xu-3p \{\\*(]X
+-.br\}
+-.el\\*(]X\h|\\n()Iu+\\n()Ru\c
+-.}f
+-.lg
+-..
+-.de}N
+-.if\\n()E .br
+-.if\\n()E1 .di
+-.if\\n()E0 .}f
+-.if\\n()E1 .}1
+-.if\\n()E2 .}2
+-..
+-.deRS
+-.nr]\\n+()p \\n()I
+-.nr)\\n()p \\n()R
+-.ie!\\$1 .nr )R +\\$1n
+-.el.nr )R +\\n()I
+-.nr)I \\n()Mu
+-.}E
+-..
+-.deRE
+-.if!\\$1 \{.ie \\$10 .nr )p 1 1
+-.el.nr )p \\$1 1 \}
+-.ds]i \\*(]I\\n()p
+-.ds]r \\*(]R\\n()p
+-.nr)I \\*(]i
+-.nr)R \\*(]r
+-.if\\n()p .nr )p -1
+-.}E
+-..
+-'''\"	.2C begin 2-column display, by diversion
+-'''\"   CC=amount of text that will fit on page
+-'''\"	CL=1 multicolumn in effect, else 0
+-'''\"	CI saved indent
+-'''\"	CB contains diverted text
+-.de 2C
+-.ne 2
+-.nf
+-.nr CC \\n(.t/1v*2v
+-.nr CI \\n(IN
+-.nr IN 0
+-.di CB
+-.nr CL 1
+-.}E
+-.dt \\n(CCu C1
+-..
+-'''\"	.1C return to 1-column
+-.de 1C
+-.nr CL 0
+-.C1
+-.fi
+-..
+-'''\"	end of diversion, at end of page or return to 1-column
+-'''\"	CC=pos of nominal column end
+-.de C1
+-.dt
+-\!.C3
+-.di
+-.if \\n(dn \{.nr CC \\n(dnu/2u+\\n(nlu
+-.wh \\n(CCu C2
+-.mk
+-.nf
+-.nr IN \\n(CIu
+-.}E
+-.CB \}
+-..
+-'''\"	end of first column retrieved from diversion
+-'''\"	CC=pos of actual column end
+-.de C2
+-.wh \\n(CCu
+-.mk CC
+-.po +(\\n(LLu/2u)u
+-.rt
+-.if \\n(dn>1v .ns
+-..
+-'''\"	end of second column
+-.de C3
+-.br
+-.po -(\\n(LLu/2u)u
+-.if \\n(CC>\\n(nl .sp |\\n(CCu
+-.ne 2
+-..
+-.dePM
+-.if\\$1 .nr !K 0
+-.if\w\\$1 \{\
+-.ie\\$1P .nr !K 1
+-.el.ie \\$1BP .nr !K 3
+-.el.ie \\$1BR .nr !K 4
+-.el.nr !K 2 \}
+-.if\\n(!K .wh -(\\n(:mu+5v) )G
+-..
+-.de)G
+-.if\\n(!K 'sp 2v
+-.ie\\n(!K=1 \{\
+-.iet .bd1 3
+-.el.bd1 0
+-.tlPRIVATE
+-.bd1
+-.tlThis information should not be disclosed to unauthorized persons.
+-.tlIt is meant solely for use by authorized Bell System employees. \}
+-.el.ie \\n(!K=3 \{\
+-.iet .bd1 3
+-.el.bd1 0
+-.tlBELL LABORATORIES PROPRIETARY
+-.bd1
+-.tlNot for use or disclosure outside Bell Laboratories except by
+-.tlwritten approval of the director of the distributing organization. \}
+-.el.ie \\n(!K=4 \{\
+-.iet .bd1 3
+-.el.bd1 0
+-.tlBELL LABORATORIES RESTRICTED
+-.bd1
+-.tlThe information herein is meant solely for use by authorized
+-.tlBell Laboratories employees and is not to be disclosed to others. \}
+-.el.if \\n(!K=2 \{\
+-.iet .bd1 3
+-.el.bd1 0
+-.tlNOTICE
+-.bd1
+-.tlNot for use or disclosure outside the
+-.tlBell System except under written agreement. \}
+-..
+-.nr)s 0
+-.ift .if \ns .nr )s 1
+-.nr)t 0
+-.ift .if !\ns .nr )t 1
+-.if\n()s \{.nr )L 9i
+-.nrLL 4.75i
+-.nr)O .75i
+-.nr)S 9
+-.nr)V 10 \}
+-.if\n()t \{.nr )L 11i
+-.nrLL 6.5i
+-.nr)O 1i
+-.nr)S 10
+-.nr)V 12 \}
+-.ift \{.ds R \(rg
+-.dsS \s\n()S
+-..\}
+-.ifn \{.nr )L 11i
+-.nrLL 6.5i
+-.nr)O .463i
+-.if '\*(.T'think' \{.nrLL 80n
+-.nr)O 0\}
+-.if '\*(.T'thinksmall' \{.nrLL 142n
+-.vs 9p
+-.nr)O 0\}
+-.dsR (Reg.)
+-.dsS
+-..\}
+-.if\nT .nr LL 80n
+-.if\nV>1 \{
+-.nrLL 82n
+-.nr)L 84v
+-.rmul \}
+-.nr)p 0 1
+-.ds]I \\\\n(]
+-.ds]R \\\\n()
+-.if\nd0 .nr m \n(mo-1
+-.if\nm0 .ds ]m January
+-.if\nm1 .ds ]m February
+-.if\nm2 .ds ]m March
+-.if\nm3 .ds ]m April
+-.if\nm4 .ds ]m May
+-.if\nm5 .ds ]m June
+-.if\nm6 .ds ]m July
+-.if\nm7 .ds ]m August
+-.if\nm8 .ds ]m September
+-.if\nm9 .ds ]m October
+-.if\nm10 .ds ]m November
+-.if\nm11 .ds ]m December
+-.ifn \{.nr m \nm+1
+-.ie\nd .ds ]W (last mod. \nm/\nd/\ny)
+-.el.ds ]W (printed \n(mo/\n(dy/\n(yr)
+-..\}
+-.if\n()s .ds ]W
+-.if\n()t \{.ie \nd .ds ]W \*(]m \nd, 19\ny
+-.el.ds ]W \*(]m \n(dy, 19\n(yr
+-..\}
+-.pl\n()Lu
+-.ll\n(LLu
+-.lt\n(LLu
+-.po\n()Ou
+-.fp 5 L CW
+-.ift .tr \``\''
+-.}f
+-.if\n()s .nr :m 3.5v
+-.if\n()t .nr :m 6v
+-.ifn .nr :m 7v
+-.ift .nr )M 3.6m
+-.ifn .nr )M 5n
+-.em}K
+-.nr q \np
+-.if!\np .nr p 1
+-.pn \np
+//GO.SYSIN DD ./tmac.an
+echo ./mkfile 1>&2
+sed 's/.//' >./mkfile <<'//GO.SYSIN DD ./mkfile'
+-NAMES=alloc arc bquote builtins dir expand gen glob graph job\
+-	lex main makefile match mk parse quote\
+-	recipe regexp rule run shprint sig symtab t_ar t_driver t_file var word
+-OBJ=${NAMES:%=%.o}
+-NPROC=2
+-BUILTINS=
+-# for profiling, use -p -DPROF
+-CFLAGS=-I.. -DSYSV
+-
+-nmk:	$OBJ
+-	$CC $CFLAGS -o nmk $OBJ fio/fio.a libc/libc.a math/math.a
+-
+-goo:V:	nmk
+-	nmk
+-
+-clean:V:
+-	rm -f cyntax nmk *.o O/*
+-
+-install:V:	nmk
+-	cp nmk /usr/bin/mk
+-	strip /usr/bin/mk
+-
+-pp:V:
+-	pr *.h *.c | lp -dpsu -n2
+-
+-%.o:	mk.h
+-
+-%.o:	%.c
+-	$CC $CFLAGS -c $stem.c
+-
+-tut.out:	tut.ms
+-	pic tut.ms | tbl | troff -Tpost -ms > tut.out
+-
+-sane:V:	nmk
+-	cp nmk goo
+-	rm arc.o; goo -e
+-	goo -e -wjob.o
+-
+-poot:V:	nmk
+-	echo 'pooter Any Dk,g nj/fart/whistle.uucp' >> /n/research/usr/lib/uucp/Systems.dk
+-	./nmk -k -i -f /usr/lib/upas/mkfile NPROC=1 systems
+//GO.SYSIN DD ./mkfile

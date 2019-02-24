@@ -1,0 +1,194 @@
+.P
+These are the ASSERT error messages that can occur.
+The will appear in the error log (/usr/spool/uucp/.Admin/errors).
+When the errors occur, the program will abort--the file name,
+sccsid, line number will appear in the error message along with the
+following text.
+In most cases, these result from file system problems;
+use the errno, when present to check out the problem.
+.P
+.VL 23 0
+.LI "CAN'T OPEN"
+An open() or fopen() failed--``errno'' appears in ()
+.LI "CAN'T WRITE"
+A write() or fwrite() or fprintf() etc--``errno'' appears in ()
+.LI "CAN'T READ"
+A read(), fgets(), etc failed--``errno'' appears in ()
+.LI "CAN'T CREATE"
+A creat() call failed--``errno'' appears in ()
+.LI "CAN'T ALLOCATE"
+A dynamic allocation failed.
+.LI "CAN'T LOCK"
+An attempt to make a LCK (lock) file failed.
+In some
+cases, this is a fatal error.
+.LI "CAN'T STAT"
+A stat() call failed--``errno'' appears in ()
+.LI "CAN'T CHMOD"
+A chmod() call failed--``errno'' appears in ()
+.LI "CAN'T LINK"
+A link() call failed--``errno'' appears in ()
+.LI "CAN'T CHDIR"
+A chdir() call failed--``errno'' appears in ()
+.LI "CAN'T UNLINK"
+A unlink() call failed--``errno'' appears in ()
+.LI "WRONG ROLE"
+This is an internal logic problem.
+.LI "CAN'T MOVE TO CORRUPTDIR"
+.br
+An attempt to move some bad C. or X. files
+to the .Corrupt directory failed--the directory is
+probably missing or has wrong modes or owner.
+(/usr/spool/uucp/.Corrupt)
+.LI "CAN'T CLOSE"
+A close() or fclose() call failed--``errno'' appears in ()
+.LI "FILE EXISTS"
+The creation of a C. or D. file is attempted, but the file exists.
+This
+occurs when there is a problem with the sequence file
+access--usually a software error.
+.LI "No uucp server"
+A tcp/ip call is attempted, but there is no server for uucp.
+.LI "BAD UID"
+The uid can not be found in the /etc/passwd file.
+The file system is in trouble, or the /etc/passwd file is inconsistant.
+.LI "BAD LOGIN_UID"
+same as previous.
+.LI "ULIMIT TOO SMALL"
+The ulimit for the current user/process is too small;
+file transfers may fail, so transfer is not
+attempted.
+.LI "BAD LINE"
+There is a bad line in the Devices file;
+there are not enough arguments on one or more lines.
+.LI "FSTAT FAILED IN EWRDATA"
+.br
+There is something wrong with the ethernet media.
+.LI "SYSLST OVERFLOW"
+An internal table in gename.c overflowed.
+A big/strange request was attempted--send it with MR to the
+appropriate place.
+.LI "TOO MANY SAVED C FILES"
+.br
+same as previous
+.LI "RETURN FROM fixline ioctl"
+.br
+An ioctl, which should never fail, failed.
+There is a system or driver problem.
+.LI "BAD SPEED"
+A bad line speed appears in the Devices/Systems files.
+.LI "PERMISSIONS file: BAD OPTION--"
+.br
+There is a bad line or option in the PERMISSIONS file.
+Fix it immediately!
+.LI "PKCGET READ"
+The other side probably hung up;
+don't worry about it.
+.LI "SYSTAT OPEN FAIL"
+There is a problem with the modes of /usr/lib/uucp/.Status, or there
+is a file with bad modes in the directory.
+.LI "TOO MANY LOCKS"
+There is some internal problem!
+Send in an MR.
+.LI "CAN NOT ALLOCATE FOR"
+.br
+There is some kernel problem;
+a call to calloc() failed.
+.LI "XMV ERROR"
+There is a problem with some file or directory;
+It is likely the spool directory, since the modes of
+the destinations were suppose to be checked before
+the program attempts this.
+.LI "CAN'T FORK"
+An attempt to fork and exec failed.
+The current job should not be lost, but will be attempted later
+(uuxqt).
+No action need be taken.
+.LE
+.SK
+These are the messages that will appear in the system status file:
+.VL 23 0
+.LI "OK"
+Things are OK.
+.LI "NO DEVICES AVAILABLE"
+There is no currently available device for the call.
+Check to see that there is a valid device in Devices file
+for this system.
+.LI "WRONG TIME TO CALL"
+self explanatory
+.LI "TALKING"
+self explanatory
+.LI "SOME FAILURE"
+
+to be determined
+.LI "BAD SEQUENCE CHECK"
+If sequence checking is used between systems, the
+sequence numbers do not agree. (This is almost never
+used.)
+.LI "CALLER SCRIPT FAILED"
+The negotiations with the modem/network specified in the
+DIALERS file did not complete successfully.
+This is similar to DIAL FAILED.
+I may occassionally fail, but if it never succeeds, there may
+be a problem with the entry in the DIALERS file.
+.LI "LOGIN FAILED"
+The login for the given machine failed.
+It could
+be a wrong login/passwd, wrong number, a very slow
+machine, or failure in getting through the chat script.
+.LI "CONVERSATION FAILED"
+The conversation failed after successful startup.
+This usually means that one side went down, the program
+aborted, or the line just hung up.
+.LI "DIAL FAILED"
+The remote never answered.
+It could be a bad dialer or
+the wrong phone number.
+.LI "BAD LOGIN/MACHINE COMBINATION"
+.br
+The machine called us with login/machine name
+that does not agree with our PERMISSIONS file.
+They could be trying to masquerade!
+.LI "DEVICE LOCKED"
+The calling device is currently locked and in use
+by some process.
+.LI "ASSERT ERROR"
+An ASSERT error occurred--see
+/usr/spool/uucp/.Admin/errors.
+.LI "SYSTEM NOT IN Systems"
+The system name is not in Systems.
+.LI "CAN'T ACCESS DEVICE"
+The device tried does not exist,
+or the modes are wrong.
+.LI "DEVICE FAILED"
+The open of the device failed.
+.LI "WRONG MACHINE NAME"
+The called machine is reporting a different
+name in the Shere= message.
+.LI "CALLBACK REQUIRED"
+The called machine requires that it call us.
+.LI "REMOTE HAS A LCK FILE FOR ME"
+.br
+The remote site has a LCK file for this
+system.
+They could be trying to call us.
+If they have an older version of uucp, the process
+that was talking to us may have failed leaving the
+LCK file.
+If they have the new uucp, and they are
+not trying us, then the process that was talking to
+us is hung!
+.LI "REMOTE DOES NOT KNOW ME"
+.br
+The remote site does not have our name in their
+Systems file.
+.LI "REMOTE REJECT AFTER LOGIN"
+.br
+The login we used does not correspond to what
+the remote site is expecting.
+.LI "REMOTE REJECT, UNKNOWN MESSAGE"
+.br
+The remote site rejected us for unknown
+reason--they are probably not running a standard
+version of uucp.
+.LE

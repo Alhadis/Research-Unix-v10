@@ -1,0 +1,102 @@
+		How to Standard ML of New Jersey run faster
+
+
+1. Each compilation unit is compiled separately.  None of the 
+   optimizations take place across compilation-unit boundaries.   
+   Example:
+
+	fun f(x) = (x,x);
+        fun g 0 = nil | g i = f i :: g(i-1);
+        
+   This is two compilation units if typed at top level, or if loaded
+   from a file because at the first semicolon, the function f is compiled,
+   and then at the next semicolon, g is compiled.  The function g will run
+   significantly faster if any of the following is used instead:
+
+	fun f(x) = (x,x)
+        fun g 0 = nil | g i = f i :: g(i-1);
+
+	local fun f(x) = (x,x);
+          in  fun g 0 = nil | g i = f i :: g(i-1)
+         end;
+
+    structure S = struct 
+	fun f(x) = (x,x);
+        fun g 0 = nil | g i = f i :: g(i-1);
+     end;
+
+    In either of these last two, of course, the semicolons are optional.
+
+    Moral of the story:  use small compilation units while typing to
+    the interactive system and seeing how things work.  Use larger
+    compilation units when compiling large programs.  I recommend the
+    use of the module system, or of "let" and "local" declarations,
+    to bind things together in a well-structured way.
+
+    The use of signature constraints to minimize the number of things
+    exported from structures will reduce memory usage, and is just clean style.
+
+2.  For the fanatic:  (these are not guaranteed forever)
+
+	The initial environment (i.e. the List, Array, Ref, etc. structures)
+    is normally in a separate module from the user program.  If you
+    would like a copy of this stuff in your program so that calls to the
+    pervasive functions will have less overhead, textually insert
+    src/boot/fastlib.sml near the beginning of your own structure.
+    This only helps, of course, if fastlib.sml is put into the same
+    compilation unit as the functions calling it, using the module
+    system as described above.
+
+	You can nest structures.  To get better performance, after you
+    have developed your program, nest the whole thing in one huge
+    structure, e.g.
+
+	structure Whole : sig end = struct
+
+		your program
+	end
+
+    You can even put signatures and functors at top level inside such a
+    structure, although this is not "Standard" ML.
+
+
+3.  You can increase the level of optimization, if you want to wait
+    a bit longer for compiles.  To make things compile more slowly
+    but run faster, execute this before compiling your program:
+
+       System.Control.CG.reducemore := 0;
+       System.Control.CG.rounds := 10;
+       System.Control.CG.bodysize := 20;
+
+    To make things compile faster but run slower, try this:
+
+       System.Control.CG.reducemore := 10000;
+       System.Control.CG.rounds := 0;
+       System.Control.CG.bodysize := ~100;
+       System.Control.CG.reduce := false;
+
+4.  You can measure the execution time of your programs using the
+    functions in System.Timer.
+    (* in the initial environment,
+	signature TIMER =
+	  sig  
+	    datatype time = TIME of {sec : int, usec : int}
+	    type timer
+	    val start_timer : unit -> timer
+	    val check_timer : timer -> time
+	    val check_timer_gc: timer -> time
+	    val makestring : time -> string
+	    val add_time : time * time -> time
+	  end
+        structure System.Timer : TIMER 
+     *)
+
+      let val t = System.Timer.start_timer()
+          val _ = run_my_program()
+          val non_gc_time = System.Timer.check_timer t
+          val gc_time = System.Timer.check_timer_gc t
+          val total_time = System.Timer.add_time(non_gc_time,gc_time)
+       in print(System.Timer.makestring total_time)
+      end
+
+5.  You can also use the execution profiler, described in doc/profiling

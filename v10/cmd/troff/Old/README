@@ -1,0 +1,81 @@
+Changed 7/27/81
+
+The troff in this directory (known as a.out)
+is a troff that produces machine-independent output.
+It requires a file of descriptive information about
+the particular typesetter you have in mind, and produces
+output parameterized for that device.
+
+Thus:
+	a.out -T202 ...
+produces output for the mergenthaler linotron 202.
+(This is the default.)
+
+To make this work, one needs to create a set of
+device and font descriptions in the directory
+	/usr/lib/font/devxxx
+where "xxx" is your device name.
+Currently supported devices are
+	202	mergenthaler 202 using our software
+	aps	autologic aps5
+	cat	gsi cat (not really working at present)
+
+The file "DESC" contains information about the
+device itself and the character set.  The file dev202/DESC
+is a good example; follow the format closely.
+
+In addition, each font needs a description of its
+characters, width and device-driving codes;
+see dev202/R and S for typical examples.
+
+The program "makedev" will convert these text
+descriptions into a binary form that the a.out can
+slurp up in a single gulp during initialization;
+these wind up in dev202/DESC.out (which includes
+default font info) and XX.out for info about font XX.
+
+The second half of the job is to write a post-processor
+that converts the more or less machine-independent a.out
+output into specific codes for your favorite typesetter.
+d202.c is the driver for the 202;
+it will serve as a useful prototype.  In particular,
+it contains a precise description of the output language.
+Other working postprocessors are
+	daps	aps5
+	dcat	graphic systems CAT (not really up to date)
+	tc	tektronix 4014
+	hc	hp2621 (mainly for crude graphics)
+	ta	arbitrary terminal
+The 202 driver writes onto /dev/202 in the same way that
+old troff writes on /dev/cat; to get its output on the std output,
+use, e.g., d202 -t ... >file.
+
+One can always simply run
+	a.out
+and look at the output; it is guaranteed to be ascii text
+and thus safe to edit, grep, etc.
+(Since it is ascii, it is also guaranteed to be quite voluminous.)
+On the research system, /usr/bin/troff is actually a shell program
+that detects -Txxx arguments;  the current default is 202.
+/usr/lib/troff.new and the appropriate postprocessor are fired up.
+
+Putting output codes into the font description files
+seems like the right thing to do but I'm not happy yet.
+Accordingly, the formats of any or all of the files
+described here are subject to drastic change; hang loose.
+
+As it says in the Unix warranty:
+	"There is no warranty of merchantability nor any warranty
+	of fitness for a particular purpose nor any other warranty,
+	either express or implied, as to the accuracy of the
+	enclosed materials or as to their suitability for any
+	particular purpose.  Accordingly, Bell Telephone
+	Laboratories assumes no responsibility for their use by the
+	recipient.   Further, Bell Laboratories assumes no obligation
+	to furnish any assistance of any kind whatsoever, or to
+	furnish any additional information or documentation."
+
+Nevertheless, I will try to answer questions in cases of
+dire necessity.  Suggestions and other comments would be appreciated.
+
+Brian W. Kernighan

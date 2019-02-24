@@ -1,0 +1,51 @@
+CFLAGS=-I.. -DKERNEL
+L=../lib/io.a
+M=../lib/ioicarus.a
+FILES=\
+	$L(fd.x) $L(mem.x) $L(sw.x) $L(fineclock.x) \
+	$L(bio.x) $L(stream.x) $L(partab.x) \
+	$L(kb.y) $L(dk.y) $L(kdi.y) $L(kmc.y) \
+	$L(unixpld.x) $L(cmcld.x) $L(dkp.x) $L(dkmod.x) \
+	$L(tu78.y) $L(te16.y) \
+	$L(ttyld.x) $L(xttyld.x) $L(mesg.x) $L(connld.x) $L(bufld.x) \
+	$L(dz.y) $L(dhv11.y) $L(om.y) $L(pg.y) $L(scsi.y) $L(vplot.y) \
+	$L(mg.y) $L(rco.y) $L(im.y) $L(gpib.y) \
+	$L(dsort.x) $L(bad144.x) $L(errlog.x) \
+	$L(ra.x) $L(ta.x) $L(uda.y) $L(bda.y) $L(up.y) $L(hp.y) \
+	$L(cure.y) $L(drbit.y) $L(dn.y) $L(nttyld.x) $L(deqna.y) $L(ni1010a.y) \
+	$L(debna.y) $L(archosld.x) $M(camac.x)
+
+FILESICARUS=\
+	$M(fd.x) $M(mem.x) $M(sw.x) $M(fineclock.x) \
+	$M(bio.x) $M(stream.x) $M(partab.x) \
+	$M(kb.y) $M(dk.y) $M(kdi.y) $M(kmc.y) \
+	$M(unixpld.x) $M(cmcld.x) $M(dkp.x) $M(dkmod.x) \
+	$M(tu78.y) $M(te16.y) \
+	$M(ttyld.x) $M(mesg.x) $M(connld.x) $M(bufld.x) \
+	$M(dz.y) $M(dhv11.y) $M(om.y) $M(pg.y) $M(scsi.y) $M(vplot.y) \
+	$M(mg.y) $M(rco.y) $M(im.y) $M(gpib.y) \
+	$M(dsort.x) $M(bad144.x) $M(errlog.x) \
+	$M(raicarus.x) $M(ta.x) $M(uda.y) $M(bda.y) $M(up.y) $M(hp.y) \
+	$M(cure.y) $M(drbit.y) $M(dn.y) $M(nttyld.x) $M(deqna.y) $M(ni1010a.y) \
+	$M(debna.y) $M(archosld.x)
+
+all: $L $M 
+
+$L: $FILES
+	names=`membername $newprereq`
+	ar r $L $names 
+	ranlib $L
+$L(%):N: %
+$M: $FILESICARUS
+	names=`membername $newprereq`
+	ar r $M $names && rm $names
+	ranlib $M
+$M(%):N: %
+%.x: %.c
+	cc $CFLAGS -S $stem.c
+	/lib/c2 <$stem.s | sed -f ../lib/asm.sed | as -o $stem.x
+#	rm $stem.s
+%.y: %.c
+	cc $CFLAGS -S $stem.c
+	/lib/c2 -i <$stem.s | sed -f ../lib/asm.sed | as -o $stem.y
+	rm $stem.s

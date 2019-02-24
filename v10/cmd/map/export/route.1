@@ -1,0 +1,85 @@
+.TH ROUTE 1
+.SH NAME
+route \- map orientations and great circle paths
+.SH SYNOPSIS
+.B route
+[ 
+.B -t
+]
+.SH DESCRIPTION
+.I Route
+without an option
+reads from the standard input a sequence of points, expressed 
+as latitude-longitude pairs.
+For each pair of points, say A and B,
+.I route
+prints on the standard output
+.IP \-
+A
+.IR map (7)
+orientation, expressed as a
+.B -o
+option, that transforms the great circle from A to B into the equator.
+The transformed locations of A and B are located on the equator
+at equal distances west and east of the Prime Meridian.
+.IP \-
+The transformed coordinates of the two points.
+.IP \-
+The same information for a map orientation in which point A
+appears to the east and B to the west of the Prime Meridian.
+.PP
+Under option
+.B -t
+.I route
+produces coordinates along the great circle from A to B
+in the form of a track for use with 
+.I map
+option
+.BR -t .
+.PP
+Coordinates are expressed in degrees, with latitude
+positive north of the equator and longitude positive
+west of Greenwich.
+.SH EXAMPLES
+.HP
+.B "echo 40.75 74 52 0 | route -t | map mercator -l 30 70 -10 80 -t - | plot
+.br
+Produce a map of the North Atlantic with a great circle plotted
+from New York to London.
+.TP
+.B route
+.br
+.ns
+.TP
+.B 40.75 74 52 0
+Produces the output
+.RS
+.IP
+.nf
+.ft L
+-o 35.8283 -157.5308 -168.6148
+A -0.0000 24.9943
+B -0.0000 -24.9943
+-o -35.8283 22.4692 168.6149
+A -0.0000 -24.9943
+B 0.0000 24.9943
+.ft
+.fi
+.RE
+.IP
+From this we derive the following command to draw a strip map 
+20 degrees wide along the great circle from New York to London.
+The
+.B -w
+option windows the map in the new coordinate system, where
+the equator runs along the great circle and the two cities
+sit at 25W and 25E on that `equator'.
+The
+.B -l
+option avoids surveying the whole rest of the world for
+plottable points.
+.IP
+.B
+map mercator -o 35.83 -157.53 -168.61 -w -10 10 -30 30 -l 30 75 -10 80
+.SH SEE ALSO
+.IR map (7)

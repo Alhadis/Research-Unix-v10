@@ -1,0 +1,329 @@
+\chapter{Evaluation}
+\label{eval}
+\section{Environments and Values}
+Evaluation of phrases takes place in the presence of an {\em environment} and a
+{\em store}.  An {\em value environment} E maps identifiers to values, value constructors, and
+exception constructors.  A {\em store} S maps references to values; references
+are themselves values.  (Type environments TE, are
+ignored here since they are relevant only to
+type-checking and compilation, not to evaluation.  Other environments
+having to do with the module system are also ignored here.)
+
+A value $v$ is either a constant (a nullary constructor), a
+construction (a constructor applied to a value), a record, a
+reference, or a function value.  A record value is a set of
+label-value pairs, written \{ label = value , \rep{0} , label = value \},
+in which the labels are distinct; note that the order of components
+is immaterial.  Labels may be identifiers or integer numerals; both
+kinds of labels may appear in the same record value.  A function
+value is a partial function which, given a value, may return a
+value or may raise an exception; it may also change the store as a side-effect.
+
+An exception $e$, associated to an exception name  {\em exn} in a value
+environment, is a special kind of constructor.  Exception
+constructors may be nullary or value-carrying, just as may ordinary
+constructors.  Nullary exception constructors, and constructed
+exceptions (exception constructors applied to values), are ordinary
+values of type {\em exn}.
+
+Evaluation of a phrase returns a {\em result}---a value $v$,
+a value-environment $E$, or a store $S$ as follows:
+
+\begin{tabular}{l l}
+{\bf \ \ Phrase}&{\bf \  Value} \\
+Expression & v and S, or raise(v) and S\\
+Value binding & E and S, or raise(v) and S\\
+Type binding & {\it no effect on E or S} \\
+Datatype binding & E \\
+Exception binding & E \\
+Declaration & E and S, or raise(v) and S
+\end{tabular}
+
+The remainder of this chapter describes the semantics of various
+phrases in terms of values $v$ and environments $E$.
+
+The semantics of stores ($S$) are discussed in
+Chapter~\ref{reference};
+for the remainder of this chapter, the
+effect of various phrases on stores will be ignored.
+The semantics of exceptions is discussed in
+Chapter~\ref{exception}.
+
+
+For every phrase except a \verb"handle" expression, whenever its
+evaluation demands the evaluation of an immediate subphrase which
+returns a raised exception {\em raise(v)} as a result, no further
+evaluation of subphrases occurs and {\em raise(v)} is also the result
+of the phrase.  This rule should be remembered while reading the
+evaluation rules below.
+
+In presenting the rules, explicit type
+constraints (:ty) have been ignored since they have no effect on
+evaluation.
+
+\section{Environment manipulation}
+We may write $\{ i_1 \mapsto v_1 , ... , i_n \mapsto v_n \}$ for a
+value environment E (the identifiers $i_k$ being distinct).  Then
+$E(i_k)$ denotes $v_k$, $\{\}$ is the empty value environment, and
+$E+E'$ means the environment in which the associations of $E'$
+supersede those of $E$.
+
+\section{Matching patterns}
+Patterns serve in ML both as formal parameters of functions, and
+as indices in case statements.  When a function or a case statement
+is applied to a particular value, one of its patterns may match the
+value.
+
+A nullary constructor (like \verb"nil") used as a pattern
+will match only the corresponding nullary constructor value.  A
+value-carrying constructor $c$, applied to a pattern $p_1$, makes a pattern
+$c(p_1)$;
+this constructed pattern will match a value $c(v_1)$
+built with the same value-carrying constructor, and only if the
+pattern $p_1$ matches the value $v_1$.
+
+A record pattern 
+\verb"{" ${\it lab}_1$ \verb"=" ${\it pat}_1$ , \underline{\ \ \ } , ${\it lab}_n$ \verb"=" ${\it pat}_n$ \verb"}"
+matches a record value whose labels are the same, and only if each
+pattern matches the corresponding value.
+If the ellipsis (\verb"...") is used at the end of a record pattern,
+then it will match a record value with {\it at least} the labels
+specified in the pattern.
+
+An identifier (i.e. a variable)
+used as a pattern will match any value; when this happens, the
+variable will also be bound to that value throughout the variable's
+scope.  When a variable is a component of a record or constructor
+pattern, then it is bound to a particular component of the record
+value or constructed value.
+
+An underscore will match any value.
+
+Sometimes it is desired to bind a variable to a value only
+if the value matches a particular pattern.  The pattern 
+{\it id}\verb" as "{\it pat} binds the value to the variable {\it
+id}, but only if the {\it pat} matches.
+
+Type constraints may be applied to patterns.  {\it pat\verb":"ty}
+matches the same values that {\it pat} does, but the compiler will
+guarantee that the pattern will only be applied to values  of type
+{\it ty}.
+
+\subsection*{A more formal description}
+The matching of a pattern to a value $v$ either {\em fails} or yields
+a value environment.  Failure is distinct from raising an exception,
+but an exception will be raised when all patterns fail in applying a
+match to a value (see Sections~\ref{raisematch}, \ref{raisebind}, and \ref{reraise}).  In the following rules, if any
+component pattern fails to match then the whole pattern fails to
+match.
+
+The following is the effect of matching a pattern  to a value $v$ in the
+environment $E$, for
+each of the kinds of pattern (with failure if any condition is not
+satisfied):
+\begin{description}
+\item[\protect\verb"\_"\hfill]  {\it (underscore)} the empty value environment $\{\}$ is
+returned
+\item[id\hfill] if $E(id)$ is not a constructor, then the value environment
+$\{id \mapsto v\}$ is returned
+\item[id\hfill] if $E(id)$ is a nullary constructor, then if $E(id)=v$,
+then $\{\}$ is returned, else failure
+\item[id pat\hfill]  if $E(id)$ is a value-carrying constructor $c$, and 
+$v = c v'$, then pat is matched to $v'$, else failure.
+\item[id \protect\verb"as" pat\hfill]  pat is matched to $v$ returning $E$;
+then $\{id \mapsto v\}+E$ is returned.
+\item[\protect\verb"\{" ${\it lab}_1$ \protect\verb"=" ${\it pat}_1$ , \underline{\ \ \ } , ${\it lab}_n$ \protect\verb"=" ${\it pat}_n$ \protect\verb"\}" \hfill]  
+if $v = \{ {\it lab}_1 = v_1 , ... , {\it lab}_n = v_n \}$ then 
+${\it pat}_i$ is matched to $v_i$ returning $E_i$, for each $i$; then 
+$E_1 + ... + E_n$ is returned.
+
+\item[\protect\verb"\{" ${\it lab}_1$ \protect\verb"=" ${\it pat}_1$ , \underline{\ \ \ } , ${\it lab}_n$ \protect\verb"=" ${\it pat}_n$ \protect\verb", ... \}" \hfill]  
+if $v = \{ {\it lab}'_1 = v_1 , ... , {\it lab}'_m = v_m \}$ then if
+the ${\it lab}_i$ are a subset of the ${\it lab}'_j$ then
+${\it pat}_i$ is matched to $v_j$ returning $E_i$, for each $i,j$ such that
+${\it lab}_i = {\it lab}'_j$; then 
+$E_1 + ... + E_n$ is returned.
+\end{description}
+No pattern may contain the same variable twice.
+No record pattern, record expression, or record type may use the same
+label twice.
+\section{Applying a match}
+Assume environment $E$.  Applying a match
+$ {\it pat}_1 \protect\verb"=>" {\it exp}_1 \mid ... 
+\mid {\it pat}_n \protect\verb"=>" {\it exp}_n $ to value $v$ returns a value
+or raises an exception as follows.  Each ${\it pat}_i$ is matched to
+$v$ in turn, from left to right, until one succeeds returning $E_i$;
+then ${\it exp}_i$ is evaluated in $E+E_i$.  If none succeeds, then
+an exception is raised, depending on the syntactic context in which
+the match occurs (see Sections~\ref{raisematch}, \ref{raisebind}, and \ref{reraise}).
+\label{matchwarn}
+If a match contains a redundant pattern (where any value that could
+satisfy it will be matched by a previous pattern in the match), the
+compiler will issue a warning message.  If the match (except those
+that form exception-handlers) is not exhaustive (some value matches
+none of the patterns) then the compiler will issue a warning message.
+
+Thus, for each $E$, a match denotes a function value.
+
+\section{Evaluation of expressions}
+Evaluating an expression in the environment $E$ returns a value (or raises an
+exception) as follows, in each of the cases for exp:
+\begin{description}
+\item[id\hfill]  the value $E(id)$ is returned; id may be a variable-id or a
+constructor-id
+\item[const\hfill]  the value denoted by the constant (an integer, real, or
+string literal) is returned.
+\item[${\bf exp}_1 {\bf exp}_2$\hfill] ${\bf exp}_1$ is evaluated, 
+returning function $f$; then ${\it exp}_2$
+is evaluated, returning value $v$; then $f(v)$ is returned.
+\item[\protect\verb"\{" ${\it lab}_1$ \protect\verb"=" ${\it exp}_1$ , \underline{\ \ \ } , ${\it lab}_n$ \protect\verb"=" ${\it exp}_n$ \protect\verb"\}" \hfill]  
+the ${\it exp}_i$ are evaluated in sequence, from left to right,
+returning $v_i$ respectively; then the record 
+$\{ {\it lab}_1 = v_1 , ... , {\it lab}_n = v_n \}$ is returned.
+\item[\protect\verb"raise" exp\hfill]  exp is evaluated, returning $v$; then 
+the exception-value $v$ is raised.
+
+\item[exp \verb"handle" match\hfill]  exp is evaluated; if exp returns a
+value $v$, then $v$ is returned.  If exp raises an exception $e$ then
+the match is applied to $e$.  If the match fails, then $e$ is raised
+(as the value of the \verb"handle" expression).  If the match
+succeeds, then the resulting value is returned.
+
+\item[\verb"let" dec \verb"in" exp \verb"end"\hfill]  dec is evaluated,
+returning $E'$; then exp is evaluated in the environment $E+E'$.
+
+\item[\verb"fn" match\hfill]  $f$ is returned, where $f$ is the function of
+$v$ gained by applying match to $v$ in the environment $E$, and such
+that if the match fails, an exception \verb"Match" will be raised.
+\label{raisematch}
+But matches that may fail are to be detected by the
+compiler and flagged with a warning; see Section~\ref{matchwarn}.
+\end{description}
+
+\section{Evaluation of value bindings}
+Evaluating a value binding in environment $E$ returns a value
+environment $E'$  or raises an exception as follows:
+\begin{description}
+\item[pat \verb"=" exp\hfill]  exp is evaluated in $E$, returning value
+$v$; then pat is matched to $v$; if this returns $E'$ then $E'$ is
+returned.  If the pattern fails to match then the exception 
+\verb"Bind" will be raised.
+\label{raisebind}
+But bindings that may fail are to be detected by the
+compiler and flagged with a warning; see Section~\ref{bindwarn}.
+
+\item[${\bf vb}_1$ \verb"and" \underline{\ \ \ } \verb"and" ${\bf vb}_n$\hfill]
+The value bindings ${\bf vb}_1$ through ${\bf vb}_n$ are evaluated in
+$E$ from left to right, returning $E_1 , ... E_n$; then $E_1 + ... +
+E_n$ is returned.
+
+\item[\verb"rec" vb\hfill]  {\bf vb} is evaluated in $E'$, returning $E''$,
+where $E' = E + E''$.  Because the values bound by \verb"rec" {\bf
+vb} must be function values, $E'$ is well defined by ``tying knots''
+(Landin).
+\end{description}
+No binding may bind the same identifier twice.
+
+\label{bindwarn}
+For each value binding ``pat = exp'' the compiler will issue a
+warning message if {\it either} pat is not exhaustive {\it or} pat
+contains no variable.  This will (on both counts) detect a mistaken
+declaration like \verb"val nil = f(x)" in which the user expects to
+declare a new variable nil (whereas the language dictates that
+\verb"nil" here is a constant pattern, so no variable gets declared).
+However, these warnings need not be given at top level in the
+interactive system.
+\section{Evaluation of type and datatype bindings}
+The value environment $E$ does not affect the evaluation of type
+bindings or datatype bindings ($TE$ affects their type-checking and
+compilation).  Evaluation of a type binding just returns the empty
+value environment $\{\}$; the purpose of type bindings is merely to
+provide an abbreviation for a compound type.
+
+Evaluation of a
+datatype binding {\bf db} returns a value environment $E'$ (it cannot
+raise an exception) as follows:
+
+\begin{description}
+\item[tyvars id = ${\bf constr}_1 \mid \underline{\ \ \ } \mid {\bf constr}_n$\hfill]
+New constructors ${\bf con}_1, ... , {\bf con}_n$ are created.
+The value environment $E' = \{ id_1 \mapsto v_1 , ... , id_n \mapsto
+v_n \} $ is returned, where $v_i$ is either the constant value
+${\bf con}_i$ (if ${\bf constr}_i$ is just ${\bf id}_i$), or else the
+function which maps $x$ to ${\bf con}_i(x)$ (if ${\bf constr}_i$ is
+${\bf id}_i$ \verb"of" {\bf ty}).
+
+\item[${\bf db}_1$ \verb"and" \underline{\ \ \ } \verb"and" ${\bf db}_n$\hfill]
+The bindings ${\bf db}_1 , ... , {\bf db}_n$
+are evaluated from left to right, returning $E_1 , ... , E_n$; then
+$E_1 + ... + E_n$ is returned.
+\end{description}
+In the left hand side ``tyvars id'' of a type of datatype binding,
+no type-variable may appear twice in ``tyvars.''
+The right hand side may contain only the type variables
+mentioned on the left.  Within the scope of the declaration of
+``id,'' any occurrence of the type constructor ``id'' must be
+accompanied by as many type arguments as indicated by the (possibly empty)
+tyvar sequence ``tyvars'' in the declaration.
+
+No binding may bind the same identifier twice.
+\section{Evaluation of exception bindings}
+The evaluation of an exception binding in an environment $E$ returns an
+environment $E'$ as follows:
+\begin{description}
+\item[id\hfill]   A new exception constructor {\bf con} is generated, and
+the environment $\{{\bf id} \mapsto {\bf con} \}$ is returned.
+
+\item[id \verb"of" ty \hfill]  A new exception constructor {\bf con} is generated,
+and the environment $\{{\bf id} \mapsto v\}$ is returned, where $v$ is the
+function of $x$ that returns ${\bf con}(x)$.
+
+\item[${\bf id}_1$ \verb"=" ${\bf id}_2$ \hfill]  The environment
+$\{ {\bf id}_1 \mapsto E({\bf id}_2) \}$ is returned; that is, 
+${\bf id}_1$ is bound to the same exception constructor as ${\bf id}_2$.
+
+\item[${\bf eb}_1$ \verb"and" \underline{\ \ \ } \verb"and" ${\bf eb}_n$\hfill]
+The bindings ${\bf eb}_1 , ... , {\bf eb}_n$
+are evaluated from left to right, returning $E_1 , ... , E_n$; then
+$E_1 + ... + E_n$ is returned.
+\end{description}
+No binding may bind the same identifier twice.
+\section{Evaluation of declarations}
+
+Evaluating a declaration in a value environment $E$ returns a value
+environment $E'$ or raises an exception as follows (as usual in this chapter,
+the effect on type environments is ignored):
+
+\begin{description}
+\item[\verb"val" vb\hfill] The value binding {\rm vb} is evaluated,
+returning $E'$; then $E'$ is returned.
+
+\item[\verb"type" tb\hfill] The empty environment $\{\}$ is returned.
+
+\item[\verb"datatype" db\hfill]  {\rm db} is evaluated, returning
+$E'$, which is returned.
+
+\item[\verb"exception" eb\hfill]  {\rm eb} is evaluated, returning
+$E'$, which is returned.
+
+\item[\verb"local" ${\bf dec}_1$ \verb"in" ${\bf dec}_2$ \verb"end"\hfill]
+${\rm dec}_1$ is evaluated in $E$, returning $E_1$; then 
+${\rm dec}_2$ is evaluated in $E+E_1$, returning $E_2$; then $E+E_2$
+is returned.
+
+\item[${\bf dec}_1$ ${\bf dec}_2$\hfill]
+${\rm dec}_1$ is evaluated in $E$, returning $E_1$; then 
+${\rm dec}_2$ is evaluated in $E+E_1$, returning $E_2$; then $E_1+E_2$
+is returned.
+
+\item[${\bf dec}$ \verb";"\hfill] has the same effect as {\bf dec}.
+\end{description}
+\section{Evaluation of a program}
+The evaluation of a program ${\bf dec}_1$ \verb";" \underline{\ \ \ }
+\verb";" ${\bf dec}_n$ takes place in the initial presence of the
+standard top-level environment $E_0$ containing all the standard
+bindings (see Appendix~\ref{library}).  For $i>0$ the top-level environment
+$E_i$, present after the evaluation of ${\bf dec}_i$ in the program,
+is defined recursively as follows:  ${\bf dec}_i$ is evaluated in
+$E_{i-1}$ returning environment ${E'}_i$, and then $E_i =
+E_{i-1}+{E'}_i$.

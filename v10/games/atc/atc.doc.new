@@ -1,0 +1,103 @@
+
+
+
+		 ATC With Plans
+
+Delayed commands may be specified using the "@" command:
+
+	@<location>,<command>[,<command> ...]
+
+The comma is required after the location and between commands.
+
+The command is any normal legal airplane control command.
+
+A location may be any of the unique identified points on the screen:
+entries, airports, or navaids.  Note that the navaids now have different
+identifiers.  The navaid command still uses a '*' or ':'.
+
+Example:  @3,AA2
+
+A location may be further specified by giving the number of miles in
+each direction from a known fix, e.g.
+
+	    @#sw3s2,ARE
+
+which means at the point which can be reached by going three
+miles SW from fix #, then two miles S, plane A should begin
+a right turn until heading E.
+
+When the plane specified in the command reaches the location, the
+command is executed automatically.
+
+The information command shows all delayed commands pending for that plane.
+
+Stored commands for plane A (for example) may be expunged with
+
+	<23> A?
+
+
+
+Fine points:
+
+	A plane can be given commands to take effect when it
+	comes onto the screen; it need not be active to get the first
+	commands for its delayed list.
+
+	To issue a navaid command for a later navaid, give a delayed
+	command to take effect at the NEXT navaid.  Since navaids are
+	now identified differently, it will recognize the point and
+	issue the navaid command when it arrives at the first one.
+
+
+
+Movie mode:
+
+	The flag -p=filename will save the keystroke file and timing
+	information for a game in the specified file.  There is enough
+	information to re-create the game ASSUMING you use the same
+	version of ATC.
+
+	To re-play the game in movie mode, use
+
+		atc -m=filename
+
+	The game will use the same seed as before, and the traffic
+	pattern will be identical.  At any point the observer can
+	interject commands.  Probably the only useful command will
+	be to request information, since the remembered commands will
+	still be inserted at the remembered time.
+
+
+
+Flow control:
+
+	When a game is started, ATC looks for the file <airspace>.flow
+	in the directory /usr/rand/jim/atc to establish a traffic pattern.
+        For example, if the airspace is Apple3, it uses the file
+	/usr/rand/jim/atc/Apple3.flow .
+
+	The flow file contains one line for each legal path through the
+	airspace.  Each line is left-adjusted, and consists of an origin,
+	the symbol "->" (for "goes to"), the destination, a space, and
+	the relative frequency of this path.  The expected frequency for
+	this path is its relative frequency divided by the sum of the
+	relative frequencies for all the paths.  Some examples are:
+
+		1->5 5
+		1->8 10
+
+		2-># 10
+		2->% 5
+		2->6 5
+
+		%->% 5
+		#->% 10
+
+	Blank lines are ignored (for spacing).
+
+	Any path with no relative frequency is assumed to have frequency 0.
+
+
+Things to come:
+
+	(1) There will be a capability for canned procedures.

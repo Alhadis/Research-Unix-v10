@@ -1,0 +1,18 @@
+LCBT = -lcbt
+ALL = btadd btbuild btcat btcreat btdelete btlook btran btreport btsquash
+NPROC=2
+BUILTINS=
+
+all:    $ALL
+
+%:	%.c
+	$CC $CFLAGS $prereq $LCBT -o $target
+
+install:V:
+	strip $ALL
+	test -d /usr/lib/btree || mkdir /usr/lib/btree
+	mv $ALL /usr/lib/btree
+	cp cbt /usr/bin
+
+clean:
+	rm -f $ALL

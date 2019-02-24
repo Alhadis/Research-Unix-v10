@@ -1,0 +1,591 @@
+\documentstyle[11pt]{article}
+
+\title{Installing lcc}
+
+\author{Christopher W. Fraser\\
+AT\&T Bell Laboratories, 600 Mountain Avenue,\\
+Murray Hill, NJ 07974
+\and
+David R. Hanson\\
+Department of Computer Science, Princeton University,\\
+Princeton, NJ 08544}
+
+\date{August 24, 1990}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\verb|lcc| is a retargetable compiler for C as defined
+by the ANSI Standard X3.159--1989.
+\verb|lcc| is in production use
+at Princeton University and AT\&T Bell Laboratories.
+When used with a conforming preprocessor and library,
+\verb|lcc| passes the conformance section of Version 2.00 of the Plum-Hall
+Validation Suite for ANSI~C, except that it
+does not detect underflow/overflow in constant expressions.
+
+Extract the distribution into its own directory.
+All paths below are relative to this directory.
+
+All distributions include the following top-level directories;
+``front-end'' distributions include {\em only} these directories.
+
+\begin{center}
+\begin{tabular}{ll}
+\tt c		& front end \\
+\tt etc		& driver, man page, this document \\
+\tt include	& ANSI include files \\
+\tt tst		& test suite \\
+\tt gen0	& ``symbolic'' code generator \\
+\end{tabular}
+\end{center}
+``Front-end'' distributions include no code generators
+and only Section~6 of this document applies.
+
+``Full'' distributions include code generators for the VAX, MIPS,
+and Motorola 68020 with the 68881 floating-point co-processor.
+These distributions add the following top-level directories.
+
+\begin{center}
+\begin{tabular}{ll}
+\tt gen2	& production code generators \\
+\tt gen3	& demonstration VAX code generator \\
+\end{tabular}
+\end{center}
+
+Installation of a production compiler
+involves three steps performed in the following order.
+\begin{enumerate}
+\item Decide where to install the man page, the include files,
+the compiler, and \verb|lcc|, the driver program; see Section~2.
+
+\item Install a host-specific driver; see Section~3.
+
+\item Install a host- and target-specific compiler; see Section~4.
+\end{enumerate}
+
+\verb|c/version.h| identifies the version of the distribution
+as {\tt (($x$<<8)|$y$)} for version {\tt $x$.$y$},
+and \verb|LOG| describes the changes from the previous version.
+
+
+\section{Paths}
+
+Installation consists of three files and one directory;
+these are summarized below along with paths used in typical installations.
+
+\begin{center}
+\begin{tabular}{ll}
+\tt /usr/local/man/man1/lcc.1	& the man page \\
+\tt /usr/local/lib/rcc		& the compiler \\
+\tt /usr/local/bin/lcc		& the driver \\
+\tt /usr/local/include/ansi	& include files (a directory) \\
+\end{tabular}
+\end{center}
+
+These files can be placed in other, site-specific locations,
+but the compiler should be named \verb|rcc|.
+If the driver isn't named \verb|lcc|, edit the man page (\verb|etc/lcc.1|).
+
+Include files are in directories named \verb|include/|{\it target}\verb|_|{\it system},
+where {\it target\/} is one of \verb|mips|, \verb|mc|, \verb|vax|, or \verb|sparc|,
+and {\it system\/} is one of
+\verb|bsd| (4.3BSD UNIX),
+\verb|ultrix| (ULTRIX 3.0),
+\verb|mips| (RISC/os 4.0),
+\verb|sun| (SUNOS 4.0), and
+\verb|iris| (IRIX System V Release 3.2).
+Not all combinations of {\it target}, {\it system\/} are provided
+and many don't make sense.
+Choose the include files that are appropriate for your system,
+or make a copy of a closely related set and edit them.
+
+For example, if the paths shown above are chosen and if
+\verb|include/vax_ultrix| has the appropriate include files,
+install the man page and include files by
+\begin{verbatim}
+$ cp etc/lcc.1 /usr/local/man/man1
+$ cp include/vax_ultrix/*.h /usr/local/include/ansi
+\end{verbatim}
+
+
+\section{Installing the Driver}
+
+The preprocessor, compiler, assembler, and loader are
+invoked by a driver program, \verb|lcc|, which is similar
+to \verb|cc| on most systems. It's described in the man page
+\verb|etc/lcc.1|.
+The driver is built by combining the host-independent
+part, \verb|etc/lcc.c|, with a small host-specific part.
+By convention, host-specific parts are named {\it hostname}\verb|.c|,
+where {\it hostname\/} is the local name for the host on which \verb|lcc|
+is being installed. \verb|etc| holds many examples.
+Comments in most give the details of the
+particular host; pick one that is closely related to your host,
+copy it to \verb|etc/|{\it yourhostname}\verb|.c|,
+and edit it as described below.
+You should not have to edit \verb|etc/lcc.c|.
+
+Debug your version of the driver by running it
+with the \verb|-v -v| options, which cause it to echo the
+commands it would execute, but not to execute them.
+
+Here's \verb|etc/ffserver.c|, which we'll use as an example
+in describing how to edit a host-specific part.
+This example illustrates all of the important features.
+\begin{verbatim}
+/* VAXes running UNIX 4.3BSD or ULTRIX at Princeton University */
+
+#include <string.h>
+
+char *cpp[] = { "/usr/gnu/lib/gcc-cpp", "-undef", "-Dvax",
+        "$1", "$2", "$3", 0 };
+char *include[] = { "-I/usr/local/include/ansi", 0 };
+char *com[] = { "/usr/local/lib/rcc", "$1", "$2", "$3", 0 };
+char *as[] = { "/bin/as", "-J", "-o", "$3", "$1", "$2", 0 };
+char *ld[] = { "/bin/ld", "-o", "$3", "/lib/crt0.o", "-X",
+        "$1", "$2", "", "-lm", "", "-lc", 0 };
+
+int option(arg) char *arg; {
+        if (strcmp(arg, "-g") == 0)
+                ld[9]  = "-lg";
+        else if (strcmp(arg, "-p") == 0) {
+                ld[3]  = "/lib/mcrt0.o";
+                ld[10] = "-lc_p";
+        } else if (strcmp(arg, "-pg") == 0) {
+                ld[3]  = "/usr/lib/gcrt0.o";
+                ld[10] = "-lc_p";
+        } else if (strcmp(arg, "-b") == 0
+        && access("/usr/local/lib/bbexit.o", 4) == 0)
+                ld[7]  = "/usr/local/lib/bbexit.o";
+        else
+                return 0;
+        return 1;
+}
+\end{verbatim}
+
+Most of the host-specific code is data that
+gives prototypes for the commands that invoke
+the preprocessor, compiler, assembler, and loader.
+Each command prototype is an array of pointers to strings
+terminated with a null pointer;
+the first string is the full path name of the command and the others
+are the arguments or argument placeholders, which are described below.
+
+The \verb|cpp| array gives the command for running the preprocessor.
+\verb|lcc| is intended to be used with an ANSI preprocessor,
+such as the GNU C preprocessor available from the Free Software Foundation.
+If the GNU preprocessor is used,
+it must be named \verb|gcc-cpp| in order for \verb|lcc|'s \verb|-N| option
+to work correctly.
+
+Literal arguments specified in prototype, e.g., \verb|"-Dvax"| in
+the \verb|cpp| command above, are passed to the command as given.
+
+The strings \verb|"$1"|, \verb|"$2"|, and \verb|"$3"| in
+prototypes are placeholders for {\em lists} of arguments that
+are substituted in a copy of the prototype before the command is executed.
+\verb|$1| is replaced by the {\em options} specified by the user;
+for the preprocessor, this list always contains at least
+\verb|-Dunix| and \verb|-D__LCC__|.
+\verb|$2| is replaced by the {\em input} files,
+and \verb|$3| is replaced by the {\em output} file.
+
+Zero-length arguments after replacement are removed from
+the argument list before the command is invoked. So, e.g.,
+if the preprocessor is invoked without an output file,
+\verb|"$3"| becomes \verb|""|, which is removed from the final argument list.
+
+For example, to specify a preprocessor command prototype to invoke
+\verb|/bin/cpp| with the options \verb|-Dvax| and \verb|-Dultrix|,
+the \verb|cpp| array would be
+\begin{verbatim}
+char *cpp[] = { "/bin/cpp", "-Dvax", "-Dultrix",
+        "$1", "$2", "$3", 0 };
+\end{verbatim}
+
+The \verb|include| array is a list of \verb|-I| options that
+specify which directives should be searched to satisfy include directives.
+These directories are searched in the order given.
+The first directory should be the one to which the ANSI
+header files were copied in Section~2.
+The driver adds these options to \verb|cpp|'s arguments
+when it invokes the preprocessor.
+
+\verb|com| gives the command for invoking the compiler.
+This prototype can appear exactly as shown above, except
+that the command name should be edited to reflect the
+location of the compiler chosen in Section~2.
+
+\verb|as| gives the command for invoking the assembler.
+
+\verb|ld| gives the command for invoking the loader.
+For the other commands, the list \verb|$2| contains a single file;
+for \verb|ld|, \verb|$2| contains all `.o' files and libraries, and
+\verb|$3| is \verb|a.out|, unless the \verb|-o| option is specified.
+As suggested in the code above, \verb|ld| must also specify
+the appropriate startup code and default libraries.
+
+The \verb|option| function is described below;
+for now, use an existing \verb|option| function or one that returns \verb|0|.
+
+After specifying the prototypes, compile the driver by
+\begin{verbatim}
+$ cd etc
+$ make HOST=ffserver
+\end{verbatim}
+where \verb|ffserver| is replaced by {\it yourhostname}.
+Run the resulting \verb|a.out| with the options \verb|-v -v|
+to display the commands that would be executed, e.g.,
+\begin{verbatim}
+$ a.out -v -v foo.c baz.c mylib.a -lcurses
+a.out version 1.2
+foo.c:
+/usr/gnu/lib/gcc-cpp -undef -Dvax -Dunix -D__LCC__ -v
+    -I/usr/local/include/ansi foo.c |
+    /usr/local/lib/rcc -v - /tmp/lcc00024.s
+/bin/as -J -o foo.o /tmp/lcc00024.s
+baz.c:
+/usr/gnu/lib/gcc-cpp -undef -Dvax -Dunix -D__LCC__ -v
+    -I/usr/local/include/ansi baz.c |
+    /usr/local/lib/rcc -v - /tmp/lcc00024.s
+/bin/as -J -o baz.o /tmp/lcc00024.s
+/bin/ld -o a.out /lib/crt0.o -X foo.o baz.o mylib.a
+    -lcurses -lm -lc
+rm /tmp/lcc00024.s
+\end{verbatim}
+Leading spaces indicate lines that have been folded manually to fit this page.
+Note the use of a pipeline to connect the preprocessor and compiler.
+\verb|lcc| arranges this pipeline itself; it does not call the shell.
+ 
+As the output shows, \verb|lcc| places temporary files in \verb|/tmp|.
+Alternatives can be specified by defining \verb|TEMPDIR| in \verb|CFLAGS|
+when making the driver, e.g.,
+\begin{verbatim}
+$ make CFLAGS='-DTEMPDIR=\"/usr/tmp\"' HOST=ffserver
+\end{verbatim}
+causes \verb|lcc| to place temporary files in \verb|/usr/tmp|.
+
+Once the driver is completed, install it by
+\begin{verbatim}
+$ cp a.out /usr/local/bin/lcc
+\end{verbatim}
+where the destination is the location chosen for \verb|lcc| in Section~2.
+
+The \verb|option| function is called for the options
+\verb|-g|, \verb|-p|, \verb|-pg|, and \verb|-b| because these compiler options might
+also affect the loader's arguments. For these options,
+the driver calls \verb|option(arg)| to give the host-specific
+code an opportunity to edit the \verb|ld| prototype, if necessary.
+\verb|option| can change \verb|ld|, if necessary, and return \verb|1| to
+announce its acceptance of the option. If the option
+is unsupported, \verb|option| should return \verb|0|.
+
+For example, in response to \verb|-g|, the \verb|option| function shown above
+changes \verb|ld[9]| from \verb|""| to \verb|"-lg"|, which causes
+a debugging library to be loaded. If \verb|-g| is not specified,
+the \verb|""| argument is omitted from the \verb|ld| command
+because it's empty.
+
+Likewise, the \verb|-pg| causes \verb|option| to change the name
+of the startup code and the name of the default C library. Note that
+\verb|option| has been written to support simultaneous use
+of \verb|-g| and \verb|-pg|, e.g.,
+\begin{verbatim}
+$ a.out -v -v -g -pg foo.o baz.o -o myfoo
+a.out version 1.2
+/bin/ld -o myfoo /usr/lib/gcrt0.o -X foo.o baz.o -lm -lg -lc_p
+rm /tmp/lcc00660.s
+\end{verbatim}
+
+To support Sun's \verb|-f68881| option, the driver also
+passes any option beginning with \verb|-f| to \verb|option|.
+
+The option \verb|-Wo|{\it arg\/} causes the driver to pass {\it arg\/}
+to \verb|option|. Such options have no other effect; this mechanism
+is provide to support system-specific options that affect the
+commands executed by the driver.
+
+The \verb|-b| option causes the compiler to generate
+code to count the number of times each expression is executed.
+The \verb|exit| function in \verb|etc/bbexit.c| writes these
+counts to \verb|prof.out| when the program terminates.
+If \verb|option| is called with \verb|-b|,
+it must edit the \verb|ld| command accordingly,
+as shown above. This version of \verb|option| uses
+the \verb|access| system call to insure that \verb|bbexit.o| is installed before
+editing the \verb|ld| command. To install \verb|bbexit.o| execute
+\begin{verbatim}
+$ make bbexit.o
+$ cp bbexit.o /usr/local/lib/bbexit.o
+\end{verbatim}
+If necessary, change \verb|/usr/local/lib| to reflect local conventions.
+The \verb|exit| function in \verb|etc/bbexit.c| works on the
+systems listed in \S2, but may need to be modified for other systems.
+
+If \verb|option| supports \verb|-b|, you should also
+install \verb|etc/bprint.c|, which reads \verb|prof.out|
+and generates a listing annotated with execution counts.
+After \verb|lcc| is installed, install \verb|bprint| with the commands
+\begin{verbatim}
+$ make bbexit.o bprint
+$ cp bprint /usr/local/bin/bprint
+$ cp bprint.1 /usr/local/man/man1
+\end{verbatim}
+The \verb|makefile| uses \verb|lcc| to compile \verb|bprint.c|;
+you must use \verb|lcc| or another ANSI~C compiler
+because \verb|bprint.c| is written in ANSI~C.
+\verb|bprint.c| includes \verb|"../c/profio.c"|, so it must
+be compiled in \verb|etc|.
+
+To complete the driver,
+write an appropriate \verb|option| function for your system,
+and make and install the driver as described above.
+
+
+\section{Installing a Production Compiler}
+
+\verb|gen2| contains source code common to all of the production
+code generators and directories for each of the supported targets:
+
+\begin{center}
+\begin{tabular}{ll}
+\tt gen2/vax	& VAX code generator \\
+\tt gen2/mips	& MIPS code generator \\
+\tt gen2/mc	& Motorola 68020 \& 68881 code generator \\
+\end{tabular}
+\end{center}
+
+A production compiler, \verb|rcc|, is built by compiling it
+with the host C compiler and then using the result to re-compile itself.
+A test suite is used to
+verify that the compiler is working correctly.
+The examples below use the VAX compiler to illustrate this process.
+You must have the driver, \verb|lcc|, installed in order
+to build and test \verb|rcc|.
+If any of the steps below fail, contact us (see Section~7).
+
+The \verb|makefile| runs the shell script
+\verb|gen2/run| on each C program in the test suite, \verb|tst|.
+The assignment to \verb|os| in \verb|gen2/run| indicates the target operating
+system; edit this assignment if it's incorrect for your system.
+
+To build a VAX \verb|rcc|, execute the commands
+\begin{verbatim}
+$ cd gen2/vax
+$ make
+\end{verbatim}
+There may be a few warnings, but there should be no errors.
+
+Once \verb|rcc| is built with the host C compiler,
+run the test suite to verify that \verb|rcc| is working correctly:
+\begin{verbatim}
+$ make test
+vax-bsd 8q:
+vax-bsd array:
+vax-bsd cf:
+vax-bsd cq:
+vax-bsd cvt:
+vax-bsd fields:
+vax-bsd front:
+vax-bsd incr:
+vax-bsd init:
+vax-bsd paranoia:
+3456c3456
+< .align 2; _881:.long 0xc5ac37a7,0x4788471b
+---
+> .align 2; _881:.long 0xc5ac37a7,0x4784471b
+3674c3674
+< .align 2; _72:.long 0xd70a3d23,0xa3d83d70
+---
+> .align 2; _72:.long 0xd70a3d23,0xa3d73d70
+3688c3688
+< .align 2; _14:.long 0x126e3b83,0x4fe0978d
+---
+> .align 2; _14:.long 0x126e3b83,0x4fdf978d
+vax-bsd sort:
+vax-bsd spill:
+vax-bsd stdarg:
+vax-bsd struct:
+vax-bsd switch:
+vax-bsd wf1:
+vax-bsd yacc:
+\end{verbatim}
+For each C program in the test suite,
+\verb|gen2/run| compiles the program and uses \verb|diff|
+to compare the generated assembly code
+with the expected code (the expected VAX code for \verb|tst/8q.c| is
+in \verb|gen2/vax/tst/8q.s.bak|, etc.). If there are differences, the script
+executes the generated code with the input given in \verb|tst|
+(the input for \verb|tst/8q.c| is in \verb|tst/8q.0|, etc.)
+and compares the output with the expected output
+(the expected output from \verb|tst/8q.c| on the VAX is
+in \verb|gen2/vax/tst/8q.1|, etc.). The script also compares the
+diagnostics from the compiler with the expected diagnostics.
+
+As shown above, there may be a few differences between the generated code
+and the expected code for the VAX.
+These differences occur because the expected code is
+generated by cross compilation
+on a MIPS and the least-significant bits of some floating-point constants
+differ from those bits in constants generated on a VAX.
+There should be no differences in the output from executing the test programs.
+
+If you edited the assignment to \verb|os| in \verb|gen2/run|,
+a few differences may occur because of differences between the ANSI headers
+for your system and those for the default system.
+
+If your host is a little-endian MIPS, such as those from DEC,
+there will be numerous differences (about 335 lines) because the expected code
+is generated on a big-endian MIPS. Most of the differences
+are in floating-point constants and data and instructions
+concerning bit fields. It is easy to examine
+the differences and verify that they are all due to the different
+addressing order. Also, the output from \verb|tst/paranoia.c|
+may differ trivially; if so, you'll need to \verb|make test| a second
+time to finish the suite.
+
+The \verb|vax-bsd| preceding the name of each test program in the output
+above indicates a {\it target\/\it-system\/} combination, e.g.,
+``generating code for a \verb|vax| running the
+\verb|bsd| operating system''.
+
+Next, build \verb|rcc| again using the just-built \verb|rcc|:
+\begin{verbatim}
+$ make triple
+rm -f *.o
+make CC=lcc CFLAGS='-B./ -d0.1 -A -DPROTO -DENUMS' LDFLAGS='-s' rcc
+lcc -c -B./ -d0.1 -A -DPROTO -DENUMS -I. -I.. -I../../c ../../c/dag.c
+...
+lcc -s -o rcc dag.o ... sel.o
+od +8 <rcc >tst/od2
+rm -f *.o
+make CC=lcc CFLAGS='-B./ -d0.1 -A -DPROTO -DENUMS' LDFLAGS='-s' rcc
+lcc -c -B./ -d0.1 -A -DPROTO -DENUMS -I. -I.. -I../../c ../../c/dag.c
+...
+lcc -s -o rcc dag.o ... sel.o
+od +8 <rcc >tst/od3
+cmp tst/od[23] && rm tst/od[23]
+\end{verbatim}
+This command builds \verb|rcc| twice; once using the
+\verb|cc|-built \verb|rcc| and again using the \verb|lcc|-built \verb|rcc|.
+After building each version, an octal dump of the resulting binary is made,
+and the two dumps are compared. They should be identical, as shown
+at the end of the output above.
+If they aren't, our compiler is generating bad code.
+This triple-compilation test is described in
+B.~J. Cornelius, I.~R. Lowman, and D.~J. Robson,
+`Steady-State Compilers,' {\it Software---Practice \& Experience \bf 14},
+8 (Aug.\ 1984) 705--9. (They name four generations because they
+number them differently.)
+
+The final version of \verb|rcc| should also pass the test suite;
+i.e., the output from \verb|make test|
+should be identical to that from the previous \verb|make test|.
+
+Now install the final version of \verb|rcc|:
+\begin{verbatim}
+$ cp rcc /usr/local/lib/rcc
+\end{verbatim}
+where the destination is the location chosen for \verb|rcc| in Section~2.
+
+The \verb|make| commands described above can be done with a single command:
+\begin{verbatim}
+$ make test triple test
+\end{verbatim}
+and \verb|make clean| cleans up, but does not remove \verb|rcc|.
+
+The software used to build the production code generators
+is described in C.~W. Fraser, `A Language for Writing Code Generators,'
+{\it Proc.\ SIGPLAN Conf.\ on Programming Language Design and Implementation},
+Portland, June 1989, 238--45. It is not yet available.
+
+
+\section{Building the Demonstration VAX Compiler}
+
+The code generator in \verb|gen3| emits naive VAX code.
+It is not a production code generator. It is included only
+to illustrate the interface between the front end
+and the code generator. If you want to replace \verb|lcc|'s code generator,
+study it and not the larger production code generators.
+
+The command
+\begin{verbatim}
+$ make test
+\end{verbatim}
+builds and tests the demonstration VAX code generator.
+The \verb|makefile| uses \verb|lcc| instead of \verb|cc|
+because \verb|gen3/gen.c| is written in ANSI~C.
+If \verb|lcc| is unavailable, use another ANSI~C compiler, e.g., \verb|gcc|,
+and use a command like
+\begin{verbatim}
+$ make CC=gcc test
+\end{verbatim}
+to build the demonstration compiler. Alternatively, you can specify
+another ANSI~C compiler by editing the first line in \verb|makefile|.
+
+There may be warnings, but there should be no errors.
+As for the production code generators, this command
+tests \verb|rcc| by running a shell script,
+\verb|gen3/run|, on each C program in the test suite.
+This script compiles a program and compares the generated VAX code
+with the expected code (the expected VAX code for \verb|tst/8q.c| is
+in \verb|gen3/tst/8q.s.bak|, etc.). There should be no differences.
+If there are differences, the script executes the generated code
+and compares the output with the expected output
+(the expected output from \verb|tst/8q.c| is
+in \verb|gen3/tst/8q.1|, etc.).
+
+\verb|make triple| is the same as for the production compilers, and
+\verb|make clean| cleans up, but does not remove \verb|rcc|.
+
+
+\section{Building the Symbolic Compiler}
+
+The code generator in \verb|gen0| documents the
+interface between the front end and the code generator and is used routinely in
+front-end development. The output of this code generator is a printable
+representation of the input program, e.g., the dags constructed by the
+front end are printed, and other interface functions print their arguments.
+The output is not executable, unlike the output of the demonstration
+VAX code generator.
+
+The interface is defined by a small set of functions in
+\verb|gen0/symbolic.c|. Some of the interface functions are defined as
+macros in \verb|gen0/config.h| along with other machine-specific parameters.
+The dag language constitutes the bulk of the interface. The
+operators are enumerated in \verb|c/ops.h|. Each generic operator (e.g.,
+\verb|ADD|) has several type-specific variants indicated by type suffixes
+(e.g., \verb|ADDI|, \verb|ADDF|, \verb|ADDP|, etc.). The suffixes are defined in
+\verb|c/ops.h|.  The dag nodes (\verb|struct node|) are defined in \verb|c/c.h|; the
+\verb|Xnode| field is machine specific and is defined in \verb|gen0/config.h|.
+\verb|c/c.h| defines almost all of the data structures used the front end.
+
+The command
+\begin{verbatim}
+$ make test
+\end{verbatim}
+builds the symbolic compiler, \verb|rcc|, and tests it by running the shell script
+\verb|gen0/run| on each C program in the test suite, \verb|tst|.
+This script compiles a program and uses \verb|diff| to compare the generated symbolic code
+with the expected code (the expected code for \verb|tst/8q.c| is
+in \verb|gen0/tst/8q.s.bak|, etc.). There should be no differences.
+The script also compares the
+diagnostics from the compiler with the expected diagnostics
+(the expected diagnostics for \verb|tst/8q.c| are
+in \verb|tst/8q.2|, etc.).
+
+\verb|make clean| cleans up, but does not remove \verb|rcc|.
+
+
+\section{Reporting Bugs}
+
+Bugs can be reported by sending mail with the shortest program
+that exposes them and the details reported by \verb|lcc|'s \verb|-v|
+option to \verb|lcc-bugs@princeton.edu|.
+Other questions and comments can be mailed to \verb|lcc-requests@princeton.edu|.
+
+\end{document}

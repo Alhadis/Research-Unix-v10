@@ -1,0 +1,120 @@
+NPROC=2
+CFLAGS=-DMEMMOVE -N -I/usr/include/lcc -I/usr/include/libc # -A -p -DPROFILING # -DUSE_STDIO
+# CC should be an ansi compiler (or c++); OCC any old compiler
+CC=lcc
+OCC=cc
+NAMES=main dofgrep dogre fns buffer
+OBJ=${NAMES:%=%.o}
+LIB=libc.a
+LNAMES=cw bm re eg egcomp eglit egpos egstate egcw egbr egerror refile\
+	egparen egmatch egcanon
+LOBJ=${LNAMES:%=$LIB(%.o)}
+LLOBJ=${LNAMES:%=%.o}
+SRC=${NAMES:%=%.c} ${LNAMES:%=%.c}
+BUILTINS='%.o:	%.c
+	$CC $CFLAGS -c $stem.c
+'"`cat DEPEND`"
+
+all:V:	gre cyntax
+
+gre:	$OBJ $LIB
+	$CC $CFLAGS -o $target $prereq
+
+regress:VQ:	#hcheck
+	make CC=$CC regress
+
+oregress:VQ:
+	rm -fr tmp
+	mkdir tmp tmp/regress.d
+	for i in $SRC *.h
+	do
+		awk -f deansify.awk $i > tmp/$i
+	done
+	cp makefile tmp
+	cp regress.d/* tmp/regress.d
+	(cd tmp; make CC=$OCC regress)
+	rm -fr tmp
+
+lt1:	lt1.o $LIB
+	$CC $CFLAGS -o $target $prereq
+
+pp:V:
+	pr mkfile hdr.h $SRC | lp -dpsu -n2
+
+htest.o:	htest.c
+	$CC $CFLAGS -DUSE_STDIO -c $prereq
+htest:	htest.o $LIB
+	$CC $CFLAGS -o $target $prereq
+hcheck:	htest
+	echo aabcdd | htest 'a+(b|c)*d+' tempa 0
+	echo abccccc | htest '^(a|b)*(abc+|c)' tempa 0
+	echo bccc | htest '(bc|bc+)' tempa 0
+	echo abab | htest '((b|a)+)\1' tempa 0
+	echo vivi | htest '^.+$' tempa '^(.+)$' tempb 01
+	echo acbb | htest '((.)+)\1' tempa 0
+	echo !gryphon.att.com!eby | time htest '^!([^!.]+)\.att\.com!(.+)$' tempa 0
+
+h1:V:	htest
+	echo abc | time htest '^^.+!([^!]+2!([^!]+)$$' tempa 0
+
+check:V:
+	rm -f *.o gre refile libc.a
+	mk gre refile regress oregress
+	rm -f *.o gre refile libc.a
+
+bm.o: re.h lre.h hdr.h
+buffer.o: re.h lre.h hdr.h
+cw.o: re.h lre.h hdr.h
+dofgrep.o: re.h lre.h hdr.h
+dogre.o: re.h lre.h hdr.h
+eg.o: re.h lre.h hdr.h
+egbr.o: re.h lre.h hdr.h
+egcomp.o: re.h lre.h hdr.h
+egcw.o: re.h lre.h hdr.h
+egerror.o: re.h /usr/include/stdio.h
+eglit.o: re.h lre.h hdr.h
+egmatch.o: re.h lre.h hdr.h
+egparen.o: re.h lre.h hdr.h
+egpos.o: re.h lre.h hdr.h
+egstate.o: re.h lre.h hdr.h
+fns.o: re.h lre.h hdr.h
+main.o: re.h lre.h hdr.h
+re.o: re.h lre.h hdr.h
+refile.o: re.h lre.h
+
+$LIB(%.o):N:	%.o
+
+$LIB:Q:	$LOBJ
+	names=`membername $newprereq`
+	ar rv $target $names && rm $names
+	ranlib $target
+
+export:VQ:
+	what="$SRC hdr.h io.h re.h lre.h libc.h"
+	what="$what getopt.c"		# for those without
+	what="$what `echo regress.d/*` mkfile makefile README"
+	what="$what tmac.an re.3 gre.1 deansify.awk"
+	cp /n/bowell/usr/man/man3/re.3 .
+	cp /n/bowell/usr/man/man1/gre.1 .
+	cp /usr/lib/tmac/tmac.an .
+	cp /usr/include/libc.h .
+	(echo mkdir regress.d; bundle $what) > gre.bundle
+	ls -l gre.bundle
+	rm re.3 libc.h gre.1 tmac.an
+
+%.rcp:V:
+	rcp gre.bundle $stem:/tmp
+	rsh $stem "cd /tmp; rm -fr gre; mkdir gre; cd gre; sh < ../gre.bundle; make regress && (cd ..; rm -fr gre gre.bundle)"
+
+DEPEND:D:	$SRC
+	cdepend $OBJ $LLOBJ > DEPEND
+
+refile:	refile.c $LIB
+	$CC $CFLAGS -DUSE_STDIO -o $target -DMAIN $prereq && rm refile.o
+refile.o:	refile.c
+	$CC $CFLAGS -DUSE_STDIO -c refile.c
+extern:V:	$LIB
+	nm $LIB | egrep -v ' [dtUb] |:| _re| _eg' | sort -u | mc
+
+poot:V:	gre
+	gre -x '.|..' filex

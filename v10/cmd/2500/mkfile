@@ -1,0 +1,52 @@
+CFLAGS=-g
+OBJ=y.tab.o lex.o main.o fn.o helptab.o status.o time.o remote.o
+CC=lcc
+NPROC=2
+
+2500:	$OBJ
+	$CC $CFLAGS -o $target $prereq -lipc
+
+install:	2500
+	cp $prereq /usr/bin
+
+y.tab.c y.tab.h:	gram.y
+	yacc -d -D gram.y
+	ed - y.tab.c <<!
+	,s/printf/print/
+	w
+	q
+	!
+
+x.tab.h:Q:	y.tab.h
+	cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+
+y.tab.o lex.o:	x.tab.h
+
+lex.o:	lex.l
+	lex -t lex.l > lex.c
+	ed - lex.c <<!
+	,s/fprintf(yyout/fprint(2/
+	w
+	q
+	!
+	$CC $CFLAGS -c lex.c && rm lex.c
+
+helptab.c:QD:	gram.y
+	( echo 'char *helpstrs[] = {'
+	sed -n -e '1,/^line/d
+	/^\/\*DO NOT/,$d
+	/::/s/\(.*\)::.*/\1",/
+	/:/s/.*:/	"/p
+	/	|/s/  *{.*/",/
+	/	|/s/[^|]*|	*/	"/p' < gram.y
+	echo '	0'
+	echo '};'
+	) | grep -v '""' > $target
+
+poot:V:	2500
+	echo 'still 5.0.0
+	remote "pyxis" "/tmp/show /polygami/act3/seq/%0.4d"
+	wait
+	shoot 39 3
+	still mode off
+	stop' | 2500

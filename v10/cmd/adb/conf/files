@@ -1,0 +1,146 @@
+#
+# files for various versions of adb
+#
+
+#
+# common stuff: used by every version
+#
+
+access.o:	../comm/access.c ../comm/defs.h:	comm:	adb
+command.o:	../comm/command.c ../comm/defs.h:	comm:	adb
+expr.o:		../comm/expr.c ../comm/defs.h:		comm:	adb
+format.o:	../comm/format.c ../comm/defs.h:	comm:	adb
+input.o:	../comm/input.c ../comm/defs.h:		comm:	adb
+main.o:		../comm/main.c ../comm/defs.h:		comm:	adb
+output.o:	../comm/output.c ../comm/defs.h:	comm:	adb
+pcs.o:		../comm/pcs.c ../comm/defs.h:		comm:	adb
+print.o:	../comm/print.c ../comm/defs.h:		comm:	adb
+runpcs.o:	../comm/runpcs.c ../comm/defs.h:	comm:	adb
+sym.o:		../comm/sym.c ../comm/defs.h:		comm:	adb
+
+#
+# dummy routines for the `null' version,
+# with no process control or a.out knowledge
+# also good for stubs in incomplete versions
+#
+
+#	no a.out knowledge
+setup.o:	../null/setup.c ../comm/defs.h:		null:	nullfile
+regs.o:		../null/regs.c ../comm/defs.h:		null:	nullcore
+mchpr.o:	../null/mchpr.c:			null:	nullcore
+mchframe.o:	../null/mchframe.c:			null:	nullframe
+#	no system mapping
+mchsys.o:	../null/mchsys.c ../comm/defs.h:	null:	nullsys
+#	trivial machine-dependent io
+mchio.o:	../null/mchio.c:			null:	nullio
+#	can't control processes
+trcrun.o:	../null/trcrun.c:			null:	nullexec
+#	no machine-specific init
+mchinit.o:	../null/mchinit.c:			null:	nullinit
+#	no instruction printing
+das.o:		../null/das.c:				null:	nullins
+#	no symbol table
+syminit.o:	../null/syminit.c:			null:	nullsym
+
+#
+# os stuff: v7
+# ptrace; silly but functional symbols (calls nm)
+#
+
+gensyminit.o:	../v7/gensyminit.c ../comm/defs.h:	v7:	gensym
+trace.o:	../v7/trace.c ../comm/defs.h:		v7:	ptrace
+trcrun.o:	../v7/trcrun.c ../comm/defs.h:		v7:	ptrace
+
+#
+# os stuff: v8
+# symbols and /proc
+#
+
+syminit.o:	../v8/syminit.c ../comm/defs.h:		v8:	v8sym
+trcrun.o:	../v8/trcrun.c ../comm/defs.h:		v8:	v8proc
+
+#
+# stuff for the ns32032 and the sequent
+# includes funny nsc symbol tables
+#
+
+das.o:		../seq/das.c ../comm/defs.h:		seq:	seq
+mchframe.o:	../seq/mchframe.c ../comm/defs.h:	seq:	seq
+mchinit.o:	../seq/mchinit.c ../comm/defs.h:	seq:	seq
+mchrun.o:	../seq/mchrun.c ../comm/defs.h:		seq:	seq
+mchpr.o:	../seq/mchpr.c ../comm/defs.h:		seq:	seq
+mchsys.o:	../seq/mchsys.c ../comm/defs.h:		seq:	seq
+module.o:	../seq/module.c ../comm/defs.h:		seq:	seq
+regs.o:		../seq/regs.c ../comm/defs.h:		seq:	seq
+setup.o:	../seq/setup.c ../comm/defs.h:		seq:	seq
+syminit.o:	../seq/syminit.c ../comm/defs.h:	seq:	seq
+
+#
+# vax
+#
+
+mchframe.o:	../vax/mchframe.c ../comm/defs.h:	vax:	vax
+mchinit.o:	../vax/mchinit.c ../comm/defs.h:	vax:	vax
+mchio.o:	../vax/mchio.c ../comm/defs.h:		vax:	vax
+mchrun.o:	../vax/mchrun.c ../comm/defs.h:		vax:	vax
+mchpr.o:	../vax/mchpr.c ../comm/defs.h:		vax:	vax
+mchsys.o:	../vax/mchsys.c ../comm/defs.h:		vax:	vax
+opset.o:	../vax/opset.c ../comm/defs.h:		vax:	vax
+optab.o:	../vax/optab.c ../comm/defs.h:		vax:	vax
+regs.o:		../vax/regs.c ../comm/defs.h:		vax:	vax
+setup.o:	../vax/setup.c ../comm/defs.h:		vax:	vax
+
+#
+# pdp11
+# -- really something to look at pdp11 code/core on a vax
+#
+
+mchio.o:	../11v/mchio.c ../comm/defs.h:		11v:	11v
+opset.o:	../11v/opset.c ../comm/defs.h:		11v:	11v
+syminit.o:	../11v/syminit.c ../comm/defs.h:	11v:	11v
+setup.o:	../11v/setup.c ../comm/defs.h:		11v:	11v
+mchframe.o:	../11v/mchframe.c ../comm/defs.h:	11v:	11v
+regs.o:		../11v/regs.c ../comm/defs.h:		11v:	11v
+mchpr.o:	../11v/mchpr.o:				11v:	11v
+
+#
+# 68020
+# -- really cross-debugger, on the vax or sequent
+#
+
+mchio.o:	../68v/mchio.c:				68v:	68v
+misc.o:		../68v/misc.c:				68v:	68v
+das.o:		../68v/das.c ../comm/defs.h:		68v:	68v
+optab.o:	../68v/optab.c:				68v:	68v
+setup.o:	../68v/setup.c ../comm/defs.h:		68v:	68v
+syminit.o:	../68v/syminit.c ../comm/defs.h:	68v:	68v
+
+#
+# 68020 in the gnot
+# some of this is duplicated by 68v.  too bad, for now.
+#
+
+gtou.o:		../g/gtou.c:				g:	g
+mchio.o:	../g/mchio.c:				g:	g
+das.o:		../g/das.c ../comm/defs.h:		g:	g
+optab.o:	../g/optab.c:				g:	g
+setup.o:	../g/setup.c ../comm/defs.h:		g:	g
+syminit.o:	../g/syminit.c ../comm/defs.h:		g:	g
+regs.o:		../g/regs.c:				g:	g
+mchpr.o:	../g/mchpr.c:				g:	g
+mchframe.o:	../g/mchframe.c:			g:	g
+
+#
+# cray x-mp
+#
+
+setup.o:	../cray/setup.c:			cray:	cray
+hksyminit.o:	../cray/hksyminit.c:			cray:	cray
+regs.o:		../cray/regs.c:				cray:	cray
+mchpr.o:	../cray/mchpr.c:			cray:	cray
+mchframe.o:	../cray/mchframe.c:			cray:	cray
+das.o:		../cray/das.c:				cray:	cray
+mchrun.o:	../cray/mchrun.c:			cray:	cray
+trcrun.o:	../cray/trcrun.c:			cray:	cray
+trace.o:	../cray/trace.c:			cray:	cray
+mchio.o:	../cray/mchio.c:			cray:	cray

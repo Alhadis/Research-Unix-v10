@@ -1,0 +1,49 @@
+S=/usr/src/libc
+I=/usr/include
+df(){
+	for i in *.c
+	do
+		echo $i
+		diff $i $S/$1/$i
+	done
+	for i in *.h
+	do
+		echo $i
+		diff $i $I/$i
+	done
+}
+
+if [ -s export ]
+then
+	echo removing extant export
+	rm -fr export
+fi
+echo diffing libraries
+cd export.proto/libc
+df gen
+cd ../fio
+df fio
+cd ../math
+df math
+cd ../..
+echo copying proto
+reccp export.proto export
+cd export
+cp /usr/bin/mkconv /usr/bin/membername .
+cp /usr/man/man1/mk.1 .
+cp ../src/*.[ch] .
+cp /usr/include/ndir.h ndir.h
+cp /usr/lib/tmac/tmac.an .
+cp ../tut.ms .
+sed -e '/-o nmk/s:$: fio/fio.a libc/libc.a math/math.a:'\
+	-e '1,$s/V9/SYSV/g' -e 's/CFLAGS=/&-I.. /' ../src/mkfile > mkfile
+O=`ls *.c | sed -e 's/.$/o/'`
+O=`echo $O`
+echo "OBJ=$O" > temp
+cat Makefile >> temp
+echo "$O:	" *.h >> temp
+mv temp Makefile
+echo bundling
+(echo mkdir math fio libc; bundle `find . -type f -print`) > ../mk.bundle
+cd ..
+ls -l mk.bundle

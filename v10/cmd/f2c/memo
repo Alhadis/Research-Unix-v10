@@ -1,0 +1,304 @@
+hash constants
+
+? prototypes for generated functions at start under -A
+
+? logical*1 as separate type? (currently treated as LOGICAL, with error msg).
+
+complex function zork*16(x) ? [obvious change to gram.head, i.e.,
+	changing
+		| type SFUNCTION new_proc entryname arglist
+			{ entrypt(CLPROC, $1, varleng, $4, $5); }
+	to
+		| type SFUNCTION new_proc entryname lengspec arglist
+			{ entrypt(CLPROC, $1, $5, $4, $6); }
+	doesn't work: it thinks functionzork is one word]
+
+f8x control structures: for labels of DO, add to defines.h:
+#define CLLABEL 8
+#define PLABEL 5
+for vclass and vprocclass, resp.
+
+
+-------------
+
+/n/research/netlib/f2c/F2C invoked /n/crab/usr/ehg/bin/netlib.f2c .
+
+-------------
+
+11 July 1989:
+   No args to f2c ==> filter (read stdin, write stdout).
+
+17 July 1989:
+   -ext ==> complain of f77 extensions (automatic, static,
+double complex, constants [binary, octal, hex]).
+
+17 July 1989
+   -z ==> do not recognize double complex intrinsics.
+   ASSIGNED var ==> char *var_fmt rather than char *Var.
+
+3 Aug. 1989
+   -a ==> use AUTOMATIC storage for variables that are neither
+initialized nor involved in EQUIVALENCEs (debug option).
+
+	4 Aug. 1989
+   Bug in output.c: str_fmt should have "%%" rather than "%".
+   Format_data.c: k was too small by one in the malloc call
+at the start of make_one_const().
+
+8 Aug. 1989:
+   New flag -r8 promotes REAL to DOUBLE PRECISION, COMPLEX to
+DOUBLE COMPLEX (a la Berkeley f77).
+
+10 Aug. 1989:
+   Allow \n in
+	print *,'\nHello, world!'
+   Tweaks to -I2, making it more like f77's -I2; new flag -i2.
+   -[Ii]2 are two flavors of rendering INTEGER as short rather
+than long int: -i2 goes further and assumes modified lib[FI]77.
+
+11 Aug. 1989:
+   Quietly allow names up to 8 characters long (except under -ext).
+   Complain about, then ignore arguments to a main program.
+   Under -u, complain just once about each undeclared variable.
+
+
+31 Aug. 1989:
+   putx inserted in putaddr (putpcc.c) so A(min(i,j)) works,
+with A an array; the change:
+	< return (expptr) p;
+	---
+	> 	if (p->isarray && p->memoffset)
+	> 		p->memoffset = putx(p->memoffset);
+	> 	return (expptr) p;
+This required augmenting the simplification logic in mkexpr()
+to turn A(((...)<<2)/4) into A(...).  Now multiplications by
+integer constant powers of 2 are sometimes rendered as shifts,
+(only in I/O stmts?) where before they were multiplications.
+This may be a result of the putx in putaddr.
+
+31 Aug. 1989:
+   7 and 8 character C and I/O keywords added to c_keywords.
+   Rewrote in_vector to use binary search and simply know that
+it's looking at c_keywords -- somewhat faster (e.g. 20%), but
+these lookups should be done just once, rather than each time
+the variable is printed out.
+
+31 Aug. 1989:
+   A file named block_data was left in the current directory
+when there was block data.  Now it's /tmp/f2cnnnnn_blkd.
+
+31 Aug. 1989:
+   LOGICAL*1 type stmts now generate just one error msg
+(rather than one per variable) and don't inhibit output of
+the .c file; LOGICAL*1 is simply treated as logical.
+
+31 Aug. 1989:
+
+	subroutine foo(x)
+	integer x(10)
+	write(*,x)
+	end
+
+now works (as it did for f77); under -ext, it elicits a message.
+For completeness,
+
+	subroutine foo(x)
+	integer x(10)
+	write(*,x(3))
+	end
+
+now works similarly.
+
+5 Sept. 1989:
+   Fixed botch in argument passing of substrings of equivalenced variables.
+
+15 Sept. 1989:
+   Warn about incorrect code generated when a character-valued
+function is not declared external and is passed as a parameter
+before it is invoked.  (For f77, this is the old "Code may be wrong"
+message, which now should appear when it may be appropriate, rather
+than when it is not.)  Example:
+
+	subroutine foo(a,b)
+	character*10 a,b
+	call goo(a,b)
+	b = a(3)
+	end
+
+18 Sept. 1989:
+   Complain about overlapping initializations.
+
+20 Sept. 1989:
+   Warn about names declared EXTERNAL but never referenced;
+include such names as externs in the generated C (even
+though most C compilers will discard them).
+
+21 Sept. 1989:
+   Fix bug encountered in the following (a combination of
+an EXTERNAL subroutine parameter and IMPLICIT CHARACTER):
+
+	subroutine b(asmbly,x)
+	implicit character*7(a-z)
+	external asmbly
+	call asmbly(x)
+	end
+
+21 Sept. 1989:
+   New option -w8 to suppress complaint when COMMON or EQUIVALENCE
+forces word alignment of a double.
+
+22 Sept. 1989:
+   Under -A, ensure that floating constants contain either a decimal
+point or an exponent field.
+   Fixed bugs with ichar: nonarithmetic operand encountered in...
+
+	subroutine foo(ch,i)
+	common /zork/ x
+	character*1 x(256), ch, y
+	integer i
+	x(ichar(ch)) = char(i)
+	end
+
+and wrong ichar(ch) (missing *) in...
+
+	subroutine bar(ch,i)
+	character*1 ch
+	integer i
+	i = ichar(ch)
+	end
+
+   Fixed bug with intrinsic char function: wrong code for char(b) in...
+
+	subroutine george(a,b)
+	character*11 a
+	integer b
+	a(b:b) = char(b)
+	end
+
+   Restored f77's character*1 optimizations: neither s_cmp nor s_copy for...
+
+	subroutine zork(a,b)
+	character*1 a,b*3,c,d(4)
+	if (c .lt. a) c = a
+	if (d(3) .gt. c) d(3) = c
+	if (b(1:1) .eq. d(2)) b(2:2) = d(2)
+	end
+
+   Supplied semicolon missing before "} else {" in the following...
+
+		subroutine bop(n,L)
+		logical L
+		integer i, nok
+	
+		if (L) then
+			do 10 i = 1, n
+				if (nok(i) .gt. 0) goto 20
+	 10			continue
+	 20			continue
+			else
+				call glop(idnt(3))
+			endif
+		end
+
+   Don't declare variables used only in defining statement functions.
+   Always assume floating-point valued routines in libF77 return
+doubles, even under -R.
+
+23 Sept. 1989:
+   Arguments to subroutines having multiple entry points were
+sometimes lost.  Example: na was omitted from dlu_0_ in
+
+	subroutine dlu (na,a,nb,b,error)
+	implicit integer(i-n),double precision(a-h,o-z)
+	dimension a(na,na,1),b(na,1)
+	integer error
+	entry dlu1f (na,a,nb,b,error)
+		call goo(na,a,nb,b,error)
+	end
+
+   Offsets were sometimes lost or added twice on equivalenced
+variables in certain contexts; structure names were omitted
+from character variables in COMMON that were used as formats
+or internal files.  An example that had several such errors:
+
+	subroutine boo12
+	common /zork/ a, b, struct
+	character*80 a, b, struct,d
+	character*40 e(2), f
+	equivalence(b,d), (e(2),f)
+	write(f,10) f
+	write(b,10) a
+	write(struct,10) a
+ 10	format(a80)
+	write(d,10) d
+	if (f(4:4) .lt. b(5:5)) f(6:6) = d(7:7)
+	struct = b
+	write(b(10:30),10) b(12:32)
+	write(d(15:25),10) d(20:30)
+	write(e(2),f)
+	write(f(30:40), f(50:60))
+	end
+
+   Repaired invalid P1_HEAD class encountered by
+
+10	format(' hello, world!')
+	write(6,10)
+	end
+
+28 Sept. 1989:
+   Warn about variables that appear only in data stmts; don't emit them.
+
+2 Oct. 1989:
+   Fix bugs in character DATA for noncharacter variables
+involved in EQUIVALENCE.
+   Treat noncharacter variables initialized (at least partly) with
+character data as though they were equivalenced -- put out a struct
+and #define the variables.  This eliminates the hideous and nonportable
+numeric values that were used to initialize such variables.
+   IMPLICIT NONE treated as IMPLICIT UNDEFINED(A-Z) .
+   New option -!I disables includes (for netlib).
+   Bail out when given an invalid flag.
+
+5 October 1989:
+   Change retval to ret_val in multiple-entry subprograms.
+   Change ret_val_nnn to ret_val in functions.
+   Omit unused dim_ values for final array extents.
+   New option -W nnn specifies nnn characters/word (for Hollerith data).
+   New naming scheme for generated variables; such "system variables"
+are now sorted by type, and more of them are recycled (and fewer declared).
+
+6 October 1989:
+   Bug fix: x(i:min(i+10,j)) elicited "Can't handle opcode 31 yet".
+   Simplify expressions (i+const1)-(i+const2) to const1-const2,
+where i is a scalar integer variable (and const1 or const2 may be
+missing ==> taken to be 0).  Thus
+	x(i:i) = y[j+3:j+3]
+(both expressions having length 1) is now done in-line,
+without a call on s_copy.
+
+7 October 1989:
+   Initialize uninitialized portions of character string arrays to 0
+rather than to blanks.
+
+8 October 1989:
+   New options -g for # nn "file", -c for /*< Fortran source >*/.
+
+9 October 1989:
+   ! recognized as in-line comment delimiter (a la Fortran 88).
+
+apparent bug in Microsoft C 5.10: gram.c: must add
+	static void zap(long n) {}
+and insert
+	zap(varleng);
+after the C generated for the first lengspec rule in gram.dcl ({ $$ = varleng; }).
+
+MSDOS:	cl -nologo -AL -Gt28 -Os -c
+-->	cl -nologo -AL -Gt28 -Odt -c
+
+cl -c -Alfw -Gt28 gram.c
+gram.c(676): warning C4058: address of automatic (local) variable taken, DS != SS
+gram.c(756): "		"....
+
+Optimization bug with proc.c: newentry omitted segment from return value.
+
+Error on line 235 of gqtst.f: wrong number of subscripts on [garbage]

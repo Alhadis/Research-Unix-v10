@@ -1,0 +1,35 @@
+type Lineno = int
+val lineno = ref 1
+fun error s l = output std_out 
+	("line " ^ makestring (l:int) ^ ":" ^ s ^ "\n")
+fun lookup s = ordof(s,0) - ord("a")+1
+%%
+%structure Calc
+%eof   EOF
+%start START
+
+%left SUB PLUS
+%left TIMES DIV
+
+%right CARAT
+
+%term ID of string | NUM of int | PLUS | TIMES | PRINT | EOS | EOF |
+	CARAT | DIV | SUB
+%nonterm EXP of int | START | STMT | STMT_LIST
+
+%%
+  START : STMT_LIST	()
+  STMT_LIST : STMT_LIST STMT EOS ()
+  STMT_LIST : ()
+  STMT : PRINT EXP 	(print EXP; print "\n"; flush_out std_out)
+  STMT : EXP 		()
+  EXP : NUM		(NUM)
+      | ID		(lookup ID)
+      | EXP PLUS EXP	(EXP1+EXP2)
+      | EXP TIMES EXP	(EXP1*EXP2)
+      | EXP DIV EXP	(EXP1 div EXP2)
+      | EXP SUB EXP 	(EXP1-EXP2)
+      | EXP CARAT EXP   (let fun e (m,0) = 1
+				| e (m,i) = m*e(m,i-1)
+			 in e (EXP1,EXP2)	
+			 end)

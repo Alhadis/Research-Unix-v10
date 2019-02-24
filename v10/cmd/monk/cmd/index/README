@@ -1,0 +1,62 @@
+The programs in this directory make a stab at preparing
+an index for a book.  You still have to do a lot of work.
+
+To handle things like different fonts, subsequent
+programs in this sequence recognize a simple language
+within index items:
+	~	will print as blank
+	_~	will print as ~
+	[...]	will print in CW font
+	{...}	will print in italics
+	_[, _]	will print as [, ]
+	_{, _}	will print as {, }
+	__	will print as _
+	_b	will print as \
+	_q	will print as "
+	e.g.:	|index<[pr]~[-]{n} command>
+		|index<[_[^{...}_]] regular~expression>
+
+doindex
+	converts lines of the form produced by |index
+	into list in proper form sorted alphabetically.
+	calls lots of other guys...
+
+doclean
+	deletes lines that don't begin with ix:.
+	canonicalizes blanks and tabs
+
+permute
+	a C program that converts index terms of the form
+		word1 word2 \t n
+	into multiple entries of the form
+		word1 word2 \t n
+		word2, word1 \t n
+	and so on for longer ones.
+
+dofont
+	converts [...], {...}, etc. into ascii control characters
+	suitable for fooling sort into sorting properly.
+
+dosort
+	knows the sort options to get things in order, including
+	dictionary order, ignoring non-printable stuff,
+	numeric sort on page numbers, etc.
+
+crunch
+	C program to combine adjacent lines that differ only in page number
+	into single lines with a list of page numbers.
+
+sequal
+	C program to combine adjacent page numbers into a hyphenated list.
+
+subindex
+	C program to combine adjacent index entries into an index with
+	main entries and sub entries.
+
+undofont
+	does inverse mapping of dofont:  converts hidden
+	ascii characters into \\f's.  also knows how to
+	protect \\'s.  prepends :
+		|index_level0 to each top level index entry without sub levels
+		|index_level1 to each top level index entry with sub levels
+		|index_level2 to each sub level index entry

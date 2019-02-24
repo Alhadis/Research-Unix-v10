@@ -1,0 +1,54 @@
+\subsection{Handling IEEE floating point constants}
+Here we take care of converting floating point constants from
+string representation to 64-bit IEEE representation.
+We use the machinery developed for the Sparc by John Reppy.
+
+Reppy's functor accepts a simple structure with a single value,
+[[emitWord : int -> unit]], which emits a 16-bit word.
+It produces a [[PRIMREAL]].
+When [[RealConst]] is applied to the result, it produces a 
+structure containing a single function, [[val realconst : string -> unit]].
+This function, when applied to a string, emits the four sixteen-bit words
+of the IEEE representation, most significant first.
+
+Our job will be to convert this to something that emits the two 32-bit
+words of the constant, least significant word first.
+First, let's consider the state information that has to be retained
+while the halfwords are being emitted, and functions that change that state.
+<<state info>>=
+val halfwords = ref nil : int list ref		(* halfwords already out *)
+val count = ref 0				(* length of halfwords *)
+fun reset_state () = (halfwords := nil; count := 0)
+fun add_half h = (count := !count + 1; halfwords := h :: (!halfwords))
+
+<<emitting a halfword>>=
+fun emit_half h = 
+    if !count = 3 then (emit_four (h::(!halfwords)); reset_state())
+    else add_half h
+
+@ To emit the whole list, we have to emit the words, one at a time.
+We use descriptive names to remind ourselves what is signficant
+(highest is most significant).
+<<emitting four halfwords>>=
+fun emit_four [lowest,low,high,highest] = 
+			(emit_word(low,lowest);emit_word(highest,high))
+  | emit_four _ = ErrorMsg.impossible "bad floating pt constant in mips"
+
+@ Now, we bundle up the whole thing in a functor that
+gets passed a structure holding [[emit_word]] and returns 
+one containing [[realconst]].
+<<*>>=
+functor MipsReal(E: sig val emit_word : int * int -> unit end) : REALCONST = 
+struct
+    open E
+    <<state info>>
+    <<emitting four halfwords>>
+    <<emitting a halfword>>
+    structure IEEERealConst =
+	RealConst(IEEEReal(struct val emitWord = emit_half end))
+    val realconst = IEEERealConst.realconst
+end
+
+
+
+

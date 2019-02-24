@@ -1,0 +1,14 @@
+extern xnode	*type_char;
+extern xnode	*type_chstr;
+extern xnode	*type_double;
+extern xnode	*type_float;
+extern xnode	*type_ftnretint;
+extern xnode	*type_int;
+extern xnode	*type_long;
+extern xnode	*type_range;
+extern xnode	*type_short;
+extern xnode	*type_uchar;
+extern xnode	*type_uint;
+extern xnode	*type_ulong;
+extern xnode	*type_ushort;
+extern xnode	*type_void;

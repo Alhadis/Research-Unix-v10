@@ -1,0 +1,19 @@
+set -x
+
+f2c </n/pyxis/usr/dmg/swift/port3/src/p3$2/$1.f >$1.c || { echo $1 failed | mail cwf; exit 1 }
+
+f77 /n/pyxis/usr/dmg/swift/port3/src/p3$2/$1.f fport.a
+a.out <in/$1 >outf
+
+lcc -B/usr/src/cmd/lcc/gen2/vax-v9/    -c $1.c
+f77 $1.o cport.a
+a.out <in/$1 >outc
+cmp outf outc || { echo $1 failed | mail cwf; exit 1 }
+
+lcc -B/usr/src/cmd/lcc/gen2/vax-v9/ -g -c $1.c
+f77 $1.o dport.a
+a.out <in/$1 >outd
+cmp outf outd || { echo $1 failed | mail cwf; exit 1 }
+
+rm -f a.out $1.[fco] out[cdf]
+exit 0

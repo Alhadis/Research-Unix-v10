@@ -1,0 +1,127 @@
+.de DS
+.if n .sp 1
+.if t .sp 3p
+.nf
+.ft CW
+..
+.de DE
+.fi
+.ft 1
+.if n .sp 1
+.if t .sp 3p
+..
+.TH MOVIE 1
+.SH NAME
+movie, stills \- algorithm animation
+.SH SYNOPSIS
+.B movie
+[ file ]
+.br
+.B stills
+[ file ]
+.SH DESCRIPTION
+The first step in animating an algorithm is to prepare a
+.I "script file"
+(with suffix
+.BR ".s" )
+using these commands:
+.DS
+\f2optional label:\fP text   \f2options\fP \f2x\fP \f2y\fP \f2string\fP
+\f2optional label:\fP line   \f2options\fP \f2x1\fP \f2y1\fP \f2x2\fP \f2y2\fP
+\f2optional label:\fP box    \f2options\fP \f2x1\fP \f2y1\fP \f2x2\fP \f2y2\fP
+\f2optional label:\fP circle \f2options\fP \f2x\fP \f2y\fP \f2radius\fP
+erase	\f2label\fP
+clear
+click	\f2optional_name\fP
+view  	\f2name\fP
+.DE
+.PP
+The command
+.BR "movie fname.s"
+develops
+.BR fname.s
+into the intermediate file
+.BR fname.i
+and uses that intermediate file to project the movie in a 
+.IR mux (9.1)
+or Sun window.
+Button 1 stops and starts the movie;
+button 2 adjusts view sizes and selects times;
+button 3 sets various parameters.
+.PP
+The program
+.I stills
+is a preprocessor that converts commands bracketed by
+.BR \&.begin
+.BR stills
+and
+.BR \&.end
+into
+.IR pic (1)
+commands; other output is passed through untouched.
+Commands include
+.DS
+view  	\f2viewname\fP \f2optional title, with blanks\fP
+print	all | final | \f2clickname\fP all | \f2clickname\fP \f2int\fP+
+file  	\f2filename\fP.s
+\f2parameter_name\fP  \f2value\fP
+.DE
+The script file is developed before being used.
+Parameters include
+.BR frameht
+and
+.BR framewid
+(in inches),
+.BR frames
+and
+.BR times
+.BR "" ( invis
+or
+.BW vis )
+and
+.BR across
+and
+.BR down
+(an optional value tells how many frames across or down the page).
+.SH EXAMPLES
+An insertion sort program might be animated by augmenting
+the comparison and swap routines to write the script file
+.BR "sort.s" .
+One plays the movie by the command
+.BR "movie sort.s" .
+To make a series of several stills from the file, give
+.I stills
+input such as
+.DS
+\&.begin stills
+file sort.s
+print stages all
+\&.end
+.DE
+.SH FILES
+.br
+.BR anim :
+host end of animation; calls animterm
+.br
+.BR animterm :
+terminal end of animation
+.br
+.BR develop
+converts
+.BR file.s
+into
+.BR file.i
+if necessary; calls
+.BR fdevelop
+.br
+.BR fdevelop
+is used by develop
+.SH SEE ALSO
+.IR pic (1),
+.IR troff (1).
+.br
+.IR "A System for Algorithm Animation" ,
+J. L. Bentley and B. W. Kernighan,
+CSTR 132 (Jan. 1987)
+.SH BUGS
+Inevitably.

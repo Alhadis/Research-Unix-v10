@@ -1,0 +1,219 @@
+.text
+.globl _addpoint
+.align 2
+_addpoint:link a6,#-8
+movm.l #0x10,-8(a6)
+mov.l a1,-4(a6)
+mov.l 8($a6),$d4
+add.l 16($a6),$d4
+mov.l $d4,8($a6)
+mov.l 12($a6),$d4
+add.l 20($a6),$d4
+mov.l $d4,12($a6)
+lea 8($a6),$a0
+mov.l -4($a6),$a1
+mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+L1:
+movm.l -8(a6),#0x10
+unlk a6
+rts
+.globl _canonrect
+.align 2
+_canonrect:link a6,#-28
+movm.l #0x90,-28(a6)
+mov.l a1,-4(a6)
+mov.l 8($a6),$d4
+cmp.l 16($a6),$d4; jge L10
+mov.l 8($a6),$d7
+jra L11
+L10:
+mov.l 16($a6),$d7
+L11:
+mov.l $d7,-20($a6)
+mov.l 12($a6),$d4
+cmp.l 20($a6),$d4; jge L19
+mov.l 12($a6),$d7
+jra L20
+L19:
+mov.l 20($a6),$d7
+L20:
+mov.l $d7,-16($a6)
+mov.l 8($a6),$d4
+cmp.l 16($a6),$d4; jle L25
+mov.l 8($a6),$d7
+jra L26
+L25:
+mov.l 16($a6),$d7
+L26:
+mov.l $d7,-12($a6)
+mov.l 12($a6),$d4
+cmp.l 20($a6),$d4; jle L36
+mov.l 12($a6),$d1
+jra L37
+L36:
+mov.l 20($a6),$d1
+L37:
+mov.l $d1,-8($a6)
+lea -20($a6),$a0
+mov.l -4($a6),$a1
+mov.l &16/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+L5:
+movm.l -28(a6),#0x90
+unlk a6
+rts
+.globl _makepoint
+.align 2
+_makepoint:link a6,#-12
+mov.l a1,-4(a6)
+mov.l 8($a6),-12($a6)
+mov.l 12($a6),-8($a6)
+lea -12($a6),$a0
+mov.l -4($a6),$a1
+mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+L38:
+unlk a6
+rts
+.globl _makerect
+.align 2
+_makerect:link a6,#-36
+mov.l a1,-4(a6)
+lea 8($a6),$a0
+lea -20($a6),$a1
+mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea 16($a6),$a0
+lea -12($a6),$a1
+mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea -20($a6),$a0
+lea 0($sp),$a1; mov.l &16/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+mov.l -4($a6),$a1
+jbsr _canonrect
+L41:
+unlk a6
+rts
+.globl _ptinrect
+.align 2
+_ptinrect:link a6,#-4
+movm.l #0x10,-4(a6)
+mov.l 8($a6),$d4
+cmp.l 16($a6),$d4; jlt L53
+cmp.l 24($a6),$d4; jge L53
+mov.l 12($a6),$d4
+cmp.l 20($a6),$d4; jlt L53
+mov.l 12($a6),$d4
+cmp.l 28($a6),$d4; jge L53
+mov.l &1,$d1
+jra L54
+L53:
+clr.l $d1
+L54:
+mov.l $d1,$d0
+L45:
+movm.l -4(a6),#0x10
+unlk a6
+rts
+.text
+.align 2; _56:long 0
+long 0
+.align 2; _57:long 320
+long 320
+.align 2; _58:long -1
+long -1
+long 1
+long 1
+long 20
+long 300
+long 500
+long 400
+.text
+.globl _main
+.align 2
+_main:link a6,#-156
+movm.l #0x3c90,-132(a6)
+lea _56,$a0
+lea -64($a6),$a1
+mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea _57,$a0
+lea -72($a6),$a1
+mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea _58,$a0
+lea -32($a6),$a1
+mov.l &32/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+mov.l &-10,($sp)
+mov.l &-10,4($sp)
+lea -80($a6),$a1
+jbsr _makepoint
+lea -80($a6),$a0
+mov.l $a0,$a5
+lea -72($a6),$a0
+lea 0($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+mov.l $a5,$a0
+lea 8($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea -88($a6),$a1
+jbsr _addpoint
+lea -88($a6),$a0
+mov.l $a0,$a4
+mov.l &10,($sp)
+mov.l &10,4($sp)
+lea -96($a6),$a1
+jbsr _makepoint
+lea -96($a6),$a0
+mov.l $a0,$a3
+lea -64($a6),$a0
+lea 0($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+mov.l $a3,$a0
+lea 8($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea -104($a6),$a1
+jbsr _addpoint
+lea -104($a6),$a0
+mov.l $a0,-108($a6)
+mov.l $a4,$a0
+lea 0($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+mov.l -108($a6),$a0
+lea 8($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea -48($a6),$a1
+jbsr _makerect
+clr.l $d7
+jra L67
+L64:
+lea -32($a6),$a2
+mov.l $d7,$d4; asl.l &3,$d4
+mov.l 0($a2,$d4.l),($sp)
+lea -28($a6),$a2
+mov.l 0($a2,$d4.l),4($sp)
+lea -56($a6),$a1
+jbsr _makepoint
+mov.l &_68,($sp)
+lea -32($a6),$a2
+mov.l $d7,$d4; asl.l &3,$d4
+mov.l 0($a2,$d4.l),4($sp)
+mov.l -52($a6),8($sp)
+jbsr _printf
+lea -56($a6),$a0
+lea 0($sp),$a1; mov.l &8/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+lea -48($a6),$a0
+lea 8($sp),$a1; mov.l &16/2,$d0; mov.w ($a0)+,($a1)+; subq.l &1,$d0; byte 0x6e,-6
+jbsr _ptinrect
+tst.l $d0; jne L71
+mov.l &_73,($sp)
+jbsr _printf
+L71:
+mov.l &_74,($sp)
+mov.l -48($a6),4($sp)
+mov.l -44($a6),8($sp)
+mov.l -40($a6),12($sp)
+mov.l -36($a6),16($sp)
+jbsr _printf
+L65:
+addq.l &1,$d7
+L67:
+cmp.l &4,$d7; jcs L64
+mov.l &0,($sp)
+jbsr _exit
+L55:
+movm.l -132(a6),#0x3c90
+unlk a6
+rts
+.text
+.align 2; _74:.ascii "within [%d,%d; %d,%d]\012\000"
+.align 2; _73:.ascii "not \000"
+.align 2; _68:.ascii "(%d,%d) is \000"

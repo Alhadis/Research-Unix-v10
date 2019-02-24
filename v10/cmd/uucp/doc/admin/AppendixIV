@@ -1,0 +1,571 @@
+.H 1 Introduction
+The Permissions file replaces the USERFILE for uucp.
+It's purpose is to specify the permission that remote sites
+have with respect to login, file access, and command
+execution.
+Options provide for restricting the ability to request files and
+the ability to receive files queued by the local site.
+In addition, an option is available to specify the commands that a
+remote site can execute on the local system.
+.P
+The next section gives three Permissions' file entries.
+Taken together, they provide all the entries needed by most
+sites running the uucp system.
+Section three gives the basics of the syntax and semantics of the
+Permissions file.
+The remainder of the documents gives a detailed explanation of the
+options available, their uses, and setting up the default values.
+.H 1 " Starting Examples"
+The first example is the model of an entry for the public login on
+your system;
+it represents the most restrictive access to your system.
+.HU "Example 1"
+.sp
+.nf
+		LOGNAME=nuucp
+.fi
+.sp
+It states that login "nuucp" has all the default permissions/restrictions:
+.BL
+.LI
+The remote site can send files exclusively to the \fIuucp public\fR directory.
+(usually /usr/spool/uucppublic)
+.LI
+The remote site can \fInot\fR request to receive any files.
+.LI
+\fINo\fR files that are queued for the remote site will be transferred
+during the present session.
+.LI
+The only commands that can be executed are the defaults--usually
+"rmail".
+(See section 6 for details on how to set this default.)
+.LE
+.P
+This entry alone is sufficient to start communications with remote sites,
+permitting files to be transferred to the uucp public directory by request of
+the remote site.
+.HU "Example 2"
+The next entry is for remote sites that log in, but have fewer restrictions.
+The login and passwd corresponding to this entry should not be distributed
+to the general public;
+it is usually reserved for closely coupled systems where the Systems file
+information can be tightly controlled.
+.sp
+.nf
+		LOGNAME=uucpz REQUEST=yes SENDFILES=yes \\
+		  READ=/  WRITE=/
+.fi
+.sp
+This entry provides the following permissions
+when a remote site logs in as "uucpz":
+.BL
+Files can be requested from the local site (REQUEST option).
+.LI
+Files can be transferred to any directory or any file
+that is writable by user "other"--that is
+a file/directory that is writable by a local user with
+neither owner nor group permissions.
+(Option WRITE controls this permission.)
+.LI
+Any files readable by user "other" can be requested.
+(Option READ controls this permission.)
+.LI
+Any requests queued by the local site will be executed during
+the conversation;
+these are requests by local users that are destined for the
+site that is calling in.
+(SENDFILES option).
+.LI
+The commands sent for execution on the local system by the remote
+must be in the default set ( usually "rmail").
+.LE
+.HU "Example 3"
+Thus far, the examples showed entries that referred to remote sites
+when they log in to the local system.
+This example is an entry used when calling a remote site.
+.sp
+.nf
+		MACHINE=mhtsa:mhtsb:mhtsc:pwbcc \\
+		  REQUEST=yes READ=/ WRITE=/
+.fi
+.sp
+When calling any of the systems given in the MACHINE list,
+the following permissions prevail:
+.BL
+.LI
+The remote site can both request and send files (REQUEST option).
+.LI
+The source or destination of the files on the local system can
+be anywhere in the file system.
+.LI
+The only commands that will be executed for the remote site
+are those in the default list.
+.LE
+.P
+Any site that is called that does not have its name in a MACHINE
+entry will have the default permissions as stated in "example 1"
+with the exception that files queued for that site will be sent (the SENDFILES
+option only has meaning in a LOGNAME entry).
+.P
+It is possible to put these
+three examples together to form a Permissions file that
+can be used by a system with a public login for remote sites
+and several closely coupled machines.
+.H 1 Basics
+Each \fIentry\fR is a logical line;
+physical lines are terminated with a "\\" to indicate continuation.
+Entries are made up of "white space" delimited \fIoptions\fR.
+Each option is a name/value pair;
+these are constructed by an option name followed by a "=" followed by
+the value.
+Note that \fIno\fR white space is allowed within an option assignment.
+.P
+Comment lines begin with '#';
+they occupy the entire line up to a newline character.
+Blank lines are ignored (even within multi line entries).
+.P
+There are two types of entries:
+.BL
+.LI
+LOGNAME entries specify permissions for remote sites
+when they log in to the local machine.
+.LI
+MACHINE entries
+specify permissions for sites that the local machine call.
+.LE
+.P
+LOGNAME entries will contain a LOGNAME option.
+MACHINE entries will contain a MACHINE option.
+.H 1 "Some Rules"
+\fIRULE\fR:--All login ids used by remote sites to login for uucp
+\fImust\fR appear in one and only one LOGNAME entry.
+.P
+\fIRULE\fR:--Any site that is called whose name
+\fIdoes not\fR appear in a
+MACHINE entry in the Permissions file will have the following
+default permissions/restrictions:
+.BL
+.LI
+Local send and receive requests will be executed.
+.LI
+The remote can send files to the system's public uucp directory.
+.LI
+The commands sent by the remote for execution on the local machine
+must be in the default set--usually "rmail" and "rnews".
+.LE
+.H 1 "Options"
+This section give the details of each option, specifying how they are
+used and their default values.
+.HU "MACHINE"
+The MACHINE entry specifies the permissions that take effect when
+a remote site is called.
+.sp
+.nf
+		MACHINE=mhtsa
+.fi
+.sp
+is the start of an entry that will specify the permissions associated
+with machine "mhtsa".
+The MACHINE option can contain a list of different system names,
+each separated by a ":".
+For example,
+.sp
+.nf
+		MACHINE=mhtsa:mhtsb:mhtsc
+.fi
+.sp
+.HU "LOGNAME"
+The LOGNAME option specifies a list of login ids of remote sites
+that are able to log into the local system.
+The option contains one or more names separated by a ":".
+For example,
+.sp
+.nf
+		LOGNAME=nuucp
+.sp
+.or
+		LOGNAME=uucpz:uucyz
+.fi
+.sp
+Names that appear in LOGNAME options can appear in only one such option.
+.HU "REQUEST"
+The REQUEST option can appear in either a LOGNAME entry or a MACHINE entry
+and specifies whether the remote can make requests to receive local
+files.
+.sp
+.nf
+		REQUEST=yes
+.fi
+.sp
+specifies that the remote \fIcan\fR request files.
+.sp
+.nf
+		REQUEST=no
+.fi
+.sp
+specifies that the remote \fIcan not\fR request files.
+The latter is the default--it will be used if the REQUEST
+option is not specified.
+.HU "SENDFILES"
+SENDFILES specifies whether the \fIcalled\fR site will execute locally
+queued requests during the conversation.
+The default is that locally queued
+requests will not be executed during the call;
+they will be done only when the remote is \fIcalled\fR by the local system.
+(I don't care who you say you are, I'll send you queued files when
+I call you.)
+.P
+Clearly, this option is only significant in LOGNAME entries, since
+MACHINE entries apply when calls are made out to remote sites.
+In fact, the option is ignored when a MACHINE entry is being used.
+.sp
+.nf
+		SENDFILES=yes
+.fi
+.sp
+specifies that the locally queued requests will be executed when
+the remote site logs in as one of the names in this entry's
+LOGNAME option.
+.P
+The default setting for the SENDFILE option is
+.sp
+.nf
+		SENDFILES=call
+.fi
+.sp
+meaning that queued files will be sent only when I call you.
+This option can be specified for documentation purposes.
+.HU "READ and WRITE"
+The default for both the READ and WRITE options
+is the uucp public directory.
+The options
+.sp
+.nf
+		READ=/usr/spool/uucppublic \\
+		WRITE=/usr/spool/uucppublic
+.fi
+.sp
+are the defaults and may be specified for documentation purposes.
+The options
+.sp
+.nf
+		READ=/ WRITE=/
+.fi
+.sp
+specify permission to access any file that can be accessed by a local
+user with "other" permissions.
+.P
+The value of these entries is a colon separated list of path
+names.
+The READ option is for requesting files and the WRITE option for
+depositing files.
+One of the values must be the prefix
+of any full path name of a file coming in or going out.
+.P
+To grant permission to deposit files in /usr/news
+as well as the public directory, specify
+.sp
+.nf
+		WRITE=/usr/spool/uucppublic:/usr/news
+.fi
+.sp
+in the entry.
+.P
+\fIRULE\fR:--If the READ or WRITE option is specified, all the
+path names must be specified;  these do not add to the default
+list.
+.HU "NOREAD and NOWRITE"
+There are two other options in the file access class,
+NOREAD and NOWRITE.
+These will rarely be used;
+they specify exceptions to the READ and WRITE options or defaults.
+.sp
+.nf
+		READ=/ NOREAD=/etc \\
+		WRITE=/usr/spool/uucppublic
+.fi
+.sp
+This example would permit reading any file except those in the /etc
+directory (and its sub directories--remember these are prefixes)
+and writing only to the default /usr/spool/uucppublic directory.
+NOWRITE works the same way for sending files to the local system.
+.HU  "CALLBACK - Is That Really You?"
+The CALLBACK option is used in LOGNAME entries to specify that
+no transaction will take place, but the calling system,
+as established during handshake, will be called back.
+.sp
+.nf
+		CALLBACK=yes
+.fi
+.sp
+specifies this action.
+The default is
+.sp
+.nf
+		CALLBACK=no
+.fi
+.sp
+The CALLBACK option will rarely be used.
+(Note that if two sites have this option set for each other, a conversation
+will never get started.)
+.HU "COMMANDS"
+WARNING!!
+\fI
+The COMMANDS option can be hazardous to the security
+of your system.
+Use it with extreme care.
+\fR
+The VALIDATE option should be used in conjunction with the
+COMMANDS option whenever potentially dangerous commands
+like "cat" and "uucp" are specified.
+Any command that reads or writes files is potentially
+dangerous to local security when executed by the uucp
+remote execution demon (uuxqt).
+.P
+The \fIuux\fR program will generate remote execution requests and queue
+them to be transferred to the remote site.
+Files and a command are sent to the target site.
+The COMMANDS option can be used
+in MACHINE entries to specify the commands that a remote
+machine can execute.
+.sp
+.nf
+		COMMANDS=rmail:rnews
+.fi
+.sp
+This line indicates the commands that can be executed by the
+remote machine are either rmail or rnews exclusively.
+(The default list is specified in the "parms.h" header file
+during installation of uucp.
+The defaults settings will be discussed later.)
+The entry
+.sp
+.nf
+		MACHINE=owl:raven:hawk:dove \\
+		  COMMANDS=rmail:rnews:lp
+.fi
+.sp
+overrides the  COMMAND default such that the command list
+for machines owl, raven, hawk, and dove now consists of
+"rmail", "rnews" and "lp".
+.HU "VALIDATE"
+\fIRULE\fR:--If you don't trust a caller's identity, don't let that system
+execute dangerous commands.
+.sp
+\fICOROLLARY\fR:--If you can't trust a site, don't give it
+a privileged login and passwd.
+.sp
+\fBWARNING!\fR
+Giving a site a special login, with file access and remote execution
+capability, is like giving anyone on that system a normal login.
+.P
+Use the VALIDATE option in connection with the COMMANDS option
+when specifying dangerous commands.
+It is used in LOGNAME entries to provide \fIsome\fR verification
+of the caller's identity.
+However, an important aspect of this validation is that the
+login/passwd associated with this entry be protected.
+If an outsider gets that information, the validation is not valid!
+.P
+Now that the warnings are out of the way, here is an example:
+.sp
+.nf
+		LOGNAME=uucpfriend VALIDATE=eagle:owl:hawk
+.fi
+.sp
+This entry specifies that if a remote logs in and says that it is
+any of the specified birds, it must have logged in as "uucpfriend".
+As can be seen, if an outsider gets the uucpfriend login/passwd,
+masquerading is trivial.
+.P
+But what does this have to do with the COMMANDS option,
+which only appears in MACHINE entries?
+A short answer is that it connects the MACHINE entry that has the
+COMMANDS option with a protected login entry that appears in
+a LOGNAME option.
+This connection is needed because the execution demon is not
+running while the remote is logged in;
+it is in fact, an asynchronous process with no knowledge of
+what system sent the execution requests.
+.P
+Therefore, the real question is, how does the local site know who put the
+execution files (X. files created by the uux command on the remote site)?
+.P
+Each remote site has its own "spool" directory, with write permission
+only given to the uucp programs.
+The execution files from the remote site are put in its spool directory.
+Therefore, when the "uuxqt" demon program runs, it can use the
+spool directory name to find the MACHINE entry in the Permissions
+file and get the COMMANDS list, or if the machine name does not
+appear in the Permissions file, the default list will be used.
+Example
+.sp
+.nf
+		MACHINE=mhtsa:mhtsb:mhtsc   REQUEST=yes \\
+		COMMANDS=ALL \\
+		READ=/  WRITE=/
+
+		LOGNAME=uucpz   VALIDATE=mhtsa:mhtsb:mhtsc \\
+		REQUEST=yes   SENDFILES=yes \\
+		READ=/  WRITE=/
+.fi
+.sp
+provides unlimited read, write, and command execution.
+The ALL value in the commands option means that any command
+can be executed!
+\fBWARNING\fR:
+Using the ALL value gives the remote site unlimited access to your
+system.
+In fact, files that are only readable or writable by user "uucp"
+(like Systems)
+can be accessed using commands like "ed".
+.P
+The assumption you make by the first entry above is that when you
+call mhtsa, mhtsb or mhtsc, you really know who you are talking to.
+Therefore, any files put into one of the "mhtsa", "mhtsb", or "mhtsc"
+spool directories is put there by one of those sites.
+If a remote site logs in and says they are one of these three systems,
+their execution files will also be put in the privileged spool
+directory.
+You therefore have to validate that the site has the privileged
+login "uucpz".
+.HU "COMMANDS revisited"
+The COMMANDS option specifies a list of commands that can be
+executed by remote machines.
+In addition to the names as specified above, they can be full path
+names of commands, for example
+.sp
+.nf
+		COMMANDS=rmail:/usr/lbin/rnews:/usr/local/lp
+.fi
+.sp
+specifies that command "rmail" uses the default path,
+which is set up at uucp installation time--specified in the
+parms.h file.
+When the remote site specifies rnews or /usr/lbin/rnews for the
+command to be executed, /usr/lbin/rnews will be executed
+regardless of the default path.
+Likewise, /usr/local/lp is the lp command that will be executed.
+.P
+Including the "ALL" value in the list means that any command from the
+remote machine(s) specified in the entry will be executed.
+If you use this value, you give the remote machine full access
+to you machine!
+.sp
+.nf
+		COMMANDS=/usr/lbin/rnews:ALL:/usr/local/lp
+.fi
+.sp
+This example illustrates two points.
+The ALL value can appear anywhere in the string.
+And, the path names specified for rnew and lp will be used
+if the requested command does not contain the full path names
+for rnews or lp.
+.H 1 "Who Am I?"
+When a remote calls, the called system responds with the local system
+name;
+this communicated in the \fIShere\fR message.
+There are some situations when a system may want to say it is someone else.
+First, for testing, this permits a system to call itself.
+Also, a series of systems can be made to look like one to the outside world,
+while retaining unique identities within a local network.
+.sp
+.nf
+		LOGNAME=uucptest   MYNAME=testing
+.fi
+.sp
+The local system will report its name as \fItesting\fR whenever
+a remote logs in as uucptest.
+.P
+This facility can also be used when calling out:
+.sp
+.nf
+		MACHINE=testmach   MYNAME=atest
+.fi
+.sp
+Tells the machine, \fItestmach\fR, that machine \fIatest\fR is calling.
+.H 1 "Public Directory"
+The public directory, \fI/usr/spool/uucppublic\fR, provides a tree
+for public access (by default, receiving files from sites.)
+One may want to have different public directories based on
+login ids.
+.sp
+.nf
+		LOGNAME=loginA   PUBDIR=/usr/spool/uucppublic/loginA
+
+		LOGNAME=loginB   PUBDIR=/usr/spool/uucppublic/loginB
+.fi
+.sp
+This can also be specified when remote machines are called:
+.sp
+.nf
+		MACHINE=machineA   PUBDIR=/usr/spool/uucppublic/machineA
+
+		MACHINE=machineB   PUBDIR=/usr/spool/uucppublic/machineB
+.fi
+.sp
+.H 1 "Default Settings"
+The parms.h header file contains some default settings that affect
+the Permissions file processing.
+The PATH manifest defines the PATH environment variable that will be
+set when remote commands are executed.
+A typical line is
+.sp
+.nf
+	#define PATH	"PATH=/bin:/usr/bin:/usr/lbin " /* */
+.fi
+.sp
+The default list of commands is defined by
+.sp
+.nf
+	#define DEFAULTCMDS	"rmail"
+.fi
+.sp
+Another example is
+.sp
+.nf
+	#define DEFAULTCMDS	"rmail:rnews:xp:lp"
+.fi
+.sp
+These take effect if no COMMANDS option is specified for the
+machine that sent the remote execution.
+.H 1 "MACHINE Entry For Other Systems"
+An administrator may want to specify different option values for
+the machines it calls that are not mentioned in specific MACHINE
+entries.
+This may occur when there are many machines calling in, and the command
+set changes from time to time.
+For these cases, it is not convenient to change the DEFAULTCMDS
+as it would require a recompile.
+The name "OTHER" for the machine name is used for this entry.
+.sp
+.nf
+		MACHINE=OTHER  \\
+		COMMANDS=rmail:rnews:/usr/lbin/Photo:/usr/lbin/xp
+.fi
+.sp
+All other options available for the MACHINE entry may also be set
+for the machines that are not mentioned in other MACHINE entries.
+.H 1 "Combining MACHINE and LOGNAME Entries"
+It is possible to combine MACHINE and LOGNAME entries into a single entry
+where the common options are the same.
+For example, these two entries
+.sp
+.nf
+		MACHINE=mhtsa:mhtsb:mhtsc REQUEST=yes \\
+		  READ=/  WRITE=/
+
+		LOGNAME=uucpz REQUEST=yes SENDFILES=yes \\
+		  READ=/  WRITE=/
+.fi
+.sp
+share the REQUEST, READ, and WRITE options.
+They can be merged into one entry
+.sp
+.nf
+		MACHINE=mhtsa:mhtsb:mhtsc REQUEST=yes \\
+		LOGNAME=uucpz SENDFILES=yes \\
+		  READ=/  WRITE=/
+.fi
+.sp
+that will take the place of the two entries.

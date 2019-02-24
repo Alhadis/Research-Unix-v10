@@ -1,0 +1,165 @@
+.TH MOVIE 1 
+.CT 1 files prog_other
+.SH NAME
+movie, stills \- algorithm animation
+.SH SYNOPSIS
+.B movie
+[
+.B -t
+.I termprog
+]
+[
+.BI -m memory
+]
+[
+.I file
+]
+.br
+.B stills
+[
+.I files ...
+]
+.SH DESCRIPTION
+.PP
+.I Movie
+converts a script in a movie language
+into an internal representation, then displays it in a window on a
+Teletype 5620, AT&T630, or X11 system (depending on which version has been compiled).
+If the filename is of the form
+\f2file\f(CW.s\f1,
+.I movie
+creates the intermediate form in
+\f2file\f(CW.i\f1,
+which will be used in subsequent calls if it is more recent than
+\f2file\f(CW.s\f1.
+The options are:
+.TP
+.BI -t " termprog
+Load
+.I termprog
+instead of the default terminal program.
+.br
+.ns
+.TP
+.B -m\f2mem\fP
+Use
+.I mem
+bytes of terminal memory instead of the default.
+.PP
+In the terminal, button 1 stops and starts the movie;
+button 2 adjusts view sizes and selects clicks;
+button 3 sets various parameters.
+.PP
+.SS Movie language
+.br
+.B text
+.I options x y string.
+Text is centered and medium size by default;  options: one of
+.B "center
+.B ljust
+.B rjust
+.B above
+.BR below ,
+and one of
+.BR "small
+.B medium
+.B big
+.BR bigbig .
+A leading quote is stripped from
+.IR string ,
+as is a trailinbg quote if a leading one is present.
+.br
+.BI line
+.I "options x1 y1 x2 y2.
+Lines are solid by default;  options: one of
+.B "fat
+.B fatfat
+.B dotted
+.B dashed
+and one of
+.B "->
+.B <-
+.BR <-> .
+.br
+.BI box
+.I "options xmin ymin xmax ymax.
+A box may
+.BR fill ed.
+.br
+.BI circle 
+.I "options x1 y1 radius.
+Radius is measured in the
+.I x
+dimension.
+A circle may be
+.BR fill ed.
+.br
+Any text or geometrical object may be labeled with a name and colon.
+A subsequent appearance of a label in the same view erases the previous
+object with that label.
+.BI erase
+.I label
+erases the object explicitly.
+.B clear
+erases all objects currently in the current view.
+.br
+.BI click
+.I "optional name
+leaves a mark in the intermediate with this name;
+clicks are used to control stepping in a movie or to define frames
+for a set of stills.
+.br
+A movie may consist of multiple independent views,
+each presented as a rectangular sub-window.
+.BI view 
+.I name
+associates
+subsequent objects with this view,
+until changed again.
+Labels and coordinates are local to views.
+If no view statements appear, there is a single implicit view
+.BR def.view .
+.br
+Comments follow #; blank lines are ignored.
+.PP
+.I Stills
+converts selected frames of a movie into
+commands for
+.IR pic (1).
+Commands for
+.I stills
+begin with
+.B .begin stills
+and end with
+.B .end
+.BR stills .
+.SH FILES
+All files are in
+.BR /usr/lib/movie .
+.TF stills.awk
+.TP
+.F develop
+Shell script to control conversion from script language to internal form.
+.TP
+.F fdevelop
+C program that does the work.
+.TP
+.F stills.awk
+Awk program to process stills language into
+.IR pic (1).
+.TP
+.F anim
+Host end of the animation system.
+.TP
+.F animterm
+terminal end.
+.TP
+.F newer
+Test whether one file is newer than another.
+.SH "SEE ALSO"
+J. L. Bentley and B. W. Kernighan,
+.IR "A System for Algorithm Animation" ,
+CSTR 132, January, 1987.
+.SH BUGS
+The 630 can only handle 65000 bytes of memory.
+.br

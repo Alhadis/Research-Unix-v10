@@ -1,0 +1,74 @@
+'\"macro stdmacro
+.if n .pH g1a.smtpsched %W% of %G%
+.nr X
+.if \nX=0 .ds x} smtpsched 1M "" "\&"
+.if \nX=1 .ds x} smtpsched 1M ""
+.if \nX=2 .ds x} smtpsched 1M "" "\&"
+.if \nX=3 .ds x} smtpsched "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4smtpsched\fP \- process messages queued in the \s-1SMTP\s+1 mail queue
+.SH SYNOPSIS
+\f4smtpsched\f1 [ \f4\-c\f1 ] [ \f4\-v\f1 ] [ \f4\-t\f1 ] [ \f4\-s\f2 scheds\f1 ]
+[ \f4\-r\f2 days\f1 ] [ \f4\-w\f2 days\f1 ] [\f2 qnames\f1 ]
+.SH DESCRIPTION
+\f4smtpsched\fP is used to process the messages queued up in the
+.SM SMTP
+mail queue \f4/var/spool/smtpq\fP.
+It is invoked automatically by the
+.SM SMTP
+mail surrogate \f4smtpqer\fP,
+whenever mail is queued for
+.SM SMTP
+delivery to a remote host, and by
+\f4smtpd\fP whenever incoming mail arrives.
+It should also be run once per hour (from \f4cron\fP) to attempt
+delivery of any mail that cannot be delivered immediately.
+.P
+\f4smtpsched\fP will normally attempt to send all messages queued under all
+subdirectories of \f4/var/spool/smtpq\fP.
+However, if \f2qnames\fP are specified, only those listed subdirectories
+of \f4/var/spool/smtpq\fP will be searched for messages to deliver.
+The subdirectories each refer to a different remote host.
+.P
+The options to \f4smtpsched\fP are as follows:
+.TP 12
+\f4\-c\fP
+Causes empty queue directories to be removed.
+.TP
+\f4\-v\fP
+Causes verbose logging to occur.
+.TP
+\f4\-t\fP
+Test mode.
+The actions \f4smtpsched\fP would take are logged but not performed.
+.TP
+\f4\-s\f2 scheds\f1
+Specifies the maximum number of concurrent \f4smtpsched\fPs that may be
+running at once.
+If more than this number is running, \f4smtpsched\fP will exit.
+.TP
+\f4\-r\f2 days\f1
+Causes mail older than \f2days\fP days to be returned.
+.TP
+\f4\-w\f2 days\f1
+Any mail older than \f2days\fP days will trigger a warning message,
+which is sent to the originator.
+.SH FILES
+.TP 35n
+\f4/usr/lib/mail/surrcmd/smtp\fP
+delivers the mail
+.TP
+\f4/usr/lib/mail/surrcmd/smtpqer\fP
+queues the mail
+.TP
+\f4/var/spool/smtpq\fP
+queued mail messages
+.TP
+\f4/var/spool/smtpq/LOG*\fP
+log files
+.TP
+\f4/var/spool/smtpq/\f2host\fP\fP
+mail messages queued for \f2host\fP
+.SH "SEE ALSO"
+\f4cron\fP(1M), \f4smtp\fP(1M), \f4smtpqer\fP(1M)

@@ -1,0 +1,137 @@
+.text
+.globl _main
+.align 1
+_main:.word 0xe00
+subl2 $48,sp
+clrl r10
+L1:
+clrl r11
+L5:
+mull3 r10,$1000,r5
+ashl $4,r10,r4
+addl3 r11,r5,_x(r4)[r11]
+L6:
+incl r11
+cmpl r11,$4
+jlss L5
+ashl $4,r10,r5
+addl3 $_x,r5,_y[r10]
+L2:
+incl r10
+cmpl r10,$3
+jlss L1
+calls $0/4,_f
+clrl r10
+L9:
+ashl $4,r10,r5
+movab -48(fp)[r5],r5
+movl r5,r9
+movl r5,_y[r10]
+clrl r11
+L13:
+ashl $4,r10,r5
+movl _x(r5)[r11],(r9)[r11]
+L14:
+incl r11
+cmpl r11,$4
+jlss L13
+L10:
+incl r10
+cmpl r10,$3
+jlss L9
+pushal _y
+pushal -48(fp)
+calls $8/4,_g
+clrl r0
+ret
+.globl _f
+.align 1
+_f:.word 0xc00
+clrl r10
+L17:
+clrl r11
+L21:
+ashl $4,r10,r5
+pushl _x(r5)[r11]
+pushal L25
+calls $8/4,_printf
+L22:
+incl r11
+cmpl r11,$4
+jlss L21
+L18:
+incl r10
+cmpl r10,$3
+jlss L17
+pushal L26
+calls $4/4,_printf
+clrl r10
+L27:
+clrl r11
+L31:
+movl _y[r10],r5
+pushl (r5)[r11]
+pushal L25
+calls $8/4,_printf
+L32:
+incl r11
+cmpl r11,$4
+jlss L31
+L28:
+incl r10
+cmpl r10,$3
+jlss L27
+pushal L26
+calls $4/4,_printf
+ret
+.globl _g
+.align 1
+_g:.word 0xf00
+movl 4(ap),r11
+movl 8(ap),r10
+clrl r8
+L35:
+clrl r9
+L39:
+ashl $4,r8,r5
+addl2 r11,r5
+pushl (r5)[r9]
+pushal L25
+calls $8/4,_printf
+L40:
+incl r9
+cmpl r9,$4
+jlss L39
+L36:
+incl r8
+cmpl r8,$3
+jlss L35
+pushal L26
+calls $4/4,_printf
+clrl r8
+L43:
+clrl r9
+L47:
+movl (r10)[r8],r5
+pushl (r5)[r9]
+pushal L25
+calls $8/4,_printf
+L48:
+incl r9
+cmpl r9,$4
+jlss L47
+L44:
+incl r8
+cmpl r8,$3
+jlss L43
+pushal L26
+calls $4/4,_printf
+ret
+.data
+.globl _y
+.comm _y,12
+.globl _x
+.comm _x,48
+.text 1
+L26:.byte 10,0
+L25:.ascii " %d\000"

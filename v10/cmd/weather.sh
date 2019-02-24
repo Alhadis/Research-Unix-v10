@@ -1,0 +1,1 @@
+exec alice weather "$*"

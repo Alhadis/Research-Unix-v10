@@ -1,0 +1,300 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+|environment(tc_heading;
+clear string EH OH PH,
+new.page odd, tab.stops \nWuR,
+divert.string Ts;
+
+inline off, size +4, font.family helvetica, center on,
+font bold, string Ts, font roman,
+center off, font.family times, size -4, inline on,
+minimum.lines,
+clear string Rs,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\(ts\\nP\s0\(ts")
+|comment<summary: tc_heading (tc program heading)>
+
+|environment(index_placement;
+clear string EH OH PH,
+new.page odd, spacing on, blank.lines 2i,
+set string Ts "INDEX", inline off,
+size +4, inline on, font.family helvetica, blank.lines .25i,
+tab.stops \nWuR,
+font bold, tab, string Ts, new.line,
+font roman, font.family times, size -4, inline on,
+minimum.lines 1.25i, paragraph,
+clear string Rs,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\(ts\\nP\s0\(ts",
+minimum.lines;)
+|comment<summary: index_placement (put the index here)>
+
+|environment(reference_placement;
+|ifvalue sawreference on [
+clear string EH OH PH,
+new.page odd, spacing on, blank.lines 2i,
+set string Ts "REFERENCES", inline off,
+size +4, inline on, font.family helvetica, blank.lines .25i,
+tab.stops \nWuR,
+font bold, tab, string Ts, new.line,
+font roman, font.family times, size -4, inline on,
+minimum.lines 1.25i, paragraph,
+clear string Rs,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\(ts\\nP\s0\(ts",
+reference.placement
+];
+
+sawreference off)
+|comment<summary: reference_placement (produce references here)>
+
+
+
+|environment(chapter;
+clear string EH OH PH,
+new.page odd, spacing on, blank.lines 2i,
+incr CH,
+clear S0 S1 S2
+S3,
+set string Ts "Chapter ",
+add string.from.number Ts CH,
+inline off, size +10, font.family helvetica,
+tab.stops \nWuR,
+tab, string Ts,
+divert.string Ts;
+
+sectioning bychapter,
+inline off, size +4, font.family helvetica, blank.lines .25i,
+tab.stops \nWuR,
+font bold, tab, string Ts, new.line,
+font roman, font.family times, size -4, inline on,
+minimum.lines 1.25i, paragraph,
+store string.from.number Rs CH,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\(tsChapter ",
+add string.from.number EH CH,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2Chapter ",
+add string.from.number OH CH,
+add string OH "\(ts",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\\nP\s0\(ts")
+|comment<summary: chapter (numbered chapter; IT)>
+
+|environment(section;
+divert.string Ts;
+
+minimum.lines 2, protect, incr S0,
+clear S1 S2 S3,
+font bold,
+|ifvalue sectioning bychapter [
+number CH, text ".",
+]
+|ifvalue sectioning byappendix [
+number AC, text ".",
+]
+number S0,
+|ifvalue sectioning bysection [
+text ".",
+]
+text " ", string Ts, font roman,
+paragraph,
+clear string Rs,
+|ifvalue sectioning bychapter [
+store string.from.number Rs CH,
+add string Rs ".",
+]
+|ifvalue sectioning byappendix [
+store string.from.number Rs AC,
+add string Rs ".",
+]
+add string.from.number Rs S0,
+|ifvalue sectioning bysection [
+contents section 1 Rs Ts,
+]
+|ifvalue sectioning bychapter [
+contents section 2 Rs Ts,
+]
+|ifvalue sectioning byappendix [
+contents section 2 Rs Ts,
+]
+set string OH "\(ts\s9\f2Section ",
+|ifvalue sectioning bychapter [
+add string.from.number OH CH,
+add string OH ".",
+]
+|ifvalue sectioning byappendix [
+add string.from.number OH AC,
+add string OH ".",
+]
+add string.from.number OH S0,
+add string OH "\(ts",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\\nP\s0\(ts")
+|comment<summary: section (numbered section; IT)>
+
+|environment(appendix;
+clear string EH OH PH,
+new.page odd, spacing on, blank.lines 2i,
+number format AC A, incr AC,
+clear S0 S1 S2
+S3,
+set string Ts "Appendix ",
+add string.from.number Ts AC,
+inline off, size +4, font.family helvetica,
+tab.stops \nWuR,
+font bold, tab, string Ts, font roman,
+divert.string Rs;
+
+sectioning byappendix,
+inline off, size +4, font.family helvetica, blank.lines .25i,
+tab.stops \nWuR,
+font bold, tab, string Rs, new.line,
+font roman, font.family times, size -4, inline on,
+minimum.lines 1.25i, paragraph,
+store string.from.number Rs AC,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\(tsAppendix ",
+add string.from.number EH AC,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2Appendix ",
+add string.from.number OH AC,
+add string OH "\(ts",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\\nP\s0\(ts")
+|comment<summary: appendix (numbered appendix; IT)>
+
+|environment(unnumbered_chapter;
+clear string EH OH PH,
+new.page odd, spacing on, blank.lines 2i,
+divert.string Ts;
+
+sectioning bychapter,
+inline off, size +4, font.family helvetica, blank.lines .25i,
+tab.stops \nWuR,
+font bold, tab, string Ts, new.line,
+font roman, font.family times, size -4, inline on,
+minimum.lines 1.25i, paragraph,
+clear string Rs,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\(ts\\nP\s0\(ts")
+|comment<summary: unnumbered_chapter (unnumbered chapter)>
+
+|environment(unnumbered_section;
+divert.string Ts;
+
+minimum.lines 2, protect, font bold,
+string Ts, font roman,
+paragraph,
+clear string Rs,
+|ifvalue sectioning bysection [
+contents section 1 Rs Ts,
+]
+|ifvalue sectioning bychapter [
+contents section 2 Rs Ts,
+]
+|ifvalue sectioning byappendix [
+contents section 2 Rs Ts,
+]
+set string OH "\(ts\s9\f2",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\(ts\\nP\s0\(ts")
+|comment<summary: unnumbered_section (unnumbered section)>
+
+|environment(unnumbered_appendix;
+clear string EH OH PH,
+divert.string Ts;
+
+new.page odd, spacing on, blank.lines 2i,
+sectioning byappendix,
+inline off, size +4, font.family helvetica, blank.lines .25i,
+tab.stops \nWuR,
+font bold, tab, string Ts, new.line,
+font roman, font.family times, size -4, inline on,
+minimum.lines 1.25i, paragraph,
+clear string Rs,
+contents section 1 Rs Ts,
+set string EH "\(ts\s9\\nP\(ts\(ts\f2",
+add string.from.string EH Ts,
+add string EH "\fP\s0\(ts",
+set string OH "\(ts\s9\f2",
+add string.from.string OH Ts,
+add string OH "\fP\(ts\(ts\\nP\s0\(ts")
+|comment<summary: unnumbered_appendix (unnumbered appendix)>
+
+|environment(:document;
+line.length 5i,
+page.length 9.5i,
+clear string EH OH PH, reference.option rp;)
+
+|environment(:document_save;
+;)
+
+|environment(:document_restore;
+;)
+
+|macro(top.of.page;
+[
+'\"	;P page number register TEMP
+.		de TP
+'		sp
+.		af ;P \\gP		\" save format of P
+.		af P 1			\" normal format for next line
+.		nr ;P \\nP			\" must use different name for P
+.		af P \\g(;P			\" restore format to P
+.		af ;P 1					\" normal format for control register
+'		sp 2
+.		if \\n(;P-1 .tl \\*(PH		\" output headers
+.		if !\\n(;P%2 .tl \\*(EH
+.		if \\n(;P%2 .tl \\*(OH
+'		sp .75i
+.		rr ;P					\" free storage
+..
+])

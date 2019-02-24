@@ -1,0 +1,103 @@
+cs
+cs:.so /usr/lib/tmac/tmac.s:OUT
+cs:.so /usr/lib/tmac/tmac.cs:OUT
+cs::PRINT& QUEST
+"Do you want instructions (y or n)?"
+"
+The docgen program with the -mcs option is designed to help you generate
+a document cover sheet without understanding or remembering the special
+cover sheet formatting command names. Simply answer the questions with the
+correct information (or type a carriage return to indicate that there is
+no information).
+
+In several instances you will be given the choice of reading the text from
+a file (by typing ':r' followed by the filename) or typing the information in
+directly. If any of the following items are lengthy, it probably will be most
+convenient to read the data from a file prepared earlier: abstract, complete
+copy distribution list, cover sheet only distribution list. If you have no data
+to input for any one of these items, simply type a colon(:) followed by a
+carriage return.
+
+After you have answered all the questions, you will find that docgen has
+written (or appended) the information to the output file (default temp.cover)
+in your directory. This file is ready to troff. The ms macros will be loaded
+for you.
+"
+cs:.DT:SKIP
+"What date do you want (just type return if today)?"
+cs:.TI:MANY
+"Type in the full title of the document."
+cs:{
+	cs:.AH:ARGS
+	"Type the author's name."
+	"location code (2 characters)?"
+	"department?"
+	"extension?"
+	"room number?"
+	"computer mail address?"
+	"company if other than AT&T-BL?"
+} "are there more authors? (y or return)"
+cs:.SA:MANY
+	"Type in the abstract."
+cs:.SE:OUT
+cs:.KW "$" "$" "$" "$" "$" "$" "$" "$" "$":QUEST & QSTUFF
+"Are there keywords for the abstract? (y or return)"
+"	Type in 1st keyword or phrase."
+"	next?"
+"	next?"
+"	next?"
+"	next?"
+"	next?"
+"	next?"
+"	next?"
+"	last?"
+cs:.TY:ARGS
+"What type of document is the cover sheet for?
+	for technical memorandum type: TM
+	for internal memorandum type: IM
+	for technical correspondence type: TC"
+"Is this a software-related document? (y or return)"
+cs:{
+	cs:.NU:ARGS
+	"Answer the following questions for each document number.
+What is the department number (5 digits)?"
+		"What is the date field (yymmdd)?"
+		"What is the sequence field (2 digits)?"
+		"What is the filing case?"
+		"What is the project number(default is that for 1127)?"
+} "are there more numbers? (y or return)"
+cs:.MY:QUEST & ARGS
+"Do you wish to select MERCURY announcement bulletin sections? (y or return)"
+"	Chemistry and Materials? (y or return)"
+"	Communications? (y or return)"
+"	Computing? (y or return)"
+"	Electronics? (y or return)"
+"	Life Sciences? (y or return)"
+"	Mathematics and Statistics? (y or return)"
+"	Physics? (y or return)"
+"	Manufacturing? (y or return)"
+cs:.PR:QUEST & ARGS
+"Do you wish to select a proprietary classification?"
+"	for AT&T BELL LABORATORIES - PROPRIETARY type: BP
+	for no marking type: 0"
+cs:.GS:QUEST & OUT
+"Is this document government security classified? (y or return)"
+cs:.RL:ARGS
+"Should ITDS release this document to any AT&T employee? (y or n)"
+cs:.CO:MANY&ARGS
+	"Type the addressees (one per line) to whom you intend to send
+	complete copies of the document. For non-BTL recipients add tab
+	character and company name. "
+"Do you want the 1127 default complete copy list?"
+cs:.CE:OUT
+cs:.CV:MANY&ARGS
+	"Type the addressees (one per line) to whom you intend to send
+	cover sheets of the document. For non-BTL recipients add tab
+	character and company name."
+"Do you want the 1127 default cover sheet list?"
+cs:.CE:OUT
+cs:.SC:ARGS
+	"How many total pages are there (don't include the coversheet)?"
+cs::PRINT
+	"Please submit this paper to the center database - see manual page submit.1
+	or type submit with no arguments and it will tell you"

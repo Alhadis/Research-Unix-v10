@@ -1,0 +1,192 @@
+# This file contains contains a collection of tests for the history
+# operations in Tcl.  If everything is OK then it finishes silently.
+# If a problem is detected then it generates a Tcl error with a cryptic
+# message.  To trace the error you'll have to read through the commands
+# in this file.
+#
+# $Header: /sprite/src/lib/tcl/tests/RCS/history.test,v 1.2 90/03/19 14:55:16 ouster Exp $ (Berkeley)
+
+proc check {a b num} {
+    if {[string compare $a $b] != 0} {
+	error [format {History error %s: wanted "%s", got "%s"} $num $b $a]}
+}
+
+set num [history nextid]
+history keep 3
+history add {set a 12345}
+history add {set b [format {A test %s} string]}
+history add {Another test}
+
+# "history event"
+
+check [history event -1] {set b [format {A test %s} string]} 1.1
+check [history event $num] {set a 12345} 1.2
+check [history event [expr $num+2]] {Another test} 1.3
+check [history event set] {set b [format {A test %s} string]} 1.4
+check [history e "* a*"] {set a 12345} 1.5
+check [catch {history event *gorp} a] 1 1.6
+check $a {no event matches "*gorp"} 1.7
+check [history event] {set b [format {A test %s} string]} 1.8
+check [catch {history event 123 456}] 1 1.9
+
+# "history redo"
+
+set a 0
+history redo -2
+check $a 12345 2.1
+set b 0
+history
+check $b {A test string} 2.2
+history redo
+check $b {A test string} 2.3
+check [catch {history redo -3 -4}] 1 2.4
+
+# "history add"
+
+history add "set a 444" exec
+check $a 444 3.1
+check [catch {history add "set a 444" execGorp}] 1 3.2
+check [catch {history add "set a 444" a}] 1 3.3
+history add "set a 555" e
+check $a 555 3.4
+history add "set a 666"
+check $a 555 3.5
+check [catch {history add "set a 666" e f}] 1 3.6
+
+# "history change"
+
+history change "A test value"
+check [history event [expr {[history n]-1}]] "A test value" 4.1
+history c "Another test" -1
+check [history e] "Another test" 4.2
+check [history event [expr {[history n]-1}]] "A test value" 4.3
+check [catch {history change Foo 4 10}] 1 4.4
+check [catch {history change Foo [expr {[history n]-4}]}] 1 4.5
+
+# "history info"
+
+set num [history n]
+history add set\ a\ {b\nc\ d\ e}
+history add {set b 1234}
+history add set\ c\ {a\nb\nc}
+check [history info] [format {%6d  set a {b
+	c d e}
+%6d  set b 1234
+%6d  set c {a
+	b
+	c}} $num [expr $num+1] [expr $num+2]] 5.1
+check [history i 2] [format {%6d  set b 1234
+%6d  set c {a
+	b
+	c}} [expr $num+1] [expr $num+2]] 5.2
+check [catch {history i 2 3}] 1 5.3
+
+# "history keep"
+
+history add "foo1"
+history add "foo2"
+history add "foo3"
+history keep 2
+check [history event [expr [history n]-1]] foo3 6.1
+check [history event -1] foo2 6.2
+check [catch {history event -3}] 1 6.3
+history k 5
+check [history event -1] foo2 6.4
+check [history event -2] "" 6.5
+check [history event -3] "" 6.6
+check [history event -4] "" 6.7
+check [catch {history event -5}] 1 6.8
+check [catch {history keep 4 6}] 1 6.9
+check [catch {history keep}] 1 6.10
+check [catch {history keep -3}] 1 6.11
+
+# "history nextid"
+
+set num [history n]
+history add "Testing"
+history add "Testing2"
+check [history event] "Testing" 7.1
+check [history next] [expr $num+2] 7.2
+check [catch {history nextid garbage}] 1 7.3
+
+# "history substitute"
+
+history add "set a {test foo test b c test}"
+history add "Test command 2"
+set a 0
+history substitute foo bar -1
+check $a {test bar test b c test} 8.1
+history s test gorp
+check $a {gorp foo gorp b c gorp} 8.2
+history sub " te" to
+check $a {test footost b ctost} 8.3
+check [catch {history sub xxx yyy}] 1 8.4
+check [catch {history s a b -10}] 1 8.5
+check [catch {history s a b -1 20}] 1 8.6
+
+# "history words"
+
+history add {word0 word1 word2 a b c word6}
+history add foo
+check [history words 0-$] {word0 word1 word2 a b c word6} 9.1
+check [history w 2 -1] word2 9.2
+check [history wo $] word6 9.3
+check [catch {history w 1--1}] 1 9.4
+check [history w w] "" 9.5
+check [history w *2] word2 9.5
+check [history w *or*] {word0 word1 word2 word6} 9.6
+check [catch {history words 10}] 1 9.7
+check [catch {history words 1 -1 20}] 1 9.8
+
+# history revision
+
+set a 0
+history a {set a 12345}
+history a {set a [history e]} exec
+check $a {set a 12345} 10.1
+history a foo
+check [history ev -1] {set a {set a 12345}} 10.2
+set a 0
+history a {history r -2} exec
+history a {set a 12345}
+check [history ev -1] {set a {set a 12345}} 10.3
+history a {history s 123 999} exec
+history a foo
+check [history ev -1] {set a 99945} 10.4
+history add {word0 word1 word2 a b c word6}
+history add {set [history w 3] [list [history w 0] [history w {[ab]}]]} exec
+check $a {word0 {a b}} 10.5
+history add {format b}
+check [history ev] {set a [list word0 {a b}]} 10.6
+history add {word0 word1 word2 a b c word6}
+set a 0
+history add {set [history subs b a -2] [list abc [history r -2] [history w 1-3]]} exec
+history add {format set}
+check [history ev] {set [format a] [list abc [format b] {word1 word2 a}]} 10.7
+history add {set a 12345}
+concat a b c
+history add {history redo; set b 44} exec
+history add foo
+check [history ev] {set a 12345; set b 44} 10.8
+history add {set a 12345}
+history add {history redo; history change "A simple test"; history subs 45 xx} exec
+check $a 123xx 10.9
+history add foo
+check [history e] {A simple test} 10.10
+history add {word0 word1 $ a b c word6}
+history add {set a [history w 4-[history word 2]]} exec
+history add foo
+check $a {b c word6} 10.11
+check [history e] {set a {b c word6}} 10.12
+history add {history word 0} exec
+history add foo
+check [history e] {history word 0} 10.13
+history add {set a [history word 0; format c]} exec
+history add foo
+check [history e] {set a [history word 0; format c]} 10.14
+
+# miscellaneous
+
+check [catch {history gorp} a] 1 11.1
+set a [range $a 0 35 chars]
+check $a {bad "history" option "gorp": must be} 11.2

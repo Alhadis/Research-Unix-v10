@@ -1,0 +1,49 @@
+7c7
+< at the top of f2c.h .
+---
+> at the top of f2c.h and fmtlib.c .
+9a10,17
+> If you have a really ancient K&R C compiler that does not understand
+> void, add -Dvoid=int to the definition of CFLAGS in the makefile.
+> 
+> If you use a C++ compiler, first create a local f2c.h by appending
+> f2ch.add to the usual f2c.h, e.g., by issuing the command
+> 	make f2c.h
+> which assumes f2c.h is installed in /usr/include .
+> 
+42c50,51
+< at the beginning of fio.h, and recompile these modules.
+---
+> at the beginning of fio.h, and recompile everything (or
+> at least those modules that contain NON_UNIX_STDIO).
+66,69c75,77
+< err.c, inquire.c, open.c, and util.c with MSDOS defined;
+< in that case, you may need to supply access(char *Name,0),
+< which is supposed to return 0 if file Name exists,
+< nonzero otherwise.
+---
+> with NON_UNIX_STDIO defined; in that case, you may need
+> to supply access(char *Name,0), which is supposed to
+> return 0 if file Name exists, nonzero otherwise.
+84a93,95
+> Compiling with -DNON_UNIX_STDIO omits all references to creat()
+> and almost all references to open() and close(), the exception
+> being in the function f__isdev() (in open.c).
+89d99
+< Don't use -mh -- it is horribly broken.
+127a138,152
+> 
+> Extensions (Feb. 1993) to NAMELIST processing:
+>  1. Reading a ? instead of &name (the start of a namelist) causes
+> the namelist being sought to be written to stdout (unit 6);
+> to omit this feature, compile rsne.c with -DNo_Namelist_Questions.
+>  2. Reading the wrong namelist name now leads to an error message
+> and an attempt to skip input until the right namelist name is found;
+> to omit this feature, compile rsne.c with -DNo_Bad_Namelist_Skip.
+>  3. Namelist writes now insert newlines before each variable; to omit
+> this feature, compile xwsne.c with -DNo_Extra_Namelist_Newlines.
+> 
+> Nonstandard extension (Feb. 1993) to open: for sequential files,
+> ACCESS='APPEND' (or access='anything else starting with "A" or "a"')
+> causes the file to be positioned at end-of-file, so a write will
+> append to the file.

@@ -1,0 +1,7 @@
+#define button1()	button(1)
+#define button2()	button(2)
+#define button3()	button(4)
+#define button12()	button(3)
+#define button13()	button(5)
+#define	button23()	button(6)
+#define	button123()	button(7)

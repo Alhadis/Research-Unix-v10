@@ -1,0 +1,49 @@
+CFLAGS=-I.. -I/usr/include -DKERNEL $gflag
+
+#
+# these vars just for brevity in dependency lists
+#
+LB=../lib/lccbvax.a
+LU=../lib/lccuvax.a
+LS=../lib/lccstar.a
+LC=../lib/lcccomet.a
+LN=../lib/lccnaut.a
+LU2=../lib/lccmflow.a
+LU3=../lib/lccmfair.a
+
+all:V: $LB $LU $LS $LC $LN $LU2 $LU3
+
+$LB: $LB(machdep.x) $LB(mba.y) $LB(ubamap.y)
+$LB(%):N: %
+$LS: $LS(machstar.x) $LS(mchkstar.x) $LS(mcrstar.y) $LS(rststar.y) \
+	$LS(nexstar.x) $LS(ubastar.y) $LS(consstar.x) $LS(cdiskstar.x) \
+	$LS(staruddump.y)
+$LS(%):N: %
+$LC: $LC(machcomet.x) $LC(mchkcomet.x) $LC(mcrcomet.y) $LC(rstcomet.x) \
+	$LC(nexcomet.x) $LC(ubacomet.y) $LC(conscomet.x) $LC(ctapecomet.x) \
+	$LC(cometupdump.y) $LC(cometuddump.y) $LC(comethpdump.y)
+$LC(%):N: %
+$LN: $LN(machnaut.x) $LN(mchknaut.x) $LN(mcrnaut.y) $LN(rstnaut.x) \
+	$LN(nexnaut.x) $LN(ubanaut.y) $LN(consnaut.x) $LN(cdisknaut.x) \
+	$LN(nautbddump.y)
+$LN(%):N: %
+
+$LU: $LU(consuvax.x) $LU(ubauvax.y) $LU(uvaxuddump.y)
+$LU(%):N: %
+$LU2: $LU2(machmflow.y) $LU2(mchkmflow.y)
+$LU2(%):N: %
+$LU3: $LU3(machmfair.y) $LU3(mchkmfair.y) $LU3(mcrmfair.y)
+$LU3(%):N: %
+
+%.a:
+	names=`membername $newprereq`
+	ar r $target $names && rm $names
+	ranlib $target
+%.x: %.c
+	lcc $CFLAGS -S $stem.c
+	sed -f ../lib/lccasm.sed <$stem.s | as -o $stem.x
+	rm $stem.s
+%.y: %.c
+	lcc $CFLAGS -Wf-k -S $stem.c
+	sed -f ../lib/lccasm.sed <$stem.s | as -o $stem.y
+	rm $stem.s

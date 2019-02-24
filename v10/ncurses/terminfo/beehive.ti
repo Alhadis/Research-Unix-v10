@@ -1,0 +1,74 @@
+# # --------------------------------
+#	@(#)beehive.ti	1.3 (1.9	8/19/82)
+#
+# beehive: BEEHIVE
+#  Beehive documentation is undated (Preliminary) and has
+# no figures so we must have early Superbee2 Model 600.  It has proved reliable
+# except for some missing padding requirements (notably after \EK ).
+#       The key idea is that AEP mode is poison for cm & that US's in the local
+# memory should be avoided.  That means that the 2048 character
+# local buffer is used as 25 lines of 80 characters, period.  No scrolling
+# local memory, folks.  It also appears that we cannot use INS LINE feature
+# alone since it uses US.  The sbi fakes the al with an 80-space insert that may
+# be too slow at low speeds; also spaces get converted to \040 which is too
+# long for some programs (not vi).   DEL LINE is ok but slow.
+#	The only known bug is that sometimes the screen will not scroll down
+# after a nl, leaving a half-line elipsis to a quad that is the extra 48 memory
+# locations.  Not to worry; the first line is not displayed then, but it will
+# be whenever the cursor is moved up there.  Since cm is addressed relative
+# to memory of window, nothing is lost.
+# WARNING: Not all features tested (Does an excercier exist?) and not
+# well tested at 9600 bd.   Timings are assembled from 3 sources.
+# Some timings may reflect SB2/Model 300 that were used if cheap enough.
+# Tested on a Model 600.  Seems that Model 300 has a 650ms delay on back tab...
+# rejected.
+#        The BACKSPACEkb option is tricky. The NEWLINE key, so cleverly
+#            placed on the keyboard and useless because of AEP, is made into a
+#	     backspace key.
+# In use ESC must be pressed twice (to send) and sending ^C must be prefixed by
+#	 ESC to avoid that wierd transmit mode associated with ENTER key.
+# As delivered this machine has a FATAL feature that will throw it into
+#	that strange transmit state (SPOW) if the space bar is hit after
+#	a CR is received, but before receiving a LF (or a few others).
+# The machine MUST be modified to eliminate the SPOW latch.  This is
+#	done by strapping on chip A46 of the I/O board; cut the p.c. connection
+#	to Pin 5 and Strap Pin 5 to Pin 8 of that chip.  This mod has been
+#	checked out on a Mod 600 of Superbee II.  With this modification
+#	absurdly high timings on cr are unnecessary.
+# NOTE WELL that the rear panel switch should be set to CR/LF---not AEP!
+sb1|sbg|Beehive superbee for graphics sans excessive -il1- string,
+	cr=^M, cud1=^J, ind=^J, bel=^G, am, cub1=^H, cbt=\E`$<10>, bw,
+	ed=\EJ$<3>, el=\EK$<3>, clear=\EH$<3>\EJ$<3>,
+	cup=\EF%p2%3d%p1%3d, cols#80,
+	cub1=^H$<3>, da, db, dch1=\EP$<3>, dl1=\EM$<100>, cud1=\EB$<1>,
+	rmir=\ER, home=1\EH, ich1=, smir=\EQ, tbc=\E3, hts=\E1,
+	is2=\EE$<12>\EX\EZ\EO\Eb\Eg\ERRear switch to CR/LF so AEP off!\nNEWLINE key is2 BACKSPACE...unless stty overrides\n,
+	kf0=\E2, kf1=\Ep, kf2=\Eq, kf3=\Er, kf4=\Es, kf5=\Et, kf6=\Eu,
+	kf7=\Ev, kf8=\Ew, kf9=\E1, kbs=^_, kcud1=\EB, khome=\EH,
+	kcub1=\ED, kcuf1=\EC, kcuu1=\EA,
+	lines#25, lf0=TAB CLEAR, lf9=TAB SET,
+	ind=\n\n\EA<3>\EK<3>\ET$<1>, mir, cuf1=1\EC, ht=^I,
+	rmso=\E_3, xmc#1, smso=\E_1, ht=^I$<1>,
+	smcup=3\EO\EH$<3>\EJ, rmul=\E_3, ug#1, ul,
+	cuu1=\EA$<3>, smul=\E_0, cnorm=\n, xsb,
+sb2|sb3|fixed superbee,
+	xsb@, use=superbee,
+sbi|superbee|beehive superbee at Indiana U.,
+	cr=^M$<1>, il1=1\EN\EL$<9>\EQ \EP$<9> \EO\ER\EA, use=sbg,
+# good grief - does this entry make xmc when it doesn't have to?
+# look at those spaces in rmso/smso.  Seems strange to me.
+# However, not having one to test changes on, I'll just leave it be...
+bh3m|beehiveIIIm,
+	if=/usr/lib/tabset/beehive,
+	cr=^M, cud1=^J, ind=^J, bel=^G,
+	il1=^S$<160>, am, cub1=^H, ed=^R, el=^P, clear=^E^R,
+	cols#80, dl1=^Q$<350>, home=^E, lines#20, ll=^E^K,
+	cuf1=^L, ht=^I, rmso= ^_, smso=^] , cuu1=^K,
+microb|microbee|micro bee series,
+	cr=^M, cud1=^J, ind=^J, bel=^G, am, cub1=^H,
+	ed=\EJ, el=\EK, clear=\EE, cols#80, cup=\EF%p1%' '%+%c%p2%' '%+%c,
+	kf1=\Ep, kf2=\Eq, kf3=\Er, kf4=\Es,
+	kf5=\Et, kf6=\Eu, kf7=\Ev, kf8=\Ew, kf9=\Ex,
+	kcud1=\EB, khome=\EH, kcub1=\ED, kcuf1=\EC, kcuu1=\EA,
+	lines#24, cuf1=\EC, ht=^I, cuu1=\EA,
+	rmso=\Ed@ , smso= \EdP, rmul=\Ed@, smul=\Ed`,

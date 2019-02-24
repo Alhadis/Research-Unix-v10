@@ -1,0 +1,1067 @@
+!<arch>
+arc.c           497730845   633   4     100664  372       `
+#include "pen.h"
+arc(x1, y1, x2, y2, xc, yc, r)
+double x1, y1, x2, y2, xc, yc, r;
+{
+	float th;
+	if(noscale){
+	x1 = SCX(x1);
+	y1 = SCY(y1);
+	x2 = SCX(x2);
+	y2 = SCY(y2);
+	xc = SCX(xc);
+	yc = SCY(yc);
+	r = SCX(r);
+	}
+	th = theta(x1,y1,x2,y2,xc,yc,r);
+	penUp();
+	fprintf(pltout,"PA %8.2f,%8.2f; PD; AA %8.2f,%8.2f,%8.2f;\n",
+		x1,y1,xc,yc,th);
+	penstate = DOWN;
+	ckerr(0);
+}
+box.c           497730845   633   4     100664  544       `
+#include "pen.h"
+box(x1,y1,x2,y2)
+double x1,y1,x2,y2;
+{
+	if(noscale){
+	x1 = SCX(x1);
+	y1 = SCY(y1);
+	x2 = SCX(x2);
+	y2 = SCY(y2);
+	}
+	penUp();
+	fprintf(pltout,"PA %8.2f,%8.2f; PD; PA %8.2f,%8.2f %8.2f,%8.2f %8.2f,%8.2f %8.2f,%8.2f\n",
+		x1,y1,x1,y2,x2,y2,x2,y1,x1,y1);
+	penstate = DOWN;
+	ckerr(0);
+}
+sbox(x1, y1, x2, y2)
+double x1, y1, x2, y2;
+{
+	double ff[8], *fp[1];
+	int i[2];
+	ff[0] = ff[6] = x1;
+	ff[1] = ff[3] = y1;
+	ff[2] = ff[4] = x2;
+	ff[5] = ff[7] = y2;
+	i[0] = 4;
+	i[1] = 0;
+	fp[0] = ff;
+	internal = 1;
+	fill(i,fp);
+	internal = 0;
+}
+circle.c        497730845   633   4     100664  239       `
+#include "pen.h"
+circle(x, y, r)
+double x, y, r;
+{
+	if(noscale){
+	x = SCX(x);
+	y = SCY(y);
+	r = SCX(r);
+	}
+	penUp();
+	fprintf(pltout,"PA %8.2f,%8.2f CI %8.2f\n",
+		x, y, r);
+	ckerr(0);
+}
+disc(x, y, r)
+double x, y, r;
+{
+	circle(x, y, r);
+}
+
+color.c         497734030   633   4     100664  1105      `
+#include "pen.h"
+color(s)
+char *s;
+{
+	register float f;
+	register char **p;
+	char *sp, *bp;
+	if(s == (char *)0) {
+		fprintf(pltout,"SP0\n");
+		return;
+	}
+	while(*s != NULL){
+		if(*s >= '0' && *s <= '9'){
+			e1->pen = atoi(&s[1]);
+			penUp();
+			fprintf(pltout,"SP %d ",(e1->pen>0)?e1->pen:1);
+		}
+		else if(*s == 'S'){
+			s++;
+			f = atof(s);
+			e1->charsz = f;
+			fprintf(pltout,"SR %8.2f,%8.2f ",
+			    ((f * CH_RATIO)),(f));
+		}
+		else if(*s == 'P'){
+			s++;
+			continue;
+		}
+		else if(*s == 'A'){
+			e1->pslant = atof(++s)/RADIANS;
+		}
+		else if(*s == 'G'){
+			e1->pgap = atoi(++s);
+		}
+		else if(*s == 's'){
+			/* scribe or scratch pen */
+			s++;
+			e1->pen = 8;
+			penUp();
+			fprintf(pltout, "SP 8\nVS 5,8\nFS 8,8\n");
+		}
+		else {
+			if(*s == 'T')sp=s+1;
+			else sp = s;
+			if(*sp == 'b')sp+=2;
+			for(p=pens; p<&pens[4];p++){
+				bp = *p;
+				if(*bp == 'b')bp+=2;
+				if(*sp == *bp){
+					e1->pen = p - pens;
+					e1->pen++;
+					if(*s == 'T')e1->pen += 4;
+					penUp();
+					fprintf(pltout,"SP %d ",e1->pen);
+				}
+			}
+		}
+		while(*++s != NULL)
+			if(*s == '/'){
+				s++;
+				break;
+			}
+	}
+}
+
+dummies.c       497730845   633   4     100664  723       `
+#include "pen.h"
+erase(){}
+closepl(){
+	move(e0->p1x,e0->p1y);
+	color((char *)0);
+	ckerr(1);
+}
+grade(){}
+ppause(){}
+cfill(s)
+char *s;
+{
+	register char **p;
+	register char *sp, *bp;
+	while(*s != NULL){
+		if(*s >= '0' && *s <= '8'){
+			e1->brush = atoi(s);
+		}
+		else if(*s == 'A'){
+			e1->pslant = (180. - atof(++s))/RADIANS;
+		}
+		else if(*s == 'G'){
+			e1->pgap = atoi(++s);
+		}
+		else {
+			if(*s == 'T')sp = s+1;
+			else sp = s;
+			if(*s == 'b')sp+=2;
+			for(p=pens;p<&pens[4];p++){
+				bp = *p;
+				if(*bp == 'b')bp+=2;
+				if(*bp == *sp){
+					e1->brush = p-pens;
+					e1->brush++;
+					if(*s == 'T')e1->brush += 4;
+				}
+			}
+		}
+		while(*++s != NULL)
+			if(*s == '/'){
+				s++;
+				break;
+			}
+	}
+}
+idle(){}
+ptype(){}
+
+fill.c          497730845   633   4     100664  5001      `
+#include <stdio.h>
+#include <math.h>
+#include "pen.h"
+#define SEGS 256
+#define ROUND(a) a>0?a+.5:a-.5
+double	sinp, cosp;
+int place();
+fill(num,ff)
+int num[];
+double	*ff[];
+{
+	register struct seg *sp;
+	register double x, y;
+	int sgap;
+	double slant;
+	struct seg *in, *spend;
+	struct seg ss[4];
+	int	so;
+	double	 X, Y, xyt, **fp;
+	int ymin;
+	int	M, *n;
+	double	*xpp, *ypp;
+	int fx, fy, flag;
+
+	if(!internal){
+		in = (struct seg *)malloc((unsigned)(SEGS*sizeof(struct seg)));
+		if(in == 0){
+			fprintf(stderr,"not enough space for fill segments\n");
+			return(1);
+		}
+		spend = in + (SEGS-2);
+	}
+	else {
+		in = ss;
+		spend = &ss[3];
+	}
+	sinp = cos(e1->pslant);
+	cosp = sin(e1->pslant);
+	n = num;
+	fp = ff;
+	sp = in;
+	ymin = 4000;
+	while((M = *n++)){
+		xpp = *fp++;
+		ypp = xpp + 1;
+		x = SCX(*xpp);
+		y = SCY(*ypp);
+		if (cosp)  {
+			xyt = sinp * x - cosp * y;
+			y = cosp * x + sinp * y;
+			y = ROUND(y);
+			x = ROUND(xyt);
+		}
+		fx = x;
+		fy = y;
+		flag = 0;
+		while(--M){
+			xpp += 2;
+			ypp += 2;
+			X = SCX(*xpp);
+			Y = SCY(*ypp);
+			if (cosp)  {
+				xyt = sinp * X - cosp * Y;
+				Y = cosp * X + sinp * Y;
+				Y = ROUND(Y);
+				X = ROUND(xyt);
+			}
+	check:
+			if ( (Y > y) || (Y==y && X > x)){
+				sp->x = X;
+				sp->y = Y;
+				sp->X = x;
+				sp->Y = y;
+			}
+			else {
+				sp->x = x;
+				sp->y = y;
+				sp->X = X;
+				sp->Y = Y;
+			}
+			x=X;
+			y=Y;
+			sp->stat = 1;
+			if(Y < ymin)
+				ymin = Y;
+			if ( sp->y == sp->Y) {
+				if(sp > in){
+				if ((sp-1)->y == (sp-1)->Y && (sp-1)->y == sp->y) {
+					if (sp->x == (sp - 1)->X) {
+						(sp - 1)->X = sp->X;
+					sp--;
+					} else if (sp->X == (sp - 1)->x) {
+						(sp - 1)->x = sp->x;
+					sp--;
+					}
+				}
+				}
+			}
+			if(sp++ > spend){
+				fprintf(stderr, "Too many sides\n");
+				return(0);
+			}
+			if((M==1) && (flag == 0)){
+				X = fx;
+				Y = fy;
+				flag = 1;
+				goto check;
+			}
+		}
+	}
+	sgap = e0->pgap;
+	slant = e0->pslant;
+	e0->pgap = e1->pgap;
+	e0->pslant = e1->pgap;
+	esave = e1;
+	penUp();
+	fprintf(pltout,"SP %d LT;  ",(e1->brush>0)?e1->brush:1);
+	e1 = e0;
+	so = sp - in;
+	realfill(so, in, ymin);
+	e0->pgap = sgap;
+	e0->pslant = slant;
+	e1 = esave;
+	if(e1->brush > 0 && e1->brush != e1->pen)
+		fprintf(pltout,"SP %d ",e1->pen);
+	if(e1->pentype > 0)
+		fprintf(pltout,"LT%d; ",e1->pentype);
+	if(!internal)
+		free(in);
+	return(1);
+}
+double	xcut();
+realfill(so, s, yymin)
+int	so, yymin;
+struct seg *s;
+{
+	register struct seg *sp, *s1, *s2, *st;
+	register int	yb;
+	struct seg *sfin;
+
+	sfin = s1 = s + so - 1;
+	for (sp = s; sp <= sfin;  sp++) {
+		if (sp->stat){
+			if (sp->y == sp->Y){
+				if (sp < sfin) {
+					s2 = sp+1;
+					while(s2<=sfin && s2->y==s2->Y){
+						if (sp->X == s2->x)
+							sp->X = s2->X;
+						else if (sp->x == s2->X)
+							sp->x = s2->x;
+						s2++->stat = 0;
+					}
+				}
+				else s2 = sp;
+				if (s1->y == sp->y &&s2->y == sp->y)
+					sp->stat = 0;
+				else if (s1->Y == sp->y && s2->Y == sp->y)
+					sp->stat = 0;
+			}
+		}
+		s1 = sp;
+	}
+
+	qsort(s, so, sizeof(struct seg), place);
+	sfin++;
+	s1 = s;
+	yb = s1->y;
+	for(sp=s; yb <= sp->y;sp++);
+	s2 = sp - 1;
+	for (; yb >= yymin; yb--) {
+		if (!(yb % e1->pgap))
+			draw(yb, s1, s2);
+		for (st = s1; st <= s2; st++) {
+			if (st->stat)
+				if (yb <= st->Y)
+					st->stat = 0;
+		}
+		if (sp >= sfin)
+			continue;
+		for (; yb <= (sp->y + 1) && sp < sfin; sp++) {
+			for (st = s1; st <= s2; st++) {
+				if (sp->y == st->Y) {
+					if (sp->x == st->X)
+						st->stat = 0;
+					else if (sp->Y == sp->y && sp->X == st->X)
+						st->stat = 0;
+				}
+			}
+		}
+
+		s2 = sp - 1;
+		while (!(s1->stat) && s1 < sfin)
+			s1++;
+	}
+}
+draw(y, pr1, pr2)
+int	y;
+struct seg *pr1, *pr2;
+{
+	register struct seg *pr;
+	register double *xp;
+	double	x[32], yy, yi, yii, xi, xii, xj;
+	double *xpe;
+	for(pr=pr1, xp=x; pr <= pr2;pr++){
+		if (pr->stat)
+			if (pr->y != pr->Y){
+				*xp++ = xcut(y, pr->x, pr->y, pr->X, pr->Y);
+				if(xp > &x[31])
+					fprintf(stderr, "Too many intersections\n");
+			}
+	}
+	xpe = xp;
+	if(xpe < &x[1])
+		return;
+	do {
+		xj = 0;
+		for(xp=x+1;xp<xpe;xp++){
+			if(*(xp-1) > *xp){
+				xj = *(xp-1);
+				*(xp-1) = *xp;
+				*xp = xj;
+			}
+		}
+	} while(xj);
+	yy = y;
+	for(xp=x; xp<xpe;xp++){
+		xj = *xp++;
+		if (!cosp)
+			line(xj, (double)yy/e1->scale, *xp, (double)yy/e1->scale);
+		else {
+			xi = sinp * xj + cosp * yy;
+			yi = -cosp * xj + sinp * yy;
+			xii = sinp * *xp + cosp * yy;
+			yii = -cosp * *xp + sinp * yy;
+			line(xi, (double)yi/e1->scale, xii, (double)yii/e1->scale);
+		}
+	}
+
+}
+
+
+double	xcut(y, x1, y1, x2, y2)
+{
+	register double	dx, dy, xy, x;
+	if (y1 == y2) {
+		x = x1 > x2 ? x1 : x2;
+		return(x);
+	}
+	dy = y1 - y2;
+	dx = x1 - x2;
+	xy = (float)y1 * x2 - x1 * (float)y2;
+	x = (y * dx + xy) / dy;
+	return(x);
+}
+place(p1, p2)
+struct seg *p1, *p2;
+{
+	if(p1->y > p2->y)
+		return(-1);
+	else if(p1->y < p2->y)
+		return(1);
+	else if(p1->x > p2->x)
+		return(-1);
+	else if(p1->x < p2->x)
+		return(1);
+	else if(p1->X > p2->X)
+		return(-1);
+	else if(p1->X < p2->X)
+		return(1);
+	else if(p1->Y > p2->Y)
+		return(-1);
+	else if(p1->Y < p2->Y)
+		return(1);
+	else return(0);
+}
+
+frame.c         497730845   633   4     100664  364       `
+#include "pen.h"
+frame(xs, ys, xf, yf)
+double xs, ys, xf, yf;
+{
+	e1->p1x = e0->p1x+(xs*DX);
+	e1->p1y = e0->p1y+(ys*DY);
+	e1->p2x = e0->p1x+(xf*DX);
+	e1->p2y = e0->p1y+(yf*DY);
+	fprintf(pltout,"IP %8.2f,%8.2f %8.2f,%8.2f\n",
+		e1->p1x,e1->p1y,
+		e1->p2x,e1->p2y);
+	fprintf(pltout,"SC %8.2f,%8.2f,%8.2f,%8.2f\n",
+		e1->xmin,e1->xmax,e1->ymin,e1->ymax);
+	ckerr(0);
+}
+line.c          497730845   633   4     100664  251       `
+#include "pen.h"
+line(x1, y1, x2, y2)
+double x1, y1, x2, y2;
+{
+	if(noscale){
+	x1 = SCX(x1);
+	y1 = SCY(y1);
+	x2 = SCX(x2);
+	y2 = SCX(y2);
+	}
+	penUp();
+	fprintf(pltout,"PA %8.2f,%8.2f PD %8.2f,%8.2f\n",
+		x1, y1, x2, y2);
+	penstate = DOWN;
+	ckerr(0);
+}
+
+move.c          497730846   633   4     100664  283       `
+#include "pen.h"
+move(x,y)
+double x, y;
+{
+	if(noscale){
+	x = SCX(x);
+	y = SCY(y);
+	}
+	penUp();
+	fprintf(pltout,"PA %8.2f,%8.2f\n",x,y);
+	ckerr(0);
+}
+rmove(x, y)
+double x, y;
+{
+	if(noscale){
+	x = SCX(x);
+	y = SCY(y);
+	}
+	penUp();
+	fprintf(pltout,"PR %8.2f,%8.2f\n",x,y);
+	ckerr(0);
+}
+
+openpl.c        534708556   633   4     100664  1924      `
+#include "pen.h"
+#define PLOTTER "/dev/hp7580"
+
+struct sgttyb vvec;
+struct ttydevb dvec;
+extern int tty_ld;
+
+openpl(s)
+char *s;
+{
+	int n, dp;
+
+	dp = open(PLOTTER, 2);
+	if (dp < 0) {
+		fprintf(stderr, "cannot open plotter %s\n", PLOTTER);
+		exit(1);
+	}
+	if(ioctl(dp, FIOLOOKLD, 0) != tty_ld){
+		if(ioctl(dp, FIOPUSHLD, &tty_ld) < 0){
+			perror("tty_ld");
+			exit(1);
+		}
+	}
+	if(ioctl(dp, TIOCEXCL, 0)){
+		perror("plotter in use");
+		exit(1);
+	}
+	vvec.sg_ispeed = vvec.sg_ospeed = B9600;
+	vvec.sg_flags = CBREAK|CRMOD|TANDEM;
+	vvec.sg_erase = 0;
+	vvec.sg_kill = 0;
+	ioctl(dp, TIOCGDEV, &dvec);
+	if(ioctl(dp, TIOCSETP, &vvec) < 0){
+		perror("ioctl");
+		exit(1);
+	}
+	dvec.ispeed = dvec.ospeed = vvec.sg_ispeed;
+	dvec.flags |= EVENP|ODDP;
+	if(ioctl(dp, TIOCSDEV, &dvec) < 0){
+		perror("ioctl1");
+		exit(1);
+	}
+	ioctl(dp, TIOCEXCL, 0);
+	if((pltin = fdopen(dp, "r")) == NULL) {
+		fprintf(stderr, "cannot fdopen, pltin");
+		exit(1);
+	}
+	if((pltout = fdopen(dp, "w")) == NULL) {
+		fprintf(stderr, "cannot fdopen, pltout");
+		exit(1);
+	}
+/*	system("stty >/dev/hp7580");
+*/
+	fprintf(pltout, "\033.I;;17:");
+	fprintf(pltout, "\033.N;19:");
+	fprintf(pltout, "\033.M10;;;10:");
+	fprintf(pltout, " IN SP 1 SR .67,1.0\n");
+	fprintf(pltout,"OP;\n");
+	fflush(pltout);
+	e0->p1x = e1->p1x = (float) readInt(pltin);
+	e0->p1y = e1->p1y = (float) readInt(pltin);
+	e0->p2x = e1->p2x = (float) readInt(pltin);
+	e0->p2y = e1->p2y = (float) readInt(pltin);
+	DX = e0->p2x - e0->p1x;
+	e0->xmax = e1->xmax = DX;
+	DY = e0->p2y - e0->p1y;
+	e0->ymax = e1->ymax = DY;
+	e0->scale = e1->scale = 1.;
+	e0->pen = e1->pen = 1;
+	e0->charsz = e1->charsz = 1.;
+	e0->brush = e1->brush = 1;
+	e0->pentype = e1->pentype = 0;
+	e0->xmin = e1->xmin = 0;
+	e0->ymin = e1->ymin = 0;
+	e0->pslant = e1->pslant = 0;
+	e0->pgap = e1->pgap = 2.;
+	if(*s == 'N'){
+		noscale = 0;
+		fprintf(pltout,"SC %8.2f,%8.2f %8.2f,%8.2f\n",
+			e1->xmin,e1->xmax,e1->ymin,e1->ymax);
+	}
+	ckerr(1);
+}
+parabola.c      497730846   633   4     100664  878       `
+#include "pen.h"
+parabola(x0, y0, x1, y1, xb, yb)
+double x0, y0, x1, y1, xb, yb;
+{
+	register double t, x, y;
+	double d1, d2, dt;
+	double c0x,c0y,c1x,c1y;
+	if(noscale){
+	x0 = SCX(x0);
+	y0 = SCY(y0);
+	x1 = SCX(x1);
+	y1 = SCY(y1);
+	xb = SCX(xb);
+	yb = SCY(yb);
+	}
+	d1=sqrt((xb-x0)*(xb-x0)+(yb-y0)*(yb-y0));
+	d2=sqrt((xb-x1)*(xb-x1)+(yb-y1)*(yb-y1));
+	if (d1<=QUANTUM || d2<=QUANTUM) {
+		penUp();
+		fprintf(pltout,"PA %8.2f,%8.2f PD %8.2f,%8.2f",
+			x0,y0,x1,y1);
+		penstate = DOWN;
+	}
+	else {
+		c0x = x0 + x1 - 2.*xb; 
+		c0y = y0 + y1 - 2.*yb; 
+		c1x = 2. * (xb - x0);
+		c1y = 2. * (yb - y0);
+		penUp();
+		fprintf(pltout,"PA %8.2f,%8.2f PD",x0,y0);	
+		penstate = DOWN;
+		dt = QUANTUM/d1;
+		for (t=dt; t < 1.0; t += dt) {	
+			x = (c0x*t + c1x)*t + x0;
+			y = (c0y*t + c1y)*t + y0;
+			fprintf(pltout," %8.2f,%8.2f",x,y);
+		}
+		fprintf(pltout," %8.2f,%8.2f\n",x1,y1);
+	}
+	ckerr(0);
+}
+pen.c           497730846   633   4     100664  745       `
+#include "pen.h"
+pen(s)
+char *s;
+{
+	register int i;
+	i = -1;
+	while(*s != NULL){
+		switch(*s){
+		case 'l':
+			if(!strncmp(s, "long", 4))
+				i=3;
+			break;
+		case 'd':
+			if(!strncmp(s,"dotd",4))
+				i=4;
+			else if(!strncmp(s,"dott",4))
+				i=1;
+			else if(!strncmp(s,"dash",4))
+				i=5;
+			else if(!strncmp(s,"dd",2))
+				i=6;
+			break;
+		case 's':
+			if(!strncmp(s,"solid",5))
+				i=0;
+			else if(!strncmp(s,"short",5))
+				i = 2;
+			break;
+		case 'G':
+			e1->pgap = atof(s+1);
+			break;
+		case 'A':
+			e1->pslant = atof(s+1)/RADIANS;
+			break;
+		}
+		while(*s++ != NULL)
+			if(*s == '/'){
+				s++;
+				break;
+			}
+	}
+	if(i == 0)fprintf(pltout,"LT; ");
+	else if(i > 0)
+		fprintf(pltout,"LT%d; ",i);
+	if(i >= 0)
+		e1->pentype = i;
+	ckerr(0);
+}
+
+point.c         534612798   633   4     100664  176       `
+#include "pen.h"
+point(x, y)
+double x, y;
+{
+	if(noscale){
+	x = SCX(x);
+	y = SCY(y);
+	}
+	penUp();
+	fprintf(pltout,"PA %8.2f,%8.2f PD; PU;\n",x,y); 
+	penstate = UP;
+	ckerr(0);
+}
+poly.c          497730846   633   4     100664  246       `
+#include <stdio.h>
+poly(num, ff)
+int num[];
+double *ff[];
+{
+	double *xp, *yp, **fp;
+	int i, *n;
+	n = num;
+	fp = ff;
+	while((i = *n++)){
+		xp = *fp++;
+		yp = xp+1;
+		move(*xp, *yp);
+		while(--i){
+			xp += 2;
+			yp += 2;
+			vec(*xp, *yp);
+		}
+	}
+}
+range.c         497730846   633   4     100664  755       `
+#include "pen.h"
+range(x0, y0, x1, y1)
+double x0, y0, x1, y1;
+{
+	double dx, dy, step;
+	if(noscale){
+	dx = x1 - x0;
+	dy = y1 - y0;
+	if(dx <= 2. || dy <= 2.)
+		e1->scale = 1000.;
+	else if(dx <= 100. || dy <= 100.)
+		e1->scale = 100.;
+	else e1->scale = 1.;
+	if(!res){
+		dx *= e1->scale;
+		dy *= e1->scale;
+		step = (((dy*DX)/dx)>DY) ? DY/dy : DX/dx;	
+		e1->p2x = e0->p1x + dx*step;
+		e1->p2y = e0->p1y + dy*step;
+		fprintf(pltout,"IP %8.2f,%8.2f %8.2f,%8.2f\n",
+			  e1->p1x,e1->p1y,e1->p2x,e1->p2y);
+			DX = e1->p2x - e1->p1x;
+			DY = e1->p2y - e1->p1y;
+			res = 1;
+	}
+	}
+	e1->xmin = SCX(x0);
+	e1->ymin = SCY(y0);
+	e1->xmax = SCX(x1);
+	e1->ymax = SCY(y1);
+	fprintf(pltout,"SC %8.2f,%8.2f %8.2f,%8.2f\n",
+		e1->xmin,e1->xmax,e1->ymin,e1->ymax);
+	ckerr(1);
+}
+
+restore.c       497730846   633   4     100664  556       `
+#include "pen.h"
+restore(){
+	if(--e1 == e0)
+		fprintf(stderr,"stack underflow\n");
+	fprintf(pltout,"SR %8.2f,%8.2f \n",
+		e1->charsz*CH_RATIO,e1->charsz);
+	if(noscale){
+	fprintf(pltout,"IP %8.2f,%8.2f %8.2f,%8.2f\n",
+	    	e1->p1x,e1->p1y,e1->p2x,e1->p2y);
+	}
+	fprintf(pltout,"SC %8.2f,%8.2f %8.2f,%8.2f\n",
+	    	e1->xmin,e1->xmax,e1->ymin,e1->ymax);
+	penUp();
+	fprintf(pltout,"SP %d PA %8.2f,%8.2f\n",
+		(e1->pen>0)?e1->pen:1,
+		e1->copyx, e1->copyy);
+	if(!e1->pentype)
+		fprintf(pltout,"LT\n");
+	else fprintf(pltout,"LT %d\n",e1->pentype);
+	ckerr(1);
+}
+save.c          497730846   633   4     100664  258       `
+#include "pen.h"
+save(){
+	int i;
+
+	fprintf(pltout,"OC;\n");
+	fflush(pltout);
+	e1->copyx = (float) readInt(pltin);
+	e1->copyy = (float) readInt(pltin);
+	i = readInt(pltin);
+	sscpy(e1,e1+1);
+	if(++e1 > &E[8])
+		fprintf(stderr,"stack overflow\n");
+	ckerr(1);
+}
+spline.c        497730846   633   4     100664  1342      `
+/*
+Produce spline (uniform knots, second order)
+from guiding points
+*/
+
+splin(mode, num, ff) 
+int num[], mode;
+double *ff[];
+{
+	int	i,  *np, n;
+	double	xa, ya, xc, yc, *xp, *yp, *xp0, *yp0, *xpe, *ype;
+	double **fp;
+	np = num;
+	fp = ff;
+	while((n = *np++)){
+		xp = *fp++; 
+		yp = xp + 1; 
+		xp0 = xp; 
+		yp0 = yp;
+		xpe = xp0 + 2 * (n - 1); 
+		ype = yp0 + 2 * (n - 1);
+		if (n < 3) { 
+			line(*xp, *yp, *(xp + 2), *(yp + 2)); 
+			continue;
+		}
+		if (mode == 4) {	/*closed curve*/
+			xa = 0.5 * (*xpe + *(xpe - 2)); 
+			xc = 0.5 * (*xpe + *xp0);
+			ya = 0.5 * (*ype + *(ype - 2)); 
+			yc = 0.5 * (*ype + *yp0);
+			parabola(xa, ya, xc, yc, *xpe, *ype);
+			xa = 0.5 * (*xpe + *xp0); 
+			xc = 0.5 * (*(xp0 + 2) + *xp0);
+			ya = 0.5 * (*ype + *yp0); 
+			yc = 0.5 * (*(yp0 + 2) + *yp0);
+			parabola(xa, ya, xc, yc, *xp0, *yp0);
+		}
+		else {	/*open curve with multiple endpoints*/
+			if (mode % 2) /*odd mode makes first point double*/
+				line(*xp0,*yp0,0.5*(*xp0+*(xp0+2)),0.5*(*yp0+*(yp0+2)));
+		}
+		xp += 2; 
+		yp += 2;
+		for (i = 1; i < (n - 1); i++, xp += 2, yp += 2) {
+			xa = 0.5 * (*(xp - 2) + *xp); 
+			xc = 0.5 * ( *xp + *(xp + 2));
+			ya = 0.5 * (*(yp - 2) + *yp); 
+			yc = 0.5 * ( *yp + *(yp + 2));
+			parabola(xa, ya, xc, yc, *xp, *yp);
+		}
+		if(mode >= 2 && mode != 4)
+			line(0.5*(*(xpe-2)+*xpe),0.5*(*(ype-2)+*ype),*xpe,*ype);
+	}
+}
+subr.c          497730846   633   4     100664  1661      `
+#include "pen.h"
+double DX, DY;
+int res = 0;
+struct penvir E[9];
+struct penvir *e0 = E, *e1 = &E[1];
+struct penvir *esave;
+int penstate = UP;
+int noscale = 1;
+FILE *pltin, *pltout;
+char *pens[4] = {
+	"black",
+	"red",
+	"green",
+	"blue"
+};
+ckerr(doit)
+{
+	register int i;
+	static int count;
+
+	if(doit) count = 0;
+	if(count >= 250) count = 0;
+	if(count++ != 0) return;
+	fprintf(pltout,"OE;\n");
+	fflush(pltout);
+	i = readInt(pltin);
+	if(i > 0){
+		fprintf(stderr,"plotter error %d\n",i);
+		exit(1);
+	}
+}
+float theta(x1,y1,x2,y2,xc,yc,r)
+double x1,y1,x2,y2,xc,yc,r;
+{
+	float radians, degrees;
+	radians = atan2((y2-yc), (x2-xc)) - atan2((y1-yc),(x1-xc));
+	if(radians < 0)radians += 2*PI;
+	if(r < 0)radians = (2*PI) - radians;
+	degrees = (radians * 180.) / PI;
+	return( (r<0)? -degrees : degrees);
+}
+int
+readInt(f)
+FILE *f;
+{
+	register i, c;
+	int sign = 1;
+	i = 0;
+	for(;;) {
+		c = getc(f);
+		if(c == EOF) {
+			fprintf(stderr, "eof on plotter\n");
+			exit(1);
+		}
+		c &= 0177;
+		if(c == '-'){
+			sign = -1;
+			c = getc(f) & 0177;
+			break;
+		}
+		if(c >= '0' && c <= '9')
+			break;
+	}
+	while(c >= '0' && c <= '9') {
+		i = 10*i + c - '0';
+		c = getc(f) & 0177;
+	}
+	i *= sign;
+	return(i);
+}
+sscpy(f,t)
+struct penvir *f, *t;
+{
+	t->scale = f->scale;
+	t->xmax = f->xmax;
+	t->ymax = f->ymax;
+	t->xmin = f->xmin;
+	t->ymin = f->ymin;
+	t->copyx = f->copyx;
+	t->copyy = f->copyy;
+	t->p1x = f->p1x;
+	t->p1y = f->p1y;
+	t->p2x = f->p2x;
+	t->p2y = f->p2y;
+	t->charsz = f->charsz;
+	t->pen = f->pen;
+	t->brush = f->brush;
+	t->pentype = f->pentype;
+	t->pslant = f->pslant;
+	t->pgap = f->pgap;
+}
+float
+normx(x)
+double x;
+{
+	return(x);
+}
+float
+normy(y)
+double y;
+{
+	return(y);
+}
+unorm(){}
+
+text.c          497730846   633   4     100664  386       `
+#include "pen.h"
+text(s)
+char *s;
+{
+	if (*s=='\\') 
+		switch(*(s+1)) {
+		case 'C':
+			fprintf(pltout,"LO5 ");
+			s += 2;
+			break;
+		case 'R':
+			fprintf(pltout,"LO8 ");
+			s += 2;
+			break;
+		case '\\':
+			fprintf(pltout,"LO2 ");
+			s++;
+			break;
+		default:
+			fprintf(pltout,"LO2 ");
+			s += 2;
+			break;
+		}
+	else fprintf(pltout,"LO2 ");
+	fprintf(pltout,"LB%s\3\n",s);
+	ckerr(0);
+}
+vec.c           497730846   633   4     100664  269       `
+#include "pen.h"
+vec(x, y)
+double x, y;
+{
+	if(noscale){
+	x = SCX(x);
+	y = SCY(y);
+	}
+	penDown();
+	fprintf(pltout,"PA %8.2f,%8.2f\n",x,y);
+	ckerr(0);
+}
+rvec(x, y)
+double x, y;
+{
+	x = SCX(x);
+	y = SCY(y);
+	penDown();
+	fprintf(pltout,"PR %8.2f,%8.2f\n",x,y);
+	ckerr(0);
+}
+
+pen.h           458417185   41    1     100664  830       `
+#include <stdio.h>
+#include <math.h>
+#include <sgtty.h>
+#define UP 0
+#define DOWN 1
+#define QUANTUM 10
+#define penUp()	{if(penstate==DOWN)fprintf(pltout,"PU "); penstate=UP;}
+#define penDown()	{if(penstate==UP)fprintf(pltout,"PD ");penstate=DOWN;}
+extern int penstate;
+extern FILE *pltout, *pltin;
+extern int res;
+float theta();
+extern struct penvir {
+	float xmax, ymax;
+	float xmin, ymin;
+	float copyx, copyy;
+	float p1x, p1y;
+	float p2x, p2y;
+	float charsz;
+	float pslant;
+	float scale;
+	int pgap;
+	int pentype;
+	int pen;
+	int brush;
+} *e0, *e1, E[], *esave;
+extern double DX, DY;
+struct seg {
+	int x, y, X, Y;
+	char stat;
+};
+#define SCX(x)	x*e1->scale
+#define SCY(y)	y*e1->scale
+#define CH_RATIO	.67
+float normx();
+float normy();
+#define RADIANS 57.3
+int internal;
+extern char *pens[];
+extern int noscale;
+#define CH_RATIO	.67

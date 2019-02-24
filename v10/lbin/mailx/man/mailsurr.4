@@ -1,0 +1,517 @@
+'\"macro stdmacro
+.if n .pH g4.mailsurr %W% of %G%
+.\"  Emphasis
+.de Em
+\f2\\$1\fP\\$2
+..
+.nr X
+.if \nX=0 .ds x} mailsurr 4 "Essential Utilities" "\&"
+.if \nX=1 .ds x} mailsurr 4 "Essential Utilities"
+.if \nX=2 .ds x} mailsurr 4 "" "\&"
+.if \nX=3 .ds x} mailsurr "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4mailsurr\f1 \- surrogate commands for routing and transport of mail
+.SH DESCRIPTION
+The \f4mailsurr\f1 file contains routing and transport surrogate
+commands used by the \f4mail\fP command.
+Each entry in \f4mailsurr\f1 has three whitespace-separated,
+single quote delimited fields:
+.P
+.RS
+.ft 4
+\&'\f2sender\fP'   '\f2recipient\fP'   '\f2command\fP'
+.ft 1
+.RE
+.P
+or a line that begins
+.P
+.RS
+.ft 4
+Defaults:
+.ft 1
+.RE
+.P
+Entries and fields may span multiple lines,
+but leading whitespace on field continuation lines is ignored.
+Fields must be less than 1024 characters long after expansion (see
+below).
+.PP
+The sender and recipient fields are regular expressions.
+If the sender and recipient fields match those of the message currently
+being processed, the associated command is invoked.
+.PP
+The \f2command\fP field may have one of the following five forms:
+.P
+.RS
+.ft 4
+.nf
+\f4A\f1[\f4ccept\f1]
+\f4D\f1[\f4eny\f1]
+\f4T\f1[\f4ranslate\f1] \f4R=\f1[\f4\(bv\f1]\f2string\f1
+\f4< S=...;C=...;F=...;\f2 command\f1
+\f4>\fP \f2command\f1
+.fi
+.ft 1
+.RE
+.SS "Regular Expressions"
+The sender and recipient fields are composed of regular
+expressions (REs) which are digested by the \f4regexp\fP(5)
+\f4compile\fP and \f4advance\fP procedures
+in the C library.
+The regular expressions matched are those from \f4ed\fP(1), with simple
+parentheses \f4()\fP playing the role of \f4\e(\e)\fP and the addition of
+the \f4+\fP and \f4?\fP operators from \f4egrep\fP(1).
+Any single quotes embedded within the REs
+.Em must
+be escaped by prepending them with a backslash or
+the RE is not interpreted properly.
+.PP
+The \f4mail\fP command prepends a circumflex (\f4^\f1)
+to the start and appends a dollar sign (\f4$\f1) to the
+end of each RE so that it matches the entire string.
+Therefore it would be an error
+to use \f4^\f2RE\f4$\f1 in the sender and recipient fields.
+To provide case insensitivity, all REs are
+converted to lower case before compilation,
+and all sender and recipient information is converted to
+lower case before comparison.
+This conversion is done only for the purposes of RE pattern matching;
+the information contained within the
+message's header is
+.Em not
+modified.
+.PP
+The sub-expression pattern matching capabilities of \f4regexp\fP may be used
+in the command field,
+that is, \f4(\f1...\f4)\f1, where 1 \(<= \f2n\fP \(<= 9.
+Any occurrences of \f4\e\e\f2n\f1 in the
+replacement string are themselves replaced by the corresponding \f4(\f1...\f4)\f1
+substring in the matched pattern.
+The sub-expression fields from both the sender and recipient fields are
+accessible, with the fields numbered 1 to 9 from left to right.
+.SS "Accept and Deny Commands"
+\f4Accept\fP instructs \f4rmail\fP to continue its processing with the \f4mailsurr\f1
+file,
+but to ignore any subsequent matching \f4Deny\fP.
+That is, unconditionally accept this message for delivery processing.
+\f4Deny\fP instructs \f4rmail\fP to stop processing the \f4mailsurr\f1 file
+and to send a negative delivery notification to the originator of the message.
+Whichever is encountered first takes precedence.
+.SS "Translate Command"
+\f4Translate\fP allows optional on-the-fly translation of recipient address
+information.
+The \f2recipient\fP replacement string is specified as \f4R=\f2string\f1.
+.PP
+For example, given a command line of the form
+.P
+.RS 2
+.nf
+\f4\&'.+' '([^!]+)@(.+)\e.EUO\e.ATT\e.com' 'Translate R=attmail!\e\e2!\e\e1'\f1
+.fi
+.RE
+.P
+and a recipient address of \f4rob@sysa.EUO.ATT.COM\fP
+the resulting recipient address would be \f4attmail!sysa!rob\fP.
+.PP
+Should the first character after the equal sign be a `\(bv',
+the remainder of the string is taken as a command line
+to be directly executed by \f4rmail\fP.
+If any \f4sh\fP(1) syntax is required
+(metacharacters, redirection, etc.),
+then the surrogate command must be of the form:
+.P
+.RS
+\f4sh \-c "\f2shell command line...\f4"\f1
+.RE
+.P
+Special care must be taken to escape properly any embedded back-slashes
+and single or double quotes,
+since \f4rmail\fP uses double quoting to group
+whitespace delimited fields that are meant to be considered as a single
+argument to \f4execl\fP(2).
+It is assumed that the executed command will write one or more replacement
+strings on \f4stdout\fP, one per line.
+If more than one line is returned,
+each is assumed to be a different recipient for the message.
+This mechanism is useful for mailing list expansions.
+As stated above, any occurrences of \f4\e\e\f2n\f1 are replaced by the
+appropriate substring
+.Em before
+the command is executed.
+If the invoked command does not return at least one replacement string
+(no output or just a newline),
+the original string is
+.Em not
+modified.
+For example, the command line
+.P
+.RS
+\f4\&'.+'	'(.+)' 'Translate R=\(bv/usr/bin/findpath \e\e1'\fP
+.RE
+.P
+allows local routing decisions to be made.
+.PP
+If the recipient address string is modified, \f4mailsurr\fP
+is rescanned from the beginning with the new address(es),
+and any prior determination of \f4Accept\fP (see above) is discarded.
+.SS "\f4<\fP \f2command\fP"
+The intent of a \f4<\fP command is that it is invoked as part of the transport
+and delivery mechanism,
+with the ready-for-delivery message available to the command
+at its standard input.
+As such, there are three conditions possible when the command exits:
+.RS
+.TP 10
+Success
+The command successfully delivered the message.
+What actually constitutes successful delivery may be different
+within the context of different surrogates.
+The \f4rmail\fP process assumes that no more processing
+is required for the message for the current recipient.
+.TP 10
+Continue
+The command performed some function
+(logging remote message traffic, for example)
+but did not do what would be considered message delivery.
+The \f4rmail\fP process continues to scan the
+\f4mailsurr\f1 file looking for some
+other delivery mechanism.
+.TP 10
+Failure
+The command encountered some catastrophic failure.
+The \f4rmail\fP process
+stops processing the message and sends to the originator of the message
+a non-delivery notification that includes any \f4stdout\fP and \f4stderr\fP
+output generated by the command.
+.RE
+.PP
+The semantics of the \f4<\fP command field in the \f4mailsurr\fP file allow
+the specification of exit codes that constitute success, continue, and
+failure for each surrogate command individually.
+The syntax of the exit state specification is:
+.P
+.RS
+.nf
+\f4<\f1 WS [\f2exit_state_id\f4=\f2ec\f1[\f4,\f2ec\f1[,...]]\f4;\f1][\f2exit_state_id\f4=\f2ec\f1[,\f2ec\f1[,...]]\f4;\f1
+        [...]]] WS\0\f2surrogate_cmd_line\f1
+.fi
+.RE
+.P
+.SM 
+.I WS
+is whitespace.
+\f2exit_state_id\fP can have the value \f4S\fP, \f4C\fP, or \f4F\fP.
+\f2exit_state_id\fPs can be specified in any order.
+\f2ec\fP can
+be:
+.IP
+any integer 0 \(<= \f2n\fP \(<= 255
+[Negative exit values are not possible.
+See \f4exit\fP(2) and \f4wait\fP(2).]
+.IP
+a range of integers of the form \f2lower_limit\f1\-\f2upper_limit\f1
+where the limits are \(>= 0 and \(<= 255, and
+.IP
+\f4\(**\fP, which implies \f2anything\fP
+.PP
+For example, a command field of the form:
+.P
+.RS
+\&'\f4< S=1-5,99;C=0,12;F=\(**;   \f2command\fP %R'\f1
+.RE
+.P
+indicates that exit values of 1 through 5, and 99,
+are to be considered success,
+values of 0 (zero) and 12 indicate continue,
+and that anything else implies failure.
+If not explicitly supplied, default settings are \f4S=0;C=\(**;\fP.
+.PP
+It may be possible for ambiguous entries to exist
+if two exit states have the same
+value, for example,  \f4S=12,23;C=\(**;F=23,52\fP; or \f4S=\(**;C=9;F=\(**;\fP.
+To account for this, \f4rmail\fP looks for
+.Em explicit
+exit
+values (that is,
+.Em not
+\&``\(**'') in
+order of success, continue, failure.
+Not finding an explicit match,
+\f4rmail\fP then scans for ``\(**'' in the same order.
+.PP
+It is possible to eliminate an exit state completely by setting that
+state's value to an impossible number.
+Since exit values must be between 0 and 255 (inclusive),
+a value of 256 is a good one to use.
+For example, if you had a surrogate command that was to log all message
+traffic, a \f4mailsurr\f1 entry of
+.P
+.RS 2
+.nf
+\f4\&'(.+)'\0'(.+)'\0'\f4<\fPS=256;C=*;\0/usr/lib/mail/surrcmd/logger \e\e1 \e\e2'\f1
+.fi
+.RE
+.P
+would always indicate continue.
+.PP
+Surrogate commands are executed by \f4rmail\fP directly.
+If any shell syntax is required
+(metacharacters, redirection, etc.),
+then the surrogate command must be of the form:
+.P
+.RS
+\f4sh \-c "\f2shell command line...\f4"\f1
+.RE
+.P
+Special care must be taken to properly escape any embedded
+back-slashes and other characters special to the shell
+as stated in the ``Translate'' section above.
+.PP
+If there are no matching \f4<\fP commands,
+or all matching \f4<\fP commands exit with a continue indication,
+\f4rmail\fP attempts to deliver the message itself by assuming
+that the recipient is local and delivering
+the message to \f4/var/mail/\fP\f2recipient\fP.
+.SS "\f4>\f1 command"
+The intent of a \f4>\fP command is that it is invoked
+.Em after
+a successful delivery to do any post-delivery processing that may be required.
+Matching \f4>\fP commands are executed only if some \f4<\fP command indicates a
+successful delivery (see the previous section)
+or local delivery processing is successful.
+The \f4mailsurr\f1 file is rescanned and
+all matching \f4>\fP commands,
+not just those following the successful \f4<\fP command,
+are executed in order.
+The exit status of an \f4>\fP command is ignored.
+.SS "Defaults: Line"
+The default settings may be redefined by creating a separate
+line in the \f4mailsurr\f1 file of the form
+.P
+.RS
+.nf
+\f4Defaults: \f1[\f4S=\f1...\f4;\f1][\f4C=\f1...\f4;\f1][\f4F\f1=...\f4;\f1]
+.fi
+.ft 1
+.RE
+.P
+\f4Defaults:\fP lines are honored and the indicated default values
+redefined when the line is encountered during the normal processing
+of the \f4mailsurr\f1 file.
+Therefore, to redefine the defaults globally, the \f4Defaults:\fP
+line should be the first line in the file.
+It is possible to have multiple \f4Defaults:\fP lines in the \f4mailsurr\f1 file,
+where each subsequent line overrides the previous one.
+.SS "Surrogate Command Keyword Replacement."
+Certain special sequences are textually-substituted
+in surrogate commands before they are invoked:
+.P
+.RS
+.PD 0
+.TP 11
+\f4%n\f1
+the recipient's full name.
+.TP
+\f4%R\f1
+the full return path to the originator (useful for sending replies,
+delivery failure notifications, etc.)
+.TP
+\f4%c\f1
+value of the \f5Content-Type:\fP header line if present.
+.TP
+\f4%C\f1
+\&``\f5text\fP'' or ``\f5binary\fP'', depending on an actual scan of the content.
+This is independent of the value of any \f5Content-Type\fP header line encountered
+(useful when calling \f4ckbinarsys\fP.)
+.TP
+\f4%S\f1
+the value of the \f5Subject:\fP header line, if present.
+.TP
+\f4%l\f1
+value of the \f5Content-Length:\fP header line.
+.TP
+\f4%L\f1
+the local system name.
+This will be either \f4CLUSTER\fP from \f4mailcnfg\fP or the value returned
+by \f4uname\fP.
+.TP
+\f4%U\f1
+the local system name, as returned by \f4uname\fP.
+.TP
+\f4%X\f1
+the value of \f4SMARTERHOST\fP in \f4mailcnfg\fP.
+.TP
+\f4%D\f1
+the local domain name.
+This will be either \f4DOMAIN\fP from \f4mailcnfg\fP, or the value returned by
+\f4getdomainame\fP.
+.TP
+\f4\e\e\f2n\f1
+as described above, the corresponding (...)
+substring in the matched patterns.
+This implies that the \f4regexp\fP limitation of 9 substrings is applied
+to the sender and recipient REs collectively.
+.TP
+\f4%\f2keywords\f1
+Other keywords as specified in \f4/etc/mail/mailcnfg\fP.
+See \f4mailcnfg\fP(4).
+.RE
+The sequences \f4%L\fP, \f4%U\fP, \f4%D\fP, and \f4%\f2keywords\f1 are
+permitted within the sender and recipient fields as well as in the command
+fields.
+.PD
+.PP
+An example of the \f4mailsurr\f1 entry that replaces the
+\f4uux\fP ``built-in'' of previous versions of \f4rmail\fP is:
+.P
+.RS
+.nf
+\f4\&'.+'	'([^@!]+)!(.+)'	'< /usr/bin/uux \- \e\e1!rmail (\e\e2)'\fP
+.fi
+.RE
+.SS "Mail Surrogate Examples"
+Some examples of mail surrogates include the distribution of message-waiting
+notifications to LAN-based recipients and lighting Message-Waiting Lamps,
+the ability to mail output to printers,
+and the logging of all \f4rmail\fP requests between remote systems
+(messages passing through the local system).
+The following is a sample \f4mailsurr\f1 file:
+.P
+.nf
+.ft 4
+\s-1#
+# Some common remote mail surrogates follow. To activate any
+# or all of them, remove the `#' (comment indicators) from
+# the beginning of the appropriate lines. Remember that they
+# will be tried in the order they are encountered in the file,
+# so put preferred surrogates first.
+  
+#	Prevent all shell meta-characters
+\&'.+'	'.*[`;&|^<>()].*'       'Deny'
+  
+#	Map all names of the form local-machine!user -> user
+\&'.+'	'%L!(.+)'               'Translate R=\\1'
+  
+#	Map all names of the form uname!user -> user
+#	Must be turned on when using mail in a cluster environment.
+#'.+'	'%U!(.+)'               'Translate R=\\1'
+  
+#	Map all names of the form user@host -> host!user
+\&'.+'	'([^!@]+)@(.+)'         'Translate R=\\2!\\1'
+  
+#	Map all names of the form host.uucp!user -> host!user
+\&'.+'	'([^!@]+)\\.uucp!(.+)'  'Translate R=\\1!\\2'
+  
+#	Map all names of the form host.local-domain!user -> host!user
+#	DOMAIN= within /etc/mail/mailcnfg will override getdomainame(3).
+\&'.+'	'([^!@]+)%D!(.+)'       'Translate R=\\1!\\2'
+  
+#	Allow access to `attmail' from remote system `sysa'
+\&'sysa!.*'	'attmail!.+'    'Accept'
+  
+#	Deny access to `attmail' from all other remotes	
+\&'.+!.+'	'attmail!.+'    'Deny'
+  
+#	Send mail for `laser' to attached laser printer
+#	Make certain that failures are reported via return mail.
+\&'.+'	'laser'	'\f4<\fP S=0;F=*; lp \-dlaser'
+  
+#	Run all local names through the mail alias processor
+#
+\&'.+'	'[^!@]+'         'Translate R=|/usr/bin/mailalias %n'
+  
+#	For remote mail via nusend
+#'.+'	'([^!]+)!(.+)'   '\f4<\fP /usr/bin/nusend \-d \e\e1 \-s \-e \-!"rmail \e\e2" \-'
+  
+#	For remote mail via usend
+\&'.+'	'([^!]+)!(.+)'
+         '\f4<\fP /usr/bin/usend \-s \-d\e\e1 \-uNoLogin \-!"rmail \e\e2" \- '
+  
+#	For remote mail via uucp
+\&'.+'	'([^!@]+)!.+'   '\f4<\fPS=256;C=0;
+  		/usr/lib/mail/surrcmd/ckbinarsys \-t %C \-s \e\e1'
+\&'.+'	'([^!@]+)!(.+)'   '\f4<\fP /usr/bin/uux \- \e\e1!rmail (\e\e2)'
+  
+#	For remote mail via smtp
+#'.+'	'([^!@]+)!(.+)'         '< /usr/lib/mail/surrcmd/smtpqer %R %n'
+  
+#	If none of the above work, then let a router change the address.
+#'.+'	'.*[!@].*'      'Translate R=| /usr/lib/mail/surrcmd/smail -A %n'
+  
+#	If none of the above work, then ship remote mail off to a smarter host.
+#	Make certain that SMARTERHOST= is defined within /etc/mail/mailcnfg.
+#'.+'	'.*[!@].*'              'Translate R=%X!%n'
+  
+#	Log successful message deliveries
+\&'(.+)' '(.+)' '\f4>\fP/usr/lib/mail/surrcmd/logger \\1 \\2'\s0
+.ft 1
+.fi
+.PP
+Note that invoking \f4mail\fP to read mail does not
+involve the \f4mailsurr\f1 file or any surrogate processing.
+.SS "Security"
+Surrogate commands execute
+with the permissions of \f4rmail\fP (user \s-1ID\s+1 of the invoker,
+group \s-1ID\s+1 of mail).
+This allows surrogate commands to validate themselves,
+checking that their effective group \s-1ID\s+1 was \f4mail\fP at invocation time.
+This requires that all additions to \f4mailsurr\f1 be scrutinized before
+insertion to prevent any unauthorized access to users' mail files.
+All surrogate commands are executed with the path
+\f4/usr/lib/mail/surrcmd:/usr/bin\fP.
+.SS "Debugging New \f4mailsurr\f1 Entries"
+To debug \f4mailsurr\fP files,
+use the \f4\-T\fP option of the \f4mail\fP command.
+The \f4\-T\fP option requires an argument that is taken as the
+pathname of a test \f4mailsurr\fP file.
+If null (as in \f4\-T ""\fP),
+the system \f4mailsurr\f1 file is used.
+Enter
+.P
+.RS
+.nf
+\f4mail\ \-T \f2test_file\0recipient\f1
+.fi
+.RE
+.P
+and some trivial message (like ``\f4testing\fP''),
+followed by a line with either just a dot (``\f4.\fP'') or a cntl-D.
+The result of using the \f4\-T\fP option is displayed on standard output and
+shows the inputs and resulting transformations as \f4mailsurr\f1 is
+processed by the \f4mail\fP command for the indicated \f2recipient\fP.
+.PP
+Mail messages will never be sent or delivered when using the \f4\-T\fP option.
+.SH "FILES"
+.PD 0
+.TP 27
+\f4/etc/mail/mailsurr\fP
+.TP 27
+\f4/usr/lib/mail/surrcmd/\(**\fP
+surrogate commands
+.TP 27
+\f4/etc/mail/mailcnfg\fP
+initialization information for \f4mail\fP
+.PD
+.SH SEE ALSO
+\f4ckbinarsys\fP(1M),
+\f4mailcnfg\fP(4)
+.br
+\f4mail\fP(1),
+\f4sh\fP(1),
+\f4uux\fP(1),
+\f4ed\fP(1),
+\f4egrep\fP(1),
+in the \f2User's Reference Manual\f1
+.br
+\f4exec\fP(2),
+\f4exit\fP(2),
+\f4wait\fP(2),
+\f4popen\fP(3),
+\f4regexp\fP(5),
+\f4getdomainname\f1(3)
+in the \f2Programmer's Reference Manual\f1
+.SH "NOTES"
+It would be unwise to install new entries into the system
+\f4mailsurr\f1 file without verifying at least their syntactical
+correctness via `\f4mail\fP \f4\-\T\fP \f2...\fP' as described above.

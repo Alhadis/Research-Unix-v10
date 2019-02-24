@@ -1,0 +1,82 @@
+	What are the meaning of "local" and "open" in signatures?
+
+			David B. MacQueen
+
+I am not sure what the purpose of the local spec form was supposed to be.
+Specifications such as 
+
+   local val x : t
+    in val y : s
+   end
+
+are certainly useless, and
+
+   local type t
+    in val x : t
+   end
+
+does not seem very interesting either.  Presumably the purpose of local specs
+was to localize the scope of open specs, as in
+
+   structure A : sig type t ... end
+   local open A
+    in val x : t
+   end
+
+But I would argue that open specs are really just an abbreviation device and
+do not add specifications to a signature in any case.  The bindings in a
+structure, such as A above, are a different kind of entity from normal
+signature specifications, and they can be treated differently from
+specifications.  It makes sense to include the specifications in a signature
+in another signature, as is done by the include spec, but it does not make
+sense to include the components of a structure in a signature.  For instance,
+consider the following example:
+
+   structure A = struct type t = int val x = 3 end
+   signature SIG =
+   sig
+     open A
+   end
+
+What is the meaning of SIG?  Since the unconstrained structure A matches
+many different signatures, it would seem that SIG is not well defined.
+
+As we have implemented the open specification, it simply makes
+the identifiers inside the opened structures visible in unqualified form, so
+that "t" can be used as an abbreviation for "A.t" in the above example.  The
+scope of the open specification is by default the remainder of the signature
+expression, and an open specification does not add any new components to a
+signature.  Thus the above definition of SIG is equivalent to
+
+   signature SIG = sig end
+
+This view of open specs seems to eliminate any justification for local
+specs, so they are suppored only in a dummy form for compatibility.  The 
+meaning of
+
+   local spec1 in spec2 end
+
+is the same as
+
+   spec1 spec2
+
+except that the specifications in spec1 are ignored during signature
+matching.  If spec1 is an open spec, which is the only reasonable
+possibility, the open spec remains in force even after the end of the local
+spec.  For instance,
+
+  sig
+   structure A : sig type t ... end
+   type t
+   local open A in
+    in val x : t  (* t is A.t *)
+   end
+   val y : t  (* t is still A.t, not the top level t *)
+  end
+
+We would be interested to hear any arguments against this treatment.  If it
+is generally accepted, it would seem to make sense to delete local specs from
+the language.  In any case, it should be considered a dubious feature to be
+used only when necessary for compatibility.  I also consider the let
+structure expression a dubious feature, but it is at least fairly simple to
+implement.  

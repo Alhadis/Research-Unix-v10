@@ -1,0 +1,23 @@
+INSTALLING THE BTREE STUFF
+
+Manuals are given in both v9 source and nroffed form.
+The v9 macros involve nonstandard fonts L and F.  You may simulate
+these fonts by changing .L and .LR to .B and .BR, and removing .F.
+
+Acceptance testing -
+
+1.  There are two subdirectories, libcbt for cbt(3) and cbt for cbt(1)
+2.  If your system lacks ranlib, remove all references to it
+	from libcbt/makefile.
+3.  Run test.sh to make a test version
+4.  In cbt run the verify shell script with arguments, say, 10,100,1000 thus:
+	LIB=. PATH=.:$PATH verify 10
+	Verify 1000 needs 3 minutes of cpu time on a vax750.
+5.  Copy everything to its final directory.
+6.  Change the NDSZ definition after #else in cbt.h to an efficient 
+	block size for your file system.  If you later change it,
+	old btrees will have to be rebuilt (oldcbt cat -R old|newcbt build -R new).
+7.  In the permanent libcbt source directory do "make clean all install"
+8.  In the permanent cbt source directory do "make clean all install"
+9.  Run verify again, this time with no special environment.
+10. "make clean" may be run in both directories.

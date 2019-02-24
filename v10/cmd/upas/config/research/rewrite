@@ -1,0 +1,30 @@
+# local mail
+[^!@%.=]+		translate	"exec /v/lib/upas/translate '&'"
+local!([^!@]+)		>>		/usr/spool/mail/\1
+\l!(.+)			alias		\1
+research\.att\.com!(.+)	alias		\1
+research\.research\.att\.com!(.+)	alias		\1
+plan9\.research\.att\.com!(.+)	alias	\1
+
+league\.att\.com!(.+)	alias		league!\1
+league\.research\.att\.com!(.+)	alias	league!\1
+league!(.+)		alias	\1
+
+
+# convert @ format to ! format
+([^!]+)@([^!@]+)	alias	\2!\1
+
+# convert % addresses for us only.
+([^!]+)%([^!%]+)	alias	\2!\1
+
+# network gateways
+
+uucp!(.+)		alias	\1
+bitnet!(.+)		alias	inet!bitnet!\1
+uunet!(.+)		alias	inet!uunet.uu.net!\1
+.*tempo\.att\.com!.*	| "exec /v/lib/upas/route '\s' allegra.att.com" "'&'"
+vax135!(.*)		| "exec /v/lib/upas/route '\s' big.l1135.att.com" "\1"
+\[([^!]+)\]!(.+)	|	"exec /v/lib/upas/route.ip '\s' '\1'" "'\2'"
+([^!]+\.att\.com)!(.+)	|	"exec /v/lib/upas/route '\s' '\1'" "'\2'"
+[^!]+\..*		|	"exec /v/lib/upas/route '\s' inet" "'&'"
+([^!]+)!(.+)		|	"exec /v/lib/upas/route '\s' '\1'" "'\2'"

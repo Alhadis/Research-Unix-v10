@@ -1,0 +1,15 @@
+#ifndef __FLOAT
+#define __FLOAT
+
+
+#define LDBL_MANT_DIG	DBL_MANT_DIG
+#define LDBL_EPSILON	DBL_EPSILON
+#define LDBL_DIG	DBL_DIG
+#define LDBL_MIN_EXP	DBL_MIN_EXP
+#define LDBL_MIN	DBL_MIN
+#define LDBL_MIN_10_EXP	DBL_MIN_10_EXP
+#define LDBL_MAX_EXP	DBL_MAX_EXP
+#define LDBL_MAX	DBL_MAX
+#define LDBL_MAX_10_EXP	DBL_MAX_10_EXP
+
+#endif /* __FLOAT */

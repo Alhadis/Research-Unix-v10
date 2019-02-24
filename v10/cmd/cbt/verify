@@ -1,0 +1,72 @@
+export PATH
+x=$1
+if test $# = 0
+then
+	echo verify rec-cnt
+	exit 1
+fi
+echo 1. loading a btree with $x empty records
+cbt creat junk
+awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' <<! | cbt build junk
+$x
+!
+echo 1. does report think there are $x records
+cbt report junk
+echo 2. check them with cat, it will report errors
+cbt cat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}'
+echo 2. end of load test
+echo 3. delete all the records
+awk '{for(i = 0; i < $1; i++) printf "%8.8d\n", i}' <<!| cbt delete junk
+$x
+!
+echo 3. report should think they are all gone
+cbt report junk
+echo 4. cat should too
+cbt cat junk | awk '{next}; END {print NR " records"}'
+echo 4. there should be no records left
+echo
+echo 5. now load them back one at a time in different order
+echo $x | awk '{for(i = $1; --i >= 0; ) printf "%8.8d\n", i}' |
+	cbt add junk
+echo 5. report should think there are $x records
+cbt report junk
+echo 6. cat should think so too
+cbt cat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo 6. there should have been no bad records
+echo
+echo 7. now throw every other one away
+awk '{for(i = 0; i < $1; i+=2) printf "%8.8d\n", i}' <<! | cbt delete junk
+$x
+!
+echo 7. report should think they are gone
+cbt report junk
+echo 8. cat should too
+cbt cat junk | awk '{next}; END {print NR " records"}'
+echo 8. there should be half the records left
+echo
+echo 9. now squash the file
+cbt squash junk
+echo 9. report says
+cbt report junk
+echo 10. and can cat find them all:
+cbt cat junk | awk 'length != 9 || $0+0 != 2*NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo 10. there should be half the records left
+echo
+echo 11. now put the other half back
+echo $x | awk '{for(i = 0; i < $1; i+=2) printf "%8.8d\n", i}' |
+	cbt add junk
+echo 11. report should see $x records
+cbt report junk
+echo 12. so should cat
+cbt cat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo 13. and they should all be there after squashing
+cbt squash junk
+echo 13. report should see $x records
+cbt report junk
+echo 14. so should cat
+cbt cat junk | awk 'length != 9 || $0+0 != NR-1 {print length, $0+0, NR, "bad"}
+	END {print NR " records"}'
+echo and that is all I could think of doing

@@ -1,0 +1,16 @@
+We can port -lipc to non-v10 systems with unix domain sockets.
+How it works:
+	client creates a socket in the unix domain, /tmp/blurfl
+	client opens a connection to /cs/server in the unix domain
+	client writes the name /tmp/blurfl to the /cs/server connection
+	client writes a random magic cookie to the /cs/server connection
+	server writes a random magic cookie back to the client
+	client closes the /cs/server connection
+	server can stat() /tmp/blurfl to find out who the client is
+	client listens on /tmp/blurfl for the server to call
+	server open /tmp/blurfl
+	client and server exchange random magic cookies obtained earlier
+	if the cookies check out we have an authenticated connection
+At this point, we've approximately duplicated the v10 business of opening
+a pipe with conn_ld and identifying ourselves.  Since unix domain sockets
+support descriptor passing, the rest should be roughly as in v10.

@@ -1,0 +1,75 @@
+A set of new primitives has been added to ML to give access to continuations:
+
+type 'a cont
+val callcc : ('a cont -> 'a) -> 'a
+val throw : 'a cont -> 'a -> 'b
+
+The continuation of an expression is an abstraction of what the system
+will do with the value of the expression. For example in the
+expression:
+
+                if a orelse b then foo() else goo()
+
+the continuation of the expression "a orelse b" can be described in
+words as "if the value is true then compute foo() otherwise compute
+goo()" and then continue in the context of the if-expression. Usually
+the continuation of an expression is implicit, however, the primitive
+callcc allows the programmer to capture and use these continuations.
+
+The primitive callcc takes a function as an argument and applies it to
+the current continuation.  The continuation of an expression of type 'a
+has type 'a cont and is a first-class object. To capture the
+continuation described above one would write:
+
+   if callcc(fn k => a orelse b) then foo() else goo
+
+Here the continuation of the callcc-application is captured by being
+bound to k, but it is not used. Because the continuation is not used
+the result is simply the result of the expression "a orelse b".  To
+use the continuation a value must be supplied, and the computation
+continues as if that value where the result of the callcc-application.
+This is called throwing the continuation a value; it is performed by
+applying "throw" to the continuation and the value.
+
+ if callcc(fn k => (throw k false) orelse b) then foo() else goo()
+
+Here, when the continuation k is thrown the value false, "orelse b" is simply
+ignored, the callcc-application returns false, and goo() is then evaluated.
+
+The type returned by a throw-expression is unconstrained like that of
+a raise-expression and for the same reason:  neither of these
+expressions ever return.
+
+One of the less interesting uses of callcc is as an alternative to
+exception handlers. For example:
+
+    exception Prod
+
+    fun prod l = let fun loop [] = 1
+		       | loop(0::r) = raise Prod
+		       | loop(a::r) = a * loop r
+		 in loop l handle Prod => 0
+		 end
+
+can be written with callcc as follows:
+
+    fun prod l = callcc(fn exit => 
+			   let fun loop [] = 1
+				 | loop(0::r) = throw exit 0
+				 | loop(a::r) = a * loop r
+			   in loop l
+			   end)
+
+But continuations are more general than exception handlers and can be
+used to implement sophisticated control structures. These more complex
+uses often involve subtle interactions with the type system.  For just
+a taste of the techniques involved consider the following example
+implementing an infinite loop.
+
+    datatype State = S of State cont 
+    fun state_throw (S k) = throw k
+
+    let val s = callcc S
+    in state_throw s s
+    end
+

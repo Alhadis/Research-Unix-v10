@@ -1,0 +1,16 @@
+CFLAGS=-I.. -DKERNEL
+L=../lib/fs.a
+FILES=\
+	$L(fs.x) $L(fsnami.x) $L(alloc.x) \
+	$L(neta.x) $L(proca.x) $L(ms.x) $L(netb.x) \
+	$L(errfs.x) $L(pipe.x)
+
+$L: $FILES
+	names=`membername $newprereq`
+	ar r $L $names && rm $names
+	ranlib $L
+$L(%):N: %
+%.x: %.c
+	cc $CFLAGS -S $stem.c
+	/lib/c2 <$stem.s | sed -f ../lib/asm.sed | as -o $stem.x
+	rm $stem.s

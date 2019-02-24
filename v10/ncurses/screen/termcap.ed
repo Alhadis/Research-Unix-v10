@@ -1,0 +1,35 @@
+e caps
+g/^#/d
+/--- begin bool/+,/--- end bool/-w bool
+/--- begin num/+,/--- end num/-w num
+/--- begin str/+,/--- end str/-w str
+e bool
+1,$s/"/'/
+1,$s/"/'/
+1,$s/	*'[^	]*'	*"//
+1,$s/".*//
+1,$s/\(.*\),\(.\)\(.\)/	case two('\2','\3'): rv = \1; break;
+w
+e num
+1,$s/"/'/
+1,$s/"/'/
+1,$s/	*'[^	]*'	*"//
+1,$s/".*//
+1,$s/\(.*\),\(.\)\(.\)/	case two('\2','\3'): rv = \1; break;
+w
+e str
+1,$s/"/'/
+1,$s/"/'/
+1,$s/	*'[^	]*'	*"//
+1,$s/".*//
+1,$s/\(.*\),\(.\)\(.\)/	case two('\2','\3'): rv = \1; break;
+w
+e termcap.form
+/BOOL/d
+-r bool
+/NUM/d
+-r num
+/STR/d
+-r str
+w termcap.c
+q

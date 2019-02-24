@@ -1,0 +1,127 @@
+			How to bootstrap ML
+
+This is stuff that "src/makeml" does for you, but if you're implementing
+a new runtime system or a new code generator, you need to know what
+makeml is doing.  This is a summary by Norman Ramsey of information
+that Andrew Appel should have written down.
+
+runtime/run is the ML loader.  It searches for things it needs in the
+mo directory.  It takes one argument, which is the name of a
+structure.  That structure is found in the mo directory and executed
+for side effects.
+
+runtime/run loads only 4 .mo files:
+	CoreFunc.mo  Math.mo Initial.mo Loader.mo
+It passes its argument (a structure name) to Loader.mo, which then
+loads many other .mo files (the entire DAG of dependencies whose root
+is CompFoo.mo (or whatever)).
+
+The mo directory contains mo files.  These carry names of top-level
+structures or functors.  They are copies of the output produced by the
+code generator.  As such they are machine-dependent.  There is no
+software support for figuring out to which code generator (or machine)
+a .mo file corresponds.  Thus it is entirely up to the user to make
+sure that the .mo files in the .mo directory make sense and are the
+right ones for the task at hand.
+
+The highest-level structure of a mo file is: 
+   fn () => (["a","b","c"], fn [a,b,c] => top-level structure or functor)
+where the ["a", "b", "c"] is a list of names of structures on which
+the top-level thing depends, and the [a,b,c] are the structures
+themselves.  Thus a, b, and c are the only free variables in the
+top-level structure, and the thing in the mo file is actually a closed
+lambda-term.  Only the run program reads .mo files.  
+
+
+The CompFoo structure (created with the Batch functor) is a structure
+that executes a small batch compiler as a side effect.  IntFoo is a
+structure that executes the full interactive system as a side effect.
+The only difference between the two is in the user interface.  The
+`run' loader is typically used only on one of these two structures, to
+execute either the batch or the interactive system.  Both the batch
+and interactive systems support an `export ML' command that saves the
+currently executing system into a file in a.out format, so that it can
+be re-executed at will.
+
+
+The batch system has three interesting commands that deal with ML
+source.  They are:
+   !file   compile file, and write a .mo file for each top-level structure
+   *file   compile file, and write a .s file for each top-level structure
+   <file   read in and parse the file
+All three commands enter appropriate things into the batch compiler's
+symbol table, so that later files can refer to them, and the
+appropriate top-level references can be resolved.
+
+It is possible to set batch options with
+	^option
+The options ^printit and ^saveLvarNames will cause useful intermediate
+code to be written to the .s file, in addition to the assembly code.
+
+
+
+
+Procedure for cross-development
+
+Here's how to build a Mips ML, given a Vax ML.  To be able to begin, we
+either have to have 
+   a) the .mo files needed for a Vax image of a compiler for a Vax target
+or
+   b) a batch system running on the Vax that generates code for the Vax.
+
+If we have a) we can get to b) by the following steps:
+   -- type `run CompVax'.  when the dust settles you will be running b).
+   -- type >batch to save the batch system
+
+The structure CompMipsLittle specifies a batch compiler that will
+generate code for a little-endian Mips.  Suppose this lives in
+mipsglue.sml.  Then we run our `batch' with the command !mipsglue.sml,
+which will create the CompMipsLittle.mo file.  We go park that in the
+.mo directory.  Similarly we may need to compile other parts of the
+Mips code generator and create mo files for them.  The list of Mips
+files is in ./mipsall.
+
+Now we can use the bootstrap loader (run) to create a new batch,
+batchm, that runs on the Vax but generates code for the mips.  
+`run CompMipsLittle' will do the job, and then we can export the new
+batch by `>batchm'.
+
+Now we're in a position to throw out all of our old, boring Vax .mo
+files, and to replace them with new, exciting Mips .mo files.  We're
+the only ones who will know the difference---we'll only be able to
+tell the difference when' run fails to work. `mv mo mo.vax' will save
+the vax mo files for a rainy day.
+
+Then we run batchm on a long script that compiles the whole compiler,
+this time generating Mips code.  This process may take about an hour
+on notecnirp.  The long script is the famous `all'.  We'll then have
+to go park all the newly-created mo files in the newly-created (Mips)
+mo directory.
+
+Finally we have all our new improved Mips .mo files in place in the mo
+directory.  We're not ready to go yet, though, because we don't yet
+have a Mips loader.  If you've been wondering when we would get a
+runtime system, this is it.  We move to the Mips, go into ./runtime,
+remove all the object code, and adjust the Makefile to indicate we're
+generating a system for the Mips.  We then build a new loader with
+`make run'.  This will compile the runtime system and the loader and
+will squirrel them both away in `run'.  Next we `run CompMipsLittle'
+to get a Mips batch system.  We can also `run IntMipsLittle' to get a
+Mips interactive system.  We can run the interactive system, and we
+can use the batch system to make a new compiler.
+
+
+Making a new compiler
+
+Use the appropriate batch to generate appropriate .mo files.
+Then use the boot loader (run) to generate a new compiler.
+There it is.
+
+
+
+Baby steps
+
+When debugging the mips code generator, it might be worth replacing
+CoreFunc with a very simple structure ("hello world"), then using
+batchm to generate a fake CoreFunc.mo. runtime/run would execute
+CoreFunc before dying in Math or Initial.

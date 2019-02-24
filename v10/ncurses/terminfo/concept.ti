@@ -1,0 +1,110 @@
+# # --------------------------------
+#	@(#)concept.ti	1.3	(1.23	2/3/83)
+#
+# concept: (HUMAN DESIGNED SYSTEMS)
+#
+# Concept 108:
+#
+# There seem to be a number of different versions of the C108 PROMS
+# (with bug fixes in its Z-80 program).
+# The first one that we had would lock out the keyboard if you
+# sent lots of short lines (like /usr/dict/words) at 9600 baud.
+# Try that on your C108 and see if it sends a ^S when you type it.
+# If so, you have an old version of the PROMs.
+# You should configure the C108 to send ^S/^Q before running this.
+# It is much faster (at 9600 baud) than the c100 because the delays
+# are not fixed.
+# new status line display entries for c108-8p:
+# is3 - init str #3 - setup term for status display - set programmer mode,
+#	select window 2, define window at last line of memory,
+#	set bkgnd stat mesg there, select window 0.
+# tsl - to status line - select window 2, home cursor, erase to end-of-window,
+#	1/2 bright on, goto(line#0, col#?)
+# fsl - from status line - 1/2 bright off, select window 0
+# dsl - disable status display - set bkgnd status mesg with illegal window #
+# There are probably more function keys that should be added but I don't know
+# what they are.
+c108|c108-8p|concept108-8p|concept 108 w/8 pages,
+	is3=\EU\E z"\Ev^A\177 !p\E ;"\E z \Ev  ^A\177p\Ep\n,
+	rmcup=\Ev  ^A\177p\Ep\r\n, use=c108-4p,
+c108-4p|concept108-4p|concept 108 w/4 pages,
+	hs, eslok, tsl=\E z"\E?\E^E\EE\Ea %+ , fsl=\Ee\E z , dsl=\E ;\177,
+	is3=\EU\E z"\Ev\177 !p\E ;"\E z \Ev  \177p\Ep\n,
+	xon, is1=\EK\E!\E F,
+	smcup=\EU\Ev  8p\Ep\r\E^U, rmcup=\Ev  \177p\Ep\r\n,
+# block cursor is disliked on the c100, so we only use it on c108.
+	cvvis=\EW, cnorm=\Ew,
+# no delays needed on c108 because of ^S/^Q handshaking
+	pb@, cr=^M, ind=^J,
+	cup=\Ea%p1%?%p1%{95}%>%t^A%{96}%-%;%' '%+%c%p2%?%p2%{95}%>%t^A%{96}%-%;%' '%+%c,
+	use=c100,
+c108-rv|c108-rv-8p|concept108-rv-8p|concept 108 w/8 pages in reverse video,
+	smcup=\EU\Ev  8p\Ep\r, rmcup=\Ev  ^B p\Ep\r\n, use=c108-rv-4p, 
+c108-rv-4p|concept108-rv-4p|concept 108 w/4 pages in reverse video,
+	flash=\EK$<50>\Ek, is1=\Ek, smso=\EE, rmso=\Ee,
+	use=c108-4p, 
+c108-na|c108-na-8p|c108-8p-na|concept108-na-8p|concept 108 w/8 pages no arrows,
+	smkx@, rmkx@, kf7=\E;, kf8=\E<, kf9=\E=, use=c108-8p,
+c108-rv-na|c108-rv-na-8p|c108-8p-rv-na|concept 108 8 pages no arrows rev video,
+	smkx@, rmkx@, kf7=\E;, kf8=\E<, kf9=\E=, use=c108-rv-8p,
+c108-w|c108-w-8p|concept108-w-8p|concept 108 w/8 pages in wide mode,
+	is1=\E F\E",
+	smcup=\EU\Ev  8^AD\Ep\r, rmcup=\Ev  ^A0^AD\Ep\r\n,
+	cols#132, use=c108-8p,
+# Concept 100:
+# These have only window relative cursor addressing, not screen relative.
+# To get it to work right here, smcup/rmcup (which were invented for the
+# concept) lock you into a one page window for screen style programs.
+# To get out of the one page window, we use a clever trick:
+# we set the window size to zero ("\Ev    " in rmcup) which the terminal
+# recognizes as an error and resets the window to all of memory.
+# This trick works on c100 but does not on c108, sigh.
+#
+# Some tty drivers use cr3 for concept, others use nl3, hence the delays on
+# cr and ind below.  This padding is only needed at 9600 baud.
+# One or the other is commented out depending on local conventions.
+#
+# 2 ms padding on rmcup isn't always enough.  6 works fine.  Maybe less
+# than 6 but more than 2 will work.
+#
+# Note: can't use function keys f7-f10 because they are indistinguishable
+# from arrow keys (!), also, del char and clear eol use xon/xoff so they
+# probably won't work very well.
+# Also note that we don't define insrt/del char/delline/eop/send because
+# they don't transmit unless we reset them - I figured it was a bad idea
+# to clobber their definitions.
+#
+# The mc5 sequence changes the escape character to ^^ so that escapes will
+# be passed through to the printer.  Only trouble is that ^^ won't be - ^^
+# was chosen to be unlikely.  Unfortunately, if you're sending raster bits
+# through to be plotted, any character you choose will be likely, so we lose.
+c100|concept100|concept|c104|c100-4p|concept 100,
+	is2=\EU\Ef\E7\E5\E8\El\ENH\E\0\Eo&\0\Eo'\E\Eo!\0\E^G!\E^HA@ ,
+	is1=\EK, is3=\Ev    $<6>\Ep\n,
+#	cr=^M, ind=^J$<9>,
+	cr=$<9>^M, ind=^J,
+	bel=^G, cud1=^J, clear=\E?\E^E$<2*>,
+	smcup=\EU\Ev  8p\Ep\r\E^U$<16>, rmcup=\Ev    $<6>\Ep\r\n,
+	il1=\E^R$<3*>, am, cub1=^H, ed=\E^E$<16*>, el=\E^U$<16>,
+	cup=\Ea%p1%' '%+%c%p2%' '%+%c, cols#80, dch1=\E^Q$<16*>, dl1=\E^B$<3*>,
+	rmir=\E\200, eo, smir=\E^P, ip=$<16*>, lines#24, mir, cuf1=\E=,
+	ht=\t$<8>, kbs=^h, ul, cuu1=\E;, smul=\EG, rmul=\Eg,
+	xenl, flash=\Ek$<20>\EK, pb#9600, vt#8,
+	smul=\EG, rmul=\Eg, smso=\ED, rmso=\Ed,
+	dim=\EE, rev=\ED, blink=\EC, prot=\EI, blank=\EH, sgr0=\EN\200,
+	rep=\Er%p1%c%p2%' '%+%c$<.2*>, smkx=\EX, rmkx=\Ex,
+	kcuu1=\E;, kcud1=\E<, kcub1=\E>, kcuf1=\E=, khome=\E?,
+	kf1=\E5, kf2=\E6, kf3=\E7, kf4=\E8, kf5=\E9, kf6=\E:,
+	kich1=\E^P, krmir=\E\0, kdch1=\E^Q, kil1=\E^R, kdl1=\E^B,
+	kel=\E^S, ked=\E^C, kpp=\E., knp=\E-, kind=\E[, kri=\E\\,
+	khts=\E], kctab=\E_,
+# \EQ"\EY(^W (send anything from printer to host, for xon/xoff) cannot be
+# in is2 because it will hang a c100 with no printer if sent twice.
+	mc5=\EQ"\EY(^W\EYD\Eo ^^, mc4=^^o \E\EQ!\EYP^W,
+c100-rv|c100-rv-4p|c100-rv-4p-pp|concept100-rv|c100 rev video,
+	is1=\Ek, flash=\EK$<20>\Ek, cvvis@, cnorm@,
+	smso=\EE, rmso=\Ee, use=c100,
+c100-rv-na|c100-rv-4p-na|concept100-rv-na|c100 with no arrows,
+	smkx@, rmkx@, use=c100-rv,
+oc100|oconcept|c100-1p|old 1 page concept 100,
+	in, is3@, use=c100,

@@ -1,0 +1,55 @@
+		Definition of Intermediate Language
+
+Cmd	Abbrev	Operands / Comments
+comment	#			only at start of line
+blank	b	s <vnum>	start blanking; erase commands follow
+		e <vnum>	end blanking current view
+click	c	<clicknum>
+define	d	v <number> <viewname> <minx> <miny> <maxx> <maxy>
+		c <number> <clickname>
+		p e	pragma -- end of defs at front of file
+			Other possible ``pragmas'':			???
+				Number of (lines, bytes) in file
+				Number of slots ever used
+erase	e	<line repeated here, except for leading g>
+			Object is deletable
+geom	g	<slotn>	l <vnum> <opts> <x1> <y1> <x2> <y2>	line
+			b <vnum> <opts> <x1> <y1> <x2> <y2>	box
+			c <vnum> <opts> <x> <y> <rad>		circle
+			t <vnum> <opts> <x> <y> <text string>	text
+				one separating tab; string unquoted
+			    <opts> format: string of characters, in order
+			    <slotn> == 0 => line never erased
+
+At beginning of file:
+	d v <number> <view name> <minx> <miny> <maxx> <maxy>
+	d c <number> <click name>
+	d p <various pragmas here>
+	d p e
+
+Options for geometric objects
+	OBJECT	POS	NAME	ABBREV
+	text	1	center	c
+			ljust	l
+			rjust	r
+			above	a
+			below	b
+		2	medium	m
+			small	s
+			big	b
+			bigbig	B
+	line	1	solid	s
+			fat	f
+			fatfat	F
+			dotted	o
+			dashed	a
+		2	-	-
+			->	>
+			<-	<
+			<->	x
+	box	1	nofill	n
+			fill	f
+	circle	1	nofill	n
+			fill	f
+    Default is first in position
+    Example: "line small" has code "cs"

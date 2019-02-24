@@ -1,0 +1,105 @@
+.TH HOC 1
+.SH NAME
+hoc \- interactive floating point language
+.SH SYNOPSIS
+.B hoc
+[ file ... ]
+.SH DESCRIPTION
+.I Hoc
+interprets a simple language for floating point arithmetic,
+at about the level of BASIC, with C-like syntax and
+functions and procedures with arguments and recursion.
+.PP
+The named
+.IR file s
+are read and interpreted in order.
+If no
+.I file
+is given or if
+.I file
+is `\-'
+.I hoc
+interprets the standard input.
+.PP
+.I Hoc
+input consists of
+.I expressions
+and
+.IR statements .
+Expressions are evaluated and their results printed.
+Statements, typically assignments and function or procedure
+definitions, produce no output unless they explicitly call
+.IR print .
+.PP
+Variable names are the usual syntax, including `_'; the name `_'
+by itself contains the value of the last expression evaluated.
+The variables E, PI, PHI, GAMMA and DEG are predefined;
+the last is 59.25..., degrees per radian.
+.PP
+Expressions are formed with these operators:
+.nf
+.ta .5i 1.5i
+	^	exponentiation
+	! \- ++ \-\-	unary logical and arithmetic negation, ...
+	* / %	the obvious
+	+ \-	ditto
+	> >= < <= == !=
+	&&
+	\(or\(or
+	= += \-= \(**= /= %=
+.fi
+Built in functions include 
+.IR abs ,
+.I atan
+(one argument),
+.IR cos ,
+.IR exp ,
+.IR int ,
+.IR log ,
+.IR log10 ,
+.IR sin ,
+and
+.IR sqrt .
+The function
+.I read(x)
+reads a value into the variable 
+.IR x ;
+the statement
+.I print
+prints a list of expressions that may include
+string constants such as
+.IR \&\&\&"hello\en" .
+.PP
+Control flow includes
+.IR if-else ,
+.IR while ,
+and
+.IR for ,
+with braces for grouping.
+End of line marks end of statement, as does a semicolon.
+Comments begin with # and continue to end of line.
+.PP
+Functions and procedures are introduced by the words
+.I func
+and
+.IR proc ;
+.I return
+is used to return, with a value from a function.
+Within a function or procedure,
+arguments are referred to as
+.IR $1 ,
+.IR $2 ,
+etc.; all other variables are global.
+.SH "SEE ALSO"
+.I
+The Unix Programming Environment
+by Brian Kernighan and Rob Pike.
+.br
+.IR bas (1),
+.IR bc (1)
+and
+.IR dc (1).
+.SH BUGS
+Error recovery is imperfect within function and procedure definitions.
+.br
+The treatment of newlines is not exactly user-friendly.

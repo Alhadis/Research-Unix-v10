@@ -1,0 +1,33 @@
+DEST = /usr/bin/spitbol
+
+OBJ = spitv35.o spitv35sub.o \
+	arg2scb.o cpys2sc.o doexec.o doset.o dosys.o fakexit.o flush.o \
+        getdate.o gethost.o lenfnm.o openerr.o osclose.o osopen.o \
+	osint.o ospipe.o osread.o oswait.o oswrite.o \
+	rdenv.o sigs.o sioarg.o swcinp.o swcoup.o testty.o wrtaout.o
+
+COBJ = arg2scb.o doexec.o dosys.o fakexit.o flush.o getdate.o lenfnm.o \
+	openerr.o osclose.o osopen.o \
+	osread.o oswrite.o rdenv.o sigs.o sioarg.o swcinp.o swcoup.o testty.o \
+	wrtaout.o
+
+CFLAGS = -O
+
+spitbol: $(OBJ)
+	cc -o spitbol $(OBJ)
+
+install: spitbol 
+	cp spitbol $(DEST)
+	strip $(DEST)
+
+spitv35.o: spitv35.s header.s
+	as -o spitv35.o header.s spitv35.s
+
+spitv35sub.o: spitv35sub.s regmasks.s
+	as -o spitv35sub.o spitv35sub.s regmasks.s
+
+$(COBJ): spitblks.h spitio.h
+
+clean:
+	rm -f spitbol $(OBJ)
+

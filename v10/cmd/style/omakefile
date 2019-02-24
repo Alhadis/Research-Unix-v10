@@ -1,0 +1,45 @@
+#	make file for style
+#
+#	BIN is directory for storing object code
+#		for 3 style programs
+#	if defined SCATCH is for collecting data
+#	if defined SNOM is for collecting nominalizations
+#
+BIN = /usr/lib/style
+SCATCH= -DSCATCH=\"/usr/lib/style/scatch\"
+SNOM= -DSNOM=\"/usr/lib/style/snom\"
+style: style1 style2 style3
+style3: $(BIN)/style3
+$(BIN)/style3: prtlex.o pscan.o outp.o
+	cc prtlex.o pscan.o outp.o -ll -o $(BIN)/style3
+	strip $(BIN)/style3
+prtlex.c: part.l
+	lex part.l
+	mv lex.yy.c prtlex.c
+prtlex.o: names.h prtlex.c
+	cc -c -O $(SCATCH) $(SNOM) prtlex.c
+pscan.o: names.h conp.h
+outp.o: names.h conp.h style.h 
+	cc -c -O outp.c
+style1: $(BIN)/style1
+$(BIN)/style1: wdslex.o
+	cc wdslex.o -ll -o $(BIN)/style1
+	strip $(BIN)/style1
+wdslex.o: wdslex.c nhash.c dict.c ydict.c names.h abbrev.c
+	cc -c wdslex.c
+wdslex.c: nwords.l
+	lex nwords.l
+	mv lex.yy.c wdslex.c
+style2: $(BIN)/style2
+$(BIN)/style2: endlex.o
+	cc endlex.o -ll -o $(BIN)/style2
+	strip $(BIN)/style2
+endlex.o: names.h endlex.c ehash.c edict.c
+	cc -c endlex.c
+endlex.c: end.l
+	lex end.l
+	mv lex.yy.c endlex.c
+cleanup:
+	rm prtlex.c prtlex.o pscan.o outp.o
+	rm wdslex.c wdslex.o
+	rm endlex.c endlex.o

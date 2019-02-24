@@ -1,0 +1,36 @@
+/* modifications here must be duplicated in codegen/codegen.sml,
+   vax/vaxprim.sml, and m68/m68prim.sml */
+#define ARRAYS 		0
+#define ARRAYSIZE 	1
+#define STRINGS 		2
+#define STRINGSIZE 	3
+#define REFCELLS 	4
+#define REFLISTS 	5
+#define CLOSURES 	6
+#define CLOSURESLOTS 	11
+#define CLOSUREOVFL 	(CLOSURES + CLOSURESLOTS)
+#define KCLOSURES 	18
+#define KCLOSURESLOTS 	11
+#define KCLOSUREOVFL 	(KCLOSURES + KCLOSURESLOTS)
+#define CCLOSURES 	30
+#define CCLOSURESLOTS 	11
+#define CCLOSUREOVFL 	(CCLOSURES + CCLOSURESLOTS)
+#define LINKS 		42
+#define LINKSLOTS 	11
+#define LINKOVFL 	(LINKS + LINKSLOTS)
+#define SPLINKS 	54
+#define SPLINKSLOTS 	11
+#define SPLINKOVFL 	(SPLINKS + SPLINKSLOTS)
+#define RECORDS 	66
+#define RECORDSLOTS 	11
+#define RECORDOVFL 	(RECORDS + RECORDSLOTS)
+#define SPILLS 		78
+#define SPILLSLOTS 	21
+#define SPILLOVFL 	(SPILLS + SPILLSLOTS)
+#define KNOWNCALLS 	(SPILLOVFL + 1)
+#define STDKCALLS 	(KNOWNCALLS + 1)
+#define STDCALLS 	(STDKCALLS + 1)
+#define CNTCALLS 	(STDCALLS + 1)
+#define ARITHOVH 	(CNTCALLS+1)
+#define ARITHSLOTS 	5
+#define PROFSIZE 	(ARITHOVH+ARITHSLOTS)

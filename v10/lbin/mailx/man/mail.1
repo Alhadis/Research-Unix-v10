@@ -1,0 +1,662 @@
+'\"macro stdmacro
+.if n .pH g1.mail %W% of %G%
+.nr X
+.if \nX=0 .ds x} mail 1 "Essential Utilities" "\&"
+.if \nX=1 .ds x} mail 1 "Essential Utilities"
+.if \nX=2 .ds x} mail 1 "" "\&"
+.if \nX=3 .ds x} mail "" "" "\&"
+.TH \*(x}
+.SH NAME
+\f4mail\f1, \f4rmail\f1 \- read mail or send mail to users
+.SH SYNOPSIS
+.SS Sending mail:
+.PP
+\f4mail\f1
+[
+\f4\-tw\f1
+] [
+\f4\-m\f1
+.I message_type
+]
+\f2recipient . . .\f1
+.PP
+\f4rmail\f1
+[
+\f4\-tw\f1
+] [
+\f4\-m\f1
+.I message_type
+]
+\f2recipient . . .\f1
+.PP
+.SS Reading mail:
+.PP
+\f4mail\f1
+[
+\f4\-ehpPqr\f1
+] [
+\f4\-f\f1
+\f2file\f1
+]
+.PP
+.SS Forwarding mail:
+.PP
+\f4mail \-F\fP \f2recipient . . .\f1
+.PP
+.SS Debugging:
+.PP
+\f4mail\fP [ \f4\-x\fP\f2debug_level\fP ] [ \f2other_mail_options\fP ]
+\f2recipient . . .\f1
+.PP
+\f4mail\f1
+\f4\-T\f1
+.I mailsurr_file
+\f2recipient . . .\f1
+.SH DESCRIPTION
+.PP
+A
+.I recipient\^
+is usually a user name recognized by
+\f4login\fP(1).
+When
+.I recipients\^
+are named,
+\f4mail\fP
+assumes a message is being sent
+(except in the case of the \f4\-F\fP option).
+It reads from the standard input up to an end-of-file
+(cntrl-d) or,
+if reading from a terminal device,
+until it reads a line consisting of just a period. 
+When either of those indicators is received,
+\f4mail\fP
+adds the 
+.I letter\^
+to the
+.I mailfile
+for each
+.IR recipient .
+.PP
+A \f2letter\fP is composed of some \f2header lines\fP followed by a blank
+line followed by the \f2message content\fP.
+The \f2header lines\fP section of the letter consists of one or more UNIX
+postmarks:
+.sp .5
+.RS
+\f4From\f1 \f2sender date_and_time\f1 [\f4remote from\f1 \f2remote_system_name\f1]
+.RE
+.sp .5
+followed by one or more standardized message header lines of the form:
+.sp .5
+.RS
+\f2keyword-name\f4\f4:\f1 [\f2printable text\f1]
+.RE
+.sp .5
+where \f2keyword-name\fP is comprised of any printable,
+non-whitespace, characters other than colon (`:').
+A \f4Content-Length:\fP header line,
+indicating the number of bytes in the \f2message content\fP will always be
+present.
+A \f4Content-Type:\fP header line that describes the type of the
+\f2message content\fP (such as text, binary, multipart, etc.) will always
+be present unless the letter consists of only header lines with no message
+content.
+Header lines may be contined on the following line if that line starts with
+white space.
+.SS Sending mail:
+.PP
+The following command-line arguments affect SENDING mail:
+.PD 0
+.TP
+\f4\-m\f1
+causes a \f4Message-Type:\fP line to be added to the message header with
+the value of \f2message_type\fP.
+.TP
+\f4\-t\f1
+causes a \f4To:\f1 line to be added to the message header
+for each of the intended recipients.
+.TP
+\f4\-w\f1
+causes a letter to be sent to a remote recipient without waiting for the
+completion of the remote transfer program.
+.PD
+.PP
+If a letter is found to be undeliverable, it is returned to the
+sender with diagnostics that indicate the location and nature of the
+failure.
+If 
+\f4mail\fP
+is interrupted during input,
+the message is saved in the file
+\f4dead.letter\f1
+to allow editing and resending.
+\f4dead.letter\f1
+is always appended to,
+thus preserving any previous contents. 
+The initial attempt to append to (or create) \f4dead.letter\fP will be in the
+current directory.
+If this fails, \f4dead.letter\fP will be appended to (or created in) the user's
+login directory.
+If the second attempt also fails, no \f4dead.letter\fP processing will be
+done.
+.PP
+\f4rmail\fP
+only permits the sending of mail;
+\f4uucp\fP(1C)
+uses
+\f4rmail\fP
+as a security precaution.
+Any application programs that generate mail messages should be sure to
+invoke \f4rmail\fP rather than \f4mail\fP for message transport and/or
+delivery.
+.PP
+If the local system has the
+Basic Networking Utilities installed,
+mail may be sent to a recipient on a remote system. 
+There are numerous ways to address mail to recipients on remote systems
+depending on the transport mechanisms available to the local system.
+The two most prevalent addressing schemes are UUCP-style and
+Domain-style.
+With UUCP-style addressing,
+remote recipients are specified 
+by prefixing the recipient name with the remote system name and 
+an exclamation point (such as sysa!user).
+A series of system names separated by exclamation points
+can be used to direct a letter through an extended
+network (such as \f4sysa!sysb!sysc!user\f1).
+With Domain-style addressing,
+remote recipients are specified by appending an `\f4@\f1' and domain (and
+possibly sub-domain) information to the recipient name
+(such as \f4user@sf.att.com\f1).
+(The local System Administrator should be consulted for details on which
+addressing conventions are available on the local system.)
+.PP
+.SS Reading Mail:
+.PP
+The following command-line arguments affect READING mail:
+.PD 0
+.TP
+\f4\-e\f1
+causes mail not to be printed.
+An exit value of 0 is returned if the user has mail;
+otherwise, an exit value of 1 is returned.
+.TP
+\f4\-h\f1
+causes a window of headers to be initially displayed rather than the latest
+message.  The display is followed by the `\f4?\f1' prompt.
+.TP
+\f4\-p\f1
+causes all messages to be printed without prompting for disposition.
+.TP
+\f4\-P\f1
+causes all messages to be printed with \f2all\fP header lines displayed,
+rather than the default selective header line display.
+.TP
+\f4\-q\f1
+causes
+\f4mail\fP
+to terminate after interrupts.
+Normally an interrupt causes only the
+termination of the message being printed.
+.TP
+\f4\-r\f1
+causes messages to be printed in first-in, first-out order.
+.TP
+\f\B\-f\fP\0\f2file\fP
+causes
+\f4mail\fP
+to use
+.I file\^
+(such as
+\f4mbox\f1)
+instead of the default
+.IR mailfile .
+.PD
+.PP
+\f4mail\fP,
+unless otherwise influenced by command-line arguments,
+prints a user's mail messages
+in last-in, first-out order.
+The default mode for printing messages is to display only
+those header lines of immediate interest.
+These include, but are not limited to,
+the UNIX \f4From\fP and \f4>From\fP postmarks,
+\f4From:\fP,
+\f4Date:\fP,
+\f4Subject:\fP,
+and \f4Content-Length:\fP header lines,
+and any recipient header lines such as
+\f4To:\fP,
+\f4Cc:\fP,
+\f4Bcc:\fP,
+etc.
+After the header lines have been displayed,
+\f4mail\fP will display the contents (body) of the message only if it
+contains no unprintable characters.
+Otherwise, \f4mail\fP will issue a warning statement about the message
+having binary content and \f4not\fP display the content.
+(This may be overridden via the \f4p\fP command. See below.)
+.PP
+For each message,
+the user is prompted with a
+\f4?\f1,
+and a line is read from the standard input.
+The following commands are available
+to determine the disposition of the message:
+.PD 
+.TP 21
+\f4#\f1
+Print the number of the current message.
+.TP
+\f4\-\f1
+Print previous message.
+.TP
+<new-line>, \f4+\f1, or \f4n\f1
+Print the next message.
+.TP
+\f4!\f2command\^\f1
+Escape to the shell to do
+.IR command .
+.TP
+\f4a\f1
+Print message that arrived during the \f4mail\fP session.
+.TP
+\f4d\f1, or \f4dp\f1
+Delete the current message and print the next message.
+.TP
+\f4d \f2n\fP\f1
+Delete message number \f2n\fP.  Do not go on to next message.
+.TP
+\f4dq\f1
+Delete message and quit \f4mail\fP.
+.TP
+\f4h\f1
+Display a window of headers around current message.
+.TP
+\f4h \f2n\fP\f1
+Display a window of headers around message number \f2n\fP.
+.TP
+\f4h a\f1
+Display headers of all messages in the user's \f2mailfile\f1.
+.TP
+\f4h d\f1
+Display headers of messages scheduled for deletion.
+.TP
+\f4m\fP [ \f2persons\^\fP ]
+Mail (and delete) the current message to the named
+\f2person\f1(\f2s\f1).
+.TP
+.I n
+Print message number \f2n\fP.
+.TP
+\f4p\f1
+Print current message again,
+overriding any indications of binary (that is, unprintable) content.
+.TP
+\f4P\f1
+Override default brief mode and print current message again,
+displaying all header lines.
+.TP
+\f4q\f1, or cntrl-\s-1D\s+1
+Put undeleted mail back in the
+.I mailfile\^
+and quit \f4mail\fP.
+.TP
+\f4r\f1 [ \f2users\^\fP ]
+Reply to the sender, and other \f2user(s)\f1, then delete the
+message.
+.TP
+\f4s\fP [ \f2files\^\fP ]
+Save message in the named
+\f2file\f1(\f2s\f1)\^
+\f1(\f4mbox\f1
+is default) and delete the message.
+.TP
+\f4u\f1 [ \f2n\fP ]
+Undelete message number \f2n\fP (default is last read).
+.TP
+\f4w\fP [ \f2files\^\fP ]
+Save message contents, without any header lines,
+in the named
+.I files\^
+\f1(\f4mbox\f1
+is default) and delete the message.
+.TP
+\f4x\f1
+Put all mail back in the
+.I mailfile\^
+unchanged and exit \f4mail\fP.
+.TP
+\f4y\fP [ \f2files\^\fP ]
+Same as save.
+.TP
+\f4?\f1
+Print a command summary.
+.PD
+.PP
+When a user logs in, the presence of mail,
+if any,
+is usually indicated.
+Also,
+notification is made if new mail arrives while using
+\f4mail\fP.
+.PP
+The permissions of
+.I mailfile\^
+may be manipulated using \f4chgrp\fP in two ways to alter the function of
+\f4mail\fP.
+The other
+permissions of the file may be read-write (0666), read-only (0664),
+or neither read nor write (0660) to allow different levels of privacy.
+If changed to other than the default (mode 0660), the file will be preserved
+even when empty to perpetuate the desired permissions.
+(The administrator may override this file preservation using the
+\f4DEL_EMPTY_MAILFILE\fP option of \f4mailcnfg\fP.)
+.P
+The group id of the mailfile must be \f4mail\f1
+to allow new messages to
+be delivered, and the mailfile must be writable by group \f4mail\f1.
+.SS Forwarding mail:
+.PP
+The following command-line argument affects FORWARDING of mail:
+.sp .5
+.PD 0
+.TP
+\f4\-F\fP\0\f2recipients\fP
+Causes all incoming mail to be forwarded to 
+.IR recipients .\^
+The mailbox must be empty.
+.PD
+.PP
+The \f4\-F\fP option causes the \f2mailfile\fP to contain
+a first line of:
+.sp .5
+.RS
+\f4Forward to\f1 \f2recipient\^. . .\f1
+.RE
+.sp .5
+Thereafter, all mail sent to the owner of the
+.I mailfile\^
+will be forwarded to each
+.IR recipient .
+.PP
+An \f4Auto-Forwarded-From: ...\f1 line
+will be added to the forwarded message's header.
+This is especially useful 
+in a multi-machine environment
+to forward all a person's mail to a single machine, 
+and to keep the recipient informed if the mail
+has been forwarded.
+.PP
+Installation and removal of forwarding is done with the
+\f4\-F\f1
+invocation option.
+To forward all your mail to \f4systema!user\f1 enter:
+.sp .5
+.RS
+\f4mail -F\0systema!user\f1
+.sp .5
+.RE
+.PP
+To forward to more than one recipient enter:
+.sp .5
+.RS
+\f4mail \-F\0"user1,user2@att.com,systemc!systemd!user3"\f1
+.sp .5
+.RE
+.PP
+Note that when more than one recipient is specified, the entire list
+should be enclosed in double quotes so that it may all be
+interpreted as the operand of the \f4\-F\f1 option.
+The list can be up to 1024 bytes; either commas or white space can
+be used to separate users.
+.PP
+If the first character of any forwarded-to recipient name is the pipe
+symbol (`\(bv'),
+the remainder of the line will be interpreted as a command to pipe the
+current mail message to. 
+The command, known as a \f2Personal Surrogate\fP,
+will be executed in the environment of the recipient of the
+message (that is, basename of the \f2mailfile\fP).
+For example, if the mailfile is \f4/var/mail/foo\f1,
+\f4foo\fP will be looked up in \f4/etc/passwd\f1
+to determine the correct user\s-1ID\s+1, group\s-1ID\s+1, and \f4HOME\f1 directory.
+The command's environment will be set to contain only
+\f4HOME\f1, \f4LOGNAME\f1, \f4TZ\f1, \f4PATH\f1
+(= \f4/usr/bin:\f1), and \f4SHELL\f1 (= \f4/bin/sh\f1),
+and the command will execute in the recipient's \f4HOME\f1 directory.
+If the message recipient cannot be found in /etc/passwd,
+the command will not be executed and a non-delivery notification with
+appropriate diagnostics will be sent to the message's originator.
+.PP
+After the pipe symbol, escaped double quotes should be used
+to have strings with embedded whitespace be considered as single arguments
+to the command being executed.
+No shell syntax or
+metacharacters may be used unless the command specified is \f4/bin/sh\f1.
+For example,
+.sp .5
+.RS
+\f4mail\0\-F\0"\(bv/bin/sh \-c \e"shell_command_line\e""\f1
+.RE
+.sp .5
+will work, but is not advised since using double quotes and
+backslashes within the shell_command_line is difficult to do correctly and
+becomes tedious \f4very\fP quickly.
+.PP
+Certain %keywords are allowed within the piped-to command specification
+and will be textually substituted for \f2before\fP the command line is
+executed.
+.sp .5
+.PD 0
+.TP
+\f4%R\fP
+Return path to the message originator.
+.TP
+\f4%c\fP
+Value of the \f4Content-Type:\f1 header line if present.
+.TP
+\f4%S\fP
+Value of the \f4Subject:\f1 header line if present.
+.PD
+.PP
+If the command being piped to exits with any non-zero value,
+\f4mail\fP will assume that message delivery failed and will generate a
+non-delivery notification to the message's originator. It is allowable to
+forward mail to other recipients \f4and\fP pipe it to a command,
+as in
+.sp .5
+.RS
+\f4mail \-F\0"carol,joe,\(bvmyvacationprog %R"\f1
+.RE
+.PP
+Two UNIX System facilities that use the forwarding of
+messages to commands are \f4notify\fP(1),
+which causes asynchronous notification of new mail,
+and \f4vacation\fP(1),
+which provides an auto-answer capability for messages when the recipient
+will be unavailable for an extended period of time.
+.PP
+To remove forwarding enter:
+.sp .5
+.RS
+\f4mail \-F\0"\^"\f1
+.RE
+.PP
+The pair of double quotes is mandatory to set a NULL argument for
+the \-F option.
+.PP
+In order for forwarding to work properly the
+.I mailfile\^
+should have \f4mail\fP as group ID,
+and the group permission should be read-write.
+.PP
+\f4mail\fP will exit with a return code of \f40\fP if forwarding was
+successfully installed or removed.
+.SS Debugging:
+.PP
+The following command-line arguments cause \f4mail\fP to provide
+DEBUGGING information:
+.sp .5
+.PD 0
+.TP 22
+\f4\-T\fP\0\f2mailsurr_file
+causes \f4mail\fP to display how it will parse and interpret
+the \f4mailsurr\fP file.
+.TP
+\f4\-x\fP\f2debug_level\fP
+causes \f4mail\fP to create a trace file containing debugging information.
+.PD
+.PP
+The \f4\-T\fP option requires an argument that will be taken as the
+pathname of a test \f4mailsurr\f1 file.
+If NULL (as in \f4\-T ""\f1),
+the system \f4mailsurr\f1 file will be used.
+To use, type '\f4mail\fP \f4\-T\fP \f2test_file\0recipient\fP' and some trivial
+message (like "testing"), 
+followed by a line with either just a dot (`.') or a cntrl-D.
+The result of using the \f4\-T\f1 option will be displayed on standard output and
+show the inputs and resulting transformations as \f4mailsurr\fP is
+processed by the \f4mail\fP command for the indicated recipient.
+Mail messages will never actually be sent or delivered when
+the \f4\-T\f1 option is used.
+.PP
+The  \f4\-x\f1 option causes \f4mail\fP to create a file named
+\f4/tmp/MLDBG\f2process_id\f1 that contains debugging information
+relating to how \f4mail\fP processed the current message.
+The absolute value of \f2debug_level\f1 controls the verboseness
+of the debug information.
+Zero implies no debugging. 
+If \f2debug_level\f1 is greater than zero,
+the debug file will be retained \f4only\f1 if \f4mail\fP encountered some
+problem while processing the message.
+If \f2debug_level\fP is less than zero the debug file will always be retained.
+The \f2debug_level\f1 specified via \f4\-x\f1 overrides any specification
+of \f4DEBUG\f1 in \f4/etc/mail/mailcnfg\f1.
+The information provided by the \f4\-x\f1 option is esoteric and is
+probably only useful to System Administrators.
+The output produced by the \f4\-x\f1 option is a superset
+of that provided by the \f4\-T\f1 option.
+.SS Delivery Notification
+Several forms of notification are available for mail by
+including one of the following lines in the message header.
+.PP
+\f4Transport-Options:\f1 [ \f4/\f2options\f1 ]
+.sp .2
+\f4Default-Options:\f1 [ \f4/\f2options\f1 ]
+.sp .2
+\f4>To:\f1 \f2recipient\f1 [ \f4/\f2options\f1 ]
+.PP
+Where the ``/\f2options\f1'' may be one or more of the following:
+.TP 12
+\f4/delivery\f1
+Inform the sender that the message was successfully delivered to the
+\f2recipient\f1's mailbox.
+.TP
+\f4/nodelivery\f1
+Do not inform the sender of successful deliveries.
+.TP
+\f4/ignore\f1
+Do not inform the sender of \f4un\f1successful deliveries.
+.TP
+\f4/return\f1
+Inform the sender if mail delivery fails.
+Return the failed message to the sender.
+.TP
+\f4/report\f1
+Same as \f4/return\f1 except that 
+the original message is not returned.
+.PP
+The default is \f4/nodelivery/return\f1.
+If contradictory options are used, the first will
+be recognized and later, conflicting, terms will be ignored.
+.SH FILES
+.PD 0
+.TP 20
+\f4dead.letter\f1
+unmailable text
+.TP
+\f4/etc/passwd\f1
+to identify sender and locate recipients
+.TP
+\f4/etc/mail/mailsurr\f1
+routing / name translation information 
+.TP
+\f4/etc/mail/mailcnfg\f1
+initialization information
+.TP
+.SM
+\f4$HOME\*S/mbox\f1
+saved mail
+.TP
+.SM
+\f4$MAIL\*S\f1
+variable containing path name of
+.I mailfile\^
+.TP
+\f4/tmp/ma\f1\(**
+temporary file
+.TP
+\f4/tmp/MLDBG\f1\(**
+debug trace file
+.TP
+\f4/var/mail/\f1\(**\f4.lock\f1
+lock for mail directory
+.TP
+\f4/var/mail/:saved\f1
+directory for holding temp files to prevent loss of data in the event of a
+system crash.
+.TP
+\f4/var/mail/\f1\f2user\f1
+incoming mail for \f2user\fP;
+that is, the
+.I mailfile\^
+.PD
+.SH SEE ALSO
+\f4chmod\fP(1),
+\f4login\fP(1),
+\f4mailx\fP(1),
+\f4notify\fP(1),
+\f4write\fP(1),
+\f4vacation\fP(1)
+.sp .2
+\f4mail_pipe\fP(1M),
+\f4mailsurr\fP(4),
+\f4mailcnfg\fP(4) in the \f2System Administrator's Reference Manual\f1.
+.br
+.IR "User\'s Guide" .
+.SH NOTES
+The "Forward to recipient" feature may result in a loop.
+Local loops (messages sent to \f4usera\f1, which are forwarded to
+\f4userb\f1, which are forwarded to \f4usera\f1) will be detected
+immediately. Remote loops (mail sent to \f4sys1!usera\fP1 which is forwarded
+to \f4sys2!userb\f1, which is forwarded to \f4sys1!usera\f1) will also be
+detected, but only after the message has exceeded the built-in hop count
+limit of 20. 
+Both cases of forwarding loops will result in a non-delivery
+notification being sent to the message originator.
+.PP
+As a security precaution, the equivalent of a \f4chmod s+g\f1 is performed on 
+the \f2mailfile\fP whenever forwarding is activated via the \f4\-F\fP
+option,
+and a \f4chmod s\(mig\fP is done when forwarding is removed via the
+\f4\-F\fP option.
+If the set\s-1GID\s+1 mode bit is not set when \f4mail\fP
+attempts to forward an incoming message to a command,
+the operation will fail and a non-delivery report with appropriate
+diagnostics will be sent to the message's originator.
+.PP
+The interpretation and resulting action taken because of the
+header lines described in the Delivery Notifications section
+above will only occur if this version of \f4mail\fP is installed
+on the system where the delivery (or failure) happens.
+Earlier versions of \f4mail\fP may not support any types
+of delivery notification.
+.PP
+Conditions sometimes result
+in a failure to remove a lock file.
+.PP
+After an interrupt, the next message may not be printed;
+printing may be forced by typing a
+\f4p\f1.
+.Ee

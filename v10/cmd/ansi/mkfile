@@ -1,0 +1,18 @@
+ENVIRON='install(){
+	strip $1
+	cp $1 $4 && rm -f $1 $1.o
+	chmod $3 $4
+	/etc/chown $2 $4
+}
+ubin(){
+	install $1 bin,bin 775 /usr/bin/$1
+}'
+
+all:V: \
+	tr
+
+%: %.c
+	lcc -A $stem.c -o $stem
+
+%.ins:	%
+	ubin tr

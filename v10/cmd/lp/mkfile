@@ -1,0 +1,20 @@
+cc = lcc
+cflags=-g
+
+all:V: lpdaemon lpsend file
+
+file: file.c
+	$cc $cflags $prereq -o $target
+
+lpdaemon: lpdaemon.c
+	$cc $cflags $prereq -o $target
+
+lpsend: lpsend.c
+	$cc $cflags $prereq -lipc -o $target
+
+install: file lpdaemon lpsend lpsend.sh
+	cp $prereq /usr/spool/lp/bin
+
+clobber:
+clean:
+	rm -f file lpdaemon lpsend

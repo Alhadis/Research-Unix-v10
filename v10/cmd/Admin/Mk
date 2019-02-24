@@ -1,0 +1,79 @@
+set -p
+install(){
+	strip $1 &&
+	cp $1 $2
+#	(cp $1 $2 || mv $1 $2) &&
+#	/etc/chown bin,bin $2 &&
+#	chmod o-w,g+w $2
+}
+PATH=/bin:/usr/bin:/etc:
+export PATH
+cd /usr/src/cmd
+for i in $*
+do 	echo "	======== $i"
+
+	if	Admin/lookline "$i" Admin/large
+	then	CFLAGS=-O
+	else	CFLAGS='-Od2'
+	fi
+
+	case $i in
+
+	clean)	rm -f *.o core y.tab.c lex.yy.c  # Clean unwanted files.
+		;;
+
+	*.y)	B=`basename $i .y`
+		eval D=`Admin/dest $B`
+		   yacc $B.y  &&
+		cc $CFLAGS -o $B y.tab.c -ly &&
+		install $B $D/$B &&
+		rm -f y.tab.[co] $B
+		;;
+
+	*.l)	B=`basename $i .l`
+		eval D=`Admin/dest $B`
+		   lex $B.l  &&
+		cc $CFLAGS -o $B lex.yy.c -ll &&
+		install $B $D/$B &&
+		rm -f lex.yy.[co] $B
+		;;
+
+	*.c)	B=`basename $i .c`
+		eval D=`Admin/dest $B`
+		   cc $CFLAGS -o $B $B.c &&
+		install $B $D/$B &&
+		rm -f $B.o $B
+		;;
+
+	*.s)	B=`basename $i .s`
+		eval D=`Admin/dest $B`
+		   as -o $B.o $B.s &&
+		cc -o $B $B.o &&
+		install $B $D/$B &&
+		rm -f $B.o $B
+		;;
+
+	*.sh)	B=`basename $i .sh`
+		eval D=`Admin/dest $B`
+		cp $B.sh $DESTDIR$D/$B
+#		chmod +x $DESTDIR$D/$B
+#		/etc/chown bin,bin $DESTDIR$D/$B
+#		chmod o-w,g+w $DESTDIR$D/$B
+		;;
+
+	Admin)	echo Do nothing.
+		;;
+
+	*)	if [ ! -d $i ]
+		then	echo "Don't know what to do with $i."
+		else
+			cd $i
+			/bin/make clean &&
+			/bin/make &&
+			/bin/make install &&
+			/bin/make clean
+			cd ..
+		fi
+
+	esac
+done

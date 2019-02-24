@@ -1,0 +1,83 @@
+14 JAN 81:
+	modified rhccomp.c so operators are output as += (for example)
+	instead of =+ . Do a g/token=assignop/ to see the code changes.
+	Then, had to fix the assignop checks.  do g/"[-+<>\*\/|&^%]= "/ to
+	find all of the changes.
+	Also, fixed the =+ (etc..) and initializaton violations in rhccomp.c.
+28 OCT 80:
+	Fixed bug in rhccomp.c which messed up goto labels.
+	Is marked /*god*/
+29 JUL 80:
+	Changed all .asm files to .s
+	Created makefile
+29 APR 80:
+	Running fpp on VAX:
+		use malloc(sz) instead of alloc(sz); sz must be even !?
+	fpp.c:		do not #define SMALL
+	rhccomp.c:	HEADLEN: 4 -> 2*sizeof(int)
+			own alloc() -- calls malloc()
+			remove outcore.
+	rhsymtab.c:	calloc() -> kalloc() which calls malloc()
+			own OUT #define.
+18 JAN 79:
+	New rhfcc.c from RH: changes made to fpp.c --
+	passes along cpp line numbers and uses;
+	removed adding extra # line numbers and new abt(), warn(), pdiag() for messages.
+	Also changes (and to cc.c) for -F[qunl] as 4th arg.
+	New rhccomp.c.
+
+06 JAN 79:
+	fpp.c changed to accept "symtout" file
+	as third command argument.  (cc.c -> /bin/cc changed also.)
+
+08 DEC 78:
+	This started with the tape sent to me by R. Hardin 6DEC78.
+	Everything important has been saved on "source" disk.
+	may remove the files in this directory.
+
+
+07 DEC 78:
+
+(7)  Making new /lib/fpp from new source from R. Hardin.
+	Has alloc() calls in rhccomp.c and rhsymtab.c already fixed;
+	  has "symtout" (instead of "a.out") in rhsymtab.c already;
+	  therefore no changes needed to rhccomp.c or rhsymtab.c.
+	Use my fpp.c to get /lib/fpp;
+	  must set unixfmt = 1;
+	  do or do not #define SMALL for 11/20 or not.
+	Use new rhflib.asm which I gave him.
+	Keep my rhfcc.c (although not using).
+
+06 NOV 78:
+
+(5)	Break up rhftoa.c into rhftoa1.c amd rhprintf.o;
+	so can use libS.a printf.
+	Also rhpfloat.o before rhftoa1.o in flibu "/lib/libfu.a"
+	and rhprintf.o before rhpfloat.o
+(6)	Also, remove fltpr.o in libS.a and
+	remove global "pfloat" and "pscien" (leave) "pgen" from ffltpr.o
+
+04 NOV 78:
+
+(4)	Use "atof1()" from JP Hawkins at WH;
+	mmatof.c -> mmatof.o.
+	Put in "flibu" (-lfu).
+
+19 OCT 78:
+
+(1)	in rhccomp.c and rhsymtab.c;
+		alloc error test no good on LSX
+		on LSX error return is -1 and not 0.
+		change: alloc -> malloc
+(2)	fpp.c: rhfcc.c for LSX
+	If SMALL DEFINEd (for 16k usr space):
+		SYMTABSZ: 4096 -> 1024
+		N:	200 -> 100
+		OB:	200 -> 100
+	Also make into a filter for new "cc -F" command.
+	 Add output file as another command arg.
+	 Remove "system4" calls to 'cc' command
+	 and logic of options
+(3)	in rhsymtab.c
+		"a.out" -> symtout
+	and symtout set in rhfcc.c (fpp.c)

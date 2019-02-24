@@ -1,0 +1,118 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+|associate(department;;;
+
+[name $;
+set string N0 $;]
+[number $;
+set string N1 $;])
+|comment<summary: department (name, number for title box)>
+
+|associate(date;;;
+
+[report $;
+set string DT $;]
+[range $;
+set string N2 $;])
+|comment<summary: date (report, range for title box)>
+
+|associate(author;;;
+
+[name $;
+set string N3 $;]
+[number $;
+set string N4 $;])
+|comment<summary: author (name, number for footer and title box)>
+
+|environment(titlebox;
+
+font bold, line.length +.5i, page.offset -.25i,
+spacing on, goto .5i, blank.lines -1,
+set string Ts "`Research Report`Department ",
+add string.from.string Ts N1,
+add string Ts "`",
+add string.from.string Ts DT,
+add string Ts "`",
+title Ts,
+
+blank.lines .5,
+set string Ts "`",
+add string.from.string Ts N2,
+add string Ts "`",
+add string.from.string Ts N0,
+add string Ts "`\s-1WPN\s+1 ",
+add string.from.string Ts N4,
+add string Ts "`",
+title Ts,
+
+page.offset +.25i, line.length -.5i, minimum.lines 1;)
+|comment<summary: titlebox (title box)>
+
+|associate(paragraph;
+minimum.lines .5, clear string Ts;;
+
+[indented;
+indent.line 3;]
+[i;
+indent.line 3;])
+|comment<summary: paragraph (i, indented)>
+
+|associate(p;
+minimum.lines .5, clear string Ts;;
+
+[indented;
+indent.line 3;]
+[i;
+indent.line 3;])
+|comment<summary: p (alias for paragraph)>
+
+|environment(section;
+minimum.lines .5, protect, font bold;
+
+paragraph)
+|comment<summary: section (section)>
+
+|environment(signature;
+minimum.lines 3,
+remember P0,
+indent.line .3125i,
+text "AT&T \(em PROPRIETARY", new.line,
+text "Use pursuant to Company Instructions", new.line,
+return P0,
+indent 3i, blank.lines 1,
+tab.stops 1.5iC, fill off, tab, string N3, tab;)
+|comment<summary: signature (signature)>
+
+|environment(:document;
+page.offset +.25i;)
+
+|environment(:document_save;
+;)
+
+|environment(:document_restore;
+;)

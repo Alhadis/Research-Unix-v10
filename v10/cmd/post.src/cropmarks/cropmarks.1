@@ -1,0 +1,101 @@
+.ds dQ /usr/lib/postscript
+.TH CROPMARKS 1 "DWB 3.2"
+.SH NAME
+.B cropmarks
+\- add cropmarks to PostScript files
+.SH SYNOPSIS
+\*(mBcropmarks\f1
+.OP "" options []
+.OP "" files []
+.SH DESCRIPTION
+.B Cropmarks
+surrounds PostScript
+.I files
+with code that centers each page and adds cropmarks to the four
+corners.
+The results are written on the standard output.
+If no
+.I files
+are specified, or if
+.OP \-
+is one of the input
+.I files,
+the standard input is read.
+The following
+.I options
+are understood:
+.TP 1.0i
+.OP \-d
+Disable the device-dependent PostScript code that expands page sizes.
+.TP 1.0i
+.OP \-h num
+Set the height of each page to
+.I num
+inches.
+The default is 11.0 inches.
+.TP 1.0i
+.OP \-s
+Scale pages so cropmarks always show up.
+Primarily for debugging and development on devices that don't adjust
+page sizes.
+.TP 1.0i
+.OP \-w num
+Set the width of each page to
+.I num
+inches.
+The default is 8.5 inches.
+.TP 1.0i
+.OP \-L file
+Use
+.I file
+as the PostScript prologue.
+.br
+The default is
+.MR \*(dQ/cropmarks.ps .
+.PP
+Height and width set with the
+.OP \-h
+and
+.OP \-w
+options adjust the size of the image area available on each sheet
+of paper.
+Neither suggests anything about the orientation of output in that area.
+Cropmarks are printed at each corner just outside the image area.
+.SH EXAMPLES
+.PP
+Print text in a 6.5\(mu8.0-inch area centered on each sheet of paper:
+.EX
+troff -mm \f2file\fP | dpost | cropmarks -w6.5 -h8.0 | \f2spool
+.EE
+Print landscape text in exactly the same 6.5\(mu8.0-inch area:
+.EX
+troff -mm \f2file\fP | dpost -pland | cropmarks -w6.5 -h8.0 | \f2spool
+.EE
+In both examples,
+.I spool
+is the spooling command used to send PostScript output to a local printer.
+.SH WARNINGS
+.PP
+Device-dependent PostScript code to automatically expand page sizes may
+only work on Linotronic 200P typesetters that use 12-inch-wide paper.
+Local changes to the printer-dependent code can be made in the
+.MW expandpagesize
+procedure defined in
+.MR \*(dQ/cropmarks.ps .
+.PP
+The PostScript
+.I files
+must be reasonably well behaved.
+There are no guarantees, particularly if the input
+.I files
+redefine the
+.MW showpage
+operator.
+.PP
+The program is unsupported and may not be included in future releases.
+.SH FILES
+.MW \*(dQ/cropmarks.ps
+.SH SEE ALSO
+.BR dpost (1),
+.BRpostio (1),
+.BR troff (1)

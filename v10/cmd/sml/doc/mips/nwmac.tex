@@ -1,0 +1,94 @@
+\magnification=\magstephalf
+\advance\hoffset 0.5 true in
+\advance\hsize -1 true in
+\newdimen\textsize
+\textsize=\hsize
+\def\today{\ifcase\month\or
+  January\or February\or March\or April\or May\or June\or
+  July\or August\or September\or October\or November\or December\fi
+  \space\number\day, \number\year}
+\headline={\hbox to \textsize{\tentt\firstmark\hfil\tenrm\today\hbox
+to 4em{\hss\folio}}\hss}
+\footline={\hfil}
+\def\semifilbreak{\vskip0pt plus1.5in\penalty-200\vskip0pt plus -1.5in}
+\raggedbottom
+
+%
+% \chapcenter macro to produce nice centered chapter titles
+%
+\def\chapcenter{\leftskip=0.5 true in plus 4em minus 0.5 true in
+    \rightskip=\leftskip
+    \parfillskip=0pt \spaceskip=.3333em \xspaceskip=.5em
+    \pretolerance=9999 \tolerance=9999
+    \hyphenpenalty=9999 \exhyphenpenalty=9999}
+% \startsection{LEVEL}{INDENT}{BEFORESKIP}{AFTERSKIP}{STYLE}{HEADING}
+%		#1     #2      #3          #4         #5     #6
+%
+%	LEVEL:		depth; e.g. part=0 chapter=1 sectino=2...
+%	INDENT:		indentation of heading from left margin
+%	BEFORESKIP:	skip before header
+%	AFTERSKIP:	skip after header
+%	STYLE:		style of heading; e.g.\bf
+%	HEADING:	heading of the sectino
+%
+\def\startsection#1#2#3#4#5#6{\par\vskip#3
+    \noindent{\leftskip=#2 \rightskip=0.5true in plus 4em minus 0.5 true in
+              \hyphenpenalty=9999 \exhyphenpenalty=9999
+              #5#6\par}\vskip#4%
+    {\def\code##1{[[}\def\edoc##1{]]}\message{[#6]}}
+    \settocparms{#1}
+    \def\themodtitle{#6}
+    {\def\code{\string\code}\def\edoc{\string\edoc}%
+    \edef\next{\write\cont{\tocskip
+	\tocline{\hskip\tocindent\tocstyle\relax\themodtitle}
+		{\the\pageno}}}\next % write to toc
+    }%
+}
+%
+\def\settocparms#1{
+	\count255=#1
+	\ifnum\count255<1
+            \def\tocskip{\vskip3ptplus1in\penalty-100
+			\vskip0ptplus-1in}%
+            \def\tocstyle{\bf}
+	    \def\tocindent{0pt}
+        \else
+            \def\tocskip{}
+	    \def\tocstyle{\rm}
+	    \dimen0=2em \advance\count255 by -1 \dimen0=\count255\dimen0
+	    \edef\tocindent{\the\dimen0}
+	\fi
+}
+%
+\def\tocline#1#2{\line{{\ignorespaces#1}\leaders\hbox to .5em{.\hfil}\hfil
+     \hbox to1.5em{\hss#2}}}
+
+
+\def\section#1{\par \vskip3ex\noindent {\bf #1}\par\nobreak\vskip1ex\nobreak}
+\def\chapter#1{\startsection{0}{0pt}{6ex}{3ex}{\bf\chapcenter}{#1}}
+\def\section#1{\startsection{1}{0pt}{4ex}{2ex}{\bf}{#1}}
+\def\subsection#1{\startsection{2}{0pt}{3ex}{2ex}{\bf}{#1}}
+\def\paragraph#1{\startsection{3}{0pt}{2ex}{0ex}{\bf}{#1}}
+
+\input nwkernel
+
+
+\edef\contentsfile{\jobname.toc } % file that gets table of contents info
+\def\readcontents{\expandafter\input \contentsfile}
+
+\newwrite\cont
+\openout\cont=\contentsfile
+\write\cont{\string\catcode`\string\@=11}% a hack to make contents
+					 % take stuff in plain.tex
+
+\def\bye{%
+    \write\cont{}% ensure that the contents file isn't empty
+    \closeout\cont
+    \vfil\eject\pageno=-1 % new page causes contents to be really closed
+    \topofcontents\readcontents\botofcontents
+    \vfil\eject\end}
+\def\topofcontents{\vfil\mark{{\bf Table of Contents}}}
+\def\botofcontents{}
+
+
+\let\em=\it

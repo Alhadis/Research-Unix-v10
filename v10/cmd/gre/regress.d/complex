@@ -1,0 +1,14 @@
+did=verified
+for i in `ls t*.sh | sed -e 's/.sh$//' | sort +0.1n`
+do
+	sh $i.sh > temp
+	if cmp -s temp $i.out
+	then 
+		:
+	else 
+		echo "test $i failed" 
+	fi 
+	rm temp
+	did="$did $i"
+done
+echo "$did"

@@ -1,0 +1,1843 @@
+.if n .pH uguide.chap11 %W%
+.BK "User's Guide"
+.H 0 "Electronic Mail Tutorial" "11"
+.H 1 "Introduction"
+The UNIX system offers a choice of commands that enable you to communicate
+with other UNIX system users.
+Specifically, they allow you to:
+send and receive messages
+from other users (on either your system or another UNIX system);
+exchange files;
+and form networks with other UNIX systems.
+Through
+networking, a user on one system can exchange messages
+and files between computers, and execute commands on
+remote computers.
+.P
+To help you take advantage of these capabilities,
+this chapter will teach you how to use the
+following commands.
+.VL 2.25i 0.3i
+.LI "For exchanging messages:"
+\f4mail\f1, \f4mailx\f1, \f4uname\f1, and \f4uuname\f1
+.LE
+.P
+To help you exchange files, and for information on networking,
+see Chapter 12.
+.H 1 "Exchanging Messages"
+.IX sending messages (see \f4mail, mailx\f1)
+To send messages 
+you can use either the \f4mail\f1 or \f4mailx\f1 command.
+These commands deliver your message
+to a file belonging to the recipient.
+When the recipient logs in (or while
+already logged in), he or she receives a message
+that says \f4you have mail\f1.
+The recipient can use either the
+.UI mail
+or
+.UI mailx
+command to read your message and 
+reply at his or her leisure.
+.P
+The main difference between \f4mail\f1 and \f4mailx\f1
+is that only \f4mailx\f1 
+offers the following features:
+.BL 
+.LI
+a choice of text editors (\f4ed\f1 or \f4vi\f1) 
+for handling incoming and outgoing messages
+.LI
+several options for saving files
+.LI
+commands for replying to messages and sending copies
+(of both incoming and outgoing messages) to other users
+.LE
+.P
+You can also use \f4mail\f1 or \f4mailx\f1 to
+send short files containing memos, reports,
+and so on.
+However, if you want to send someone
+a file that is over a page long,  
+use one of the commands 
+designed for transferring files:  \f4uuto\f1
+or \f4uucp\f1.
+(See "Sending Large Files" in chapter 12
+for descriptions of these commands.)
+.H 1 "\f4mail\fP"
+.IX istart \f4mail\f1 command
+This section presents the \f4mail\f1 command.
+It discusses the basics of sending mail
+to one or more people simultaneously,
+whether they are working on the local
+system (the same system as you) or on a 
+remote system.
+It also covers receiving and handling incoming mail.
+.H 2 "Sending Messages"
+.IX sending messages (see \f4mail, mailx\f1)
+The basic command line format for sending mail is
+.DS I
+\f4mail \f2login\f4<CR>\f1
+.DE
+where \f2login\f1 is the recipient's login name
+on a UNIX system.  This login name can be 
+either of the following:
+.BL 
+.LI
+a login name if the recipient is on your system
+(for example, \f4bob\f1)
+.LI
+a system name and login name
+if the recipient is on another UNIX system
+that can communicate with yours (for example,
+\f4sys2!bob\f1)
+.LE
+For the moment, assume that the recipient is on the local system.
+(We will deal with sending mail to users
+on remote systems later.)
+Type the \f4mail\f1 command at the system prompt,
+type the recipient's login id,
+press the RETURN key, and start typing
+the text of your message on the next line.
+When you have finished typing it, send the message by
+typing a period (\f4\z..\f1) or a <cntrl-d>
+at the beginning of a new line.
+.P
+The following example shows how this
+procedure will appear on your screen.
+.SS
+$ \f4mail phyllis<CR>
+My meeting with Smith's<CR>
+group tomorrow has been moved<CR>
+up to 3:00 so I won't be able to<CR>
+see you then.  Could we meet<CR>
+in the morning instead?<CR>
+\&.<CR>\fP
+$
+.SE
+The prompt on the last line
+means that your message has been 
+queued (placed in a waiting line of messages)
+and will be sent.
+.H 3 "Undeliverable Mail" 
+.IX \f4mail\f1, undeliverable
+If you make an error when typing the recipient's login,
+the \f4mail\f1 command will not be able to deliver your mail.
+Instead, it will print two messages telling you that it has failed
+and that it is returning your mail.
+Then it will return your mail in a message that includes
+the system name and login name of both the sender and intended recipient,
+and an error message stating the reason for the failure.
+.P
+For example, say you (owner of the login \f4kol\f1) 
+want to send a message to a user with the login \f4chris\f1.
+Your message says \f4The meeting has been changed to 2:00.\f1
+Failing to notice that you have incorrectly typed 
+the login as \f4cris\f1,
+you try to send your message.
+.SS
+$ \f4mail cris<CR>
+The meeting has been changed to 2:00.
+\&.<CR>\fP
+mail: Can't send to cris
+mail: Return to kol
+you have mail
+$
+.SE
+The message \f4you have mail\f1 is presented by the shell; different shells
+may use slightly different wording for this message.
+.P
+The mail that is waiting for you in \f4/var/mail\f1
+will be useful if you do not know
+why the \f4mail\f1 command has failed,
+or if you want to retrieve your mail
+so that you can resend it without typing it in again.
+It contains the following:
+.SS
+$ \f4mail<CR>\fP
+From kol Mon Jan 23 16:00 EST 1989
+Date: Mon Jan 23 11:00:01 GMT 1989
+Original-Date:  Mon Jan 23 15:59 EST 1989
+Not-Delivered-To: marmaduk!cris  due to 02  Ambiguous Originator/Recipient Name
+     ORIGINAL MESSAGE ATTACHED
+     (mail: Error # 8 'Invalid recipient')
+Content-Length: 77
+
+Content-Type: text
+Content-Length: 38
+
+The meeting has been changed to 2:00.
+
+?
+.SE
+To learn how to display and handle this message
+see "Managing Incoming Mail" later in this chapter.
+.H 3 "Sending Mail to One Person"
+.IX \f4mail\f1, sending to one person
+The following screen shows a typical message.
+.SS
+$ \f4mail tommy<CR>
+Tom,<CR>
+There's a meeting of the review committee<CR>
+at 3:00 this afternoon.  D.F. wants your<CR>
+comments and an idea of how long you think<CR>
+the project will take to complete.<CR>
+B.K.<CR>
+\&.<CR>\fP
+$
+.SE
+When Tom logs in at his terminal (or while he is already logged in),
+he receives a message that tells him he has mail waiting:
+.DS I
+\f4you have mail\f1
+.DE
+To find out how he can read his mail,
+see the section "Managing Incoming Mail"
+in this chapter.
+.P
+You can practice using the \f4mail\f1 command
+by sending mail to yourself.
+Type in the \f4mail\f1 command
+and your login ID, and then write a short message to yourself.
+When you type the final period or <cntrl-d>,
+the mail will be sent to a file named
+after your login ID in the \f4/var/mail\f1 directory, and
+you will receive a notice that you have mail.
+.P
+Sending mail to yourself can also serve as a handy reminder system.
+For example, suppose you (login ID \f4bob\f1)
+want to call someone the next morning.  Send
+yourself a reminder in a mail message.
+.SS
+$ \f4mail bob<CR>
+Call Accounting and find out<CR>
+why they haven't returned my 1988 figures!<CR>
+\&.<CR>\fP
+$
+.SE
+When you log in the next day,
+a notice will appear on your screen
+informing you that you have mail
+waiting to be read.
+.H 3 "Sending Mail to Several People Simultaneously"
+.IX \f4mail\f1, sending several people
+You can send a message to several people
+by including their login names on the \f4mail\f1
+command line.
+For example:
+.SS
+$ \f4mail tommy jane wombat dave<CR>
+Diamond cutters,<CR>
+The game is on for tonight at diamond three.<CR>
+Don't forget your gloves!<CR>
+Your Manager<CR>
+\&.<CR>\fP
+$
+.SE
+.H 2 "Sending Mail to Remote Systems:  the \f4uname\fP and \f4uuname\fP Commands"
+.IX \f4mail\f1, sending mail to remote systems
+.IX \f4uname\f1 command
+.IX \f4uuname\f1 command
+Until now we have assumed that you are sending messages to users
+on the local UNIX system.
+However, your company may have three separate computer systems,
+each in a different part of a building, or you may
+have offices in several locations, each with its own system.
+.P
+If your system has the Basic Networking Utilities package installed,
+you can send mail to users on other systems
+simply by adding the name of the recipient's
+system before the login ID on the command line.
+.DS I
+\f4mail sys2!bob<CR>\f1
+.DE
+Notice that the system name and the recipient's
+login ID are separated by an exclamation mark.
+.P
+Before you can run this command, however, you need three
+pieces of information:
+.BL 
+.LI
+the name of the remote system
+.LI
+whether or not your system and the remote system communicate
+.LI
+the recipient's login name
+.LE
+The \f4uname\f1 and \f4uuname\f1 commands
+.IX \f4uname\f1 command
+.IX \f4uuname\f1 command
+allow you to find this information.
+.P
+If you can, get the name of the remote system and the recipient's login name
+from the recipient.  If the recipient does not know the system name,
+have him or her issue the following command on the remote system:
+.DS I
+\f4uname \-n<CR>\f1
+.DE
+The command will respond with the name of the system.
+For example:
+.DS I
+\f4$ \f4uname \-n<CR>\f4
+dumbo 
+$\f1
+.DE
+.P
+Once you know the remote system name,
+the \f4uuname\f1 command can help you verify that
+your system can communicate with the remote system.
+At the prompt, type:
+.DS I
+\f4uuname<CR>\f1
+.DE
+This generates a list of remote systems with which your system can communicate.
+If the recipient's system is on that list,
+you can send messages to it by \f4mail\f1.
+.P
+You can simplify this step by using the \f4grep\f1 command to search through 
+the \f4uuname\f1 output.
+At the prompt, type:
+.DS I
+\f4uuname | grep \f2system\f4<CR>\f1
+.DE
+(Here \f2system\f1 is the recipient's system name.)
+If \f4grep\f1 finds the specified system name, it prints it
+on the screen.  For example:
+.IX \f4uname\f1 command
+.IX \f4uuname\f1 command
+.DS I
+\f4$\f4 uuname | grep dumbo<CR>
+\f4dumbo
+$\f1
+.DE
+This means that \f4dumbo\f1
+can communicate with your system.
+If \f4dumbo\f1 does not communicate
+with your system, a prompt is returned.
+.DS I
+\f4$ \f4uuname | grep dumbo<CR>
+\f4$\f1
+.DE
+.P
+To summarize our discussion of \f4uname\f1
+.IX \f4uname\f1 command
+.IX \f4uuname\f1 command
+and \f4uuname\f1, consider an example.
+Suppose you want to send a message to login \f4sarah\f1
+on the remote system \f4dumbo\f1.
+Verify that \f4dumbo\f1 can communicate with your system and send your message.
+The following screen shows both steps.
+.SS
+$ \f4uuname | grep dumbo<CR>\fP
+dumbo
+$ \f4mail dumbo!sarah<CR>
+Sarah,<CR>
+The final counts for the writing seminar<CR>
+are as follows:<CR>
+<CR>
+Our department \- 18<CR>
+Your department \- 20<CR>
+<CR>
+Tom<CR>
+\&.<CR>\fP
+$
+.SE
+.P
+Figures 11-1 and 11-2 summarize the syntax and 
+capabilities of the \f4uname\f1 and \f4uuname\f1 
+commands, respectively.
+.SK
+.FG "Summary of the \f4uname\fP Command"
+.TS
+box;
+c s s
+c s s
+c cw(1.5i) cw(1.5i)
+c cw(1.5i) cw(1.5i)
+lw(1i) l s.
+.sp .5
+Command Recap
+.sp .5
+\f4uname\f1 \- displays the system name\f1
+.sp .5
+_
+.sp .5
+\f2command	\0\0\0options	arguments\f1
+.sp .5
+_
+.sp .5
+\f4uname\f1	\0\0\0\f4\-n\f1 and others*	none
+.sp .5
+_
+.sp
+Description:	T{
+.ll 3i
+\f4uname\0\-n\f1 displays the name of the system
+on which your login resides.
+.ll
+T}
+.sp .5
+.TE
+.IX \f4uname\fP(1)
+.TS
+c lp8w(3.5i).
+*	T{
+See \f4uname\f1(1)
+in the \f2User's Reference Manual\f1 for all
+available options and an explanation of their
+capabilities.
+T}
+.TE
+.P
+.FG "Summary of the \f4uuname\fP Command"
+.TS
+box;
+c s s
+c s s
+c cw(1.5i) cw(1.5i)
+c cw(1.5i) cw(1.5i)
+lw(1i) l s.
+.sp .5
+Command Recap
+.sp .5
+\f4uuname\f1 \- displays a list of networked systems\f1
+.sp .5
+_
+.sp .5
+\f2command	\0\0\0options	arguments\f1
+.sp .5
+_
+.sp .5
+\f4uuname\f1	\0\0\0none	none
+.sp .5
+_
+.sp 12p
+.T&
+l l s.
+Description:	T{
+.ll 3i
+\f4uuname\f1 displays a list of remote
+systems that can communicate with your
+system.
+.ll
+T}
+.TE
+.P
+In addition to the addressing style described above,
+another addressing syntax known as Domain-style addressing is supported.
+Here the address would be in the form
+.DS I
+\f2recipient\f4@\f2remote_system\f1
+.DE
+or
+.DS I
+\f2recipient\f4@\f2remote_system.domain_info\f1
+.DE
+The above two addresses are equivalent to the addresses
+.DS I
+\f2remote_system\f4!\f2recipient\f1
+.DE
+or
+.DS I
+\f2remote_system.domain_info\f4!\f2recipient\f1
+.DE
+.P
+Other addressing syntaxes may be set up by your local System Administrator.
+Your local System Administrator may also have set it up 
+(check with your local System Administrator to be sure),
+such that it may not be necessary to verify that your local system can
+directly communicate with the remote system.
+If the remote system cannot be contacted directly the message may
+be automatically forwarded to another system that can service the
+indicated remote system.
+.P
+Figure 11-3 summarizes the syntax and capabilities of the \f4mail\fP command.
+.FG "Summary of Sending Messages with the \f4mail\fP Command"
+.TS
+box;
+c s s
+c s s
+c cw(1.5i) cw(1.5i)
+c cw(1.5i) cw(1.5i)
+lw(1i) l s.
+.sp .5
+Command Recap
+.sp .5
+\f4mail\f1 \- sends a message to another user's login
+.sp .5
+_
+.sp .5
+\f2command	\0\0\0options*	arguments\f1
+.sp .5
+_
+.sp .5
+\f4mail\f1	\0\0\0none required	[\f2system_name!\f1]\f2login\f1
+.sp .5
+_
+.sp
+Description:	T{
+.ll 3i
+Typing \f4mail\f1 followed by one or more
+login names (which may include a system name),
+sends the
+message typed on the lines following the
+command line to the specified login(s).
+.ll
+T}
+.sp
+Remarks:	T{
+.ll 3i
+Typing a period (\f4.\f1) (followed by the RETURN key) or a <cntrl-d>
+at the beginning of a new line sends the message.
+.ll
+T}
+.TE
+.TS
+c lp8w(3.5i).
+*	T{
+See the \f4mail\f1(1) manual page
+in the \f2User's Reference Manual\f1 for all
+available options and an explanation of their
+capabilities.
+T}
+.TE
+.H 2 "Managing Incoming Mail"
+.IX \f4mail\f1, incoming
+As stated earlier,
+the \f4mail\f1 command also allows you
+to display messages sent to you by other users
+on your screen
+so you can read them.
+If you are logged in
+when someone sends
+you mail, the following message is printed on
+.IX \f4mail\f1, message
+your screen:
+.DS I
+\f4you have mail\f1
+.DE
+This means that one or more messages are being held for you in a file
+called \f4/var/mail/\f2your_login\f1, usually referred to as your mailbox.
+To display these messages on your screen, type the \f4mail\f1 command 
+without any arguments:
+.DS I
+\f4mail<CR>\f1
+.DE
+.P
+The messages will be displayed one at a time, beginning with
+the one most recently received. 
+A typical \f4mail\f1 message display looks like this:
+.SS
+$ mail
+>From tommy Wed May 21 15:33 CST 1989
+Content-Length: 104
+
+Bob,
+Looks like the meeting has been canceled.
+Do you still want the material for the technical review?
+Tom
+
+?
+.SE
+The first set of lines,
+called the message header,
+provides information about the message:  the
+login name of the sender,
+the date and time the message was sent,
+and how many characters long the contents of the message is.
+The lines after the first blank line (up to the line containing the \f1?\f1)
+comprise the contents of the message.
+.P
+If a long message is being displayed on your terminal screen,
+.IX \f4mail\f1, message
+you may not be able to read it all at once.
+You can interrupt the printing by typing <cntrl-s>.
+This will freeze the screen, giving you a chance to read.
+When you are ready to continue,
+type <cntrl-q> and the printing will resume.
+.P
+After displaying each message, the \f4mail\f1 command 
+prints a \f4?\f1 prompt and waits for a response.
+You have many options, for example, you can
+leave the current message in your mailbox
+while you read the next message;
+you can delete the current message;
+or you can save the current message for future reference.
+For a list of \f4mail\f1's available options, type a \f4?\f1
+in response to \f4mail\f1's \f1?\f1 prompt.
+.P
+To display the next message without deleting the current message,
+press the RETURN key after the question mark.
+.DS I
+\f4?\f4<CR>\f1
+.DE
+The current message remains in your mailbox
+and the next message is displayed.
+If you have read all the messages in your mailbox,
+the shell prompt appears.
+.P
+To delete a message, type a \f4d\f1 after the question mark:
+.IX \f4mail\f1, delete message
+.DS I
+\f4? \f4d<CR>\f1
+.DE
+The message is deleted from your mailbox.
+If there is another message waiting, it is then displayed.
+.P
+To save a message for later reference,
+.IX \f4mail\f1, save message
+type an \f4s\f1 after the question mark:
+.DS I
+\f4? \f4s<CR>\f1
+.DE
+This saves the message, by default, in a file called \f4mbox\f1
+in your home directory.
+To save the message in another file,
+type the name of that file after the \f4s\f1 command.
+.P
+For example, to save a message
+.IX \f4mail\f1, save message
+in a file called \f4mailsave\f1 (in your current directory),
+enter the response shown after the question mark:
+.DS I
+\f4? \f4s mailsave<CR>\f1
+.DE
+If \f4mailsave\f1 is an existing file,
+the \f4mail\f1 command appends the message to it.
+If there is no file by that name, the \f4mail\f1 command
+creates one and stores your message in it.
+You can later verify the existence of the new file
+by using the \f4ls\f1 command.
+(\f4ls\f1 lists the contents of your current directory.)
+.P 
+You can also save the message in a file in a different directory
+by specifying a path name.
+For example:
+.DS I
+\f4? \f4s project1/memo<CR>\f1
+.DE
+This is a relative path name that identifies a file called \f4memo\f1
+(where your message will be saved)
+in a subdirectory (\f4project1\f1)
+of your current directory.
+You can use either relative or full path names 
+when saving mail messages.
+(For instructions on using path names, see Chapter 3,
+"Using the File System.")
+.P
+To quit reading messages, enter the response shown after the question mark:
+.IX \f4mail\f1, quit reading message
+.DS I
+\f4?\f4 q<CR>\f1
+.DE
+Any messages that you have not read are kept in your mailbox
+until the next time you use the \f4mail\f1 command.
+.P
+To stop the printing of a message entirely, press the BREAK key.
+The \f4mail\f1 command will stop the display, print a ? prompt,
+and wait for a response from you. 
+.P
+Figure 11-4 summarizes the syntax and capabilities of the \f4mail\f1 command
+for reading messages.
+.FG "Summary of Reading Messages with the \f4mail\fP Command"
+.TS
+box;
+c s s
+c s s
+c cw(1.5i) cw(1.5i)
+c cw(1.5i) cw(1.5i)
+lw(1i) l s.
+.sp .5
+Command Recap
+.sp .5
+\f4mail\f1 \- reads messages sent to your login\f1
+.sp .5
+_
+.sp .5
+\f2command	\0\0\0options	arguments\f1
+.sp .5
+_
+.sp .5
+\f4mail\f1	\0\0\0available*	none
+.sp .5
+_
+.sp
+Description:	T{
+.ll 3i
+When issued without options, 
+the \f4mail\f1 command displays
+any messages waiting in
+your mailbox
+(the system file
+\f4/var/mail/\f2your_login\f1).
+.ll
+T}
+.sp
+Remarks:	T{
+.ll 3i
+A question mark (\f4?\f1) at the
+end of a message means that a response
+is expected.
+A full list of possible responses is
+given in the \f2User's Reference Manual\f1.
+.ll
+T}
+.TE
+.IX \f4mail\f1 command, summary of
+.TS
+c lp8w(3.5i).
+*	T{
+See the \f4mail\f1(1) manual page in 
+the \f2User's Reference Manual\f1 for all
+available options and an explanation of their
+capabilities.
+T}
+.TE
+.H 3  "The \f4vacation\fP and \f4notify\fP commands"
+.IX \f4notify\f1 command
+.IX \f4vacation\f1 command
+Two other programs related to managing incoming messages are
+\f2notify\f1(1) and \f2vacation\f1(1).
+The \f2notify\f1 command provides a mechanism for
+notifying the recipient (if they are currently logged on) of
+newly arrived messages.
+The \f2vacation\f1 command provides a way to automatically
+answer incoming messages with a canned response while also
+saving the incoming messages for later perusal.
+See the \f2User's Reference Manual\f1 for additional details.
+.IX iend \f4mail\f1 command
+.H 1 "\f4mailx\fP"
+.IX istart \f4mailx\f1 command
+This section introduces the \f4mailx\f1 facility.
+It explains how to set up your \f4mailx\f1 environment, 
+send messages with the \f4mailx\f1 command,
+and handle messages that have been sent to you.
+The material is presented in four parts:
+.BL
+.LI
+\f4mailx\f1 Overview
+.LI
+Sending Messages
+.LI 
+Managing Incoming Mail 
+.LI
+The \f4.mailrc\f1 File
+.LE
+.H 1 "\f4mailx\fP Overview" "mailx"
+.IX \f4mailx\f1 command
+The \f4mailx\f1(1) command is an enhanced version of the 
+\f4mail\f1(1) command.
+There are many options to \f4mailx\f1 that are not available in \f4mail\f1
+for sending and reading mail.
+For example, you can define an alias for a single login or for a group.
+This allows you to send \f4mail\f1 to an individual using a
+name or word other than their login ID,
+and to send \f4mail\f1 to a whole group of people
+using a single name or word.
+When you use \f4mailx\f1 to read incoming mail 
+you can save it in various files,
+edit it, forward it to someone else, 
+respond to the person who originated the message, and so forth.
+By using \f4mailx\f1 environment variables
+you can develop an environment to suit your individual tastes.
+.P
+If you type the \f4mailx\f1 command with one or more logins as
+arguments, \f4mailx\f1 decides you are sending mail
+to the named users, prompts you
+for a summary of the subject, and then waits for you to
+type in your message or issue a command.
+The section "How to Send Messages" describes 
+features that are available to you for editing, incorporating other
+files, adding names to copy lists, and more.
+.P
+If you enter the \f4mailx\f1 command with no arguments,
+\f4mailx\f1 checks incoming mail for you in a file named
+\f4/var/mail/\f2your_login\f1.
+If there is mail for you in that file, you are shown a list of
+the items and given the opportunity to read, store, remove or transfer
+each one to another file.
+The section entitled "How to Manage Incoming Mail" provides some
+examples and describes the
+options available.
+.P
+If you choose to customize \f4mailx\f1,
+.IX \f4mailx\f1 command
+you should create a start-up file in your home
+directory called \f4.mailrc\f1.
+The section on "The \f4.mailrc\f1 File" describes variables you
+can include in your start-up file.
+.P
+\f4mailx\f1 has two modes of functioning:  input mode and command mode.
+You must be in input mode to create and send messages.
+Command mode is used to read incoming mail.
+You can use any of the following methods to
+control the way \f4mailx\f1 works for you:
+.BL 
+.LI
+by entering options on the command line.
+(See the \f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1.)
+.LI
+by issuing commands when you are in input mode, for example,
+creating a message to send.
+These commands are always preceded by a \&\f4~\f1(tilde) and are
+referred to as tilde escapes.
+(See the \f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1.)
+.LI
+by issuing commands when you are in command mode, for example,
+reading incoming mail.
+.LI
+by storing commands and environment variables in a start-up
+file in your home directory called \f4$HOME/.mailrc\f1.
+.LE
+.P
+Tilde escapes are discussed in "Sending Messages,"
+command mode commands in "Managing Incoming Mail,"
+and the \f4.mailrc\f1 file in "The \f4.mailrc\f1 File."
+.H 1 "Command Line Options"
+.IX \f4mailx\f1, options
+In this section, we will look at command line options.
+.P
+The syntax for the \f4mailx\f1 command is:
+.DS I
+\f4mailx\f1 [\f2options\f1] [\f2name...\f1]
+.DE
+The \f2options\f1 are flags that control the action of the command,
+and \f2name...\f1 represents the intended recipients. 
+.P
+Anything on the command line other than an
+option preceded by a hyphen is read by \f4mailx\f1 as a \f2name\f1; that is, 
+the login or alias of a person to
+whom you are sending a message.
+.P
+One valuable command line option that is also available
+in \f4mail\f1, is
+.TS
+l lw(4i).
+\f4\-f \f1[\f2filename\f1]:\ 	T{
+Allows you to read messages from \f2filename\f1 instead of your mailbox. 
+.sp
+Because \f4mailx\f1 lets you store messages in any file you name,
+you need the \f4\-f\f1 option to review these stored options.
+The default storage file is \f4$HOME/mbox\f1, so the command:
+.DS I
+\f4mailx \-f\f1
+.DE
+is used to review messages stored there.
+T}
+.TE
+.H 1 "How to Send Messages:  the Tilde Escapes" 
+.IX \f4mailx\f1, send message
+To send a message to another UNIX system user, enter the following
+command:
+.SS 
+$ \f4mailx \fP\f2login\fP\f4<CR>\fP
+Subject:
+.SE
+The login name specified belongs to 
+the person who is to receive the message.
+The system puts you into input mode and prompts you for 
+the subject of the message.
+(You may have to wait a few seconds for the \f4Subject:\f1
+prompt if the system is very busy.)
+This is the simplest way to run the \f4mailx\f1 command;
+it differs little from the way you run the \f4mail\f1 command.
+.P
+The following examples
+show how you can edit messages you
+are sending, incorporate existing text into your messages,
+change the header information,
+and do other tasks that take
+advantage of the \f4mailx\f1 command's capabilities.
+Each example is followed by an explanation of the key
+points illustrated in the example.
+.SS 
+$ mailx sms<CR>
+Subject:
+.SE
+.P
+Whether to include a subject or not is optional.
+If you elect not to, press the RETURN key.
+The cursor moves to the next line and the program waits for you
+to enter the text of the message.
+.SS 
+$ mailx sms<CR>
+Subject: meeting notice<CR>
+We're having a meeting for novice mailx users in<CR>
+the auditorium at 9:00 tomorrow.<CR>
+Would you be willing to give a demonstration?<CR>
+Bob<CR>
+~. <CR>
+EOT
+$
+.SE
+.P
+There are two important things to notice about the above
+example:
+.BL
+.LI
+You break up the lines of your message by
+pressing the RETURN key
+at the end of each line.
+This makes it easier for 
+the recipient to read the message,
+and prevents you from overflowing the line buffer.
+.LI
+You end the text and send the message by entering
+.IX \f4mailx\f1, end message
+a tilde and a period together (\f4\~\.\f1), or a \f4cntrl-d\f1, at the
+beginning of a line.
+The system responds with an 
+end-of-text notice (\f4EOT\f1) and a prompt.
+.LE
+.P
+There are several commands available to you
+when you are in input mode (as we were in the example).
+Each of them consists of a tilde (\~),
+followed by an alphabetic character,
+entered at the beginning of a line.
+Together they are known as tilde escapes.
+(See the \f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1.)
+Most of them are used in the examples in this section.
+.P
+You can include the subject of your message on the
+command line by using the \f4\-s\f1 option.
+.IX \f4mailx\f1 options
+For example, the command line:
+.DS I
+\f4$ \f4mailx \-s "meeting notice" sms<CR>\f1
+.DE
+is equivalent to:
+.DS I
+\f4$ \f4mailx sms<CR>\fP
+Subject: \f4meeting notice<CR>\f1
+.DE
+.br
+.ne8
+.P
+The subject line will look the same to the
+recipient of the message.
+Notice that when putting the subject
+on the command line, you must enclose a subject
+that has more than one word in quotation marks.
+.H 2 "Editing the Message"
+.IX \f4mailx\f1, edit message
+When you are in the input mode of \f4mailx\f1, you can invoke an
+editor by entering the <tilde e> escape
+at the beginning of a line.
+The following example shows how to use tilde:
+.SS
+.ta 1i
+$ \f4mailx sms<CR>\fP
+Subject: \f4Testing my tilde<CR>
+When entering the text of a message<CR>
+that has somehow gotten grabled<CR>
+you may invoke your favorite editor<CR>
+by means of a <tilde e> (~e).\fP
+	.
+	.
+	.
+.ta
+.SE
+Notice that you have misspelled a word in your message.
+To correct the error, use \f4\~e\f1 to invoke the editor,
+in this case the default editor, \f4ed\f1.
+.SS
+.ta 1i
+	.
+	.
+	.
+\f4\~e<CR>\fP
+12
+\f4/grabled/p\fP
+that has somehow gotten grabled
+\f4s/gra/gar/p\fP
+that has somehow gotten garbled
+\f4w\fP
+132
+\f4q\fP
+(continue)
+\f4What more can I tell you?\fP
+	.
+	.
+	.
+.ta
+.SE
+.P
+In this example the \f4ed\f1 editor was used.
+.IX \f4mailx\f1, edit message
+Your \f4.profile\f1 or a \f4.mailrc\f1 file
+controls which editor will be invoked when you issue a \f4\~e\f1 escape command.
+The \f4\~v\f1 (tilde v) escape invokes an alternate editor (most commonly,
+\f4vi\f1).
+.P
+When you exited from \f4ed\f1 (by typing \f4q\f1),
+the \f4mailx\f1 command
+returned you to input mode and prompted you
+to continue your message.
+At this point you may want to preview your corrected message by
+entering a \f4\~p\f1 (tilde p) escape.
+The \f4\~p\f1 escape prints out the entire message up to the point
+where the \f4\~p\f1 was entered.
+Thus, at any time during text entry, you can review the current
+contents of your message.
+.SS
+.sp -1
+.ta 1i
+	.
+	.
+	.
+\f4\~p\fP
+Message contains:
+To: sms
+Subject: Testing my tilde
+
+When entering the text of a message
+that has somehow gotten garbled
+you may invoke your favorite editor
+by means of a <tilde e> (~e).
+What more can I tell you?
+(continue)
+~.
+EOT
+$
+.ta
+.SE
+.H 2 "Incorporating Existing Text into Your Message"
+.IX \f4mailx\f1, incorporating existing text
+\f4mailx\f1 provides four ways to incorporate
+material from another source into
+the message you are creating.
+You can:
+.BL 
+.LI
+read a file into your message
+.LI
+read a message you have received into a reply
+.LI
+incorporate the value of a named 
+environment variable into a message
+.LI 
+execute a shell command and incorporate
+the output of the command into a message
+.LE
+.P
+The following examples show the first two of these functions.
+These are the most commonly used of these four functions.
+For information about the other two, see the
+\f4mailx\f1(1) manual page of the \f2User's Reference Manual\f1.
+.H 3 "Reading a File into a Message"
+.IX \f4mailx\f1, read file
+.SS
+$ \f4mailx sms<CR>\fP
+Subject: \f4Work Schedule<CR>
+As you can see from the following<CR>
+\~r letters/file1
+\f4"letters/file1"   10/725\f4
+we have our work cut out for us.
+Please give me your thoughts on this.
+\- Bob
+\~.\fP
+EOT
+$
+.SE
+.P
+As the example shows, the \f4\~r\f1 (tilde r) escape
+is followed by the name of the file you want to include.
+The system displays the file name and 
+the number of lines and characters it contains.
+You are still in input mode and can continue with
+the rest of the message.  When the recipient gets
+the message, the text of \f4letters/file1\f1 is included.
+(You can, of course, use the \f4\~p\f1 (tilde p) escape
+to preview the contents
+before sending your message.)
+.H 3 "Incorporating a Message from Your Mailbox into a Reply"
+.IX \f4mailx\f1, incorporating message from mailbox
+.SS
+$ \f4mailx<CR>\fP
+mailx version 4.0  Type ? for help.
+"/var/mail/roberts": 2 messages 1 new
+>N   1 abc        Tue May 1  08:09  8/155  Meeting Notice
+     2 hqtrs      Mon Apr 30 16:57  4/127  Schedule
+? \f4m jones<CR>\fP
+Subject: \f4Hq Schedule<CR>
+Here is a copy of the schedule from headquarters...<CR>
+\~f 2<CR>\fP
+Interpolating: 2
+(continue)
+\f4As you can see, the boss will be visiting our district on<CR>
+the 14th and 15th.<CR>
+\- Robert
+\~.\fP
+EOT
+?
+.SE
+.P
+There are several important points illustrated in this
+example:  
+.BL 
+.LI
+The sequence begins in command mode, where you read and respond
+.IX \f4mailx\f1, incorporating message from mailbox
+to your incoming mail.
+Then you switch into input mode
+by issuing the command \f4\m jones\f1
+(meaning send a message to \f4jones\f1). 
+.LI
+The \f4\~f\f1 escape is used in input mode to forward a message in 
+your mailbox and make it part of the outgoing message.  
+The number \f42\f1 after the \f4~f\f1 means message 2 is to be 
+interpolated (read in).
+.LI
+\f4mailx\f1 tells you that message 2 is being 
+interpolated and then tells you to continue.
+.LI
+When you finish creating and sending the message,
+you are back in command mode,
+shown by the \f4?\f1 prompt.
+You may now do something else in command mode,
+or exit \f4mailx\f1 by typing \f4q\f1.
+.LE
+.P
+An alternate command, the \f4\~m\f1 (tilde m) escape,
+works the way that \f4\~f\f1 does except
+the read-in message is indented one tab stop.  Both the \f4\~m\f1
+and \f4\~f\f1 commands work only if you start out in command mode and then 
+enter a command that puts you into input mode.
+Other commands that work this way will be covered in the section
+"How to Manage Incoming Mail."
+.H 2 "Changing Parts of the Message Header"
+.IX \f4mailx\f1, changing message header
+The header of a \f4mailx\f1 message has four components:
+.BL
+.LI
+subject
+.LI
+recipient(s) 
+.LI
+copy-to list
+.LI
+blind-copy list (a list of intended recipients that is not shown on
+the copies sent to other recipients)
+.LE
+.P
+When you enter the \f4mailx\f1 command followed by a login or
+an alias you are put into input mode and prompted for the
+subject of your message.
+Once you end the 
+subject line by pressing the RETURN key,
+\f4mailx\f1 expects you to type
+the text of the message.
+If, at any point in input mode, 
+you want to change or
+supplement some of the header information, there are four 
+tilde escapes that you can use:  \f4\~h\f1, \f4\~t\f1, \f4\~c\f1,
+and \f4\~b\f1.
+.VL .75i .25i
+.LI "\f4\~h\f1"
+displays all the header fields:  subject, recipient,
+copy-to list, and blind copy list, with their current values.
+You can change a current value, add to it, or, by 
+pressing the RETURN key, accept it.
+.LI "\f4\~t\f1"
+lets you add names to the list of recipients.
+Names can be either login names or aliases.
+.LI "\f4\~c\f1"
+lets you create or add to a copy-to list for the message.
+Enter either login names or aliases of those to whom a copy
+of the message should be sent.
+.LI "\f4\~b\f1"
+lets you create or add to a blind-copy
+list for the message.
+.LE
+.P
+All tilde escapes
+must be in the first position on a line.
+For the \f4\~t\f1, \f4\~c\f1 or \f4\~b\f1,
+any additional material on the
+line is taken to be input for the list in question.
+Entering a tilde escape with no additional material will display the
+header line in question, allowing you to backspace and make changes.
+Any additional material on a line
+that begins with a \f4\~h\f1 is ignored.
+.H 2 "Adding Your Signature"
+.IX \f4mailx\f1, adding your signature
+If you want, you can establish two different signatures
+with the \f4sign\f1 and \f4Sign\f1 environment variables.
+These can be invoked with
+the \f4\~a\f1 (tilde a) or \f4\~A\f1 (tilde A) escape, 
+respectively.
+Assume you have set the value 
+Supreme Commander to be called by the \f4\~A\f1 escape.
+Here's how it would work:
+.SS
+$ \f4mailx \-s orders bll<CR>
+Be ready to move out at 0400 hours.<CR>
+~A<CR>\fP
+Supreme Commander
+~.<CR>
+EOT
+$
+.SE
+.P
+Having both escapes (\f4\~a\f1 and \f4\~A\f1)
+allows you to set up
+two forms for your signature.
+However, because the sender's login automatically appears in
+the message header when the message is read, no
+signature is required to identify you.
+.H 2 "Keeping a Record of Messages You Send"
+.IX \f4mailx\f1, record of messages
+The \f4mailx\f1 command offers several ways
+to keep copies of outgoing messages.
+Two that you can use
+without setting any special environment variables 
+are the \f4\~w\f1 (tilde w) escape
+and the \f4\-F\f1 option on the command line.
+.P
+The \f4\~w\f1 followed by a file name causes the text of the message to
+be written to the named file if the file does not already exist.
+For example:
+.SS
+$ \f4mailx bdr<CR>\fP
+Subject: \f4Saving Copies<CR>
+When you want to save a copy of<CR> 
+the text of a message, use the tilde w.<CR>
+\~w savemail\fP
+"savemail" 2/71
+\f4\~.\fP
+EOT
+$
+.SE
+If you now display the contents of \f4savemail\f1, you will see 
+this:
+.IX \f4mailx\f1, record of messages
+.SS
+$ \f4cat savemail<CR>\fP
+When you want to save a copy of 
+the text of a message, use the tilde w.
+$
+.SE
+The drawback to this method, as you can see, is that
+none of the header information is saved.
+.P
+The \f4\-F\f1 option appends the text of the message
+to a file named after the first recipient.
+If you have used an alias for the recipient(s)
+the alias is first converted into the appropriate
+login(s) and the first login is used as
+the file name.
+As noted above, if you have a file by that name in your current
+directory, the
+text of the message is appended to it.
+.P
+Using the \f4\-F\f1 option on the command line does preserve the
+header information.
+It works as follows:
+.SS
+$ \f4mailx \-F bdr<CR>\fP
+\f4Subject: \fP Savings
+This method appends this message to a
+file in my current directory named bdr.
+~.\fP
+EOT
+$
+.SE
+.P
+We can check the results by looking at the file \f4bdr\f1.
+.IX \f4mailx\f1, record of messages
+.SS
+$ \f4cat bdr<CR>\fP
+From: kol  Fri May 2  11:14:45  1989
+To: bdr
+Subject: Savings
+
+This method appends this message to a 
+file in my current directory named bdr.
+$
+.SE
+.H 2 "Exiting from \f4mailx\fP"
+.IX \f4mailx\f1, exiting from
+When you have finished composing your message,
+you can leave \f4mailx\f1 by typing any of the following 
+three commands:
+.VL .75i .25i
+.LI "\f4\~.\f1"
+tilde period (\f4\~.\f1), or \f4cntrl-d\f1, is the standard way of leaving
+input mode.
+It also sends the message.  If you entered
+input mode from the command mode of \f4mailx\f1, you
+now return to the command mode (shown by the
+\f4?\f1 prompt you receive after typing this command).
+If you started out in input mode, you
+now return to the shell (shown by the shell prompt).
+.LI "\f4\~q\f1"
+tilde q (\f4\~q\f1) simulates an interrupt.  It lets you exit the
+input mode of \f4mailx\f1.  If you have entered text for a message,
+it will be appended to the file called \f4dead.letter\f1
+in your home directory.
+.LI "\f4\~x\f1"
+tilde x (\f4\~x\f1) simulates an interrupt.  It lets you exit the
+input mode of \f4mailx\f1 without saving anything.
+.LE
+.H 2 "Summary"
+In the preceding paragraphs we have described and shown
+examples of some of the tilde escape commands available when sending
+messages via the \f4mailx\f1 command.
+(See the \f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1.)
+.H 1 "How to Manage Incoming Mail" 
+.IX \f4mailx\f1, incoming mail
+\f4mailx\f1 has over fifty commands that help you manage your incoming mail.
+See the \f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1
+for a list of all of them (and their synonyms) in alphabetic order.
+The most commonly used commands (and arguments) are described in the
+following subsections:
+.BL
+.LI
+the \f2msglist\f1 argument
+.LI
+commands for reading and deleting mail
+.LI
+commands for saving mail
+.LI
+commands for replying to mail
+.LI
+commands for getting out of \f4mailx\f1
+.LE
+.H 2 "The \f4msglist\fP Argument"
+.IX \f4mailx\f1, \f4msglist\f1 argument
+.IX \f4msglist\f1 (see \f4mailx\f1)
+Many commands in \f4mailx\f1 take a form of
+the \f2msglist\f1 argument.
+This argument provides the command with a list of messages on which
+to operate.
+If a command expects a \f2msglist\f1 argument and you
+do not provide one, 
+the command is performed on the current message.
+Any of the following formats can be used for a \f2msglist\f1:
+.VL 1i .5i
+.LI "\f2n\f1"
+use message number \f2n\f1 as the current message
+.LI "\f4^\f1"
+the first undeleted message
+.LI "\f4$\f1"
+the last message
+.LI "\f4*\f1"
+all messages
+.LI "\f2n-m\f1"
+an inclusive range of message numbers
+.LI "\f2user\f1"
+all messages from \f2user\f1
+.LI "/\f2string\f1"
+All messages with \f2string\f1 in the 
+subject line (case is ignored)
+.LI "\f4:\f2c\f1"
+all messages of type \f2c\f1 where \f2c\f1 is:
+.in +.5i
+.sp .5
+.nf
+\f4d\f1 - deleted messages
+\f4n\f1 - new messages
+\f4o\f1 - old messages
+\f4r\f1 - read messages
+\f4u\f1 - unread messages
+.in -.5i
+.fi
+.in 0
+.sp
+The context of the command determines whether
+this type of specification makes sense.
+.LE
+.P
+Here are two examples (the \f4?\f1 is the command mode prompt):
+.SS
+? \f4d 1-3\|\0\0\0\0\0\0\0\0\0\0\fP[ \f2Delete messages 1, 2 and 3\fP ]
+? \f4s bdr bdrmail\0\0\fP[ \f2Save all messages from user \f1bdr\f2 in a file named \f1bdrmail\f4. ]
+?
+.SE
+Additional examples may be found throughout the next three
+subsections.
+.H 2 "Commands for Reading and Deleting Mail"
+When a message arrives in your mailbox 
+the following notice appears on your screen:
+.DS I
+\f4you have mail\f1
+.DE
+The notice appears when you log in or when you
+return to the shell from another procedure.
+.H 3 "Reading Mail"
+.IX \f4mailx\f1, reading mail
+To read your mail, enter the \f4mailx\f1  command with or without arguments.
+Execution of the command places you in the command mode of
+\f4mailx\f1.
+The next thing that appears on your screen is
+a display that looks something like this:
+.SS 
+mailx version 4.0  Type ? for help.
+"/var/mail/bdr":   3 messages  3 new
+> N 1 rbt         Thur Apr 30 14:20   8/190  Review Session
+  N 2 admin       Thur Apr 30 15:56   5/84   New printer
+  N 3 sms         Fri  May  1 08:39  64/1574 Reorganization
+?
+.SE
+.P
+The first line identifies the version of
+\f4mailx\f1 used on your system, and 
+reminds you that help is available by typing a question mark (\f4?\f1).
+The second line shows the path name of the file used
+as input to the display (the file name is normally the same
+as your login name) together with a count of the total
+number of messages and their status.
+.IX \f4mailx\f1, reading mail
+The rest of the display is header
+information from the incoming messages.
+The messages are numbered in sequence with the last one
+received at the bottom of the list.
+To the left of the numbers there may be a status indicator; N
+for new, U for unread.
+A greater than sign (\f4>\f1) points to the current message.
+Other fields in the header line show the login of the 
+originator of the message, the day, date and time it
+was delivered, the number of lines and characters
+in the message, and the message subject.
+The last field may be blank.
+.P
+When the header information is displayed on your screen,
+you can print messages either by pressing the RETURN key
+or entering a command followed by a \f2msglist\f1
+argument.
+If you enter a command with no \f2msglist\f1 argument, the
+command acts on the message pointed at by the \f4>\f1 sign.
+Pressing the RETURN key
+is equivalent to typing the \f4p\f1 (for print) command without
+a \f2msglist\f1 argument; the message displayed is the one
+pointed at by the \f4>\f1 sign.
+To read some other message (or several
+others in succession),
+enter a \f4p\f1 (for print)
+or \f4t\f1 (for type)
+followed by the message number(s).
+Here are some examples:
+.SS
+? \f4<CR>\fP	\0\0\0\0\0\0\0\0\0[ \f2Print the current message.\fP ]
+? \f4p 2<CR>\fP	\|\0\0\0\0\|\0[ \f2Print message number 2.\fP    ]
+? \f4p sms<CR>\fP\0\0\0[ \f2Print all messages from user sms.\fP ]
+.SE
+The command \f4t\f1 (for type) is a synonym of \f4p\f1 (for print).
+.H 3 "Scanning Your Mailbox"
+.IX mailbox
+The \f4mailx\f1 command lets you
+look through the messages in your mailbox 
+while you decide which ones need your immediate attention.
+.P
+When you first enter the \f4mailx\f1 command mode, the banner tells
+you how many messages you have and displays the header line for
+twenty messages.
+(If you are connected to the computer over a slow communication line, only
+the header lines for ten messages are displayed.)
+If the total number of messages exceeds one screenful, you can
+display the next screen by entering the \f4z\f1 command.
+Typing \f4z\-\f1 causes a previous screen
+(if there is one) to be displayed.
+If you want to see the 
+header information for a specific group of
+messages, enter the \f4f\f1 (for from) command
+followed by the \f2msglist\f1
+argument.
+.P
+Here are examples of those commands:
+.SS 
+? \f4z\fP\0\0\0\0\0[ \f2Scroll forward one screenful of header lines.\fP ]
+? \f4z\-\fP\0\0\0\0[ \f2Scroll backward one screenful.\fP ]
+? \f4f sms\fP\0\0[ \f2Display headers of all messages from user sms.\fP ]
+.SE
+.H 3 "Switching to Other Mail Files"
+.IX \f4mailx\f1, other mail files
+When you enter \f4mailx\f1 by issuing the command:
+.DS I
+\f4$ \f4mailx<CR>\f1
+.DE
+you are looking at the file \f4/var/mail/\f2your_login\f1.
+.sp
+\f4mailx\f1 lets you switch to other mail files and use any of the
+\f4mailx\f1 commands on their contents.
+(You can even switch to a non-mail file, but if you try to use
+\f4mailx\f1 commands you are told \f4No applicable messages\f1.)
+The switch to another file is done with the \f4fi\f1 or \f4fold\f1 command
+(they are synonyms) followed by the \f2filename\f1.
+The following special characters
+work in place of the \f2filename\f1 argument:
+.VL .75i .25i
+.LI "\f4%\f1"
+the user's default mailbox (\f4/var/mail/\f2your_login\f1)
+.LI "\f4%\f2login\f1"
+the mailbox of the owner of \f2login\f1 (if you have the required permissions)
+.LI "\f4#\f1"
+the previous file
+.LI "\f4&\f1"
+the current mbox
+.LE
+Here is an example of how this might look on your screen:
+.SS 
+$ \f4mailx<CR>\fP
+mailx version 4.0  Type ? for help.
+"/var/mail/sms":  3 messages 2 new 3 unread
+  U 1 jaf         Sat May 9 07:55   7/137   test25
+> N 2 todd        Sat May 9 08:59   9/377   UNITS requirements
+  N 3 has         Sat May 9 11:08  29/1214  access to bailey
+
+? \f4fi &\fP		[\f2 Enter this command to transfer to your mbox.\fP ]
+
+Held 3 messages in /var/mail/sms
+"+mbox":  74 messages 10 unread
+  .		[\f2 Enter any commands for your mbox.\fP ]
+  .
+  .
+? \f4q<CR>\fP
+$
+.SE
+.H 3 "Deleting Mail"
+.IX \f4mailx\f1, deleting mail
+To delete a message, enter a \f4d\f1 followed by a \f2msglist\f1 argument.
+If the \f2msglist\f1 argument is omitted, the current message is deleted.
+The messages are not deleted until you leave the mailbox
+file you are processing.
+Until you do, the \f4u\f1 (for \f4u\f1ndelete) gives you the opportunity
+to change your mind.
+Once you have issued the quit command (\f4q\f1) or switched to
+another file, however, 
+the deleted messages are gone.
+.P
+\f4mailx\f1 permits you to combine the delete and print command and
+enter a \f4dp\f1.
+This is like saying, "Delete the message I just read and show
+me the next one."
+Here are some examples of the delete command:
+.SS
+? \f4d *\fP\0\0\0\0[ \f2Delete all my messages.\fP ]
+? \f4d :r\fP\0\0\0\0[ \f2Delete all messages that have been read.\fP ]
+? \f4dp\fP\0\0\0\0\|[ \f2Delete the current message and print the next one.\fP ]
+? \f4d 2-5\fP\0[ \f2Delete messages 2 through 5.\fP ]
+.SE
+.H 2 "Commands for Saving Mail"
+.IX \f4mailx\f1, saving mail
+All messages not specifically deleted are saved when you quit
+\f4mailx\f1.
+Messages that have been read
+are saved in a file in your home directory called \f4mbox\f1.
+Messages that have not been read are held in your
+mailbox (\f4/var/mail/\f2your_login\f1).
+.P
+The command to save messages comes in two forms:  with an
+upper case or a lower case \f4s\f1.
+The syntax for the upper case version is:
+.DS I
+\f4S\f1 [\f2msglist\f1]
+.DE
+Messages specified by the \f2msglist\f1 argument are saved in a
+file in the current directory named for the login of the first
+message in the list.
+.P
+The syntax for the lower case version is:
+.DS I
+\f4s\f1 [\f2msglist\f1] \f2filename\f1
+  \f2or\fP
+\f4s\f1
+.DE
+Messages specified by the \f2msglist\f1 argument are saved in
+the file named in the \f2filename\f1 argument.
+If you omit the \f2msglist\f1 argument, the current message is
+saved.
+If you are using logins for file names, this can lead to some
+ambiguity.
+If \f4mailx\f1 is puzzled, you will get an error message.
+Finally, if both the \f2msglist\f1 and the \f2filename\f1
+are omitted, the mail is saved in a file called
+.UI mbox
+in your home directory.
+.H 2 "Commands for Replying to Mail"
+.IX \f4mailx\f1, replying to mail
+The command for replying to mail comes in two forms:
+with an upper case or a lower case \f4r\f1.
+The difference between the two forms is that the
+upper case form (\f4R\f1) causes your response
+to be sent only to the originator of the message,
+while the lower case form (\f4r\f1) causes your
+response to be sent not only to the originator
+but also to all other recipients.
+.P
+When you reply to a message,
+the original subject line is picked
+up and used as the subject of your reply.
+Here's an example of the way it looks:
+.SS 
+$ \f4mailx<CR>\fP
+
+mailx version 4.0  Type ? for help.
+"/var/mail/sms":  3 messages 2 new 3 unread
+  U 1 jaf         Wed May 9 07:55   7/137   test25
+> N 2 todd        Wed May 9 08:59   9/377   UNITS requirements
+  N 3 has         Wed May 9 11:08  29/1214  access to bailey
+
+? \f4R 2\fP
+To: todd
+Subject: Re: UNITS requirements
+.SE
+Assuming the message about ``UNITS requirements'' had been sent to
+.IX \f4mailx\f1, replying to mail
+some additional people, and the lower case \f4r\f1 had been used,
+the header might have appeared like this:
+.SS
+? \f4r 2\fP
+To: todd eg has jcb bdr
+Subject: Re:  UNITS requirements
+.SE
+.H 2 "Commands for Getting Out of \f4mailx\fP"
+.IX \f4mailx\f1, getting out of
+There are two standard ways of leaving \f4mailx\f1:  with a \f4q\f1
+or with an \f4x\f1.
+If you leave \f4mailx\f1 with a \f4q\f1, you see messages that summarize
+what you did with your mail.
+They look like this:
+.SS
+? \f4q<CR>\fP
+Saved 1 message in /fs1/bdr/mbox
+Held 1 message in /var/mail/bdr
+$
+.SE
+.P
+\&From the example we can surmise that user \f4bdr\f1 had at least
+two messages, read one and either left the other unread or
+issued a command asking that it be held in \f4/var/mail/bdr\f1.
+If there were more than two messages, the others were deleted
+or saved in other files.
+\f4mailx\f1 does not issue a message about those.
+.P
+If you leave \f4mailx\f1 with an \f4x\f1,
+it is almost as if you had never entered.
+Mail read and messages deleted are retained in your mailbox.
+However, if you have saved messages in other files, that action
+has already taken place and is not undone by the \f4x\f1.
+.H 2 "\f4mailx\fP Command Summary"
+.IX iend \f4mailx\f1 command
+In the preceding subsections we have described 
+some of the most frequently used
+\f4mailx\f1 commands.
+(See the \f4mailx\f1(1) manual page in the
+\f2User's Reference Manual\f1 for a complete list.)
+If you need help while you are in the command
+mode of \f4mailx\f1, type either a \f4?\f1 or
+\f4help\f1 at the \f4?\f1 prompt.
+A list of \f4mailx\f1 commands and what they do will
+be displayed on your terminal screen.
+.H 1 "The \f4.mailrc\fP File" "mailx"
+.IX istart \f4.mailrc\f1
+The \f4.mailrc\f1 file contains commands to be executed
+when you invoke \f4mailx\f1.
+.P
+There may be a system-wide start-up file
+(\f4/etc/mail/mailx.rc\f1) on your system.
+If it exists it is used by the system administrator to set common variables.
+Variables set in your \f4.mailrc\f1 file
+take precedence over those in \f4mailx.rc.\f1
+.P
+Most \f4mailx\f1 commands are legal in the \f4.mailrc\f1 file.
+However, the following commands are NOT legal entries:
+.VL 1.5i .25i
+.LI "\f4!\f1\ (or)\ \f4shell\f1"
+escape to the shell
+.LI "\f4Copy\f1"
+save messages in \f2msglist\f1 in a file whose name is
+derived from the author
+.LI "\f4edit\f1"
+invoke the editor
+.LI "\f4visual\f1"
+invoke vi
+.LI "\f4followup\f1"
+respond to a message
+.LI "\f4Followup\f1"
+respond to a message, sending a copy to \f2msglist\f1
+.LI "\f4mail\f1"
+switch into input mode
+.LI "\f4reply\f1"
+respond to a message
+.LI "\f4Reply\f1"
+respond to the author of each message in
+\f2msglist\f1
+.LE
+.P
+You can create
+your own \f4.mailrc\f1 with any editor, or
+copy a friend's.
+Figure 11-5 shows a sample \f4.mailrc\f1 file.
+.FG "Sample \f4.mailrc\fP File"
+.SS 
+if r
+\0\0cd $HOME/mail
+endif
+set allnet append asksub askcc autoprint dot 
+set metoo quiet save showto header hold keep keepsave
+set outfolder 
+set folder='mail'
+set record='outbox'
+set crt=24
+set EDITOR='/bin/ed'
+set sign='Roberts'
+set Sign='Jackson Roberts, Supervisor'
+set toplines=10
+alias fred\0\0fjs
+alias bob\0\0rcm
+alias alice\0\0ap
+alias donna\0\0dr
+alias pat\0\0pat
+group robertsgrp\0\0fred bob alice mark pat
+group accounts\0\0robertsgrp donna
+.SE
+.P
+The example in Figure 11-5 includes the commands
+you are most likely to find useful:  the \f4set\f1 command and
+the \f4alias\f1 or \f4group\f1 commands.
+.P
+The \f4set\f1 command is used to establish values for
+environment variables.
+The command syntax is:
+.DS I
+\f4set
+set \f2name\fP
+\f4set \f2name\fP=\f2string\fP
+\f4set \f2name\fP=\f2number\f1
+.DE
+.P
+When you issue the \f4set\f1 command without any arguments,
+\f4set\f1 produces a list of all
+defined variables and their values.
+The argument \f2name\f1
+refers to an environmental variable.
+More than one \f2name\f1 can be entered after the \f4set\f1 command.
+Some variables take a string or numeric value.
+String values are enclosed in single quotes.
+.P
+When you put a value in an environment variable
+by making an assignment such as \f4HOME=\f2my_login\f1,
+you are telling the shell how to interpret that variable.
+However, this type of assignment in the shell does not
+make the value of the variable accessible to other
+UNIX system programs that need to reference environment
+variables.
+To make it accessible, you must export the variable.
+If you set the \f4TERM\f1 variable in your environment
+in Chapter 7 or Chapter 9),
+you will remember using the \f4export\f1 command
+shown in the following example:
+.DS I
+\f4$ \f4TERM=5425
+\f4$ \f4export TERM\f1
+.DE
+.P
+When you export variables from the shell in this way,
+programs that reference environment variables are said to import them.
+Some of these variables (such as \f4EDITOR\f1 and \f4VISUAL\f1) 
+are not peculiar to \f4mailx\f1, but may be specified as general
+environment variables and imported from your 
+execution environment.
+If a value is set in \f4.mailrc\f1 for an imported variable
+it overrides the imported value.
+There is an \f4unset\f1 command,
+but it works only
+against variables set in \f4.mailrc\f1;
+it has no effect on imported variables.
+.P
+There are too many environment variables that can be defined in
+your \f4.mailrc\f1 to be fully described in this document.
+For complete information, consult the
+\f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1.
+.P
+Three variables used in the example in Figure 11-5 deserve
+special attention because they show how
+to organize the filing of messages.
+These variables are:  \f4folder\f1, \f4record\f1,
+and \f4outfolder\f1.
+All three are interrelated
+and control the directories and files
+in which copies of messages are kept.
+.P
+To put a value into the \f4folder\f1 variable,
+use the following format:
+.DS I
+\f4set folder=\f2directory\f1
+.DE
+This specifies the directory
+in which you want to save
+standard mail files.
+If the directory name specified does not begin with a \f4/\f1 (slash),
+it is presumed to be relative to \f4$HOME\f1.
+If \f4folder\f1 is an exported shell variable,
+you can specify file names
+(in commands that call for a \f2filename\f1 argument) with
+a \f4/\f1 before the name; the name will be expanded so that   
+the file is put into the \f4folder\f1 directory.
+.P
+To put a value in the \f4record\f1 variable,
+use the following format:
+.DS I
+\f4set record=\f2filename\f1
+.DE
+This directs \f4mailx\f1 
+to save a copy of all outgoing messages
+in the specified file.
+The header information is saved along with the text of the message.
+By default, this variable is disabled.
+.P
+The \f4outfolder\f1 variable
+causes the file in which you store copies of outgoing messages
+(enabled by the variable \f4record=\f1)
+to be located in the \f4folder\f1 directory.
+It is established by being named in a \f4set\f1 command.
+The default is \f4nooutfolder\f1.
+.P
+The \f4alias\f1 and \f4group\f1 commands are synonyms.
+In Figure 11-5, the \f4alias\f1 command is used to associate a
+name with a single login; the \f4group\f1 command is used to 
+specify multiple names that can be called in with one pseudonym.
+This is a nice way to distinguish between single and group
+aliases, but if you want, you can treat the commands as exact equivalents.
+Notice, too, that aliases can be nested.
+.P
+In the \f4.mailrc\f1 file shown in Figure 11-5,
+the alias \f4robertsgrp\f1 represents five
+users; four of them are specified by previously defined
+aliases and one, \f4mark\fP, is specified by a login.
+The fifth user, \f4pat\f1, is specified by both a login and an alias.
+The next group command in the example, \f4accounts\f1,
+uses the group \f4robertsgrp\f1 plus the alias \f4donna\f1.
+It expands to six logins.
+.P
+The \f4.mailrc\f1 file in Figure 11-5
+includes an \f4if-endif\f1 command.
+The full syntax of that command is:
+.DS I
+\f4if s\||\|r
+  \f2mail_commands\f4
+else
+  \f2mail_commands\f4
+endif\f1
+.DE
+The \f4s\f1 and \f4r\f1 stand for send and receive, 
+so you can cause
+some initializing commands to be executed according to whether
+\f4mailx\f1 is entered in input mode (send) or command mode (receive).
+In the preceding example, the command is issued to change directory
+to \f4$HOME/mail\f1 if reading mail.
+Here, the user elected to set up a subdirectory to
+handle incoming mail.
+.P
+The environment variables
+shown in this section are those most commonly 
+included in the \f4.mailrc\f1 file.
+You can, however, specify any of them
+for one session only whenever
+you are in command mode.
+For a complete list of the environment variables
+you can set in \f4mailx\f1 see
+the \f4mailx\f1(1) manual page in the \f2User's Reference Manual\f1.
+.IX iend \f4.mailrc\f1

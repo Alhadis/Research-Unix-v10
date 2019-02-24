@@ -1,0 +1,375 @@
+.TH PROJ 3X bowell
+.CT 2 graphics math
+.br
+.SH NAME
+orient, normalize \- map projections
+.SH SYNOPSIS
+.B orient(lat, lon, rot)
+.br
+.B double lat, lon, rot;
+.PP
+.B normalize(p)
+.br
+.B struct place *p;
+.SH DESCRIPTION
+Users of
+.IR map (7)
+may skip to the description of `Projection generators'
+below.
+.PP
+The functions
+.I orient
+and
+.I normalize
+plus a collection of map projection generators
+are loaded by
+option
+.BR -lmap 
+of
+.IR ld (1).
+Most of them
+calculate maps for a spherical earth.
+Each map projection is available in one standard
+form, into which data must be normalized
+for transverse
+or nonpolar projections.
+.PP
+Each standard projection is displayed with the Prime
+Meridian (longitude 0) being a straight vertical line, along which North
+is up.
+The orientation of nonstandard projections is specified by
+.I orient.
+Imagine a transparent gridded sphere around the globe.
+First turn the overlay about the North Pole
+so that the Prime Meridian (longitude 0)
+of the overlay coincides with meridian
+.I lon
+on the globe.
+Then tilt the North Pole of the
+overlay along its Prime Meridian to latitude
+.I lat
+on the globe.
+Finally again turn the
+overlay about its `North Pole' so
+that its Prime Meridian coincides with the previous position
+of (the overlay's) meridian
+.I rot.
+Project the desired map in
+the standard form appropriate to the overlay, but presenting
+information from the underlying globe.
+It is not useful to use
+.I orient
+without using
+.IR normalize .
+.PP
+.I Normalize
+converts latitude-longitude coordinates on the globe
+to coordinates on the overlaid grid.
+The coordinates and their sines and cosines
+are input to
+.I normalize
+in a
+.B place
+structure.
+Transformed coordinates and their sines and cosines
+are returned in the same structure.
+.PP
+.EX
+.nr xx \w'12345678'
+.ta \n(xxu +\n(xxu +\n(xxu +\n(xxu +\n(xxu +\n(xxu
+	struct place {
+		double radianlat, sinlat, coslat;
+		double radianlon, sinlon, coslon;
+	};
+.EE
+.PP
+The projection generators
+return a pointer to a function that converts normalized coordinates
+to 
+.I x-y
+coordinates for the desired map, or
+0 if the required projection
+is not available.
+The returned function is exemplified by
+.I proj 
+in this example.  Warning: coordinates are in degrees for
+.I orient,
+in radians for
+.LR place .
+.PP
+.EX
+.ta \n(xxu +\n(xxu +\n(xxu +\n(xxu +\n(xxu +\n(xxu
+	struct place pt;
+	int (*proj)() = mercator();
+	double x, y;
+.EE
+.PP
+.EX
+	orient(45.0, 30.0, 180.0);	/* set coordinate rotation */
+.EE
+.PP
+.EX
+	. . .				/* fill in the pt structure */
+	normalize(&pt);			/* rotate coordinates */
+	if((*proj)(&pt, &x, &y) > 0)	/* project onto x,y plane */
+		plot(x, y);
+.EE
+.PP
+The projection function
+.B (*proj)()
+returns 1 for a good point,
+0 for a point on a wrong
+sheet (e.g. the back of the world in a perspective
+projection), and \-1 for a point that is deemed
+unplottable (e.g. points near the poles on a Mercator projection).
+.PP
+Scaling may be determined from the
+.I x-y
+coordinates of
+selected points.
+Latitudes and longitudes are measured in degrees for
+ease of specification for
+.I orient 
+and the projection generators
+but in radians for ease of calculation 
+for
+.I normalize
+and
+.I proj.
+In either case
+latitude is measured positive north of the equator,
+and longitude positive west of Greenwich.
+Radian longitude should be limited to the range
+.if t .I \-\(*p\(<=lon<\(*p.
+.if n .I -pi <= lon < pi.
+.SS Projection generators
+Equatorial projections centered on the Prime Meridian
+(longitude 0).
+Parallels are straight horizontal lines.
+.br
+.ns
+.IP
+.B mercator()
+equally spaced straight meridians, conformal,
+straight compass courses
+.br
+.B sinusoidal()
+equally spaced parallels,
+equal-area, same as
+.I bonne(0)
+.br
+.B cylequalarea(lat0)
+equally spaced straight meridians, equal-area,
+true scale on
+.I lat0
+.br
+.B cylindrical()
+central projection on tangent cylinder
+.br
+.B rectangular(lat0)
+equally spaced parallels, equally spaced straight meridians, true scale on
+.I lat0
+.br
+.B gall(lat0)
+parallels spaced stereographically on prime meridian, equally spaced straight
+meridians, true scale on
+.I lat0
+.br
+.B mollweide()
+(homalographic) equal-area, hemisphere is a circle
+.PP
+Azimuthal projections centered on the North Pole.
+Parallels are concentric circles.
+Meridians are equally spaced radial lines.
+.br
+.ns
+.IP
+.B azequidistant()
+equally spaced parallels,
+true distances from pole
+.br
+.B azequalarea()
+equal-area
+.br
+.B gnomonic()
+central projection on tangent plane,
+straight great circles
+.br
+.B perspective(dist)
+viewed along earth's axis
+.I dist
+earth radii from center of earth
+.br
+.B orthographic()
+viewed from infinity
+.br
+.B stereographic()
+conformal, projected from opposite pole
+.br
+.B laue()
+.IR radius " = tan(2\(mu" colatitude ),
+used in xray crystallography
+.br
+.B fisheye(n)
+stereographic seen from just inside medium with refractive index n
+.br
+.B newyorker(r)
+.IR radius " = log(" colatitude / r ):
+extreme `fisheye' view from pedestal of radius
+.I r
+degrees
+.PP
+Polar conic projections symmetric about the Prime Meridian.
+Parallels are segments of concentric circles.
+Except in the Bonne projection,
+meridians are equally spaced radial
+lines orthogonal to the parallels.
+.br
+.ns
+.IP
+.B conic(lat0)
+central projection on cone tangent at
+.I lat0
+.br
+.B simpleconic(lat0,lat1)
+equally spaced parallels, true scale on
+.I lat0
+and
+.I lat1
+.br
+.B lambert(lat0,lat1)
+conformal, true scale on 
+.I lat0
+and 
+.I lat1
+.br
+.B albers(lat0,lat1)
+equal-area, true scale on
+.I lat0
+and 
+.I lat1
+.br
+.B bonne(lat0)
+equally spaced parallels, equal-area,
+parallel
+.I lat0
+developed from tangent cone
+.PP
+Projections with bilateral symmetry about
+the Prime Meridian
+and the equator.
+.br
+.ns
+.IP
+.B polyconic()
+parallels developed from tangent cones,
+equally spaced along Prime Meridian
+.br
+.B aitoff()
+equal-area projection of globe onto 2-to-1
+ellipse, based on 
+.I azequalarea
+.br
+.B lagrange()
+conformal, maps whole sphere into a circle
+.br
+.B bicentric(lon0)
+points plotted at true azimuth from two
+centers on the equator at longitudes
+.I \(+-lon0,
+great circles are straight lines
+(a stretched gnomonic projection)
+.br
+.B elliptic(lon0)
+points are plotted at true distance from
+two centers on the equator at longitudes
+.I \(+-lon0
+.br
+.B globular()
+hemisphere is circle,
+circular arc meridians equally spaced on equator,
+circular arc parallels equally spaced on 0- and 90-degree meridians
+.br
+.B vandergrinten()
+sphere is circle,
+meridians as in
+.I globular,
+circular arc parallels resemble 
+.I mercator
+.PP
+Doubly periodic conformal projections.
+.br
+.ns
+.IP
+.B guyou()
+W and E hemispheres are square
+.br
+.B square()
+world is square with Poles
+at diagonally opposite corners
+.br
+.B tetra()
+map on tetrahedron with edge
+tangent to Prime Meridian at S Pole,
+unfolded into equilateral triangle
+.br
+.B hex()
+world is hexagon centered
+on N Pole, N and S hemispheres are equilateral
+triangles
+.PP
+Miscellaneous projections.
+.br
+.ns
+.IP
+.B harrison(dist,angle)
+oblique perspective from above the North Pole,
+.I dist
+earth radii from center of earth, looking
+along the Date Line
+.I angle
+degrees off vertical
+.br
+.B trapezoidal(lat0,lat1)
+equally spaced parallels,
+straight meridians equally spaced along parallels,
+true scale at
+.I lat0
+and
+.I lat1
+on Prime Meridian
+.PP
+Retroazimuthal projections.
+At every point the angle between vertical and a straight line to
+`Mecca', latitude
+.I lat0
+on the prime meridian,
+is the true bearing of Mecca.
+.br
+.ns
+.IP
+.B mecca(lat0)
+equally spaced vertical meridians
+.br
+.B homing(lat0)
+distances to `Mecca' are true
+.PP
+Maps based on the spheroid.
+Of geodetic quality, these projections do not make sense
+for tilted orientations.
+For descriptions, see corresponding maps above.
+.br
+.ns
+.IP
+.B sp_mercator()
+.br
+.B sp_albers(lat0,lat1)
+.SH "SEE ALSO
+.IR map (7), 
+.IR map (5), 
+.IR plot (3)
+.SH BUGS
+Only one projection and one orientation can be active at a time.
+.br
+The west-longitude-positive convention
+betrays Yankee chauvinism.

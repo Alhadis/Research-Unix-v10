@@ -1,0 +1,10 @@
+PATH=/bin:/usr/bin
+for i in ?.i
+do x=`echo $i | sed 's/..$//'`
+	echo $x
+	../comp -XB < $i | egrep -v '\.stab' > /tmp/x$$
+	/lib/ccom -XB < $i | egrep -v '\.stab' > /tmp/y$$
+	cmp /tmp/x$$ /tmp/y$$ || diff /tmp/x$$ /tmp/y$$ | sed 's/^< #/new/
+		s/^> #/old/'
+done
+rm /tmp/x$$ /tmp/y$$

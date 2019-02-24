@@ -1,0 +1,157 @@
+.data
+.globl _x
+.align 2; _x:.long 1
+.long 2
+.long 3
+.long 4
+.text
+.globl _main
+.align 1
+_main:.word 0x0
+pushal L1
+calls $4/4,_print
+pushal L3
+pushal L2
+calls $8/4,_print
+pushl $10
+pushl $3
+pushal L4
+calls $12/4,_print
+pushl $10
+pushl $4
+pushal L7
+pushal L6
+pushal L5
+calls $20/4,_print
+pushl $10
+movd L9,-(sp)
+pushal L7
+pushal L6
+pushal L8
+calls $24/4,_print
+subl2 $(16+3)&-4,sp
+movc3 $16,_x,(sp)
+subl2 $(16+3)&-4,sp
+movc3 $16,_x,(sp)
+subl2 $(16+3)&-4,sp
+movc3 $16,_x,(sp)
+subl2 $(16+3)&-4,sp
+movc3 $16,_x,(sp)
+subl2 $(16+3)&-4,sp
+movc3 $16,_x,(sp)
+subl2 $(16+3)&-4,sp
+movc3 $16,_x,(sp)
+pushal L10
+calls $100/4,_print
+ret
+.globl _print
+.align 1
+_print:.word 0xc00
+subl2 $16,sp
+moval 8(ap),r11
+jbr L16
+L13:
+cmpb *4(ap),$37
+jneq L17
+addl3 $1,4(ap),r5
+movl r5,4(ap)
+cvtbl (r5),r10
+cmpl r10,$115
+jeql L33
+cmpl r10,$115
+jgtr L37
+cmpl r10,$98
+jlss L19
+cmpl r10,$102
+jgtr L19
+movl L39-392[r10],r5
+jmp (r5)
+.align 2; L39:.long L22
+.long L27
+.long L29
+.long L19
+.long L35
+L38:
+L37:
+cmpl r10,$119
+jeql L31
+jbr L19
+L22:
+addl3 $16,r11,r5
+movl r5,r11
+movc3 $16,-16(r5),-16(fp)
+pushl -4(fp)
+pushl -8(fp)
+pushl -12(fp)
+pushl -16(fp)
+pushal L23
+calls $20/4,_printf
+jbr L18
+L27:
+addl3 $4,r11,r5
+movl r5,r11
+cvtbl -4(r5),-(sp)
+pushal L28
+calls $8/4,_printf
+jbr L18
+L29:
+addl3 $4,r11,r5
+movl r5,r11
+pushl -4(r5)
+pushal L30
+calls $8/4,_printf
+jbr L18
+L31:
+addl3 $4,r11,r5
+movl r5,r11
+cvtwl -4(r5),-(sp)
+pushal L32
+calls $8/4,_printf
+jbr L18
+L33:
+addl3 $4,r11,r5
+movl r5,r11
+pushl -4(r5)
+pushal L34
+calls $8/4,_printf
+jbr L18
+L35:
+addl3 $8,r11,r5
+movl r5,r11
+movd -8(r5),-(sp)
+pushal L36
+calls $12/4,_printf
+jbr L18
+L19:
+cvtbl *4(ap),-(sp)
+pushal L28
+calls $8/4,_printf
+jbr L18
+L17:
+cvtbl *4(ap),-(sp)
+pushal L28
+calls $8/4,_printf
+L18:
+L14:
+incl 4(ap)
+L16:
+tstb *4(ap)
+jneq L13
+ret
+.text 1
+L36:.byte 37,102,0
+L34:.byte 37,115,0
+L32:.byte 37,120,0
+L30:.byte 37,100,0
+L28:.byte 37,99,0
+L23:.ascii "{%d %d %d %d}\000"
+L10:.ascii "%b %b %b %b %b %b\012\000"
+.align 2; L9:.long 0x41a0,0x0
+L8:.ascii "%s%s %f%c\000"
+L7:.ascii "st\000"
+L6:.ascii "te\000"
+L5:.ascii "%s%s %w%c\000"
+L4:.ascii "test %d%c\000"
+L3:.byte 50,0
+L2:.ascii "test %s\012\000"
+L1:.ascii "test 1\012\000"

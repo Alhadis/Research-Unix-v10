@@ -1,0 +1,66 @@
+To: cvw
+Subject: ideal library
+
+There's also a library file that drag expects to be present,
+called "drag".  Do you mind if I install it in various ideal
+libraries (various as in the machines I use)?  Or perhaps
+you'd like to look at it and install it yourself.  Here it is:
+
+
+.IS
+...libfile dash
+idaline { # line p1 to p2, for use in arrowhead (p3 unused)
+	var p1, p2, p3;
+	conn p1 to p2;
+}
+
+arrowhead {
+	var tl, hd, perp, strokes;
+	perp = 0.1*(tl-hd)/abs(tl-hd);
+	conn hd+cis(25)*perp to hd+cis(-25)*perp
+		using strokes-1 idaline { p2=hd; }<p1,p3>;
+	conn hd+cis(-25)*perp to hd;
+}
+
+thickline {
+	var tl, hd, perp;
+	perp = .01*cis(90)*(tl-hd)/abs(tl-hd);
+	conn tl-perp to tl+perp
+		using 4 idaline { p2=p1+hd-tl; }<p1,p3>;
+}
+
+dashline {
+	var tl, hd;
+	conn tl to hd
+		using int(abs(hd-tl)/.1 + .99) dash{}<start,end>;
+}
+
+selfloop { # loop from c to itself, passing through e, with arrowhead
+	var c, e, h, i, c1, c2, c3, c4, s;
+	var B, C, D;
+	B ~ .6; C ~ .6; D ~ .2;
+	h = e + B*(e-c)*cis(90);
+	i = e + B*(e-c)*cis(-90);
+	c1 = C[c,h];
+	c4 = C[c,i];
+	c2 = D[e,h];
+	c3 = D[e,i];
+	spline c to c1 to c2 to c3 to c4 to c;
+	put arrowhead { hd=c; tl=c4; strokes=s; };
+}
+
+selfloopc { # loop from a to b, passing through e, with arrowhead at b
+	    # c is "center": ce is perpendicular to tangent at e
+	var a, b, c, d, e, h, c1, c2, c3, c4, s;
+	var A, C, D;
+	A ~ .8; C ~ .2; D ~ .4;
+	d = c - A*(e-c);
+	c1 = a + C*(a-d);
+	c4 = b + C*(b-d);
+	h = d + (c1-d)*abs(e-d)/abs((c1+c4)/2-d);
+	c2 = D[e,h];
+	c3 = e-(c2-e);
+	spline a to c1 to c2 to c3 to c4 to b;
+	put arrowhead { hd=b; tl=c4; strokes=s; };
+}
+.IE
